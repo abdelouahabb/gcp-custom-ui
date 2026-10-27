@@ -5545,28 +5545,6 @@ function CloudPulseCockpit() {
 
               {activeTab === 'VPC_NETWORKS' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="NETOPS"
-                    projectId={selectedProjectId}
-                    studioContextLabel="VPC & Firewall Studio · 4-Hop Packet Tracer & IPAM CIDR Guard"
-                    defaultExpanded={true}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="VPC"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <VpcNetworksAndFirewalls
                     projectId={selectedProjectId}
                     vpcs={overview?.vpcs || []}
@@ -5584,6 +5562,28 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                     onSelectTab={(tab) => setActiveTab(tab)}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="VPC"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <PersonaContextualHelper
+                    persona="NETOPS"
+                    projectId={selectedProjectId}
+                    studioContextLabel="VPC & Firewall Studio · 4-Hop Packet Tracer & IPAM CIDR Guard"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                 </div>
               )}

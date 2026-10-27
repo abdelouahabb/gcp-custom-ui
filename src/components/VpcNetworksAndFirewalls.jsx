@@ -224,7 +224,7 @@ const ZERO_TRUST_TEMPLATES = [
 
 export default function VpcNetworksAndFirewalls({
   projectId,
-  vpcs = [],
+  vpcs: propVpcs = [],
   firewalls = [],
   initialRuleSeed,
   onOpenProvisionVpc,
@@ -237,11 +237,50 @@ export default function VpcNetworksAndFirewalls({
   onShowError,
   onSelectTab,
 }) {
-  // Local optimistic firewall list so creates, edits, toggles, and deletes reflect immediately
+  // Local optimistic VPC & firewall lists so creates, edits, toggles, deletes, and direct API syncs reflect immediately
+  const [localVpcs, setLocalVpcs] = useState(propVpcs);
   const [localFirewalls, setLocalFirewalls] = useState(firewalls);
+  const [directFetching, setDirectFetching] = useState(false);
+  const [focusedSeedRuleName, setFocusedSeedRuleName] = useState(null);
+  const vpcs = localVpcs;
+
   useEffect(() => {
-    setLocalFirewalls(firewalls);
+    if (Array.isArray(propVpcs) && propVpcs.length > 0) {
+      setLocalVpcs(propVpcs);
+    }
+  }, [propVpcs]);
+
+  useEffect(() => {
+    if (Array.isArray(firewalls) && firewalls.length > 0) {
+      setLocalFirewalls(firewalls);
+    }
   }, [firewalls]);
+
+  const fetchDirectVpcAndFirewalls = async () => {
+    if (!projectId) return;
+    setDirectFetching(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vpc-firewalls`,
+        { timeout: 10000 }
+      );
+      if (Array.isArray(res.data?.vpcs)) {
+        setLocalVpcs(res.data.vpcs);
+      }
+      if (Array.isArray(res.data?.firewalls)) {
+        setLocalFirewalls(res.data.firewalls);
+      }
+    } catch {
+      // Fallback to parent overview props
+    } finally {
+      setDirectFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDirectVpcAndFirewalls();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
   // Real-time GCP Global Operation trackers keyed by firewall/VPC name
@@ -283,9 +322,13 @@ export default function VpcNetworksAndFirewalls({
 
   useEffect(() => {
     if (!initialRuleSeed?.nonce) return;
+    // Never set searchQuery to filter out the Live VPC Firewall Rules list!
+    // Instead, keep all Live VPC Firewall Rules visible and highlight the seeded rule.
+    setSearchQuery('');
+    setFilterMode('ALL');
+    setSelectedVpcFilter('ALL');
     if (initialRuleSeed.ruleName) {
-      setSearchQuery(initialRuleSeed.ruleName);
-      setFilterMode('ALL');
+      setFocusedSeedRuleName(initialRuleSeed.ruleName);
     }
     if (initialRuleSeed.protocol) {
       setSimProtocol(String(initialRuleSeed.protocol).toLowerCase());
@@ -300,6 +343,10 @@ export default function VpcNetworksAndFirewalls({
       setSimIp(initialRuleSeed.sourceIp);
     }
     setActiveSubPanel('SIMULATOR');
+    setTimeout(() => {
+      const el = document.getElementById('live-vpc-firewall-rules-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
   }, [
     initialRuleSeed?.nonce,
     initialRuleSeed?.ruleName,
@@ -1152,14 +1199,36 @@ export default function VpcNetworksAndFirewalls({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              disabled={loading}
-              onClick={onRefresh}
+              disabled={loading || directFetching}
+              onClick={() => {
+                fetchDirectVpcAndFirewalls();
+                if (onRefresh) onRefresh();
+              }}
               className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 ${
+                  loading || directFetching ? 'animate-spin' : ''
+                }`}
               />
               <span>Sync GCP</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilterMode('ALL');
+                setSearchQuery('');
+                setSelectedVpcFilter('ALL');
+                const el = document.getElementById(
+                  'live-vpc-firewall-rules-section'
+                );
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="inline-flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35 rounded-lg px-3 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Live VPC Firewall Rules ({stats.total}) ↓</span>
             </button>
 
             <button
@@ -2108,7 +2177,54 @@ export default function VpcNetworksAndFirewalls({
         </div>
 
         {/* Right Column: Full-Fledged Firewall Policy Matrix (ALLOW & DENY, INGRESS & EGRESS) */}
-        <div className="xl:col-span-8 space-y-3">
+        <div
+          id="live-vpc-firewall-rules-section"
+          className="xl:col-span-8 space-y-3"
+        >
+          <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1 flex items-center justify-between flex-wrap gap-2">
+            <span className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 font-extrabold">
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span>
+                Live VPC Firewall Rules ({enrichedFirewalls.length})
+              </span>
+            </span>
+            <span className="font-mono text-[11px]">
+              compute.v1/projects/{projectId}/global/firewalls (Priority 0 → 65535)
+            </span>
+          </div>
+
+          {focusedSeedRuleName && (
+            <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-sky-600 text-white text-[10px] font-extrabold">
+                  🎯 FOCUSED FROM GLOBAL MAP X-RAY
+                </span>
+                <span className="text-zinc-800 dark:text-zinc-200">
+                  Rule:{' '}
+                  <strong className="text-sky-600 dark:text-sky-300">
+                    {focusedSeedRuleName}
+                  </strong>
+                  {!enrichedFirewalls.some(
+                    (f) => f.name === focusedSeedRuleName
+                  ) && (
+                    <span className="text-zinc-500 ml-1.5">
+                      (Google Cloud Implied Priority-65535 Fallback Rule — all{' '}
+                      {enrichedFirewalls.length} explicit Live VPC Firewall Rules
+                      are shown below)
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFocusedSeedRuleName(null)}
+                className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+              >
+                ✕ Clear Focus
+              </button>
+            </div>
+          )}
+
           {/* Compact Firewall Search + Rule Filter Dropdown Toolbar */}
           <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="relative flex-1">
@@ -2198,12 +2314,15 @@ export default function VpcNetworksAndFirewalls({
                   !fw.disabled &&
                   ranges.includes('0.0.0.0/0');
                 const isIapProtected = ranges.includes('35.235.240.0/20');
+                const isFocusedFromMap = focusedSeedRuleName === fw.name;
 
                 return (
                   <div
                     key={fw.id || fw.name}
                     className={`bg-white dark:bg-[#202124] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
-                      fw.disabled
+                      isFocusedFromMap
+                        ? 'border-sky-500 ring-2 ring-sky-500/40 bg-sky-500/[0.04]'
+                        : fw.disabled
                         ? 'border-zinc-200 dark:border-zinc-800 opacity-65'
                         : isDeny
                         ? 'border-red-500/35 hover:border-red-500/60'
@@ -2217,6 +2336,11 @@ export default function VpcNetworksAndFirewalls({
                       <div className="space-y-1.5">
                         {/* Badges Row */}
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {isFocusedFromMap && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-sky-600 text-white">
+                              🎯 FOCUSED RULE
+                            </span>
+                          )}
                           {/* ALLOW vs DENY Badge */}
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${

@@ -1666,13 +1666,13 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
           token,
           projectId,
-          { timeout: 2200 }
+          { timeout: 6500 }
         ),
         gcpFetch(
-          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=30`,
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=100`,
           token,
           projectId,
-          { timeout: 2200 }
+          { timeout: 6500 }
         ),
         fetchProjectEnabledApis(projectId, token),
         gcpFetch(
@@ -7125,6 +7125,90 @@ app.delete(
     }
   }
 );
+
+// 9a. GET /api/project/:projectId/vpc-firewalls -> Dedicated Live VPC Networks & Firewall Rules Fetch
+app.get('/api/project/:projectId/vpc-firewalls', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const [vpcsRes, firewallsRes] = await Promise.allSettled([
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=100`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ),
+    ]);
+
+    const liveVpcs =
+      vpcsRes.status === 'fulfilled' ? vpcsRes.value?.items || [] : [];
+    const liveFirewalls =
+      firewallsRes.status === 'fulfilled' ? firewallsRes.value?.items || [] : [];
+
+    const vpcs = liveVpcs.map((vpc) => ({
+      id: vpc.id || vpc.name,
+      name: vpc.name,
+      autoCreateSubnetworks: Boolean(vpc.autoCreateSubnetworks),
+      routingMode: vpc.routingConfig?.routingMode || 'REGIONAL',
+      mtu: vpc.mtu || 1460,
+      subnetsCount: (vpc.subnetworks || []).length,
+      subnetworks: (vpc.subnetworks || []).map((s) => {
+        const parts = s.split('/');
+        return {
+          name: parts[parts.length - 1],
+          region: parts[parts.indexOf('regions') + 1] || 'global',
+        };
+      }),
+      createdAt: vpc.creationTimestamp || new Date().toISOString(),
+      description: vpc.description || '',
+    }));
+
+    const firewalls = liveFirewalls.map((fw) => ({
+      id: fw.id || fw.name,
+      name: fw.name,
+      description: fw.description || '',
+      network: fw.network?.split('/').pop() || 'default',
+      direction: fw.direction || 'INGRESS',
+      action:
+        Array.isArray(fw.denied) && fw.denied.length > 0 ? 'DENY' : 'ALLOW',
+      priority: fw.priority ?? 1000,
+      disabled: Boolean(fw.disabled),
+      sourceRanges: fw.sourceRanges || [],
+      destinationRanges: fw.destinationRanges || [],
+      sourceTags: fw.sourceTags || [],
+      targetTags: fw.targetTags || [],
+      sourceServiceAccounts: fw.sourceServiceAccounts || [],
+      targetServiceAccounts: fw.targetServiceAccounts || [],
+      allowed: fw.allowed || [],
+      denied: fw.denied || [],
+      logConfig: fw.logConfig || { enable: false },
+      selfLink: fw.selfLink || '',
+      createdAt: fw.creationTimestamp || new Date().toISOString(),
+    }));
+
+    return res.json({
+      projectId,
+      vpcs,
+      firewalls,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to fetch live VPC networks and firewall rules.',
+    });
+  }
+});
 
 // 9b. PATCH /api/project/:projectId/firewalls/:firewallName -> Edit, Toggle Enable/Disable, Change ALLOW/DENY, Priority, Ranges, Tags & Logging on Live GCP Firewall Rule
 app.patch('/api/project/:projectId/firewalls/:firewallName', async (req, res) => {

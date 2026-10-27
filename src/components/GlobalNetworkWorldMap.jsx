@@ -4526,9 +4526,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               id: 'VPC_SUBNETS',
               featureId: 'GLOBAL_MAP_VPC_SUBNETS',
               icon: Layers,
-              label: `Regional VPC Subnets & CIDR Map (${
+              label: `VPC Subnets & Live Firewall Rules (${
                 liveGeoTelemetry?.liveSubnets?.length || 0
-              } Subnets)`,
+              } Subnets · ${firewalls.length} Rules)`,
             },
             {
               id: 'STACK_SYNTHESIZER',
@@ -5112,60 +5112,172 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           </div>
         )}
 
-        {/* TAB 04: LIVE REGIONAL VPC SUBNETS & RFC1918 CIDR MAP */}
+        {/* TAB 04: LIVE VPC FIREWALL RULES & REGIONAL VPC SUBNETS / RFC1918 CIDR MAP */}
         {activeGeoTab === 'VPC_SUBNETS' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
-            {(liveGeoTelemetry?.liveSubnets || []).map((sn, idx) => {
-              const isSelected = selectedRegionId === sn.region;
-              return (
-                <div
-                  key={`${sn.region}-${sn.name}-${idx}`}
-                  onClick={() => selectRegionInPlace(sn.region, 2.8)}
-                  className={`p-3 rounded-xl border text-xs font-mono space-y-1 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                  }`}
+          <div className="space-y-3">
+            {/* Live VPC Firewall Rules Matrix */}
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-extrabold text-zinc-900 dark:text-zinc-100">
+                  <Shield className="w-4 h-4 text-emerald-500" />
+                  <span>
+                    Live VPC Firewall Rules ({firewalls.length} Active in{' '}
+                    {projectId})
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    compute.v1/global/firewalls · Priority 0 → 65535
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenRuleInVpcStudio('')}
+                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-zinc-900 dark:text-white truncate">
-                      {sn.region}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
-                          SELECTED
-                        </span>
-                      )}
-                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
-                        {sn.ipCidrRange}
+                  🛡️ Open Full VPC &amp; Firewalls Studio ↗
+                </button>
+              </div>
+
+              {firewalls.length === 0 ? (
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500">
+                  No custom VPC firewall rules returned for {projectId} (using
+                  Google Cloud Implied Priority-65535 rules).
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {[...firewalls]
+                    .sort((a, b) => (a.priority ?? 1000) - (b.priority ?? 1000))
+                    .map((fw) => {
+                      const isDeny =
+                        fw.action === 'DENY' ||
+                        (Array.isArray(fw.denied) && fw.denied.length > 0);
+                      const specs = isDeny
+                        ? fw.denied || []
+                        : fw.allowed || [];
+                      const portsLabel =
+                        specs
+                          .map(
+                            (s) =>
+                              `${String(s.IPProtocol || 'tcp').toUpperCase()}${
+                                s.ports?.length ? `:${s.ports.join(',')}` : ''
+                              }`
+                          )
+                          .join(', ') || 'ALL';
+                      const ranges =
+                        (fw.direction || 'INGRESS') === 'EGRESS'
+                          ? fw.destinationRanges || ['0.0.0.0/0']
+                          : fw.sourceRanges || ['0.0.0.0/0'];
+                      return (
+                        <div
+                          key={fw.id || fw.name}
+                          className={`p-2.5 rounded-xl border space-y-1.5 ${
+                            isDeny
+                              ? 'bg-red-500/[0.06] border-red-500/35'
+                              : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                              {fw.name}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] font-bold">
+                                P-{fw.priority ?? 1000}
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                                  isDeny
+                                    ? 'bg-red-500/20 text-red-500'
+                                    : 'bg-emerald-500/20 text-emerald-500'
+                                }`}
+                              >
+                                {isDeny ? 'DENY' : 'ALLOW'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-[10px] text-zinc-500 truncate">
+                            {fw.direction || 'INGRESS'} ·{' '}
+                            <strong className="text-zinc-700 dark:text-zinc-300">
+                              {portsLabel}
+                            </strong>{' '}
+                            · CIDR: {ranges.join(', ')}
+                          </div>
+                          <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                            <span className="text-[9.5px] text-zinc-400">
+                              vpc:{fw.network || 'default'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRuleInVpcStudio(fw.name)}
+                              className="px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 text-[9.5px] font-extrabold cursor-pointer"
+                            >
+                              Inspect in VPC Studio ↗
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Regional VPC Subnets Grid */}
+            <div className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 px-1">
+              Regional VPC Subnets &amp; RFC1918 CIDR Allocations (
+              {liveGeoTelemetry?.liveSubnets?.length || 0} Subnets)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
+              {(liveGeoTelemetry?.liveSubnets || []).map((sn, idx) => {
+                const isSelected = selectedRegionId === sn.region;
+                return (
+                  <div
+                    key={`${sn.region}-${sn.name}-${idx}`}
+                    onClick={() => selectRegionInPlace(sn.region, 2.8)}
+                    className={`p-3 rounded-xl border text-xs font-mono space-y-1 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-zinc-900 dark:text-white truncate">
+                        {sn.region}
                       </span>
+                      <div className="flex items-center gap-1">
+                        {isSelected && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                            SELECTED
+                          </span>
+                        )}
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
+                          {sn.ipCidrRange}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate">
+                      VPC: <strong>{sn.network}</strong> · Subnet: {sn.name}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 flex items-center justify-between pt-0.5">
+                      <span>
+                        GW: {sn.gatewayAddress} · PGA:{' '}
+                        <strong className="text-emerald-500">
+                          {sn.privateIpGoogleAccess ? 'ON' : 'OFF'}
+                        </strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusOnRegion(sn.region, 3.2, { scrollToMap: true });
+                        }}
+                        className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
+                      >
+                        Focus on Map →
+                      </button>
                     </div>
                   </div>
-                  <div className="text-[10px] text-zinc-500 truncate">
-                    VPC: <strong>{sn.network}</strong> · Subnet: {sn.name}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 flex items-center justify-between pt-0.5">
-                    <span>
-                      GW: {sn.gatewayAddress} · PGA:{' '}
-                      <strong className="text-emerald-500">
-                        {sn.privateIpGoogleAccess ? 'ON' : 'OFF'}
-                      </strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        focusOnRegion(sn.region, 3.2, { scrollToMap: true });
-                      }}
-                      className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
-                    >
-                      Focus on Map →
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
