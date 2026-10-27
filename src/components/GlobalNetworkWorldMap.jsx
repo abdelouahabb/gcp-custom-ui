@@ -39,6 +39,10 @@ import {
   formatLatLon,
   calculateGreatCircleKm,
 } from '../data/worldMapGeoPaths';
+import {
+  STACK_BLUEPRINTS,
+  computeOrbitalTelemetry,
+} from './OrbitalControlPlaneDrawer';
 
 // ============================================================================
 // 1. GOOGLE CLOUD GLOBAL REGIONS & ZONES CATALOG (Exact WGS84 Lat/Lon Projected)
@@ -1951,6 +1955,46 @@ export default function GlobalNetworkWorldMap({
   const [liveGeoTelemetry, setLiveGeoTelemetry] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [activeGeoTab, setActiveGeoTab] = useState('LATENCY_PROBES');
+  const [mapStackBlueprint, setMapStackBlueprint] = useState(
+    'AI_INFERENCE_STACK'
+  );
+  const [mapStackPrefix, setMapStackPrefix] = useState('ai-core');
+  const [mapDeployingStack, setMapDeployingStack] = useState(false);
+  const [mapStackResult, setMapStackResult] = useState(null);
+
+  const orbitalMapMetrics = useMemo(
+    () => computeOrbitalTelemetry(overview),
+    [overview]
+  );
+
+  const handleSynthesizeMapStack = async (e) => {
+    if (e) e.preventDefault();
+    if (!projectId || mapDeployingStack) return;
+    setMapDeployingStack(true);
+    setMapStackResult(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/stack-deploy`,
+        {
+          blueprintId: mapStackBlueprint,
+          stackPrefix: mapStackPrefix,
+          region: selectedRegionId || 'us-central1',
+        }
+      );
+      setMapStackResult(res.data);
+      if (onShowToast) onShowToast(res.data?.message);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to synthesize 3-tier regional stack.'
+        );
+      }
+    } finally {
+      setMapDeployingStack(false);
+    }
+  };
 
   const fetchLiveGeoTelemetry = useCallback(
     async (showToastMsg = false, focusRegObj = null) => {
@@ -3144,8 +3188,8 @@ export default function GlobalNetworkWorldMap({
           </div>
         </div>
 
-        {/* 4-Pillar Equal-Width Navigation Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+        {/* 5-Pillar Equal-Width Navigation Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 w-full">
           {[
             {
               id: 'LATENCY_PROBES',
@@ -3170,6 +3214,10 @@ export default function GlobalNetworkWorldMap({
               label: `04 · Regional VPC Subnets & CIDR Map (${
                 liveGeoTelemetry?.liveSubnets?.length || 0
               } Subnets)`,
+            },
+            {
+              id: 'STACK_SYNTHESIZER',
+              label: `05 · 1-Tap 3-Tier Stack Synthesizer & CFE (${orbitalMapMetrics.avgCfe}% Clean)`,
             },
           ].map((tab) => (
             <button
@@ -3469,6 +3517,140 @@ export default function GlobalNetworkWorldMap({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* TAB 05: 1-TAP GREEN-REGION 3-TIER STACK SYNTHESIZER & CONTINENTAL CFE% FOOTPRINT */}
+        {activeGeoTab === 'STACK_SYNTHESIZER' && (
+          <div className="space-y-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                  1-Tap Describe-to-Deploy 3-Tier Stack Synthesizer into Selected Map Region: <span className="text-blue-600 dark:text-blue-400">{selectedRegion.id} ({selectedRegion.city} · {selectedRegion.cfePercent}% CFE)</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Synthesizes a live Cloud Storage Bucket, BigQuery Dataset, and Scale-to-Zero Cloud Run Gen2 Service (`$0.00/hr` idle) in `{selectedRegion.id}` pre-wired with `GCS_BUCKET_URI` and `BIGQUERY_DATASET` environment variables.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                  Fleet Avg CFE: {orbitalMapMetrics.avgCfe}% Clean
+                </span>
+                {Object.entries(orbitalMapMetrics.continents).map(
+                  ([cont, count]) => (
+                    <span
+                      key={cont}
+                      className="px-2 py-1 rounded-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+                    >
+                      {cont}: <strong>{count}</strong>
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {STACK_BLUEPRINTS.map((bp) => {
+                const active = mapStackBlueprint === bp.id;
+                return (
+                  <button
+                    key={bp.id}
+                    type="button"
+                    onClick={() => setMapStackBlueprint(bp.id)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer space-y-1.5 ${
+                      active
+                        ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 shadow-xs'
+                        : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                        {bp.title}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                        {bp.estIdleCost}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {bp.subtitle}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <form
+              onSubmit={handleSynthesizeMapStack}
+              className="grid grid-cols-1 sm:grid-cols-12 gap-3"
+            >
+              <div className="sm:col-span-4">
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Stack Naming Prefix
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={mapStackPrefix}
+                  onChange={(e) => setMapStackPrefix(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="sm:col-span-5">
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Target Map Region (Click any region on map or choose below)
+                </label>
+                <select
+                  value={selectedRegionId}
+                  onChange={(e) => selectRegionInPlace(e.target.value, 2.8)}
+                  className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                >
+                  {GCP_GLOBAL_REGIONS.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.id} ({r.city} · {r.cfePercent}% CFE · {r.gco2} gCO2/kWh)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-3 flex items-end">
+                <button
+                  type="submit"
+                  disabled={mapDeployingStack}
+                  className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                >
+                  <span>
+                    {mapDeployingStack
+                      ? `Synthesizing in ${selectedRegion.id}...`
+                      : `Deploy 3-Tier Stack in ${selectedRegion.id}`}
+                  </span>
+                </button>
+              </div>
+            </form>
+
+            {mapStackResult && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 text-xs font-mono space-y-2">
+                <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                  ✓ {mapStackResult.message}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {(mapStackResult.steps || []).map((st, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px]"
+                    >
+                      <div className="text-zinc-500">{st.step}</div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        {st.name}
+                      </div>
+                      <div className="text-emerald-600 dark:text-emerald-400">
+                        {st.status} ({st.region})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

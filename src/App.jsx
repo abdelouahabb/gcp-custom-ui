@@ -36,6 +36,8 @@ import {
   Zap,
   CreditCard,
   AlertTriangle,
+  History,
+  Wand2,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -70,6 +72,9 @@ import Revolutionary2026Suite, {
   calculateLiveBurnRate,
 } from './components/Revolutionary2026Suite';
 import CommandPaletteModal from './components/CommandPaletteModal';
+import OrbitalControlPlaneDrawer, {
+  computeOrbitalTelemetry,
+} from './components/OrbitalControlPlaneDrawer';
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
@@ -3080,6 +3085,7 @@ function CloudPulseCockpit() {
   }, []);
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [activeOrbitalDrawer, setActiveOrbitalDrawer] = useState(null); // null | 'STACK_COMPOSER' | 'FLIGHT_RECORDER' | 'AUTOPILOT_GUARD'
   const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
   const [sovereignSubTab, setSovereignSubTab] = useState('IAM_SURGEON');
   const [awsAzureSubTab, setAwsAzureSubTab] = useState('RESOURCE_GROUPS');
@@ -3995,11 +4001,86 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
                 title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <span>⌘K Ops</span>
               </button>
+
+              {/* Reincarnated Orbital Telemetry & Zero-Mock Control-Plane Triggers */}
+              {(() => {
+                const orb = computeOrbitalTelemetry(overview);
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('GLOBAL_MAP')}
+                      title="Live Grid Carbon-Free Energy (CFE%) & Zero-Trust Posture Grade — Click to open 40-Region Global Map"
+                      className="hidden xl:inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span>CFE {orb.avgCfe}%</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        · Grade {orb.postureGrade}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveOrbitalDrawer((cur) =>
+                          cur === 'STACK_COMPOSER' ? null : 'STACK_COMPOSER'
+                        )
+                      }
+                      title="1-Tap 3-Tier Cloud Stack Synthesizer (Provisions GCS Bucket + BigQuery Dataset + Cloud Run Gen2 Service)"
+                      className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
+                        activeOrbitalDrawer === 'STACK_COMPOSER'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                      }`}
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span>1-Tap Stack</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveOrbitalDrawer((cur) =>
+                          cur === 'FLIGHT_RECORDER' ? null : 'FLIGHT_RECORDER'
+                        )
+                      }
+                      title="Open Cloud Flight Recorder & 1-Tap Mutation Time-Machine"
+                      className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
+                        activeOrbitalDrawer === 'FLIGHT_RECORDER'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                      <span>Flight Recorder</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveOrbitalDrawer((cur) =>
+                          cur === 'AUTOPILOT_GUARD' ? null : 'AUTOPILOT_GUARD'
+                        )
+                      }
+                      title="Open Real Autonomous FinOps & Zero-Trust Control-Plane Enforcer (Scale-to-Zero, 12-Invariant Self-Healer & Night-Mode Sleep)"
+                      className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
+                        activeOrbitalDrawer === 'AUTOPILOT_GUARD'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      }`}
+                    >
+                      <Cpu className="w-3.5 h-3.5 shrink-0" />
+                      <span>Auto-Pilot Guard</span>
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap shrink-0">
@@ -4181,6 +4262,24 @@ function CloudPulseCockpit() {
 
           {/* Non-blocking asynchronous page render: Studios and KPI cards mount immediately (<16ms) while live GCP telemetry streams in the background */}
           <>
+              {activeOrbitalDrawer && (
+                <OrbitalControlPlaneDrawer
+                  activeDrawer={activeOrbitalDrawer}
+                  onCloseDrawer={() => setActiveOrbitalDrawer(null)}
+                  onSelectDrawer={(d) => setActiveOrbitalDrawer(d)}
+                  projectId={selectedProjectId}
+                  overview={overview}
+                  onRefreshOverview={() => {
+                    fetchProjectOverview(selectedProjectId, { force: true });
+                    setVmRefreshTrigger((c) => c + 1);
+                  }}
+                  onDeleteResource={handleDeleteResource}
+                  onNavigateTab={(tabId) => setActiveTab(tabId)}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
               {activeTab === 'OVERVIEW' && (
                 <div className="space-y-6">
                   <SortableKpiRow
