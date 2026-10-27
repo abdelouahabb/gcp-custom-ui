@@ -53,9 +53,56 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
 
   const vms = allResources.filter((r) => r.type === 'Compute Engine VM');
   const cloudRunServices = allResources.filter((r) => r.type === 'Cloud Run Service');
+  const buckets = allResources.filter((r) => r.type === 'Cloud Storage Bucket');
+  const datasets = allResources.filter((r) => r.type === 'BigQuery Dataset');
+
+  // 0. Enabled GCP Service APIs (Must be checked first so data/AI APIs are never confused with Datasets/Buckets)
+  if (type === 'Enabled GCP Service API') {
+    const svcName = String(details.serviceName || row?.storageClass || name).toLowerCase();
+    const isComputeCore =
+      svcName.includes('compute.googleapis.com') ||
+      svcName.includes('iam') ||
+      svcName.includes('cloudresourcemanager') ||
+      svcName.includes('logging') ||
+      svcName.includes('monitoring') ||
+      svcName.includes('serviceusage');
+
+    const hasBackingResources =
+      (svcName.includes('compute') && vms.length > 0) ||
+      (svcName.includes('storage') && buckets.length > 0) ||
+      (svcName.includes('bigquery.googleapis.com') && datasets.length > 0) ||
+      (svcName.includes('run.googleapis.com') && cloudRunServices.length > 0) ||
+      isComputeCore;
+
+    if (!hasBackingResources) {
+      return {
+        isStale: true,
+        badgeLabel: 'UNUSED ENABLED API ($0/mo)',
+        badgeTone: 'amber',
+        targetTab: 'OVERVIEW',
+        originTitle: `Enabled Google Cloud API (${svcName})`,
+        howCreated: `Enabled on project "${projectId}" when provisioning or testing ${name} workloads.`,
+        whyStayed: `In Google Cloud, enabling a Service API (${svcName}) remains active on the project even after all datasets, buckets, or instances using it are deleted.`,
+        attachedTo: `0 active ${name.replace(/ API$/i, '')} resources in ${projectId}`,
+        recommendation: `No billing charge while idle ($0.00/mo), or click "Disable API" to turn off ${svcName} for strict least-privilege hygiene.`,
+      };
+    }
+
+    return {
+      isStale: false,
+      badgeLabel: 'ACTIVE SERVICE API',
+      badgeTone: 'emerald',
+      targetTab: 'OVERVIEW',
+      originTitle: `Active Google Cloud Service API (${svcName})`,
+      howCreated: `Enabled on project "${projectId}".`,
+      whyStayed: 'Actively required by running project infrastructure.',
+      attachedTo: `Backing active workloads in ${projectId}`,
+      recommendation: 'Keep enabled — required by your active project resources.',
+    };
+  }
 
   // 1. Cloud Storage Buckets
-  if (type === 'Cloud Storage Bucket' || row?.category === 'storage') {
+  if (type === 'Cloud Storage Bucket') {
     // Check if this is a VM-to-Cloud Run migration FUSE disk bucket (<projectId>-vmdisk-<vmName>)
     const vmDiskMatch = lower.match(/-vmdisk-(.+)$/);
     if (vmDiskMatch) {
@@ -72,13 +119,14 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
           isStale: true,
           badgeLabel: 'STALE MIGRATION ARTIFACT',
           badgeTone: 'amber',
+          targetTab: 'CLOUD_STORAGE',
           originTitle: 'VM-to-Cloud Run Migration Disk Bucket (MOUNT_GCS_FUSE_DISK)',
           howCreated: `Auto-created when migrating GCE VM "${targetVmName}" to Cloud Run Gen2 (gs://${name}) to hold extracted VM disk files for Cloud Storage FUSE mounting.`,
           whyStayed: `When the migrated Cloud Run service was deleted, Google Cloud preserved this backing Cloud Storage bucket so your extracted disk files would not be lost.`,
           attachedTo: matchingVm
             ? `0 Cloud Run mounts (VM "${matchingVm.name}" runs on its own persistent boot disk, not this bucket)`
             : '0 active workloads',
-          recommendation: 'Safe to delete if you no longer need the extracted Cloud Run FUSE disk backup.',
+          recommendation: 'Click "Clean Up" to permanently delete this leftover migration bucket, or "Open Studio" to inspect its files first.',
         };
       }
 
@@ -86,6 +134,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
         isStale: false,
         badgeLabel: 'ACTIVE FUSE VOLUME',
         badgeTone: 'emerald',
+        targetTab: 'CLOUD_STORAGE',
         originTitle: 'Cloud Run Gen2 GCS FUSE Volume Bucket',
         howCreated: `Created by VM-to-Cloud Run Migration for "${targetVmName}".`,
         whyStayed: 'Actively mounted by a live Cloud Run service.',
@@ -107,11 +156,12 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
         isStale: true,
         badgeLabel: 'STALE DEMO BUCKET',
         badgeTone: 'amber',
+        targetTab: 'CLOUD_STORAGE',
         originTitle: 'Innovation Lab 1-Click Telemetry Provisioner',
         howCreated: `Created during an Innovation Lab (eVTOL / Telemetry Flight Deck) 1-click provisioning test in project "${projectId}".`,
         whyStayed: 'Cloud Storage buckets are persistent stateful resources and do not auto-delete when you leave or reset a studio demo.',
         attachedTo: '0 active Compute / Cloud Run / Dataflow workloads',
-        recommendation: 'Safe to delete — standalone demo bucket with no active compute consumers.',
+        recommendation: 'Click "Clean Up" to purge all demo objects and delete this bucket.',
       };
     }
 
@@ -125,11 +175,12 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
         isStale: true,
         badgeLabel: 'UNATTACHED BUCKET',
         badgeTone: 'amber',
+        targetTab: 'CLOUD_STORAGE',
         originTitle: 'Standalone Cloud Storage Bucket',
         howCreated: `Provisioned via GCP Storage API (${row.region || 'US'}, ${row.storageClass || 'STANDARD'}).`,
         whyStayed: 'Decoupled object storage persists independently of compute VMs or Cloud Run services.',
         attachedTo: '0 active VMs or Cloud Run volume mounts verified',
-        recommendation: 'Review contents in Cloud Storage Studio; delete if left over from an old test.',
+        recommendation: 'Click "Open Studio" to browse objects in Cloud Storage Studio, or "Clean Up" to delete if no longer needed.',
       };
     }
 
@@ -137,6 +188,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
       isStale: false,
       badgeLabel: 'ACTIVE BUCKET',
       badgeTone: 'emerald',
+      targetTab: 'CLOUD_STORAGE',
       originTitle: 'Attached Cloud Storage Bucket',
       howCreated: `Provisioned in ${row.region || 'US'}.`,
       whyStayed: 'Actively referenced by live compute workloads.',
@@ -146,7 +198,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
   }
 
   // 2. BigQuery Datasets
-  if (type === 'BigQuery Dataset' || row?.category === 'data') {
+  if (type === 'BigQuery Dataset') {
     if (
       lower.includes('flying_car_telemetry') ||
       lower.includes('starlink_orbital_failover') ||
@@ -159,11 +211,12 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
         isStale: true,
         badgeLabel: 'STALE DEMO DATASET',
         badgeTone: 'amber',
+        targetTab: 'BIGQUERY_STUDIO',
         originTitle: studioSource,
         howCreated: `Created via BigQuery REST API when testing ${studioSource} in "${projectId}".`,
         whyStayed: 'BigQuery datasets are persistent analytical schemas that remain in your project after a test stream finishes.',
         attachedTo: '0 active Cloud Run / Dataflow / VM ingestion pipelines',
-        recommendation: 'Safe to delete if you are done inspecting the demo telemetry tables.',
+        recommendation: 'Click "Clean Up" to drop this demo dataset and its tables, or "Open Studio" to query it in BigQuery Studio.',
       };
     }
 
@@ -176,11 +229,12 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
         isStale: true,
         badgeLabel: 'STANDALONE DATASET',
         badgeTone: 'amber',
+        targetTab: 'BIGQUERY_STUDIO',
         originTitle: 'Standalone BigQuery Analytical Dataset',
         howCreated: `Provisioned in location ${row.region || 'US'}.`,
-        whyStayed: 'BigQuery datasets persist until explicitly dropped.',
+        whyStayed: 'BigQuery datasets persist independently of compute VMs until explicitly dropped.',
         attachedTo: '0 active compute workloads referencing this dataset ID',
-        recommendation: 'Verify tables in BigQuery Studio or remove if no longer needed.',
+        recommendation: 'Click "Open Studio" to inspect tables in BigQuery Studio, or "Clean Up" to delete the dataset.',
       };
     }
 
@@ -188,6 +242,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
       isStale: false,
       badgeLabel: 'ACTIVE DATASET',
       badgeTone: 'emerald',
+      targetTab: 'BIGQUERY_STUDIO',
       originTitle: 'Connected BigQuery Lakehouse Dataset',
       howCreated: `Provisioned in ${row.region || 'US'}.`,
       whyStayed: 'Referenced by active workloads.',
@@ -492,6 +547,7 @@ export default function ResourceControlCenter({
                     const isDeletingThis =
                       Boolean(deletingIds[item.id]) ||
                       item.status === 'DEPROVISIONING';
+                    const isServiceApi = item.type === 'Enabled GCP Service API';
                     const canDelete =
                       onDeleteResource &&
                       [
@@ -500,6 +556,7 @@ export default function ResourceControlCenter({
                         'Compute Engine VM',
                         'Cloud Run Service',
                         'VPC Firewall Rule',
+                        'Enabled GCP Service API',
                       ].includes(item.type);
 
                     return (
@@ -531,52 +588,78 @@ export default function ResourceControlCenter({
                               {item.name}
                             </div>
                             <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-                              Provisioned: {formatReadableDate(item.createdAt)}
+                              {isServiceApi
+                                ? `API Endpoint: ${item.details?.serviceName || item.storageClass}`
+                                : `Provisioned: ${formatReadableDate(item.createdAt)}`}
                             </div>
                           </div>
 
-                          {canDelete && lin.isStale && (
-                            <div className="shrink-0">
-                              {drawerConfirmDeleteId === item.id ? (
-                                <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {lin.targetTab && lin.targetTab !== 'OVERVIEW' && onSelectTab && (
+                              <button
+                                type="button"
+                                onClick={() => onSelectTab(lin.targetTab)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                              >
+                                <span>Open Studio →</span>
+                              </button>
+                            )}
+                            {canDelete && lin.isStale && (
+                              <div>
+                                {drawerConfirmDeleteId === item.id ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      disabled={actionLoading || isDeletingThis}
+                                      onClick={async () => {
+                                        setDeletingIds((prev) => ({
+                                          ...prev,
+                                          [item.id]: true,
+                                        }));
+                                        setDrawerConfirmDeleteId(null);
+                                        await onDeleteResource({
+                                          ...item,
+                                          name: isServiceApi
+                                            ? item.details?.serviceName || item.storageClass
+                                            : item.name,
+                                        });
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                    >
+                                      {isDeletingThis
+                                        ? 'Working...'
+                                        : isServiceApi
+                                        ? 'Confirm Disable API'
+                                        : 'Confirm Delete'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDrawerConfirmDeleteId(null)}
+                                      className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     type="button"
                                     disabled={actionLoading || isDeletingThis}
-                                    onClick={async () => {
-                                      setDeletingIds((prev) => ({
-                                        ...prev,
-                                        [item.id]: true,
-                                      }));
-                                      setDrawerConfirmDeleteId(null);
-                                      await onDeleteResource(item);
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                    onClick={() => setDrawerConfirmDeleteId(item.id)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                                   >
-                                    {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>
+                                      {isDeletingThis
+                                        ? 'Working...'
+                                        : isServiceApi
+                                        ? 'Disable API'
+                                        : 'Clean Up'}
+                                    </span>
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDrawerConfirmDeleteId(null)}
-                                    className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={actionLoading || isDeletingThis}
-                                  onClick={() => setDrawerConfirmDeleteId(item.id)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>
-                                    {isDeletingThis ? 'Deleting...' : 'Clean Up'}
-                                  </span>
-                                </button>
-                              )}
-                            </div>
-                          )}
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="space-y-1.5 text-xs bg-white/80 dark:bg-zinc-950/70 rounded-lg p-3 border border-zinc-200/80 dark:border-zinc-800">
@@ -604,6 +687,16 @@ export default function ResourceControlCenter({
                               {lin.attachedTo}
                             </span>
                           </div>
+                          {lin.recommendation && (
+                            <div className="pt-1 border-t border-zinc-200/70 dark:border-zinc-800/80">
+                              <span className="font-bold text-blue-600 dark:text-blue-400">
+                                Recommended Action:{' '}
+                              </span>
+                              <span className="text-zinc-700 dark:text-zinc-200">
+                                {lin.recommendation}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

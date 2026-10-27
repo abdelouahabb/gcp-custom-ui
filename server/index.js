@@ -7569,6 +7569,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         }
       }
 
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         cleanedItems,
@@ -7607,6 +7608,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         projectId,
         cached.filter((a) => a.name !== serviceName)
       );
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         message: `Emergency Kill-Switch: Disabled Google Cloud API "${serviceName}" on project ${projectId}.`,
@@ -7626,6 +7628,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         projectId,
         { method: 'DELETE', timeout: 8000 }
       );
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         message: `Deleted Secret Manager secret "${shortName}" from project ${projectId}.`,
