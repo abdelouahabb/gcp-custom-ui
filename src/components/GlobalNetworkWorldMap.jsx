@@ -2770,10 +2770,12 @@ export default function GlobalNetworkWorldMap({
       // Scale step distance per tick so motion stays smooth at any refresh rate (100ms -> 2000ms)
       const tickScale = Math.max(0.6, Math.min(tickIntervalMs / 180, 4.5));
 
+      const effectiveMode = overrideSpec?.modeOverride || simMode;
+
       // Every 5th probe in LIVE_MIX when multiple regions are active evaluates Inter-Region Google Fiber Backbone
       if (
-        !overrideSpec &&
-        simMode === 'LIVE_MIX' &&
+        !overrideSpec?.originId &&
+        effectiveMode === 'LIVE_MIX' &&
         activeRegionIds.length > 1 &&
         seq % 5 === 0
       ) {
@@ -2825,15 +2827,15 @@ export default function GlobalNetworkWorldMap({
       let protocol = overrideSpec?.protocol || 'tcp';
       let port = overrideSpec?.port !== undefined ? Number(overrideSpec.port) : 443;
 
-      if (!overrideSpec) {
-        if (simMode === 'SSH_BRUTEFORCE') {
+      if (!overrideSpec?.originId) {
+        if (effectiveMode === 'SSH_BRUTEFORCE') {
           const scanners = effectiveClientOrigins.filter(
             (o) => o.kind === 'THREAT_SCANNER' || o.kind === 'PUBLIC_CLIENT'
           );
           origin = scanners[seq % Math.max(scanners.length, 1)];
           protocol = 'tcp';
           port = seq % 3 === 0 ? 3389 : 22;
-        } else if (simMode === 'IAP_ZERO_TRUST') {
+        } else if (effectiveMode === 'IAP_ZERO_TRUST') {
           if (seq % 2 === 0) {
             origin = effectiveClientOrigins[0]; // Live Client Origin
             protocol = 'tcp';
@@ -2843,7 +2845,7 @@ export default function GlobalNetworkWorldMap({
             protocol = 'tcp';
             port = 22;
           }
-        } else if (simMode === 'GLOBAL_LOAD_TEST') {
+        } else if (effectiveMode === 'GLOBAL_LOAD_TEST') {
           const clients = effectiveClientOrigins.filter(
             (o) =>
               o.kind === 'MY_LIVE_CLIENT' ||
@@ -2942,6 +2944,73 @@ export default function GlobalNetworkWorldMap({
       pkt,
     ]);
   };
+
+  // Switch scenario mode AND immediately launch a live 6-packet wave + update HUD/logs
+  const handleSelectSimMode = useCallback(
+    (nextMode) => {
+      setSimMode(nextMode);
+      setMapLens('TRAFFIC');
+      setDvrScrubIndex(0);
+      setIsRunning(true);
+      if (nextMode === 'IAP_ZERO_TRUST') {
+        setShowHybridTunnel(true);
+      }
+
+      const burstCount = Math.min(6, maxConcurrentPackets);
+      const burstPackets = Array.from({ length: burstCount }, (_, idx) => {
+        const pkt = spawnSimulatedPacket({ modeOverride: nextMode });
+        return {
+          ...pkt,
+          progress: Number((0.12 + idx * 0.11).toFixed(2)),
+        };
+      });
+
+      setInFlightPackets(burstPackets);
+
+      const newRings = burstPackets.slice(0, 3).map((pkt) => {
+        const interceptThreshold = pkt.verdict === 'DENY' ? 0.86 : 1.0;
+        const impactPoint = pointOnQuadraticBezier(
+          pkt.x1,
+          pkt.y1,
+          pkt.cx,
+          pkt.cy,
+          pkt.x2,
+          pkt.y2,
+          interceptThreshold
+        );
+        return {
+          id: `ring-mode-${pkt.id}`,
+          x: impactPoint.x,
+          y: impactPoint.y,
+          verdict: pkt.verdict,
+          kind: pkt.kind,
+        };
+      });
+      setImpactRings(newRings);
+
+      let allowInc = 0;
+      let denyInc = 0;
+      let bbInc = 0;
+      burstPackets.forEach((item) => {
+        if (item.kind === 'BACKBONE') bbInc += 1;
+        else if (item.verdict === 'ALLOW') allowInc += 1;
+        else denyInc += 1;
+      });
+      setCounters((c) => ({
+        totalPackets: c.totalPackets + burstPackets.length,
+        allowedPackets: c.allowedPackets + allowInc,
+        deniedPackets: c.deniedPackets + denyInc,
+        backbonePackets: c.backbonePackets + bbInc,
+      }));
+
+      const nowStr = new Date().toLocaleTimeString();
+      setPacketLog((logs) => [
+        ...burstPackets.map((p) => ({ ...p, completedAt: nowStr })),
+        ...logs.slice(0, 10),
+      ]);
+    },
+    [maxConcurrentPackets, spawnSimulatedPacket]
+  );
 
   // Throttled Animation & Spawner Loop (respects tickIntervalMs, maxConcurrentPackets, and document.hidden)
   useEffect(() => {
@@ -3763,25 +3832,27 @@ export default function GlobalNetworkWorldMap({
             <button
               type="button"
               onClick={() => setShowSubseaBackbone(!showSubseaBackbone)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showSubseaBackbone
                   ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                   : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
               }`}
             >
-              Fiber Mesh
+              <Radio className="w-3.5 h-3.5" />
+              <span>Fiber Mesh</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowZoneRings(!showZoneRings)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showZoneRings
                   ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                   : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
               }`}
             >
-              Zones (a/b/c)
+              <Layers className="w-3.5 h-3.5" />
+              <span>Zones (a/b/c)</span>
             </button>
 
             {onSelectTab && (
@@ -3865,49 +3936,78 @@ export default function GlobalNetworkWorldMap({
         </div>
 
         {/* Scenario Mode Selector Pills */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
           {[
             {
               id: 'LIVE_MIX',
+              icon: Globe,
+              badge: '443 · ICMP · Fiber',
               title: 'Global Live Traffic & VPC Mesh',
               desc: 'HTTPS :443, ICMP Ping, Inter-Region Fiber & Background Scans',
-              color: 'cyan',
             },
             {
               id: 'SSH_BRUTEFORCE',
+              icon: ShieldAlert,
+              badge: 'Port :22 & :3389',
               title: 'Global SSH/RDP Brute-Force Wave',
               desc: 'Tests whether your VPC Firewall blocks public :22 & :3389',
-              color: 'rose',
             },
             {
               id: 'IAP_ZERO_TRUST',
+              icon: Lock,
+              badge: '35.235.240.0/20',
               title: 'IAP Zero-Trust Tunnel Verification',
               desc: 'Compares Google IAP (35.235.240.0/20) vs Public Internet SSH',
-              color: 'emerald',
             },
             {
               id: 'GLOBAL_LOAD_TEST',
+              icon: Zap,
+              badge: 'GCLB :443 / :80',
               title: 'Multi-Region Edge Surge (:443)',
               desc: 'High-volume GCLB & global user HTTPS routing into active regions',
-              color: 'blue',
             },
           ].map((mode) => {
+            const ModeIcon = mode.icon;
             const active = simMode === mode.id;
             return (
               <button
                 key={mode.id}
                 type="button"
-                onClick={() => setSimMode(mode.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                onClick={() => handleSelectSimMode(mode.id)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                   active
-                    ? 'bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-900 border-blue-500 shadow-sm'
-                    : 'bg-zinc-50/80 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-zinc-50/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-zinc-900 dark:text-zinc-100'
                 }`}
               >
-                <div className="text-xs font-bold font-mono">{mode.title}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <ModeIcon className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-extrabold font-mono truncate">
+                      {mode.title}
+                    </span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold shrink-0 ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                    }`}
+                  >
+                    {mode.badge}
+                  </span>
+                </div>
                 <div
-                  className={`text-[10px] mt-0.5 line-clamp-1 ${
-                    active ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-500'
+                  className={`text-[10.5px] line-clamp-1 ${
+                    active ? 'text-blue-100' : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {mode.desc}
@@ -3916,6 +4016,185 @@ export default function GlobalNetworkWorldMap({
             );
           })}
         </div>
+
+        {/* Live Scenario Verdict & Firewall Rule Audit Strip (Updates Immediately on Mode Switch) */}
+        {(() => {
+          const sshPublicEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '185.220.101.44', protocol: 'tcp', port: 22 },
+            firewalls
+          );
+          const rdpPublicEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '185.220.101.44', protocol: 'tcp', port: 3389 },
+            firewalls
+          );
+          const iapSshEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '35.235.240.18', protocol: 'tcp', port: 22 },
+            firewalls
+          );
+          const httpsEdgeEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '130.211.0.22', protocol: 'tcp', port: 443 },
+            firewalls
+          );
+          const httpEdgeEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '130.211.0.22', protocol: 'tcp', port: 80 },
+            firewalls
+          );
+          const icmpEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: liveClientOriginNode.ip, protocol: 'icmp', port: 0 },
+            firewalls
+          );
+
+          return (
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs font-mono">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold uppercase">
+                    ACTIVE SCENARIO X-RAY · {simMode}
+                  </span>
+                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {simMode === 'SSH_BRUTEFORCE'
+                      ? 'Testing Public Threat Scanners (185.220.101.44) vs TCP :22 (SSH) & TCP :3389 (RDP)'
+                      : simMode === 'IAP_ZERO_TRUST'
+                      ? 'Comparing Google Cloud IAP Tunnel (35.235.240.0/20 → :22) vs Public Internet SSH'
+                      : simMode === 'GLOBAL_LOAD_TEST'
+                      ? `Evaluating Multi-Region GCLB Edge Surge (:443 & :80) Across ${activeRegionIds.length} Active Regions`
+                      : 'Evaluating Multi-Protocol Mesh (:443 HTTPS, ICMP Ping, :22 SSH & Andromeda Subsea Fiber)'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  {simMode === 'SSH_BRUTEFORCE' && (
+                    <>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          sshPublicEval.verdict === 'ALLOW'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        Public SSH (:22): {sshPublicEval.verdict} (
+                        {sshPublicEval.verdict === 'ALLOW'
+                          ? 'EXPOSED TO 0.0.0.0/0'
+                          : 'BLOCKED'}
+                        {' · '}
+                        {sshPublicEval.ruleName} p{sshPublicEval.priority})
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          rdpPublicEval.verdict === 'ALLOW'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        Public RDP (:3389): {rdpPublicEval.verdict} (
+                        {rdpPublicEval.verdict === 'ALLOW'
+                          ? 'EXPOSED TO 0.0.0.0/0'
+                          : 'BLOCKED'}
+                        {' · '}
+                        {rdpPublicEval.ruleName} p{rdpPublicEval.priority})
+                      </span>
+                    </>
+                  )}
+
+                  {simMode === 'IAP_ZERO_TRUST' && (
+                    <>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          iapSshEval.verdict === 'ALLOW'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        }`}
+                      >
+                        Google IAP (35.235.240.18:22): {iapSshEval.verdict} (
+                        {iapSshEval.ruleName} p{iapSshEval.priority})
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          sshPublicEval.verdict === 'DENY'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                        }`}
+                      >
+                        Public Internet (:22): {sshPublicEval.verdict} (
+                        {sshPublicEval.verdict === 'DENY'
+                          ? 'ZERO-TRUST ENFORCED ✓'
+                          : 'STILL OPEN TO 0.0.0.0/0'}
+                        {' · '}
+                        {sshPublicEval.ruleName})
+                      </span>
+                    </>
+                  )}
+
+                  {simMode === 'GLOBAL_LOAD_TEST' && (
+                    <>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          httpsEdgeEval.verdict === 'ALLOW'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName} p
+                        {httpsEdgeEval.priority})
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          httpEdgeEval.verdict === 'ALLOW'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        HTTP (:80): {httpEdgeEval.verdict} ({httpEdgeEval.ruleName} p
+                        {httpEdgeEval.priority})
+                      </span>
+                    </>
+                  )}
+
+                  {simMode === 'LIVE_MIX' && (
+                    <>
+                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                        HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                        ICMP Ping: {icmpEval.verdict} ({icmpEval.ruleName})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                        SSH (:22): {sshPublicEval.verdict} ({sshPublicEval.ruleName})
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSelectSimMode(simMode)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold cursor-pointer shadow-xs"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Fire 6-Packet Wave Now</span>
+                </button>
+                {(simMode === 'SSH_BRUTEFORCE' || simMode === 'IAP_ZERO_TRUST') &&
+                  sshPublicEval.verdict === 'ALLOW' && (
+                    <button
+                      type="button"
+                      disabled={deployingShield}
+                      onClick={handleDeployMapShield}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>
+                        {deployingShield
+                          ? 'Deploying Shield...'
+                          : 'Deploy Priority-100 SSH Block Shield'}
+                      </span>
+                    </button>
+                  )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 1B. Live GCP Cloud Billing & Regional GPU SKU Sync Bar (Variable Rates + Drift Detection) */}
@@ -4103,34 +4382,39 @@ export default function GlobalNetworkWorldMap({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 font-bold">Map Lens:</span>
               {[
-                { id: 'TRAFFIC', label: 'Live Network & Firewall' },
-                { id: 'CARBON_GRID', label: 'Carbon-Free Grid (CFE %)' },
-                { id: 'SPOT_ARBITRAGE', label: 'Spot VM Price Heatmap' },
-              ].map((lens) => (
-                <button
-                  key={lens.id}
-                  type="button"
-                  onClick={() => setMapLens(lens.id)}
-                  className={`px-2 py-1 rounded-md border transition-colors cursor-pointer ${
-                    mapLens === lens.id
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                  }`}
-                >
-                  {lens.label}
-                </button>
-              ))}
+                { id: 'TRAFFIC', icon: Activity, label: 'Live Network & Firewall' },
+                { id: 'CARBON_GRID', icon: Leaf, label: 'Carbon-Free Grid (CFE %)' },
+                { id: 'SPOT_ARBITRAGE', icon: Cpu, label: 'Spot VM Price Heatmap' },
+              ].map((lens) => {
+                const LensIcon = lens.icon;
+                return (
+                  <button
+                    key={lens.id}
+                    type="button"
+                    onClick={() => setMapLens(lens.id)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
+                      mapLens === lens.id
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold'
+                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <LensIcon className="w-3 h-3 shrink-0" />
+                    <span>{lens.label}</span>
+                  </button>
+                );
+              })}
 
               <button
                 type="button"
                 onClick={() => setShowHybridTunnel(!showHybridTunnel)}
-                className={`px-2 py-1 rounded-md border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
                   showHybridTunnel
                     ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 font-bold'
                     : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                 }`}
               >
-                Hybrid VPN/IAP Tunnel
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>Hybrid VPN/IAP Tunnel</span>
               </button>
             </div>
 
@@ -4139,13 +4423,14 @@ export default function GlobalNetworkWorldMap({
               <button
                 type="button"
                 onClick={() => setRouteAnalyzerEnabled(!routeAnalyzerEnabled)}
-                className={`px-2 py-1 rounded-md border cursor-pointer font-bold ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border cursor-pointer font-bold ${
                   routeAnalyzerEnabled
                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300'
                     : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                 }`}
               >
-                Fiber RTT & Egress Laser
+                <Crosshair className="w-3 h-3 shrink-0" />
+                <span>Fiber RTT &amp; Egress Laser</span>
               </button>
               {routeAnalyzerEnabled && (
                 <>
