@@ -2199,6 +2199,20 @@ export default function GlobalNetworkWorldMap({
   const [dvrScrubIndex, setDvrScrubIndex] = useState(0); // 0 = Live
 
   const toggleSeverRegion = (regionId) => {
+    const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
+    const isCurrentlySevered = severedRegions.includes(regionId);
+    if (!isCurrentlySevered) {
+      setIsRegionPinnedOnMap(true);
+      setShowZoneRings(true);
+      const healthyPeer =
+        reg?.backbonePeers?.find((p) => !severedRegions.includes(p)) ||
+        'us-east1';
+      showMapBanner(
+        `OUTAGE SIMULATED: ${regionId} OFFLINE — Auto-Failover routing traffic to healthy peer ${healthyPeer}`
+      );
+    } else {
+      showMapBanner(`REGION RESTORED: ${regionId} is back ONLINE (All zones healthy)`);
+    }
     setSeveredRegions((prev) =>
       prev.includes(regionId)
         ? prev.filter((id) => id !== regionId)
@@ -2207,6 +2221,33 @@ export default function GlobalNetworkWorldMap({
   };
 
   const toggleSeverZone = (zoneId) => {
+    const parentRegionId = zoneId.split('-').slice(0, 2).join('-');
+    const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === parentRegionId);
+    const isCurrentlySevered = severedZones.includes(zoneId);
+    if (!isCurrentlySevered) {
+      setSelectedRegionId(parentRegionId);
+      setSelectedZoneName(zoneId);
+      setIsRegionPinnedOnMap(true);
+      setShowZoneRings(true);
+      if (reg) {
+        const nextZ = Math.max(zoom, 2.8);
+        setZoom(nextZ);
+        const halfW = 1200 / nextZ / 2;
+        const halfH = 560 / nextZ / 2;
+        setCameraCenter({
+          x: Math.max(halfW, Math.min(1200 - halfW, reg.x)),
+          y: Math.max(halfH, Math.min(560 - halfH, reg.y)),
+        });
+      }
+      const healthySibling =
+        reg?.zones?.find((z) => z !== zoneId && !severedZones.includes(z)) ||
+        `${parentRegionId}-b`;
+      showMapBanner(
+        `ZONE SEVERED: ${zoneId} OFFLINE — Intra-Region HA Failover active to ${healthySibling} (<1ms RTT)`
+      );
+    } else {
+      showMapBanner(`ZONE RESTORED: ${zoneId} is back ONLINE`);
+    }
     setSeveredZones((prev) =>
       prev.includes(zoneId)
         ? prev.filter((id) => id !== zoneId)
@@ -5130,6 +5171,89 @@ export default function GlobalNetworkWorldMap({
                 </g>
               ))}
 
+              {/* Live Cross-Region Chaos Outage Auto-Failover Arcs (Always Visible When Any Region Is Severed — Even When PAUSED) */}
+              {severedRegions.map((sevId) => {
+                const sevReg = GCP_GLOBAL_REGIONS.find((r) => r.id === sevId);
+                if (!sevReg) return null;
+                const peerId =
+                  (sevReg.backbonePeers || []).find(
+                    (p) => !severedRegions.includes(p)
+                  ) || 'us-east1';
+                const peerReg =
+                  GCP_GLOBAL_REGIONS.find((r) => r.id === peerId) ||
+                  GCP_GLOBAL_REGIONS[1];
+                const failArc = buildArcPath(
+                  sevReg.x,
+                  sevReg.y,
+                  peerReg.x,
+                  peerReg.y
+                );
+                const failMid = pointOnQuadraticBezier(
+                  sevReg.x,
+                  sevReg.y,
+                  failArc.cx,
+                  failArc.cy,
+                  peerReg.x,
+                  peerReg.y,
+                  0.5
+                );
+                return (
+                  <g key={`failover-arc-${sevId}`} className="pointer-events-none">
+                    <path
+                      d={failArc.d}
+                      fill="none"
+                      stroke="#ef4444"
+                      strokeWidth={5 * invScale}
+                      strokeOpacity="0.22"
+                    />
+                    <path
+                      d={failArc.d}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth={2.2 * invScale}
+                      strokeDasharray="5 2.5"
+                      strokeOpacity="0.95"
+                    />
+                    <g
+                      transform={`translate(${peerReg.x}, ${peerReg.y}) scale(${invScale})`}
+                    >
+                      <circle
+                        r={12}
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="1.5"
+                        strokeDasharray="3 2"
+                      />
+                    </g>
+                    <g
+                      transform={`translate(${failMid.x}, ${failMid.y}) scale(${invScale})`}
+                    >
+                      <rect
+                        x={-68}
+                        y={-7.5}
+                        width={136}
+                        height={14}
+                        rx={3.5}
+                        fill="#090d16"
+                        fillOpacity="0.95"
+                        stroke="#ef4444"
+                        strokeWidth="1"
+                      />
+                      <text
+                        y={1.8}
+                        textAnchor="middle"
+                        fill="#fca5a5"
+                        fontSize="6"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {`FAILOVER: ${sevReg.name} ➔ ${peerReg.name}`}
+                      </text>
+                    </g>
+                  </g>
+                );
+              })}
+
               {/* All 40 Official Google Cloud Regions & 121 Orbiting Availability Zones (Exact WGS84 Projected) */}
               {sortedRegionsForRender.map((reg) => {
                 const workloads = regionWorkloadsMap[reg.id];
@@ -5137,15 +5261,22 @@ export default function GlobalNetworkWorldMap({
                 const isSelected = isRegionPinnedOnMap && selectedRegionId === reg.id;
                 const isHovered = hoveredRegionId === reg.id;
                 const isSevered = severedRegions.includes(reg.id);
+                const hasSeveredZone = reg.zones.some((z) =>
+                  severedZones.includes(z)
+                );
                 const isPeer = isRegionPinnedOnMap && selectedRegionPeers.has(reg.id);
-                const isFocusedNode = isSelected || isHovered || isSevered;
+                const isFocusedNode =
+                  isSelected || isHovered || isSevered || hasSeveredZone;
 
-                // Only expand the Availability Zone constellation when explicitly clicked/selected (never prematurely on hover!)
+                // Always expand Availability Zone constellation when a region or any of its zones is severed, or when selected
                 const shouldRenderZones =
-                  showZoneRings &&
-                  (isSelected || (!spotlightMode && zoom >= 2.2));
+                  isSevered ||
+                  hasSeveredZone ||
+                  (showZoneRings &&
+                    (isSelected || (!spotlightMode && zoom >= 2.2)));
                 const showDetailedZones = shouldRenderZones;
-                const zoneOrbitRadius = isSelected ? 22 : 14;
+                const zoneOrbitRadius =
+                  isSelected || isSevered || hasSeveredZone ? 22 : 14;
 
                 // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Unselected when no region is pinned = crisp 0.9, Dimmed when a region is pinned
                 const nodeOpacity = isFocusedNode
@@ -5174,6 +5305,8 @@ export default function GlobalNetworkWorldMap({
                 let lensColor = '#475569';
                 if (isSevered) {
                   lensColor = '#ea4335';
+                } else if (hasSeveredZone) {
+                  lensColor = '#f59e0b';
                 } else if (mapLens === 'CARBON_GRID') {
                   lensColor =
                     reg.cfePercent >= 80
@@ -5209,7 +5342,12 @@ export default function GlobalNetworkWorldMap({
                     ? zoneOrbitRadius + 11
                     : 15
                   : reg.labelOffset?.dy ?? 14;
-                const pillWidth = Math.max(reg.name.length * 4.3, 50);
+                const displayLabelText = isSevered
+                  ? `${reg.name} [OUTAGE]`
+                  : hasSeveredZone
+                  ? `${reg.name} [ZONE DOWN]`
+                  : reg.name;
+                const pillWidth = Math.max(displayLabelText.length * 4.3, 50);
 
                 return (
                   <g
@@ -5235,9 +5373,15 @@ export default function GlobalNetworkWorldMap({
                     {/* Halo for Focused Region, Active Workload Region, or Severed Chaos Region */}
                     {(isFocusedNode || (hasWorkloads && !spotlightMode)) && (
                       <circle
-                        r={isSelected || isSevered ? 32 : isHovered ? 24 : 18}
+                        r={
+                          isSelected || isSevered || hasSeveredZone
+                            ? 32
+                            : isHovered
+                            ? 24
+                            : 18
+                        }
                         fill={
-                          isSevered
+                          isSevered || hasSeveredZone
                             ? 'url(#chaosRegionHalo)'
                             : isSelected
                             ? 'url(#selectedRegionHalo)'
@@ -5247,19 +5391,21 @@ export default function GlobalNetworkWorldMap({
                     )}
 
                     {/* Outer Selection or Chaos Outage Hazard Reticle + Zone Orbit Track */}
-                    {(shouldRenderZones || isSevered) && (
+                    {(shouldRenderZones || isSevered || hasSeveredZone) && (
                       <circle
                         r={zoneOrbitRadius}
                         fill="none"
                         stroke={
-                          isSevered
+                          isSevered || hasSeveredZone
                             ? '#ea4335'
                             : isSelected
                             ? '#10b981'
                             : '#669df6'
                         }
-                        strokeOpacity="0.45"
-                        strokeWidth={isSelected || isSevered ? '1.3' : '1'}
+                        strokeOpacity="0.65"
+                        strokeWidth={
+                          isSelected || isSevered || hasSeveredZone ? '1.4' : '1'
+                        }
                         strokeDasharray="3 2"
                       />
                     )}
@@ -5276,7 +5422,7 @@ export default function GlobalNetworkWorldMap({
                       />
                     )}
 
-                    {/* Orbiting Availability Zone Nodes (-a, -b, -c, -f) - Only blooms when clicked/expanded! */}
+                    {/* Orbiting Availability Zone Nodes (-a, -b, -c, -f) */}
                     {shouldRenderZones &&
                       reg.zones.map((z, idx) => {
                         const angle =
@@ -5288,6 +5434,18 @@ export default function GlobalNetworkWorldMap({
                           isSelected && selectedZoneName === z;
                         const isZoneSevered =
                           isSevered || severedZones.includes(z);
+
+                        // Find healthy sibling zone for Intra-Region HA Failover arc when a single zone is severed
+                        const healthyIdx = reg.zones.findIndex(
+                          (hz) => !isSevered && !severedZones.includes(hz)
+                        );
+                        const hAngle =
+                          healthyIdx >= 0
+                            ? (healthyIdx / reg.zones.length) * Math.PI * 2 -
+                              Math.PI / 2
+                            : 0;
+                        const hx = Math.cos(hAngle) * zoneOrbitRadius;
+                        const hy = Math.sin(hAngle) * zoneOrbitRadius;
 
                         return (
                           <g key={z}>
@@ -5304,10 +5462,23 @@ export default function GlobalNetworkWorldMap({
                                   ? '#10b981'
                                   : '#669df6'
                               }
-                              strokeOpacity="0.45"
-                              strokeWidth="1"
+                              strokeOpacity={isZoneSevered ? '0.85' : '0.45'}
+                              strokeWidth={isZoneSevered ? '1.4' : '1'}
                               strokeDasharray="2 1.5"
                             />
+                            {/* Intra-Region HA Zone Failover Arc (Severed Zone -> Healthy Sibling Zone) */}
+                            {isZoneSevered && !isSevered && healthyIdx >= 0 && (
+                              <line
+                                x1={zx}
+                                y1={zy}
+                                x2={hx}
+                                y2={hy}
+                                stroke="#10b981"
+                                strokeWidth="1.5"
+                                strokeDasharray="2.5 1.5"
+                                strokeOpacity="0.9"
+                              />
+                            )}
                             <g
                               transform={`translate(${zx}, ${zy})`}
                               onClick={(e) => {
@@ -5322,8 +5493,17 @@ export default function GlobalNetworkWorldMap({
                               }}
                             >
                               <circle r={6.5} fill="transparent" />
+                              {isZoneSevered && (
+                                <circle
+                                  r={6.8}
+                                  fill="none"
+                                  stroke="#ef4444"
+                                  strokeWidth="1.1"
+                                  strokeDasharray="2 1.5"
+                                />
+                              )}
                               <circle
-                                r={isZoneSelected ? 4.4 : 3.4}
+                                r={isZoneSelected || isZoneSevered ? 4.6 : 3.4}
                                 fill={
                                   isZoneSevered
                                     ? '#ea4335'
@@ -5334,11 +5514,25 @@ export default function GlobalNetworkWorldMap({
                                 stroke="#020617"
                                 strokeWidth="1.2"
                               >
-                                <title>{`Zone ${z} · ${reg.city} (${reg.gpsLabel})`}</title>
+                                <title>{`Zone ${z} · ${
+                                  isZoneSevered ? 'SEVERED (OUTAGE)' : 'HEALTHY'
+                                } · ${reg.city}`}</title>
                               </circle>
+                              {isZoneSevered && (
+                                <text
+                                  y={2}
+                                  textAnchor="middle"
+                                  fill="#ffffff"
+                                  fontSize="5.5"
+                                  fontWeight="bold"
+                                  fontFamily="monospace"
+                                >
+                                  ✕
+                                </text>
+                              )}
                               {showDetailedZones && (
                                 <text
-                                  y={-6}
+                                  y={-6.5}
                                   textAnchor="middle"
                                   fill={
                                     isZoneSevered
@@ -5351,7 +5545,9 @@ export default function GlobalNetworkWorldMap({
                                   fontWeight="bold"
                                   fontFamily="monospace"
                                 >
-                                  -{shortZone}
+                                  {isZoneSevered
+                                    ? `-${shortZone} [DOWN]`
+                                    : `-${shortZone}`}
                                 </text>
                               )}
                             </g>
@@ -5362,7 +5558,7 @@ export default function GlobalNetworkWorldMap({
                     {/* Region Core Node (Exact WGS84 Geographic Coordinate Pin) */}
                     <circle
                       r={
-                        isSelected || isSevered
+                        isSelected || isSevered || hasSeveredZone
                           ? 6.4
                           : isHovered
                           ? 5.6
@@ -5383,9 +5579,23 @@ export default function GlobalNetworkWorldMap({
                       </title>
                     </circle>
 
-                    {/* Precision Center Pinpoint Dot on Selected/Hovered Region */}
-                    {isFocusedNode && (
-                      <circle r={1.6} fill="#ffffff" pointerEvents="none" />
+                    {/* Precision Center Pinpoint Dot or Outage Cross on Focused Region */}
+                    {isSevered ? (
+                      <text
+                        y={2.2}
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="6.5"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                        pointerEvents="none"
+                      >
+                        ✕
+                      </text>
+                    ) : (
+                      isFocusedNode && (
+                        <circle r={1.6} fill="#ffffff" pointerEvents="none" />
+                      )
                     )}
 
                     {/* Leader Line + Region Label Pill */}
@@ -5414,6 +5624,8 @@ export default function GlobalNetworkWorldMap({
                             stroke={
                               isSevered
                                 ? '#ea4335'
+                                : hasSeveredZone
+                                ? '#f59e0b'
                                 : isSelected
                                 ? '#10b981'
                                 : isHovered
@@ -5423,7 +5635,9 @@ export default function GlobalNetworkWorldMap({
                                 : '#1e293b'
                             }
                             strokeWidth={
-                              isSelected || isHovered || isSevered ? '1.1' : '0.6'
+                              isSelected || isHovered || isSevered || hasSeveredZone
+                                ? '1.1'
+                                : '0.6'
                             }
                           />
                           <text
@@ -5432,6 +5646,8 @@ export default function GlobalNetworkWorldMap({
                             fill={
                               isSevered
                                 ? '#fda4af'
+                                : hasSeveredZone
+                                ? '#fde68a'
                                 : isSelected
                                 ? '#34d399'
                                 : isHovered
@@ -5440,15 +5656,23 @@ export default function GlobalNetworkWorldMap({
                                 ? '#f8fafc'
                                 : '#cbd5e1'
                             }
-                            fontSize={isSelected || isHovered ? '7.3' : '6.3'}
+                            fontSize={
+                              isSelected || isHovered || isSevered || hasSeveredZone
+                                ? '7.3'
+                                : '6.3'
+                            }
                             fontWeight={
-                              isSelected || isHovered || hasWorkloads
+                              isSelected ||
+                              isHovered ||
+                              isSevered ||
+                              hasSeveredZone ||
+                              hasWorkloads
                                 ? 'bold'
                                 : 'normal'
                             }
                             fontFamily="monospace"
                           >
-                            {reg.name}
+                            {displayLabelText}
                           </text>
                         </g>
                       </g>
