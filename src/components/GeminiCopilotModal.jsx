@@ -264,6 +264,17 @@ export default function GeminiCopilotModal({
     }
   }, [isOpen, projectId, runLiveProjectAudit]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const exposedFirewalls = useMemo(() => {
     const fws = overview?.firewalls || [];
     return fws.filter(ruleExposesSensitivePortsToWorld);
@@ -449,10 +460,16 @@ export default function GeminiCopilotModal({
   const dossier = synthesisData?.executiveDossier;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-6">
-      <div className="w-[96vw] max-w-7xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-6"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[96vw] max-w-7xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
         {/* Sober Enterprise Header */}
-        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-[#1b1c1f] flex flex-wrap items-center justify-between gap-4">
+        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-[#1b1c1f] flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <div
               className={`w-11 h-11 rounded-xl flex items-center justify-center border font-mono font-extrabold text-base shrink-0 ${
@@ -492,7 +509,7 @@ export default function GeminiCopilotModal({
                       }`}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
                 Unified Zero-Trust firewall posture, stale/orphaned resource cleanup, SHA-256 Merkle state drift, and ClickOps-to-Terraform HCL sync.
               </p>
             </div>
@@ -502,30 +519,31 @@ export default function GeminiCopilotModal({
             <button
               type="button"
               onClick={handleDownloadSignedDossier}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer transition-colors"
               title="Download Cryptographically Signed SHA-256 Executive Audit Dossier (JSON)"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export Audit JSON</span>
+              <span className="hidden md:inline">Export JSON</span>
             </button>
             <button
               type="button"
               onClick={runLiveProjectAudit}
               disabled={loadingScan}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin' : ''}`}
               />
-              <span>{loadingScan ? 'Scanning...' : 'Re-Scan Project'}</span>
+              <span>{loadingScan ? 'Scanning...' : 'Re-Scan'}</span>
             </button>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close Health and Drift modal"
-              className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-200 hover:bg-red-600 dark:bg-zinc-800 dark:hover:bg-red-600 text-zinc-900 dark:text-zinc-100 hover:text-white border border-zinc-300 dark:border-zinc-700 text-xs font-extrabold transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -1372,6 +1390,21 @@ export default function GeminiCopilotModal({
               />
             </div>
           )}
+        </div>
+
+        {/* Sticky Modal Footer with Close Button */}
+        <div className="px-6 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-[#1b1c1f] flex items-center justify-between gap-3">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Press <kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 font-mono text-[11px]">Esc</kbd> or click outside to close
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-extrabold transition-colors cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Close Health &amp; Drift</span>
+          </button>
         </div>
       </div>
     </div>
