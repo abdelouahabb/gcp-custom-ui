@@ -19,7 +19,6 @@ import {
   FileCode2,
   Sparkles,
 } from 'lucide-react';
-import GoogleCloudRemoteMcpStudio from './GoogleCloudRemoteMcpStudio';
 
 export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   const normalized = String(track || 'ALPHA').toUpperCase();
@@ -86,8 +85,8 @@ const STUDIO_TABS = [
     shortLabel: '[GA 590.0.1] Agent Registry & Identity Control Plane',
     subtitle: 'gcloud agent-registry mcp-servers · agents · agent-identity [GA] · skills [ALPHA]',
     icon: Cpu,
-    ownerStudioTab: 'CLOUD_SOC',
-    ownerStudioLabel: 'Open Cloud SOC Agentic Audit',
+    ownerStudioTab: 'MCP_HUB',
+    ownerStudioLabel: 'Open Dedicated MCP Servers Studio (48 Servers)',
   },
   {
     id: 'ALPHA_PAM_TROUBLESHOOT',
@@ -170,17 +169,7 @@ const STUDIO_TABS = [
     ownerStudioTab: 'VERTEX_AI',
     ownerStudioLabel: 'Open Vertex AI & Hypercomputer Studio',
   },
-  // REMOTE MCP HUB & 8-PILLAR OBSERVABILITY/ORCHESTRATION
-  {
-    id: 'OFFICIAL_REMOTE_MCP_HUB',
-    wave: 'WAVE_3',
-    track: 'ALPHA_AND_BETA',
-    shortLabel: '[2026 MCP] 48 Official *.googleapis.com/mcp Servers',
-    subtitle: 'Live JSON-RPC 2.0 tools/list · tools/call · 4-Server Triage Chains · Gemini MCP Agent',
-    icon: Sparkles,
-    ownerStudioTab: 'CLOUD_SOC',
-    ownerStudioLabel: 'Open Cloud SOC & MCP Sentinel',
-  },
+  // 8-PILLAR OBSERVABILITY, ORCHESTRATION & AI
   {
     id: 'WAVE3_GCLOUD_590_SUITE',
     wave: 'WAVE_3',
@@ -373,7 +362,7 @@ export default function GcloudAlphaBetaStudio({
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
                   GCLOUD {overview?.sdk?.coreVersion || '590.0.1'} CLI LAB
-                  (12 COMMAND SUITES)
+                  (11 COMMAND SUITES)
                 </span>
               </span>
               <ReleaseTrackBadge track="GA" />
@@ -517,10 +506,10 @@ export default function GcloudAlphaBetaStudio({
               onChange={(e) => setWaveFilter(e.target.value)}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">Domain: All CLI Suites (12)</option>
+              <option value="ALL">Domain: All CLI Suites (11)</option>
               <option value="WAVE_1">Runtime, Agent Identity &amp; PAM (5)</option>
               <option value="WAVE_2">Model Armor, Quotas &amp; AI HPC (5)</option>
-              <option value="WAVE_3">Remote MCP &amp; Observability (2)</option>
+              <option value="WAVE_3">Observability &amp; Orchestration (1)</option>
             </select>
 
             <select
@@ -1005,21 +994,27 @@ export default function GcloudAlphaBetaStudio({
             ))}
           </div>
 
-          <GoogleCloudRemoteMcpStudio
-            projectId={projectId}
-            region={region}
-            onShowToast={onShowToast}
-          />
+          {/* Dedicated Top-Level MCP Servers Studio Bridge (Zero Duplication) */}
+          <div className="p-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                Looking for Interactive JSON-RPC 2.0 `tools/list` &amp; `tools/call` across all 48 `*.googleapis.com/mcp` Servers?
+              </div>
+              <div className="text-[11px] font-mono text-zinc-500">
+                The full Remote MCP Hub now lives in its own dedicated top-level menu tab (`MCP Servers`) to avoid duplication.
+              </div>
+            </div>
+            {typeof onSelectStudioTab === 'function' && (
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('MCP_HUB')}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer shrink-0"
+              >
+                Open Dedicated MCP Servers Tab →
+              </button>
+            )}
+          </div>
         </div>
-      )}
-
-      {/* TAB 0: [2026 MCP MOONSHOT] 48 OFFICIAL GOOGLE CLOUD REMOTE MCP SERVERS */}
-      {activeSubTab === 'OFFICIAL_REMOTE_MCP_HUB' && (
-        <GoogleCloudRemoteMcpStudio
-          projectId={projectId}
-          region={region}
-          onShowToast={onShowToast}
-        />
       )}
 
       {/* TAB 3: [GA · 590.0.1] PAM JIT IAM & 403 POLICY TROUBLESHOOTER */}

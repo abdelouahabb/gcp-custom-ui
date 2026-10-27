@@ -4347,32 +4347,6 @@ function CloudPulseCockpit() {
                     }}
                   />
 
-                  {/* 2026 Beyond-Console Innovation Lab */}
-                  <Revolutionary2026Suite
-                    projectId={selectedProjectId}
-                    overview={overview}
-                    initialSubTab={innovationSubTab}
-                    onRefreshOverview={() => {
-                      fetchProjectOverview(selectedProjectId);
-                      setVmRefreshTrigger((c) => c + 1);
-                    }}
-                    onOpenProvision={handleOpenProvision}
-                    onDeleteResource={handleDeleteResource}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onSelectStudioTab={handleNavigateStudioTab}
-                    onSelectProject={(pid) => {
-                      sessionStorage.setItem(
-                        'cloudpulse_project_explicit',
-                        'true'
-                      );
-                      setSelectedProjectId(pid);
-                      showToast(`Switched active project to ${pid}`);
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-
                   {/* 5-Domain Organized Studio Hub (Zero Duplication Across Standard GCP Services) */}
                   <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
@@ -4399,7 +4373,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Google for Startups Scale & Credit Radar' },
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Categorized Beyond-Console Labs' },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '16 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },

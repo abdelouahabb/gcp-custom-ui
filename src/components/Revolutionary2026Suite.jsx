@@ -1027,7 +1027,7 @@ export default function Revolutionary2026Suite({
         </div>
       </div>
 
-      {/* Category Filter Toolbar + Lab Suite Navigation Grid */}
+      {/* Category Filter Toolbar + 16-Studio Zero-Duplicate 4x4 Navigation Grid */}
       <div className="space-y-3">
         <div className="px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1072,26 +1072,20 @@ export default function Revolutionary2026Suite({
                 ) {
                   setSubTab('TOPOLOGY');
                 } else if (
-                  nextCat === 'SECURITY_DLP' &&
-                  !['SECURITY', 'X1', 'X4'].includes(subTab)
-                ) {
-                  setSubTab('SECURITY');
-                } else if (
                   nextCat === 'AI_IAC' &&
-                  !['DREAM_BRAIN', 'MODEL_ARMOR_FINOPS', 'TERRAFORM', 'X6'].includes(subTab)
+                  !['DREAM_BRAIN', 'TERRAFORM'].includes(subTab)
                 ) {
                   setSubTab('DREAM_BRAIN');
                 }
               }}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">All Domains (24 Specialized Cloud Engineering Studios)</option>
-              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 590.0.1</option>
-              <option value="QUANTUM">2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews</option>
-              <option value="FINOPS">FinOps Cost Control, Night-Mode Sleep, Zombie Hunter &amp; Egress Analysis</option>
-              <option value="PERF_TOPOLOGY">4-Layer Topology, Latency Benchmark &amp; Cold-Start Surgeon</option>
-              <option value="SECURITY_DLP">Zero-Trust IAM, In-Memory Storage DLP &amp; Ransomware Air-Gap</option>
-              <option value="AI_IAC">Pre-Crime Billing Forecaster, Model Armor, Reverse-Terraform &amp; RAM Vault</option>
+              <option value="ALL">All Domains (16 Specialized Studios · 4×4 Grid · Zero Duplicates)</option>
+              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 590.0.1 (8)</option>
+              <option value="QUANTUM">2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews (1)</option>
+              <option value="FINOPS">FinOps Sleep &amp; Zombie Hunter, Cross-Region Teleporter &amp; Egress Tollbooth (3)</option>
+              <option value="PERF_TOPOLOGY">4-Layer Topology &amp; Latency/Cold-Start/12-City RTT Suite (2)</option>
+              <option value="AI_IAC">Pre-Crime Billing Forecaster, Dream Stack &amp; Reverse-Terraform + C4 Mermaid (2)</option>
             </select>
             {labCategory !== 'ALL' && (
               <button
@@ -1104,12 +1098,12 @@ export default function Revolutionary2026Suite({
             )}
           </div>
           <span className="text-[11px] font-mono text-zinc-500">
-            Select an Engineering Studio below — hover any button for architecture &amp; API guide:
+            16 Non-Overlapping Studios (4×4 Bento Grid) — hover any button for architecture &amp; API guide:
           </span>
         </div>
 
-        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards · Grouped by Domain) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+        {/* 16-Studio Sub-Navigation Pills (Exact 4x4 Equal-Width Bento Grid · Zero Duplicates) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {[
             {
               id: 'WAVE11_MOONSHOT',
@@ -1171,7 +1165,7 @@ export default function Revolutionary2026Suite({
               badge: '10-PERSONA',
               label:
                 '10-Persona War-Room — Enterprise Architecture Review Board (Architect, SRE, FinOps, SecOps)',
-              tip: '10-Persona War-Room & Enterprise Architecture Review Board: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps Lead, (06) AI/MLOps, (07) SRE Commander, (08) DBRE, (09) FinOps & GreenOps, and (10) K8s Platform Engineer + Live SHA-256 State Diff',
+              tip: '10-Persona War-Room & Enterprise Architecture Review Board: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps Lead, (06) AI/MLOps, (07) SRE Commander, (08) DBRE, (09) FinOps & GreenOps, and (10) K8s Platform Engineer + Live C4 Mermaid Visualizer',
               icon: ShieldCheck,
             },
             {
@@ -1195,20 +1189,11 @@ export default function Revolutionary2026Suite({
             {
               id: 'FINOPS_SLEEP',
               category: 'FINOPS',
-              badge: 'NIGHT-MODE $0',
+              badge: 'SLEEP & ZOMBIES',
               label:
-                'Night-Mode Sleep & Burn Radar — Hourly Cost Breakdown & Compute Hibernation',
-              tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
+                'Night-Mode Sleep, Burn Radar & Zombie Hunter — Compute Hibernation & Orphaned Disk/IP Cleaner',
+              tip: 'Inspect real-time hourly & 30-day cost breakdown per resource, park non-production VMs & Cloud Run services to $0/hr overnight, and exterminate unattached Persistent Disks & unused Static External IPs ($7.30/mo)',
               icon: DollarSign,
-            },
-            {
-              id: 'ZOMBIES',
-              category: 'FINOPS',
-              badge: 'ZOMBIE HUNTER',
-              label:
-                'Zombie Resource Hunter — Idle & Orphaned Disk / Static IP Cleaner',
-              tip: 'Detect unattached Persistent Disks, unused Static External IPs ($7.30/mo), and idle warm instances to reclaim wasted cloud spend in 1 click',
-              icon: AlertTriangle,
             },
             {
               id: 'TELEPORT_DIFF',
@@ -1240,56 +1225,11 @@ export default function Revolutionary2026Suite({
             {
               id: 'BENCHMARK',
               category: 'PERF_TOPOLOGY',
-              badge: 'HTTP X-RAY',
+              badge: 'LATENCY & COLD-START',
               label:
-                'Stress Arena & HTTP X-Ray — Cold-Start & P95 Latency Load Tester',
-              tip: 'Measure #1 First-Hit Cold-Start latency vs Warm P50/P95/P99 latency, throughput (RPS), and HTTP response headers against live endpoints',
+                'Stress Arena, Cold-Start Surgeon & 12-City RTT — Load Tester, Distroless & Cloud CDN Edge',
+              tip: 'Unified Performance & Latency Suite: (1) Stress Arena & HTTP X-Ray P95 Load Tester, (2) Cloud Run Cold-Start Surgeon & Distroless Dockerfile Generator, and (3) 12-Metropolis Speed-of-Light Global RTT vs Cloud CDN Edge Comparator',
               icon: Zap,
-            },
-            {
-              id: 'X2',
-              category: 'PERF_TOPOLOGY',
-              badge: 'COLD-START',
-              label:
-                'Cold-Start Surgeon — Cloud Run Startup Profiler & Distroless Dockerfile Generator',
-              tip: 'Break down Cloud Run startup phases, generate multi-stage Distroless Dockerfiles, and enable Startup CPU Boost + Gen2 execution in 1 click',
-              icon: Zap,
-            },
-            {
-              id: 'X5',
-              category: 'PERF_TOPOLOGY',
-              badge: '12 CITIES RTT',
-              label:
-                '12-Metropolis Speed-of-Light — Global Client Latency & Cloud CDN Edge Comparator',
-              tip: 'Calculate optical-fiber RTT and TLS 1.3 latency from 12 global client cities to your active GCP regions vs Google Cloud CDN Anycast Edge',
-              icon: Globe,
-            },
-            {
-              id: 'SECURITY',
-              category: 'SECURITY_DLP',
-              badge: `${(auditData?.findings?.length || 0) + publicRun.length} ALERTS`,
-              label:
-                'Zero-Trust Perimeter Scanner — VPC Firewall 0.0.0.0/0 & IAM Auditor',
-              tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
-              icon: ShieldAlert,
-            },
-            {
-              id: 'X1',
-              category: 'SECURITY_DLP',
-              badge: 'RAM DLP',
-              label:
-                'Storage RAM DLP X-Ray — Cloud Storage Secret Leak & PII Scanner',
-              tip: 'Stream live Cloud Storage objects in server RAM, scan for leaked API keys, private keys, and regulated PII, and redact leaks in-place',
-              icon: ShieldAlert,
-            },
-            {
-              id: 'X4',
-              category: 'SECURITY_DLP',
-              badge: 'SEC 17a-4',
-              label:
-                'Ransomware Air-Gap Auditor — Cloud Storage WORM Lock & Retention Shield',
-              tip: 'Audit every Cloud Storage bucket against ransomware deletion risks (Soft-Delete, Object Versioning, WORM Lock) and harden in 1 click',
-              icon: Lock,
             },
             {
               id: 'DREAM_BRAIN',
@@ -1301,37 +1241,24 @@ export default function Revolutionary2026Suite({
               icon: Sparkles,
             },
             {
-              id: 'MODEL_ARMOR_FINOPS',
-              category: 'AI_IAC',
-              badge: '-80% LLM CACHE',
-              label:
-                'Vertex AI Model Armor Firewall & Context Cache Cost Calculator',
-              tip: 'Block prompt injection, jailbreaks, and secret/PII exfiltration at the GCP edge with Vertex AI Model Armor, plus calculate -80% LLM Context Caching savings',
-              icon: ShieldCheck,
-            },
-            {
               id: 'TERRAFORM',
               category: 'AI_IAC',
-              badge: 'IaC EXPORT',
+              badge: 'IaC & C4 MERMAID',
               label:
-                'Reverse-Terraform — Live Project to main.tf & gcloud Script Exporter',
-              tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf), Terraform 1.5+ import blocks, or a reproducible gcloud script',
+                'Reverse-Terraform & C4 Mermaid — Live Project to main.tf, gcloud Script & Visual C4 Diagram',
+              tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf), Terraform 1.5+ import blocks, a reproducible gcloud script, or an interactive browser SVG C4 Mermaid Architecture Diagram',
               icon: FileCode2,
-            },
-            {
-              id: 'X6',
-              category: 'AI_IAC',
-              badge: 'RAM AI VAULT',
-              label:
-                'Zero-Disk RAM Vault — AES-256-GCM Encrypted Gemini API Key & SRE Assistant',
-              tip: 'Zero-disk-persistence AES-256-GCM In-Memory Vault for live Gemini 3.8 Flash / 3.1 Pro SRE & FinOps Architecture Assistant',
-              icon: Sparkles,
             },
           ]
             .filter((t) => labCategory === 'ALL' || t.category === labCategory)
             .map((t) => {
               const Icon = t.icon;
-              const active = subTab === t.id;
+              const active =
+                subTab === t.id ||
+                (t.id === 'FINOPS_SLEEP' && subTab === 'ZOMBIES') ||
+                (t.id === 'BENCHMARK' && ['X2', 'X5'].includes(subTab)) ||
+                (t.id === 'FIVE_PERSONA_COUNCIL' &&
+                  String(subTab || '').startsWith('FIVE_PERSONA_'));
               return (
                 <button
                   key={t.id}
@@ -1364,60 +1291,125 @@ export default function Revolutionary2026Suite({
               );
             })}
         </div>
+
+        {/* Cross-Studio Canonical Deep-Link Bar (Zero Duplication Across Dedicated Studios) */}
+        {onSelectStudioTab && (
+          <div className="px-3.5 py-2.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[10.5px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
+              Dedicated Domain Bridges (Canonical Homes — Zero Duplication):
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('STARTUP_10X')}
+                title="Open dedicated Startup 10X Mentor Studio (Runway, Burn Guardrails & Launch Readiness)"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Startup 10X Studio →
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('MCP_HUB')}
+                title="Open dedicated MCP Servers Studio (48 Official *.googleapis.com/mcp Endpoints)"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                48 Official MCP Servers →
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('CLOUD_STORAGE', 'RAM_DLP')}
+                title="Open Storage RAM DLP X-Ray & SEC 17a-4 WORM Ransomware Shield inside Cloud Storage Studio"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Storage RAM DLP &amp; WORM Lock →
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')}
+                title="Open IAM Surgeon, SA Key Kill-Switch & SHA-256 Time-Machine inside IAM Studio"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                IAM Surgeon &amp; SA Key Kill-Switch →
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                title="Open 20-Pillar Cloud SOC, Vertex AI Model Armor & Red-Team Ledger"
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Cloud SOC &amp; Model Armor →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* FLAGSHIP WAVE 16 ENTERPRISE MOONSHOT LAB */}
+      {/* FLAGSHIP MULTI-REGION DR GAMEDAY & SQL SURGEON */}
       {subTab === 'WAVE16_ENTERPRISE_MOONSHOT' && (
         <Wave16EnterpriseMoonshotStudio
           projectId={projectId}
           onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
       )}
 
-      {/* FLAGSHIP WAVE 15 DYSON VECTOR SQL, SLSA v1.0 PROVENANCE, LOGGING SURGEON & TLS 1.3 X.509 STUDIO */}
+      {/* FLAGSHIP SUPPLY-CHAIN SLSA & LOG RCA STUDIO */}
       {subTab === 'WAVE15_DYSON_MOONSHOT' && (
         <Wave15DysonSupplyLoggingTlsStudio
           projectId={projectId}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
         />
       )}
 
-      {/* FLAGSHIP WAVE 14 QUANTUM VAULT, BIGQUERY TIME-TRAVEL & SELF-HEALING DOCTOR STUDIO */}
+      {/* FLAGSHIP SELF-HEALING CLOUD DOCTOR & PITR STUDIO */}
       {subTab === 'WAVE14_QUANTUM_DOCTOR' && (
         <Wave14QuantumTimeTravelDoctorStudio
           projectId={projectId}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onRefreshOverview={onRefreshOverview}
         />
       )}
 
-      {/* FLAGSHIP WAVE 13 STARLINK ORBITAL MESH & NEURALINK SINGULARITY STUDIO */}
+      {/* FLAGSHIP GLOBAL EDGE & PROMPT-TO-DAG STUDIO */}
       {subTab === 'WAVE13_STARLINK_NEURALINK' && (
         <Wave13StarlinkNeuralinkStudio
           projectId={projectId}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onRefreshOverview={onRefreshOverview}
         />
       )}
 
-      {/* FLAGSHIP WAVE 12 ROADSTER FLIGHT DECK STUDIO */}
+      {/* FLAGSHIP AUTONOMOUS DRIFT & MIGRATION DECK */}
       {subTab === 'WAVE12_ROADSTER' && (
         <Wave12RoadsterFlightDeckStudio
           projectId={projectId}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
           onShowToast={onShowToast}
           onRefreshOverview={onRefreshOverview}
         />
       )}
 
-      {/* FLAGSHIP WAVE 11 MOONSHOT STUDIO */}
+      {/* FLAGSHIP RELEASE & MULTI-PROJECT STUDIO */}
       {subTab === 'WAVE11_MOONSHOT' && (
         <Wave11MoonshotStudio
           projectId={projectId}
           overview={overview}
           liveBurn={burn}
           onSelectProject={onSelectProject}
+          onSelectStudioTab={onSelectStudioTab}
           onRunInShell={onRunInShell}
           onShowToast={onShowToast}
           onShowError={onShowError}
@@ -1963,6 +1955,36 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               ))}
             </div>
           </div>
+
+          {/* Unified Zombie Resource Hunter inside Night-Mode Sleep, Burn Radar & Zombie Hunter */}
+          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Zombie Resource Hunter &amp; Unattached Waste Evictor (Static IPs, Stopped VM Disks, Cold Buckets)
+              </div>
+              {onSelectStudioTab && (
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('FINOPS')}
+                  className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  Open FinOps Billing Studio →
+                </button>
+              )}
+            </div>
+            <EngineerWishlistWave2
+              activeMode="ZOMBIES"
+              projectId={projectId}
+              overview={overview}
+              vms={vms}
+              onRefreshOverview={() => {
+                fetchExtraData();
+                if (onRefreshOverview) onRefreshOverview();
+              }}
+              onShowToast={onShowToast}
+              onShowError={onShowError}
+            />
+          </div>
         </div>
       )}
 
@@ -2265,6 +2287,53 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* UNIFIED LATENCY & PERFORMANCE SUITE: STRESS ARENA (BENCHMARK) + COLD-START SURGEON (X2) + 12-METROPOLIS RTT (X5) */}
+      {['BENCHMARK', 'X2', 'X5'].includes(subTab) && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+            {[
+              {
+                id: 'BENCHMARK',
+                label: 'Stress Arena & HTTP X-Ray P50/P95 Load Tester',
+                badge: 'LOAD BENCHMARK',
+              },
+              {
+                id: 'X2',
+                label: 'Cloud Run Cold-Start Surgeon & Distroless Builder',
+                badge: 'COLD-START WATERFALL',
+              },
+              {
+                id: 'X5',
+                label: '12-Metropolis Speed-of-Light Global RTT vs CDN',
+                badge: 'GLOBAL EDGE RTT',
+              },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSubTab(item.id)}
+                className={`w-full px-3 py-2 rounded-lg text-left border transition-colors cursor-pointer flex items-center justify-between gap-2 ${
+                  subTab === item.id
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                }`}
+              >
+                <span className="text-xs font-bold truncate">{item.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold shrink-0 ${
+                    subTab === item.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  {item.badge}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
