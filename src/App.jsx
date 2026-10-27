@@ -3582,8 +3582,8 @@ function CloudPulseCockpit() {
     {
       id: 'OVERVIEW',
       group: 'COMMAND',
-      label: '2026 SRE',
-      tip: 'Executive 2026 SRE Cockpit: Live Project KPIs, Featured 2026 Innovation Lab, 5-Domain Architecture Hub, Live Resource Inventory & API Kill-Switch',
+      label: 'Overview',
+      tip: 'Project Overview & Resource Lineage: Live Project KPIs, Stale/Orphaned Resource Detector, Live Resource Inventory, 5-Domain Architecture Hub & API Kill-Switch',
       icon: LayoutDashboard,
     },
     {
@@ -3838,8 +3838,23 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: [5-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
+            {/* Top-Right Cluster: [Overview] + [10-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
+              {/* Big 1-Click Overview & Resource Lineage Button */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('OVERVIEW')}
+                title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'OVERVIEW'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 shrink-0" />
+                <span>Overview</span>
+              </button>
+
               {/* 1-Click 10-Persona Enterprise Architecture Board Launcher */}
               <button
                 type="button"
@@ -4347,6 +4362,17 @@ function CloudPulseCockpit() {
                     }}
                   />
 
+                  <ResourceControlCenter
+                    resources={overview?.resources || []}
+                    projectId={selectedProjectId}
+                    onTriggerAction={handleTriggerAction}
+                    onDeleteResource={handleDeleteResource}
+                    actionLoading={actionLoading}
+                    onRunInShell={handleRunInShell}
+                    onAskCopilot={handleOpenCopilotWithPrompt}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                  />
+
                   {/* 5-Domain Organized Studio Hub (Zero Duplication Across Standard GCP Services) */}
                   <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
@@ -4481,17 +4507,6 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
-
-                  <ResourceControlCenter
-                    resources={overview?.resources || []}
-                    projectId={selectedProjectId}
-                    onTriggerAction={handleTriggerAction}
-                    onDeleteResource={handleDeleteResource}
-                    actionLoading={actionLoading}
-                    onRunInShell={handleRunInShell}
-                    onAskCopilot={handleOpenCopilotWithPrompt}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
-                  />
 
                   <div id="emergency-api-killswitch-section">
                     <EmergencyApiKillSwitch
