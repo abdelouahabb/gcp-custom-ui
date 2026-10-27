@@ -1859,9 +1859,8 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/soc/deep-probe') ||
       rawUrl.includes('/soc/purple-team-drill') ||
       rawUrl.includes('/soc/ai-red-team-audit') ||
-      (rawUrl.includes('/wave16/action') &&
-        (body.action === 'RUN_DR_GAMEDAY_DRILL' ||
-          body.action === 'DRY_RUN_SQL_SURGEON')) ||
+      rawUrl.includes('/wave16/action') ||
+      rawUrl.includes('/startup-10x/remediate') ||
       rawUrl.includes('/vms/ssh-identity-mode') ||
       rawUrl.includes('/scp/') ||
       rawUrl.includes('/s3-compatible/') ||
