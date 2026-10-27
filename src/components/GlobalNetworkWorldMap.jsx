@@ -29,6 +29,7 @@ import {
   Maximize2,
   Move,
   Navigation,
+  HelpCircle,
 } from 'lucide-react';
 import {
   WORLD_COUNTRY_PATHS,
@@ -2959,7 +2960,10 @@ export default function GlobalNetworkWorldMap({
     const orig =
       effectiveClientOrigins.find((o) => o.id === customOriginId) ||
       liveClientOriginNode;
-    const evalIp = orig.evalIp || orig.ip || '198.51.100.1';
+    const liveProbeIp = (liveGeoTelemetry?.regionalSocketProbes || []).find(
+      (p) => p.regionId === customTargetRegionId
+    )?.resolvedIp;
+    const evalIp = orig.evalIp || liveProbeIp || orig.ip;
     return {
       origin: orig,
       sourceIp: evalIp,
@@ -2977,12 +2981,42 @@ export default function GlobalNetworkWorldMap({
     };
   }, [
     customOriginId,
+    customTargetRegionId,
     customProtocol,
     customPort,
     effectiveClientOrigins,
     liveClientOriginNode,
+    liveGeoTelemetry,
     firewalls,
   ]);
+
+  // Helper to compute live fiber RTT for any region using live socket probes first, then great-circle optical fiber physics
+  const computeRegionLiveRttMs = useCallback(
+    (regObj) => {
+      if (!regObj) return 0;
+      const liveProbe = (liveGeoTelemetry?.regionalSocketProbes || []).find(
+        (p) => p.regionId === regObj.id
+      );
+      if (typeof liveProbe?.tcpMs === 'number' && liveProbe.tcpMs > 0) {
+        return liveProbe.tcpMs;
+      }
+      if (
+        typeof liveProbe?.totalRttMs === 'number' &&
+        liveProbe.totalRttMs > 0
+      ) {
+        return liveProbe.totalRttMs;
+      }
+      const greatKm = calculateGreatCircleKm(
+        liveClientOriginNode.lat,
+        liveClientOriginNode.lon,
+        regObj.lat,
+        regObj.lon
+      );
+      const fiberKm = Math.max(80, Math.round(greatKm * 1.22));
+      return Math.max(4, Math.round((fiberKm / 200) * 2 + 5));
+    },
+    [liveGeoTelemetry, liveClientOriginNode]
+  );
 
   // Unified Real Cloud Logging / Audit, Live Flowing Packet Verdict & Socket Probe Timeline for the Time-Machine Scrubber
   const liveTimeMachineEvents = useMemo(() => {
@@ -3005,30 +3039,40 @@ export default function GlobalNetworkWorldMap({
               pkt.x2 ?? matchedReg.x,
               pkt.y2 ?? matchedReg.y
             );
+      const fallbackEval = evaluatePacketAgainstFirewalls(
+        {
+          sourceIp: pkt.sourceIp || liveClientOriginNode.evalIp,
+          protocol: pkt.protocol || 'tcp',
+          port: Number(pkt.port || 443),
+        },
+        firewalls
+      );
+      const rttMs = pkt.latencyMs ?? computeRegionLiveRttMs(matchedReg);
       events.push({
         id: `tm-pkt-${pkt.id || idx}`,
         timestamp: pkt.completedAt || new Date().toLocaleTimeString(),
         category:
           pkt.kind === 'BACKBONE'
             ? 'Subsea Fiber Backbone'
-            : `VPC Firewall (${pkt.ruleName || 'default'})`,
+            : `VPC Firewall (${pkt.ruleName || fallbackEval.ruleName})`,
         summary:
           pkt.kind === 'BACKBONE'
-            ? `${pkt.sourceLabel} ⇄ ${matchedReg.id} (${pkt.latencyMs}ms)`
+            ? `${pkt.sourceLabel} ⇄ ${matchedReg.id} (${rttMs}ms)`
             : `${(pkt.protocol || 'tcp').toUpperCase()}:${pkt.port || 443} · ${
-                pkt.verdict
-              } by ${pkt.ruleName || 'implicit-deny'} (${pkt.latencyMs}ms)`,
+                pkt.verdict || fallbackEval.verdict
+              } by ${pkt.ruleName || fallbackEval.ruleName} (${rttMs}ms)`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
         targetZone: pkt.targetZone || matchedReg.zones?.[0],
-        verdict: pkt.verdict === 'DENY' ? 'DENY' : 'ALLOW',
+        verdict:
+          (pkt.verdict || fallbackEval.verdict) === 'DENY' ? 'DENY' : 'ALLOW',
         sourceIp: pkt.sourceIp || liveClientOriginNode.ip,
         sourceLabel: pkt.sourceLabel || liveClientOriginNode.city,
         protocol: pkt.protocol || 'tcp',
         port: pkt.port || 443,
-        ruleName: pkt.ruleName || 'default-allow-https',
-        priority: pkt.priority ?? 1000,
-        latencyMs: pkt.latencyMs || 18,
+        ruleName: pkt.ruleName || fallbackEval.ruleName,
+        priority: pkt.priority ?? fallbackEval.priority,
+        latencyMs: rttMs,
         sourceType: 'PACKET',
         x1: pkt.x1 ?? liveClientOriginNode.x,
         y1: pkt.y1 ?? liveClientOriginNode.y,
@@ -3052,6 +3096,16 @@ export default function GlobalNetworkWorldMap({
         matchedReg.x,
         matchedReg.y
       );
+      const logPort = Number(ev.destPort || 443);
+      const fwEval = evaluatePacketAgainstFirewalls(
+        {
+          sourceIp: ev.remoteIp || liveClientOriginNode.evalIp,
+          protocol: 'tcp',
+          port: logPort,
+        },
+        firewalls
+      );
+      const rttMs = computeRegionLiveRttMs(matchedReg);
       events.push({
         id: `tm-log-${idx}`,
         timestamp: ev.timestamp
@@ -3066,10 +3120,10 @@ export default function GlobalNetworkWorldMap({
         sourceIp: ev.remoteIp || liveClientOriginNode.ip,
         sourceLabel: 'Cloud Audit Log (logging.v2)',
         protocol: 'tcp',
-        port: ev.destPort || 443,
-        ruleName: ev.logType || 'cloudaudit.googleapis.com/activity',
-        priority: 1000,
-        latencyMs: 14,
+        port: logPort,
+        ruleName: ev.logType || fwEval.ruleName,
+        priority: fwEval.priority,
+        latencyMs: rttMs,
         sourceType: 'AUDIT_LOG',
         x1: liveClientOriginNode.x,
         y1: liveClientOriginNode.y,
@@ -3092,6 +3146,15 @@ export default function GlobalNetworkWorldMap({
         matchedReg.x,
         matchedReg.y
       );
+      const fwEval = evaluatePacketAgainstFirewalls(
+        {
+          sourceIp: p.resolvedIp || liveClientOriginNode.evalIp,
+          protocol: 'tcp',
+          port: 443,
+        },
+        firewalls
+      );
+      const rttMs = p.tcpMs ?? p.totalRttMs ?? computeRegionLiveRttMs(matchedReg);
       events.push({
         id: `tm-probe-${idx}`,
         timestamp: liveGeoTelemetry?.probedAt
@@ -3107,9 +3170,9 @@ export default function GlobalNetworkWorldMap({
         sourceLabel: `${liveClientOriginNode.city} Edge Socket`,
         protocol: 'tcp',
         port: 443,
-        ruleName: `TLS 1.3 Handshake (${p.tlsCipher || 'TLS_AES_256_GCM_SHA384'})`,
-        priority: 1000,
-        latencyMs: p.tcpMs || p.totalRttMs || 15,
+        ruleName: `TLS 1.3 Handshake (${p.tlsCipher || fwEval.ruleName})`,
+        priority: fwEval.priority,
+        latencyMs: rttMs,
         sourceType: 'TLS_SOCKET',
         x1: liveClientOriginNode.x,
         y1: liveClientOriginNode.y,
@@ -3127,6 +3190,8 @@ export default function GlobalNetworkWorldMap({
     liveGeoTelemetry,
     liveClientOriginNode,
     selectedRegion,
+    firewalls,
+    computeRegionLiveRttMs,
   ]);
 
   const filteredTimeMachineEvents = useMemo(() => {
@@ -3181,14 +3246,33 @@ export default function GlobalNetworkWorldMap({
   const buildForensicEventBundle = useCallback(
     (ev) => {
       if (!ev) return null;
+      const matchedReg =
+        GCP_GLOBAL_REGIONS.find((r) => r.id === ev.regionId) || selectedRegion;
+      const liveSubnet = (liveGeoTelemetry?.liveSubnets || []).find(
+        (sn) => sn.region === ev.regionId
+      );
+      const liveQuota = (liveGeoTelemetry?.regionalQuotas || []).find(
+        (q) => q.regionName === ev.regionId
+      );
+      const liveProbe = (liveGeoTelemetry?.regionalSocketProbes || []).find(
+        (p) => p.regionId === ev.regionId
+      );
+      const evalSourceIp =
+        ev.sourceIp && /^\d+\.\d+\.\d+\.\d+$/.test(ev.sourceIp)
+          ? ev.sourceIp
+          : liveProbe?.resolvedIp || liveClientOriginNode.evalIp;
       const evalTrace = tracePacketFirewallXRay(
         {
-          sourceIp: ev.sourceIp || '198.51.100.1',
+          sourceIp: evalSourceIp,
           protocol: ev.protocol || 'tcp',
           port: Number(ev.port || 443),
         },
         firewalls
       );
+      const activeVpcName =
+        liveSubnet?.network || vpcs?.[0]?.name || 'default';
+      const measuredRttMs =
+        ev.latencyMs ?? computeRegionLiveRttMs(matchedReg);
       const lqlFilter =
         ev.sourceType === 'AUDIT_LOG'
           ? `logName:"cloudaudit.googleapis.com" OR resource.labels.location="${ev.regionId}"`
@@ -3212,7 +3296,9 @@ export default function GlobalNetworkWorldMap({
           labels: {
             project_id: projectId,
             location: ev.regionId,
-            zone: ev.targetZone || `${ev.regionId}-a`,
+            zone: ev.targetZone || matchedReg?.zones?.[0] || `${ev.regionId}-a`,
+            subnetwork_name: liveSubnet?.name || activeVpcName,
+            subnetwork_cidr: liveSubnet?.ipCidrRange || 'auto-mode',
           },
         },
         jsonPayload: {
@@ -3223,23 +3309,33 @@ export default function GlobalNetworkWorldMap({
             src_ip: ev.sourceIp || liveClientOriginNode.ip,
             src_label: ev.sourceLabel || liveClientOriginNode.city,
             dest_region: ev.regionId,
-            dest_city: ev.regionCity,
+            dest_city: ev.regionCity || matchedReg?.city,
             protocol: (ev.protocol || 'tcp').toUpperCase(),
             dest_port: Number(ev.port || 443),
           },
           rule_details: {
-            reference: `network:default/firewall:${
-              ev.ruleName || evalTrace.winningRule?.name || 'default'
+            reference: `network:${activeVpcName}/firewall:${
+              ev.ruleName || evalTrace.winningRule?.name || activeVpcName
             }`,
-            priority: ev.priority ?? evalTrace.winningRule?.priority ?? 1000,
+            priority:
+              ev.priority ?? evalTrace.winningRule?.priority ?? 65535,
             action: ev.verdict,
           },
-          latency_rtt_ms: ev.latencyMs || 16,
+          regional_telemetry: {
+            latency_rtt_ms: measuredRttMs,
+            tls_cipher: liveProbe?.tlsCipher || 'TLS_AES_256_GCM_SHA384',
+            cfe_green_percent: matchedReg?.cfePercent,
+            gco2_per_kwh: matchedReg?.gco2,
+            vcpu_quota: liveQuota
+              ? `${liveQuota.cpusUsed}/${liveQuota.cpusLimit}`
+              : undefined,
+          },
         },
       };
 
       return {
         ...ev,
+        latencyMs: measuredRttMs,
         lqlFilter,
         nlQuery: `show logs in ${ev.regionId} for ${ev.category} (${ev.verdict})`,
         gcloudCommand,
@@ -3247,7 +3343,15 @@ export default function GlobalNetworkWorldMap({
         firewallTrace: evalTrace,
       };
     },
-    [firewalls, projectId, liveClientOriginNode]
+    [
+      firewalls,
+      vpcs,
+      projectId,
+      liveClientOriginNode,
+      liveGeoTelemetry,
+      selectedRegion,
+      computeRegionLiveRttMs,
+    ]
   );
 
   const inspectedForensicBundle = useMemo(
@@ -7847,10 +7951,16 @@ export default function GlobalNetworkWorldMap({
                           4. Measured Latency &amp; Priority
                         </div>
                         <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                          {timeMachineActiveEvent.latencyMs || 16}ms RTT
+                          {timeMachineActiveEvent.latencyMs ??
+                            computeRegionLiveRttMs(selectedRegion)}
+                          ms RTT
                         </div>
                         <div className="text-[9.5px] text-zinc-500">
-                          Priority: P-{timeMachineActiveEvent.priority ?? 1000}{' '}
+                          Priority: P-
+                          {timeMachineActiveEvent.priority ??
+                            inspectedForensicBundle?.firewallTrace?.winningRule
+                              ?.priority ??
+                            65535}{' '}
                           · Replay Arc Active on Map
                         </div>
                       </div>
@@ -8856,7 +8966,7 @@ export default function GlobalNetworkWorldMap({
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[10px] text-zinc-400">
-                          {ev.latencyMs || 16}ms
+                          {ev.latencyMs ?? computeRegionLiveRttMs(selectedRegion)}ms
                         </span>
                         <div className="flex items-center gap-1">
                           <button
@@ -9008,7 +9118,11 @@ export default function GlobalNetworkWorldMap({
                     inspectedForensicBundle.category}
                 </div>
                 <div className="text-[10px] text-zinc-500">
-                  Priority: P-{inspectedForensicBundle.priority ?? 1000}
+                  Priority: P-
+                  {inspectedForensicBundle.priority ??
+                    inspectedForensicBundle.firewallTrace?.winningRule
+                      ?.priority ??
+                    65535}
                 </div>
               </div>
               <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
@@ -9016,7 +9130,9 @@ export default function GlobalNetworkWorldMap({
                   4. Measured Network RTT
                 </div>
                 <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  {inspectedForensicBundle.latencyMs || 16}ms RTT
+                  {inspectedForensicBundle.latencyMs ??
+                    computeRegionLiveRttMs(selectedRegion)}
+                  ms RTT
                 </div>
                 <div className="text-[10px] text-zinc-500">
                   Source Type: {inspectedForensicBundle.sourceType || 'LIVE'}
