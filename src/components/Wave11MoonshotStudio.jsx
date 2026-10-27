@@ -380,7 +380,7 @@ export default function Wave11MoonshotStudio({
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 20px 0; }
     .card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
     .label { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-family: monospace; }
-    .val { font-size: 22px; font-weight: 800; font-family: monospace; margin-top: 4px; color: #38bdf8; }
+    .val { font-size: 22px; font-weight: 800; font-family: monospace; margin-top: 4px; color: #8ab4f8; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
     th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #334155; font-family: monospace; }
     th { color: #94a3b8; text-transform: uppercase; font-size: 11px; background: #0f172a; }

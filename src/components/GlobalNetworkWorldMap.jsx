@@ -3364,7 +3364,7 @@ export default function GlobalNetworkWorldMap({
                         <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                           Location: {asset.location} ({asset.locationType})
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                           {asset.sovereigntyZone}
                         </span>
                       </div>
@@ -4222,8 +4222,8 @@ export default function GlobalNetworkWorldMap({
                   <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
                 </radialGradient>
                 <radialGradient id="chaosRegionHalo" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.7" />
-                  <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#ea4335" stopOpacity="0.7" />
+                  <stop offset="100%" stopColor="#ea4335" stopOpacity="0" />
                 </radialGradient>
               </defs>
 
@@ -4246,9 +4246,9 @@ export default function GlobalNetworkWorldMap({
                       y2={py}
                       stroke={
                         p.equator
-                          ? '#0ea5e9'
+                          ? '#4285f4'
                           : p.tropic
-                          ? '#38bdf8'
+                          ? '#8ab4f8'
                           : '#334155'
                       }
                       strokeOpacity={p.equator ? '0.35' : p.tropic ? '0.18' : '0.28'}
@@ -4260,7 +4260,7 @@ export default function GlobalNetworkWorldMap({
                     <text
                       x={6}
                       y={py - 3}
-                      fill={p.equator ? '#38bdf8' : '#64748b'}
+                      fill={p.equator ? '#8ab4f8' : '#64748b'}
                       fillOpacity="0.65"
                       fontSize={6.5 * invScale}
                       fontFamily="monospace"
@@ -4287,7 +4287,7 @@ export default function GlobalNetworkWorldMap({
                       y1={0}
                       x2={mx}
                       y2={560}
-                      stroke={m.prime ? '#0ea5e9' : '#334155'}
+                      stroke={m.prime ? '#4285f4' : '#334155'}
                       strokeOpacity={m.prime ? '0.28' : '0.26'}
                       strokeWidth={m.prime ? 0.9 * invScale : 0.7 * invScale}
                       strokeDasharray="3 6"
@@ -4295,7 +4295,7 @@ export default function GlobalNetworkWorldMap({
                     <text
                       x={mx + 3}
                       y={553}
-                      fill={m.prime ? '#38bdf8' : '#64748b'}
+                      fill={m.prime ? '#8ab4f8' : '#64748b'}
                       fillOpacity="0.65"
                       fontSize={6.5 * invScale}
                       fontFamily="monospace"
@@ -4550,7 +4550,7 @@ export default function GlobalNetworkWorldMap({
                     r={3.5}
                     fill={
                       orig.kind === 'THREAT_SCANNER'
-                        ? '#f43f5e'
+                        ? '#ea4335'
                         : orig.kind === 'IAP_ZERO_TRUST'
                         ? '#10b981'
                         : '#4285f4'
@@ -4591,7 +4591,7 @@ export default function GlobalNetworkWorldMap({
                     ? '#669df6'
                     : pkt.verdict === 'ALLOW'
                     ? '#10b981'
-                    : '#f43f5e';
+                    : '#ea4335';
 
                 const isRelevantToSelection =
                   pkt.targetRegionId === selectedRegionId ||
@@ -4645,7 +4645,7 @@ export default function GlobalNetworkWorldMap({
                   <circle
                     r={16}
                     fill="none"
-                    stroke={ring.verdict === 'DENY' ? '#f43f5e' : '#10b981'}
+                    stroke={ring.verdict === 'DENY' ? '#ea4335' : '#10b981'}
                     strokeWidth="2"
                     opacity="0.65"
                   />
@@ -4706,14 +4706,14 @@ export default function GlobalNetworkWorldMap({
                 // Determine core node color based on active Map Lens (Traffic / Carbon / Spot)
                 let lensColor = '#475569';
                 if (isSevered) {
-                  lensColor = '#f43f5e';
+                  lensColor = '#ea4335';
                 } else if (mapLens === 'CARBON_GRID') {
                   lensColor =
                     reg.cfePercent >= 80
                       ? '#10b981'
                       : reg.cfePercent >= 55
                       ? '#f59e0b'
-                      : '#f43f5e';
+                      : '#ea4335';
                 } else if (mapLens === 'SPOT_ARBITRAGE') {
                   lensColor =
                     reg.cfePercent >= 75
@@ -4782,7 +4782,7 @@ export default function GlobalNetworkWorldMap({
                         fill="none"
                         stroke={
                           isSevered
-                            ? '#f43f5e'
+                            ? '#ea4335'
                             : isSelected
                             ? '#10b981'
                             : '#669df6'
@@ -4828,7 +4828,7 @@ export default function GlobalNetworkWorldMap({
                               y2={zy}
                               stroke={
                                 isZoneSevered
-                                  ? '#f43f5e'
+                                  ? '#ea4335'
                                   : isZoneSelected
                                   ? '#10b981'
                                   : '#669df6'
@@ -4855,7 +4855,7 @@ export default function GlobalNetworkWorldMap({
                                 r={isZoneSelected ? 4.4 : 3.4}
                                 fill={
                                   isZoneSevered
-                                    ? '#f43f5e'
+                                    ? '#ea4335'
                                     : isZoneSelected
                                     ? '#10b981'
                                     : '#669df6'
@@ -4938,7 +4938,7 @@ export default function GlobalNetworkWorldMap({
                             fillOpacity="0.92"
                             stroke={
                               isSevered
-                                ? '#f43f5e'
+                                ? '#ea4335'
                                 : isSelected
                                 ? '#10b981'
                                 : isHovered
@@ -5018,7 +5018,7 @@ export default function GlobalNetworkWorldMap({
                           width={18}
                           height={10.5}
                           rx={3}
-                          fill={isSevered ? '#e11d48' : '#0284c7'}
+                          fill={isSevered ? '#d93025' : '#1a73e8'}
                         />
                         <text
                           x={9}

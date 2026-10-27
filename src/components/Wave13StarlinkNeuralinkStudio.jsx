@@ -106,7 +106,7 @@ function renderInlineMarkdown(text, keyPrefix = 'nlink') {
       return (
         <code
           key={`${keyPrefix}-c-${idx}`}
-          className="px-1.5 py-0.5 mx-0.5 rounded bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 font-mono text-[11px] font-bold"
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[11px] font-bold"
         >
           {part.slice(1, -1)}
         </code>
@@ -148,7 +148,7 @@ function NeuralinkMarkdownView({ content, onCopy }) {
               className="rounded-xl border border-zinc-800 bg-zinc-950 overflow-hidden"
             >
               <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-[10px] font-mono text-zinc-400">
-                <span className="uppercase font-bold text-cyan-300">
+                <span className="uppercase font-bold text-blue-300">
                   {seg.lang || 'CLI'}
                 </span>
                 {onCopy && (
@@ -183,7 +183,7 @@ function NeuralinkMarkdownView({ content, onCopy }) {
                     key={`li-${keyBase}-${lIdx}`}
                     className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-200"
                   >
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0" />
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     <div className="min-w-0 flex-1">
                       {renderInlineMarkdown(item, `li-${keyBase}-${lIdx}`)}
                     </div>
@@ -275,7 +275,7 @@ function NeuralinkMarkdownView({ content, onCopy }) {
                 key={`hd-${sIdx}-${lIdx}`}
                 className="pt-2 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 text-xs font-extrabold text-zinc-900 dark:text-white"
               >
-                <span className="w-2 h-2 rounded-full bg-cyan-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>{renderInlineMarkdown(headingMatch[2], `hd-${sIdx}-${lIdx}`)}</span>
               </div>
             );
@@ -544,11 +544,11 @@ export default function Wave13StarlinkNeuralinkStudio({
   return (
     <div className="space-y-6">
       {/* Top Hero Banner */}
-      <div className="p-5 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-indigo-500/10 dark:from-cyan-950/40 dark:via-zinc-900 dark:to-indigo-950/40">
+      <div className="p-5 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-blue-500/10 dark:from-blue-950/40 dark:via-zinc-900 dark:to-blue-950/40">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 WAVE 13 · STARLINK &amp; NEURALINK (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -573,7 +573,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Fastest Region
               </div>
-              <div className="text-sm font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {orbitalData?.fastestRegion || 'Probing...'}
               </div>
             </div>
@@ -581,7 +581,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Dynamic Schema
               </div>
-              <div className="text-sm font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {compiledDag?.schemaFields?.length || 5} Live Columns
               </div>
             </div>
@@ -618,8 +618,8 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                     active
-                      ? 'bg-black/25 text-cyan-100'
-                      : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300'
+                      ? 'bg-black/25 text-blue-100'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                   }`}
                 >
                   MODULE {t.step}
@@ -630,7 +630,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <div className="text-xs font-extrabold truncate">{t.title}</div>
                 <div
                   className={`text-[10px] truncate ${
-                    active ? 'text-cyan-100/90' : 'text-zinc-500 dark:text-zinc-400'
+                    active ? 'text-blue-100/90' : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {t.subtitle}
@@ -649,7 +649,7 @@ export default function Wave13StarlinkNeuralinkStudio({
           <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Globe className="w-4 h-4 text-cyan-500" />
+                <Globe className="w-4 h-4 text-blue-500" />
                 <span>
                   100% Live 6-Region Google Cloud Control-Plane Socket Matrix & BigQuery Heartbeat Streamer
                 </span>
@@ -662,7 +662,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               type="button"
               onClick={() => runStarlinkProbe()}
               disabled={probingOrbital}
-              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-mono font-bold flex items-center gap-2 shrink-0 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-bold flex items-center gap-2 shrink-0 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${probingOrbital ? 'animate-spin' : ''}`}
@@ -710,7 +710,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                   key={c.id}
                   className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
                     isFastest
-                      ? 'border-cyan-500/60 bg-cyan-500/5 dark:bg-cyan-950/20'
+                      ? 'border-blue-500/60 bg-blue-500/5 dark:bg-blue-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90'
                   }`}
                 >
@@ -720,12 +720,12 @@ export default function Wave13StarlinkNeuralinkStudio({
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                           isDeployed
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
-                            : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300'
+                            : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                         }`}
                       >
                         {isDeployed ? 'STANDBY DEPLOYED IN GCP' : c.activeTransport}
                       </span>
-                      <span className="text-[11px] font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+                      <span className="text-[11px] font-mono font-extrabold text-blue-600 dark:text-blue-400">
                         {isFastest ? 'FASTEST CONTROL PLANE' : `HTTP ${c.httpStatus}`}
                       </span>
                     </div>
@@ -746,11 +746,11 @@ export default function Wave13StarlinkNeuralinkStudio({
                           {c.tlsSocketMs} ms
                         </div>
                       </div>
-                      <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-                        <div className="text-[10px] font-mono text-cyan-700 dark:text-cyan-300">
+                      <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                        <div className="text-[10px] font-mono text-blue-700 dark:text-blue-300">
                           Live HTTPS REST RTT
                         </div>
-                        <div className="text-sm font-mono font-extrabold text-cyan-700 dark:text-cyan-300">
+                        <div className="text-sm font-mono font-extrabold text-blue-700 dark:text-blue-300">
                           {c.httpsRttMs} ms
                         </div>
                       </div>
@@ -775,7 +775,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       type="button"
                       onClick={() => runStarlinkProbe()}
                       disabled={probingOrbital}
-                      className="px-2.5 py-1.5 rounded-xl border bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-cyan-500/50 text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl border bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50 text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Re-Probe Region
                     </button>
@@ -783,7 +783,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       type="button"
                       onClick={() => handleEngageOrbitalFailover(c)}
                       disabled={executingFailover}
-                      className="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Stream Live Heartbeat
                     </button>
@@ -804,7 +804,7 @@ export default function Wave13StarlinkNeuralinkStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-indigo-500" />
+                  <Cpu className="w-4 h-4 text-blue-500" />
                   <span>
                     Neuralink &ldquo;Thought-to-Cloud&rdquo; — Natural-Language Schema Compiler &amp; Live 4-Node DAG Builder
                   </span>
@@ -814,7 +814,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 </p>
               </div>
               {compiledDag?.dagSha256 && (
-                <span className="px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold">
                   DAG SHA-256: {compiledDag.dagSha256.slice(0, 18)}...
                 </span>
               )}
@@ -834,8 +834,8 @@ export default function Wave13StarlinkNeuralinkStudio({
                   }}
                   className={`h-11 px-3 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer truncate ${
                     stackSlug === preset.slug
-                      ? 'bg-indigo-600 text-white border-indigo-500'
-                      : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/50'
+                      ? 'bg-blue-600 text-white border-blue-500'
+                      : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
                   }`}
                 >
                   {preset.label}
@@ -895,18 +895,18 @@ export default function Wave13StarlinkNeuralinkStudio({
 
             {/* Dynamic Prompt-Extracted Schema Columns */}
             {compiledDag?.schemaFields && (
-              <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-1.5">
-                <div className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+              <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-1.5">
+                <div className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
                   Prompt-Compiled BigQuery Schema Columns ({compiledDag.schemaFields.length} Fields)
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {compiledDag.schemaFields.map((f) => (
                     <span
                       key={f.name}
-                      className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-indigo-500/30 text-[10px] font-mono text-zinc-800 dark:text-zinc-200"
+                      className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-blue-500/30 text-[10px] font-mono text-zinc-800 dark:text-zinc-200"
                     >
                       <strong>{f.name}</strong>:{' '}
-                      <span className="text-indigo-600 dark:text-indigo-400">
+                      <span className="text-blue-600 dark:text-blue-400">
                         {f.type}
                       </span>{' '}
                       ({f.mode})
@@ -930,7 +930,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-extrabold">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-extrabold">
                             NODE {node.step} · {node.kind}
                           </span>
                           {receipt && (
@@ -964,7 +964,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                         <button
                           type="button"
                           onClick={() => copyText(node.cliCommand)}
-                          className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <Copy className="w-3 h-3" />
                           <span>CLI</span>
@@ -1025,7 +1025,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 type="button"
                 onClick={handleMaterializeNeuralinkDag}
                 disabled={materializingDag}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 cursor-pointer shadow-sm"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>

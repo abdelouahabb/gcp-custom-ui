@@ -181,10 +181,10 @@ export default function VisualCronScheduleBuilder({
   const humanSummary = describeCronInPlainEnglish(value);
 
   return (
-    <div className="p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-2">
+    <div className="p-2.5 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300">
-          <Clock className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-blue-700 dark:text-blue-300">
+          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
           <span>{label}</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -218,8 +218,8 @@ export default function VisualCronScheduleBuilder({
               title={`${p.desc} (${p.cron})`}
               className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition-colors cursor-pointer ${
                 active
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/50'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
               }`}
             >
               {p.label}
@@ -427,7 +427,7 @@ export default function VisualCronScheduleBuilder({
 
       {/* Optional Raw Cron Expression Input for Power Users */}
       {showAdvancedRaw && (
-        <div className="pt-1.5 border-t border-indigo-500/20 flex items-center justify-between gap-2">
+        <div className="pt-1.5 border-t border-blue-500/20 flex items-center justify-between gap-2">
           <span className="text-[10px] font-mono text-zinc-500">
             Advanced 5-Field UNIX Cron Expression (<code>min hour day month weekday</code>):
           </span>

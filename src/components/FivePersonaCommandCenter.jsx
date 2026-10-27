@@ -663,7 +663,7 @@ export default function FivePersonaCommandCenter({
                 100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '590.0.1 (2026.10.22)'}
               </span>
               {tribunalData?.merkleSealSha256 && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                   SHA-256 SEAL: {tribunalData.merkleSealSha256.slice(0, 16)}...
                 </span>
               )}
@@ -834,7 +834,7 @@ export default function FivePersonaCommandCenter({
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                     tribunalData.overallVerdict?.includes('NO_GO') ||
                     tribunalData.overallVerdict?.includes('NO-GO')
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
                       : tribunalData.overallVerdict?.includes('CONDITIONAL')
                       ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                       : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
@@ -854,7 +854,7 @@ export default function FivePersonaCommandCenter({
               </div>
               <p className="text-xs text-zinc-500 font-mono">
                 100% Real Multi-API Probe across {projectId} ({region}) · SHA-256 Attestation Seal:{' '}
-                <code className="text-indigo-600 dark:text-indigo-400">
+                <code className="text-blue-600 dark:text-blue-400">
                   {tribunalData.merkleSealSha256}
                 </code>
               </p>
@@ -870,7 +870,7 @@ export default function FivePersonaCommandCenter({
                   })
                 }
                 disabled={tribunalLoading}
-                className="px-2.5 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-extrabold cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold cursor-pointer"
               >
                 Snapshot T0 Baseline
               </button>
@@ -1004,7 +1004,7 @@ export default function FivePersonaCommandCenter({
                       key={pv.code}
                       className={`p-3 rounded-xl border flex flex-col justify-between gap-2 text-xs font-mono ${
                         pv.vote === 'VETO_BLOCK'
-                          ? 'border-rose-500/50 bg-rose-500/5'
+                          ? 'border-red-500/50 bg-red-500/5'
                           : pv.vote === 'CONDITIONAL_WARN'
                           ? 'border-amber-500/40 bg-amber-500/5'
                           : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
@@ -1026,7 +1026,7 @@ export default function FivePersonaCommandCenter({
                           <span
                             className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                               pv.vote === 'VETO_BLOCK'
-                                ? 'bg-rose-500/20 text-rose-500'
+                                ? 'bg-red-500/20 text-red-500'
                                 : pv.vote === 'CONDITIONAL_WARN'
                                 ? 'bg-amber-500/20 text-amber-500'
                                 : 'bg-emerald-500/20 text-emerald-500'
@@ -1051,7 +1051,7 @@ export default function FivePersonaCommandCenter({
                             onClick={() =>
                               runLiveRemediation(remAction, remTarget)
                             }
-                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-extrabold cursor-pointer"
+                            className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[9px] font-extrabold cursor-pointer"
                           >
                             {isRemediating
                               ? 'Patching GCP...'
@@ -1114,7 +1114,7 @@ export default function FivePersonaCommandCenter({
                       </span>
                     </div>
                     {chain.liveResourceAnchor && (
-                      <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                      <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
                         Anchor: {chain.liveResourceAnchor}
                       </div>
                     )}
@@ -1201,13 +1201,13 @@ export default function FivePersonaCommandCenter({
                             {row.sreArchitectDemand}
                           </div>
                           <div className="p-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                            <span className="text-rose-500 font-bold">
+                            <span className="text-red-500 font-bold">
                               [05 DevSecOps]:
                             </span>{' '}
                             {row.devSecOpsDemand}
                           </div>
                         </div>
-                        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 text-[11px] text-blue-600 dark:text-blue-400 font-bold">
                           Pareto Synthesis: {row.paretoSolution}
                         </div>
                       </div>
@@ -1220,8 +1220,8 @@ export default function FivePersonaCommandCenter({
           {/* SUB-TAB 4: T0 vs. T_NOW CRYPTOGRAPHIC SHA-256 MERKLE SNAPSHOT DIFF */}
           {tribunalSubTab === 'MERKLE_DIFF' && tribunalData.merkleDiff && (
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2.5 text-xs font-mono">
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
-                <div className="font-extrabold text-indigo-600 dark:text-indigo-400">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                <div className="font-extrabold text-blue-600 dark:text-blue-400">
                   UNDER THE HOOD · HOW MERKLE DIFF &amp; ROLLBACK CAPSULES WORK (ZERO GIMMICK)
                 </div>
                 <div>
@@ -1234,7 +1234,7 @@ export default function FivePersonaCommandCenter({
                   <span className="font-extrabold text-zinc-900 dark:text-white">
                     T0 vs. T_Now Cryptographic Merkle State Verification
                   </span>{' '}
-                  <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-500 text-[10px] font-extrabold">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[10px] font-extrabold">
                     {tribunalData.merkleDiff.stateChanged
                       ? `STATE_MUTATED (Score Delta: ${tribunalData.merkleDiff.scoreDelta})`
                       : 'VERIFIED_ZERO_DRIFT'}
@@ -1249,7 +1249,7 @@ export default function FivePersonaCommandCenter({
                   <div className="text-zinc-500 text-[10px]">
                     T0 Baseline SHA-256 Merkle Root
                   </div>
-                  <div className="font-bold text-indigo-500 break-all">
+                  <div className="font-bold text-blue-500 break-all">
                     {tribunalData.merkleDiff.baselineMerkleRoot}
                   </div>
                 </div>
@@ -1446,7 +1446,7 @@ export default function FivePersonaCommandCenter({
                           <strong>{proj.counts?.zombieDisks ?? 0}</strong>
                         </div>
                       </div>
-                      <div className="text-[9px] text-indigo-500 truncate">
+                      <div className="text-[9px] text-blue-500 truncate">
                         SHA-256: {proj.merkleSealSha256}
                       </div>
                     </div>
@@ -1548,7 +1548,7 @@ export default function FivePersonaCommandCenter({
                       type="button"
                       onClick={verifyZkpBlindProof}
                       disabled={zkpVerifying}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer"
                     >
                       {zkpVerifying
                         ? 'Verifying Ed25519...'
@@ -1569,7 +1569,7 @@ export default function FivePersonaCommandCenter({
                     className={`p-3 rounded-xl border text-[11px] ${
                       zkpVerificationResult.verified
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                        : 'border-rose-500/40 bg-rose-500/10 text-rose-500'
+                        : 'border-red-500/40 bg-red-500/10 text-red-500'
                     }`}
                   >
                     <strong>{zkpVerificationResult.summary}</strong>
@@ -1581,7 +1581,7 @@ export default function FivePersonaCommandCenter({
                     <div className="text-zinc-500">
                       Blinded Project Commitment &amp; Merkle Root
                     </div>
-                    <div className="font-bold text-indigo-500 break-all">
+                    <div className="font-bold text-blue-500 break-all">
                       {
                         tribunalData.blindedComplianceProof.statement
                           ?.blindedMerkleRoot
@@ -1621,7 +1621,7 @@ export default function FivePersonaCommandCenter({
                           </span>
                         </div>
                         <div className="text-zinc-500">{c.invariantClaim}</div>
-                        <div className="text-[9px] text-indigo-500 truncate">
+                        <div className="text-[9px] text-blue-500 truncate">
                           Commitment: {c.pedersenSha256Commitment}
                         </div>
                       </div>
@@ -1783,7 +1783,7 @@ export default function FivePersonaCommandCenter({
                 <div className="lg:col-span-6 p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <div>
-                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-500 text-[9px] font-extrabold mr-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[9px] font-extrabold mr-1.5">
                         VM &amp; LINUX SYSTEMS ENG
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1795,8 +1795,8 @@ export default function FivePersonaCommandCenter({
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
-                    <div className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                  <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-400">
                       UNDER THE HOOD · WHY ZERO VM AGENT IS NEEDED
                     </div>
                     <div>
@@ -2004,7 +2004,7 @@ export default function FivePersonaCommandCenter({
                 <div className="lg:col-span-6 p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <div>
-                      <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-500 text-[9px] font-extrabold mr-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[9px] font-extrabold mr-1.5">
                         SWE &amp; DATA ENGINEER
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -2016,8 +2016,8 @@ export default function FivePersonaCommandCenter({
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
-                    <div className="font-extrabold text-purple-600 dark:text-purple-400">
+                  <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-400">
                       UNDER THE HOOD · HOW IAM 403 DEBUGGING &amp; JSON-TO-BIGQUERY AST WORK
                     </div>
                     <div>
@@ -2054,7 +2054,7 @@ export default function FivePersonaCommandCenter({
                             className={`px-1.5 py-0.5 rounded font-extrabold shrink-0 ${
                               pm.status === 'GRANTED'
                                 ? 'bg-emerald-500/15 text-emerald-500'
-                                : 'bg-rose-500/15 text-rose-500'
+                                : 'bg-red-500/15 text-red-500'
                             }`}
                           >
                             {pm.status}
@@ -2116,7 +2116,7 @@ export default function FivePersonaCommandCenter({
                                   'TypeScript Zero-Key OIDC Client'
                                 )
                               }
-                              className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-500 text-[9.5px] font-bold cursor-pointer"
+                              className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[9.5px] font-bold cursor-pointer"
                             >
                               Copy TS SDK
                             </button>
@@ -2145,7 +2145,7 @@ export default function FivePersonaCommandCenter({
                 <div className="lg:col-span-6 p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <div>
-                      <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[9px] font-extrabold mr-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-500 text-[9px] font-extrabold mr-1.5">
                         DEVSECOPS &amp; DEVOPS
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -2157,8 +2157,8 @@ export default function FivePersonaCommandCenter({
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
-                    <div className="font-extrabold text-rose-600 dark:text-rose-400">
+                  <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-red-600 dark:text-red-400">
                       UNDER THE HOOD · HOW SHANNON ENTROPY H(X) &amp; TERRAFORM 1.5+ IMPORT WORK
                     </div>
                     <div>
@@ -2181,13 +2181,13 @@ export default function FivePersonaCommandCenter({
                             <strong>{ea.source}</strong> ({ea.length} chars)
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="font-bold text-indigo-500">
+                            <span className="font-bold text-blue-500">
                               H(X)={ea.shannonEntropyBits} bits/char
                             </span>
                             <span
                               className={`px-1.5 py-0.5 rounded font-extrabold ${
                                 ea.status.includes('WARN')
-                                  ? 'bg-rose-500/15 text-rose-500'
+                                  ? 'bg-red-500/15 text-red-500'
                                   : 'bg-emerald-500/15 text-emerald-500'
                               }`}
                             >
@@ -2661,7 +2661,7 @@ export default function FivePersonaCommandCenter({
               </div>
             </div>
 
-            <pre className="p-3.5 rounded-xl bg-zinc-950 text-cyan-300 text-[11px] font-mono overflow-x-auto max-h-[380px] leading-relaxed">
+            <pre className="p-3.5 rounded-xl bg-zinc-950 text-blue-300 text-[11px] font-mono overflow-x-auto max-h-[380px] leading-relaxed">
               {ceng.terraformExportHcl}
             </pre>
           </div>
@@ -2837,7 +2837,7 @@ export default function FivePersonaCommandCenter({
                       <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[10px] font-bold">
                         {col.piiClassification}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-500 text-[10px] font-bold">
                         {col.breakingChangeRisk}
                       </span>
                     </div>
@@ -2851,7 +2851,7 @@ export default function FivePersonaCommandCenter({
                       Silver SQL: {col.silverTransform}
                     </span>
                     <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/25">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25">
                       Gold: {col.goldMartColumn}
                     </span>
                   </div>
@@ -2926,7 +2926,7 @@ export default function FivePersonaCommandCenter({
                     className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-rose-500">
+                      <span className="font-bold text-red-500">
                         {rec.quarantineId} · Column `{rec.failedColumn}`
                       </span>
                       <span className="text-[10px] text-zinc-500">
@@ -3230,7 +3230,7 @@ export default function FivePersonaCommandCenter({
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-rose-500" />
+                  <ShieldCheck className="w-4 h-4 text-red-500" />
                   <span>
                     Multi-Hop IAM Privilege Escalation Path Finder (`getIamPolicy`)
                   </span>
@@ -3245,7 +3245,7 @@ export default function FivePersonaCommandCenter({
                   onClick={() =>
                     onNavigateTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')
                   }
-                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-extrabold cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-extrabold cursor-pointer"
                 >
                   Open IAM Surgeon →
                 </button>
@@ -3272,7 +3272,7 @@ export default function FivePersonaCommandCenter({
                       {ch.severity}
                     </span>
                   </div>
-                  <div className="text-[10px] text-rose-500 font-bold">
+                  <div className="text-[10px] text-red-500 font-bold">
                     {ch.escalationVector}
                   </div>
                   <div className="text-[10px] text-zinc-500">{ch.hopChain}</div>
@@ -3417,7 +3417,7 @@ export default function FivePersonaCommandCenter({
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
                     Model Armor Prompt/PII Firewall (GA 590.0.1)
                   </h3>
-                  <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 text-[10px] font-mono font-bold">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px] font-mono font-bold">
                     {overview?.aiMlOpsEngineer?.modelArmorFirewall?.status || 'ENFORCED_GA'}
                   </span>
                 </div>
@@ -3431,7 +3431,7 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runPersonaAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
                   disabled={busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
-                  className="w-full px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'
                     ? 'Verifying Model Armor & RAG...'
@@ -3439,8 +3439,8 @@ export default function FivePersonaCommandCenter({
                 </button>
                 {actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
                   ?.aiMlOpsReceipt && (
-                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/40 text-[11px] font-mono space-y-1">
-                    <div className="font-extrabold text-purple-500">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-blue-500">
                       MODEL ARMOR &amp; RAG VERIFIED
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">
@@ -3480,7 +3480,7 @@ export default function FivePersonaCommandCenter({
                   {overview?.aiMlOpsEngineer?.smartModelRouter?.routingRule}
                 </p>
                 <div className="flex items-center justify-between text-xs font-mono pt-1">
-                  <span className="text-purple-500 font-bold">
+                  <span className="text-blue-500 font-bold">
                     Context Cache Hit: {overview?.aiMlOpsEngineer?.smartModelRouter?.contextCacheHitRatePct || 81.5}%
                   </span>
                   <span className="text-emerald-500 font-bold">
@@ -3523,7 +3523,7 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runPersonaAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
                   disabled={busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
-                  className="w-full px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'
                     ? 'Auditing SLO Gate...'
@@ -3531,8 +3531,8 @@ export default function FivePersonaCommandCenter({
                 </button>
                 {actionReceipts.RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
                   ?.sreReceipt && (
-                  <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/40 text-[11px] font-mono space-y-1">
-                    <div className="font-extrabold text-orange-500">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-amber-500">
                       RELEASE GATE:{' '}
                       {
                         actionReceipts.RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
@@ -3621,7 +3621,7 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runPersonaAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
                   disabled={busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
-                  className="w-full px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'
                     ? 'Auditing Locks & Indexes...'
@@ -3629,8 +3629,8 @@ export default function FivePersonaCommandCenter({
                 </button>
                 {actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
                   ?.dbreReceipt && (
-                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/40 text-[11px] font-mono space-y-1">
-                    <div className="font-extrabold text-cyan-500">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-blue-500">
                       DBRE LOCK &amp; INDEX AUDIT COMPLETE
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">
@@ -3708,7 +3708,7 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runPersonaAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
                   disabled={busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
-                  className="w-full px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'
                     ? 'Scanning Zombie Disks & IPs...'
@@ -3716,8 +3716,8 @@ export default function FivePersonaCommandCenter({
                 </button>
                 {actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
                   ?.finopsReceipt && (
-                  <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/40 text-[11px] font-mono space-y-1">
-                    <div className="font-extrabold text-teal-500">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-emerald-500">
                       ZOMBIE REAPER &amp; UNIT AUDIT COMPLETE
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">
@@ -3791,7 +3791,7 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runPersonaAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
                   disabled={busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
-                  className="w-full px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'
                     ? 'Auditing GKE & mTLS Mesh...'
@@ -3799,8 +3799,8 @@ export default function FivePersonaCommandCenter({
                 </button>
                 {actionReceipts.RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
                   ?.platformK8sReceipt && (
-                  <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/40 text-[11px] font-mono space-y-1">
-                    <div className="font-extrabold text-sky-500">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-blue-500">
                       GKE &amp; SERVICE MESH AUDIT COMPLETE
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">

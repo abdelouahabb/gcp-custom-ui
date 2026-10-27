@@ -1594,7 +1594,7 @@ export default function AutonomousCloudBrain({
                     y1={capY}
                     x2={740}
                     y2={capY}
-                    stroke="#f43f5e"
+                    stroke="#ea4335"
                     strokeWidth="1.5"
                     strokeDasharray="5 4"
                   />
@@ -1629,7 +1629,7 @@ export default function AutonomousCloudBrain({
                     y2={projY}
                     stroke={
                       isBreachDay
-                        ? '#f43f5e'
+                        ? '#ea4335'
                         : pt.projected >= monthlyBudgetCap
                         ? '#10b981'
                         : '#4285f4'
@@ -1644,7 +1644,7 @@ export default function AutonomousCloudBrain({
                     r={isBreachDay ? 5 : 3}
                     fill={
                       isBreachDay
-                        ? '#f43f5e'
+                        ? '#ea4335'
                         : pt.projected >= monthlyBudgetCap && autoBreakerArmed
                         ? '#10b981'
                         : '#8ab4f8'

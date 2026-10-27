@@ -2098,7 +2098,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     <button
                       type="button"
                       onClick={() => onSelectStudioTab('CLOUD_SOC')}
-                      className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                     >
                       Quarantine in Cloud SOC →
                     </button>

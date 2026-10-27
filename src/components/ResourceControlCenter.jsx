@@ -278,7 +278,7 @@ export default function ResourceControlCenter({
                         score >= 80
                           ? 'bg-red-500'
                           : score >= 60
-                          ? 'bg-orange-400'
+                          ? 'bg-amber-400'
                           : 'bg-emerald-500';
 
                       return (

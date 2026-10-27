@@ -155,7 +155,7 @@ export default function CommandPaletteModal({
         subtitle: 'Enable Google Sign-In on any Cloud Run .run.app URL without an $18.25/mo Load Balancer + custom OAuth 2.0 Client binder for standalone @gmail.com projects',
         keywords: 'cloud run iap identity aware proxy google sign in zero load balancer 0/mo oauth client id secret iapenabled app engine',
         badge: 'CLOUD RUN IAP ($0/MO)',
-        badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Key,
         run: () => {
           onSelectTab('CLOUD_RUN');
@@ -197,7 +197,7 @@ export default function CommandPaletteModal({
         subtitle: 'Live BigQuery Standard SQL Z-Score & Cosine Vector CTE, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Attestor, Live logging.googleapis.com Correlator + Gemini 3.8 Flash RCA & Real TLS 1.3 X.509 Handshake Inspector',
         keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini rca surgeon tls 1.3 x509 certificate cipher',
         badge: 'WAVE 15 · SLSA & RCA',
-        badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'WAVE15_DYSON_MOONSHOT');
@@ -211,7 +211,7 @@ export default function CommandPaletteModal({
         subtitle: 'Live BigQuery FOR SYSTEM_TIME AS OF SQL Diff, Automated GCS/BQ/Secret REST PATCH Remediation, Live getIamPolicy Permission Graph & X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
         keywords: 'wave 14 quantum doctor pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel point in time recovery for system_time as of self healing config drift remediation iam permission blast radius graph getiampolicy',
         badge: 'WAVE 14 · DRIFT & PQC',
-        badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Key,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'WAVE14_QUANTUM_DOCTOR');
@@ -225,7 +225,7 @@ export default function CommandPaletteModal({
         subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Neuralink Prompt-to-Schema 4-Node DAG Builder, Optimus 3-Agent Review & Ed25519 Signed Audit Trail',
         keywords: 'wave 13 starlink orbital laser subsea fiber neuralink thought to cloud multi region tls 1.3 latency probe natural language schema dag compiler builder optimus 3 agent review board ed25519 audit trail signature',
         badge: 'WAVE 13 · TLS & DAG',
-        badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Globe,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'WAVE13_STARLINK_NEURALINK');
@@ -295,7 +295,7 @@ export default function CommandPaletteModal({
         subtitle: 'Azure-style Resource Groups + 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator, Presigned URLs & Global LB Wizard',
         keywords: 'aws azure resource group tagger hard spend fuse stop loss budget iam policy simulator switch role presigned url sas s3 load balancer waf',
         badge: 'AWS/AZURE PARITY',
-        badgeColor: 'text-indigo-700 dark:text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Rocket,
         run: () => {
           onSelectTab('AWS_AZURE_PARITY');
@@ -709,7 +709,7 @@ export default function CommandPaletteModal({
         subtitle: 'Live JSON-RPC 2.0 tools/list & tools/call workbench, 4-server triage chains, Gemini MCP Agent & 1-click IDE config exporter',
         keywords: 'mcp model context protocol servers json-rpc tools list call gemini claude cursor bigquery gke run',
         badge: '48 MCP SERVERS',
-        badgeColor: 'text-indigo-700 dark:text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Cpu,
         run: () => {
           onSelectTab('MCP_HUB');
@@ -807,7 +807,7 @@ export default function CommandPaletteModal({
         subtitle: 'Compile plain English into LQL at $0.00 (Porter Stemmer + NER + BM25), learn official LQL syntax, and cut $0.50/GiB log noise',
         keywords: 'logs logging chrono lql query language tutorial natural language nlp error 500 latency trace waterfall drain3 sink exclusion',
         badge: 'NLP + LQL',
-        badgeColor: 'text-purple-700 dark:text-purple-300 bg-purple-500/15 border-purple-500/30',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Terminal,
         run: () => {
           onSelectTab('LOGS_SHELL');
@@ -849,7 +849,7 @@ export default function CommandPaletteModal({
         subtitle: 'Masks personal emails, Cloud Billing Account IDs, GCP project numbers & public IPv4s across all 20 tabs for safe screen sharing',
         keywords: 'gde mode streamer tutorial privacy shield hide email billing account id screen share video recording mask pii',
         badge: 'GDE SHIELD',
-        badgeColor: 'text-rose-700 dark:text-rose-300 bg-rose-500/15 border-rose-500/30',
+        badgeColor: 'text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30',
         icon: Sparkles,
         run: () => {
           onClose();
@@ -1153,7 +1153,7 @@ export default function CommandPaletteModal({
                           {action.badge}
                         </span>
                         {action.nlpMatchPct && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                             NLP Match {action.nlpMatchPct}%
                           </span>
                         )}

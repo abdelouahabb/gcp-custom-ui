@@ -580,22 +580,22 @@ export default function AutonomousCloudSocStudio({
   return (
     <div className="space-y-4">
       {/* Top SOC Command Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-cyan-500/35 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100 shadow-xl space-y-4">
+      <div className="p-4 sm:p-5 rounded-2xl border border-blue-500/35 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100 shadow-xl space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-extrabold">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>WAVE 16 · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
                 100% REAL GCP REST APIs · $0.00/MO SIEM LICENSE TAX
               </span>
-              <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-mono font-bold">
                 12-Invariant Guardian: {selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount} ({selfHealingGuardian.complianceScorePct}%)
               </span>
               {healthAndDriftBridge?.merkleSnapshot?.merkleRootShort && (
-                <span className="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-bold">
                   Health &amp; Drift Merkle: {healthAndDriftBridge.merkleSnapshot.merkleRootShort}
                 </span>
               )}
@@ -609,7 +609,7 @@ export default function AutonomousCloudSocStudio({
               Next-Gen Autonomous 20-Pillar Cloud Security Operations Center (`{projectId}`)
             </h2>
             <p className="text-xs text-zinc-400 max-w-4xl">
-              Correlates live <code className="text-cyan-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong>, verifies container <code className="text-cyan-300">@sha256</code> supply-chain &amp; Binary Authorization integrity, stress-tests <strong>Gemini &amp; Vertex AI Model-Armor</strong>, audits DNSSEC/Egress/KMS &amp; API attack surface, enforces <strong>12 Formal Zero-Trust Invariants</strong>, and seals every SOAR action in an <strong>Ed25519 (RFC 8032)</strong> ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
+              Correlates live <code className="text-blue-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong>, verifies container <code className="text-blue-300">@sha256</code> supply-chain &amp; Binary Authorization integrity, stress-tests <strong>Gemini &amp; Vertex AI Model-Armor</strong>, audits DNSSEC/Egress/KMS &amp; API attack surface, enforces <strong>12 Formal Zero-Trust Invariants</strong>, and seals every SOAR action in an <strong>Ed25519 (RFC 8032)</strong> ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
             </p>
           </div>
 
@@ -633,8 +633,8 @@ export default function AutonomousCloudSocStudio({
               onClick={() => setShowGitOpsBridge((v) => !v)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer border ${
                 showGitOpsBridge
-                  ? 'bg-indigo-600 border-indigo-400 text-white'
-                  : 'bg-zinc-900 hover:bg-zinc-800 border-indigo-500/40 text-indigo-300'
+                  ? 'bg-blue-600 border-blue-400 text-white'
+                  : 'bg-zinc-900 hover:bg-zinc-800 border-blue-500/40 text-blue-300'
               }`}
               title="Inspect live Terraform HCL git diff generated from your Cloud SOC SOAR actions"
             >
@@ -647,7 +647,7 @@ export default function AutonomousCloudSocStudio({
             <button
               type="button"
               onClick={() => setActivePillar('AUTONOMOUS_SELF_HEALING_GUARDIAN')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
               title="Open 12-Invariant Zero-Trust Compliance Engine & 1-Click Self-Healing Reconciler"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -669,7 +669,7 @@ export default function AutonomousCloudSocStudio({
               type="button"
               onClick={() => handleRunAiCommander('FULL_SOC_TRIAGE')}
               disabled={aiLoading || loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
@@ -691,10 +691,10 @@ export default function AutonomousCloudSocStudio({
 
         {/* Live Health & Drift + ClickOps-to-GitOps (main.tf / imports.tf) Bridge Drawer */}
         {showGitOpsBridge && healthAndDriftBridge?.gitOpsBridge && (
-          <div className="p-3.5 rounded-xl bg-zinc-900/95 border border-indigo-500/40 space-y-2.5 font-mono">
+          <div className="p-3.5 rounded-xl bg-zinc-900/95 border border-blue-500/40 space-y-2.5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-extrabold uppercase">
+                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold uppercase">
                   Health &amp; Drift &harr; Cloud SOC Bidirectional Bridge
                 </span>
                 <span className="text-xs font-bold text-white">
@@ -714,7 +714,7 @@ export default function AutonomousCloudSocStudio({
                   onClick={() => setGitOpsTab('DIFF')}
                   className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
                     gitOpsTab === 'DIFF'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
@@ -725,7 +725,7 @@ export default function AutonomousCloudSocStudio({
                   onClick={() => setGitOpsTab('IMPORTS')}
                   className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
                     gitOpsTab === 'IMPORTS'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
@@ -754,7 +754,7 @@ export default function AutonomousCloudSocStudio({
                   <button
                     type="button"
                     onClick={() => onNavigateTab('SOVEREIGN_STUDIO')}
-                    className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-[10px] font-extrabold cursor-pointer"
+                    className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-blue-300 text-[10px] font-extrabold cursor-pointer"
                   >
                     Open SHA-256 Time-Machine &rarr;
                   </button>
@@ -798,7 +798,7 @@ export default function AutonomousCloudSocStudio({
             </div>
             <div
               className={`text-lg font-extrabold mt-0.5 ${
-                summary.criticalChainsCount > 0 ? 'text-red-400' : 'text-cyan-400'
+                summary.criticalChainsCount > 0 ? 'text-red-400' : 'text-blue-400'
               }`}
             >
               {summary.killChainsCount} Chains ({summary.criticalChainsCount} High/Crit)
@@ -873,14 +873,14 @@ export default function AutonomousCloudSocStudio({
                 onClick={() => setActivePillar(p.id)}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
                   isActive
-                    ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-md'
+                    ? 'bg-blue-500/20 border-blue-400 text-white shadow-md'
                     : 'bg-zinc-900/70 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300'
                 }`}
               >
                 <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
                     isActive
-                      ? 'bg-cyan-400 text-zinc-950'
+                      ? 'bg-blue-400 text-zinc-950'
                       : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
@@ -888,7 +888,7 @@ export default function AutonomousCloudSocStudio({
                 </span>
                 <div className="min-w-0">
                   <div className="text-xs font-extrabold truncate flex items-center gap-1.5">
-                    <Icon className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                     <span className="truncate">{p.title}</span>
                   </div>
                   <div className="text-[10px] text-zinc-400 truncate mt-0.5">
@@ -918,7 +918,7 @@ export default function AutonomousCloudSocStudio({
             )}
             <span className="font-bold">{statusBanner.message}</span>
             {statusBanner.receipt && (
-              <span className="px-2 py-0.5 rounded bg-zinc-900 text-cyan-300 font-mono text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-zinc-900 text-blue-300 font-mono text-[10px]">
                 Ed25519 Signed: {String(statusBanner.receipt.signatureHex || '').slice(0, 20)}...
               </span>
             )}
@@ -1090,13 +1090,13 @@ export default function AutonomousCloudSocStudio({
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold border ${
                                 exp.actorClassification === 'PURPLE_TEAM_SIMULATION'
-                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40'
+                                  ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40'
                                   : exp.actorClassification ===
                                     'AUTHENTICATED_OPERATOR_SESSION'
                                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                                   : exp.actorClassification ===
                                     'GOOGLE_MANAGED_CONTROL_PLANE'
-                                  ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30'
+                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
                                   : 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40'
                               }`}
                             >
@@ -1175,7 +1175,7 @@ export default function AutonomousCloudSocStudio({
                         {(chain.tactics || []).map((t) => (
                           <span
                             key={t}
-                            className="px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[10px]"
+                            className="px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10px]"
                           >
                             {t}
                           </span>
@@ -1209,7 +1209,7 @@ export default function AutonomousCloudSocStudio({
 
                           {/* 2. Exact Mathematical Risk Formula */}
                           <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
-                            <span className="font-extrabold text-cyan-600 dark:text-cyan-400">
+                            <span className="font-extrabold text-blue-600 dark:text-blue-400">
                               Risk Score Math:{' '}
                             </span>
                             {exp.scoreFormulaText}
@@ -1256,7 +1256,7 @@ export default function AutonomousCloudSocStudio({
                           <div
                             className={`p-2.5 rounded-lg border text-[11px] leading-relaxed ${
                               exp.actorClassification === 'PURPLE_TEAM_SIMULATION'
-                                ? 'bg-violet-500/10 border-violet-500/30 text-violet-800 dark:text-violet-200'
+                                ? 'bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-200'
                                 : exp.actorClassification ===
                                   'AUTHENTICATED_OPERATOR_SESSION'
                                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
@@ -1299,7 +1299,7 @@ export default function AutonomousCloudSocStudio({
                                           <td className="py-1 px-2 text-zinc-500 truncate max-w-[240px]">
                                             {ev.resourceName}
                                           </td>
-                                          <td className="py-1 px-2 text-cyan-600 dark:text-cyan-400">
+                                          <td className="py-1 px-2 text-blue-600 dark:text-blue-400">
                                             {ev.techniqueId}
                                           </td>
                                           <td className="py-1 pl-2 text-right font-bold text-red-500">
@@ -1490,7 +1490,7 @@ export default function AutonomousCloudSocStudio({
                       <button
                         type="button"
                         onClick={() => setActivePillar('WIF_IDENTITY_FREEZE')}
-                        className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
                       >
                         Manage SA Freeze (:disable)
                       </button>
@@ -1594,7 +1594,7 @@ export default function AutonomousCloudSocStudio({
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       Enforce Binary Auth
                     </button>
@@ -1627,7 +1627,7 @@ export default function AutonomousCloudSocStudio({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Eye className="w-4 h-4 text-cyan-500" />
+                <Eye className="w-4 h-4 text-blue-500" />
                 <span>Zero-Cost ($0.00/mo) Active Canary &amp; Tripwire Deception Grid</span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -1645,7 +1645,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -1705,7 +1705,7 @@ export default function AutonomousCloudSocStudio({
                   <div className="text-xs font-extrabold text-zinc-900 dark:text-white">
                     {c.title}
                   </div>
-                  <div className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 break-all">
+                  <div className="text-[11px] font-mono text-blue-600 dark:text-blue-400 break-all">
                     {c.name}
                   </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -1727,7 +1727,7 @@ export default function AutonomousCloudSocStudio({
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="w-full py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       Arm $0.00/mo Tripwire
                     </button>
@@ -1762,7 +1762,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <Sparkles className="w-4 h-4 text-blue-500" />
                   <span>Gemini 3.8 Flash &amp; 3.1 Pro Autonomous SOC Incident Commander</span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -1782,7 +1782,7 @@ export default function AutonomousCloudSocStudio({
                   type="button"
                   onClick={() => handleRunAiCommander('FULL_SOC_TRIAGE')}
                   disabled={aiLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1793,8 +1793,8 @@ export default function AutonomousCloudSocStudio({
             </div>
 
             {aiBriefing && (
-              <div className="p-4 rounded-xl bg-zinc-950 border border-violet-500/40 text-zinc-100 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300 border-b border-zinc-800 pb-2">
+              <div className="p-4 rounded-xl bg-zinc-950 border border-blue-500/40 text-zinc-100 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-blue-300 border-b border-zinc-800 pb-2">
                   <span>Model: {aiBriefing.model}</span>
                   {aiBriefing.receipt && (
                     <span>
@@ -1817,7 +1817,7 @@ export default function AutonomousCloudSocStudio({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px] font-mono">
               <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Canonical State SHA-256 Digest:</div>
-                <div className="font-bold text-cyan-600 dark:text-cyan-400 break-all mt-0.5">
+                <div className="font-bold text-blue-600 dark:text-blue-400 break-all mt-0.5">
                   {attestation.stateSha256 || 'pending'}
                 </div>
               </div>
@@ -1859,7 +1859,7 @@ export default function AutonomousCloudSocStudio({
                                 message: `Copied Ed25519-signed forensic receipt [${rcpt.action}] to clipboard!`,
                               });
                             }}
-                            className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold cursor-pointer"
+                            className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                           >
                             Copy Signed JSON
                           </button>
@@ -1886,7 +1886,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-500" />
+                  <Layers className="w-4 h-4 text-blue-500" />
                   <span>
                     IAM Policy Time-Machine, Cryptographic `etag` Vault &amp; 1-Click Atomic `setIamPolicy` Rollback
                   </span>
@@ -1916,7 +1916,7 @@ export default function AutonomousCloudSocStudio({
                     setCheckpointLabelInput('');
                   }}
                   disabled={Boolean(actionBusy)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>
@@ -1932,7 +1932,7 @@ export default function AutonomousCloudSocStudio({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] text-zinc-400">Live IAM Policy etag</div>
-                <div className="font-bold text-cyan-600 dark:text-cyan-400 truncate mt-0.5">
+                <div className="font-bold text-blue-600 dark:text-blue-400 truncate mt-0.5">
                   {iamTimeMachine.liveEtag}
                 </div>
               </div>
@@ -1976,7 +1976,7 @@ export default function AutonomousCloudSocStudio({
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold text-[10px]">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[10px]">
                         {cp.checkpointId}
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -2037,7 +2037,7 @@ export default function AutonomousCloudSocStudio({
                         <button
                           type="button"
                           onClick={() => setActivePillar('IAM_ESCALATION_SOLVER')}
-                          className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                         >
                           Escalation Solver
                         </button>
@@ -2148,7 +2148,7 @@ export default function AutonomousCloudSocStudio({
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Re-Verify Bucket Lock</span>
@@ -2180,7 +2180,7 @@ export default function AutonomousCloudSocStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-white">
                         {s.name}
                       </span>
-                      <span className="text-cyan-600 dark:text-cyan-400 font-bold">
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">
                         { s.status}
                       </span>
                     </div>
@@ -2264,7 +2264,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-cyan-500" />
+                  <Cpu className="w-4 h-4 text-blue-500" />
                   <span>
                     1-Click Service Account In-Place Freeze / Unfreeze (`serviceAccounts:disable` &amp; `:enable`)
                   </span>
@@ -2404,7 +2404,7 @@ export default function AutonomousCloudSocStudio({
                       <div className="text-[11px] text-zinc-500">{p.description}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold">
                         {p.state}
                       </span>
                       {onRunInShell && (
@@ -2437,7 +2437,7 @@ export default function AutonomousCloudSocStudio({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Server className="w-4 h-4 text-cyan-500" />
+                <Server className="w-4 h-4 text-blue-500" />
                 <span>
                   Cross-Project Multi-Estate SOC Federation Matrix (`cloudresourcemanager.googleapis.com/v1/projects`)
                 </span>
@@ -2451,7 +2451,7 @@ export default function AutonomousCloudSocStudio({
               type="button"
               onClick={fetchFleetSocMatrix}
               disabled={fleetLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${fleetLoading ? 'animate-spin' : ''}`} />
               <span>
@@ -2463,7 +2463,7 @@ export default function AutonomousCloudSocStudio({
           {fleetMatrix ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-300 font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold">
                   Active Projects Scanned: {fleetMatrix.projectsCount}
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 font-bold">
@@ -2480,7 +2480,7 @@ export default function AutonomousCloudSocStudio({
                     key={proj.projectId}
                     className={`p-3.5 rounded-xl border space-y-2 font-mono text-xs ${
                       proj.projectId === projectId
-                        ? 'border-cyan-500/50 bg-cyan-500/5'
+                        ? 'border-blue-500/50 bg-blue-500/5'
                         : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50'
                     }`}
                   >
@@ -2539,7 +2539,7 @@ export default function AutonomousCloudSocStudio({
                       </div>
                       <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
                         <div className="text-zinc-400">App Engine Edge</div>
-                        <div className="font-bold text-cyan-600 dark:text-cyan-400">
+                        <div className="font-bold text-blue-600 dark:text-blue-400">
                           {proj.appEngineState}
                         </div>
                       </div>
@@ -2650,16 +2650,16 @@ export default function AutonomousCloudSocStudio({
               </span>
             </div>
             <p className="text-[11px] text-zinc-200 leading-relaxed">
-              Locking <code className="text-amber-300">default-allow-ssh</code> from <code className="text-red-300">0.0.0.0/0</code> to <code className="text-emerald-300">35.235.240.0/20</code> (Google Cloud IAP) blocks direct public-IP SSH on port 22. After hardening, running plain <code className="text-amber-300">gcloud compute ssh &lt;vm&gt;</code> in your local bash terminal will stall/time out unless you pass <code className="text-emerald-300 font-bold">--tunnel-through-iap</code> (or click <strong>Restore Direct SSH (0.0.0.0/0)</strong> above). Public web rules (<code className="text-cyan-300">default-allow-http</code> / <code className="text-cyan-300">default-allow-https</code>) are automatically preserved.
+              Locking <code className="text-amber-300">default-allow-ssh</code> from <code className="text-red-300">0.0.0.0/0</code> to <code className="text-emerald-300">35.235.240.0/20</code> (Google Cloud IAP) blocks direct public-IP SSH on port 22. After hardening, running plain <code className="text-amber-300">gcloud compute ssh &lt;vm&gt;</code> in your local bash terminal will stall/time out unless you pass <code className="text-emerald-300 font-bold">--tunnel-through-iap</code> (or click <strong>Restore Direct SSH (0.0.0.0/0)</strong> above). Public web rules (<code className="text-blue-300">default-allow-http</code> / <code className="text-blue-300">default-allow-https</code>) are automatically preserved.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs font-mono">
             <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2 flex flex-col justify-between">
               <div className="space-y-1">
-                <div className="text-cyan-400 font-extrabold">Stage 1 · IAM Vault</div>
+                <div className="text-blue-400 font-extrabold">Stage 1 · IAM Vault</div>
                 <div className="text-[11px] text-zinc-300">
-                  Captures an Ed25519-signed <code className="text-cyan-300">getIamPolicy</code> snapshot with Zero-Lockout Owner Guard.
+                  Captures an Ed25519-signed <code className="text-blue-300">getIamPolicy</code> snapshot with Zero-Lockout Owner Guard.
                 </div>
               </div>
               <button
@@ -2671,7 +2671,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 1 Only
               </button>
@@ -2714,9 +2714,9 @@ export default function AutonomousCloudSocStudio({
             </div>
             <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2 flex flex-col justify-between">
               <div className="space-y-1">
-                <div className="text-violet-400 font-extrabold">Stage 4 · App Engine</div>
+                <div className="text-blue-400 font-extrabold">Stage 4 · App Engine</div>
                 <div className="text-[11px] text-zinc-300">
-                  Locks App Engine Edge Firewall default rule (<code className="text-violet-300">*</code>) to <code className="text-red-300">DENY</code>.
+                  Locks App Engine Edge Firewall default rule (<code className="text-blue-300">*</code>) to <code className="text-red-300">DENY</code>.
                 </div>
               </div>
               <button
@@ -2727,7 +2727,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 4 Only
               </button>
@@ -2812,7 +2812,7 @@ export default function AutonomousCloudSocStudio({
                     <span className="font-extrabold text-zinc-900 dark:text-white">
                       {p.sourceMember}
                     </span>
-                    <span className="text-cyan-600 dark:text-cyan-400 font-bold">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold">
                       --[{p.role}]--&gt;
                     </span>
                     <span className="text-zinc-600 dark:text-zinc-300">
@@ -2889,7 +2889,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-cyan-500" />
+                  <Terminal className="w-4 h-4 text-blue-500" />
                   <span>
                     Compute Engine Project Metadata (`commonInstanceMetadata`), IAM OS Login, Serial-Port Backdoor &amp; SSH-Key Forensics
                   </span>
@@ -3003,7 +3003,7 @@ export default function AutonomousCloudSocStudio({
                       <span className="font-bold text-zinc-900 dark:text-white">
                         User: {k.username}
                       </span>{' '}
-                      <span className="text-cyan-500">({k.algorithm})</span>
+                      <span className="text-blue-500">({k.algorithm})</span>
                       <span className="text-zinc-500 ml-2 truncate max-w-md inline-block align-bottom">
                         {k.fingerprintPreview}
                       </span>
@@ -3037,7 +3037,7 @@ export default function AutonomousCloudSocStudio({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Activity className="w-4 h-4 text-cyan-500" />
+                <Activity className="w-4 h-4 text-blue-500" />
                 <span>
                   Live Endpoint TLS 1.3 X.509 Cipher, HTTP Security Headers (`HSTS`/`CSP`/`CORS`) &amp; Unauthenticated Surface Prober
                 </span>
@@ -3051,7 +3051,7 @@ export default function AutonomousCloudSocStudio({
               type="button"
               onClick={handleRunDeepProbe}
               disabled={deepProbeLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${deepProbeLoading ? 'animate-spin' : ''}`}
@@ -3073,7 +3073,7 @@ export default function AutonomousCloudSocStudio({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-extrabold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold">
                         {ep.type}
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -3120,7 +3120,7 @@ export default function AutonomousCloudSocStudio({
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <Lock className="w-3 h-3" />
                           <span>Verify App Engine DENY</span>
@@ -3131,7 +3131,7 @@ export default function AutonomousCloudSocStudio({
                         type="button"
                         onClick={handleRunDeepProbe}
                         disabled={deepProbeLoading}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>Re-Probe TLS 1.3</span>
@@ -3165,7 +3165,7 @@ export default function AutonomousCloudSocStudio({
                     </div>
                     <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
                       <div className="text-zinc-400">X.509 SHA-256 Fingerprint</div>
-                      <div className="font-bold text-cyan-600 dark:text-cyan-400 truncate">
+                      <div className="font-bold text-blue-600 dark:text-blue-400 truncate">
                         {ep.certFingerprint256}
                       </div>
                     </div>
@@ -3294,7 +3294,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Key className="w-3.5 h-3.5" />
                 <span>Arm $0/mo Honey-Secret Canary</span>
@@ -3314,7 +3314,7 @@ export default function AutonomousCloudSocStudio({
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   1-Click Provision SOC Honey-Secret Now
                 </button>
@@ -3328,7 +3328,7 @@ export default function AutonomousCloudSocStudio({
                   >
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
                           {sec.rotationStatus}
                         </span>
                         <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -3351,7 +3351,7 @@ export default function AutonomousCloudSocStudio({
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Rotate Secret Version (:addVersion)</span>
@@ -3384,7 +3384,7 @@ export default function AutonomousCloudSocStudio({
           PILLAR 15: AUTONOMOUS PURPLE-TEAM BREACH & ATTACK SIMULATION (BAS) STOPWATCH
          ==================================================================== */}
       {activePillar === 'PURPLE_TEAM_BAS_ARENA' && (
-        <div className="p-4 rounded-xl border border-violet-500/40 bg-white dark:bg-zinc-950 space-y-4">
+        <div className="p-4 rounded-xl border border-blue-500/40 bg-white dark:bg-zinc-950 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -3419,7 +3419,7 @@ export default function AutonomousCloudSocStudio({
                 <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
                   Detection Coverage: {purpleDrillResult.detectionCoveragePct}%
                 </span>
-                <span className="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold">
+                <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                   Total Stopwatch Latency: {purpleDrillResult.totalDrillLatencyMs}ms
                 </span>
                 <span className="text-zinc-500">
@@ -3441,7 +3441,7 @@ export default function AutonomousCloudSocStudio({
                         {st.latencyMs}ms
                       </span>
                     </div>
-                    <div className="text-[10px] text-cyan-600 dark:text-cyan-400 break-all">
+                    <div className="text-[10px] text-blue-600 dark:text-blue-400 break-all">
                       API: {st.apiProbed}
                     </div>
                     <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
@@ -3463,7 +3463,7 @@ export default function AutonomousCloudSocStudio({
                         <button
                           type="button"
                           onClick={() => setActivePillar('KILL_CHAINS')}
-                          className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                         >
                           View in Kill-Chains
                         </button>
@@ -3485,11 +3485,11 @@ export default function AutonomousCloudSocStudio({
           PILLAR 16: VERTEX AI & GEMINI MODEL-ARMOR RED-TEAM PROMPT-INJECTION ARENA
          ==================================================================== */}
       {activePillar === 'AI_RED_TEAM_FIREWALL' && (
-        <div className="p-4 rounded-xl border border-violet-500/40 bg-white dark:bg-zinc-950 space-y-4">
+        <div className="p-4 rounded-xl border border-blue-500/40 bg-white dark:bg-zinc-950 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-violet-500" />
+                <Sparkles className="w-4 h-4 text-blue-500" />
                 <span>
                   Vertex AI &amp; Gemini Model-Armor Red-Team Prompt-Injection, SSRF (`169.254.169.254`) &amp; IAM Tool-Call Hijack Arena
                 </span>
@@ -3513,7 +3513,7 @@ export default function AutonomousCloudSocStudio({
                 type="button"
                 onClick={() => handleRunAiRedTeamAudit(customRedTeamPrompt)}
                 disabled={aiRedTeamLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>
@@ -3526,8 +3526,8 @@ export default function AutonomousCloudSocStudio({
           </div>
 
           {/* Interactive Custom Adversarial Prompt-Injection Probe Bar */}
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-violet-500/30 flex flex-wrap items-center gap-2 text-xs font-mono">
-            <span className="font-extrabold text-violet-600 dark:text-violet-300 shrink-0">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-blue-500/30 flex flex-wrap items-center gap-2 text-xs font-mono">
+            <span className="font-extrabold text-blue-600 dark:text-blue-300 shrink-0">
               Custom Red-Team Payload Probe:
             </span>
             <input
@@ -3559,13 +3559,13 @@ export default function AutonomousCloudSocStudio({
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-[10px] text-zinc-500">Target Gemini Model</div>
-                  <div className="text-base font-extrabold text-violet-600 dark:text-violet-400 mt-0.5">
+                  <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                     {aiRedTeamResult.modelTested}
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-[10px] text-zinc-500">Vertex AI / GenLanguage APIs</div>
-                  <div className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                  <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                     Vertex: {aiRedTeamResult.vertexAiEnabled ? 'ON' : 'OFF'} · GenAI: {aiRedTeamResult.genLangEnabled ? 'ON' : 'OFF'}
                   </div>
                 </div>
@@ -3597,13 +3597,13 @@ export default function AutonomousCloudSocStudio({
                       {vec.adversarialPayload}
                     </div>
 
-                    <div className="text-[11px] text-cyan-700 dark:text-cyan-300">
+                    <div className="text-[11px] text-blue-700 dark:text-blue-300">
                       <span className="font-bold">Firewall Rule: </span>
                       {vec.deterministicFirewallRule}
                     </div>
 
                     <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
-                      <span className="font-bold text-violet-500">{vec.defenseLayer}: </span>
+                      <span className="font-bold text-blue-500">{vec.defenseLayer}: </span>
                       {vec.modelResponseSnippet}
                     </div>
 
@@ -3612,7 +3612,7 @@ export default function AutonomousCloudSocStudio({
                         type="button"
                         onClick={() => handleRunAiRedTeamAudit(vec.adversarialPayload)}
                         disabled={aiRedTeamLoading}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <Zap className="w-3 h-3" />
                         <span>Re-Fire Vector Against {selectedAiModel}</span>
@@ -3688,7 +3688,7 @@ export default function AutonomousCloudSocStudio({
             </div>
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
               <div className="text-[10px] text-zinc-500">Cloud KMS KeyRings (`cloudkms.googleapis.com`)</div>
-              <div className="text-base font-extrabold mt-0.5 text-cyan-500">
+              <div className="text-base font-extrabold mt-0.5 text-blue-500">
                 {(dnsEgressAndKmsRadar.kmsKeyRings || []).length} KeyRing(s) Inspected
               </div>
             </div>
@@ -3709,7 +3709,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -3733,7 +3733,7 @@ export default function AutonomousCloudSocStudio({
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   Create DNSSEC-Hardened Zone Now
                 </button>
@@ -3774,7 +3774,7 @@ export default function AutonomousCloudSocStudio({
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {z.isHardened
                           ? 'Re-Verify DNSSEC Signing'
@@ -3821,7 +3821,7 @@ export default function AutonomousCloudSocStudio({
                   <button
                     type="button"
                     onClick={() => onNavigateTab('SRE_WAR_ROOM')}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-cyan-300 text-[11px] font-mono font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-blue-300 text-[11px] font-mono font-bold cursor-pointer"
                   >
                     VPC-SC Perimeter Architect (SRE War-Room) &rarr;
                   </button>
@@ -3966,7 +3966,7 @@ export default function AutonomousCloudSocStudio({
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Key className="w-3 h-3" />
                   <span>
@@ -3990,7 +3990,7 @@ export default function AutonomousCloudSocStudio({
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     Create Zero-Trust KMS KeyRing Now
                   </button>
@@ -4023,7 +4023,7 @@ export default function AutonomousCloudSocStudio({
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                         >
                           Ensure 90d Key
                         </button>
@@ -4045,7 +4045,7 @@ export default function AutonomousCloudSocStudio({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-cyan-500" />
+                <Layers className="w-4 h-4 text-blue-500" />
                 <span>
                   Live Enabled GCP API Attack-Surface Minimizer (`serviceusage.googleapis.com/v1`)
                 </span>
@@ -4055,7 +4055,7 @@ export default function AutonomousCloudSocStudio({
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="px-2.5 py-1 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-bold">
+              <span className="px-2.5 py-1 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                 Enabled APIs: {apiSurfaceMinimizer.enabledApisCount}
               </span>
               <span className="px-2.5 py-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
@@ -4077,7 +4077,7 @@ export default function AutonomousCloudSocStudio({
                         svc.isUnusedHighRisk
                           ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
                           : svc.isProtectedCore
-                          ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300'
+                          ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300'
                           : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                       }`}
                     >
@@ -4124,7 +4124,7 @@ export default function AutonomousCloudSocStudio({
                         );
                       }
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer shrink-0"
                   >
                     Core Guarded (Verify CLI)
                   </button>
@@ -4144,7 +4144,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <FileCode2 className="w-4 h-4 text-cyan-500" />
+                  <FileCode2 className="w-4 h-4 text-blue-500" />
                   <span>
                     Binary Authorization Cryptographic Admission Policy (`binaryauthorization.googleapis.com/v1`)
                   </span>
@@ -4162,7 +4162,7 @@ export default function AutonomousCloudSocStudio({
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>
@@ -4176,7 +4176,7 @@ export default function AutonomousCloudSocStudio({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] text-zinc-500">Enforcement Mode</div>
-                <div className="text-sm font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                   {artifactAndBinAuthRadar.binaryAuthorization?.defaultEnforcementMode || 'ENFORCED_BLOCK_AND_AUDIT_LOG'}
                 </div>
               </div>
@@ -4251,7 +4251,7 @@ export default function AutonomousCloudSocStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-white">
                         {repo.location}/{repo.name} ({repo.format})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
                         {repo.encryptionType}
                       </span>
                     </div>
@@ -4269,7 +4269,7 @@ export default function AutonomousCloudSocStudio({
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {repo.immutableTags
                           ? 'Re-Verify Immutable Tags'
@@ -4365,13 +4365,13 @@ export default function AutonomousCloudSocStudio({
             </div>
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] text-zinc-500">1-Click Auto-Healable</div>
-              <div className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+              <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                 {selfHealingGuardian.invariantsViolatedCount} Invariant(s)
               </div>
             </div>
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] text-zinc-500">GitOps HCL Sync</div>
-              <div className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+              <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                 {healthAndDriftBridge?.flightMutationsCount || 0} HCL Mutation(s)
               </div>
             </div>
@@ -4489,7 +4489,7 @@ export default function AutonomousCloudSocStudio({
                       {inv.passed ? 'COMPLIANT (PASS)' : 'VIOLATION DETECTED'}
                     </span>
                   </div>
-                  <div className="text-[10px] text-cyan-600 dark:text-cyan-400">
+                  <div className="text-[10px] text-blue-600 dark:text-blue-400">
                     Category: <code>{inv.category}</code> · Target Invariant: <code>{inv.targetInvariant}</code>
                   </div>
                   <div className="text-[11px] text-zinc-600 dark:text-zinc-300">

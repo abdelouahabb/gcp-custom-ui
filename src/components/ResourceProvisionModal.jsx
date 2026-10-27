@@ -2138,10 +2138,10 @@ export default function ResourceProvisionModal({
 
           {/* Universal Runtime Service Account (iam.serviceAccounts.actAs) Selector */}
           {['CLOUD_RUN', 'COMPUTE_VM', 'GKE_CLUSTER'].includes(serviceType) && (
-            <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-2.5">
+            <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     Runtime Service Account (iam.serviceAccounts.actAs)
                   </span>
@@ -4077,9 +4077,9 @@ export default function ResourceProvisionModal({
           {serviceType === 'CLOUD_RUN' && (
             <div className="space-y-3.5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
               {/* Cloud Run Workload Kind Selector: SERVICE vs BATCH JOB */}
-              <div className="p-3 rounded-[10px] border border-indigo-500/35 bg-indigo-500/5 space-y-2.5">
+              <div className="p-3 rounded-[10px] border border-blue-500/35 bg-blue-500/5 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">
                     Cloud Run v2 Workload Kind (HTTP Service vs. Parallel Batch Job)
                   </label>
                   <span className="text-[10px] font-mono text-zinc-500">
@@ -4125,14 +4125,14 @@ export default function ResourceProvisionModal({
                         }}
                         className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
                           active
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                             : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
                         <div className="text-[11px] font-bold">{wk.label}</div>
                         <div
                           className={`text-[10px] mt-0.5 ${
-                            active ? 'text-indigo-100' : 'text-zinc-500'
+                            active ? 'text-blue-100' : 'text-zinc-500'
                           }`}
                         >
                           {wk.sub}
@@ -4143,7 +4143,7 @@ export default function ResourceProvisionModal({
                 </div>
 
                 {runWorkloadKind === 'JOB' && (
-                  <div className="pt-2 border-t border-indigo-500/20 space-y-2.5">
+                  <div className="pt-2 border-t border-blue-500/20 space-y-2.5">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
@@ -4209,7 +4209,7 @@ export default function ResourceProvisionModal({
                           type="checkbox"
                           checked={Boolean(runJobExecuteNow)}
                           onChange={(e) => setRunJobExecuteNow(e.target.checked)}
-                          className="rounded border-indigo-400 text-indigo-600"
+                          className="rounded border-blue-400 text-blue-600"
                         />
                         <span>
                           Execute First Run Immediately (<code>:run</code>)
@@ -4223,7 +4223,7 @@ export default function ResourceProvisionModal({
                           onChange={(e) =>
                             setRunJobAttachScheduler(e.target.checked)
                           }
-                          className="rounded border-indigo-400 text-indigo-600"
+                          className="rounded border-blue-400 text-blue-600"
                         />
                         <span>
                           Attach Cloud Scheduler Trigger (
@@ -4831,7 +4831,7 @@ export default function ResourceProvisionModal({
                     }}
                     className={`w-full h-[34px] rounded-[8px] px-2.5 text-xs font-mono border transition-colors cursor-pointer ${
                       runEnableIap
-                        ? 'bg-violet-500/15 border-violet-500/50 text-violet-600 dark:text-violet-300 font-bold'
+                        ? 'bg-blue-500/15 border-blue-500/50 text-blue-600 dark:text-blue-300 font-bold'
                         : runAllowUnauth
                         ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
                         : 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'

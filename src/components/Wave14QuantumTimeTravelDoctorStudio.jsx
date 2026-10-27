@@ -69,7 +69,7 @@ function renderInlineMarkdown(text, copyFn) {
           key={idx}
           onClick={() => copyFn && copyFn(codeTxt)}
           title="Click to copy"
-          className="px-1.5 py-0.5 mx-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-cyan-700 dark:text-cyan-300 font-mono text-[11px] cursor-pointer hover:bg-cyan-500/20"
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-blue-700 dark:text-blue-300 font-mono text-[11px] cursor-pointer hover:bg-blue-500/20"
         >
           {codeTxt}
         </code>
@@ -189,7 +189,7 @@ function FormattedMarkdown({ text, onCopy }) {
             blocks.push(
               <h4
                 key={`h3-${sIdx}-${lIdx}`}
-                className="text-xs font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 pt-2"
+                className="text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 pt-2"
               >
                 {renderInlineMarkdown(trimmed.slice(4), onCopy)}
               </h4>
@@ -209,7 +209,7 @@ function FormattedMarkdown({ text, onCopy }) {
                 key={`li-${sIdx}-${lIdx}`}
                 className="flex items-start gap-2 pl-2"
               >
-                <span className="text-cyan-500 font-bold mt-0.5">·</span>
+                <span className="text-blue-500 font-bold mt-0.5">·</span>
                 <div className="flex-1">
                   {renderInlineMarkdown(trimmed.slice(2), onCopy)}
                 </div>
@@ -496,11 +496,11 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
   return (
     <div className="space-y-6">
       {/* Top Hero Banner */}
-      <div className="p-5 rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-500/10 via-cyan-500/5 to-emerald-500/10 dark:from-violet-950/40 dark:via-zinc-900 dark:to-emerald-950/40">
+      <div className="p-5 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-emerald-500/10 dark:from-blue-950/40 dark:via-zinc-900 dark:to-emerald-950/40">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 WAVE 14 · QUANTUM DOCTOR (POINT-IN-TIME RECOVERY SQL, DRIFT AUTO-REMEDIATION, IAM GRAPH &amp; PQC VAULT)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -528,7 +528,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 IAM Principals
               </div>
-              <div className="text-sm font-mono font-extrabold text-violet-600 dark:text-violet-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {iamData ? `${iamData.totalPrincipals} Live` : 'Scanning...'}
               </div>
             </div>
@@ -536,7 +536,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Temporal Rows
               </div>
-              <div className="text-sm font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {timeTravelData
                   ? `${timeTravelData.currentRowCount} Now / ${timeTravelData.historicalRowCount} Past`
                   : 'Ready'}
@@ -567,8 +567,8 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                     active
-                      ? 'bg-black/25 text-violet-100'
-                      : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                      ? 'bg-black/25 text-blue-100'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                   }`}
                 >
                   MODULE {t.step}
@@ -579,7 +579,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 <div className="text-xs font-extrabold truncate">{t.title}</div>
                 <div
                   className={`text-[10px] truncate ${
-                    active ? 'text-violet-100/90' : 'text-zinc-500 dark:text-zinc-400'
+                    active ? 'text-blue-100/90' : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {t.subtitle}
@@ -599,7 +599,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-violet-500" />
+                  <Clock className="w-4 h-4 text-blue-500" />
                   <span>
                     Live BigQuery Time-Travel SQL Engine (<code>FOR SYSTEM_TIME AS OF</code>)
                   </span>
@@ -624,7 +624,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={() => executeTimeTravelQuery(true)}
                   disabled={runningTimeTravel}
-                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>
@@ -658,8 +658,8 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                         }}
                         className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-violet-600 text-white border-violet-500 font-bold'
-                            : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-violet-500/40'
+                            ? 'bg-blue-600 text-white border-blue-500 font-bold'
+                            : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                         }`}
                       >
                         {t.datasetId}.{t.tableId} ({t.location})
@@ -732,7 +732,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                       <button
                         type="button"
                         onClick={() => copyText(timeTravelData.executedSqlNow)}
-                        className="text-cyan-400 hover:underline cursor-pointer"
+                        className="text-blue-400 hover:underline cursor-pointer"
                       >
                         Copy SQL
                       </button>
@@ -749,19 +749,19 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                         onClick={() =>
                           copyText(timeTravelData.executedSqlTimeTravel)
                         }
-                        className="text-violet-400 hover:underline cursor-pointer"
+                        className="text-blue-400 hover:underline cursor-pointer"
                       >
                         Copy SQL
                       </button>
                     </div>
-                    <code className="block text-[11px] font-mono text-violet-300 break-all">
+                    <code className="block text-[11px] font-mono text-blue-300 break-all">
                       {timeTravelData.executedSqlTimeTravel}
                     </code>
                   </div>
                 </div>
 
                 {/* Temporal Delta Banner */}
-                <div className="p-3.5 rounded-xl border border-violet-500/40 bg-violet-500/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <div className="p-3.5 rounded-xl border border-blue-500/40 bg-blue-500/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                   <div>
                     Present Rows: <strong>{timeTravelData.currentRowCount}</strong> · Historical Snapshot Rows:{' '}
                     <strong>{timeTravelData.historicalRowCount}</strong> · Temporal Delta:{' '}
@@ -858,7 +858,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   </div>
 
                   <div className="p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/60 space-y-2">
-                    <div className="text-xs font-mono font-extrabold text-violet-700 dark:text-violet-300">
+                    <div className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
                       Historical Snapshot via FOR SYSTEM_TIME AS OF ({timeTravelData.historicalRowCount} Rows)
                     </div>
                     {timeTravelData.historicalRows?.length > 0 ? (
@@ -1032,7 +1032,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 text-violet-500" />
+                  <Users className="w-4 h-4 text-blue-500" />
                   <span>
                     Live IAM Policy Bindings &amp; Blast-Radius Graph (<code>projects:getIamPolicy</code>)
                   </span>
@@ -1057,7 +1057,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={() => handleGenerateIamAiPlan('')}
                   disabled={generatingIamPlan}
-                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1083,7 +1083,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   <div className="text-[10px] font-mono uppercase text-zinc-400">
                     Unique Principals
                   </div>
-                  <div className="text-base font-mono font-extrabold text-violet-600 dark:text-violet-400">
+                  <div className="text-base font-mono font-extrabold text-blue-600 dark:text-blue-400">
                     {iamData.totalPrincipals} Members
                   </div>
                 </div>
@@ -1113,7 +1113,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/70 space-y-2.5"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 text-[10px] font-mono font-bold uppercase">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold uppercase">
                       {p.principalType}
                     </span>
                     <span
@@ -1152,9 +1152,9 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             </div>
 
             {iamAiPlan?.markdown && (
-              <div className="p-5 rounded-2xl border border-violet-500/40 bg-white dark:bg-zinc-900/95 space-y-3">
+              <div className="p-5 rounded-2xl border border-blue-500/40 bg-white dark:bg-zinc-900/95 space-y-3">
                 <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-                  <div className="text-xs font-mono font-extrabold uppercase text-violet-700 dark:text-violet-300">
+                  <div className="text-xs font-mono font-extrabold uppercase text-blue-700 dark:text-blue-300">
                     LIVE GEMINI 3.8 FLASH LEAST-PRIVILEGE IAM REFACTORING PLAN ({iamAiPlan.latencyMs}ms)
                   </div>
                   <button
@@ -1184,7 +1184,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-cyan-500" />
+                  <KeyRound className="w-4 h-4 text-blue-500" />
                   <span>
                     Hybrid Post-Quantum Envelope Vault (X25519 ECDH + SHAKE256/HKDF-SHA512 + AES-256-GCM + Ed25519 + Secret Manager)
                   </span>
@@ -1197,7 +1197,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 <button
                   type="submit"
                   disabled={sealingEnvelope}
-                  className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>
@@ -1259,9 +1259,9 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             </div>
 
             {sealedEnvelope?.envelope && (
-              <div className="p-4 rounded-2xl border border-cyan-500/40 bg-cyan-500/5 space-y-2.5">
+              <div className="p-4 rounded-2xl border border-blue-500/40 bg-blue-500/5 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-mono font-extrabold text-cyan-800 dark:text-cyan-300">
+                  <span className="text-xs font-mono font-extrabold text-blue-800 dark:text-blue-300">
                     SEALED TO GOOGLE CLOUD SECRET MANAGER: {sealedEnvelope.secretVersionName}
                   </span>
                   <span className="text-[11px] font-mono text-zinc-500">

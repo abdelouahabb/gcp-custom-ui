@@ -92,7 +92,7 @@ function renderInlineNodes(text, keyPrefix = 'inl') {
       return (
         <code
           key={`${keyPrefix}-c-${idx}`}
-          className="px-1.5 py-0.5 mx-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] font-bold"
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[11px] font-bold"
         >
           {part.slice(1, -1)}
         </code>
@@ -134,7 +134,7 @@ function RoadsterMarkdownView({ content, onCopy }) {
               className="rounded-xl border border-zinc-800 bg-zinc-950 overflow-hidden"
             >
               <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-[10px] font-mono text-zinc-400">
-                <span className="uppercase font-bold text-indigo-300">
+                <span className="uppercase font-bold text-blue-300">
                   {seg.lang || 'CLI'}
                 </span>
                 {onCopy && (
@@ -169,7 +169,7 @@ function RoadsterMarkdownView({ content, onCopy }) {
                     key={`li-${keyBase}-${lIdx}`}
                     className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-200"
                   >
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     <div className="min-w-0 flex-1">
                       {renderInlineNodes(item, `li-${keyBase}-${lIdx}`)}
                     </div>
@@ -261,7 +261,7 @@ function RoadsterMarkdownView({ content, onCopy }) {
                 key={`hd-${sIdx}-${lIdx}`}
                 className="pt-2 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 text-xs font-extrabold text-zinc-900 dark:text-white"
               >
-                <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>{renderInlineNodes(headingMatch[2], `hd-${sIdx}-${lIdx}`)}</span>
               </div>
             );
@@ -640,7 +640,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
                     active
                       ? 'bg-white/20 text-white'
-                      : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300'
+                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
                   }`}
                 >
                   {t.step}
@@ -652,7 +652,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                   </div>
                   <div
                     className={`text-[10px] mt-0.5 truncate ${
-                      active ? 'text-indigo-100' : 'text-zinc-500 dark:text-zinc-400'
+                      active ? 'text-blue-100' : 'text-zinc-500 dark:text-zinc-400'
                     }`}
                   >
                     {t.subtitle}
@@ -671,7 +671,7 @@ export default function Wave12RoadsterFlightDeckStudio({
           <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                   6-VECTOR REAL-TIME FLIGHT TELEMETRY
                 </div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -710,7 +710,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                           ? 'bg-emerald-500'
                           : vec.score >= 60
                           ? 'bg-amber-500'
-                          : 'bg-rose-500'
+                          : 'bg-red-500'
                       }`}
                       style={{ width: `${Math.min(100, Math.max(10, vec.score))}%` }}
                     />
@@ -752,10 +752,10 @@ export default function Wave12RoadsterFlightDeckStudio({
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                             man.severity === 'CRITICAL'
-                              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                               : man.severity === 'HIGH'
                               ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                              : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
+                              : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                           }`}
                         >
                           {man.severity}
@@ -770,7 +770,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                             Saves ${man.estimatedMonthlySavingsUsd}/mo
                           </span>
                         )}
-                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                           +{man.securityGainPts} Posture Pts
                         </span>
                       </div>
@@ -785,7 +785,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                         type="button"
                         disabled={isBusy}
                         onClick={() => handleExecuteManeuver(man)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5" />
                         <span>
@@ -848,7 +848,7 @@ export default function Wave12RoadsterFlightDeckStudio({
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
-              <div className="text-[10px] font-mono font-extrabold uppercase text-cyan-600 dark:text-cyan-400">
+              <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                 GOOGLE JUPITER BACKBONE · ZERO LOCAL BANDWIDTH
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -900,7 +900,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                     onClick={() => setTeleportKind(mode.id)}
                     className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                       active
-                        ? 'border-cyan-500 bg-cyan-500/10'
+                        ? 'border-blue-500 bg-blue-500/10'
                         : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
                     }`}
                   >
@@ -982,7 +982,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                         setSourceResourceName(d.datasetId);
                         setDestResourceName(`${d.datasetId}_teleported`);
                       }}
-                      className="mr-1.5 px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold cursor-pointer"
+                      className="mr-1.5 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold cursor-pointer"
                     >
                       {d.datasetId}
                     </button>
@@ -998,7 +998,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                           `${destProjectId}-teleported-${String(b.name).slice(-8)}`.toLowerCase()
                         );
                       }}
-                      className="mr-1.5 px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-bold cursor-pointer"
+                      className="mr-1.5 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold cursor-pointer"
                     >
                       gs://{b.name}
                     </button>
@@ -1012,7 +1012,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                         setSourceResourceName(s.secretId);
                         setDestResourceName(`${s.secretId}-teleported`);
                       }}
-                      className="mr-1.5 px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 font-bold cursor-pointer"
+                      className="mr-1.5 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold cursor-pointer"
                     >
                       {s.secretId}
                     </button>
@@ -1022,7 +1022,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               <button
                 type="submit"
                 disabled={teleporting}
-                className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Rocket className="w-3.5 h-3.5" />
                 <span>
@@ -1172,7 +1172,7 @@ export default function Wave12RoadsterFlightDeckStudio({
       {activeTab === 'FLIGHT_DIRECTOR' && (
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
           <div>
-            <div className="text-[10px] font-mono font-extrabold uppercase text-purple-600 dark:text-purple-400">
+            <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
               VERTEX AI GEMINI 3.8 FLASH + DEVELOPER KNOWLEDGE MCP + AUTOPILOT SHA-256
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
@@ -1190,7 +1190,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                 key={pr.label}
                 type="button"
                 onClick={() => setMissionBrief(pr.brief)}
-                className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-[10.5px] font-mono font-bold cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10.5px] font-mono font-bold cursor-pointer"
               >
                 {pr.label}
               </button>
@@ -1207,7 +1207,7 @@ export default function Wave12RoadsterFlightDeckStudio({
             <button
               type="submit"
               disabled={runningDirector}
-              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>

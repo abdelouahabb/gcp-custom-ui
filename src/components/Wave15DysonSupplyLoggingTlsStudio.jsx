@@ -65,7 +65,7 @@ function renderInlineMarkdown(text, copyFn) {
           key={idx}
           onClick={() => copyFn && copyFn(codeTxt)}
           title="Click to copy"
-          className="px-1.5 py-0.5 mx-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-cyan-700 dark:text-cyan-300 font-mono text-[11px] cursor-pointer hover:bg-cyan-500/20"
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-blue-700 dark:text-blue-300 font-mono text-[11px] cursor-pointer hover:bg-blue-500/20"
         >
           {codeTxt}
         </code>
@@ -185,7 +185,7 @@ function FormattedMarkdown({ text, onCopy }) {
             blocks.push(
               <h4
                 key={`h3-${sIdx}-${lIdx}`}
-                className="text-xs font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 pt-2"
+                className="text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 pt-2"
               >
                 {renderInlineMarkdown(trimmed.slice(4), onCopy)}
               </h4>
@@ -205,7 +205,7 @@ function FormattedMarkdown({ text, onCopy }) {
                 key={`li-${sIdx}-${lIdx}`}
                 className="flex items-start gap-2 pl-2"
               >
-                <span className="text-cyan-500 font-bold mt-0.5">·</span>
+                <span className="text-blue-500 font-bold mt-0.5">·</span>
                 <div className="flex-1">
                   {renderInlineMarkdown(trimmed.slice(2), onCopy)}
                 </div>
@@ -479,11 +479,11 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
   return (
     <div className="space-y-6">
       {/* Top Hero Banner */}
-      <div className="p-5 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 via-indigo-500/5 to-emerald-500/10 dark:from-cyan-950/40 dark:via-zinc-900 dark:to-emerald-950/40">
+      <div className="p-5 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-emerald-500/10 dark:from-blue-950/40 dark:via-zinc-900 dark:to-emerald-950/40">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 WAVE 15 MOONSHOT · SUPPLY-CHAIN &amp; OBSERVABILITY (VECTOR SQL, SLSA v1.0 PROVENANCE, LOG RCA &amp; TLS 1.3 X.509)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -503,7 +503,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Artifact Digests
               </div>
-              <div className="text-sm font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {supplyData
                   ? `${supplyData.summary?.totalArtifactImages || 0} Images`
                   : 'Scanning...'}
@@ -513,7 +513,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Live Log Stream
               </div>
-              <div className="text-sm font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
+              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                 {logData ? `${logData.totalEntries} Entries` : 'Querying...'}
               </div>
             </div>
@@ -552,8 +552,8 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <span
                   className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md ${
                     active
-                      ? 'bg-black/25 text-cyan-100'
-                      : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300'
+                      ? 'bg-black/25 text-blue-100'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                   }`}
                 >
                   MODULE {t.step}
@@ -565,7 +565,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <div
                   className={`text-[10px] truncate ${
                     active
-                      ? 'text-cyan-100/90'
+                      ? 'text-blue-100/90'
                       : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
@@ -586,7 +586,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Database className="w-4 h-4 text-cyan-500" />
+                  <Database className="w-4 h-4 text-blue-500" />
                   <span>
                     Live BigQuery Statistical Z-Score Anomaly &amp; Cosine Vector Similarity SQL Engine
                   </span>
@@ -599,7 +599,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 type="button"
                 onClick={handleRunBqAnomalyVector}
                 disabled={runningBq || !selectedDataset || !selectedTable}
-                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -630,8 +630,8 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         }}
                         className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-cyan-600 text-white border-cyan-500 font-bold'
-                            : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-cyan-500/40'
+                            ? 'bg-blue-600 text-white border-blue-500 font-bold'
+                            : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                         }`}
                       >
                         {t.datasetId}.{t.tableId} ({t.location})
@@ -704,7 +704,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     <div className="text-[10px] font-mono uppercase text-zinc-400">
                       Evaluated Column
                     </div>
-                    <div className="text-xs font-mono font-extrabold text-cyan-600 dark:text-cyan-400 truncate">
+                    <div className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-400 truncate">
                       {bqResult.metricColumn}
                     </div>
                   </div>
@@ -751,7 +751,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     <button
                       type="button"
                       onClick={() => copyText(bqResult.executedSql)}
-                      className="text-cyan-400 hover:underline cursor-pointer flex items-center gap-1"
+                      className="text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <Copy className="w-3 h-3" />
                       <span>Copy SQL</span>
@@ -800,7 +800,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                             <td className="py-2 px-3 font-bold text-zinc-900 dark:text-white">
                               {r._z_score}σ
                             </td>
-                            <td className="py-2 px-3 text-cyan-600 dark:text-cyan-400 font-bold">
+                            <td className="py-2 px-3 text-blue-600 dark:text-blue-400 font-bold">
                               {r._cosine_similarity}
                             </td>
                             <td className="py-2 px-3 text-zinc-700 dark:text-zinc-300">
@@ -868,7 +868,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     <div className="text-[10px] font-mono uppercase text-zinc-400">
                       Artifact Repositories
                     </div>
-                    <div className="text-sm font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+                    <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                       {supplyData.summary?.totalRepositories} Repos
                     </div>
                   </div>
@@ -884,7 +884,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     <div className="text-[10px] font-mono uppercase text-zinc-400">
                       Active Cloud Run Services
                     </div>
-                    <div className="text-sm font-mono font-extrabold text-violet-600 dark:text-violet-400">
+                    <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
                       {supplyData.summary?.totalCloudRunServices} Live
                     </div>
                   </div>
@@ -915,12 +915,12 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                                 setSubjectName(img.uri.split('@')[0]);
                                 setSha256Digest(img.sha256Digest || '');
                               }}
-                              className="hover:bg-cyan-500/5 cursor-pointer"
+                              className="hover:bg-blue-500/5 cursor-pointer"
                             >
                               <td className="py-2 px-3 font-bold text-zinc-800 dark:text-zinc-200">
                                 {img.repository} ({img.location})
                               </td>
-                              <td className="py-2 px-3 text-cyan-600 dark:text-cyan-400 truncate max-w-xs">
+                              <td className="py-2 px-3 text-blue-600 dark:text-blue-400 truncate max-w-xs">
                                 {img.shortImageName}
                               </td>
                               <td className="py-2 px-3 text-zinc-600 dark:text-zinc-400">
@@ -932,7 +932,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                                 {(img.imageSizeBytes / (1024 * 1024)).toFixed(1)} MB
                               </td>
                               <td className="py-2 px-3 text-right">
-                                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
                                   Load Digest
                                 </span>
                               </td>
@@ -1037,7 +1037,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                       </button>
                     </div>
                     {slsaAttestation.gcsObjectUri && (
-                      <div className="text-xs font-mono text-cyan-300">
+                      <div className="text-xs font-mono text-blue-300">
                         Persisted Live to GCS: {slsaAttestation.gcsObjectUri}
                       </div>
                     )}
@@ -1063,7 +1063,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <FileSearch className="w-4 h-4 text-indigo-500" />
+                  <FileSearch className="w-4 h-4 text-blue-500" />
                   <span>
                     Live Cloud Logging Root-Cause Correlator (<code>logging.googleapis.com/v2/entries:list</code>)
                   </span>
@@ -1088,7 +1088,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   type="button"
                   onClick={handleRunLogAiSurgeon}
                   disabled={runningLogAi || !logData?.entries?.length}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1165,15 +1165,15 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
             </div>
 
             {logAiReport && (
-              <div className="p-4 rounded-2xl border border-indigo-500/40 bg-indigo-500/5 space-y-2">
+              <div className="p-4 rounded-2xl border border-blue-500/40 bg-blue-500/5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-extrabold text-indigo-700 dark:text-indigo-300">
+                  <span className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
                     VERTEX AI ({logAiReport.modelUsed}) · ROOT-CAUSE &amp; REMEDIATION REPORT ({logAiReport.latencyMs}ms)
                   </span>
                   <button
                     type="button"
                     onClick={() => copyText(logAiReport.analysisMarkdown)}
-                    className="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
                   >
                     <Copy className="w-3 h-3" />
                     <span>Copy Report</span>
@@ -1226,7 +1226,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                   isErr
-                                    ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                                    ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                                     : isWarn
                                       ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                                       : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
@@ -1235,7 +1235,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                                 {e.severity}
                               </span>
                             </td>
-                            <td className="py-2 px-3 text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
+                            <td className="py-2 px-3 text-blue-600 dark:text-blue-400 whitespace-nowrap">
                               {e.resourceType}
                             </td>
                             <td className="py-2 px-3 text-zinc-700 dark:text-zinc-300 break-all">
@@ -1307,7 +1307,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-cyan-500 shrink-0" />
+                        <Globe className="w-4 h-4 text-blue-500 shrink-0" />
                         <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
                           {ep.host}
                         </span>
@@ -1317,7 +1317,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                           {ep.protocol} · {ep.alpnProtocol} · {ep.tlsHandshakeMs}ms
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
                           {ep.error}
                         </span>
                       )}
@@ -1327,7 +1327,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                       <div className="space-y-1.5 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-400">AEAD Cipher Suite:</span>
-                          <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
                             {ep.cipherStandardName || ep.cipherName}
                           </span>
                         </div>

@@ -27,9 +27,9 @@ export function LakehouseTrackBadge({ track = 'GA' }) {
     return (
       <span
         title="Google Cloud ALPHA Track (gcloud alpha / v1alpha): Early Access Preview with no SLA."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
         <span>[ALPHA · EARLY ACCESS]</span>
       </span>
     );
@@ -1213,7 +1213,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               <code className="font-mono">Serverless PySpark 3.5 (Iceberg REST Catalog 1.10)</code>, and{' '}
               <code className="font-mono">gcloud 590.0.1 CLI</code> commands with explicit{' '}
               <strong className="font-mono text-amber-600 dark:text-amber-400">[BETA]</strong> and{' '}
-              <strong className="font-mono text-rose-600 dark:text-rose-400">[ALPHA]</strong> flags and 1-Tap Cost Gatekeeper protection.
+              <strong className="font-mono text-red-600 dark:text-red-400">[ALPHA]</strong> flags and 1-Tap Cost Gatekeeper protection.
             </p>
           </div>
 
@@ -1386,7 +1386,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               Symmetrical 3-Column Bento Matrix ({filteredPlaybooks.length} of{' '}
               {ICEBERG_PLAYBOOKS.length} Playbooks Visible)
             </span>
-            <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
+            <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
               Click any equal-sized card to open its Multi-Engine Code
               Synthesizer
             </span>
@@ -1400,8 +1400,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   key={pb.id}
                   className={`h-52 p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-indigo-600/10 dark:bg-indigo-500/15 border-indigo-500 shadow-sm'
-                      : 'bg-zinc-50/80 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50'
+                      ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 shadow-sm'
+                      : 'bg-zinc-50/80 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
                   <div className="space-y-1.5 min-h-0">
@@ -1414,7 +1414,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                     <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug">
                       {pb.title}
                     </div>
-                    <div className="text-[10.5px] font-mono text-indigo-600 dark:text-indigo-400 truncate">
+                    <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 truncate">
                       {pb.persona} · {pb.stack}
                     </div>
                     <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
@@ -1429,7 +1429,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         setSelectedPlaybookId(pb.id);
                         setViewMode('SPLIT_WORKBENCH');
                       }}
-                      className="w-full h-8 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                      className="w-full h-8 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <span>Open Workbench</span>
                       <ArrowRight className="w-3 h-3" />
@@ -1461,7 +1461,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
           <div className="lg:col-span-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                   Apache Iceberg Spec v2 · Immutable Metadata &amp; Column-ID
                   Schema Evolution
                 </div>
@@ -1571,7 +1571,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               <button
                 type="button"
                 onClick={() => setViewMode('SPLIT_WORKBENCH')}
-                className="w-full h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Back to Split Playbook Workbench</span>
               </button>
@@ -1631,7 +1631,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
             </div>
 
             <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3 shadow-sm">
-              <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+              <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                 Playbook #8, #15 &amp; #16 · Multi-Engine Optimistic Concurrency
                 Control (OCC) Matrix
               </div>
@@ -1666,7 +1666,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
                         {row.engine}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[9px] font-extrabold shrink-0">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[9px] font-extrabold shrink-0">
                         {row.badge}
                       </span>
                     </div>
@@ -1693,7 +1693,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 SHOWING {filteredPlaybooks.length} OF {ICEBERG_PLAYBOOKS.length}{' '}
                 LAKEHOUSE PLAYBOOKS
               </span>
-              <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+              <span className="text-blue-600 dark:text-blue-400 font-bold">
                 SELECT SCENARIO
               </span>
             </div>
@@ -1707,8 +1707,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   onClick={() => setSelectedPlaybookId(pb.id)}
                   className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
                     isSelected
-                      ? 'bg-indigo-600/10 dark:bg-indigo-500/15 border-indigo-500 shadow-sm'
-                      : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                      ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 shadow-sm'
+                      : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -1720,7 +1720,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">
                     {pb.title}
                   </div>
-                  <div className="text-[10.5px] font-mono text-indigo-600 dark:text-indigo-400 truncate">
+                  <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 truncate">
                     {pb.persona} · {pb.stack}
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2">
@@ -1737,7 +1737,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-mono font-extrabold">
+                    <span className="px-2.5 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-mono font-extrabold">
                       PLAYBOOK #{String(activePlaybook.num).padStart(2, '0')} OF
                       50
                     </span>
@@ -1782,7 +1782,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                     key={st.step}
                     className="h-16 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/80 flex flex-col justify-between"
                   >
-                    <div className="text-[9.5px] font-mono font-extrabold text-indigo-600 dark:text-indigo-400 truncate">
+                    <div className="text-[9.5px] font-mono font-extrabold text-blue-600 dark:text-blue-400 truncate">
                       {st.step}
                     </div>
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
@@ -1795,8 +1795,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 ))}
               </div>
 
-              <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
-                <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+              <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1">
+                <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                   Google Cloud Differentiation &amp; Core Architectural Angle (
                   {activePlaybook.stack})
                 </div>
@@ -1889,14 +1889,14 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                           active
                             ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
                               active
-                                ? 'bg-indigo-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
                             }`}
                           >
@@ -1962,7 +1962,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   }}
                   className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
                 >
-                  <Database className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <Database className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                   <span className="truncate">Open DDL in BigQuery</span>
                 </button>
 
@@ -2043,8 +2043,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       onClick={() => setSimulatorTab(sim.id)}
                       className={`w-full h-10 px-3 rounded-xl text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-between gap-2 transition-all ${
                         active
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                       }`}
                     >
                       <span
@@ -2122,7 +2122,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         ~{migrateVsFederateAnalysis.breakevenMonths} months
                       </span>
                     </div>
-                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                    <div className="pt-1 text-[11px] font-extrabold text-blue-600 dark:text-blue-400">
                       Verdict:{' '}
                       {migrateVsFederateAnalysis.recommendation ===
                       'FEDERATE_IN_PLACE_WITH_BQ_OMNI'
@@ -2157,7 +2157,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       <span className="text-zinc-500">
                         24/7 Trino on GKE Cluster Cost:
                       </span>
-                      <span className="font-bold text-rose-600 dark:text-rose-400">
+                      <span className="font-bold text-red-600 dark:text-red-400">
                         $
                         {bqVsTrinoBenchmark.trinoMonthlyFixedCostUsd.toLocaleString()}
                         /mo (P95 10TB Scan:{' '}
@@ -2222,7 +2222,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         via Managed Spark Parallel Pool
                       </span>
                     </div>
-                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                    <div className="pt-1 text-[11px] font-extrabold text-blue-600 dark:text-blue-400">
                       Zero-downtime dual-read active: Legacy Hive readers
                       continue reading while BigQuery &amp; Spark 1.10 attach
                       via Lakehouse Iceberg REST Catalog.
@@ -2285,7 +2285,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         Bill ($20/TB → $4/TB)
                       </span>
                     </div>
-                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                    <div className="pt-1 text-[11px] font-extrabold text-blue-600 dark:text-blue-400">
                       Playbook #23 &amp; #25: Z-Order compaction + GCS Autoclass
                       cuts P95 small-file scan latency by 4.6x with zero manual
                       lifecycle rules.

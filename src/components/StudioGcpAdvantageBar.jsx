@@ -1079,7 +1079,7 @@ export default function StudioGcpAdvantageBar({
                   GKE Autopilot Clusters ({finopsData?.gkeClustersCount || 0}{' '}
                   Total)
                 </div>
-                <div className="text-base font-extrabold text-purple-600 dark:text-purple-400 mt-0.5">
+                <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                   {finopsData?.autopilotClustersCount || 0} Autopilot Active
                 </div>
                 <div className="text-[10.5px] text-zinc-500">

@@ -144,7 +144,7 @@ const DOC_SECTIONS = [
     title:
       'Wave 16: 20-Pillar (4x5 Bento Grid) Autonomous Google Cloud Security Operations Center (SOC) & Purple-Team SOAR War-Room — MITRE Kill-Chains + Forensic Breach Attribution Explainer, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine, Transitive Escalation Solver, TLS 1.3 Socket Prober, Purple-Team BAS Stopwatch, Model-Armor AI Red-Team, DNSSEC/VPC Egress/KMS, API Surface Minimizer, Binary Authorization & 12-Invariant Self-Healing Reconciler',
     badge: 'CLOUD SOC TAB (PRIMARY STARRED)',
-    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldAlert,
     targetTab: 'CLOUD_SOC',
     problemSolved:
@@ -171,7 +171,7 @@ const DOC_SECTIONS = [
     title:
       'Google Cloud SDK 590.0.0 GA Cloud Run Compose (gcloud run compose up) Multi-Container & Sidecar Studio + Live Reverse Exporter',
     badge: 'CLOUD RUN TAB (COMPOSE UP STUDIO)',
-    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Layers,
     targetTab: 'CLOUD_RUN',
     problemSolved:
@@ -222,7 +222,7 @@ const DOC_SECTIONS = [
     title:
       'App Engine-Style 1-Click Direct Cloud Run Identity-Aware Proxy (IAP) Control Plane — $0.00/Mo Google Sign-In with Zero Load Balancer',
     badge: 'CLOUD RUN TAB (CLOUD IAP DRAWER) + PROVISION MODAL',
-    badgeColor: 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldCheck,
     targetTab: 'CLOUD_RUN',
     problemSolved:
@@ -248,7 +248,7 @@ const DOC_SECTIONS = [
     title:
       'Wave 15 Moonshot — Live BigQuery Statistical Z-Score & Cosine Vector SQL CTE, Cloud Build + Artifact Registry SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
     badge: '2026 INNOVATION LAB (WAVE 15 · #1)',
-    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Database,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE15_DYSON_MOONSHOT',
@@ -274,7 +274,7 @@ const DOC_SECTIONS = [
     title:
       'Wave 14 Quantum-Resistant Envelope Vault, BigQuery FOR SYSTEM_TIME AS OF Time-Travel Forensics, Autonomous Self-Healing Cloud Doctor & Live IAM Blast-Radius Graph',
     badge: '2026 INNOVATION LAB (WAVE 14 · #1)',
-    badgeColor: 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldCheck,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE14_QUANTUM_DOCTOR',
@@ -300,7 +300,7 @@ const DOC_SECTIONS = [
     title:
       'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity — 6-Region Live HTTPS/TLS Socket Matrix + BigQuery Heartbeat Streamer, Dynamic Prompt-Driven 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box',
     badge: '2026 INNOVATION LAB (WAVE 13 · #2)',
-    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Globe,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE13_STARLINK_NEURALINK',
@@ -352,7 +352,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Google Cloud Official Remote MCP Servers Hub — 48 Live *.googleapis.com/mcp Endpoints, 505 JSON-RPC 2.0 Tools, 4 Parallel Multi-Server SRE Triage Chains, Gemini 3.8 Flash MCP Agent & 1-Click IDE Config Exporter',
     badge: 'DEDICATED MAIN MENU TAB -> MCP SERVERS ★',
-    badgeColor: 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Sparkles,
     targetTab: 'MCP_HUB',
     problemSolved:
@@ -376,7 +376,7 @@ const DOC_SECTIONS = [
     title:
       'Wave 11 Moonshot Studio — Cloud Deploy Canary Pipelines, Firestore Native CRUD, Active Assist Recommender & Quota Radar, Multi-Project Estate Matrix, 18-Studio Stress Audit, Client HTML/PDF Dossier & 1-Click Cloud Run Self-Hosting',
     badge: '2026 INNOVATION LAB (WAVE 11 · #1)',
-    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE11_MOONSHOT',
@@ -401,7 +401,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — 24-Bucket Infra Histogram, Faceted Columnar Stream, Log-to-Metrics P99 Heatmap, Live Grok Extractor, Source-Code Git Blame & Patch, Multi-Window SLO Burn Matrix, eBPF Kernel X-Ray & Canary Log Replay',
     badge: 'LOGS & SHELL TAB (WAVE 1 + WAVE 2 + WAVE 3)',
-    badgeColor: 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: Terminal,
     targetTab: 'LOGS_SHELL',
     problemSolved:
@@ -426,7 +426,7 @@ const DOC_SECTIONS = [
     title:
       '50-Playbook Borderless Apache Iceberg & Multi-Engine Lakehouse Matrix — 8 Domains, Symmetrical 3x3 Bento Grid, v2 Metadata X-Ray & 4 Live TCO Simulators',
     badge: 'DATA ENGINEERING + BIGLAKE TAB',
-    badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
     icon: Layers,
     targetTab: 'DATA_ENGINEERING',
     problemSolved:
@@ -790,7 +790,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Neural Chrono-Log & Trace Studio: 3-Layer NLP-to-LQL/BigQuery SQL Compiler, Official LQL Interactive Tutorial, Drain3 Pattern Clustering, Cross-Service `traceId` Waterfall & `_Default` Sink FinOps',
     badge: 'LOGS & SHELL TAB · NLP + LQL + $0.50/GiB NOISE CUTTER',
-    badgeColor: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/40',
     icon: Zap,
     targetTab: 'LOGS_SHELL',
     problemSolved:
@@ -1025,7 +1025,7 @@ const DOC_SECTIONS = [
     title:
       'GDE Streamer & Video Tutorial Privacy Shield (1-Click Email, Billing ID, Project # & Public IP Redactor)',
     badge: 'TOP HEADER GDE MODE + ALT+G',
-    badgeColor: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    badgeColor: 'bg-red-500/15 text-red-400 border-red-500/30',
     icon: ShieldCheck,
     targetTab: 'OVERVIEW',
     problemSolved:
@@ -1048,7 +1048,7 @@ const DOC_SECTIONS = [
     title:
       '24-in-1 Global Multi-Cloud Parity Super-Studio (AWS, Azure, Alibaba Cloud & Huawei Cloud Bridges for Google Cloud)',
     badge: 'AWS/AZURE PARITY TAB',
-    badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
@@ -1483,7 +1483,7 @@ const DOC_SECTIONS = [
       '39. 20-in-1 AWS & Azure Moonshot Parity Super-Studio (Uniform 4-Column Bento Grid & 2-Mode Teardown)',
     badge: 'Top Header -> AWS & Azure Parity ★',
     badgeColor:
-      'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
@@ -1508,7 +1508,7 @@ const DOC_SECTIONS = [
       '40. 8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Super-Studio',
     badge: 'Top Header -> Alibaba & Huawei ',
     badgeColor:
-      'bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/30',
+      'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30',
     icon: Rocket,
     targetTab: 'ALIBABA_HUAWEI_PARITY',
     problemSolved:
@@ -1580,7 +1580,7 @@ const DOC_SECTIONS = [
       '43. Cloud Run v2 Batch Jobs Creator & Cloud Scheduler → Cloud Run Jobs Converter (24h Timeout · Parallel Task Sharding · Native :run Trigger)',
     badge: 'Cloud Run v2 Jobs + Cloud Scheduler v1 + volumes[].gcs',
     badgeColor:
-      'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
     icon: Zap,
     targetTab: 'CLOUD_RUN',
     problemSolved:
@@ -1605,7 +1605,7 @@ const DOC_SECTIONS = [
       '44. Self-Contained @xterm/xterm VM Control, Dual-Engine Visual SCP / SFTP Remote File Browser, 1-Click OS Login User Switcher & IAP Guardrails',
     badge: 'SSH2 SFTP + gcloud compute scp + IAP Tunnel + OS Login Switcher',
     badgeColor:
-      'bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/30',
+      'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
     icon: Terminal,
     targetTab: 'VM_FLEET',
     problemSolved:
@@ -1630,7 +1630,7 @@ const DOC_SECTIONS = [
       '45. Cloud Storage Multi-Format Object Workbench, Official Public/Authenticated HTTPS URI Studio, V4 Signed URLs, Versioning Time-Machine, S3 / MinIO / Ceph RGW Importer & <16ms SWR Telemetry',
     badge: 'GCS Object Workbench + AWS4-HMAC-SHA256 S3/MinIO/Ceph + V4 Signed URLs + SWR Cache',
     badgeColor:
-      'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border-cyan-500/30',
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
     icon: HardDrive,
     targetTab: 'CLOUD_STORAGE',
     problemSolved:

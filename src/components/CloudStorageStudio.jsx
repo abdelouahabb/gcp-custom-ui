@@ -1357,7 +1357,7 @@ export default function CloudStorageStudio({
                                 if (onSelectTab) onSelectTab('CLOUD_RUN');
                               }}
                               title="Persistent Cloud Storage FUSE Disk Bucket attached via volumes[].gcs to Cloud Run Gen2. Click to inspect attached Cloud Run services."
-                              className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/35 font-bold cursor-pointer"
+                              className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/35 font-bold cursor-pointer"
                             >
                               CLOUD RUN GEN2 PERSISTENT FUSE DISK (volumes[].gcs) →
                             </button>

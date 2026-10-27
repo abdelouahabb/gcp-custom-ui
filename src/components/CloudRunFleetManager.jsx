@@ -2021,7 +2021,7 @@ spec:
               type="button"
               onClick={() => onSelectTab('VM_SSH')}
               title="Open GCE VM -> Cloud Run Gen2 Modernization Engine (mfit 6-Dimension Readiness Scorecard + m2c Runtime Analyzer + Persistent volumes[].gcs FUSE Disk Mount)"
-              className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/35 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/35 transition-colors cursor-pointer"
             >
               <HardDrive className="w-3.5 h-3.5" />
               <span>Migrate GCE VM + Disk → Cloud Run (mfit + m2c)</span>
@@ -2034,14 +2034,14 @@ spec:
             title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
               showSchedulerToJobsStudio
-                ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/35'
+                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/35'
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
             <span>Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)</span>
             {schedulerJobsState.data && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
                 {schedulerJobsState.data.schedulerJobsCount || 0} Cron ·{' '}
                 {schedulerJobsState.data.cloudRunJobsCount || 0} Jobs
               </span>
@@ -2150,7 +2150,7 @@ spec:
                 handleFetchSchedulerAndJobs(false);
               }
             }}
-            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>+ Create Cloud Run Job</span>
@@ -2169,11 +2169,11 @@ spec:
 
       {/* CLOUD SCHEDULER -> CLOUD RUN V2 JOBS CONVERTER & PARALLEL BATCH STUDIO */}
       {showSchedulerToJobsStudio && (
-        <div className="p-4 rounded-xl border border-indigo-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+        <div className="p-4 rounded-xl border border-blue-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-extrabold">
                   <Zap className="w-3 h-3" />
                   <span>CLOUD SCHEDULER → CLOUD RUN V2 JOBS CONVERTER</span>
                 </span>
@@ -2193,7 +2193,7 @@ spec:
                 type="button"
                 onClick={() => handleFetchSchedulerAndJobs(false)}
                 disabled={schedulerJobsState.loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-xs font-mono font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -2240,9 +2240,9 @@ spec:
             ).map((item) => (
               <div
                 key={item.dimension}
-                className="p-2.5 rounded-lg border border-indigo-500/25 bg-indigo-500/5 space-y-1"
+                className="p-2.5 rounded-lg border border-blue-500/25 bg-blue-500/5 space-y-1"
               >
-                <div className="font-mono font-bold text-indigo-700 dark:text-indigo-300 text-[11px]">
+                <div className="font-mono font-bold text-blue-700 dark:text-blue-300 text-[11px]">
                   {item.dimension}
                 </div>
                 <div className="text-[10px] font-mono text-red-500 line-through">
@@ -2284,7 +2284,7 @@ spec:
             </div>
 
             {schedulerJobsState.loading ? (
-              <div className="text-xs font-mono text-indigo-500 flex items-center gap-2 py-2">
+              <div className="text-xs font-mono text-blue-500 flex items-center gap-2 py-2">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 <span>Scanning Cloud Scheduler locations &amp; Cloud Run v2 Jobs across {projectId}...</span>
               </div>
@@ -2322,7 +2322,7 @@ spec:
                       </div>
                       <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 break-all">
                         Schedule:{' '}
-                        <strong className="text-indigo-600 dark:text-indigo-400">
+                        <strong className="text-blue-600 dark:text-blue-400">
                           {describeCronInPlainEnglish(sj.schedule)}
                         </strong>{' '}
                         (<code>{sj.schedule}</code> · {sj.timeZone}) · Target:{' '}
@@ -2338,7 +2338,7 @@ spec:
                       <button
                         type="button"
                         onClick={() => handleLoadSchedulerIntoJobForm(sj)}
-                        className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-[10px] cursor-pointer"
+                        className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-[10px] cursor-pointer"
                       >
                         Load into Cloud Run v2 Job Converter
                       </button>
@@ -2350,9 +2350,9 @@ spec:
           </div>
 
           {/* 2. Interactive Cloud Run v2 Job Creator & Scheduler Rewirer */}
-          <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/30 space-y-3">
+          <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
                 2. Create New Cloud Run v2 Batch Job or Convert Scheduler Cron (<code>run.googleapis.com/v2/projects/{projectId}/locations/{jobConvertForm.region}/jobs</code>)
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -2410,7 +2410,7 @@ spec:
                         ...tpl.spec,
                       }))
                     }
-                    className="px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-bold cursor-pointer"
+                    className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer"
                   >
                     + {tpl.label}
                   </button>
@@ -2595,7 +2595,7 @@ spec:
               />
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-indigo-500/20">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-blue-500/20">
               <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-800 dark:text-zinc-200">
                 <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
                   <input
@@ -2607,7 +2607,7 @@ spec:
                         attachPersistentDisk: e.target.checked,
                       }))
                     }
-                    className="rounded border-indigo-400 text-indigo-600"
+                    className="rounded border-blue-400 text-blue-600"
                   />
                   <span>
                     Attach Persistent FUSE Disk (<code>volumes[].gcs</code>)
@@ -2628,7 +2628,7 @@ spec:
                         memory: e.target.checked ? '16Gi' : prev.memory,
                       }))
                     }
-                    className="rounded border-indigo-400 text-indigo-600"
+                    className="rounded border-blue-400 text-blue-600"
                   />
                   <span>
                     Attach <code>1x nvidia-l4</code> GPU (Batch AI/ML)
@@ -2645,7 +2645,7 @@ spec:
                         rewireCloudScheduler: e.target.checked,
                       }))
                     }
-                    className="rounded border-indigo-400 text-indigo-600"
+                    className="rounded border-blue-400 text-blue-600"
                   />
                   <span>
                     Auto-Rewire Cloud Scheduler → Native <code>:run</code> API
@@ -2662,7 +2662,7 @@ spec:
                         executeImmediately: e.target.checked,
                       }))
                     }
-                    className="rounded border-indigo-400 text-indigo-600"
+                    className="rounded border-blue-400 text-blue-600"
                   />
                   <span>
                     Execute First Run Immediately (<code>:run</code>)
@@ -2674,7 +2674,7 @@ spec:
                 type="button"
                 disabled={convertingToJob || !jobConvertForm.jobName}
                 onClick={handleConvertSchedulerToJob}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {convertingToJob ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -2738,7 +2738,7 @@ spec:
                           <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
                             {jb.name}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-mono text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
                             {jb.region} · {jb.taskCount} Shard(s) · Timeout {jb.taskTimeout}
                           </span>
                           {(jb.persistentDiskBuckets || []).map((bkt) => (
@@ -2983,7 +2983,7 @@ services:
                     });
                   }}
                   disabled={Boolean(composeActionBusy)}
-                  className="px-2.5 py-1 rounded bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                 >
                   {composeActionBusy === 'EXPORT_SERVICE_TO_COMPOSE'
                     ? 'Exporting...'
@@ -3074,7 +3074,7 @@ services:
                     />
                     <span>--allow-unauthenticated</span>
                   </label>
-                  <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-violet-600 dark:text-violet-300 cursor-pointer">
+                  <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-blue-600 dark:text-blue-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={composeEnableDirectIap}
@@ -4863,7 +4863,7 @@ services:
         {/* Runtime Service Account Selector for 1-Tap Instant Deploy */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800/70">
           <div className="flex items-center gap-2 flex-wrap">
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span className="text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
               Runtime Service Account (iam.serviceAccounts.actAs):
             </span>
@@ -5078,7 +5078,7 @@ services:
                         className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                           srv.iapEnabled
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
-                            : 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/20'
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20'
                         }`}
                       >
                         <ShieldCheck className="w-3 h-3" />
@@ -5141,7 +5141,7 @@ services:
                           type="button"
                           onClick={() => onSelectTab && onSelectTab('VM_SSH')}
                           title={`Migrated from Compute Engine VM "${srv.migratedFromVm}" (${srv.sourceVmZone || 'GCE'}) via CloudPulse mfit + m2c Modernization Engine`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
                         >
                           <Cpu className="w-3 h-3" />
                           <span>
@@ -5165,7 +5165,7 @@ services:
                       {srv.serviceAccount && (
                         <span
                           title={`Runtime Service Account: ${srv.serviceAccount}`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           <span>
@@ -5267,10 +5267,10 @@ services:
                       title="App Engine-Style 1-Click Direct Cloud IAP Control Plane ($0.00/mo · Zero Load Balancer): Toggle Google Sign-In IAP and manage roles/iap.httpsResourceAccessor principals"
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
                         activeDrawer === 'IAP'
-                          ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                           : srv.iapEnabled
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
-                          : 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/20'
+                          : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20'
                       }`}
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -5283,7 +5283,7 @@ services:
                       type="button"
                       onClick={() => handleLoadServiceIntoJobForm(srv)}
                       title="Convert this Cloud Run Service into a Cloud Run v2 Batch Job (up to 24h timeout, parallel task sharding via CLOUD_RUN_TASK_INDEX, persistent GCS FUSE disk, and Cloud Scheduler :run trigger)"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20 transition-colors cursor-pointer"
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>→ Cloud Run Job</span>
@@ -5704,11 +5704,11 @@ services:
                   const steps = iapEntry.steps || [];
 
                   return (
-                    <div className="mt-3 pt-4 border-t border-violet-500/30 space-y-4 bg-gradient-to-br from-violet-500/5 via-white to-emerald-500/5 dark:from-violet-950/25 dark:via-zinc-950 dark:to-emerald-950/20 p-4 rounded-xl">
+                    <div className="mt-3 pt-4 border-t border-blue-500/30 space-y-4 bg-gradient-to-br from-blue-500/5 via-white to-emerald-500/5 dark:from-blue-950/25 dark:via-zinc-950 dark:to-emerald-950/20 p-4 rounded-xl">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold uppercase bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/40">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold uppercase bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                               APP ENGINE-STYLE 1-CLICK CLOUD IAP · ZERO LOAD BALANCER ($0.00/MO)
                             </span>
                             <span
@@ -5724,7 +5724,7 @@ services:
                             </span>
                           </div>
                           <h4 className="text-xs sm:text-sm font-extrabold font-mono text-zinc-900 dark:text-white flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4 text-violet-500" />
+                            <ShieldCheck className="w-4 h-4 text-blue-500" />
                             <span>
                               Direct Identity-Aware Proxy (IAP) Shield — {srv.name} ({srv.region})
                             </span>
@@ -5735,7 +5735,7 @@ services:
                             type="button"
                             onClick={() => handleInspectServiceIap(srv)}
                             disabled={iapEntry.loading}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-violet-500/50 cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50 cursor-pointer"
                           >
                             {iapEntry.loading ? 'Inspecting...' : 'Refresh IAP State'}
                           </button>
@@ -5765,8 +5765,8 @@ services:
                           </p>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/90 dark:bg-zinc-900/90 border border-violet-500/30 space-y-1">
-                          <div className="text-[10px] font-mono font-bold uppercase text-violet-600 dark:text-violet-400">
+                        <div className="p-3 rounded-xl bg-white/90 dark:bg-zinc-900/90 border border-blue-500/30 space-y-1">
+                          <div className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400">
                             CloudPulse 1-Click Direct IAP (New Way)
                           </div>
                           <div className="font-bold text-emerald-600 dark:text-emerald-400">
@@ -5835,7 +5835,7 @@ services:
                             className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
                           />
                           <div className="text-[10px] font-mono text-zinc-500">
-                            Comma-separated emails or domains (auto-prefixed with <code className="text-violet-500">user:</code> or <code className="text-violet-500">domain:</code>). Defaults to your active Google account so you are never locked out.
+                            Comma-separated emails or domains (auto-prefixed with <code className="text-blue-500">user:</code> or <code className="text-blue-500">domain:</code>). Defaults to your active Google account so you are never locked out.
                           </div>
                         </div>
 
@@ -5895,7 +5895,7 @@ services:
                           </div>
                           <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
                             Standalone personal projects outside a Google Workspace Organization require a custom Web Application OAuth 2.0 Client ID &amp; Secret bound to <code className="font-mono">iap_web:iapSettings</code> (otherwise Google Frontend returns <code className="font-mono">Empty Google Account OAuth client ID(s)/secret(s)</code>). Add Authorized Redirect URI:{' '}
-                            <code className="font-mono text-violet-600 dark:text-violet-300">
+                            <code className="font-mono text-blue-600 dark:text-blue-300">
                               https://iap.googleapis.com/v1/oauth/clientIds/{iapEntry.oauthClientId || iapData.oauthClientId || '<CLIENT_ID>'}:handleRedirect
                             </code>
                           </p>
@@ -5947,7 +5947,7 @@ services:
                               className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-emerald-500/30 space-y-1 font-mono"
                             >
                               <div className="flex items-center justify-between text-[10px]">
-                                <span className="font-extrabold text-violet-600 dark:text-violet-400">
+                                <span className="font-extrabold text-blue-600 dark:text-blue-400">
                                   STEP 0{st.step}
                                 </span>
                                 <span
@@ -5986,7 +5986,7 @@ services:
                                   `iap-cli-${srv.id}`
                                 )
                               }
-                              className="text-violet-400 hover:text-violet-300 cursor-pointer"
+                              className="text-blue-400 hover:text-blue-300 cursor-pointer"
                             >
                               {copiedId === `iap-cli-${srv.id}`
                                 ? 'Copied!'
@@ -5996,7 +5996,7 @@ services:
                           <div className="text-emerald-300 break-all">
                             $ {iapData.cliCommands.enableDirectIap}
                           </div>
-                          <div className="text-cyan-300 break-all">
+                          <div className="text-blue-300 break-all">
                             $ {iapData.cliCommands.grantAccessor}
                           </div>
                         </div>
@@ -6431,7 +6431,7 @@ services:
                       <div className="min-w-0">
                         <label
                           title="Runtime Service Account (iam.serviceAccounts.actAs)"
-                          className="block text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mb-1 truncate whitespace-nowrap"
+                          className="block text-[11px] font-medium text-blue-600 dark:text-blue-400 mb-1 truncate whitespace-nowrap"
                         >
                           Runtime Service Account (iam.serviceAccounts.actAs)
                         </label>
@@ -7407,7 +7407,7 @@ services:
                                         })
                                       }
                                       title="Clone this revision's exact Container Image, CPU/RAM, Port, SA, and Secret Refs into a brand-new LATEST revision"
-                                      className="text-[10.5px] font-mono font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer"
+                                      className="text-[10.5px] font-mono font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded cursor-pointer"
                                     >
                                       Clone Spec → New LATEST
                                     </button>
@@ -7598,8 +7598,8 @@ services:
                                 )}
 
                                 {diff.serviceAccountChanged?.changed && (
-                                  <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/25">
-                                    <div className="font-bold text-indigo-600 dark:text-indigo-300">
+                                  <div className="p-2 rounded bg-blue-500/10 border border-blue-500/25">
+                                    <div className="font-bold text-blue-600 dark:text-blue-300">
                                       Runtime Service Account Changed:
                                     </div>
                                     <div className="truncate">

@@ -1355,7 +1355,7 @@ export default function VmFleetAndSsh({
                           if (acc.hasTpu) {
                             const label = acc.types[0] || 'Cloud TPU';
                             return (
-                              <span className="text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
                                 TPU: {label}
                               </span>
                             );
@@ -1457,7 +1457,7 @@ export default function VmFleetAndSsh({
                           setOpenScpTrigger((n) => n + 1);
                         }}
                         title={`Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border bg-teal-500/10 text-teal-600 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20 transition-colors cursor-pointer disabled:opacity-40"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 transition-colors cursor-pointer disabled:opacity-40"
                       >
                         <FolderOpen className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">SCP / SFTP Files</span>
@@ -1846,7 +1846,7 @@ export default function VmFleetAndSsh({
                                   </span>
                                   :
                                 </div>
-                                <pre className="w-full rounded-lg bg-zinc-950 text-purple-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto max-h-48">
+                                <pre className="w-full rounded-lg bg-zinc-950 text-blue-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto max-h-48">
                                   {`${detectedVmRuntimeInfo?.m2cArtifacts?.knativeServiceYaml || ''}\n---\n${detectedVmRuntimeInfo?.m2cArtifacts?.skaffoldYaml || ''}`}
                                 </pre>
                               </div>
@@ -2137,10 +2137,10 @@ export default function VmFleetAndSsh({
                       </div>
 
                       {/* GCE MACHINE TYPE, HIGH-END GPU / TPU ACCELERATOR CONVERSION & REGION COMPATIBILITY GUARDRAILS */}
-                      <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/35 space-y-2.5 text-xs">
+                      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/35 space-y-2.5 text-xs">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="font-bold font-mono text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                            <Cpu className="w-4 h-4 text-purple-500 shrink-0" />
+                          <div className="font-bold font-mono text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                            <Cpu className="w-4 h-4 text-blue-500 shrink-0" />
                             <span>
                               GCE MACHINE FAMILY, GPU / TPU ACCELERATOR CONVERSION &amp; REGION COMPATIBILITY GUARDRAILS
                             </span>
@@ -2178,7 +2178,7 @@ export default function VmFleetAndSsh({
                                     : prev.memory,
                                 }));
                               }}
-                              className="bg-white dark:bg-zinc-900 border border-purple-500/40 rounded-lg px-2 py-1 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
+                              className="bg-white dark:bg-zinc-900 border border-blue-500/40 rounded-lg px-2 py-1 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
                             >
                               <option value="AUTO">
                                 Auto-Detected VM ({vm.machineType} in {vm.zone})
@@ -2213,7 +2213,7 @@ export default function VmFleetAndSsh({
                               detectedVmRuntimeInfo
                                 ?.acceleratorAndRegionGuardrails?.isTpuFamily
                                 ? 'bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200'
-                                : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                                : 'bg-white/70 dark:bg-zinc-900/70 border-blue-500/25 text-zinc-700 dark:text-zinc-300'
                             }`}
                           >
                             <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
@@ -2271,7 +2271,7 @@ export default function VmFleetAndSsh({
                                 className={`p-2.5 rounded-lg border ${
                                   migrateForm.enableCloudRunGpu && !isGpuRegionOk
                                     ? 'bg-red-500/15 border-red-500/50 text-red-700 dark:text-red-300'
-                                    : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                                    : 'bg-white/70 dark:bg-zinc-900/70 border-blue-500/25 text-zinc-700 dark:text-zinc-300'
                                 }`}
                               >
                                 <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
@@ -2307,7 +2307,7 @@ export default function VmFleetAndSsh({
                                             : '16Gi',
                                         }))
                                       }
-                                      className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-[10px] cursor-pointer"
+                                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-[10px] cursor-pointer"
                                     >
                                       Auto-Switch Region &amp; Disk Bucket → {nearestGpuReg} (4 vCPU / 16Gi)
                                     </button>
@@ -2334,7 +2334,7 @@ export default function VmFleetAndSsh({
                                 ?.acceleratorAndRegionGuardrails
                                 ?.exceedsCloudRunCpuRamCeiling
                                 ? 'bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200'
-                                : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                                : 'bg-white/70 dark:bg-zinc-900/70 border-blue-500/25 text-zinc-700 dark:text-zinc-300'
                             }`}
                           >
                             <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
@@ -2347,7 +2347,7 @@ export default function VmFleetAndSsh({
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-purple-500/20">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-blue-500/20">
                           <label className="inline-flex items-center gap-2 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
                             <input
                               type="checkbox"
@@ -2373,7 +2373,7 @@ export default function VmFleetAndSsh({
                                     : prev.memory,
                                 }));
                               }}
-                              className="rounded border-purple-400 text-purple-600 focus:ring-purple-500"
+                              className="rounded border-blue-400 text-blue-600 focus:ring-blue-500"
                             />
                             <span>
                               <strong>
@@ -2880,7 +2880,7 @@ export default function VmFleetAndSsh({
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handlePowerAction(vm, 'DELETE')}
-                                className="bg-[#e11d48] hover:bg-[#be123c] text-white px-2 py-0.5 rounded text-[11px] font-bold transition-colors disabled:opacity-50"
+                                className="bg-[#d93025] hover:bg-[#b31412] text-white px-2 py-0.5 rounded text-[11px] font-bold transition-colors disabled:opacity-50"
                               >
                                 Yes, Delete
                               </button>
@@ -2897,7 +2897,7 @@ export default function VmFleetAndSsh({
                               type="button"
                               disabled={isBusy}
                               onClick={() => setConfirmDeleteVm(vm.name)}
-                              className="inline-flex items-center gap-1 bg-[#e11d48] hover:bg-[#be123c] text-white px-2.5 py-1 rounded-md text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
+                              className="inline-flex items-center gap-1 bg-[#d93025] hover:bg-[#b31412] text-white px-2.5 py-1 rounded-md text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Delete VM</span>

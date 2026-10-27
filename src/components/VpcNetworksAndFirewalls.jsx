@@ -2382,7 +2382,7 @@ export default function VpcNetworksAndFirewalls({
                 {(pendingIapLockdownFw.protocolsFormatted || []).some((p) =>
                   /\b(80|443|8080|3000|8888)\b/.test(p)
                 ) && (
-                  <li className="text-rose-300 font-bold">
+                  <li className="text-red-300 font-bold">
                     Web Traffic Warning (HTTP/HTTPS Ports Detected): This rule permits web ports ({(pendingIapLockdownFw.protocolsFormatted || []).join(', ')}). Locking it to <code className="text-amber-300">35.235.240.0/20</code> will block public web browsers from opening your VM&apos;s external IP directly!
                   </li>
                 )}

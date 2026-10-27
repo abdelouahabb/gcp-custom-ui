@@ -3810,9 +3810,9 @@ function CloudPulseCockpit() {
                   {gdePrivacyConfig.enabled && (
                     <span
                       title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                       GDE TUTORIAL SHIELD ON
                     </span>
                   )}
@@ -5709,7 +5709,7 @@ function MandatoryDeleteConfirmationModal({
                       : 'CloudPulse 2026 Destructive Action Gatekeeper')}
                 </span>
                 {normalizedTrack === 'ALPHA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-red-500/20 text-red-300 border border-red-500/40">
                     [ALPHA · EARLY ACCESS]
                   </span>
                 )}
@@ -5793,10 +5793,10 @@ function MandatoryDeleteConfirmationModal({
           </div>
 
           {/* 1. What Happens Next (Step-by-Step Cloud Execution) */}
-          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-2">
-            <div className="font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
+          <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-2">
+            <div className="font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
               <span>1. What Happens Next (Live Cloud Execution Sequence)</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30">
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30">
                 PRE-EXECUTION PREVIEW
               </span>
             </div>
@@ -5805,9 +5805,9 @@ function MandatoryDeleteConfirmationModal({
                 {parsedExecutionSteps.map((stepText, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2.5 p-2 rounded-lg bg-white/75 dark:bg-zinc-900/80 border border-indigo-500/20"
+                    className="flex items-start gap-2.5 p-2 rounded-lg bg-white/75 dark:bg-zinc-900/80 border border-blue-500/20"
                   >
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 shrink-0 mt-0.5">
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0 mt-0.5">
                       STEP 0{idx + 1}
                     </span>
                     <span className="font-medium text-[11px] sm:text-xs break-words">
@@ -5820,8 +5820,8 @@ function MandatoryDeleteConfirmationModal({
               <p className="font-medium">{effectiveWhatHappens}</p>
             )}
             {showSeparateImpactBox && (
-              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-[11px] font-medium text-indigo-950 dark:text-indigo-200">
-                <span className="font-mono font-extrabold uppercase text-[9px] tracking-wider text-indigo-600 dark:text-indigo-400 mr-1.5">
+              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/25 text-[11px] font-medium text-blue-950 dark:text-blue-200">
+                <span className="font-mono font-extrabold uppercase text-[9px] tracking-wider text-blue-600 dark:text-blue-400 mr-1.5">
                   Operational Impact:
                 </span>
                 {impactWarning}

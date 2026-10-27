@@ -1280,8 +1280,8 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   `QUALIFY ROW_NUMBER() = 1` + PII `SHA256`
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-                <div className="text-[10px] font-mono font-bold text-yellow-500">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <div className="text-[10px] font-mono font-bold text-amber-500">
                   STAGE 3 · GOLD MARTS
                 </div>
                 <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate mt-0.5">
@@ -1361,7 +1361,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       {p.silverDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
-                    <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/25">
+                    <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/25">
                       {p.goldDataset}
                     </span>
                   </div>
@@ -1401,7 +1401,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                           onClick={() =>
                             onOpenBigLakeStudio('METASTORE_CATALOGS')
                           }
-                          className="text-indigo-500 hover:underline font-bold cursor-pointer"
+                          className="text-blue-500 hover:underline font-bold cursor-pointer"
                         >
                           BigLake Catalog →
                         </button>
@@ -1894,7 +1894,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => onNavigateTab('CLOUD_SOC')}
-                  className="px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                  className="px-2.5 py-1 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
                 >
                   Audit PII Columns in Cloud SOC →
                 </button>
@@ -2605,7 +2605,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       ? onOpenBigLakeStudio('COMPACTION_DOCTOR')
                       : onNavigateTab?.('BIGLAKE_STUDIO', 'COMPACTION_DOCTOR')
                   }
-                  className="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
                 >
                   BigLake Z-Order Compaction →
                 </button>

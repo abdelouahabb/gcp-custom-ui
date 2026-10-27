@@ -464,10 +464,10 @@ export default function GeminiCopilotModal({
 
           {/* WAVE 16 BRIDGE: 15-Pillar Autonomous Cloud SOC & Ed25519 Zero-Trust Bridge */}
           {cloudSocBridge && (
-            <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/[0.06] via-zinc-900/40 to-indigo-500/[0.06] border border-rose-500/30 space-y-3 font-mono">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-red-500/[0.06] via-zinc-900/40 to-blue-500/[0.06] border border-red-500/30 space-y-3 font-mono">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-500 dark:text-rose-300 border border-rose-500/40">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-red-500/20 text-red-500 dark:text-red-300 border border-red-500/40">
                     Wave 16 · 20-Pillar Cloud SOC Bridge
                   </span>
                   <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -486,7 +486,7 @@ export default function GeminiCopilotModal({
                         onSelectTab('CLOUD_SOC');
                         onClose();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                     >
                       <ShieldAlert className="w-3.5 h-3.5" />
                       <span>Open 20-Pillar Cloud SOC</span>
@@ -500,7 +500,7 @@ export default function GeminiCopilotModal({
                         onSelectTab('SRE_WAR_ROOM');
                         onClose();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                     >
                       <Activity className="w-3.5 h-3.5" />
                       <span>Open 12-Pillar SRE War-Room</span>
@@ -540,7 +540,7 @@ export default function GeminiCopilotModal({
                         onSelectTab('AWS_AZURE_PARITY', 'TRUSTED_ADVISOR');
                         onClose();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                     >
                       <span>AWS / Azure Parity</span>
                       <ArrowRight className="w-3 h-3" />
@@ -556,7 +556,7 @@ export default function GeminiCopilotModal({
                         );
                         onClose();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                     >
                       <span>Alibaba / Huawei NOC</span>
                       <ArrowRight className="w-3 h-3" />
@@ -609,7 +609,7 @@ export default function GeminiCopilotModal({
                   <div className="text-[10px] text-zinc-500 uppercase">
                     IAM etag Vault & Merkle
                   </div>
-                  <div className="font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                  <div className="font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
                     {cloudSocBridge.iamCheckpointsCount} IAM Checkpoint
                     {cloudSocBridge.iamCheckpointsCount === 1 ? '' : 's'}
                   </div>
@@ -641,7 +641,7 @@ export default function GeminiCopilotModal({
                     onClick={() =>
                       handleExecuteSocBridgeAction('EXECUTE_DEFCON1_LOCKDOWN')
                     }
-                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Lock className="w-3.5 h-3.5" />
                     <span>
@@ -705,10 +705,10 @@ export default function GeminiCopilotModal({
 
           {/* WAVE 8 PRINCIPAL SRE WAR-ROOM & MULTI-WINDOW SLO BURN BRIDGE */}
           {sreWarRoomData && (
-            <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500/[0.06] via-zinc-900/40 to-emerald-500/[0.06] border border-indigo-500/30 space-y-3 font-mono">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/[0.06] via-zinc-900/40 to-emerald-500/[0.06] border border-blue-500/30 space-y-3 font-mono">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/40">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/40">
                     Wave 8 · 12-Pillar SRE War-Room Bridge
                   </span>
                   <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -726,7 +726,7 @@ export default function GeminiCopilotModal({
                       onSelectTab('SRE_WAR_ROOM');
                       onClose();
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>Launch Principal SRE War-Room</span>
@@ -752,7 +752,7 @@ export default function GeminiCopilotModal({
                   <div className="text-[10px] text-zinc-500 uppercase">
                     Uptime &amp; Alert Policies
                   </div>
-                  <div className="font-extrabold text-cyan-500 mt-0.5">
+                  <div className="font-extrabold text-blue-500 mt-0.5">
                     {sreWarRoomData.uptimeChecksCount ?? 0} Uptime · {sreWarRoomData.alertPoliciesCount ?? 0} Alert(s)
                   </div>
                   <div className="text-[10px] text-zinc-400">
@@ -776,7 +776,7 @@ export default function GeminiCopilotModal({
                   <div className="text-[10px] text-zinc-500 uppercase">
                     Merkle &amp; GitOps Sync
                   </div>
-                  <div className="font-extrabold text-indigo-400 mt-0.5">
+                  <div className="font-extrabold text-blue-400 mt-0.5">
                     {sreWarRoomData.healthAndSocBridge?.merkleSnapshotsCount ?? 0} Merkle Checkpoint(s)
                   </div>
                   <div className="text-[10px] text-zinc-400 truncate">
@@ -919,7 +919,7 @@ export default function GeminiCopilotModal({
           {gitOpsBridge && (
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold uppercase text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                   <GitBranch className="w-4 h-4" />
                   <span>
                     ClickOps-to-GitOps Live Session HCL Diff Bridge (
@@ -986,7 +986,7 @@ export default function GeminiCopilotModal({
           {/* DERIVED CAPABILITY D: Multi-Project Fleet Posture & FinOps Federation Matrix */}
           <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-extrabold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+              <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                 <Layers className="w-4 h-4" />
                 <span>
                   Multi-Project Fleet Posture & FinOps Federation Matrix
@@ -996,7 +996,7 @@ export default function GeminiCopilotModal({
                 type="button"
                 disabled={loadingFleet}
                 onClick={handleScanFleetMatrix}
-                className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3 h-3 ${loadingFleet ? 'animate-spin' : ''}`}
@@ -1246,10 +1246,10 @@ export default function GeminiCopilotModal({
           </div>
 
           {/* Section 4: 2026 Google Cloud Official Remote MCP Control Plane Shortcut */}
-          <div className="bg-zinc-900/90 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-zinc-900/90 border border-blue-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40">
                   Dedicated Main Menu Tab · MCP Servers
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -1260,7 +1260,7 @@ export default function GeminiCopilotModal({
                 Google Cloud Official Remote MCP Servers Hub
               </h3>
               <p className="text-xs text-zinc-400">
-                Launch the dedicated <span className="text-indigo-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 3.8 Flash grounded on official MCP telemetry.
+                Launch the dedicated <span className="text-blue-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 3.8 Flash grounded on official MCP telemetry.
               </p>
             </div>
             <button
@@ -1269,7 +1269,7 @@ export default function GeminiCopilotModal({
                 if (onSelectTab) onSelectTab('MCP_HUB');
                 if (onClose) onClose();
               }}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-2 shrink-0 cursor-pointer transition-colors"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm flex items-center gap-2 shrink-0 cursor-pointer transition-colors"
             >
               <span>Open MCP Servers Tab</span>
               <ArrowRight className="w-3.5 h-3.5" />

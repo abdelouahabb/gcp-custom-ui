@@ -210,7 +210,7 @@ export default function AwsAzureEnvySuiteStudio({
   const [oauthSupportEmail, setOauthSupportEmail] = useState(
     'support@pulsedocs.ai'
   );
-  const [oauthAccentColor, setOauthAccentColor] = useState('indigo');
+  const [oauthAccentColor, setOauthAccentColor] = useState('blue');
   const [oauthPrivacyUrl, setOauthPrivacyUrl] = useState(
     'https://pulsedocs.ai/privacy'
   );
@@ -2217,8 +2217,8 @@ export default function AwsAzureEnvySuiteStudio({
             <div
               className={`inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                 isChinaSuite
-                  ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
-                  : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -2311,8 +2311,8 @@ export default function AwsAzureEnvySuiteStudio({
                 className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
                     ? isChinaSuite
-                      ? 'bg-orange-600 text-white border-orange-600 shadow-sm ring-2 ring-orange-500/25'
-                      : 'bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-500/25'
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm ring-2 ring-amber-500/25'
+                      : 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/25'
                     : 'bg-zinc-50/90 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 border-zinc-200/90 dark:border-zinc-800'
                 }`}
               >
@@ -2322,8 +2322,8 @@ export default function AwsAzureEnvySuiteStudio({
                       active
                         ? 'bg-white/20 text-white'
                         : isChinaSuite
-                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
-                          : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                     }`}
                   >
                     {stepNum}
@@ -3033,7 +3033,7 @@ export default function AwsAzureEnvySuiteStudio({
               className={`rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 border transition-colors ${
                 isModuleDisabled
                   ? 'bg-emerald-500/5 border-emerald-500/40'
-                  : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border-blue-500/30'
+                  : 'bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-emerald-500/10 border-blue-500/30'
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -3139,7 +3139,7 @@ export default function AwsAzureEnvySuiteStudio({
                       disabled={actionBusy === `DISABLE_MOD_${activeSubTab}`}
                       onClick={openConfirmDisableModuleModal}
                       title="Opens confirmation modal where you can choose to tear down only this feature's resources ($0.00/hr) OR also disable the included Google Cloud APIs."
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>
@@ -3153,9 +3153,9 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
 
               {confirmTeardownModal && (
-                <div className="p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/10 space-y-3 text-xs font-mono shadow-lg">
+                <div className="p-4 rounded-2xl border-2 border-red-500 bg-red-500/10 space-y-3 text-xs font-mono shadow-lg">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-extrabold">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300 font-extrabold">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>
                         DANGEROUS ACTION CONFIRMATION REQUIRED —{' '}
@@ -3164,7 +3164,7 @@ export default function AwsAzureEnvySuiteStudio({
                           : `Disable & Teardown: ${confirmTeardownModal.sourceFeature}?`}
                       </span>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold">
+                    <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-extrabold">
                       CHOOSE SCOPE &amp; CONFIRM BELOW
                     </span>
                   </div>
@@ -3201,11 +3201,11 @@ export default function AwsAzureEnvySuiteStudio({
                         }
                         className={`p-3 rounded-xl border-2 cursor-pointer transition-all space-y-1 ${
                           confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
-                            ? 'border-rose-500 bg-rose-500/20'
+                            ? 'border-red-500 bg-red-500/20'
                             : 'border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80'
                         }`}
                       >
-                        <div className="font-extrabold text-rose-700 dark:text-rose-300">
+                        <div className="font-extrabold text-red-700 dark:text-red-300">
                           2. [Project-Wide] Feature Resources + ALSO Disable All Included GCP APIs
                         </div>
                         <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
@@ -3242,7 +3242,7 @@ export default function AwsAzureEnvySuiteStudio({
                           );
                         }
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-sm cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>
@@ -3344,7 +3344,7 @@ export default function AwsAzureEnvySuiteStudio({
                           key={api}
                           className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
                             isApiDisabled
-                              ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30 line-through'
+                              ? 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30 line-through'
                               : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                           }`}
                         >
@@ -3397,7 +3397,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
                           teardownReceiptBanner.teardownScope === 'FEATURE_AND_APIS'
-                            ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40'
+                            ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/40'
                             : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40'
                         }`}
                       >
@@ -3427,13 +3427,13 @@ export default function AwsAzureEnvySuiteStudio({
                   )}
                   {teardownReceiptBanner.disabledApis?.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-400">
+                      <span className="text-[10px] uppercase font-bold text-red-600 dark:text-red-400">
                         Disabled Project-Wide GCP APIs:
                       </span>
                       {teardownReceiptBanner.disabledApis.map((api) => (
                         <span
                           key={api}
-                          className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[10px] font-bold"
+                          className="px-2 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-bold"
                         >
                           {api}
                         </span>
@@ -3456,13 +3456,13 @@ export default function AwsAzureEnvySuiteStudio({
               typeof document !== 'undefined' &&
               createPortal(
                 <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="bg-white dark:bg-zinc-900 border-2 border-rose-500/80 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto">
+                  <div className="bg-white dark:bg-zinc-900 border-2 border-red-500/80 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto">
                     <div className="flex items-start gap-3">
-                      <div className="p-2.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
+                      <div className="p-2.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 shrink-0">
                         <AlertTriangle className="w-5 h-5" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400">
                           DANGEROUS ACTION CONFIRMATION · CHOOSE TEARDOWN SCOPE
                         </div>
                         <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
@@ -3473,8 +3473,8 @@ export default function AwsAzureEnvySuiteStudio({
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 text-zinc-800 dark:text-zinc-200">
-                      <div className="font-extrabold text-rose-700 dark:text-rose-300">
+                    <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2 text-zinc-800 dark:text-zinc-200">
+                      <div className="font-extrabold text-red-700 dark:text-red-300">
                         1. Feature Resources That Will Be Torn Down ($0.00/hr):
                       </div>
                       {confirmTeardownModal.mode === 'ITEM' ? (
@@ -3494,7 +3494,7 @@ export default function AwsAzureEnvySuiteStudio({
                             <strong>{pid}</strong>:
                           </p>
                           {(confirmTeardownModal.activeItems || []).length > 0 ? (
-                            <ul className="list-disc list-inside space-y-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-white/60 dark:bg-zinc-950/60 p-2.5 rounded-lg">
+                            <ul className="list-disc list-inside space-y-1 text-[11px] font-bold text-red-700 dark:text-red-300 bg-white/60 dark:bg-zinc-950/60 p-2.5 rounded-lg">
                               {confirmTeardownModal.activeItems.map((item) => (
                                 <li key={item}>{item}</li>
                               ))}
@@ -3551,15 +3551,15 @@ export default function AwsAzureEnvySuiteStudio({
                           }
                           className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all space-y-1.5 ${
                             confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
-                              ? 'border-rose-500 bg-rose-500/10'
+                              ? 'border-red-500 bg-red-500/10'
                               : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:border-zinc-400'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-extrabold text-rose-700 dark:text-rose-300">
+                            <span className="font-extrabold text-red-700 dark:text-red-300">
                               [Nuclear] Disable Feature Resources + ALSO Disable All Included GCP APIs
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-extrabold">
+                            <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-700 dark:text-red-300 text-[10px] font-extrabold">
                               PROJECT-WIDE IMPACT
                             </span>
                           </div>
@@ -3568,7 +3568,7 @@ export default function AwsAzureEnvySuiteStudio({
                             <strong>{(confirmTeardownModal.apisEnabled || []).length}</strong> underlying Google Cloud APIs (
                             <code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code>) across project <code>{pid}</code>. Warning: any other workloads in <code>{pid}</code> that depend on these APIs will also stop working!
                           </p>
-                          <div className="p-2 rounded bg-white dark:bg-zinc-950 text-rose-700 dark:text-rose-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                          <div className="p-2 rounded bg-white dark:bg-zinc-950 text-red-700 dark:text-red-300 text-[10px] overflow-x-auto whitespace-nowrap">
                             $ gcloud services disable {(confirmTeardownModal.apisEnabled || []).join(' ')} --project={pid}
                           </div>
                         </div>
@@ -3613,7 +3613,7 @@ export default function AwsAzureEnvySuiteStudio({
                             );
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-sm cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>
@@ -3659,21 +3659,21 @@ export default function AwsAzureEnvySuiteStudio({
                     done.
                   </p>
                 </div>
-                <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg cursor-pointer">
+                <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-lg cursor-pointer">
                   <input
                     type="checkbox"
                     checked={cascadeDeleteGcp}
                     onChange={(e) => setCascadeDeleteGcp(e.target.checked)}
-                    className="rounded accent-rose-600"
+                    className="rounded accent-red-600"
                   />
                   <span>Cascade-delete underlying GCP resources on teardown</span>
                 </label>
               </div>
 
               {/* RG-Scoped RBAC Quick Bar */}
-              <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-2 text-xs font-mono">
+              <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 space-y-2 text-xs font-mono">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <UserCheck className="w-3.5 h-3.5" />
                     <span>
                       Azure-Style Resource-Group-Scoped Access (RBAC) — Pick a
@@ -3781,7 +3781,7 @@ export default function AwsAzureEnvySuiteStudio({
                             type="button"
                             disabled={isDeleting || isHibernating}
                             onClick={() => handleHibernateGroup(grp)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
                           >
                             <Moon className="w-3.5 h-3.5" />
                             <span>
@@ -3795,7 +3795,7 @@ export default function AwsAzureEnvySuiteStudio({
                             onClick={() =>
                               handleDeleteGroup(grp, cascadeDeleteGcp)
                             }
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>
@@ -3852,7 +3852,7 @@ export default function AwsAzureEnvySuiteStudio({
                                 <span className="font-bold text-zinc-900 dark:text-zinc-100">
                                   {asg.principal}
                                 </span>
-                                <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                                   {asg.rgRoleLabel}
                                 </span>
                               </div>
@@ -4021,7 +4021,7 @@ export default function AwsAzureEnvySuiteStudio({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-rose-500" />
+                    <Flame className="w-4 h-4 text-red-500" />
                     <span>
                       Automated Hard-Spend Stop-Loss Fuse (Beyond Email-Only GCP
                       Budgets)
@@ -4067,7 +4067,7 @@ export default function AwsAzureEnvySuiteStudio({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-mono font-bold text-orange-500 mb-1">
+                  <label className="block text-[11px] font-mono font-bold text-amber-500 mb-1">
                     Stage 2 Compute Park (%)
                   </label>
                   <input
@@ -4078,7 +4078,7 @@ export default function AwsAzureEnvySuiteStudio({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-mono font-bold text-rose-500 mb-1">
+                  <label className="block text-[11px] font-mono font-bold text-red-500 mb-1">
                     Stage 3 Hard Fuse (%)
                   </label>
                   <input
@@ -4137,7 +4137,7 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Play className="w-4 h-4 text-rose-500" />
+                <Play className="w-4 h-4 text-red-500" />
                 <span>1-Click Execute / Test Stop-Loss Fuse Actions Now</span>
               </h3>
               <p className="text-xs text-zinc-500">
@@ -4153,9 +4153,9 @@ export default function AwsAzureEnvySuiteStudio({
                     handleExecuteSpendFuse('PROVISION_PUBSUB_BUDGET_WIRE')
                   }
                   disabled={Boolean(actionBusy)}
-                  className="w-full text-left p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                  className="w-full text-left p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all cursor-pointer"
                 >
-                  <div className="text-xs font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
+                  <div className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-400">
                     1. Wire Live Pub/Sub Budget Stop-Loss Topic (
                     <code>cloudpulse-hard-spend-fuse</code>)
                   </div>
@@ -4185,9 +4185,9 @@ export default function AwsAzureEnvySuiteStudio({
                   type="button"
                   onClick={() => handleExecuteSpendFuse('COMPUTE_PARK')}
                   disabled={Boolean(actionBusy)}
-                  className="w-full text-left p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 transition-all cursor-pointer"
+                  className="w-full text-left p-3 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all cursor-pointer"
                 >
-                  <div className="text-xs font-mono font-extrabold text-rose-600 dark:text-rose-400">
+                  <div className="text-xs font-mono font-extrabold text-red-600 dark:text-red-400">
                     3. Execute Stage 2 Compute Park ({fuseParkPct}% — Stop VMs +
                     Zero Cloud Run)
                   </div>
@@ -4218,7 +4218,7 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                  <ShieldCheck className="w-4 h-4 text-blue-500" />
                   <span>
                     AWS-Style IAM Policy Simulator &amp; &ldquo;Switch
                     Role&rdquo; Service Account Impersonator
@@ -4253,7 +4253,7 @@ export default function AwsAzureEnvySuiteStudio({
                   type="button"
                   onClick={() => handleRunIamSimulation(selectedPrincipalKey)}
                   disabled={actionBusy === 'IAM_SIM'}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                 >
                   <Search className="w-3.5 h-3.5" />
                   <span>
@@ -4291,7 +4291,7 @@ export default function AwsAzureEnvySuiteStudio({
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>{simResult.allowedCount} ALLOWED</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/15 text-red-600 dark:text-red-400 font-bold">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     <span>{simResult.deniedCount} DENIED (Implicit)</span>
                   </span>
@@ -4340,7 +4340,7 @@ export default function AwsAzureEnvySuiteStudio({
                                   <span>ALLOWED</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
                                   <AlertTriangle className="w-3 h-3" />
                                   <span>DENIED</span>
                                 </span>
@@ -4363,7 +4363,7 @@ export default function AwsAzureEnvySuiteStudio({
                                     actionBusy ===
                                     `GRANT_${row.recommendedLeastPrivilegeRole}`
                                   }
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
                                 >
                                   <Plus className="w-3 h-3" />
                                   <span>
@@ -4395,7 +4395,7 @@ export default function AwsAzureEnvySuiteStudio({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                    <Link2 className="w-4 h-4 text-sky-500" />
+                    <Link2 className="w-4 h-4 text-blue-500" />
                     <span>
                       1-Click Azure SAS / AWS S3 Presigned Share Link Generator
                     </span>
@@ -4433,7 +4433,7 @@ export default function AwsAzureEnvySuiteStudio({
                             { bucketName: selectedBucket }
                           )
                         }
-                        className="px-2.5 py-2 rounded-xl text-[11px] font-extrabold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                        className="px-2.5 py-2 rounded-xl text-[11px] font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
                         title="Import AWS S3, MinIO, or Ceph RGW buckets into this GCS bucket (M03)"
                       >
                         S3 / MinIO Importer (M03) →
@@ -4539,7 +4539,7 @@ export default function AwsAzureEnvySuiteStudio({
                                   handleGeneratePresignedUrl(obj.name)
                                 }
                                 disabled={actionBusy === `SAS_${obj.name}`}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
                               >
                                 <Link2 className="w-3 h-3" />
                                 <span>Generate Share Link</span>
@@ -4554,9 +4554,9 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
 
               {generatedSasResult && (
-                <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 space-y-2.5 text-xs font-mono">
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2.5 text-xs font-mono">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 font-extrabold text-sky-600 dark:text-sky-400">
+                    <span className="inline-flex items-center gap-1.5 font-extrabold text-blue-600 dark:text-blue-400">
                       <Link2 className="w-3.5 h-3.5" />
                       <span>
                         Expiring SAS / Presigned Link Ready (gs://
@@ -4574,7 +4574,7 @@ export default function AwsAzureEnvySuiteStudio({
                       href={generatedSasResult.bridgePath}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>Open / Download via SAS Link</span>
@@ -4618,7 +4618,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
             >
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Upload className="w-4 h-4 text-sky-500" />
+                <Upload className="w-4 h-4 text-blue-500" />
                 <span>Direct Browser Upload to gs://{selectedBucket || '...'}</span>
               </h3>
 
@@ -4629,7 +4629,7 @@ export default function AwsAzureEnvySuiteStudio({
                 <input
                   type="file"
                   onChange={handleFileInputChange}
-                  className="w-full text-xs font-mono file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-mono file:font-bold file:bg-sky-500/15 file:text-sky-600 dark:file:text-sky-400 cursor-pointer"
+                  className="w-full text-xs font-mono file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-mono file:font-bold file:bg-blue-500/15 file:text-blue-600 dark:file:text-blue-400 cursor-pointer"
                 />
               </div>
 
@@ -4662,7 +4662,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'UPLOAD_OBJ' || !selectedBucket}
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white cursor-pointer"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>
@@ -4687,7 +4687,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
             >
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-violet-500" />
+                <Globe className="w-4 h-4 text-blue-500" />
                 <span>
                   1-Screen Global HTTPS Load Balancer, Managed SSL &amp; Cloud
                   Armor WAF Wizard
@@ -4766,7 +4766,7 @@ export default function AwsAzureEnvySuiteStudio({
                     type="checkbox"
                     checked={lbEnableArmor}
                     onChange={(e) => setLbEnableArmor(e.target.checked)}
-                    className="rounded accent-violet-600"
+                    className="rounded accent-blue-600"
                   />
                   <span className="font-bold">
                     Attach Cloud Armor L7 DDoS &amp; Rate-Limit WAF Policy
@@ -4791,7 +4791,7 @@ export default function AwsAzureEnvySuiteStudio({
                 disabled={
                   actionBusy === 'PROVISION_LB' || !lbTargetRunService.trim()
                 }
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white cursor-pointer"
               >
                 <Rocket className="w-3.5 h-3.5" />
                 <span>
@@ -4806,7 +4806,7 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="lg:col-span-6 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-violet-500" />
+                <FileText className="w-4 h-4 text-blue-500" />
                 <span>
                   7-Step Global Load Balancer Execution Receipt &amp; CLI
                   Blueprint
@@ -4883,7 +4883,7 @@ export default function AwsAzureEnvySuiteStudio({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-500" />
+                    <Layers className="w-4 h-4 text-blue-500" />
                     <span>
                       CloudFormation / Azure ARM Stacks &amp; Live Drift
                       Remediator
@@ -4903,7 +4903,7 @@ export default function AwsAzureEnvySuiteStudio({
                       onClick={() => setSelectedIacFormat(fmt)}
                       className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                         selectedIacFormat === fmt
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-blue-600 text-white'
                           : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                       }`}
                     >
@@ -4930,7 +4930,7 @@ export default function AwsAzureEnvySuiteStudio({
                           <span className="font-mono font-extrabold text-sm text-zinc-950 dark:text-zinc-50">
                             {st.stackName}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                             {st.version} · {st.resourceGroup}
                           </span>
                           <span
@@ -4983,7 +4983,7 @@ export default function AwsAzureEnvySuiteStudio({
                                 `Copied ${selectedIacFormat} code for ${st.stackName}.`
                               )
                             }
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                           >
                             <Copy className="w-3 h-3" />
                             <span>Copy IaC</span>
@@ -5033,7 +5033,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
             >
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-indigo-500" />
+                <Code2 className="w-4 h-4 text-blue-500" />
                 <span>Snapshot Resource Group as Versioned Stack</span>
               </h3>
 
@@ -5100,7 +5100,7 @@ export default function AwsAzureEnvySuiteStudio({
                   disabled={
                     actionBusy === 'SNAPSHOT_STACK' || !newStackName.trim()
                   }
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>
@@ -5672,7 +5672,7 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-rose-500" />
+                  <KeyRound className="w-4 h-4 text-red-500" />
                   <span>
                     1-Click Secret Rotation &amp; Schedule Provisioner
                   </span>
@@ -5734,7 +5734,7 @@ export default function AwsAzureEnvySuiteStudio({
                     !rotateSecretName.trim()
                   }
                   onClick={() => handleRotateSecretNow(rotateSecretName)}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>
@@ -5750,7 +5750,7 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-rose-500" />
+                <ShieldCheck className="w-4 h-4 text-red-500" />
                 <span>
                   Live Key Vault / Secret Manager Inventory &amp; Cross-Env Sync
                   ({keyVaultSecrets.length})
@@ -5774,7 +5774,7 @@ export default function AwsAzureEnvySuiteStudio({
                           <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
                             {sec.name}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-300 text-[10px] font-bold">
                             Every {sec.rotationPeriodDays}d
                           </span>
                           <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
@@ -5794,7 +5794,7 @@ export default function AwsAzureEnvySuiteStudio({
                           type="button"
                           disabled={actionBusy === `ROTATE_${sec.name}`}
                           onClick={() => handleRotateSecretNow(sec.name)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
                         >
                           <RefreshCw className="w-3 h-3" />
                           <span>Rotate Now</span>
@@ -5908,7 +5908,7 @@ export default function AwsAzureEnvySuiteStudio({
                   >
                     <div className="space-y-1 max-w-3xl">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                           {f.pillar}
                         </span>
                         <span
@@ -5916,7 +5916,7 @@ export default function AwsAzureEnvySuiteStudio({
                             isFixed
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                               : f.severity === 'HIGH'
-                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                           }`}
                         >
@@ -5990,7 +5990,7 @@ export default function AwsAzureEnvySuiteStudio({
             >
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Network className="w-4 h-4 text-sky-500" />
+                  <Network className="w-4 h-4 text-blue-500" />
                   <span>
                     AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke Mesh
                   </span>
@@ -6073,7 +6073,7 @@ export default function AwsAzureEnvySuiteStudio({
                 <button
                   type="submit"
                   disabled={actionBusy === 'TGW_MESH'}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Network className="w-3.5 h-3.5" />
                   <span>
@@ -6089,7 +6089,7 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-sky-500" />
+                <Globe className="w-4 h-4 text-blue-500" />
                 <span>
                   Active Transit Gateway / Virtual WAN Spoke Attachments (
                   {(transitGateway.spokes || []).length})
@@ -6108,7 +6108,7 @@ export default function AwsAzureEnvySuiteStudio({
                           Hub: {sp.hubVpc}
                         </span>
                         <span className="text-zinc-400">&lt;--&gt;</span>
-                        <span className="font-extrabold text-sky-600 dark:text-sky-400">
+                        <span className="font-extrabold text-blue-600 dark:text-blue-400">
                           Spoke: {sp.spokeVpc}
                         </span>
                         <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
@@ -6168,7 +6168,7 @@ export default function AwsAzureEnvySuiteStudio({
             >
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Boxes className="w-4 h-4 text-violet-500" />
+                  <Boxes className="w-4 h-4 text-blue-500" />
                   <span>
                     AWS ECS Task Definition / Azure Container Apps Sidecar
                     Compose
@@ -6261,7 +6261,7 @@ export default function AwsAzureEnvySuiteStudio({
                 <button
                   type="submit"
                   disabled={actionBusy === 'COMPOSE_DEPLOY'}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Rocket className="w-3.5 h-3.5" />
                   <span>
@@ -6277,7 +6277,7 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-violet-500" />
+                <Code2 className="w-4 h-4 text-blue-500" />
                 <span>
                   Active Multi-Container Gen2 Sidecar Stacks (
                   {(containerCompose.apps || []).length})
@@ -6294,7 +6294,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
                         {app.appName} ({app.region})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
                         {(app.containers || []).length} Containers · Shared Vol:{' '}
                         {app.sharedMountPath}
                       </span>
@@ -6334,7 +6334,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span>Copy YAML</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-violet-300 text-[11px] font-mono overflow-x-auto max-h-64">
+                  <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-blue-300 text-[11px] font-mono overflow-x-auto max-h-64">
                     {composeReceipt.knativeYaml}
                   </pre>
                 </div>
@@ -6353,7 +6353,7 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Radar className="w-4 h-4 text-rose-500" />
+                  <Radar className="w-4 h-4 text-red-500" />
                   <span>
                     AWS GuardDuty / Microsoft Sentinel Live Threat Hunting &amp;
                     1-Click SOAR Quarantine
@@ -6366,7 +6366,7 @@ export default function AwsAzureEnvySuiteStudio({
                 </p>
               </div>
               <div className="flex items-center gap-2 font-mono text-xs">
-                <span className="px-3 py-1.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">
+                <span className="px-3 py-1.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 font-bold">
                   Active Threats: {guardDutySoar.activeThreatsCount || 0}
                 </span>
                 <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
@@ -6390,7 +6390,7 @@ export default function AwsAzureEnvySuiteStudio({
                             isQuarantined
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                               : th.severity === 'CRITICAL'
-                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                           }`}
                         >
@@ -6419,7 +6419,7 @@ export default function AwsAzureEnvySuiteStudio({
                           isQuarantined || actionBusy === `SOAR_${th.id}`
                         }
                         onClick={() => handleExecuteSoarPlaybook(th)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>
@@ -6437,7 +6437,7 @@ export default function AwsAzureEnvySuiteStudio({
             </div>
 
             {soarReceipt && (
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-700 dark:text-rose-300">
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-700 dark:text-red-300">
                 <strong>SOAR Playbook Execution Audit:</strong>{' '}
                 {soarReceipt.message} — CLI: <code>{soarReceipt.cliCommand}</code>
               </div>
@@ -6599,7 +6599,7 @@ export default function AwsAzureEnvySuiteStudio({
                               wf.workflowName
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-extrabold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-extrabold cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -6663,7 +6663,7 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-indigo-500" />
+                  <UserCheck className="w-4 h-4 text-blue-500" />
                   <span>
                     Azure Entra App Registrations Parity — Multiple OAuth Sign-In
                     Brandings Inside One &apos;prod&apos; GCP Project
@@ -6699,7 +6699,7 @@ export default function AwsAzureEnvySuiteStudio({
                 onSubmit={handleCreateOAuthBrandProfile}
                 className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3.5"
               >
-                <h4 className="text-xs font-mono font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                <h4 className="text-xs font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-2">
                   <Plus className="w-4 h-4" />
                   <span>
                     Register New OAuth Brand Identity in Project ({projectId})
@@ -6767,10 +6767,10 @@ export default function AwsAzureEnvySuiteStudio({
                         onChange={(e) => setOauthAccentColor(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
                       >
-                        <option value="indigo">Indigo Enterprise</option>
-                        <option value="emerald">Emerald FinTech</option>
-                        <option value="sky">Sky Cloud Native</option>
-                        <option value="rose">Rose Consumer</option>
+                        <option value="blue">Google Cloud Blue (#1a73e8)</option>
+                        <option value="emerald">Google Cloud Green (#1e8e3e)</option>
+                        <option value="amber">Google Cloud Amber (#e37400)</option>
+                        <option value="red">Google Cloud Red (#d93025)</option>
                       </select>
                     </div>
                   </div>
@@ -6815,7 +6815,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <button
                     type="submit"
                     disabled={actionBusy === 'OAUTH_BRAND_CREATE'}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>
@@ -6869,7 +6869,7 @@ export default function AwsAzureEnvySuiteStudio({
                         onClick={() => setSelectedPreviewBrandId(b.brandId)}
                         className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all space-y-1.5 ${
                           isSelected
-                            ? 'border-indigo-500 bg-indigo-500/10'
+                            ? 'border-blue-500 bg-blue-500/10'
                             : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 hover:border-zinc-400'
                         }`}
                       >
@@ -6886,13 +6886,13 @@ export default function AwsAzureEnvySuiteStudio({
                                 b.brandId
                               );
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-extrabold cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-extrabold cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Disable / Delete</span>
                           </button>
                         </div>
-                        <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                        <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold">
                           Domain: {b.customAuthDomain}
                         </div>
                         <div className="text-[10px] text-zinc-500 truncate">
@@ -6908,7 +6908,7 @@ export default function AwsAzureEnvySuiteStudio({
 
                 {/* Live Interactive OAuth Consent Screen Preview */}
                 {activePreviewBrand && (
-                  <div className="p-5 rounded-2xl border-2 border-indigo-500/30 bg-zinc-50 dark:bg-zinc-950 space-y-4">
+                  <div className="p-5 rounded-2xl border-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-950 space-y-4">
                     <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                       <span>
                         LIVE END-USER OAUTH CONSENT SCREEN PREVIEW (ISOLATED
@@ -6920,7 +6920,7 @@ export default function AwsAzureEnvySuiteStudio({
                     </div>
 
                     <div className="max-w-md mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-md space-y-4 text-center font-sans">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white font-mono font-extrabold text-lg">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600 text-white font-mono font-extrabold text-lg">
                         {activePreviewBrand.brandDisplayName
                           .slice(0, 2)
                           .toUpperCase()}
@@ -6932,7 +6932,7 @@ export default function AwsAzureEnvySuiteStudio({
                         <div className="text-xs text-zinc-500">
                           {activePreviewBrand.tagline}
                         </div>
-                        <div className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 pt-1">
+                        <div className="text-[11px] font-mono text-blue-600 dark:text-blue-400 pt-1">
                           Continue to{' '}
                           <strong>{activePreviewBrand.customAuthDomain}</strong>
                         </div>
@@ -6996,7 +6996,7 @@ export default function AwsAzureEnvySuiteStudio({
                         <span>Copy Code</span>
                       </button>
                     </div>
-                    <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-indigo-700 dark:text-indigo-300 text-[11px] font-mono overflow-x-auto">
+                    <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 text-[11px] font-mono overflow-x-auto">
                       {oauthBrokerReceipt.brokerSnippet}
                     </pre>
                   </div>
@@ -7020,12 +7020,12 @@ export default function AwsAzureEnvySuiteStudio({
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-sky-500" />
+                  <Globe className="w-4 h-4 text-blue-500" />
                   <span>
                     Route 53 Traffic Flow &amp; Azure Front Door DNS Policy Builder
                   </span>
                 </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-500">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-500">
                   Cloud DNS WRR + Geo
                 </span>
               </div>
@@ -7137,7 +7137,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'DNS_POLICY_CREATE'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'DNS_POLICY_CREATE'
                   ? 'Provisioning Cloud DNS Traffic Policy...'
@@ -7334,7 +7334,7 @@ export default function AwsAzureEnvySuiteStudio({
                   </div>
 
                   <div className="text-xs font-mono text-zinc-700 dark:text-zinc-300">
-                    <span className="font-bold text-indigo-500">
+                    <span className="font-bold text-blue-500">
                       {ev.methodName}
                     </span>{' '}
                     on <span className="underline">{ev.resourceName}</span>
@@ -7543,12 +7543,12 @@ export default function AwsAzureEnvySuiteStudio({
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-500" />
+                  <Sparkles className="w-4 h-4 text-blue-500" />
                   <span>
                     Bedrock Guardrails &amp; Azure AI Foundry Gateway Builder
                   </span>
                 </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-400">
                   Vertex AI + Cloud DLP
                 </span>
               </div>
@@ -7642,7 +7642,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'AI_GW_CREATE'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-purple-600 hover:bg-purple-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'AI_GW_CREATE'
                   ? 'Deploying Vertex AI Guardrail Gateway...'
@@ -7656,7 +7656,7 @@ export default function AwsAzureEnvySuiteStudio({
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Live Guardrail, DLP Redaction &amp; Model-Failover Playground
                 </h3>
-                <span className="text-[11px] font-mono text-purple-400 font-bold">
+                <span className="text-[11px] font-mono text-blue-400 font-bold">
                   {(bedrockGateway.routes || []).length} Active Gateway(s)
                 </span>
               </div>
@@ -7693,14 +7693,14 @@ export default function AwsAzureEnvySuiteStudio({
 
               {(aiLastEval ||
                 (bedrockGateway.recentEvaluations || [])[0]) && (
-                <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 space-y-2 text-xs font-mono">
+                <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2 text-xs font-mono">
                   {(() => {
                     const ev =
                       aiLastEval || bedrockGateway.recentEvaluations[0];
                     return (
                       <>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-extrabold text-purple-400">
+                          <span className="font-extrabold text-blue-400">
                             Verdict: {ev.verdict}
                           </span>
                           <span>
@@ -7756,7 +7756,7 @@ export default function AwsAzureEnvySuiteStudio({
                           onClick={() =>
                             handleDeleteParityItem('BEDROCK_FOUNDRY_AI_GATEWAY', rt.routeId)
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -7782,7 +7782,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
             >
               <div className="flex items-center gap-2">
-                <Rocket className="w-4 h-4 text-orange-500" />
+                <Rocket className="w-4 h-4 text-amber-500" />
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Alibaba Cloud PTS + MSE Sentinel 11.11 Singles&apos; Day Flash-Sale Pre-Warm &amp; QPS Shedder
                 </h3>
@@ -7868,7 +7868,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'ALIYUN_SENTINEL_ARM'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-orange-600 hover:bg-orange-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'ALIYUN_SENTINEL_ARM'
                   ? 'Pre-Warming Instances & Arming MSE Sentinel...'
@@ -7909,7 +7909,7 @@ export default function AwsAzureEnvySuiteStudio({
                 {(aliyunFlashSale.campaigns || []).map((c) => (
                   <div
                     key={c.campaignId}
-                    className="p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 space-y-2 text-xs font-mono"
+                    className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-2 text-xs font-mono"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -7927,7 +7927,7 @@ export default function AwsAzureEnvySuiteStudio({
                               c.campaignId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -7937,7 +7937,7 @@ export default function AwsAzureEnvySuiteStudio({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
                         <div className="text-zinc-500">Pre-Warmed Pool</div>
-                        <div className="font-extrabold text-orange-500">
+                        <div className="font-extrabold text-amber-500">
                           {c.preWarmedMinInstances} min / {c.maxBurstInstances} max
                         </div>
                       </div>
@@ -7976,7 +7976,7 @@ export default function AwsAzureEnvySuiteStudio({
                         Cold Starts: {d.coldStartsObserved} · p99 Latency: {d.p99LatencyMs}ms
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px] font-bold">
                       {d.verdict}
                     </span>
                   </div>
@@ -7998,7 +7998,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
             >
               <div className="flex items-center gap-2">
-                <Network className="w-4 h-4 text-cyan-500" />
+                <Network className="w-4 h-4 text-blue-500" />
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Alibaba Cloud CEN (Cloud Enterprise Network) &amp; Global Accelerator QoS Bandwidth Slicer
                 </h3>
@@ -8056,7 +8056,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'ALIYUN_CEN_PROVISION'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'ALIYUN_CEN_PROVISION'
                   ? 'Allocating CEN Backbone & QoS Lanes...'
@@ -8072,7 +8072,7 @@ export default function AwsAzureEnvySuiteStudio({
                 {aliyunCenPackages.map((pkg) => (
                   <div
                     key={pkg.packageId}
-                    className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2.5 text-xs font-mono"
+                    className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2.5 text-xs font-mono"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -8090,7 +8090,7 @@ export default function AwsAzureEnvySuiteStudio({
                               pkg.packageId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8109,7 +8109,7 @@ export default function AwsAzureEnvySuiteStudio({
                       </div>
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
                         <div className="text-zinc-500">Silver API QoS</div>
-                        <div className="font-extrabold text-cyan-500">
+                        <div className="font-extrabold text-blue-500">
                           {pkg.qosSlices?.silverInteractiveApiPct}% ({Math.round((pkg.totalBandwidthMbps * (pkg.qosSlices?.silverInteractiveApiPct || 35)) / 100)} Mbps)
                         </div>
                       </div>
@@ -8229,7 +8229,7 @@ export default function AwsAzureEnvySuiteStudio({
                               cl.clusterId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8254,7 +8254,7 @@ export default function AwsAzureEnvySuiteStudio({
                       </div>
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
                         <div className="text-zinc-500">Shared Storage Savings</div>
-                        <div className="font-extrabold text-indigo-500">
+                        <div className="font-extrabold text-blue-500">
                           -{cl.sharedStorageZeroCopySavingsPct}% vs 3x Replicas
                         </div>
                       </div>
@@ -8278,7 +8278,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
             >
               <div className="flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-rose-500" />
+                <Boxes className="w-4 h-4 text-red-500" />
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Huawei Cloud CCE Turbo (Volcano Scheduler) + ModelArts / Alibaba PAI Fractional vGPU Pool
                 </h3>
@@ -8351,7 +8351,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'HUAWEI_VGPU_POOL'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'HUAWEI_VGPU_POOL'
                   ? 'Scheduling Volcano vGPU Slices...'
@@ -8367,7 +8367,7 @@ export default function AwsAzureEnvySuiteStudio({
                 {huaweiVgpuPools.map((pool) => (
                   <div
                     key={pool.poolId}
-                    className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2 text-xs font-mono"
+                    className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-2 text-xs font-mono"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -8385,7 +8385,7 @@ export default function AwsAzureEnvySuiteStudio({
                               pool.poolId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8399,7 +8399,7 @@ export default function AwsAzureEnvySuiteStudio({
                     <div className="grid grid-cols-3 gap-2 text-[11px]">
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
                         <div className="text-zinc-500">Physical &rarr; vGPU Pods</div>
-                        <div className="font-extrabold text-rose-500">
+                        <div className="font-extrabold text-red-500">
                           {pool.physicalGpusAllocated} GPUs &rarr; {pool.virtualGpuPodsScheduled} vGPU Pods
                         </div>
                       </div>
@@ -8411,7 +8411,7 @@ export default function AwsAzureEnvySuiteStudio({
                       </div>
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
                         <div className="text-zinc-500">Est. Monthly GPU Savings</div>
-                        <div className="font-extrabold text-indigo-500">
+                        <div className="font-extrabold text-blue-500">
                           ${Number(pool.estimatedMonthlySavingsUsd || 0).toLocaleString()}/mo
                         </div>
                       </div>
@@ -8426,10 +8426,10 @@ export default function AwsAzureEnvySuiteStudio({
                     )}
                     {pool.gkeTimeSlicingYaml && (
                       <details className="text-[10px] font-mono bg-zinc-950/90 text-zinc-200 rounded-lg border border-zinc-800 p-2.5">
-                        <summary className="cursor-pointer font-extrabold text-rose-400">
+                        <summary className="cursor-pointer font-extrabold text-red-400">
                           View Compiled GKE NVIDIA Time-Slicing ConfigMap + CNCF Volcano PodGroup YAML
                         </summary>
-                        <pre className="mt-2 overflow-x-auto text-[10px] text-cyan-300 whitespace-pre">
+                        <pre className="mt-2 overflow-x-auto text-[10px] text-blue-300 whitespace-pre">
                           {pool.gkeTimeSlicingYaml}
                         </pre>
                       </details>
@@ -8531,7 +8531,7 @@ export default function AwsAzureEnvySuiteStudio({
                               m.messageId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8560,7 +8560,7 @@ export default function AwsAzureEnvySuiteStudio({
               className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
             >
               <div className="flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-violet-500" />
+                <GitBranch className="w-4 h-4 text-blue-500" />
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Alibaba Nacos + Higress / Huawei ServiceComb Zero-Restart Config &amp; AI Wasm Gateway
                 </h3>
@@ -8626,7 +8626,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'ALIYUN_NACOS_PUSH'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'ALIYUN_NACOS_PUSH'
                   ? 'Hot-Pushing Nacos + Higress Config...'
@@ -8642,7 +8642,7 @@ export default function AwsAzureEnvySuiteStudio({
                 {aliyunNacosConfigs.map((cfg) => (
                   <div
                     key={cfg.configId}
-                    className="p-4 rounded-xl border border-violet-500/30 bg-violet-500/5 space-y-2 text-xs font-mono"
+                    className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2 text-xs font-mono"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -8660,7 +8660,7 @@ export default function AwsAzureEnvySuiteStudio({
                               cfg.configId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8774,7 +8774,7 @@ export default function AwsAzureEnvySuiteStudio({
                               tb.tableId
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Disable / Delete</span>
@@ -8797,10 +8797,10 @@ export default function AwsAzureEnvySuiteStudio({
          ===================================================================== */}
       {activeSubTab === 'HUAWEI_DATAV_NOC_COMMAND_WALL' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-orange-500/40 rounded-2xl p-6 shadow-lg space-y-5 font-mono">
+          <div className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-amber-500/40 rounded-2xl p-6 shadow-lg space-y-5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="text-[11px] text-orange-400 font-extrabold uppercase tracking-wider">
+                <div className="text-[11px] text-amber-400 font-extrabold uppercase tracking-wider">
                   ALIBABA DATAV &amp; HUAWEI CLOUD ASTRO · EXECUTIVE DIGITAL-TWIN NOC WALL
                 </div>
                 <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white mt-0.5">
@@ -8820,7 +8820,7 @@ export default function AwsAzureEnvySuiteStudio({
                 <button
                   type="submit"
                   disabled={actionBusy === 'HUAWEI_DATAV_DRILL'}
-                  className="px-3.5 py-1.5 rounded-xl font-extrabold bg-orange-600 hover:bg-orange-500 text-white cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl font-extrabold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
                 >
                   {actionBusy === 'HUAWEI_DATAV_DRILL'
                     ? 'Simulating Drill...'
@@ -8832,7 +8832,7 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Annualized GCP Fleet Run-Rate</div>
-                <div className="text-xl font-extrabold text-orange-400 mt-1">
+                <div className="text-xl font-extrabold text-amber-400 mt-1">
                   ${Number(huaweiDataVNoc.globalLiveGmvUsd || 0).toLocaleString()}/yr
                 </div>
                 <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -8850,7 +8850,7 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Measured GCP Backbone RTT</div>
-                <div className="text-xl font-extrabold text-cyan-400 mt-1">
+                <div className="text-xl font-extrabold text-blue-400 mt-1">
                   GCS {huaweiDataVNoc.apakToEuFiberRttMs}ms / BQ {huaweiDataVNoc.apakToUsFiberRttMs}ms
                 </div>
                 <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -8859,7 +8859,7 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Posture Checks &amp; Remediations</div>
-                <div className="text-xl font-extrabold text-purple-400 mt-1">
+                <div className="text-xl font-extrabold text-blue-400 mt-1">
                   {huaweiDataVNoc.autoMitigatedAnomaliesToday} Healthy / Healed
                 </div>
                 <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -8868,7 +8868,7 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs text-orange-700 dark:text-orange-200 flex flex-wrap items-center justify-between gap-2">
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
               <span>
                 Latest Live GCP Backbone &amp; Failover Probe: <strong>{huaweiDataVNoc.lastDrillScenario}</strong>
               </span>

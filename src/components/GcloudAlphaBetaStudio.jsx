@@ -49,9 +49,9 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
     return (
       <span
         title="Combined Google Cloud GA + BETA + ALPHA Track (SDK 590.0.1)"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 shrink-0"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
         <span>[GA + BETA + ALPHA]</span>
       </span>
     );
@@ -59,9 +59,9 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   return (
     <span
       title="Google Cloud ALPHA Track (gcloud alpha / v1alpha): Early Access Preview with no SLA; flags and schemas may evolve without notice."
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/40 shrink-0"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
       <span>[ALPHA · EARLY ACCESS]</span>
     </span>
   );
@@ -363,7 +363,7 @@ export default function GcloudAlphaBetaStudio({
   return (
     <div className="space-y-5">
       {/* Top Pre-GA Release Channel Disclosure & SDK 590.0.1 Version Banner */}
-      <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10 p-4 sm:p-5 shadow-sm">
+      <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-red-500/10 to-blue-500/10 p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
@@ -414,7 +414,7 @@ export default function GcloudAlphaBetaStudio({
                 [BETA · PUBLIC PREVIEW]
               </strong>{' '}
               and{' '}
-              <strong className="text-rose-600 dark:text-rose-400 font-mono">
+              <strong className="text-red-600 dark:text-red-400 font-mono">
                 [ALPHA · EARLY ACCESS]
               </strong>
               .
@@ -585,7 +585,7 @@ export default function GcloudAlphaBetaStudio({
                       tab.wave === 'WAVE_3'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                         : tab.wave === 'WAVE_2'
-                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
                         : 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30'
                     }`}
                   >
@@ -619,7 +619,7 @@ export default function GcloudAlphaBetaStudio({
 
       {/* Active Capability Owning-Studio Bridge Bar */}
       {activeTabMeta && (
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-mono">
             <ReleaseTrackBadge track={activeTabMeta.track} />
             <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -635,7 +635,7 @@ export default function GcloudAlphaBetaStudio({
                 <button
                   type="button"
                   onClick={() => onSelectStudioTab(activeTabMeta.ownerStudioTab)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
                   <span>{activeTabMeta.ownerStudioLabel}</span>
                 </button>
@@ -1340,7 +1340,7 @@ export default function GcloudAlphaBetaStudio({
               onClick={() =>
                 executeAlphaBetaAction('RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE')
               }
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <FileCode2 className="w-4 h-4" />
               <span>
@@ -1994,7 +1994,7 @@ export default function GcloudAlphaBetaStudio({
       {activeSubTab === 'WAVE3_GCLOUD_590_SUITE' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left 7 Cols: 8-Pillar Live SDK 590.0.1 Probe */}
-          <div className="lg:col-span-7 rounded-2xl border border-indigo-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-4">
+          <div className="lg:col-span-7 rounded-2xl border border-blue-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <ReleaseTrackBadge track="ALPHA_AND_BETA" />
@@ -2008,7 +2008,7 @@ export default function GcloudAlphaBetaStudio({
                 onClick={() =>
                   executeAlphaBetaAction('SCAN_WAVE3_GCLOUD_590_FRONTIER')
                 }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -2021,7 +2021,7 @@ export default function GcloudAlphaBetaStudio({
 
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
               Executes 8 parallel CLI probes introduced or promoted in{' '}
-              <code className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              <code className="font-mono font-bold text-blue-600 dark:text-blue-400">
                 Google Cloud SDK 590.0.1 (2026.10.22 · Python 3.14.8 · kubectl 1.35.3 · bq 2.1.41)
               </code>
               : Gemini Cloud Assist Investigations, Parameter Manager, Vector
@@ -2103,7 +2103,7 @@ export default function GcloudAlphaBetaStudio({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-extrabold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
                         {item.badge}
                       </span>
                       <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
@@ -2132,7 +2132,7 @@ export default function GcloudAlphaBetaStudio({
                       <button
                         type="button"
                         onClick={() => copyText(item.cmd, item.title)}
-                        className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        className="text-[11px] font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                       >
                         Copy CLI
                       </button>
@@ -2230,8 +2230,8 @@ export default function GcloudAlphaBetaStudio({
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
-                <div className="font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1">
+                <div className="font-bold text-blue-700 dark:text-blue-300">
                   4. Cloud Observability, Compliance Manager &amp; BigLake Iceberg GA (590.0.1)
                 </div>
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">

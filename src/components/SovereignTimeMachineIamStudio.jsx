@@ -1523,7 +1523,7 @@ export default function SovereignTimeMachineIamStudio({
                     <button
                       type="button"
                       onClick={() => handleApplySaRolePreset('DATA_PIPELINE')}
-                      className="px-2 py-1 rounded bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-[10px] font-mono text-purple-700 dark:text-purple-300 cursor-pointer"
+                      className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300 cursor-pointer"
                     >
                       Data Pipeline Worker
                     </button>
@@ -2698,7 +2698,7 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
 
                   <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
-                    <div className="text-[9.5px] uppercase text-purple-600 dark:text-purple-400 font-bold">
+                    <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
                       4. Replication Cost Multiplier
                     </div>
                     <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
@@ -3071,7 +3071,7 @@ export default function SovereignTimeMachineIamStudio({
                                   Disabled/Destroyed ($0)
                                 </span>
                                 {mountedList.length > 0 && (
-                                  <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+                                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
                                     Mounted by {mountedList.length} Cloud Run Ref(s)
                                   </span>
                                 )}
@@ -3370,9 +3370,9 @@ export default function SovereignTimeMachineIamStudio({
                               </div>
 
                               {/* 4. Live Cloud Run Mounts Hot-Reload & $0/mo Autonomous Rotation Schedule */}
-                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-purple-500/30 space-y-2">
+                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
                                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-                                  <span className="font-extrabold text-purple-600 dark:text-purple-300">
+                                  <span className="font-extrabold text-blue-600 dark:text-blue-300">
                                     4. Live Cloud Run `secretKeyRef` Mounts ({mountedList.length}) & $0/mo Auto-Rotation
                                   </span>
                                   <button
@@ -3405,7 +3405,7 @@ export default function SovereignTimeMachineIamStudio({
                                       {mountedList.map((mw, mIdx) => (
                                         <span
                                           key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
-                                          className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-200 border border-purple-500/30 text-[10px] font-mono"
+                                          className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-200 border border-blue-500/30 text-[10px] font-mono"
                                         >
                                           {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
                                         </span>
@@ -3420,7 +3420,7 @@ export default function SovereignTimeMachineIamStudio({
                                           mountedList
                                         )
                                       }
-                                      className="w-full py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                                      className="w-full py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                                     >
                                       {reloadBusy
                                         ? 'Rolling Fresh Cloud Run Revision(s)...'

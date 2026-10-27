@@ -2454,7 +2454,7 @@ OPTIONS (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-xs font-extrabold font-mono uppercase text-violet-600 dark:text-violet-400">
+                <span className="text-xs font-extrabold font-mono uppercase text-blue-600 dark:text-blue-400">
                   Module 3 · Paste Databricks Code (`dbutils` / `DeltaTable`)
                 </span>
                 <div className="flex items-center gap-1">
@@ -2498,7 +2498,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
                       }}
                       className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer ${
                         dbxSourceTemplate === tpl.id
-                          ? 'bg-violet-600 text-white border-violet-600'
+                          ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
                       }`}
                     >

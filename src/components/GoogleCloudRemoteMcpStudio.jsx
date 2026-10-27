@@ -107,7 +107,7 @@ function renderInlineMarkdownNodes(text, keyPrefix = 'inl') {
       return (
         <code
           key={key}
-          className="px-1.5 py-0.5 mx-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 font-mono text-[11px]"
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25 font-mono text-[11px]"
         >
           {part.slice(1, -1)}
         </code>
@@ -120,7 +120,7 @@ function renderInlineMarkdownNodes(text, keyPrefix = 'inl') {
           href={part}
           target="_blank"
           rel="noreferrer"
-          className="underline text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-mono text-[11px]"
+          className="underline text-blue-600 dark:text-blue-400 hover:text-blue-500 font-mono text-[11px]"
         >
           {part}
         </a>
@@ -225,11 +225,11 @@ function McpFormattedMarkdown({ content, onCopy }) {
                       className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/70 text-xs text-zinc-700 dark:text-zinc-200"
                     >
                       {isNumbered ? (
-                        <span className="mt-0.5 px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-mono text-[10px] font-extrabold shrink-0">
+                        <span className="mt-0.5 px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-extrabold shrink-0">
                           #{cleanNumber}
                         </span>
                       ) : (
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                       )}
                       <div className="min-w-0 flex-1 leading-relaxed">
                         {renderInlineMarkdownNodes(
@@ -331,7 +331,7 @@ function McpFormattedMarkdown({ content, onCopy }) {
                   level <= 2 ? 'text-sm' : 'text-xs'
                 } font-extrabold text-zinc-900 dark:text-white`}
               >
-                <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>
                   {renderInlineMarkdownNodes(titleText, `hd-${sIdx}-${lIdx}`)}
                 </span>
@@ -362,8 +362,8 @@ function McpFormattedMarkdown({ content, onCopy }) {
                 key={`callout-${sIdx}-${lIdx}`}
                 className={`p-2.5 rounded-xl border text-xs leading-relaxed ${
                   isDangerCallout
-                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
-                    : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-950 dark:text-indigo-200'
+                    ? 'bg-red-500/10 border-red-500/30 text-red-900 dark:text-red-200'
+                    : 'bg-blue-500/10 border-blue-500/30 text-blue-950 dark:text-blue-200'
                 }`}
               >
                 {renderInlineMarkdownNodes(line, `callout-${sIdx}-${lIdx}`)}
@@ -458,7 +458,7 @@ function McpStructuredPayloadView({
             onClick={() => setViewMode('FORMATTED')}
             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
               viewMode === 'FORMATTED'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
             }`}
           >
@@ -469,7 +469,7 @@ function McpStructuredPayloadView({
             onClick={() => setViewMode('RAW')}
             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
               viewMode === 'RAW'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
             }`}
           >
@@ -525,7 +525,7 @@ function McpStructuredPayloadView({
               key={objKey}
               className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[11px] font-mono"
             >
-              <div className="text-[10px] font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+              <div className="text-[10px] font-extrabold uppercase text-blue-600 dark:text-blue-400">
                 {objKey}
               </div>
               {Object.entries(objVal)
@@ -561,7 +561,7 @@ function McpStructuredPayloadView({
                     return (
                       <div
                         key={`scalar-item-${idx}`}
-                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-300"
+                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-300"
                       >
                         {String(item)}
                       </div>
@@ -1285,7 +1285,7 @@ export default function GoogleCloudRemoteMcpStudio({
                               >
                                 <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-extrabold text-indigo-600 dark:text-indigo-300">
+                                    <span className="font-extrabold text-blue-600 dark:text-blue-300">
                                       {propKey}
                                     </span>
                                     {propSchema?.type && (
@@ -1297,7 +1297,7 @@ export default function GoogleCloudRemoteMcpStudio({
                                   <span
                                     className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                                       isReq
-                                        ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300'
+                                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
                                         : 'bg-zinc-200/60 dark:bg-zinc-800 text-zinc-500'
                                     }`}
                                   >
@@ -1333,7 +1333,7 @@ export default function GoogleCloudRemoteMcpStudio({
                             JSON.stringify(activeToolObj.defaultArguments || {}, null, 2)
                           )
                         }
-                        className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                       >
                         Reset to {projectId} Defaults
                       </button>
@@ -1348,8 +1348,8 @@ export default function GoogleCloudRemoteMcpStudio({
 
                   {/* Destructive Safety Gate Warning if triggered */}
                   {destructivePending && (
-                    <div className="p-3 rounded-xl border border-rose-500/50 bg-rose-500/10 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-rose-600 dark:text-rose-400">
+                    <div className="p-3 rounded-xl border border-red-500/50 bg-red-500/10 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-red-600 dark:text-red-400">
                         <ShieldAlert className="w-4 h-4 shrink-0" />
                         <span>HUMAN-IN-THE-LOOP MCP SAFETY GATE INTERCEPTION</span>
                       </div>
@@ -1360,7 +1360,7 @@ export default function GoogleCloudRemoteMcpStudio({
                         <button
                           type="button"
                           onClick={() => handleInvokeMcpTool(true)}
-                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-extrabold cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-extrabold cursor-pointer"
                         >
                           Confirm &amp; Execute Destructive MCP Tool
                         </button>
@@ -1380,7 +1380,7 @@ export default function GoogleCloudRemoteMcpStudio({
                       type="button"
                       disabled={callingTool}
                       onClick={() => handleInvokeMcpTool(false)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       <Play className="w-3.5 h-3.5" />
                       <span>

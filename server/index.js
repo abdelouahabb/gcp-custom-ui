@@ -42533,7 +42533,7 @@ app.post(
         const supportEmail = String(
           body.supportEmail || `support@${appSlug}.app`
         ).trim();
-        const accentColor = String(body.accentColor || 'indigo').trim();
+        const accentColor = String(body.accentColor || 'blue').trim();
         const privacyPolicyUrl = String(
           body.privacyPolicyUrl || `https://${appSlug}.app/privacy`
         ).trim();

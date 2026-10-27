@@ -1435,7 +1435,7 @@ ORDER BY
               {billingInfo.billingEnabled ? 'BILLING ACTIVE' : 'UNLINKED / CLOSED'}
             </span>
             {idbStats.synced && (
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                 INDEXEDDB SYNCED ({idbStats.accountsCount} accts ·{' '}
                 {idbStats.budgetsCount} budgets · {idbStats.grantsCount} grants ·{' '}
                 {idbStats.ledgerRowsCount} rows)
@@ -3530,7 +3530,7 @@ ORDER BY
                 onClick={() =>
                   handleRunAlwaysFreeEnforcer('TRIM_EXCESS_SECRET_VERSIONS')
                 }
-                className="w-full py-1.5 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+                className="w-full py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
               >
                 {enforcerBusy === 'TRIM_EXCESS_SECRET_VERSIONS'
                   ? 'Disabling Redundant Versions...'
