@@ -259,8 +259,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE16_ENTERPRISE_MOONSHOT: {
-    badge: '06 · DR GAMEDAY, FINOPS & SQL SURGEON',
-    title: '06. Multi-Region DR GameDay & SQL Surgeon — FinOps Anomaly Auto-Fixer, RTO/RPO Prover & IAM Surgeon',
+    badge: 'DR GAMEDAY, FINOPS & SQL SURGEON',
+    title: 'Multi-Region DR GameDay & SQL Surgeon — FinOps Anomaly Auto-Fixer, RTO/RPO Prover & IAM Surgeon',
     whatItDoes:
       'Provides 4 live operational engines: (1) FinOps Anomaly Auto-Fixer (GCS Lifecycle & Cloud Run Scale-to-Zero), (2) Multi-Region Disaster Recovery (DR) GameDay & RTO/RPO Prover with 1-Click Secondary Region Mirroring, (3) Least-Privilege Custom IAM Role Synthesizer, and (4) BigQuery SQL Dry-Run Cost Surgeon.',
     enterpriseValue:
@@ -269,8 +269,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE15_DYSON_MOONSHOT: {
-    badge: '05 · ANALYTICS, SLSA & LOG RCA',
-    title: '05. Supply-Chain SLSA & Log RCA Studio — BigQuery Anomaly SQL, SLSA Supply-Chain, Log Surgeon & TLS 1.3',
+    badge: 'ANALYTICS, SLSA & LOG RCA',
+    title: 'Supply-Chain SLSA & Log RCA Studio — BigQuery Anomaly SQL, SLSA Supply-Chain, Log Surgeon & TLS 1.3',
     whatItDoes:
       'Combines 4 live production tools: (1) BigQuery Z-Score & Cosine Vector SQL Engine, (2) Cloud Build + Artifact Registry SLSA v1.0 Provenance Attestor, (3) Cloud Logging + Gemini 3.8 Flash Root-Cause Surgeon, and (4) Live TLS 1.3 X.509 Certificate Inspector.',
     enterpriseValue:
@@ -279,8 +279,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE14_QUANTUM_DOCTOR: {
-    badge: '04 · PITR, DRIFT & PQC VAULT',
-    title: '04. Self-Healing Cloud Doctor & PITR — BigQuery Time-Travel, Self-Healing Drift Fix, IAM Graph & PQC Vault',
+    badge: 'PITR, DRIFT & PQC VAULT',
+    title: 'Self-Healing Cloud Doctor & PITR — BigQuery Time-Travel, Self-Healing Drift Fix, IAM Graph & PQC Vault',
     whatItDoes:
       'Provides 4 live remediation engines: (1) BigQuery FOR SYSTEM_TIME AS OF point-in-time recovery diff, (2) Self-Healing Cloud Doctor that repairs GCS/BQ/Secret configuration drift via live PATCH calls, (3) IAM Permission Blast-Radius Graph, and (4) Hybrid Post-Quantum (X25519 + SHAKE256 + AES-256-GCM) Secret Manager Vault.',
     enterpriseValue:
@@ -289,8 +289,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE13_STARLINK_NEURALINK: {
-    badge: '03 · GEO-FAILOVER & PROMPT-TO-DAG',
-    title: '03. Global Edge & Prompt-to-DAG Studio — Multi-Region TLS 1.3 Probe, Prompt-to-DAG & Ed25519 Ledger',
+    badge: 'GEO-FAILOVER & PROMPT-TO-DAG',
+    title: 'Global Edge & Prompt-to-DAG Studio — Multi-Region TLS 1.3 Probe, Prompt-to-DAG & Ed25519 Ledger',
     whatItDoes:
       'Delivers 4 capabilities: (1) 6-Region Live HTTPS/TLS 1.3 Handshake Probe & BigQuery Geo-Failover Streamer, (2) Natural-Language Prompt-to-4-Node GCP Resource Builder, (3) 3-Agent FinOps/SecOps/SRE Review Board, and (4) RFC 8032 Ed25519 Cryptographically Signed Audit Ledger.',
     enterpriseValue:
@@ -299,8 +299,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE12_ROADSTER: {
-    badge: '02 · DRIFT RECONCILER & 12-WAY MCP',
-    title: '02. Autonomous Drift & Migration Deck — Closed-Loop Drift Reconciler, Cross-Project Migrator & 12-Way MCP Probe',
+    badge: 'DRIFT RECONCILER & 12-WAY MCP',
+    title: 'Autonomous Drift & Migration Deck — Closed-Loop Drift Reconciler, Cross-Project Migrator & 12-Way MCP Probe',
     whatItDoes:
       'Provides: (1) Closed-loop Cloud Drift Reconciler with SHA-256 state receipts, (2) Server-side Cross-Project Resource Migrator (cloning GCS buckets, BigQuery datasets/tables, and secrets between projects), (3) 12-Service Parallel MCP Latency Waterfall, and (4) Grounded Gemini Flight Director.',
     enterpriseValue:
@@ -309,8 +309,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE11_MOONSHOT: {
-    badge: '01 · CANARY DEPLOY, FIRESTORE & QUOTAS',
-    title: '01. Release & Multi-Project Studio — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quotas & Multi-Project',
+    badge: 'CANARY DEPLOY, FIRESTORE & QUOTAS',
+    title: 'Release & Multi-Project Studio — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quotas & Multi-Project',
     whatItDoes:
       'Unlocks live Google Cloud Deploy progressive canary pipelines, Cloud Firestore NoSQL document CRUD explorer, Active Assist Recommender + regional quota gauges, Multi-Project Estate Matrix, and 1-Click Cloud Run self-hosting export.',
     enterpriseValue:

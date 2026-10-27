@@ -533,7 +533,7 @@ export default function Wave12RoadsterFlightDeckStudio({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-600 text-white">
-                02 · AUTONOMOUS DRIFT &amp; MIGRATION DECK (DRIFT RECONCILER, CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE)
+                AUTONOMOUS DRIFT &amp; MIGRATION DECK (DRIFT RECONCILER, CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
                 100% LIVE GCP REST + 12-LANE MCP TELEMETRY
@@ -542,7 +542,7 @@ export default function Wave12RoadsterFlightDeckStudio({
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
               <Rocket className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>
-                02. Autonomous Drift &amp; Migration Deck — Closed-Loop Drift Reconciler, Cross-Project Migrator &amp; 12-Way MCP Probe
+                Autonomous Drift &amp; Migration Deck — Closed-Loop Drift Reconciler, Cross-Project Migrator &amp; 12-Way MCP Probe
               </span>
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">

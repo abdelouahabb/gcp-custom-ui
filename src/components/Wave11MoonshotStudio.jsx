@@ -496,7 +496,7 @@ export default function Wave11MoonshotStudio({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                01 · RELEASE &amp; MULTI-PROJECT GOVERNANCE STUDIO (100% LIVE GCP APIS)
+                RELEASE &amp; MULTI-PROJECT GOVERNANCE STUDIO (100% LIVE GCP APIS)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                 CLOUD DEPLOY + FIRESTORE NOSQL + ACTIVE ASSIST RECOMMENDER + MULTI-PROJECT MATRIX
@@ -505,7 +505,7 @@ export default function Wave11MoonshotStudio({
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
               <Rocket className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span>
-                01. Release &amp; Multi-Project Studio — Cloud Deploy Canary Pipelines, Firestore NoSQL Explorer, Quota Optimizer &amp; Multi-Project Audit
+                Release &amp; Multi-Project Studio — Cloud Deploy Canary Pipelines, Firestore NoSQL Explorer, Quota Optimizer &amp; Multi-Project Audit
               </span>
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">

@@ -484,14 +484,14 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
-                05 · SUPPLY-CHAIN SLSA &amp; LOG RCA STUDIO (VECTOR SQL, SLSA v1.0 PROVENANCE, LOG RCA &amp; TLS 1.3 X.509)
+                SUPPLY-CHAIN SLSA &amp; LOG RCA STUDIO (VECTOR SQL, SLSA v1.0 PROVENANCE, LOG RCA &amp; TLS 1.3 X.509)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; SOCKET CRYPTO · ZERO AUTO-PROVISIONING
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              05. Supply-Chain SLSA &amp; Log RCA Studio — BigQuery Vector/Anomaly SQL, SLSA v1.0 Supply-Chain Attestor, Cloud Logging Root-Cause Surgeon &amp; Live TLS 1.3 X.509 Inspector
+              Supply-Chain SLSA &amp; Log RCA Studio — BigQuery Vector/Anomaly SQL, SLSA v1.0 Supply-Chain Attestor, Cloud Logging Root-Cause Surgeon &amp; Live TLS 1.3 X.509 Inspector
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
               Execute real BigQuery Standard SQL CTEs computing statistical Z-scores and token cosine similarity on your live tables, inspect Cloud Build &amp; Artifact Registry container SHA-256 digests to sign Ed25519 DSSE SLSA v1.0 provenance statements, correlate live <code>logging.googleapis.com/v2/entries:list</code> streams with Gemini 3.8 Flash, and perform real TCP/TLS 1.3 X.509 certificate handshakes.

@@ -68,12 +68,12 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
 }
 
 const STUDIO_TABS = [
-  // 01–05: CORE RUNTIME, AGENT IDENTITY & RESILIENCE
+  // CORE RUNTIME, AGENT IDENTITY & RESILIENCE
   {
     id: 'BETA_CLOUD_RUN',
     wave: 'WAVE_1',
     track: 'BETA',
-    shortLabel: '01 · [BETA/GA] Cloud Run 4-Primitive Lab',
+    shortLabel: '[BETA/GA] Cloud Run 4-Primitive Lab',
     subtitle: 'worker-pools · multi-region-services · compose [GA] · instances',
     icon: Server,
     ownerStudioTab: 'CLOUD_RUN',
@@ -83,7 +83,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_AGENT_MCP',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: '02 · [GA 590.0.1] Agent Registry & Identity Control Plane',
+    shortLabel: '[GA 590.0.1] Agent Registry & Identity Control Plane',
     subtitle: 'gcloud agent-registry mcp-servers · agents · agent-identity [GA] · skills [ALPHA]',
     icon: Cpu,
     ownerStudioTab: 'CLOUD_SOC',
@@ -93,7 +93,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_PAM_TROUBLESHOOT',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: '03 · [GA 590.0.1] PAM JIT IAM & 403 Troubleshooter',
+    shortLabel: '[GA 590.0.1] PAM JIT IAM & 403 Troubleshooter',
     subtitle: 'gcloud pam entitlements/grants [GA] · gcloud policy-troubleshoot iam [GA]',
     icon: KeyRound,
     ownerStudioTab: 'SOVEREIGN_STUDIO',
@@ -103,7 +103,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_HEALTH_FAULT',
     wave: 'WAVE_1',
     track: 'ALPHA_AND_BETA',
-    shortLabel: '04 · [GA/ALPHA] Service Health & Chaos Fault-Testing',
+    shortLabel: '[GA/ALPHA] Service Health & Chaos Fault-Testing',
     subtitle: 'gcloud service-health [GA 590.0.1] · gcloud alpha fault-testing [ALPHA]',
     icon: Radar,
     ownerStudioTab: 'SRE_WAR_ROOM',
@@ -113,18 +113,18 @@ const STUDIO_TABS = [
     id: 'ALPHA_BETA_PLATFORM',
     wave: 'WAVE_1',
     track: 'BETA',
-    shortLabel: '05 · [GA/BETA] App Optimize, Location Finder & Asset Vet',
+    shortLabel: '[GA/BETA] App Optimize, Location Finder & Asset Vet',
     subtitle: 'beta app-optimize · gcloud cloudlocationfinder [GA 590.0.1] · gcloud asset list',
     icon: Layers,
     ownerStudioTab: 'AWS_AZURE_PARITY',
     ownerStudioLabel: 'Open Multi-Cloud Parity Suite',
   },
-  // 06–10: AI SAFETY, QUOTAS, COMPLIANCE & HYPERCOMPUTER
+  // AI SAFETY, QUOTAS, COMPLIANCE & HYPERCOMPUTER
   {
     id: 'WAVE2_MODEL_ARMOR',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '06 · [GA 590.0.1] Model Armor LLM Firewall & Safety Floor',
+    shortLabel: '[GA 590.0.1] Model Armor LLM Firewall & Safety Floor',
     subtitle: 'gcloud model-armor templates · floorsettings · sanitize-user-prompt [GA]',
     icon: ShieldAlert,
     ownerStudioTab: 'CLOUD_SOC',
@@ -134,7 +134,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '07 · [GA 590.0.1] Grounded Dev Knowledge & App Topology',
+    shortLabel: '[GA 590.0.1] Grounded Dev Knowledge & App Topology',
     subtitle: 'gcloud developer-knowledge answer-query · app-topology · design-center [GA]',
     icon: Globe,
     ownerStudioTab: 'SRE_WAR_ROOM',
@@ -144,7 +144,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_BETA_CLOUD_QUOTAS',
     wave: 'WAVE_2',
     track: 'BETA',
-    shortLabel: '08 · [GA/BETA] Cloud Quotas Autonomous Adjuster & Caps',
+    shortLabel: '[GA/BETA] Cloud Quotas Autonomous Adjuster & Caps',
     subtitle: 'gcloud quotas preferences & info [GA 590.0.1] · beta quotas adjuster [BETA]',
     icon: Activity,
     ownerStudioTab: 'BILLING_CREDITS',
@@ -154,7 +154,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_AUDIT_DELIVERY_TRUST',
     wave: 'WAVE_2',
     track: 'ALPHA_AND_BETA',
-    shortLabel: '09 · [GA/ALPHA] Audit Manager, Compliance & Delivery Trust',
+    shortLabel: '[GA/ALPHA] Audit Manager, Compliance & Delivery Trust',
     subtitle: 'gcloud audit-manager & compliance-manager [GA] · alpha software-delivery-trust',
     icon: ShieldCheck,
     ownerStudioTab: 'CLOUD_SOC',
@@ -164,18 +164,18 @@ const STUDIO_TABS = [
     id: 'WAVE2_AI_HYPERCOMPUTER_HPC',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '10 · [GA 590.0.1] AI Hypercomputer Cluster Director & Lustre',
+    shortLabel: '[GA 590.0.1] AI Hypercomputer Cluster Director & Lustre',
     subtitle: 'gcloud cluster-director clusters [GA 590.0.1] · gcloud lustre [GA] · mldiagnostics',
     icon: Sparkles,
     ownerStudioTab: 'VERTEX_AI',
     ownerStudioLabel: 'Open Vertex AI & Hypercomputer Studio',
   },
-  // 11–12: REMOTE MCP HUB & 8-PILLAR OBSERVABILITY/ORCHESTRATION
+  // REMOTE MCP HUB & 8-PILLAR OBSERVABILITY/ORCHESTRATION
   {
     id: 'OFFICIAL_REMOTE_MCP_HUB',
     wave: 'WAVE_3',
     track: 'ALPHA_AND_BETA',
-    shortLabel: '11 · [2026 MCP] 48 Official *.googleapis.com/mcp Servers',
+    shortLabel: '[2026 MCP] 48 Official *.googleapis.com/mcp Servers',
     subtitle: 'Live JSON-RPC 2.0 tools/list · tools/call · 4-Server Triage Chains · Gemini MCP Agent',
     icon: Sparkles,
     ownerStudioTab: 'CLOUD_SOC',
@@ -185,7 +185,7 @@ const STUDIO_TABS = [
     id: 'WAVE3_GCLOUD_590_SUITE',
     wave: 'WAVE_3',
     track: 'ALPHA_AND_BETA',
-    shortLabel: '12 · [SDK 590.0.1] 8-Pillar Observability, Orchestration & AI',
+    shortLabel: '[SDK 590.0.1] 8-Pillar Observability, Orchestration & AI',
     subtitle: 'observability · orchestration-pipelines · compliance-manager · gemini · vector-search · IPAM',
     icon: Terminal,
     ownerStudioTab: 'DATA_ENGINEER',
@@ -372,8 +372,8 @@ export default function GcloudAlphaBetaStudio({
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
-                  08 · GCLOUD {overview?.sdk?.coreVersion || '590.0.1'} CLI LAB
-                  (01–12 COMMAND SUITES)
+                  GCLOUD {overview?.sdk?.coreVersion || '590.0.1'} CLI LAB
+                  (12 COMMAND SUITES)
                 </span>
               </span>
               <ReleaseTrackBadge track="GA" />
@@ -517,10 +517,10 @@ export default function GcloudAlphaBetaStudio({
               onChange={(e) => setWaveFilter(e.target.value)}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">Domain: All CLI Suites (01–12)</option>
-              <option value="WAVE_1">01–05: Runtime, Agent Identity &amp; PAM</option>
-              <option value="WAVE_2">06–10: Model Armor, Quotas &amp; AI HPC</option>
-              <option value="WAVE_3">11–12: Remote MCP &amp; Observability</option>
+              <option value="ALL">Domain: All CLI Suites (12)</option>
+              <option value="WAVE_1">Runtime, Agent Identity &amp; PAM (5)</option>
+              <option value="WAVE_2">Model Armor, Quotas &amp; AI HPC (5)</option>
+              <option value="WAVE_3">Remote MCP &amp; Observability (2)</option>
             </select>
 
             <select

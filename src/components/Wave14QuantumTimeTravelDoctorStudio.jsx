@@ -501,14 +501,14 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
-                04 · SELF-HEALING CLOUD DOCTOR &amp; PITR (POINT-IN-TIME RECOVERY SQL, DRIFT AUTO-REMEDIATION, IAM GRAPH &amp; PQC VAULT)
+                SELF-HEALING CLOUD DOCTOR &amp; PITR (POINT-IN-TIME RECOVERY SQL, DRIFT AUTO-REMEDIATION, IAM GRAPH &amp; PQC VAULT)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; CRYPTO · ZERO SIMULATION
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              04. Self-Healing Cloud Doctor &amp; PITR — BigQuery Time-Travel Recovery, Drift Auto-Fix, Live IAM Blast-Radius Graph &amp; PQC Vault
+              Self-Healing Cloud Doctor &amp; PITR — BigQuery Time-Travel Recovery, Drift Auto-Fix, Live IAM Blast-Radius Graph &amp; PQC Vault
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
               Query historical BigQuery storage snapshots via native <code>FOR SYSTEM_TIME AS OF</code>, heal drifted GCS/BigQuery/Secret Manager configurations via live REST <code>PATCH</code>, inspect live <code>projects:getIamPolicy</code> blast radius, and seal/decrypt X25519 + SHAKE256 + AES-256-GCM + Ed25519 envelopes inside Google Cloud Secret Manager.
