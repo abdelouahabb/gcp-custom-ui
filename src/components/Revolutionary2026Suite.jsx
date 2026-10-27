@@ -37,6 +37,7 @@ import Wave14QuantumTimeTravelDoctorStudio from './Wave14QuantumTimeTravelDoctor
 import Wave15DysonSupplyLoggingTlsStudio from './Wave15DysonSupplyLoggingTlsStudio';
 import Wave16EnterpriseMoonshotStudio from './Wave16EnterpriseMoonshotStudio';
 import FivePersonaCommandCenter from './FivePersonaCommandCenter';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -767,6 +768,50 @@ export default function Revolutionary2026Suite({
 
     return lines.join('\n');
   }, [overview, vms, projectId, extraIacInventory, auditData]);
+
+  const generatedMermaidC4 = useMemo(() => {
+    const vpcs = overview?.vpcs || [];
+    const firewalls = overview?.firewalls || [];
+    const runServices = overview?.cloudRunServices || [];
+    const buckets = (overview?.resources || []).filter(
+      (r) => r.type === 'Cloud Storage Bucket'
+    );
+    const datasets = (overview?.resources || []).filter(
+      (r) => r.type === 'BigQuery Dataset'
+    );
+    const secrets = extraIacInventory.secrets || [];
+    const sqlInstances = extraIacInventory.sqlInstances || [];
+    const gkeClusters = extraIacInventory.gkeClusters || [];
+
+    return [
+      `flowchart TB`,
+      `  subgraph Edge["Global Edge, VPC Perimeter & Identity (${projectId})"]`,
+      `    Internet["External HTTPS / OIDC Clients"]`,
+      `    VPC["VPC Networks (${vpcs.length} VPCs · ${firewalls.length} Firewall Rules)"]`,
+      `    Secrets["Secret Manager Vault (${secrets.length} Secrets)"]`,
+      `  end`,
+      `  subgraph Compute["Serverless, Containers & VM Compute Fleet"]`,
+      `    CloudRun["Cloud Run v2 (${runServices.length} Services)"]`,
+      `    VMs["Compute Engine (${vms.length} VMs)"]`,
+      `    GKE["GKE Kubernetes (${gkeClusters.length} Clusters)"]`,
+      `  end`,
+      `  subgraph Data["Lakehouse, Object Storage & Relational Databases"]`,
+      `    GCS["Cloud Storage (${buckets.length} Buckets)"]`,
+      `    BQ["BigQuery Lakehouse (${datasets.length} Datasets)"]`,
+      `    SQL["Cloud SQL / AlloyDB (${sqlInstances.length} Instances)"]`,
+      `  end`,
+      `  Internet --> VPC`,
+      `  VPC --> CloudRun`,
+      `  VPC --> VMs`,
+      `  VPC --> GKE`,
+      `  Secrets --> CloudRun`,
+      `  CloudRun --> GCS`,
+      `  CloudRun --> BQ`,
+      `  CloudRun --> SQL`,
+      `  VMs --> GCS`,
+      `  GKE --> BQ`,
+    ].join('\n');
+  }, [overview, vms, projectId, extraIacInventory]);
 
   const generatedGcloudScript = useMemo(() => {
     const vpcs = overview?.vpcs || [];
@@ -1921,11 +1966,11 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
         </div>
       )}
 
-      {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT, GCLOUD & SESSION GITOPS DELTA EXPORTER */}
+      {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT, GCLOUD, GITOPS & C4 MERMAID EXPORTER */}
       {subTab === 'TERRAFORM' && (
         <div className="space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 flex-1">
               <button
                 type="button"
                 onClick={() => setIacFormat('TERRAFORM')}
@@ -1948,7 +1993,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                 }`}
               >
-                Terraform 1.5+ Import Blocks (imports.tf)
+                Terraform 1.5+ Imports (imports.tf)
               </button>
               <button
                 type="button"
@@ -1960,19 +2005,31 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                 }`}
               >
-                Master gcloud Clone Script (deploy.sh)
+                gcloud Clone Script (deploy.sh)
               </button>
               <button
                 type="button"
                 onClick={() => setIacFormat('SESSION_GITOPS_DELTA')}
-                title="Inspect live ClickOps-to-GitOps Terraform HCL patches generated from your Wave 8 SRE War-Room & Wave 16 Cloud SOC actions"
+                title="Inspect live ClickOps-to-GitOps Terraform HCL patches generated from your SRE War-Room & Cloud SOC actions"
                 className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'SESSION_GITOPS_DELTA'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                 }`}
               >
-                Session ClickOps-to-GitOps Delta (SRE + SOC)
+                Session GitOps Delta (SRE + SOC)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIacFormat('MERMAID_C4')}
+                title="Render live C4 Mermaid Architecture Diagram (interactive SVG visualization + Mermaid flowchart source code)"
+                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                  iacFormat === 'MERMAID_C4'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                }`}
+              >
+                C4 Mermaid Diagram (Visual + Code)
               </button>
             </div>
 
@@ -1992,13 +2049,15 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     ? generatedTerraformImports
                     : iacFormat === 'SESSION_GITOPS_DELTA'
                     ? sessionDeltaText
+                    : iacFormat === 'MERMAID_C4'
+                    ? generatedMermaidC4
                     : generatedGcloudScript;
                 navigator.clipboard?.writeText(text);
                 setCopiedType(iacFormat);
                 setTimeout(() => setCopiedType(null), 1800);
               }}
               title="Copy the complete generated Infrastructure-as-Code blueprint to your clipboard"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg cursor-pointer shrink-0"
             >
               {copiedType === iacFormat ? (
                 <>
@@ -2016,6 +2075,8 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       ? 'imports.tf'
                       : iacFormat === 'SESSION_GITOPS_DELTA'
                       ? 'session_delta.tf'
+                      : iacFormat === 'MERMAID_C4'
+                      ? 'architecture.mmd'
                       : 'deploy-stack.sh'}
                   </span>
                 </>
@@ -2023,19 +2084,27 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             </button>
           </div>
 
-          <pre className="bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-xs font-mono overflow-x-auto max-h-[420px] leading-relaxed">
-            {iacFormat === 'TERRAFORM'
-              ? generatedTerraform
-              : iacFormat === 'TERRAFORM_IMPORT'
-              ? generatedTerraformImports
-              : iacFormat === 'SESSION_GITOPS_DELTA'
-              ? sreBridgeData?.healthAndSocBridge?.gitOpsBridge
-                  ?.terraformPatchHcl ||
-                socBridgeData?.healthAndDriftBridge?.gitOpsBridge
-                  ?.terraformPatchHcl ||
-                '# 0 session mutations recorded yet in Flight Recorder.\n# Execute any control-plane action in Wave 8 SRE War-Room or Wave 16 Cloud SOC to auto-generate declarative Terraform HCL patches here.'
-              : generatedGcloudScript}
-          </pre>
+          {iacFormat === 'MERMAID_C4' ? (
+            <MermaidArchitectureDiagram
+              code={generatedMermaidC4}
+              title={`Live Reverse-Compiled C4 Architecture Diagram — ${projectId}`}
+              defaultMode="SPLIT"
+            />
+          ) : (
+            <pre className="bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-xs font-mono overflow-x-auto max-h-[420px] leading-relaxed">
+              {iacFormat === 'TERRAFORM'
+                ? generatedTerraform
+                : iacFormat === 'TERRAFORM_IMPORT'
+                ? generatedTerraformImports
+                : iacFormat === 'SESSION_GITOPS_DELTA'
+                ? sreBridgeData?.healthAndSocBridge?.gitOpsBridge
+                    ?.terraformPatchHcl ||
+                  socBridgeData?.healthAndDriftBridge?.gitOpsBridge
+                    ?.terraformPatchHcl ||
+                  '# 0 session mutations recorded yet in Flight Recorder.\n# Execute any control-plane action in SRE War-Room or Cloud SOC to auto-generate declarative Terraform HCL patches here.'
+                : generatedGcloudScript}
+            </pre>
+          )}
         </div>
       )}
 

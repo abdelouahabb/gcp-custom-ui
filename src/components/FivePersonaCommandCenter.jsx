@@ -21,6 +21,7 @@ import {
   Key,
   Activity,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const PERSONA_TABS = [
   {
@@ -2597,25 +2598,11 @@ export default function FivePersonaCommandCenter({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                  Live C4 Mermaid Architecture Diagram (Reverse-Compiled)
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    copyText(arch.mermaidC4Diagram || '', 'C4_MERMAID')
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono font-bold cursor-pointer"
-                >
-                  {copiedKey === 'C4_MERMAID' ? 'Copied C4' : 'Copy Mermaid'}
-                </button>
-              </div>
-              <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[10.5px] font-mono overflow-x-auto max-h-48">
-                {arch.mermaidC4Diagram}
-              </pre>
-            </div>
+            <MermaidArchitectureDiagram
+              code={arch.mermaidC4Diagram || ''}
+              title="Live C4 Mermaid Architecture Diagram (Reverse-Compiled)"
+              defaultMode="SPLIT"
+            />
           </div>
         </div>
       )}
