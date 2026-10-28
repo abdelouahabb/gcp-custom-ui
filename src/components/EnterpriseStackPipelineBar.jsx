@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Layers,
@@ -103,6 +103,16 @@ function parseMermaidFlowchartLr(dsl = '') {
 }
 
 function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
+  const svgRef = useRef(null);
+  const dragRef = useRef(null);
+  const [offsets, setOffsets] = useState({});
+  const [activeDragKey, setActiveDragKey] = useState(null);
+
+  useEffect(() => {
+    setOffsets({});
+    setActiveDragKey(null);
+  }, [dsl]);
+
   const { subgraphs, edges } = parseMermaidFlowchartLr(dsl);
 
   if (!subgraphs.length) {
@@ -131,22 +141,68 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
     Math.max(0, subgraphs.length - 1) * colGap;
   const svgH = Math.max(220, padY * 2 + maxSgH + 8);
 
+  const handleStartDrag = (e, key) => {
+    e.stopPropagation();
+    const current = offsets[key] || { dx: 0, dy: 0 };
+    dragRef.current = {
+      key,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startDx: current.dx,
+      startDy: current.dy,
+      moved: false,
+    };
+    setActiveDragKey(key);
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const rawDx = e.clientX - drag.startClientX;
+    const rawDy = e.clientY - drag.startClientY;
+    if (Math.abs(rawDx) > 4 || Math.abs(rawDy) > 4) {
+      drag.moved = true;
+    }
+    const ctm = svgRef.current?.getScreenCTM?.();
+    const scaleX = ctm?.a || 1;
+    const scaleY = ctm?.d || 1;
+    const nextDx = Math.round(drag.startDx + rawDx / scaleX);
+    const nextDy = Math.round(drag.startDy + rawDy / scaleY);
+    setOffsets((prev) => ({
+      ...prev,
+      [drag.key]: { dx: nextDx, dy: nextDy },
+    }));
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current = null;
+    setActiveDragKey(null);
+  };
+
   const positionedNodes = new Map();
   let globalNodeIdx = 0;
 
   const positionedSubgraphs = subgraphs.map((sg, gIdx) => {
-    const sgX = padX + gIdx * (colW + colGap);
+    const sgOffset = offsets[`sg:${sg.id}`] || { dx: 0, dy: 0 };
+    const sgX = padX + gIdx * (colW + colGap) + sgOffset.dx;
     const sgH =
       sgHeaderH +
       sgPad * 2 +
       sg.nodes.length * nodeH +
       Math.max(0, sg.nodes.length - 1) * nodeGapY;
-    const sgY = Math.round((svgH - sgH) / 2);
+    const sgY = Math.round((svgH - sgH) / 2) + sgOffset.dy;
 
     const nodes = sg.nodes.map((n, nIdx) => {
-      const x = sgX + sgPad;
+      const nodeOffset = offsets[`node:${n.id}`] || { dx: 0, dy: 0 };
+      const x = sgX + sgPad + nodeOffset.dx;
       const w = colW - sgPad * 2;
-      const y = sgY + sgHeaderH + sgPad + nIdx * (nodeH + nodeGapY);
+      const y =
+        sgY + sgHeaderH + sgPad + nIdx * (nodeH + nodeGapY) + nodeOffset.dy;
       const h = nodeH;
       const topoHint = topology[globalNodeIdx] || topology[gIdx] || null;
       globalNodeIdx += 1;
@@ -224,13 +280,34 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
       ? `${String(str).slice(0, max - 1)}…`
       : String(str || '');
 
+  const hasCustomLayout = Object.keys(offsets).length > 0;
+
   return (
-    <div className="w-full overflow-x-auto rounded-xl bg-[#0d1117] border border-zinc-800 p-2.5 shadow-inner">
+    <div className="w-full overflow-x-auto rounded-xl bg-[#0d1117] border border-zinc-800 p-2.5 shadow-inner space-y-2">
+      <div className="flex items-center justify-between gap-2 px-1 text-[10.5px] font-mono text-zinc-400">
+        <span>
+          ✥ Interactive Canvas: Drag any Node or Subgraph container to move it (click a node without dragging to open its Studio)
+        </span>
+        {hasCustomLayout && (
+          <button
+            type="button"
+            onClick={() => setOffsets({})}
+            className="px-2 py-0.5 rounded bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 border border-indigo-500/40 font-bold cursor-pointer shrink-0"
+          >
+            ↺ Reset Node Positions
+          </button>
+        )}
+      </div>
+
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        className="w-full h-auto min-w-[780px] select-none"
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        className="w-full h-auto min-w-[780px] select-none touch-none"
         role="img"
-        aria-label="Live Mermaid Architecture Flowchart"
+        aria-label="Live Interactive Mermaid Architecture Flowchart"
       >
         <defs>
           <marker
@@ -257,11 +334,16 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
         {/* Subtle Engineering Grid Background */}
         <rect width={svgW} height={svgH} rx="10" fill="url(#mmd-grid)" />
 
-        {/* 1. Render Mermaid Subgraph Cluster Containers */}
+        {/* 1. Render Draggable Mermaid Subgraph Cluster Containers */}
         {positionedSubgraphs.map((sg, idx) => {
           const pal = PALETTES[idx % PALETTES.length];
+          const isDraggingSg = activeDragKey === `sg:${sg.id}`;
           return (
-            <g key={sg.id}>
+            <g
+              key={sg.id}
+              onPointerDown={(e) => handleStartDrag(e, `sg:${sg.id}`)}
+              className={isDraggingSg ? 'cursor-grabbing' : 'cursor-grab'}
+            >
               <rect
                 x={sg.x}
                 y={sg.y}
@@ -269,8 +351,8 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
                 height={sg.h}
                 rx="12"
                 fill={pal.sgFill}
-                stroke={pal.sgStroke}
-                strokeWidth="1.5"
+                stroke={isDraggingSg ? '#818cf8' : pal.sgStroke}
+                strokeWidth={isDraggingSg ? '2.2' : '1.5'}
                 strokeDasharray="5 4"
               />
               <rect
@@ -291,13 +373,13 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
                 fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                 fontWeight="700"
               >
-                {truncate(`subgraph: ${sg.label}`, 35)}
+                {truncate(`✥ subgraph: ${sg.label}`, 35)}
               </text>
             </g>
           );
         })}
 
-        {/* 2. Render Mermaid Directed Edges (Cubic Bezier + Animated Flow + Label Pills) */}
+        {/* 2. Render Mermaid Directed Edges (Dynamic Cubic Bezier + Animated Flow + Label Pills) */}
         {edges.map((edge, eIdx) => {
           const nA = positionedNodes.get(edge.from);
           const nB = positionedNodes.get(edge.to);
@@ -307,24 +389,34 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
           let labelX = 0;
           let labelY = 0;
 
-          if (nA.gIdx === nB.gIdx) {
-            // Intra-subgraph vertical connector
-            const goingDown = nA.nIdx < nB.nIdx;
+          // Dynamically pick vertical vs horizontal anchor points based on live dragged coordinates
+          const deltaX = nB.cx - nA.cx;
+          const deltaY = nB.cy - nA.cy;
+
+          if (Math.abs(deltaX) < nA.w * 0.65) {
+            // Vertical or near-vertical connector
+            const goingDown = deltaY >= 0;
             const x1 = nA.cx;
             const y1 = goingDown ? nA.bottomY : nA.topY;
             const x2 = nB.cx;
             const y2 = goingDown ? nB.topY - 3 : nB.bottomY + 3;
-            pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
+            const dy = Math.max(24, Math.abs(y2 - y1) * 0.45);
+            pathD = `M ${x1} ${y1} C ${x1} ${
+              goingDown ? y1 + dy : y1 - dy
+            }, ${x2} ${goingDown ? y2 - dy : y2 + dy}, ${x2} ${y2}`;
             labelX = (x1 + x2) / 2;
             labelY = (y1 + y2) / 2;
           } else {
-            // Inter-subgraph horizontal cubic Bezier connector
-            const x1 = nA.rightX;
+            // Horizontal cubic Bezier connector (supports dragging left or right)
+            const goingRight = deltaX >= 0;
+            const x1 = goingRight ? nA.rightX : nA.leftX;
             const y1 = nA.cy;
-            const x2 = nB.leftX - 3;
+            const x2 = goingRight ? nB.leftX - 3 : nB.rightX + 3;
             const y2 = nB.cy;
             const dx = Math.max(42, Math.abs(x2 - x1) * 0.46);
-            pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+            pathD = `M ${x1} ${y1} C ${goingRight ? x1 + dx : x1 - dx} ${y1}, ${
+              goingRight ? x2 - dx : x2 + dx
+            } ${y2}, ${x2} ${y2}`;
             labelX = (x1 + x2) / 2;
             labelY = (y1 + y2) / 2;
           }
@@ -333,7 +425,7 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
           const pillW = cleanLabel ? Math.max(68, cleanLabel.length * 5.9 + 14) : 0;
 
           return (
-            <g key={`${edge.from}-${edge.to}-${eIdx}`}>
+            <g key={`${edge.from}-${edge.to}-${eIdx}`} className="pointer-events-none">
               {/* Base solid Mermaid connector */}
               <path
                 d={pathD}
@@ -390,83 +482,89 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
           );
         })}
 
-        {/* 3. Render Interactive Mermaid Nodes */}
+        {/* 3. Render Draggable & Clickable Mermaid Nodes */}
         {positionedSubgraphs.flatMap((sg, idx) => {
           const pal = PALETTES[idx % PALETTES.length];
-          return sg.nodes.map((node) => (
-            <g
-              key={node.id}
-              onClick={() => {
-                if (onNodeClick && node.topoHint) {
-                  onNodeClick(node.topoHint);
-                }
-              }}
-              className="cursor-pointer"
-            >
-              <rect
-                x={node.x}
-                y={node.y}
-                width={node.w}
-                height={node.h}
-                rx="9"
-                fill="#161b22"
-                stroke={pal.nodeStroke}
-                strokeWidth="1.6"
-              />
-              {/* Left accent bar */}
-              <rect
-                x={node.x + 1}
-                y={node.y + 6}
-                width="4"
-                height={node.h - 12}
-                rx="2"
-                fill={pal.nodeStroke}
-              />
-              {/* Node ID badge */}
-              <rect
-                x={node.x + node.w - 46}
-                y={node.y + 6}
-                width="38"
-                height="15"
-                rx="4"
-                fill="rgba(99, 102, 241, 0.16)"
-              />
-              <text
-                x={node.x + node.w - 27}
-                y={node.y + 16.5}
-                textAnchor="middle"
-                fill="#a5b4fc"
-                fontSize="8.5"
-                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                fontWeight="700"
+          return sg.nodes.map((node) => {
+            const isDraggingNode = activeDragKey === `node:${node.id}`;
+            return (
+              <g
+                key={node.id}
+                onPointerDown={(e) => handleStartDrag(e, `node:${node.id}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (dragRef.current?.moved) return;
+                  if (onNodeClick && node.topoHint) {
+                    onNodeClick(node.topoHint);
+                  }
+                }}
+                className={isDraggingNode ? 'cursor-grabbing' : 'cursor-grab'}
               >
-                {truncate(node.id, 6)}
-              </text>
+                <rect
+                  x={node.x}
+                  y={node.y}
+                  width={node.w}
+                  height={node.h}
+                  rx="9"
+                  fill="#161b22"
+                  stroke={isDraggingNode ? '#34d399' : pal.nodeStroke}
+                  strokeWidth={isDraggingNode ? '2.4' : '1.6'}
+                />
+                {/* Left accent bar */}
+                <rect
+                  x={node.x + 1}
+                  y={node.y + 6}
+                  width="4"
+                  height={node.h - 12}
+                  rx="2"
+                  fill={pal.nodeStroke}
+                />
+                {/* Node ID + Drag Handle badge */}
+                <rect
+                  x={node.x + node.w - 52}
+                  y={node.y + 6}
+                  width="44"
+                  height="15"
+                  rx="4"
+                  fill="rgba(99, 102, 241, 0.16)"
+                />
+                <text
+                  x={node.x + node.w - 30}
+                  y={node.y + 16.5}
+                  textAnchor="middle"
+                  fill="#a5b4fc"
+                  fontSize="8.5"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontWeight="700"
+                >
+                  {truncate(`✥ ${node.id}`, 8)}
+                </text>
 
-              {/* Primary Node Title */}
-              <text
-                x={node.x + 12}
-                y={node.y + 23}
-                fill="#f8fafc"
-                fontSize="11"
-                fontFamily="ui-sans-serif, system-ui, sans-serif"
-                fontWeight="700"
-              >
-                {truncate(node.primaryTitle, 27)}
-              </text>
+                {/* Primary Node Title */}
+                <text
+                  x={node.x + 12}
+                  y={node.y + 23}
+                  fill="#f8fafc"
+                  fontSize="11"
+                  fontFamily="ui-sans-serif, system-ui, sans-serif"
+                  fontWeight="700"
+                >
+                  {truncate(node.primaryTitle, 26)}
+                </text>
 
-              {/* Secondary Node Subtitle / Live Inventory Value */}
-              <text
-                x={node.x + 12}
-                y={node.y + 42}
-                fill="#94a3b8"
-                fontSize="9.8"
-                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-              >
-                {truncate(node.secondarySub, 34)}
-              </text>
-            </g>
-          ));
+                {/* Secondary Node Subtitle / Live Inventory Value */}
+                <text
+                  x={node.x + 12}
+                  y={node.y + 42}
+                  fill="#94a3b8"
+                  fontSize="9.8"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                >
+                  {truncate(node.secondarySub, 34)}
+                </text>
+              </g>
+            );
+          });
         })}
       </svg>
     </div>
@@ -486,6 +584,7 @@ export default function EnterpriseStackPipelineBar({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedArtifactTab, setSelectedArtifactTab] = useState('mainTf'); // 'mainTf' | 'cloudBuildYaml' | 'pipelineDeploySh' | 'architectureMermaid'
   const [selectedStageId, setSelectedStageId] = useState(null);
+  const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL'); // 'VISUAL' | 'CODE'
   const [copiedKey, setCopiedKey] = useState(null);
 
@@ -869,104 +968,134 @@ export default function EnterpriseStackPipelineBar({
             </div>
           )}
 
-          {/* Live Mermaid Architecture & Dataflow Topology (Active across all 6 Stages) */}
+          {/* Live Mermaid Architecture & Dataflow Topology (Closed by default until user opens it) */}
           {activeStage && (activeStage.mermaidTopology || activeStage.mermaidDsl) && (
             <div className="rounded-xl border border-indigo-500/25 bg-gradient-to-r from-indigo-500/[0.04] via-blue-500/[0.03] to-emerald-500/[0.04] p-3 space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div
+                  onClick={() => setMermaidExpanded((prev) => !prev)}
+                  className="flex items-center gap-2 flex-wrap cursor-pointer select-none"
+                >
                   <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
                     Mermaid flowchart LR
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Stage {activeStage.stepNumber} Live Architecture & Dataflow Topology
+                    Stage {activeStage.stepNumber} Interactive Architecture & Dataflow Diagram
                   </span>
                   <span className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                    (Click any subgraph node to inspect or provision)
+                    (Draggable SVG Nodes & Subgraphs)
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setMermaidViewMode('VISUAL')}
-                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
-                      mermaidViewMode === 'VISUAL'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                    onClick={() => setMermaidExpanded((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                      mermaidExpanded
+                        ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm'
                     }`}
                   >
-                    Visual Flowchart DAG
+                    <span>
+                      {mermaidExpanded
+                        ? 'Hide Mermaid Flowchart'
+                        : 'Open Interactive Mermaid Flowchart'}
+                    </span>
+                    {mermaidExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setMermaidViewMode('CODE')}
-                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
-                      mermaidViewMode === 'CODE'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
-                    }`}
-                  >
-                    Mermaid .mmd Code
-                  </button>
-                  {activeStage.mermaidDsl && (
+
+                  {mermaidExpanded && (
                     <>
                       <button
                         type="button"
-                        onClick={() =>
-                          handleCopy(
-                            `\`\`\`mermaid\n${activeStage.mermaidDsl}\n\`\`\``,
-                            `mmd-stage-${activeStage.id}`
-                          )
-                        }
-                        title="Copy Stage Mermaid diagram wrapped in ```mermaid markdown block for GitHub / Notion / Docs"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                        onClick={() => setMermaidViewMode('VISUAL')}
+                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
+                          mermaidViewMode === 'VISUAL'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                        }`}
                       >
-                        {copiedKey === `mmd-stage-${activeStage.id}` ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-500" />
-                            <span>Copied ```mermaid</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>Copy ```mermaid</span>
-                          </>
-                        )}
+                        Visual Flowchart DAG
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
-                          handleDownloadArtifact(
-                            `${projectId}-stage-${activeStage.stepNumber}-${activeStage.id.toLowerCase()}.mmd`,
-                            activeStage.mermaidDsl
-                          )
-                        }
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                        onClick={() => setMermaidViewMode('CODE')}
+                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
+                          mermaidViewMode === 'CODE'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                        }`}
                       >
-                        <Download className="w-3 h-3" />
-                        <span>.mmd</span>
+                        Mermaid .mmd Code
                       </button>
+                      {activeStage.mermaidDsl && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(
+                                `\`\`\`mermaid\n${activeStage.mermaidDsl}\n\`\`\``,
+                                `mmd-stage-${activeStage.id}`
+                              )
+                            }
+                            title="Copy Stage Mermaid diagram wrapped in ```mermaid markdown block for GitHub / Notion / Docs"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                          >
+                            {copiedKey === `mmd-stage-${activeStage.id}` ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span>Copied ```mermaid</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy ```mermaid</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDownloadArtifact(
+                                `${projectId}-stage-${activeStage.stepNumber}-${activeStage.id.toLowerCase()}.mmd`,
+                                activeStage.mermaidDsl
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>.mmd</span>
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
               </div>
 
-              {mermaidViewMode === 'CODE' ? (
-                <pre className="bg-zinc-950 text-indigo-200 border border-zinc-800 rounded-xl p-3 text-[11px] font-mono overflow-x-auto leading-relaxed">
-                  {activeStage.mermaidDsl}
-                </pre>
-              ) : (
-                <MermaidFlowchartSvg
-                  dsl={activeStage.mermaidDsl}
-                  topology={activeStage.mermaidTopology}
-                  onNodeClick={(node) => {
-                    if (node.provisionType && onOpenProvision) {
-                      onOpenProvision(node.provisionType);
-                    } else if (node.targetTab && onSelectTab) {
-                      onSelectTab(node.targetTab);
-                    }
-                  }}
-                />
+              {mermaidExpanded && (
+                mermaidViewMode === 'CODE' ? (
+                  <pre className="bg-zinc-950 text-indigo-200 border border-zinc-800 rounded-xl p-3 text-[11px] font-mono overflow-x-auto leading-relaxed">
+                    {activeStage.mermaidDsl}
+                  </pre>
+                ) : (
+                  <MermaidFlowchartSvg
+                    dsl={activeStage.mermaidDsl}
+                    topology={activeStage.mermaidTopology}
+                    onNodeClick={(node) => {
+                      if (node.provisionType && onOpenProvision) {
+                        onOpenProvision(node.provisionType);
+                      } else if (node.targetTab && onSelectTab) {
+                        onSelectTab(node.targetTab);
+                      }
+                    }}
+                  />
+                )
               )}
             </div>
           )}
