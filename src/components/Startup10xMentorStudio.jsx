@@ -44,36 +44,29 @@ const STARTUP_10X_MODULES = [
     icon: Zap,
   },
   {
-    id: 'DB_CONNECTION_STORM',
-    step: '02',
-    title: 'Cloud SQL Connection Storm Guard',
-    subtitle: '200-Instance Surge vs PgBouncer Pool',
-    icon: Database,
-  },
-  {
     id: 'QUOTA_WALL_RADAR',
-    step: '03',
+    step: '02',
     title: 'Launch-Day Quota & HTTP 429 Radar',
     subtitle: 'Live 24h 429s, L4 GPUs & Quotas API',
     icon: Gauge,
   },
   {
     id: 'CREDIT_CLIFF_RUNWAY',
-    step: '04',
+    step: '03',
     title: 'Credit Vampires & Runway Extender',
     subtitle: 'Live Burn Ledger, GCS Lifecycle & BQ',
     icon: DollarSign,
   },
   {
     id: 'SOC2_DEAL_BLOCKER',
-    step: '05',
+    step: '04',
     title: 'Enterprise SOC2 Deal-Blocker Shield',
     subtitle: '1-Click IAP Firewall Lock, PAP & IAM',
     icon: ShieldCheck,
   },
   {
     id: 'GEMINI_RAG_LATENCY',
-    step: '06',
+    step: '05',
     title: 'Data-Gravity & -80% Context Cache',
     subtitle: 'Live Region Co-Location & Token Math',
     icon: Sparkles,
@@ -102,11 +95,6 @@ export default function Startup10xMentorStudio({
   );
   const [mentorAdvice, setMentorAdvice] = useState(null);
   const [loadingMentor, setLoadingMentor] = useState(false);
-
-  // Interactive DB Connection Storm Simulator state
-  const [simPeakInstances, setSimPeakInstances] = useState(60);
-  const [simPoolSizePerInstance, setSimPoolSizePerInstance] = useState(5);
-  const [simDbMaxConnections, setSimDbMaxConnections] = useState(100);
 
   // Interactive GenAI Token & TTFT Calculator state
   const [systemPromptTokens, setSystemPromptTokens] = useState(28000);
@@ -285,13 +273,6 @@ export default function Startup10xMentorStudio({
     hasRegionMismatch: false,
     estimatedCrossRegionRttPenaltyMs: 4,
   };
-
-  // DB Connection Storm Math
-  const totalRequestedDbConns = simPeakInstances * simPoolSizePerInstance;
-  const dbSaturationPct = Math.round(
-    (totalRequestedDbConns / Math.max(1, simDbMaxConnections)) * 100
-  );
-  const isStormFailing = totalRequestedDbConns > simDbMaxConnections;
 
   // GenAI Context Cache Math
   const monthlyUncachedInputTokensM =
@@ -598,11 +579,11 @@ export default function Startup10xMentorStudio({
           )}
         </div>
 
-        {/* Pillar Filter Bar: View All 6 Pillars OR Focus on 1 Pillar */}
+        {/* Pillar Filter Bar: View All 5 Pillars OR Focus on 1 Pillar */}
         <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-mono font-extrabold uppercase text-zinc-500 dark:text-zinc-400">
-              Select Scaling Pillar ({activeModule === 'ALL' ? 'Showing All 6 Pillars' : activeModule})
+              Select Scaling Pillar ({activeModule === 'ALL' ? 'Showing All 5 Pillars' : activeModule})
             </span>
             <button
               type="button"
@@ -619,12 +600,12 @@ export default function Startup10xMentorStudio({
             >
               <Layers className="w-3 h-3 inline mr-1" />
               {activeModule === 'ALL'
-                ? '✓ Showing All 6 Pillars'
-                : 'Show All 6 Pillars Together'}
+                ? '✓ Showing All 5 Pillars'
+                : 'Show All 5 Pillars Together'}
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
             {STARTUP_10X_MODULES.map((m) => {
               const Icon = m.icon;
               const isSelected = activeModule === m.id;
@@ -875,168 +856,7 @@ export default function Startup10xMentorStudio({
       )}
 
       {/* ==================================================================== */}
-      {/* MODULE 02: CLOUD SQL CONNECTION STORM SIMULATOR & GUARD              */}
-      {/* ==================================================================== */}
-      {showModule('DB_CONNECTION_STORM') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                  PILLAR 02
-                </span>
-                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
-                  Cloud SQL Connection Storm Simulator &amp; Serverless Pool Exhaustion Guard
-                </h3>
-              </div>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                Live Cloud SQL instances in <code className="font-mono font-bold">{projectId}</code>:{' '}
-                <strong>{sqlFindings.length}</strong>. Simulate what happens when Cloud Run autoscales to {simPeakInstances} containers against <code className="font-mono">max_connections={simDbMaxConnections}</code>.
-              </p>
-            </div>
-          </div>
-
-          {sqlFindings.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {sqlFindings.map((db) => (
-                <div
-                  key={db.name}
-                  className="p-3 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
-                >
-                  <div>
-                    <div className="font-extrabold text-zinc-950 dark:text-zinc-50">
-                      {db.name} ({db.databaseVersion})
-                    </div>
-                    <div className="text-[11px] text-zinc-500">
-                      {db.region} · {db.tier} · max_connections={db.maxConnections}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                      db.pgbouncerEnabled
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                    }`}
-                  >
-                    {db.pgbouncerEnabled ? '✓ PgBouncer ON' : 'PgBouncer OFF'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-              <div className="flex justify-between text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                <span>Cloud Run Peak Instances:</span>
-                <span className="text-blue-600 dark:text-blue-400">
-                  {simPeakInstances} containers
-                </span>
-              </div>
-              <input
-                type="range"
-                min={2}
-                max={250}
-                value={simPeakInstances}
-                onChange={(e) => setSimPeakInstances(Number(e.target.value))}
-                className="w-full accent-blue-600 cursor-pointer"
-              />
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-              <div className="flex justify-between text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                <span>ORM Pool Size / Container:</span>
-                <span className="text-blue-600 dark:text-blue-400">
-                  {simPoolSizePerInstance} conns
-                </span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={25}
-                value={simPoolSizePerInstance}
-                onChange={(e) =>
-                  setSimPoolSizePerInstance(Number(e.target.value))
-                }
-                className="w-full accent-blue-600 cursor-pointer"
-              />
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-              <div className="flex justify-between text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                <span>Cloud SQL max_connections:</span>
-                <span className="text-blue-600 dark:text-blue-400">
-                  {simDbMaxConnections} max
-                </span>
-              </div>
-              <input
-                type="range"
-                min={50}
-                max={1000}
-                step={25}
-                value={simDbMaxConnections}
-                onChange={(e) =>
-                  setSimDbMaxConnections(Number(e.target.value))
-                }
-                className="w-full accent-blue-600 cursor-pointer"
-              />
-            </div>
-          </div>
-
-          <div
-            className={`p-4 rounded-xl border text-xs font-mono space-y-2 ${
-              isStormFailing
-                ? 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300'
-                : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-extrabold text-sm">
-                {isStormFailing
-                  ? `🚨 CONNECTION STORM CRASH (${dbSaturationPct}% Saturation — ${totalRequestedDbConns} requested vs ${simDbMaxConnections} max)`
-                  : `✓ SAFE CONNECTION ENVELOPE (${dbSaturationPct}% Saturation — ${totalRequestedDbConns} requested vs ${simDbMaxConnections} max)`}
-              </div>
-              {onRunInShell && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onRunInShell(
-                      `gcloud sql instances patch primary-postgres --project=${projectId} --database-flags=max_connections=400,cloudsql.enable_pgbouncer=on`
-                    )
-                  }
-                  className="px-2.5 py-1 rounded bg-blue-600 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
-                >
-                  <Terminal className="w-3 h-3" />
-                  <span>Run PgBouncer CLI in Shell</span>
-                </button>
-              )}
-            </div>
-            <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-              <div
-                className={`h-full transition-all ${
-                  isStormFailing ? 'bg-red-500' : 'bg-emerald-500'
-                }`}
-                style={{
-                  width: `${Math.max(4, Math.min(100, dbSaturationPct))}%`,
-                }}
-              />
-            </div>
-            <p className="text-[11px] leading-relaxed">
-              {isStormFailing
-                ? `At ${simPeakInstances} Cloud Run instances × ${simPoolSizePerInstance} ORM pool connections, PostgreSQL rejects ${
-                    totalRequestedDbConns - simDbMaxConnections
-                  } connections with FATAL connection slot exhaustion. Enable Cloud SQL Managed Connection Pooling (PgBouncer) and cap ORM pool_size=1–2 per container.`
-                : `Your concurrency envelope stays below max_connections. Recommended ORM pool_size <= ${Math.max(
-                    1,
-                    Math.floor(simDbMaxConnections / simPeakInstances)
-                  )} per container.`}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================================== */}
-      {/* MODULE 03: LAUNCH-DAY QUOTA WALL & LIVE 24H HTTP 429 RADAR           */}
+      {/* MODULE 02: LAUNCH-DAY QUOTA WALL & LIVE 24H HTTP 429 RADAR           */}
       {/* ==================================================================== */}
       {showModule('QUOTA_WALL_RADAR') && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
@@ -1044,7 +864,7 @@ export default function Startup10xMentorStudio({
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                  PILLAR 03
+                  PILLAR 02
                 </span>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Launch-Day Quota Wall &amp; Live 24h HTTP 429 Throttling Radar
@@ -1148,14 +968,14 @@ export default function Startup10xMentorStudio({
       )}
 
       {/* ==================================================================== */}
-      {/* MODULE 04: STARTUP CREDIT VAMPIRES & RUNWAY EXTENDER                 */}
+      {/* MODULE 03: STARTUP CREDIT VAMPIRES & RUNWAY EXTENDER                 */}
       {/* ==================================================================== */}
       {showModule('CREDIT_CLIFF_RUNWAY') && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                PILLAR 04
+                PILLAR 03
               </span>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                 Google for Startups Credit Vampire Detector &amp; 1-Click Runway Extender
@@ -1281,7 +1101,7 @@ export default function Startup10xMentorStudio({
       )}
 
       {/* ==================================================================== */}
-      {/* MODULE 05: ENTERPRISE SOC2 DEAL-BLOCKER SCANNER & 1-CLICK REMEDIATOR */}
+      {/* MODULE 04: ENTERPRISE SOC2 DEAL-BLOCKER SCANNER & 1-CLICK REMEDIATOR */}
       {/* ==================================================================== */}
       {showModule('SOC2_DEAL_BLOCKER') && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
@@ -1289,7 +1109,7 @@ export default function Startup10xMentorStudio({
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                  PILLAR 05
+                  PILLAR 04
                 </span>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Enterprise B2B SOC2 Deal-Blocker Scanner &amp; 1-Click IAP Firewall Lock
@@ -1409,14 +1229,14 @@ export default function Startup10xMentorStudio({
       )}
 
       {/* ==================================================================== */}
-      {/* MODULE 06: DATA-GRAVITY CO-LOCATION & -80% CONTEXT CACHE CALCULATOR  */}
+      {/* MODULE 05: DATA-GRAVITY CO-LOCATION & -80% CONTEXT CACHE CALCULATOR  */}
       {/* ==================================================================== */}
       {showModule('GEMINI_RAG_LATENCY') && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                PILLAR 06
+                PILLAR 05
               </span>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                 Live Data-Gravity Co-Location Matrix &amp; -80% Vertex AI Context Cache Calculator
