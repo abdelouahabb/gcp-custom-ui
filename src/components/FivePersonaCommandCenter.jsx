@@ -22,7 +22,10 @@ import {
   Activity,
 } from 'lucide-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  getSharedPreferredProvider,
+  getAllAvailableGeminiModels,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const PERSONA_TABS = [
   {
@@ -473,6 +476,7 @@ export default function FivePersonaCommandCenter({
         {
           intentPrompt: promptToUse,
           model: intentModel,
+          preferredProvider: getSharedPreferredProvider(),
           region,
         }
       );
@@ -1648,12 +1652,11 @@ export default function FivePersonaCommandCenter({
                     onChange={(e) => setIntentModel(e.target.value)}
                     className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold"
                   >
-                    <option value="gemini-3.8-flash">
-                      gemini-3.8-flash (-80% Context Cache)
-                    </option>
-                    <option value="gemini-3.1-pro">
-                      gemini-3.1-pro (Deep Reasoning)
-                    </option>
+                    {getAllAvailableGeminiModels().map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"

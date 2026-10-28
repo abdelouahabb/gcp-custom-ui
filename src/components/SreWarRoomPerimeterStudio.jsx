@@ -32,7 +32,11 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  getSharedPreferredProvider,
+  getSharedActiveModel,
+  getAllAvailableGeminiModels,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const SRE_PILLARS = [
   {
@@ -338,7 +342,8 @@ export default function SreWarRoomPerimeterStudio({
           projectId
         )}/wave8/war-room/ai-sre-commander`,
         {
-          model: aiModel,
+          model: aiModel || getSharedActiveModel(),
+          preferredProvider: getSharedPreferredProvider(),
           prompt:
             customDirective !== undefined ? customDirective : aiPrompt.trim(),
           sloBurnRadar: warRoomData?.sloBurnRadar || {},
@@ -2147,11 +2152,8 @@ export default function SreWarRoomPerimeterStudio({
               </p>
             </div>
 
-            <div className="inline-flex items-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-1 text-xs font-mono">
-              {[
-                { id: 'gemini-3.8-flash', label: 'gemini-3.8-flash (Sub-s)' },
-                { id: 'gemini-3.1-pro', label: 'gemini-3.1-pro (Deep RCA)' },
-              ].map((m) => (
+            <div className="inline-flex flex-wrap items-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-1 text-xs font-mono">
+              {getAllAvailableGeminiModels().map((m) => (
                 <button
                   key={m.id}
                   type="button"
@@ -2162,7 +2164,7 @@ export default function SreWarRoomPerimeterStudio({
                       : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
                   }`}
                 >
-                  {m.label}
+                  {m.id}
                 </button>
               ))}
             </div>
@@ -2172,6 +2174,7 @@ export default function SreWarRoomPerimeterStudio({
             projectId={projectId}
             selectedModel={aiModel}
             onChangeModel={setAiModel}
+            onShowToast={notify}
             compact
           />
 

@@ -17,7 +17,10 @@ import {
   Database,
   Activity,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  getSharedActiveModel,
+  getSharedPreferredProvider,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const FLIGHT_DECK_TABS = [
   {
@@ -509,7 +512,11 @@ export default function Wave12RoadsterFlightDeckStudio({
       try {
         const res = await axios.post(
           `/api/project/${encodeURIComponent(projectId)}/wave12/flight-director`,
-          { missionBrief }
+          {
+            missionBrief,
+            model: getSharedActiveModel(),
+            preferredProvider: getSharedPreferredProvider(),
+          }
         );
         setDirectorResult(res.data);
         notify(`Flight Director Mission Briefing synthesized (${res.data?.latencyMs}ms)`);

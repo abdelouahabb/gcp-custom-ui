@@ -27,6 +27,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
+  addOrSelectCustomGeminiModel,
+  getAllAvailableGeminiModels,
+} from './ZeroSniffingWebCryptoEnclaveBar';
+import {
   GCP_GLOBAL_REGIONS,
   getRegionProfile,
   useLivePricingCatalog,
@@ -1019,6 +1023,9 @@ US_TAXPAYER_SSN=123-45-6789
       selectedGeminiModel === 'CUSTOM' && customModelId.trim()
         ? customModelId.trim()
         : selectedGeminiModel;
+    if (selectedGeminiModel === 'CUSTOM' && customModelId.trim()) {
+      addOrSelectCustomGeminiModel(customModelId.trim());
+    }
 
     // Convenience: if user pasted a key into the input box and clicked "Ask" directly without clicking "Seal", auto-seal it via WebCrypto first!
     if (!isAnyVaultConfigured && apiKeyInput.trim().length >= 12) {
@@ -2231,7 +2238,14 @@ CMD ["server/index.js"]`;
                 title="Choose which Gemini model powers the SRE Co-Architect (gemini-3.8-flash or gemini-3.1-pro)"
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
               >
-                {availableModels.map((m) => (
+                {Array.from(
+                  new Map(
+                    [
+                      ...availableModels,
+                      ...getAllAvailableGeminiModels(),
+                    ].map((m) => [m.id, m])
+                  ).values()
+                ).map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label || m.id}
                   </option>

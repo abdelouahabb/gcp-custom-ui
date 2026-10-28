@@ -176,6 +176,10 @@ export function getSharedPreferredProvider() {
   return sharedBrowserEnclave.preferredProvider || 'AUTO';
 }
 
+export function getSharedActiveModel() {
+  return sharedBrowserEnclave.activeModel || 'gemini-3.8-flash';
+}
+
 export function setSharedPreferredProvider(provider) {
   sharedBrowserEnclave.preferredProvider = provider;
   notifyEnclaveListeners();
@@ -631,6 +635,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
         {/* PATH A: Keyless Google Cloud Vertex AI (OAuth2 Token) */}
         {showPathA && (
           <div
+            data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
             className={`p-3 rounded-lg bg-white dark:bg-zinc-950 border flex flex-col justify-between gap-2 transition-all ${
               activeProvider === 'VERTEX_AI_OAUTH' ||
               (activeProvider === 'AUTO' && !isKeySealed)
@@ -653,6 +658,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
               </div>
               <button
                 type="button"
+                data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
                 onClick={handleEnableVertexAi}
                 disabled={enablingVertex}
                 className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
@@ -693,6 +699,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
         {/* PATH B: Google AI Studio API Key (WebCrypto Enclave + RSA-OAEP-256 / AES-256-GCM RAM Vault) */}
         {showPathB && (
           <div
+            data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
             className={`p-3 rounded-lg bg-white dark:bg-zinc-950 border flex flex-col justify-between gap-2 transition-all ${
               activeProvider === 'AI_STUDIO_KEY' ||
               (activeProvider === 'AUTO' && isKeySealed)
@@ -735,6 +742,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                 {isKeySealed && (
                   <button
                     type="button"
+                    data-feature-id="SOC_AI_CLEAR_KEY_BTN"
                     onClick={handleClearKey}
                     disabled={savingKey}
                     className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
@@ -748,8 +756,14 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
             <div className="flex items-center gap-1.5">
               <input
                 type="password"
+                data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
+                onBlur={() => {
+                  if (apiKeyInput.trim().length >= 20 && !savingKey) {
+                    handleSealKey();
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -761,6 +775,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
               />
               <button
                 type="button"
+                data-feature-id="SOC_AI_SEAL_KEY_BTN"
                 onClick={handleSealKey}
                 disabled={savingKey || !apiKeyInput.trim()}
                 className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
@@ -784,6 +799,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
+              data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
               onClick={() => handleToggleTransportMode('BROWSER_DIRECT_TLS13')}
               className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'BROWSER_DIRECT_TLS13'
@@ -795,6 +811,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
             </button>
             <button
               type="button"
+              data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
               onClick={() => handleToggleTransportMode('RSA_OAEP_SERVER_VAULT')}
               className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'RSA_OAEP_SERVER_VAULT'

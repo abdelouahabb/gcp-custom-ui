@@ -28204,7 +28204,9 @@ app.post(
       clusters = [],
     } = req.body || {};
     const selectedModel =
-      model === 'gemini-3.1-pro' ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
+      String(model || 'gemini-3.8-flash')
+        .trim()
+        .replace(/^models\//i, '') || 'gemini-3.8-flash';
     const t0 = Date.now();
 
     try {
@@ -52432,6 +52434,7 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
       projectId,
       token,
       model: requestedModel,
+      preferredProvider: req.body?.preferredProvider || 'AUTO',
       promptText,
       temperature: 0.15,
       maxOutputTokens: 2048,
@@ -52445,6 +52448,7 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
       executionMode: llmRes.executionMode,
       resolvedModelId: llmRes.resolvedModelId,
       engineUsed: llmRes.engineUsed,
+      modelUsed: llmRes.engineUsed,
       tokenUsage: llmRes.tokenUsage,
       diagnostics: llmRes.diagnostics,
       latencyMs: Date.now() - t0,
@@ -53583,6 +53587,7 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
       projectId,
       token,
       model: req.body?.model || 'gemini-3.8-flash',
+      preferredProvider: req.body?.preferredProvider || 'AUTO',
       promptText,
       temperature: 0.2,
       maxOutputTokens: 2048,
@@ -54436,6 +54441,7 @@ Do NOT use any emojis.`;
       projectId,
       token,
       model: req.body?.model || 'gemini-3.8-flash',
+      preferredProvider: req.body?.preferredProvider || 'AUTO',
       promptText,
       temperature: 0.2,
       maxOutputTokens: 2048,
@@ -54449,6 +54455,7 @@ Do NOT use any emojis.`;
       executionMode: llmRes.executionMode,
       resolvedModelId: llmRes.resolvedModelId,
       engineUsed: llmRes.engineUsed,
+      modelUsed: llmRes.engineUsed,
       tokenUsage: llmRes.tokenUsage,
       diagnostics: llmRes.diagnostics,
       latencyMs: Date.now() - t0,
@@ -55391,6 +55398,7 @@ app.post('/api/project/:projectId/wave15/logging-ai-surgeon', async (req, res) =
       projectId,
       token,
       model: req.body?.model || 'gemini-3.8-flash',
+      preferredProvider: req.body?.preferredProvider || 'AUTO',
       promptText: prompt,
       temperature: 0.2,
       maxOutputTokens: 2048,
@@ -64778,7 +64786,9 @@ app.post(
         `${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse`;
 
       const selectedModel =
-        model === 'gemini-3.1-pro' ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
+        String(model || 'gemini-3.8-flash')
+          .trim()
+          .replace(/^models\//i, '') || 'gemini-3.8-flash';
 
       const personaAmendments = [
         {
@@ -64887,6 +64897,7 @@ resource "google_storage_bucket" "tribunal_hardened_${targetBucket.replace(/[^a-
         projectId,
         token,
         model: selectedModel,
+        preferredProvider: req.body?.preferredProvider || 'AUTO',
         promptText: `You are the CloudPulse 2030 10-Persona Enterprise Architecture Board for Google Cloud project "${projectId}" (${region}).
 Engineering Intent: "${intentPrompt}"
 Live Resource Inventory:
@@ -64910,6 +64921,7 @@ Provide a concise, high-signal Markdown Executive Architecture Verdict & Terrafo
         executionMode: llmRes.executionMode,
         resolvedModelId: llmRes.resolvedModelId,
         modelUsed: llmRes.engineUsed || selectedModel,
+        compilerModel: llmRes.engineUsed || selectedModel,
         tokenUsage: llmRes.tokenUsage,
         diagnostics: llmRes.diagnostics,
         aiSynthesisMarkdown: llmRes.text,

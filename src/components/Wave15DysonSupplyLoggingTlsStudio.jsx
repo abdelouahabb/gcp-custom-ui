@@ -15,7 +15,10 @@ import {
   Terminal,
   Globe,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  getSharedActiveModel,
+  getSharedPreferredProvider,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const WAVE15_TABS = [
   {
@@ -434,6 +437,8 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
         {
           entries: logData?.entries || [],
           filterExecuted: logData?.filterExecuted || '',
+          model: getSharedActiveModel(),
+          preferredProvider: getSharedPreferredProvider(),
         }
       );
       setLogAiReport(res.data);
@@ -1103,7 +1108,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
 
             <ZeroSniffingWebCryptoEnclaveBar
               projectId={projectId}
-              selectedModel="gemini-3.8-flash"
+              onShowToast={notify}
               compact
             />
 

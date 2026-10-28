@@ -16,7 +16,10 @@ import {
   Wrench,
   Users,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  getSharedActiveModel,
+  getSharedPreferredProvider,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const WAVE14_TABS = [
   {
@@ -421,7 +424,11 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/wave14/iam-ai-hardening`,
-        { focusPrincipal }
+        {
+          focusPrincipal,
+          model: getSharedActiveModel(),
+          preferredProvider: getSharedPreferredProvider(),
+        }
       );
       setIamAiPlan(res.data);
       notify(
@@ -1072,7 +1079,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
 
             <ZeroSniffingWebCryptoEnclaveBar
               projectId={projectId}
-              selectedModel="gemini-3.8-flash"
+              onShowToast={notify}
               compact
             />
 
