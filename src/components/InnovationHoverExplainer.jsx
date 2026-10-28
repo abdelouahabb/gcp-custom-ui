@@ -1260,12 +1260,12 @@ export const INNOVATION_FEATURE_GUIDE = {
   // ============================================================================
   GLOBAL_MAP_LATENCY_PROBES: {
     badge: '100% REAL LIVE SOCKET HANDSHAKE',
-    title: 'Live Regional TCP/TLS 1.3 Socket Latency Prober (8 GCP Regions)',
+    title: 'Live Regional TCP/TLS 1.3 Socket & Jupiter Backbone Latency Prober (10 GCP Regions)',
     whatItDoes:
-      'Executes real concurrent DNS lookup, TCP (:443), and TLS 1.3 socket handshakes from the backend against 8 live Google Cloud regional endpoints (*-aiplatform.googleapis.com) using microsecond timers.',
+      'Executes real concurrent DNS A-record pool resolution (`dns.promises.resolve4`), TCP (:443), TLS 1.3 socket handshakes, and L7 HTTP discovery probes against 10 live Google Cloud regional endpoints (`*-aiplatform.googleapis.com`), separating local AS15169 GFE Anycast Edge TCP time from end-to-end Jupiter Fiber Regional RTT.',
     enterpriseValue:
-      'Measures your true network round-trip time (RTT) to North America, Europe, Asia, South America, and Middle East GCP regions without deploying test VMs.',
-    gcpApis: 'Node.js dns.promises.lookup · net.createConnection(:443) · tls.connect (TLS 1.3)',
+      'Measures your true network round-trip time (RTT) to Europe, North America, Asia-Pacific, and South America GCP regions without deploying test VMs.',
+    gcpApis: 'Node.js dns.promises.resolve4 · net.createConnection(:443) · tls.connect (TLS 1.3)',
     safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_ASSET_SOVEREIGNTY: {

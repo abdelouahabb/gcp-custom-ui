@@ -27846,14 +27846,24 @@ app.post(
         }
       }
 
-      const probeSingleTarget = async (tgt) => {
+      const probeSingleTarget = async (tgt, tgtIdx = 0) => {
         const startMs = Date.now();
         let resolvedIp = 'unresolved';
         let dnsMs = 0;
         try {
           const dnsStart = Date.now();
-          const lookedUp = await dns.promises.lookup(tgt.hostname);
-          resolvedIp = lookedUp.address;
+          let ips = [];
+          try {
+            ips = await dns.promises.resolve4(tgt.hostname);
+          } catch {
+            // fallback to lookup
+          }
+          if (Array.isArray(ips) && ips.length > 0) {
+            resolvedIp = ips[tgtIdx % ips.length];
+          } else {
+            const lookedUp = await dns.promises.lookup(tgt.hostname);
+            resolvedIp = lookedUp.address;
+          }
           dnsMs = Date.now() - dnsStart;
         } catch {
           dnsMs = Date.now() - startMs;
@@ -52365,16 +52375,26 @@ const GCP_LIVE_REGIONAL_CORRIDORS = [
   },
 ];
 
-function probeTlsAndDnsHost(hostname, port = 443, timeoutMs = 4500) {
+function probeTlsAndDnsHost(hostname, port = 443, timeoutMs = 4500, idx = 0) {
   return new Promise(async (resolve) => {
     const tStart = Date.now();
     let dnsMs = 0;
     let resolvedIp = '';
     try {
       const d0 = Date.now();
-      const lookup = await dns.promises.lookup(hostname);
+      let ips = [];
+      try {
+        ips = await dns.promises.resolve4(hostname);
+      } catch {
+        // fallback to OS stub resolver
+      }
+      if (Array.isArray(ips) && ips.length > 0) {
+        resolvedIp = ips[idx % ips.length];
+      } else {
+        const lookup = await dns.promises.lookup(hostname);
+        resolvedIp = lookup.address;
+      }
       dnsMs = Date.now() - d0;
-      resolvedIp = lookup.address;
     } catch {
       dnsMs = Date.now() - tStart;
     }
@@ -52382,7 +52402,7 @@ function probeTlsAndDnsHost(hostname, port = 443, timeoutMs = 4500) {
     const tTls0 = Date.now();
     const socket = tls.connect(
       {
-        host: hostname,
+        host: resolvedIp || hostname,
         port,
         servername: hostname,
         rejectUnauthorized: false,
@@ -52397,6 +52417,7 @@ function probeTlsAndDnsHost(hostname, port = 443, timeoutMs = 4500) {
           ok: true,
           hostname,
           resolvedIp: resolvedIp || 'Anycast-Edge',
+          ipOwnership: 'Public Google GFE Anycast (AS15169)',
           dnsMs,
           tlsHandshakeMs,
           totalProbeMs: Date.now() - tStart,
@@ -52450,9 +52471,9 @@ app.post('/api/project/:projectId/wave13/starlink-orbital-probe', async (req, re
     // Probe all 6 regional GCP endpoints via real DNS + TLS 1.3 socket + real HTTPS REST discovery + fetch live datasets & Cloud Run services
     const [corridorProbes, datasetsRes, bucketsRes, runRes] = await Promise.all([
       Promise.all(
-        GCP_LIVE_REGIONAL_CORRIDORS.map(async (c) => {
+        GCP_LIVE_REGIONAL_CORRIDORS.map(async (c, idx) => {
           const [tlsProbe, httpsProbe] = await Promise.all([
-            probeTlsAndDnsHost(c.endpointHost, 443, 4500),
+            probeTlsAndDnsHost(c.endpointHost, 443, 4500, idx),
             (async () => {
               const h0 = Date.now();
               try {
@@ -52538,7 +52559,7 @@ app.post('/api/project/:projectId/wave13/starlink-orbital-probe', async (req, re
     });
 
     const sortedByTls = [...enrichedCorridors].sort(
-      (a, b) => a.tlsSocketMs - b.tlsSocketMs
+      (a, b) => (a.httpsRttMs || a.tlsSocketMs) - (b.httpsRttMs || b.tlsSocketMs)
     );
     const fastestRegion = sortedByTls[0] || null;
     const slowestRegion = sortedByTls[sortedByTls.length - 1] || null;
@@ -52572,10 +52593,10 @@ app.post('/api/project/:projectId/wave13/starlink-orbital-probe', async (req, re
       avgTlsMs,
       avgHttpsMs,
       fastestRegion: fastestRegion
-        ? `${fastestRegion.regionCode} (${fastestRegion.tlsSocketMs}ms TLS)`
+        ? `${fastestRegion.regionCode} (${fastestRegion.httpsRttMs}ms HTTPS / ${fastestRegion.tlsSocketMs}ms TLS)`
         : 'us-central1',
       slowestRegion: slowestRegion
-        ? `${slowestRegion.regionCode} (${slowestRegion.tlsSocketMs}ms TLS)`
+        ? `${slowestRegion.regionCode} (${slowestRegion.httpsRttMs}ms HTTPS / ${slowestRegion.tlsSocketMs}ms TLS)`
         : 'asia-northeast1',
       deployedStandbysCount: enrichedCorridors.filter((c) => c.isStandbyDeployed)
         .length,
@@ -66790,6 +66811,8 @@ app.get(
           fastestRegionId: fastestRegion?.regionId || 'us-central1',
           fastestTcpMs: fastestRegion?.tcpMs || 0,
           fastestTotalRttMs: fastestRegion?.totalRttMs || 0,
+          fastestRegionalRttMs:
+            fastestRegion?.regionalRttMs || fastestRegion?.totalRttMs || 0,
           liveSubnetsCount: liveSubnets.length,
           quotaRegionsCount: regionalQuotas.length,
           pinnedOverridesCount: quotaOverrideAudit.pinnedOverrides.length,

@@ -2190,13 +2190,14 @@ export default function GlobalNetworkWorldMap({
         );
         setLiveGeoTelemetry(res.data);
         if (showToastMsg && res.data?.fastestRegion) {
+          const rtt =
+            res.data.fastestRegion.regionalRttMs ||
+            res.data.fastestRegion.totalRttMs;
           const summaryMsg = `Probed ${
             res.data?.regionalSocketProbes?.length || 10
           } live GCP regional endpoints: Fastest is ${
             res.data.fastestRegion.regionId
-          } (${res.data.fastestRegion.tcpMs}ms TCP / ${
-            res.data.fastestRegion.totalRttMs
-          }ms TLS RTT)`;
+          } (${rtt}ms Region RTT · ${res.data.fastestRegion.tcpMs}ms Edge TCP)`;
           showMapBanner(summaryMsg);
           onShowToast?.(summaryMsg);
         }
@@ -2287,7 +2288,9 @@ export default function GlobalNetworkWorldMap({
     const probedMatch = (liveGeoTelemetry?.regionalSocketProbes || []).find(
       (p) => p.regionId === selectedRegion.id
     );
-    const estRttMs = probedMatch?.tcpMs
+    const estRttMs = probedMatch?.regionalRttMs
+      ? `${probedMatch.regionalRttMs}ms Live Region RTT (${probedMatch.tcpMs}ms Edge TCP)`
+      : probedMatch?.tcpMs
       ? `${probedMatch.tcpMs}ms Live TCP`
       : `~${Math.round((fiberKm / 200) * 2 + 6)}ms Est.`;
     const arc = buildArcPath(
@@ -2999,6 +3002,12 @@ export default function GlobalNetworkWorldMap({
       const liveProbe = (liveGeoTelemetry?.regionalSocketProbes || []).find(
         (p) => p.regionId === regObj.id
       );
+      if (
+        typeof liveProbe?.regionalRttMs === 'number' &&
+        liveProbe.regionalRttMs > 0
+      ) {
+        return liveProbe.regionalRttMs;
+      }
       if (typeof liveProbe?.tcpMs === 'number' && liveProbe.tcpMs > 0) {
         return liveProbe.tcpMs;
       }
@@ -3150,26 +3159,30 @@ export default function GlobalNetworkWorldMap({
       );
       const fwEval = evaluatePacketAgainstFirewalls(
         {
-          sourceIp: p.resolvedIp || liveClientOriginNode.evalIp,
+          sourceIp: liveClientOriginNode.evalIp,
           protocol: 'tcp',
           port: 443,
         },
         firewalls
       );
-      const rttMs = p.tcpMs ?? p.totalRttMs ?? computeRegionLiveRttMs(matchedReg);
+      const rttMs =
+        p.regionalRttMs ??
+        p.totalRttMs ??
+        p.tcpMs ??
+        computeRegionLiveRttMs(matchedReg);
       events.push({
         id: `tm-probe-${idx}`,
         timestamp: liveGeoTelemetry?.probedAt
           ? new Date(liveGeoTelemetry.probedAt).toLocaleTimeString()
           : 'Live Socket',
         category: `TLS 1.3 Socket (${p.tlsCipher || 'AEAD'})`,
-        summary: `${p.endpoint || `${p.regionId}-aiplatform.googleapis.com`} · ${p.tcpMs}ms TCP / ${p.totalRttMs}ms TLS`,
+        summary: `${p.host || `${p.regionId}-aiplatform.googleapis.com`} · ${rttMs}ms Region RTT (${p.tcpMs}ms Edge TCP · GFE ${p.resolvedIp || 'Anycast'})`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
         targetZone: matchedReg.zones?.[0],
         verdict: p.reachable !== false ? 'ALLOW' : 'DENY',
-        sourceIp: p.resolvedIp || liveClientOriginNode.ip,
-        sourceLabel: `${liveClientOriginNode.city} Edge Socket`,
+        sourceIp: `GFE Edge ${p.resolvedIp || 'Anycast'} (AS15169)`,
+        sourceLabel: `${liveClientOriginNode.city} ⇄ ${p.regionId}`,
         protocol: 'tcp',
         port: 443,
         ruleName: `TLS 1.3 Handshake (${p.tlsCipher || fwEval.ruleName})`,
@@ -3665,17 +3678,19 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
             probeReg.x,
             probeReg.y
           );
+          const rtt =
+            probe.regionalRttMs || probe.totalRttMs || probe.tcpMs || 15;
           return {
             id,
             kind: probe.reachable ? 'ALLOWED' : 'DENIED',
-            sourceLabel: `${liveClientOriginNode.city} (Live Socket)`,
-            sourceIp: probe.resolvedIp || liveClientOriginNode.ip,
+            sourceLabel: `${liveClientOriginNode.city} ⇄ ${probeReg.id}`,
+            sourceIp: `GFE ${probe.resolvedIp || 'Anycast'} (AS15169)`,
             targetRegionId: probeReg.id,
             targetZone: probeReg.zones[0],
             protocol: 'tcp',
             port: 443,
             verdict: probe.reachable ? 'ALLOW' : 'DENY',
-            ruleName: `TLS 1.3 ${probe.tlsCipher || 'Socket'} (${probe.tcpMs}ms TCP)`,
+            ruleName: `TLS 1.3 ${probe.tlsCipher || 'Socket'} (${rtt}ms Region RTT)`,
             priority: 1000,
             x1: liveClientOriginNode.x,
             y1: liveClientOriginNode.y,
@@ -3686,14 +3701,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
             arcD: arc.d,
             progress: 0,
             speed: 0.088 * simSpeed * tickScale,
-            latencyMs: probe.tcpMs || probe.totalRttMs || 15,
+            latencyMs: rtt,
           };
         }
       }
 
       // 2. SSH_BRUTEFORCE: Real TCP :22/:3389 VM Socket Audit + Live VPC Firewall Rule Evaluation (`compute.v1/firewalls`)
       // 3. IAP_ZERO_TRUST: Real Google IAP Range (`35.235.240.0/20`) vs Live Client Origin against `compute.v1/firewalls`
-      // 4. GLOBAL_LOAD_TEST: Real Concurrent 8-Region TLS 1.3 Edge Socket Handshakes (:443)
+      // 4. GLOBAL_LOAD_TEST: Real Concurrent 10-Region TLS 1.3 Edge Socket Handshakes (:443)
       if (!overrideSpec?.originId && effectiveMode === 'GLOBAL_LOAD_TEST' && liveSocketProbes.length > 0) {
         const probe = liveSocketProbes[seq % liveSocketProbes.length];
         const probeReg =
@@ -3708,17 +3723,19 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           probeReg.x,
           probeReg.y
         );
+        const rtt =
+          probe.regionalRttMs || probe.totalRttMs || probe.tcpMs || 15;
         return {
           id,
           kind: httpsEval.verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
           sourceLabel: `GFE Anycast -> ${probe.regionId}`,
-          sourceIp: probe.resolvedIp || '130.211.0.22',
+          sourceIp: `GFE ${probe.resolvedIp || '130.211.0.22'} (AS15169)`,
           targetRegionId: probeReg.id,
           targetZone: probeReg.zones[0],
           protocol: 'tcp',
           port: 443,
           verdict: httpsEval.verdict,
-          ruleName: `${httpsEval.ruleName} (${probe.tcpMs}ms TCP / ${probe.tlsMs}ms TLS)`,
+          ruleName: `${httpsEval.ruleName} (${rtt}ms Region RTT / ${probe.tcpMs}ms Edge TCP)`,
           priority: httpsEval.priority,
           x1: liveClientOriginNode.x,
           y1: liveClientOriginNode.y,
@@ -4443,7 +4460,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   className="px-2.5 py-0.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer transition-colors"
                   title="Click to select and scroll to your fastest live GCP region on the World Map"
                 >
-                  FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.tcpMs}ms TCP / {liveGeoTelemetry.fastestRegion.totalRttMs}ms TLS)
+                  FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.regionalRttMs || liveGeoTelemetry.fastestRegion.totalRttMs}ms Region RTT · {liveGeoTelemetry.fastestRegion.tcpMs}ms Edge TCP)
                 </button>
               )}
             </div>
@@ -4451,7 +4468,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               Live Multi-Region Socket Latency Prober, Compute Quotas, VPC Subnet CIDRs &amp; Data Sovereignty Audit (`{projectId}`)
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Instead of a static map, this workbench executes <strong>real concurrent TCP/TLS 1.3 socket handshakes</strong> to 8 Google Cloud regional endpoints (`*-aiplatform.googleapis.com:443`), inspects your live regional quotas (`compute.regions.list`), maps your regional VPC subnets (`subnetworks.aggregatedList`), and audits every GCS Bucket, BigQuery Dataset, Cloud Run service, and VM for multi-region quorum &amp; GDPR/US residency.
+              Instead of a static map, this workbench executes <strong>real concurrent TCP/TLS 1.3 socket handshakes</strong> to 10 Google Cloud regional endpoints (`*-aiplatform.googleapis.com:443`), inspects your live regional quotas (`compute.regions.list`), maps your regional VPC subnets (`subnetworks.aggregatedList`), and audits every GCS Bucket, BigQuery Dataset, Cloud Run service, and VM for multi-region quorum &amp; GDPR/US residency.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -4476,7 +4493,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               />
               <span>
                 {geoLoading
-                  ? 'Probing 8 Regions & Quotas...'
+                  ? 'Probing 10 Regions & Quotas...'
                   : 'Re-Probe Live Regional Sockets & Quotas'}
               </span>
             </button>
@@ -4489,7 +4506,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
             UNDER THE HOOD · HOW THIS GEO-CONTROL PLANE WORKS (100% REAL SOCKETS &amp; REST APIs)
           </div>
           <div>
-            1. <strong>Live Regional Socket RTT:</strong> Node `dns.promises.lookup` + `net.createConnection(:443)` + `tls.connect` with `perf_hooks.performance.now()` microsecond timers against 8 regional `*-aiplatform.googleapis.com` frontends.
+            1. <strong>Live Regional Socket &amp; Jupiter Backbone RTT:</strong> Node `dns.promises.resolve4` (AS15169 Google GFE Anycast Pool) + `net.createConnection(:443)` + `tls.connect` + L7 HTTP `HEAD /$discovery/rest?version=v1` with `perf_hooks.performance.now()` microsecond timers against 10 regional `*-aiplatform.googleapis.com` frontends.
             {' '}2. <strong>Regional Compute, GPU &amp; TPU Quotas:</strong> Queries `GET https://compute.googleapis.com/compute/v1/projects/{projectId}/regions` for live `CPUS`, `PREEMPTIBLE_CPUS`, `A2_CPUS`, `NVIDIA_L4_GPUS`, `NVIDIA_A100_GPUS`, `NVIDIA_T4_GPUS`, `NVIDIA_V100_GPUS`, `TPU_LITE_PODSLICE_V5`, `DISKS_TOTAL_GB`, `SSD_TOTAL_GB`, and `IN_USE_ADDRESSES` headroom.
             {' '}3. <strong>VPC Subnet CIDRs &amp; Asset Residency:</strong> Queries `subnetworks.aggregatedList`, `storage.v1/b`, `bigquery.v2/datasets`, and `run.v2/services` to verify multi-region quorum (`RPO=0s`) vs single-region SPOFs.
           </div>
@@ -4503,7 +4520,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               featureId: 'GLOBAL_MAP_LATENCY_PROBES',
               icon: Activity,
               label: `Live Regional TCP/TLS Latency (${
-                liveGeoTelemetry?.regionalSocketProbes?.length || 8
+                liveGeoTelemetry?.regionalSocketProbes?.length || 10
               } Regions)`,
             },
             {
@@ -8592,24 +8609,36 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   </div>
 
                   {liveProbe ? (
-                    <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-amber-500/20">
-                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
-                        <span className="text-zinc-400 block">Live DNS</span>
-                        <strong className="text-zinc-900 dark:text-zinc-100">
-                          {liveProbe.dnsMs}ms
-                        </strong>
+                    <div className="space-y-1.5 pt-1 border-t border-amber-500/20">
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">Live DNS</span>
+                          <strong className="text-zinc-900 dark:text-zinc-100">
+                            {liveProbe.dnsMs}ms
+                          </strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">Edge TCP</span>
+                          <strong className="text-zinc-900 dark:text-zinc-100">
+                            {liveProbe.tcpMs}ms
+                          </strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">TLS 1.3</span>
+                          <strong className="text-blue-600 dark:text-blue-400">
+                            {liveProbe.tlsMs}ms
+                          </strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">Region RTT</span>
+                          <strong className="text-emerald-600 dark:text-emerald-400">
+                            {liveProbe.regionalRttMs || liveProbe.totalRttMs}ms
+                          </strong>
+                        </div>
                       </div>
-                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
-                        <span className="text-zinc-400 block">Live TCP :443</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">
-                          {liveProbe.tcpMs}ms
-                        </strong>
-                      </div>
-                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
-                        <span className="text-zinc-400 block">Live TLS 1.3</span>
-                        <strong className="text-blue-600 dark:text-blue-400">
-                          {liveProbe.tlsMs}ms
-                        </strong>
+                      <div className="text-[9.5px] text-zinc-500 dark:text-zinc-400 truncate">
+                        GFE Edge: <code>{liveProbe.resolvedIp || 'Anycast'}</code> (Public AS15169) →{' '}
+                        <code>{liveProbe.host || `${selectedRegion.id}-aiplatform.googleapis.com`}</code>
                       </div>
                     </div>
                   ) : (

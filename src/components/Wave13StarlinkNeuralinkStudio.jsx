@@ -758,7 +758,7 @@ export default function Wave13StarlinkNeuralinkStudio({
 
                     <div className="p-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-950/90 text-[10px] font-mono text-zinc-600 dark:text-zinc-400 space-y-0.5">
                       <div className="truncate">
-                        Host: <strong className="text-zinc-900 dark:text-white">{c.endpointHost}</strong> ({c.liveProbe?.resolvedIp})
+                        Host: <strong className="text-zinc-900 dark:text-white">{c.endpointHost}</strong> · GFE Edge: {c.liveProbe?.resolvedIp} (AS15169)
                       </div>
                       <div>
                         DNS: <strong>{c.dnsMs}ms</strong> · Cipher:{' '}
