@@ -433,6 +433,7 @@ export default function Startup10xMentorStudio({
 
             <button
               type="button"
+              data-feature-id="STARTUP_10X_EXPORT_PACKET"
               onClick={handleExportFounderPacket}
               title="Download Investor Due-Diligence, Unit Economics & SOC2 Evidence Report (.md)"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
@@ -599,6 +600,7 @@ export default function Startup10xMentorStudio({
             </div>
             <button
               type="button"
+              data-feature-id="STARTUP_10X_GEMINI_CTO_MENTOR"
               disabled={loadingMentor}
               onClick={handleRunGeminiMentor}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold shadow-xs cursor-pointer disabled:opacity-50"
@@ -980,6 +982,7 @@ export default function Startup10xMentorStudio({
                 {startupApis.some((a) => !a.enabled) && (
                   <button
                     type="button"
+                    data-feature-id="STARTUP_10X_ENABLE_ALL_APIS"
                     disabled={busyTarget === 'ENABLE_CORE_STARTUP_APIS:ALL'}
                     onClick={() =>
                       handleLiveRemediate('ENABLE_CORE_STARTUP_APIS', 'ALL')
@@ -1525,6 +1528,7 @@ export default function Startup10xMentorStudio({
                     </span>
                     <button
                       type="button"
+                      data-feature-id="STARTUP_10X_BOOTSTRAP_VAULT"
                       disabled={
                         busyTarget ===
                         `BOOTSTRAP_STARTUP_BUCKET:${projectId}-startup-vault`
@@ -1625,6 +1629,7 @@ export default function Startup10xMentorStudio({
                     </span>
                     <button
                       type="button"
+                      data-feature-id="STARTUP_10X_BOOTSTRAP_BQ"
                       disabled={
                         busyTarget ===
                         'BOOTSTRAP_STARTUP_BQ_DATASET:startup_analytics'
@@ -1746,9 +1751,12 @@ export default function Startup10xMentorStudio({
                   World-Open 0.0.0.0/0 Ingress Firewalls ({soc2Blockers.openFirewalls.length})
                 </span>
                 <div className="flex items-center gap-1.5">
-                  {soc2Blockers.openFirewalls.length > 0 && (
+                  {soc2Blockers.openFirewalls.some(
+                    (fw) => !fw.isWebHttpHttpsOnly
+                  ) && (
                     <button
                       type="button"
+                      data-feature-id="STARTUP_10X_LOCK_ALL_IAP"
                       disabled={
                         busyTarget === 'LOCK_ALL_OPEN_FIREWALLS_IAP:ALL'
                       }
@@ -1758,8 +1766,12 @@ export default function Startup10xMentorStudio({
                       className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       {busyTarget === 'LOCK_ALL_OPEN_FIREWALLS_IAP:ALL'
-                        ? 'Locking All...'
-                        : `1-Click Lock All (${soc2Blockers.openFirewalls.length}) to Cloud IAP`}
+                        ? 'Locking Admin Ports...'
+                        : `1-Click Lock Admin/SSH/RDP Ports (${
+                            soc2Blockers.openFirewalls.filter(
+                              (fw) => !fw.isWebHttpHttpsOnly
+                            ).length
+                          }) to Cloud IAP`}
                     </button>
                   )}
                   <span
@@ -1786,8 +1798,21 @@ export default function Startup10xMentorStudio({
                     className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0 font-mono">
-                      <div className="text-xs font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
-                        {fw.name}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
+                          {fw.name}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                            fw.isWebHttpHttpsOnly
+                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                          }`}
+                        >
+                          {fw.isWebHttpHttpsOnly
+                            ? 'PUBLIC WEB (80/443)'
+                            : 'ADMIN / INTERNAL PORT'}
+                        </span>
                       </div>
                       <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 truncate">
                         VPC: {fw.network} · Ports: {fw.portsSummary || 'all'}
@@ -1795,6 +1820,7 @@ export default function Startup10xMentorStudio({
                     </div>
                     <button
                       type="button"
+                      data-feature-id="STARTUP_10X_LOCK_FIREWALL_IAP"
                       disabled={
                         busyTarget === `LOCK_OPEN_FIREWALL_IAP:${fw.name}`
                       }
@@ -1869,21 +1895,35 @@ export default function Startup10xMentorStudio({
                   {soc2Blockers.soc2EvidenceControls.map((ctrl) => (
                     <div
                       key={ctrl.controlId}
-                      className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                      className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
                           {ctrl.controlId}
                         </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            ctrl.status === 'PASS'
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                          }`}
-                        >
-                          {ctrl.status === 'PASS' ? '✓ PASS' : 'ACTION NEEDED'}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                              ctrl.status === 'PASS'
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                            }`}
+                          >
+                            {ctrl.status === 'PASS' ? '✓ PASS' : 'ACTION NEEDED'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                `[${ctrl.controlId}] ${ctrl.question}\nStatus: ${ctrl.status}\nLive GCP Evidence (${projectId}): ${ctrl.liveEvidence}`,
+                                ctrl.controlId
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                          >
+                            {copiedKey === ctrl.controlId ? 'Copied!' : 'Copy Answer'}
+                          </button>
+                        </div>
                       </div>
                       <div className="text-[11px] text-zinc-700 dark:text-zinc-300 font-bold">
                         {ctrl.question}

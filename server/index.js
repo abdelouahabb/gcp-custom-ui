@@ -68975,11 +68975,8 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           fw.direction === 'INGRESS' &&
           (fw.sourceRanges || []).includes('0.0.0.0/0')
       )
-      .map((fw) => ({
-        name: fw.name,
-        network: (fw.network || 'default').split('/').pop(),
-        allowed: fw.allowed || [],
-        portsSummary: (fw.allowed || [])
+      .map((fw) => {
+        const portsSummary = (fw.allowed || [])
           .map(
             (a) =>
               `${a.IPProtocol}${
@@ -68988,9 +68985,24 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
                   : ''
               }`
           )
-          .join(', '),
-        targetTags: fw.targetTags || [],
-      }));
+          .join(', ');
+        const isWebHttpHttpsOnly =
+          portsSummary === 'tcp:80' ||
+          portsSummary === 'tcp:443' ||
+          portsSummary === 'tcp:80,443' ||
+          portsSummary === 'tcp:80, tcp:443';
+        return {
+          name: fw.name,
+          network: (fw.network || 'default').split('/').pop(),
+          allowed: fw.allowed || [],
+          portsSummary,
+          isWebHttpHttpsOnly,
+          riskCategory: isWebHttpHttpsOnly
+            ? 'PUBLIC_WEB_HTTP_HTTPS'
+            : 'ADMIN_OR_INTERNAL_PORT',
+          targetTags: fw.targetTags || [],
+        };
+      });
 
     const primitiveBindings = iamBindings.filter(
       (b) => b.role === 'roles/owner' || b.role === 'roles/editor'
@@ -69763,7 +69775,8 @@ app.post('/api/project/:projectId/startup-10x/remediate', async (req, res) => {
       });
     }
 
-    // 5. Live Batch Action: Lock ALL World-Open 0.0.0.0/0 Firewall Rules to Google Cloud IAP (35.235.240.0/20)
+    // 5. Live Batch Action: Lock World-Open Admin/Internal 0.0.0.0/0 Firewall Rules to Google Cloud IAP (35.235.240.0/20)
+    // Safely skips pure HTTP/HTTPS (tcp:80 / tcp:443) web ingress rules unless targetName === 'ALL_INCLUDING_WEB'
     if (action === 'LOCK_ALL_OPEN_FIREWALLS_IAP') {
       const fwRes = await gcpFetch(
         `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -69773,12 +69786,32 @@ app.post('/api/project/:projectId/startup-10x/remediate', async (req, res) => {
         projectId,
         { timeout: 8000 }
       );
-      const openRules = (fwRes?.items || []).filter(
-        (fw) =>
-          !fw.disabled &&
-          fw.direction === 'INGRESS' &&
-          (fw.sourceRanges || []).includes('0.0.0.0/0')
-      );
+      const openRules = (fwRes?.items || []).filter((fw) => {
+        if (
+          fw.disabled ||
+          fw.direction !== 'INGRESS' ||
+          !(fw.sourceRanges || []).includes('0.0.0.0/0')
+        ) {
+          return false;
+        }
+        if (targetName === 'ALL_INCLUDING_WEB') return true;
+        const portsSummary = (fw.allowed || [])
+          .map(
+            (a) =>
+              `${a.IPProtocol}${
+                Array.isArray(a.ports) && a.ports.length > 0
+                  ? `:${a.ports.join(',')}`
+                  : ''
+              }`
+          )
+          .join(', ');
+        const isWebOnly =
+          portsSummary === 'tcp:80' ||
+          portsSummary === 'tcp:443' ||
+          portsSummary === 'tcp:80,443' ||
+          portsSummary === 'tcp:80, tcp:443';
+        return !isWebOnly;
+      });
       const lockedNames = [];
       for (const fw of openRules) {
         await gcpFetch(
@@ -69806,8 +69839,8 @@ app.post('/api/project/:projectId/startup-10x/remediate', async (req, res) => {
         lockedNames,
         message:
           lockedNames.length > 0
-            ? `Restricted ${lockedNames.length} world-open firewall rule(s) (${lockedNames.join(', ')}) from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20)!`
-            : 'All firewall rules are already restricted from 0.0.0.0/0.',
+            ? `Restricted ${lockedNames.length} admin/internal firewall rule(s) (${lockedNames.join(', ')}) from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20) while preserving public HTTP/HTTPS web ports!`
+            : 'All non-web admin/internal firewall rules are already restricted from 0.0.0.0/0.',
       });
     }
 

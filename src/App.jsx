@@ -1901,6 +1901,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/soc/ai-red-team-audit') ||
       rawUrl.includes('/wave16/action') ||
       rawUrl.includes('/startup-10x/remediate') ||
+      rawUrl.includes('/startup-10x/gemini-mentor') ||
       rawUrl.includes('/vms/ssh-identity-mode') ||
       rawUrl.includes('/scp/') ||
       rawUrl.includes('/s3-compatible/') ||
@@ -3403,6 +3404,11 @@ function CloudPulseCockpit() {
       setActiveTab('SOVEREIGN_STUDIO');
       return;
     }
+    if (tabId === 'ZOMBIE_HUNTER') {
+      setInnovationSubTab('ZOMBIE_HUNTER');
+      setActiveTab('INNOVATION_LAB');
+      return;
+    }
     const normalizedTab =
       tabId === 'DATA_ENGINEER'
         ? 'DATA_ENGINEER_STUDIO'
@@ -3414,12 +3420,16 @@ function CloudPulseCockpit() {
         ? 'CLOUD_SQL_STUDIO'
         : tabId === 'SPANNER'
         ? 'WAVE10_FRONTIER'
-        : tabId === 'VPC_FIREWALL'
+        : tabId === 'VPC_FIREWALL' || tabId === 'VPC'
         ? 'VPC_NETWORKS'
-        : tabId === 'VM_FLEET'
+        : tabId === 'VM_FLEET' || tabId === 'VMS'
         ? 'VM_SSH'
         : tabId === 'STORAGE'
         ? 'CLOUD_STORAGE'
+        : tabId === 'SOVEREIGN_IAM'
+        ? 'SOVEREIGN_STUDIO'
+        : tabId === 'BILLING_GUARDIAN'
+        ? 'FINOPS'
         : tabId;
 
     if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
@@ -5113,7 +5123,7 @@ function CloudPulseCockpit() {
                 <div className="space-y-4">
                   <Startup10xMentorStudio
                     projectId={selectedProjectId}
-                    onNavigateTab={(tabId) => setActiveTab(tabId)}
+                    onNavigateTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}

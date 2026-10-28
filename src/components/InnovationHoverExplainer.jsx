@@ -4378,6 +4378,78 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'Cross-Studio Deep-Link Router',
     safetyMode: 'READ_ONLY',
   },
+
+  // --- Startup 10X Founder & CTO Workbench Actions ---
+  STARTUP_10X_EXPORT_PACKET: {
+    badge: 'VC DUE-DILIGENCE & SOC2 PACKET',
+    title: 'Export Investor Due-Diligence, Unit Economics & SOC2 Live Evidence Report (.md)',
+    whatItDoes:
+      'Downloads a board-ready Markdown audit report combining your live Startup 10X Readiness Score, 1X vs 10X SaaS/AI Unit Economics (`$/MAU` & Gross Margin), 6-Vector Cloud Cost Breakdown, and 6-Control SOC2 Live Evidence Matrix.',
+    enterpriseValue:
+      'Gives startup founders an instant technical due-diligence packet for VCs and B2B enterprise security questionnaires.',
+    gcpApis: 'Live Control-Plane Telemetry Serializer (.md)',
+    safetyMode: 'READ_ONLY',
+  },
+  STARTUP_10X_GEMINI_CTO_MENTOR: {
+    badge: 'LIVE GEMINI CTO MENTOR',
+    title: 'Generate Live Startup 10X Architecture & Runway Review via Gemini',
+    whatItDoes:
+      'Feeds your real Compute VMs, Persistent Disks, Cloud Run services, quotas, 24h HTTP 429s, and world-open firewall rules into Vertex AI / Gemini API to produce a tailored CTO readiness verdict and copy-ready gcloud remediation commands.',
+    enterpriseValue:
+      'Provides zero-hallucination architectural guidance grounded 100% on your project’s live telemetry.',
+    gcpApis: 'POST /api/project/{project}/startup-10x/gemini-mentor',
+    safetyMode: 'READ_ONLY',
+  },
+  STARTUP_10X_ENABLE_ALL_APIS: {
+    badge: '1-CLICK STARTUP API BOOTSTRAPPER',
+    title: 'Batch-Enable All 8 Core Startup GCP APIs (`serviceusage.services.batchEnable`)',
+    whatItDoes:
+      'Enables Cloud Run (`run.googleapis.com`), Artifact Registry, Secret Manager, Vertex AI (`aiplatform`), BigQuery, Cloud Storage, Cloud Build, and Cloud Billing Budgets in a single REST call.',
+    enterpriseValue:
+      'Eliminates "API Not Enabled" deployment failures when launching a new serverless + AI startup stack.',
+    gcpApis: 'POST https://serviceusage.googleapis.com/v1/projects/{project}/services:batchEnable',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_BOOTSTRAP_VAULT: {
+    badge: '1-CLICK HARDENED GCS VAULT',
+    title: 'Provision Pre-Hardened Startup Cloud Storage Bucket (`gs://{project}-startup-vault`)',
+    whatItDoes:
+      'Creates a US Standard bucket pre-configured with `publicAccessPrevention: enforced`, Uniform Bucket-Level Access, and a 30-day Nearline / 365-day Archive lifecycle rule.',
+    enterpriseValue:
+      'Gives startups a SOC2-compliant object storage vault that leverages the 5 GB/mo Always-Free US Standard tier.',
+    gcpApis: 'POST https://storage.googleapis.com/storage/v1/b?project={project}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_BOOTSTRAP_BQ: {
+    badge: '1-CLICK ANALYTICS WAREHOUSE',
+    title: 'Provision Pre-Optimized Startup BigQuery Dataset (`{project}:startup_analytics`)',
+    whatItDoes:
+      'Creates a BigQuery dataset pre-configured with a 168-hour (7-day) Time-Travel window, 60-day default partition expiration, and `startup_10x:optimized` cost attribution labels.',
+    enterpriseValue:
+      'Leverages BigQuery’s 10 GB storage + 1 TB queries/mo Always-Free tier while preventing runaway unpartitioned storage growth.',
+    gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_LOCK_ALL_IAP: {
+    badge: '1-CLICK SOC2 PERIMETER SHIELD',
+    title: 'Restrict All World-Open Admin/SSH/RDP/Notebook Firewalls (`0.0.0.0/0`) to Cloud IAP',
+    whatItDoes:
+      'Patches every world-open non-web ingress firewall rule (`allow-8888`, `default-allow-ssh`, `default-allow-rdp`, `default-allow-icmp`, DB ports) from `0.0.0.0/0` to Google Cloud Identity-Aware Proxy (`35.235.240.0/20`) while preserving public HTTP/HTTPS (`80`/`443`) web rules.',
+    enterpriseValue:
+      'Closes the #1 B2B enterprise security questionnaire & SOC2 deal-blocker in 1 click without breaking public web traffic.',
+    gcpApis: 'PATCH https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls/{rule}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_LOCK_FIREWALL_IAP: {
+    badge: '1-CLICK IAP FIREWALL LOCK',
+    title: 'Restrict Individual `0.0.0.0/0` Firewall Rule to Google Cloud IAP (`35.235.240.0/20`)',
+    whatItDoes:
+      'Updates `sourceRanges` on this specific VPC firewall rule from `0.0.0.0/0` to `35.235.240.0/20` (Google Cloud IAP TCP forwarding range).',
+    enterpriseValue:
+      'Secures SSH, RDP, or notebook ports behind zero-trust Google identity authentication at $0.00/mo.',
+    gcpApis: 'PATCH https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls/{rule}',
+    safetyMode: 'LIVE_MUTATION',
+  },
 };
 
 /**
