@@ -22039,9 +22039,11 @@ async function executeLiveDualEngineGemini({
   timeoutMs = 45000,
 }) {
   const t0 = Date.now();
-  const rawModel = String(model || 'gemini-3.8-flash').trim();
-  const isProRequested = rawModel.includes('pro');
-  const selectedModel = isProRequested ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
+  const rawModel = String(model || 'gemini-3.8-flash')
+    .trim()
+    .replace(/^models\//i, '');
+  const isProRequested = rawModel.toLowerCase().includes('pro');
+  const selectedModel = rawModel || 'gemini-3.8-flash';
   const baseCandidates = isProRequested
     ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
     : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
@@ -60970,12 +60972,17 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
   } = req.body || {};
 
   const t0 = Date.now();
-  const isProRequested = String(model || '').includes('pro');
-  const selectedModel = isProRequested ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
-  // Strictly Gemini 3.x models only (served on Vertex AI locations/global & Google AI Studio)
-  const candidateModels = isProRequested
+  const rawModel = String(model || 'gemini-3.8-flash')
+    .trim()
+    .replace(/^models\//i, '');
+  const isProRequested = rawModel.toLowerCase().includes('pro');
+  const selectedModel = rawModel || 'gemini-3.8-flash';
+  const baseCandidates = isProRequested
     ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
     : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
+  const candidateModels = Array.from(
+    new Set([rawModel, ...baseCandidates].filter(Boolean))
+  );
 
   try {
     const { token, account } = await resolveRequestAuth(req);

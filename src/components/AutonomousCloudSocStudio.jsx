@@ -21,6 +21,7 @@ import {
   Server,
   Sparkles,
 } from 'lucide-react';
+import { useSharedGeminiModels } from './ZeroSniffingWebCryptoEnclaveBar';
 
 const SOC_PILLARS = [
   {
@@ -213,6 +214,9 @@ export default function AutonomousCloudSocStudio({
 
   // Gemini Incident Commander state + Anti-Sniffing WebCrypto Enclave (Safe on http://localhost)
   const [selectedAiModel, setSelectedAiModel] = useState('gemini-3.8-flash');
+  const { models: sharedGeminiModels, selectModel: selectSharedModel } =
+    useSharedGeminiModels(selectedAiModel, setSelectedAiModel);
+  const [customSocModelInput, setCustomSocModelInput] = useState('');
   const [aiPreferredProvider, setAiPreferredProvider] = useState('AUTO');
   const [aiTransportMode, setAiTransportMode] = useState('BROWSER_DIRECT_TLS13'); // 'BROWSER_DIRECT_TLS13' | 'RSA_OAEP_SERVER_VAULT'
   const browserSocVaultRef = useRef(null);
@@ -2361,12 +2365,45 @@ Format your response with clear Markdown headings:${
                 <select
                   data-feature-id="SOC_AI_MODEL_SELECT"
                   value={selectedAiModel}
-                  onChange={(e) => setSelectedAiModel(e.target.value)}
+                  onChange={(e) => selectSharedModel(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
                 >
-                  <option value="gemini-3.8-flash">gemini-3.8-flash (Fast SOC Triage)</option>
-                  <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Forensic Reasoning)</option>
+                  {sharedGeminiModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
                 </select>
+                <div className="inline-flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={customSocModelInput}
+                    onChange={(e) => setCustomSocModelInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customSocModelInput.trim()) {
+                        e.preventDefault();
+                        selectSharedModel(customSocModelInput.trim());
+                        setCustomSocModelInput('');
+                      }
+                    }}
+                    placeholder="Add model (e.g. gemini-3.9-flash)..."
+                    className="w-48 px-2 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customSocModelInput.trim()) {
+                        selectSharedModel(customSocModelInput.trim());
+                        setCustomSocModelInput('');
+                      }
+                    }}
+                    disabled={!customSocModelInput.trim()}
+                    className="px-2 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                    title="Add and switch to this custom Gemini model"
+                  >
+                    + Use
+                  </button>
+                </div>
                 <button
                   type="button"
                   data-feature-id="SOC_AI_GENERATE_BRIEFING"

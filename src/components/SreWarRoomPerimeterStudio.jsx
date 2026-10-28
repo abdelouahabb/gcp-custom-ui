@@ -2171,6 +2171,7 @@ export default function SreWarRoomPerimeterStudio({
           <ZeroSniffingWebCryptoEnclaveBar
             projectId={projectId}
             selectedModel={aiModel}
+            onChangeModel={setAiModel}
             compact
           />
 

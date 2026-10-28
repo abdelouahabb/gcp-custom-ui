@@ -1671,6 +1671,7 @@ export default function FivePersonaCommandCenter({
               <ZeroSniffingWebCryptoEnclaveBar
                 projectId={projectId}
                 selectedModel={intentModel}
+                onChangeModel={setIntentModel}
                 compact
               />
 

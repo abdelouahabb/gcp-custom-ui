@@ -20,7 +20,9 @@ import {
   Search,
   ExternalLink,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  useSharedGeminiModels,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const CATEGORY_LABELS = {
   ALL: 'All 48 Official MCP Servers',
@@ -702,6 +704,8 @@ export default function GoogleCloudRemoteMcpStudio({
     'Inspect my live Cloud Billing status, Cloud Storage buckets, BigQuery datasets, and recent Cloud Audit logs via official Google Cloud Remote MCP servers, and search Google Developer Knowledge for 2026 MCP security best practices.'
   );
   const [agentModel, setAgentModel] = useState('gemini-3.8-flash');
+  const { models: sharedGeminiModels, selectModel: selectSharedModel } =
+    useSharedGeminiModels(agentModel, setAgentModel);
   const [agentPreferredProvider, setAgentPreferredProvider] = useState('AUTO');
   const [runningAgent, setRunningAgent] = useState(false);
   const [agentResult, setAgentResult] = useState(null);
@@ -1664,12 +1668,15 @@ export default function GoogleCloudRemoteMcpStudio({
               </select>
               <select
                 value={agentModel}
-                onChange={(e) => setAgentModel(e.target.value)}
+                onChange={(e) => selectSharedModel(e.target.value)}
                 className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200"
-                title="Choose Gemini model for live MCP synthesis"
+                title="Choose Gemini model for live MCP synthesis (or add a custom model below)"
               >
-                <option value="gemini-3.8-flash">gemini-3.8-flash (Fast MCP Grounding)</option>
-                <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Architecture Reasoning)</option>
+                {sharedGeminiModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -1677,6 +1684,7 @@ export default function GoogleCloudRemoteMcpStudio({
           <ZeroSniffingWebCryptoEnclaveBar
             projectId={projectId}
             selectedModel={agentModel}
+            onChangeModel={setAgentModel}
             preferredProvider={agentPreferredProvider}
             onChangePreferredProvider={setAgentPreferredProvider}
             onShowToast={notify}

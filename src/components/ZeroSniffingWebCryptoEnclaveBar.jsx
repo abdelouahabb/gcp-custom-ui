@@ -1,6 +1,64 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Lock, KeyRound, ExternalLink, Sparkles, CheckCircle2 } from 'lucide-react';
+import {
+  Lock,
+  KeyRound,
+  ExternalLink,
+  CheckCircle2,
+  Cpu,
+  Plus,
+  X,
+} from 'lucide-react';
+
+const CUSTOM_MODELS_STORAGE_KEY = 'cloudpulse_custom_gemini_models_v1';
+
+export const BASE_GEMINI_MODELS = [
+  {
+    id: 'gemini-3.8-flash',
+    label: 'gemini-3.8-flash (Ultra-Fast SRE & MCP Grounding)',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-3.1-pro',
+    label: 'gemini-3.1-pro (Deep Architecture & Forensic Reasoning)',
+    isBuiltIn: true,
+  },
+];
+
+function loadSavedCustomModels() {
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_MODELS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        const id = String(typeof item === 'string' ? item : item?.id || '')
+          .trim()
+          .replace(/^models\//i, '');
+        if (!id) return null;
+        return {
+          id,
+          label: `${id} (Custom Gemini Model)`,
+          isBuiltIn: false,
+        };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomModelsToStorage(customList) {
+  try {
+    window.localStorage.setItem(
+      CUSTOM_MODELS_STORAGE_KEY,
+      JSON.stringify(customList)
+    );
+  } catch {
+    // ignore storage quota errors
+  }
+}
 
 // Shared in-memory Browser WebCrypto Non-Extractable Enclave singleton across all Studios
 const sharedBrowserEnclave = {
@@ -11,6 +69,8 @@ const sharedBrowserEnclave = {
   keyFingerprint: null,
   transportMode: 'RSA_OAEP_SERVER_VAULT', // 'BROWSER_DIRECT_TLS13' | 'RSA_OAEP_SERVER_VAULT'
   preferredProvider: 'AUTO', // 'AUTO' | 'VERTEX_AI_OAUTH' | 'AI_STUDIO_KEY'
+  activeModel: 'gemini-3.8-flash',
+  customModels: typeof window !== 'undefined' ? loadSavedCustomModels() : [],
   listeners: new Set(),
 };
 
@@ -22,6 +82,94 @@ function notifyEnclaveListeners() {
       // ignore listener errors
     }
   }
+}
+
+export function getAllAvailableGeminiModels() {
+  const map = new Map();
+  for (const m of BASE_GEMINI_MODELS) {
+    map.set(m.id, m);
+  }
+  for (const cm of sharedBrowserEnclave.customModels || []) {
+    if (cm?.id && !map.has(cm.id)) {
+      map.set(cm.id, cm);
+    }
+  }
+  return Array.from(map.values());
+}
+
+export function addOrSelectCustomGeminiModel(rawModelId) {
+  const cleanId = String(rawModelId || '')
+    .trim()
+    .replace(/^models\//i, '');
+  if (!cleanId) return null;
+
+  const isBuiltIn = BASE_GEMINI_MODELS.some((m) => m.id === cleanId);
+  if (!isBuiltIn) {
+    const exists = (sharedBrowserEnclave.customModels || []).some(
+      (m) => m.id === cleanId
+    );
+    if (!exists) {
+      const nextCustom = [
+        ...(sharedBrowserEnclave.customModels || []),
+        {
+          id: cleanId,
+          label: `${cleanId} (Custom Gemini Model)`,
+          isBuiltIn: false,
+        },
+      ];
+      sharedBrowserEnclave.customModels = nextCustom;
+      saveCustomModelsToStorage(nextCustom);
+    }
+  }
+  sharedBrowserEnclave.activeModel = cleanId;
+  notifyEnclaveListeners();
+  return cleanId;
+}
+
+export function removeCustomGeminiModel(modelIdToRemove) {
+  const cleanId = String(modelIdToRemove || '').trim();
+  const nextCustom = (sharedBrowserEnclave.customModels || []).filter(
+    (m) => m.id !== cleanId
+  );
+  sharedBrowserEnclave.customModels = nextCustom;
+  saveCustomModelsToStorage(nextCustom);
+  if (sharedBrowserEnclave.activeModel === cleanId) {
+    sharedBrowserEnclave.activeModel = 'gemini-3.8-flash';
+  }
+  notifyEnclaveListeners();
+}
+
+export function useSharedGeminiModels(controlledModel, onChangeModel) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const fn = () => setTick((n) => n + 1);
+    sharedBrowserEnclave.listeners.add(fn);
+    return () => {
+      sharedBrowserEnclave.listeners.delete(fn);
+    };
+  }, []);
+
+  const models = getAllAvailableGeminiModels();
+  const activeModel =
+    controlledModel || sharedBrowserEnclave.activeModel || 'gemini-3.8-flash';
+
+  const selectModel = useCallback(
+    (nextModelId) => {
+      const resolved = addOrSelectCustomGeminiModel(nextModelId);
+      if (resolved && typeof onChangeModel === 'function') {
+        onChangeModel(resolved);
+      }
+    },
+    [onChangeModel]
+  );
+
+  return {
+    models,
+    activeModel,
+    selectModel,
+    addCustomModel: selectModel,
+    removeCustomModel: removeCustomGeminiModel,
+  };
 }
 
 export function getSharedPreferredProvider() {
@@ -124,7 +272,8 @@ export async function encryptKeyWithServerRsaPublicKey(rawKey, spkiBase64) {
 
 export default function ZeroSniffingWebCryptoEnclaveBar({
   projectId,
-  selectedModel = 'gemini-3.8-flash',
+  selectedModel: controlledModel,
+  onChangeModel,
   preferredProvider: controlledProvider,
   onChangePreferredProvider,
   onShowToast,
@@ -141,15 +290,30 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
   const [enablingVertex, setEnablingVertex] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState('');
   const [transportMode, setTransportMode] = useState(
     sharedBrowserEnclave.transportMode
   );
   const [internalProvider, setInternalProvider] = useState(
     sharedBrowserEnclave.preferredProvider
   );
+  const [internalModel, setInternalModel] = useState(
+    sharedBrowserEnclave.activeModel || 'gemini-3.8-flash'
+  );
   const [, forceTick] = useState(0);
 
   const activeProvider = controlledProvider || internalProvider || 'AUTO';
+  const activeModel = controlledModel || internalModel || 'gemini-3.8-flash';
+  const allModels = getAllAvailableGeminiModels();
+
+  const notify = useCallback(
+    (msg) => {
+      if (typeof onShowToast === 'function') {
+        onShowToast(msg);
+      }
+    },
+    [onShowToast]
+  );
 
   const handleSelectProvider = (nextProvider) => {
     sharedBrowserEnclave.preferredProvider = nextProvider;
@@ -160,14 +324,40 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     notifyEnclaveListeners();
   };
 
-  const notify = useCallback(
-    (msg) => {
-      if (typeof onShowToast === 'function') {
-        onShowToast(msg);
-      }
-    },
-    [onShowToast]
-  );
+  const handleSelectModel = (nextModelId) => {
+    const clean = addOrSelectCustomGeminiModel(nextModelId);
+    if (!clean) return;
+    setInternalModel(clean);
+    if (typeof onChangeModel === 'function') {
+      onChangeModel(clean);
+    }
+  };
+
+  const handleAddCustomModelSubmit = (e) => {
+    if (e) e.preventDefault();
+    const clean = String(customModelInput || '')
+      .trim()
+      .replace(/^models\//i, '');
+    if (!clean) {
+      notify(
+        'Enter a Gemini model ID (for example: gemini-3.9-flash or gemini-4.0-pro).'
+      );
+      return;
+    }
+    handleSelectModel(clean);
+    setCustomModelInput('');
+    notify(
+      `Added & activated custom model "${clean}" across Vertex AI OAuth2 & AI Studio Enclave!`
+    );
+  };
+
+  const handleRemoveCustomModel = (idToRemove) => {
+    removeCustomGeminiModel(idToRemove);
+    if (activeModel === idToRemove) {
+      handleSelectModel('gemini-3.8-flash');
+    }
+    notify(`Removed custom model "${idToRemove}".`);
+  };
 
   const fetchVaultStatus = useCallback(async () => {
     try {
@@ -188,6 +378,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     const listener = () => {
       setInternalProvider(sharedBrowserEnclave.preferredProvider);
       setTransportMode(sharedBrowserEnclave.transportMode);
+      setInternalModel(sharedBrowserEnclave.activeModel);
       forceTick((n) => n + 1);
     };
     sharedBrowserEnclave.listeners.add(listener);
@@ -246,7 +437,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
         );
         const res = await axios.post('/api/ai-vault/configure', {
           encryptedKeyBase64,
-          model: selectedModel,
+          model: activeModel,
         });
         setVaultStatus((prev) => ({
           ...prev,
@@ -364,6 +555,73 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
         </div>
       </div>
 
+      {/* Live Model Selector + Add Custom / Future Gemini Model Bar (e.g. gemini-4.0-pro, gemini-3.9-flash) */}
+      <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 text-zinc-500 font-bold">
+            <Cpu className="w-3.5 h-3.5 text-blue-500" />
+            <span>Active Model:</span>
+          </span>
+          {allModels.map((m) => {
+            const isSelected = activeModel === m.id;
+            return (
+              <div key={m.id} className="inline-flex items-center">
+                <button
+                  type="button"
+                  onClick={() => handleSelectModel(m.id)}
+                  className={`px-2 py-0.5 ${
+                    m.isBuiltIn ? 'rounded-md' : 'rounded-l-md'
+                  } text-[10.5px] font-bold border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
+                  }`}
+                  title={`Use ${m.id} for live Gemini inference`}
+                >
+                  {m.id}
+                </button>
+                {!m.isBuiltIn && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomModel(m.id)}
+                    className="px-1.5 py-0.5 rounded-r-md border border-l-0 border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 text-[10.5px] cursor-pointer"
+                    title={`Remove custom model ${m.id}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[260px]">
+          <input
+            type="text"
+            value={customModelInput}
+            onChange={(e) => setCustomModelInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddCustomModelSubmit();
+              }
+            }}
+            placeholder="Add custom model (e.g. gemini-3.9-flash, gemini-4.0-pro)..."
+            className="flex-1 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-900 dark:text-white"
+          />
+          <button
+            type="button"
+            onClick={handleAddCustomModelSubmit}
+            disabled={!customModelInput.trim()}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+            title="Add and switch to this custom Gemini model ID across all studios"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Add / Use Model</span>
+          </button>
+        </div>
+      </div>
+
       {/* Dynamic Engine Panel(s) based on selected Engine */}
       <div
         className={`grid grid-cols-1 ${
@@ -408,10 +666,9 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
             <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug">
               Authenticates directly with your active Google Cloud session token against{' '}
               <code className="font-mono text-emerald-600 dark:text-emerald-400">
-                aiplatform.googleapis.com/v1/projects/{projectId || ':id'}/locations/global
-              </code>{' '}
-              for <code className="font-mono">{selectedModel}</code>.{' '}
-              <strong>Zero API keys or secrets required.</strong>
+                aiplatform.googleapis.com/v1/projects/{projectId || ':id'}/locations/global/publishers/google/models/{activeModel}:generateContent
+              </code>
+              . <strong>Zero API keys or secrets required.</strong>
             </p>
             {activeProvider === 'VERTEX_AI_OAUTH' && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-900 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400">
