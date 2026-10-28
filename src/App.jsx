@@ -5113,6 +5113,7 @@ function CloudPulseCockpit() {
                 <div className="space-y-4">
                   <Startup10xMentorStudio
                     projectId={selectedProjectId}
+                    onNavigateTab={(tabId) => setActiveTab(tabId)}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
