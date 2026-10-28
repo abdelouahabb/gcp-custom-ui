@@ -2350,6 +2350,7 @@ Format your response with clear Markdown headings:${
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <select
+                  data-feature-id="SOC_AI_PROVIDER_SELECT"
                   value={aiPreferredProvider}
                   onChange={(e) => setAiPreferredProvider(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
@@ -2360,6 +2361,7 @@ Format your response with clear Markdown headings:${
                   <option value="AI_STUDIO_KEY">Engine: Google AI Studio API Key Only (AIzaSy...)</option>
                 </select>
                 <select
+                  data-feature-id="SOC_AI_MODEL_SELECT"
                   value={selectedAiModel}
                   onChange={(e) => setSelectedAiModel(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
@@ -2369,6 +2371,7 @@ Format your response with clear Markdown headings:${
                 </select>
                 <button
                   type="button"
+                  data-feature-id="SOC_AI_GENERATE_BRIEFING"
                   onClick={() => handleRunAiCommander('FULL_SOC_TRIAGE')}
                   disabled={aiLoading}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
@@ -2384,13 +2387,17 @@ Format your response with clear Markdown headings:${
             {/* Dual-Path Live Credential & Engine Readiness Bar (Keyless Vertex AI OAuth2 + Optional AI Studio Key Vault) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
               {/* Path A: Keyless Google Cloud Vertex AI (OAuth2 Token) */}
-              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div
+                data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
+                className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
                       Path A · Keyless Vertex AI (GCP OAuth2 Token)
                     </span>
                     <span
+                      data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
                       className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                         socData?.aiCommanderStatus?.vertexAiApiEnabled
                           ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
@@ -2405,6 +2412,7 @@ Format your response with clear Markdown headings:${
                   {!socData?.aiCommanderStatus?.vertexAiApiEnabled && (
                     <button
                       type="button"
+                      data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
                       onClick={() =>
                         handleExecuteSocAction('ENABLE_VERTEX_AI_FOR_SOC', {
                           action: 'ENABLE_VERTEX_AI_FOR_SOC',
@@ -2425,13 +2433,17 @@ Format your response with clear Markdown headings:${
               </div>
 
               {/* Path B: Google AI Studio API Key (WebCrypto Enclave + RSA-OAEP-256 / AES-256-GCM RAM Vault) */}
-              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div
+                data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
+                className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
                       Path B · Zero-Sniffing AI Studio Enclave (<code className="font-mono">AIzaSy...</code>)
                     </span>
                     <span
+                      data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
                       className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                         browserSocVaultMeta.configured ||
                         socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
@@ -2461,6 +2473,7 @@ Format your response with clear Markdown headings:${
                     aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured) && (
                     <button
                       type="button"
+                      data-feature-id="SOC_AI_CLEAR_KEY_BTN"
                       onClick={handleClearAiStudioKey}
                       disabled={aiKeySaving}
                       className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
@@ -2472,6 +2485,7 @@ Format your response with clear Markdown headings:${
                 <div className="flex items-center gap-2">
                   <input
                     type="password"
+                    data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
                     value={inlineApiKeyInput}
                     onChange={(e) => setInlineApiKeyInput(e.target.value)}
                     placeholder="Paste AIzaSy... key (protected by WebCrypto / RSA-OAEP-256)..."
@@ -2479,6 +2493,7 @@ Format your response with clear Markdown headings:${
                   />
                   <button
                     type="button"
+                    data-feature-id="SOC_AI_SEAL_KEY_BTN"
                     onClick={handleSealAiStudioKey}
                     disabled={aiKeySaving || !inlineApiKeyInput.trim()}
                     className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
@@ -2491,7 +2506,10 @@ Format your response with clear Markdown headings:${
 
             {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector (Safe on http://localhost) */}
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <div
+                data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
+                className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+              >
                 <Lock className="w-4 h-4 shrink-0" />
                 <span className="font-bold">
                   Anti-Sniffing Wire Protection (Safe on <code>http://localhost</code>):
@@ -2500,6 +2518,7 @@ Format your response with clear Markdown headings:${
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
                   onClick={() => setAiTransportMode('BROWSER_DIRECT_TLS13')}
                   title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key ever traverse local HTTP!"
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
@@ -2512,6 +2531,7 @@ Format your response with clear Markdown headings:${
                 </button>
                 <button
                   type="button"
+                  data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
                   onClick={() => setAiTransportMode('RSA_OAEP_SERVER_VAULT')}
                   title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
@@ -2531,6 +2551,7 @@ Format your response with clear Markdown headings:${
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="text"
+                  data-feature-id="SOC_AI_CUSTOM_QUERY_INPUT"
                   value={aiCustomQuestion}
                   onChange={(e) => setAiCustomQuestion(e.target.value)}
                   onKeyDown={(e) => {
@@ -2543,6 +2564,7 @@ Format your response with clear Markdown headings:${
                 />
                 <button
                   type="button"
+                  data-feature-id="SOC_AI_ASK_COMMANDER_BTN"
                   onClick={() => handleRunAiCommander('CUSTOM_FORENSIC_QUERY')}
                   disabled={aiLoading}
                   className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
@@ -2579,6 +2601,7 @@ Format your response with clear Markdown headings:${
                   <button
                     key={preset.focus}
                     type="button"
+                    data-feature-id="SOC_AI_QUICK_PROMPT_CHIP"
                     onClick={() => {
                       setAiCustomQuestion(preset.q);
                       handleRunAiCommander(preset.focus, preset.q);
@@ -2597,6 +2620,7 @@ Format your response with clear Markdown headings:${
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono border-b border-zinc-800 pb-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
+                      data-feature-id="SOC_AI_PROVENANCE_BADGE"
                       className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
                         aiBriefing.isLiveLlm
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'

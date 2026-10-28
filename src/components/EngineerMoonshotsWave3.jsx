@@ -2029,6 +2029,7 @@ CMD ["server/index.js"]`;
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
               onClick={() => setTransportMode('BROWSER_DIRECT_TLS13')}
               title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key or prompt ever traverse local HTTP!"
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
@@ -2042,6 +2043,7 @@ CMD ["server/index.js"]`;
             </button>
             <button
               type="button"
+              data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
               onClick={() => setTransportMode('RSA_OAEP_SERVER_VAULT')}
               title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${

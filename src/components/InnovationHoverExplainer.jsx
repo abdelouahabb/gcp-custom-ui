@@ -2038,6 +2038,146 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
     safetyMode: 'READ_ONLY',
   },
+  SOC_AI_PROVIDER_SELECT: {
+    badge: 'CLOUD SOC PILLAR 05 · INFERENCE ENGINE ROUTER',
+    title: 'Gemini 3 Inference Execution Engine Selector (`Auto` / `Vertex AI OAuth2` / `AI Studio Key`)',
+    whatItDoes:
+      'Selects whether the SOC Incident Commander routes live inference through your sealed Google AI Studio key (`generativelanguage.googleapis.com`), your keyless Google Cloud OAuth2 token on Vertex AI (`aiplatform.googleapis.com/locations/global`), or Auto-cascades between both.',
+    enterpriseValue:
+      'Guarantees 100% real LLM execution with zero synthetic fallback — letting operators work keylessly via GCP IAM/OAuth2 or via an isolated BYOK AI Studio key.',
+    gcpApis: 'aiplatform.googleapis.com/v1/.../locations/global · generativelanguage.googleapis.com/v1beta',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_MODEL_SELECT: {
+    badge: 'GEMINI 3 MODEL ARCHITECTURE · LOCATIONS/GLOBAL',
+    title: 'Gemini 3 Model Selector (`gemini-3.8-flash` vs. `gemini-3.1-pro`)',
+    whatItDoes:
+      'Switches between `gemini-3.8-flash` (high-speed SOC incident triage with 128-token thinking budget) and `gemini-3.1-pro` (deep multi-hop forensic reasoning across kill-chains and IAM graphs with 512-token thinking budget).',
+    enterpriseValue:
+      'Targets Google Cloud’s `locations/global` Gemini 3 publisher endpoints directly, avoiding legacy 1.x/2.x model drift.',
+    gcpApis: 'publishers/google/models/gemini-3.8-flash · publishers/google/models/gemini-3.1-pro-preview',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_GENERATE_BRIEFING: {
+    badge: 'LIVE GEMINI 3 SOC COMMANDER · Ed25519 SIGNED',
+    title: 'Generate Ed25519-Signed Live Gemini 3 SOC Incident Briefing',
+    whatItDoes:
+      'Packages your live `cloudaudit.googleapis.com` kill-chains, 3-vector toxic attack paths, Service Account key hygiene, and Canary tripwire telemetry into a real Gemini 3 API call and seals the resulting Markdown runbook in the Ed25519 forensic ledger.',
+    enterpriseValue:
+      'Produces copy-ready `gcloud` and Terraform containment commands grounded in your actual GCP project inventory with real token accounting and cryptographic non-repudiation.',
+    gcpApis: 'POST /api/project/{project}/soc/ai-commander (aiplatform.googleapis.com / generativelanguage.googleapis.com)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_PATH_A_VERTEX_CARD: {
+    badge: 'PATH A · KEYLESS VERTEX AI OAUTH2 ENGINE',
+    title: 'Keyless Google Cloud Vertex AI (`aiplatform.googleapis.com/locations/global`)',
+    whatItDoes:
+      'Uses your active Google Cloud OAuth2 Bearer token to invoke `gemini-3.8-flash` and `gemini-3.1-pro` directly on Vertex AI’s global endpoint without requiring any `AIzaSy...` API key.',
+    enterpriseValue:
+      'Eliminates static API key distribution by relying on your authenticated GCP IAM identity and project quota.',
+    gcpApis: 'POST https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_ENABLE_VERTEX_BTN: {
+    badge: '1-CLICK VERTEX AI API ACTIVATION',
+    title: 'Enable `aiplatform.googleapis.com` & `generativelanguage.googleapis.com` ($0.00/mo Idle)',
+    whatItDoes:
+      'Enables the Google Cloud Vertex AI API and Generative Language API on the active project so keyless OAuth2 Gemini 3 SOC inference works immediately.',
+    enterpriseValue:
+      'Enabling the APIs carries $0.00/mo standing cost; you only pay standard per-token usage when you explicitly click Generate Briefing.',
+    gcpApis: 'POST serviceusage.googleapis.com/v1/projects/{project}/services/aiplatform.googleapis.com:enable',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOC_AI_PATH_B_ENCLAVE_CARD: {
+    badge: 'PATH B · ZERO-SNIFFING AI STUDIO ENCLAVE',
+    title: 'Google AI Studio (`AIzaSy...`) WebCrypto & AES-256-GCM RAM Enclave',
+    whatItDoes:
+      'Optional BYOK vault for a Google AI Studio API key (`AIzaSy...`), protected by either a non-extractable Browser WebCrypto `AES-256-GCM` enclave (Mode 1) or a 2048-bit `RSA-OAEP-SHA256` wire envelope into Server RAM (Mode 2).',
+    enterpriseValue:
+      'Never writes your API key to disk, `localStorage`, or git, and prevents plaintext exposure over `http://localhost`.',
+    gcpApis: 'window.crypto.subtle (AES-GCM 256 / RSA-OAEP-256) · generativelanguage.googleapis.com/v1beta',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_SEAL_KEY_BTN: {
+    badge: 'CRYPTOGRAPHIC KEY SEALING · ZERO PLAINTEXT',
+    title: 'Seal `AIzaSy...` Key in Browser WebCrypto Enclave / RSA-OAEP-256 RAM Vault',
+    whatItDoes:
+      'Seals your pasted Google AI Studio key into a non-extractable Browser WebCrypto `AES-256-GCM` key (and in Mode 2, encrypts it in-browser with the server’s 2048-bit RSA-OAEP-256 public key before transmission).',
+    enterpriseValue:
+      'Computes a verifiable `SHA-256` key fingerprint while ensuring `Wireshark` or `tcpdump` on `http://localhost` can never capture a plaintext API key.',
+    gcpApis: 'window.crypto.subtle.generateKey("AES-GCM") · POST /api/ai-vault/configure (encryptedKeyBase64)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_CLEAR_KEY_BTN: {
+    badge: 'EPHEMERAL VAULT WIPE',
+    title: 'Wipe Sealed API Key from Browser WebCrypto Enclave & Server RAM',
+    whatItDoes:
+      'Immediately zeroes out the in-memory WebCrypto reference in the browser and clears the `AES-256-GCM` ciphertext/IV/authTag from the Node.js server RAM vault.',
+    enterpriseValue:
+      'Provides instant cryptographic revocation at the end of a security incident triage session.',
+    gcpApis: 'DELETE /api/ai-vault/clear',
+    safetyMode: 'READ_ONLY',
+  },
+  ANTI_SNIFFING_MODE1_DIRECT_TLS13: {
+    badge: 'ANTI-SNIFFING MODE 1 · 0 LOCAL HTTP PACKETS',
+    title: 'Direct Browser → Google HTTPS TLS 1.3 (`window.crypto.subtle` Non-Extractable Enclave)',
+    whatItDoes:
+      'Seals your `AIzaSy...` key inside a non-extractable Browser WebCrypto `AES-256-GCM` key (`extractable: false`) and dispatches `generateContent` requests directly from your browser to `https://generativelanguage.googleapis.com` over TLS 1.3.',
+    enterpriseValue:
+      'Even when running the UI on unencrypted `http://localhost`, 0 bytes of your API key ever traverse the local loopback HTTP socket — making local packet sniffing impossible.',
+    gcpApis: 'window.crypto.subtle.encrypt/decrypt (AES-GCM 256) -> https://generativelanguage.googleapis.com/v1beta',
+    safetyMode: 'READ_ONLY',
+  },
+  ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT: {
+    badge: 'ANTI-SNIFFING MODE 2 · RSA-OAEP-256 WIRE ENVELOPE',
+    title: 'Browser `RSA-OAEP-256` Ciphertext → Server `AES-256-GCM` RAM Vault',
+    whatItDoes:
+      'Imports the Node.js server’s ephemeral 2048-bit RSA public key (`SPKI`) into WebCrypto and encrypts `{ apiKey, nonce, ts }` with `RSA-OAEP-SHA256` in the browser before sending it over HTTP, where the server re-seals it in `AES-256-GCM` RAM.',
+    enterpriseValue:
+      'Allows server-side execution while ensuring any packet sniffer on `http://localhost` only ever sees 256 bytes of asymmetric RSA ciphertext.',
+    gcpApis: 'window.crypto.subtle.encrypt("RSA-OAEP") -> POST /api/ai-vault/configure -> crypto.privateDecrypt',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_CUSTOM_QUERY_INPUT: {
+    badge: 'GROUNDED FORENSIC INVESTIGATION PROMPT',
+    title: 'Custom SOC Incident Commander Question (Grounded in Live GCP Telemetry)',
+    whatItDoes:
+      'Lets you ask any custom security or compliance question (e.g., firewall exposure, IAM privilege escalation, Cloud Audit anomalies, or Terraform remediation), automatically injecting your project’s live 20-pillar SOC snapshot as context.',
+    enterpriseValue:
+      'Replaces generic chatbot answers with project-specific forensic analysis and exact `gcloud` / Terraform commands for your real resource names.',
+    gcpApis: 'POST /api/project/{project}/soc/ai-commander (customQuestion + socSnapshot)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_ASK_COMMANDER_BTN: {
+    badge: 'EXECUTE CUSTOM FORENSIC QUERY',
+    title: 'Run Grounded Gemini 3 Forensic Analysis on Custom Prompt',
+    whatItDoes:
+      'Dispatches your custom forensic question + live 20-pillar project telemetry to `gemini-3.8-flash` or `gemini-3.1-pro` and seals the response in the Ed25519 forensic ledger.',
+    enterpriseValue:
+      'Delivers on-demand incident response playbooks tailored to the exact principals, caller IPs, VPC rules, and buckets in your project.',
+    gcpApis: 'aiplatform.googleapis.com/locations/global · generativelanguage.googleapis.com/v1beta',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_QUICK_PROMPT_CHIP: {
+    badge: '1-CLICK FORENSIC PLAYBOOK PRESET',
+    title: 'Launch Targeted SOC Forensic Investigation (`VPC IAP` / `Kill-Chains` / `IAM Keys` / `DLP`)',
+    whatItDoes:
+      'Populates and immediately executes a specialized forensic prompt targeting 0.0.0.0/0 VPC firewalls, `cloudaudit` kill-chain attribution, Service Account keys & WIF migration, or GCS/Secret Manager DLP posture.',
+    enterpriseValue:
+      'Gives SecOps analysts 1-click access to the four most critical cloud security audits.',
+    gcpApis: 'POST /api/project/{project}/soc/ai-commander',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_AI_PROVENANCE_BADGE: {
+    badge: 'CRYPTOGRAPHIC LLM PROVENANCE & TOKEN TELEMETRY',
+    title: 'Verified Live Gemini 3 Execution Provenance (Zero Synthetic Output Guarantee)',
+    whatItDoes:
+      'Displays the exact execution path (`LIVE_VERTEX_AI_OAUTH`, `LIVE_GOOGLE_AI_STUDIO_API`, or `BROWSER_DIRECT_TLS13`), resolved Gemini 3 model ID, wall-clock latency (`ms`), live token usage (`Prompt + Output = Total`), and `Ed25519` signature.',
+    enterpriseValue:
+      'Guarantees complete audit transparency: if neither Vertex AI nor AI Studio is reachable, zero synthetic or simulated text is ever generated.',
+    gcpApis: 'usageMetadata (promptTokenCount, candidatesTokenCount, totalTokenCount) + Ed25519 (RFC 8032)',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**
