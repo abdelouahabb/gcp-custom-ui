@@ -71910,36 +71910,81 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
     const vmNamesList = vms.map((v) => v.name).slice(0, 2).join(', ');
     const crNamesList = cloudRunSvcs.map((s) => s.name).slice(0, 2).join(', ');
 
-    // Dynamic Stage 1 Mermaid (Only real VPCs & Firewalls with count > 0)
-    const stage1MermaidLines = [
-      `flowchart LR`,
-      `  subgraph IAM["Zero-Trust Identity"]`,
-      `    ADC["Cloud Identity: ${projectId}"]`,
-      `    IAP["Cloud IAP Tunnel: 35.235.240.0/20"]`,
-      `  end`,
-      `  ADC -->|"actAs"| IAP`,
-    ];
+    // Analyze actual firewall rules for 0.0.0.0/0 public exposure vs IAP (35.235.240.0/20) vs Internal CIDR
+    const openPublicFw = firewalls.filter((fw) =>
+      String(fw.details?.sourceRanges || '').includes('0.0.0.0/0')
+    );
+    const iapFw = firewalls.filter((fw) =>
+      String(fw.details?.sourceRanges || '').includes('35.235.240.0/20')
+    );
+    const internalFw = firewalls.filter(
+      (fw) =>
+        !String(fw.details?.sourceRanges || '').includes('0.0.0.0/0') &&
+        !String(fw.details?.sourceRanges || '').includes('35.235.240.0/20')
+    );
+
+    // Dynamic Stage 1 Mermaid (Graphs actual ingress sources -> all active firewall rules -> VPC networks)
+    const stage1MermaidLines = [`flowchart LR`];
     if (firewalls.length > 0) {
-      stage1MermaidLines.push(`  subgraph FW_SG["Firewall Rules (${firewalls.length} Active)"]`);
-      firewalls.slice(0, 3).forEach((fw, idx) => {
-        stage1MermaidLines.push(`    FW${idx}["Firewall: ${fw.name}"]`);
+      stage1MermaidLines.push(`  subgraph SRC["Ingress Traffic Sources"]`);
+      if (openPublicFw.length > 0) {
+        stage1MermaidLines.push(
+          `    PUB["Public Internet: 0.0.0.0/0 (${openPublicFw.length} Open)"]`
+        );
+      }
+      if (iapFw.length > 0) {
+        stage1MermaidLines.push(
+          `    IAP["Cloud IAP Bastion: 35.235.240.0/20"]`
+        );
+      }
+      if (internalFw.length > 0) {
+        stage1MermaidLines.push(
+          `    INT["Internal VPC CIDR: 10.128.0.0/9"]`
+        );
+      }
+      stage1MermaidLines.push(`  end`);
+
+      const shownFw = firewalls.slice(0, 6);
+      stage1MermaidLines.push(
+        `  subgraph FW_SG["VPC Firewall Rules (${shownFw.length} Active)"]`
+      );
+      shownFw.forEach((fw, idx) => {
+        const srcRange = fw.details?.sourceRanges || '0.0.0.0/0';
+        stage1MermaidLines.push(
+          `    FW${idx}["${fw.name}: ${fw.details?.direction || 'INGRESS'} (${srcRange})"]`
+        );
       });
       stage1MermaidLines.push(`  end`);
-      firewalls.slice(0, 3).forEach((_, idx) => {
-        stage1MermaidLines.push(`  IAP -->|"TCP-22 / HTTPS"| FW${idx}`);
+
+      shownFw.forEach((fw, idx) => {
+        const srcRange = String(fw.details?.sourceRanges || '');
+        if (srcRange.includes('0.0.0.0/0')) {
+          stage1MermaidLines.push(`  PUB -->|"0.0.0.0/0"| FW${idx}`);
+        } else if (srcRange.includes('35.235.240.0/20')) {
+          stage1MermaidLines.push(`  IAP -->|"TCP-22 IAP"| FW${idx}`);
+        } else {
+          stage1MermaidLines.push(`  INT -->|"Internal"| FW${idx}`);
+        }
       });
-    }
-    if (vpcs.length > 0) {
-      stage1MermaidLines.push(`  subgraph VPC_SG["VPC Networks (${vpcs.length} Active)"]`);
+
+      if (vpcs.length > 0) {
+        stage1MermaidLines.push(`  subgraph VPC_SG["VPC Networks (${vpcs.length} Active)"]`);
+        vpcs.slice(0, 3).forEach((v, idx) => {
+          stage1MermaidLines.push(`    VPC${idx}["VPC Network: ${v.name} (${v.storageClass || 'AUTO_SUBNETS'})"]`);
+        });
+        stage1MermaidLines.push(`  end`);
+        shownFw.forEach((_, idx) => {
+          stage1MermaidLines.push(`  FW${idx} -->|"Allows"| VPC0`);
+        });
+      }
+    } else if (vpcs.length > 0) {
+      stage1MermaidLines.push(
+        `  subgraph VPC_SG["VPC Networks (${vpcs.length} Active)"]`
+      );
       vpcs.slice(0, 3).forEach((v, idx) => {
         stage1MermaidLines.push(`    VPC${idx}["VPC Network: ${v.name}"]`);
       });
       stage1MermaidLines.push(`  end`);
-      if (firewalls.length > 0) {
-        stage1MermaidLines.push(`  FW0 -->|"Protected Perimeter"| VPC0`);
-      } else {
-        stage1MermaidLines.push(`  IAP -->|"Protected Perimeter"| VPC0`);
-      }
     }
     const stage1MermaidDsl =
       vpcs.length + firewalls.length > 0 ? stage1MermaidLines.join('\n') : null;
@@ -72028,104 +72073,10 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       stage3MermaidDsl = s3Lines.join('\n');
     }
 
-    // Dynamic Stage 4 Mermaid (Only codifies non-zero inventory categories into main.tf -> cloudbuild.yaml)
-    const s4Lines = [
-      `flowchart LR`,
-      `  subgraph DISCOVERY["Live Non-Zero Inventory"]`,
-    ];
-    const s4InventoryIds = [];
-    if (vpcs.length > 0) {
-      s4Lines.push(`    INV_VPC["VPC Networks: ${vpcs.length} Active"]`);
-      s4InventoryIds.push('INV_VPC');
-    }
-    if (firewalls.length > 0) {
-      s4Lines.push(`    INV_FW["Firewall Rules: ${firewalls.length} Active"]`);
-      s4InventoryIds.push('INV_FW');
-    }
-    if (buckets.length > 0) {
-      s4Lines.push(`    INV_GCS["GCS Buckets: ${buckets.length} Active"]`);
-      s4InventoryIds.push('INV_GCS');
-    }
-    if (datasets.length > 0) {
-      s4Lines.push(`    INV_BQ["BigQuery Datasets: ${datasets.length} Active"]`);
-      s4InventoryIds.push('INV_BQ');
-    }
-    if (vms.length > 0) {
-      s4Lines.push(`    INV_VM["Compute VMs: ${vms.length} Active"]`);
-      s4InventoryIds.push('INV_VM');
-    }
-    if (cloudRunSvcs.length > 0) {
-      s4Lines.push(`    INV_CR["Cloud Run: ${cloudRunSvcs.length} Active"]`);
-      s4InventoryIds.push('INV_CR');
-    }
-    if (s4InventoryIds.length === 0) {
-      s4Lines.push(`    INV_PROJ["GCP Project: ${projectId}"]`);
-      s4InventoryIds.push('INV_PROJ');
-    }
-    s4Lines.push(
-      `  end`,
-      `  subgraph IAC["Terraform Synthesizer"]`,
-      `    TF["main.tf: ${projectId}-enterprise-stack.tf"]`,
-      `  end`,
-      `  subgraph CICD["SLSA-3 Cloud Build"]`,
-      `    CB["Pipeline: cloudbuild.yaml"]`,
-      `  end`
-    );
-    s4InventoryIds.forEach((invId) => {
-      s4Lines.push(`  ${invId} -->|"HCL Block"| TF`);
-    });
-    s4Lines.push(`  TF -->|"GitOps Plan & Apply"| CB`);
-    const stage4MermaidDsl = s4Lines.join('\n');
-
-    // Dynamic Stage 5 Mermaid (Only shows spend node if > $0, always shows real enabled APIs)
-    const s5Lines = [
-      `flowchart LR`,
-      `  subgraph SURFACE["Active Project Surface"]`,
-      `    APIS["Enabled GCP APIs: ${enabledApis.length} Services"]`,
-    ];
-    if (totalMonthlySpendUsd > 0) {
-      s5Lines.push(`    BURN["Monthly Spend: $${totalMonthlySpendUsd.toFixed(2)}/mo"]`);
-    }
-    s5Lines.push(
-      `  end`,
-      `  subgraph QUOTA["HTTP 429 Quota Guard"]`,
-      `    RADAR["Service Usage & Quota Radar"]`,
-      `    S10X["Startup 10X Quota Drafter"]`,
-      `  end`,
-      `  subgraph KILLSWITCH["Autonomous Circuit-Breaker"]`,
-      `    KILL["3-Tier API Kill-Switch"]`,
-      `  end`,
-      `  APIS -->|"24h Request Telemetry"| RADAR`
-    );
-    if (totalMonthlySpendUsd > 0) {
-      s5Lines.push(`  BURN -->|"SKU Cost Attribution"| RADAR`);
-    }
-    s5Lines.push(
-      `  RADAR -->|"Quota Headroom"| S10X`,
-      `  RADAR -->|"Spend Protection"| KILL`
-    );
-    const stage5MermaidDsl = s5Lines.join('\n');
-
-    // Dynamic Stage 6 Mermaid (Omits 0-event nodes when no deletions have occurred)
-    const s6Lines = [
-      `flowchart LR`,
-      `  subgraph SRE["SRE Burn-Rate Gate"]`,
-      `    SLO["Multi-Window SLO: 14.4x (1h) / 6.0x (6h)"]`,
-      `  end`,
-      `  subgraph AUDIT["Cloud Audit Stream"]`,
-      recentDestructiveEvents.length > 0
-        ? `    LOGS["Destructive Events: ${recentDestructiveEvents.length} Recorded (30d)"]`
-        : `    LOGS["Audit Activity Stream: cloudaudit.googleapis.com"]`,
-      `  end`,
-      `  subgraph VAULT["30-Day Cloud Recycle Bin"]`,
-      `    NATIVE["Native Undelete: GCS 7d / BQ 168h / Secrets / SAs"]`,
-      `    SHELL["Shell Re-Creation: VMs / Cloud Run / VPCs"]`,
-      `  end`,
-      `  SLO -->|"Alert Gate"| LOGS`,
-      `  LOGS -->|"State Intact"| NATIVE`,
-      `  LOGS -->|"Config Snapshot"| SHELL`,
-    ];
-    const stage6MermaidDsl = s6Lines.join('\n');
+    // Stages 4, 5, and 6 are IaC / FinOps / SRE operational stages — Mermaid topology is reserved strictly for Stages 1–3 when non-zero resources exist
+    const stage4MermaidDsl = null;
+    const stage5MermaidDsl = null;
+    const stage6MermaidDsl = null;
 
     const stages = [
       {
@@ -72136,27 +72087,50 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         targetTab: 'VPC_NETWORKS',
         secondaryTab: 'SOVEREIGN_STUDIO',
         secondaryLabel: 'Sovereign IAM Studio',
-        status: vpcs.length > 0 ? 'OPTIMAL' : 'READY',
-        metricBadge: `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
+        status:
+          openPublicFw.length > 0 && iapFw.length === 0
+            ? 'ACTION_RECOMMENDED'
+            : vpcs.length > 0
+            ? 'OPTIMAL'
+            : 'READY',
+        metricBadge:
+          openPublicFw.length > 0
+            ? `${vpcs.length} VPC · ${firewalls.length} FW (${openPublicFw.length} Open 0.0.0.0/0)`
+            : `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
         summary:
           vpcs.length > 0
-            ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
+            ? openPublicFw.length > 0 && iapFw.length === 0
+              ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} firewall rules — ${openPublicFw.length} rule(s) (${openPublicFw.map((f) => f.name).slice(0, 3).join(', ')}) allow public 0.0.0.0/0 ingress. Recommend locking SSH/RDP to Cloud IAP (35.235.240.0/20).`
+              : `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
             : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
-        cliCmd: `gcloud compute firewall-rules list --project=${projectId} --format="table(name,network,direction,allowed,sourceRanges)"`,
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
         mermaidDsl: stage1MermaidDsl,
         stageItems: [
-          ...vpcs.slice(0, 3).map((v) => ({
+          ...vpcs.slice(0, 2).map((v) => ({
             kind: 'VPC Network',
             name: v.name,
             meta: v.storageClass || 'AUTO_SUBNETS',
             targetTab: 'VPC_NETWORKS',
           })),
           ...firewalls.slice(0, 5).map((fw) => ({
-            kind: 'Firewall Rule',
+            kind: String(fw.details?.sourceRanges || '').includes('0.0.0.0/0')
+              ? 'Public Firewall (0.0.0.0/0)'
+              : 'Internal Firewall Rule',
             name: fw.name,
-            meta: `${fw.details?.direction || 'INGRESS'} · ${fw.details?.sourceRanges || '0.0.0.0/0'}`,
+            meta: `${fw.details?.allowed || 'INGRESS'} · ${fw.details?.sourceRanges || '0.0.0.0/0'}`,
             targetTab: 'VPC_NETWORKS',
           })),
+          ...(openPublicFw.length > 0 && iapFw.length === 0
+            ? [
+                {
+                  kind: 'Zero-Trust Hardening',
+                  name: '+ Lock SSH to IAP Bastion (35.235.240.0/20)',
+                  meta: 'Replace 0.0.0.0/0 TCP:22 with Cloud IAP tunnel',
+                  targetTab: 'VPC_NETWORKS',
+                  provisionType: 'FIREWALL_RULE',
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -72174,10 +72148,10 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s)${
                 datasets.length > 0
                   ? ` and ${datasets.length} BigQuery analytical dataset(s)`
-                  : ' (0 BigQuery datasets provisioned)'
+                  : ' (0 BigQuery datasets provisioned — click below to create your first Lakehouse dataset)'
               }.`
             : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
-        cliCmd: `gcloud storage buckets list --project=${projectId} --format="table(name,location,storageClass)"`,
+        cliCmd: `gcloud storage buckets list --project=${projectId}`,
         mermaidDsl: stage2MermaidDsl,
         stageItems: [
           ...buckets.slice(0, 4).map((b) => ({
@@ -72192,6 +72166,17 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             meta: `${d.region || 'US'} · 168h Time-Travel`,
             targetTab: 'BIGQUERY_STUDIO',
           })),
+          ...(datasets.length === 0
+            ? [
+                {
+                  kind: '0 BigQuery Datasets',
+                  name: '+ Create BigQuery Lakehouse Dataset',
+                  meta: '10 GiB Storage + 1 TiB/mo Queries Always-Free',
+                  targetTab: 'BIGQUERY_STUDIO',
+                  provisionType: 'BIGQUERY_DATASET',
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -72213,7 +72198,10 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           vms.length + cloudRunSvcs.length + gkeClusters.length > 0
             ? `${vms.length} live GCE VM(s)${vms.length ? ` (${vms.map((v) => v.name).join(', ')})` : ''}, ${cloudRunSvcs.length} Cloud Run service(s), and ${gkeClusters.length} GKE cluster(s) active in ${projectId}.`
             : `0 running VMs or Cloud Run services in "${projectId}" ($0.00/hr compute idle). Launch a Free-Tier e2-micro VM, deploy a Scale-to-Zero Cloud Run container, or inspect recently deleted VMs in the 30-Day Recycle Bin.`,
-        cliCmd: `gcloud compute instances list --project=${projectId} && gcloud run services list --project=${projectId}`,
+        cliCmd:
+          vms.length > 0 || cloudRunSvcs.length === 0
+            ? `gcloud compute instances list --project=${projectId}`
+            : `gcloud run services list --project=${projectId}`,
         mermaidDsl: stage3MermaidDsl,
         stageItems:
           vms.length + cloudRunSvcs.length + gkeClusters.length > 0
@@ -72307,7 +72295,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         status: totalMonthlySpendUsd > 50 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
         metricBadge: `$${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs`,
         summary: `Current monthly run-rate is $${totalMonthlySpendUsd.toFixed(2)}/mo across ${enabledApis.length} enabled GCP service APIs with live HTTP 429 Quota Saturation & Startup 10X justification drafter.`,
-        cliCmd: `gcloud alpha services quota list --service=compute.googleapis.com --consumer=projects/${projectId} --limit=15`,
+        cliCmd: `gcloud services list --enabled --project=${projectId}`,
         mermaidDsl: stage5MermaidDsl,
         stageItems: [
           {
@@ -72341,7 +72329,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         status: 'OPTIMAL',
         metricBadge: `${recentDestructiveEvents.length} Vault Events (30d)`,
         summary: `Google SRE 1h/6h multi-window burn-rate gate paired with the 30-Day Cloud Recycle Bin distinguishing Native State Recovery from Empty Shell Re-Creation.`,
-        cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=15 --format=json`,
+        cliCmd: `gcloud logging read logName:cloudaudit.googleapis.com --project=${projectId} --limit=10 --format=json`,
         mermaidDsl: stage6MermaidDsl,
         stageItems: [
           {

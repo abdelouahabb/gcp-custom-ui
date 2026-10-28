@@ -102,15 +102,41 @@ function parseMermaidFlowchartLr(dsl = '') {
   return { subgraphs, edges, nodeMap };
 }
 
+function inferTargetTabFromNodeId(nodeId = '', label = '') {
+  const id = String(nodeId).toUpperCase();
+  const text = String(label).toUpperCase();
+  if (id.startsWith('VPC') || id.startsWith('FW') || id === 'PUB' || id === 'IAP' || id === 'INT') {
+    return { targetTab: 'VPC_NETWORKS', subtitle: 'Click to open VPC & Firewall Studio' };
+  }
+  if (id.startsWith('BKT') || text.includes('GS://')) {
+    return { targetTab: 'CLOUD_STORAGE', subtitle: 'Click to open Cloud Storage Studio' };
+  }
+  if (id.startsWith('DS') || text.includes('DATASET')) {
+    return { targetTab: 'BIGQUERY_STUDIO', subtitle: 'Click to open BigQuery Studio' };
+  }
+  if (id.startsWith('VM')) {
+    return { targetTab: 'VM_SSH', subtitle: 'Click to open Compute VM & SSH Studio' };
+  }
+  if (id.startsWith('CR')) {
+    return { targetTab: 'CLOUD_RUN', subtitle: 'Click to open Cloud Run Studio' };
+  }
+  if (id.startsWith('GKE')) {
+    return { targetTab: 'GKE_STUDIO', subtitle: 'Click to open GKE Cluster Studio' };
+  }
+  return null;
+}
+
 function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
   const [offsets, setOffsets] = useState({});
   const [activeDragKey, setActiveDragKey] = useState(null);
+  const [zoomPct, setZoomPct] = useState(100);
 
   useEffect(() => {
     setOffsets({});
     setActiveDragKey(null);
+    setZoomPct(100);
   }, [dsl]);
 
   const { subgraphs, edges } = parseMermaidFlowchartLr(dsl);
@@ -204,7 +230,10 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
       const y =
         sgY + sgHeaderH + sgPad + nIdx * (nodeH + nodeGapY) + nodeOffset.dy;
       const h = nodeH;
-      const topoHint = topology[globalNodeIdx] || topology[gIdx] || null;
+      const topoHint =
+        topology[globalNodeIdx] ||
+        topology[gIdx] ||
+        inferTargetTabFromNodeId(n.id, n.label);
       globalNodeIdx += 1;
 
       const parts = String(n.label || '').split(':');
@@ -214,6 +243,8 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
         parts.length > 1
           ? parts.slice(1).join(':').trim()
           : topoHint?.subtitle || 'Live GCP Telemetry';
+      const isPublicExposure =
+        n.id === 'PUB' || String(n.label || '').includes('0.0.0.0/0');
 
       const posNode = {
         ...n,
@@ -232,6 +263,7 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
         primaryTitle,
         secondarySub,
         topoHint,
+        isPublicExposure,
       };
       positionedNodes.set(n.id, posNode);
       return posNode;
@@ -284,28 +316,55 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
 
   return (
     <div className="w-full overflow-x-auto rounded-xl bg-[#0d1117] border border-zinc-800 p-2.5 shadow-inner space-y-2">
-      <div className="flex items-center justify-between gap-2 px-1 text-[10.5px] font-mono text-zinc-400">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[10.5px] font-mono text-zinc-400">
         <span>
           ✥ Interactive Canvas: Drag any Node or Subgraph container to move it (click a node without dragging to open its Studio)
         </span>
-        {hasCustomLayout && (
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
-            onClick={() => setOffsets({})}
-            className="px-2 py-0.5 rounded bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 border border-indigo-500/40 font-bold cursor-pointer shrink-0"
+            onClick={() => setZoomPct((z) => Math.max(70, z - 15))}
+            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-bold cursor-pointer"
+            title="Zoom Out Mermaid SVG"
           >
-            ↺ Reset Node Positions
+            −
           </button>
-        )}
+          <button
+            type="button"
+            onClick={() => setZoomPct(100)}
+            className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold cursor-pointer"
+            title="Reset Zoom to 100%"
+          >
+            {zoomPct}%
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoomPct((z) => Math.min(145, z + 15))}
+            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-bold cursor-pointer"
+            title="Zoom In Mermaid SVG"
+          >
+            +
+          </button>
+          {hasCustomLayout && (
+            <button
+              type="button"
+              onClick={() => setOffsets({})}
+              className="px-2 py-0.5 rounded bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 border border-indigo-500/40 font-bold cursor-pointer"
+            >
+              ↺ Reset Node Positions
+            </button>
+          )}
+        </div>
       </div>
 
       <svg
         ref={svgRef}
         viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{ width: `${zoomPct}%` }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="w-full h-auto min-w-[780px] select-none touch-none"
+        className="h-auto min-w-[780px] select-none touch-none transition-[width] duration-150"
         role="img"
         aria-label="Live Interactive Mermaid Architecture Flowchart"
       >
@@ -487,6 +546,7 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
           const pal = PALETTES[idx % PALETTES.length];
           return sg.nodes.map((node) => {
             const isDraggingNode = activeDragKey === `node:${node.id}`;
+            const nodeAccentColor = node.isPublicExposure ? '#f59e0b' : pal.nodeStroke;
             return (
               <g
                 key={node.id}
@@ -506,8 +566,8 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
                   width={node.w}
                   height={node.h}
                   rx="9"
-                  fill="#161b22"
-                  stroke={isDraggingNode ? '#34d399' : pal.nodeStroke}
+                  fill={node.isPublicExposure ? '#1f1912' : '#161b22'}
+                  stroke={isDraggingNode ? '#34d399' : nodeAccentColor}
                   strokeWidth={isDraggingNode ? '2.4' : '1.6'}
                 />
                 {/* Left accent bar */}
@@ -517,7 +577,7 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
                   width="4"
                   height={node.h - 12}
                   rx="2"
-                  fill={pal.nodeStroke}
+                  fill={nodeAccentColor}
                 />
                 {/* Node ID + Drag Handle badge */}
                 <rect
@@ -526,13 +586,17 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
                   width="44"
                   height="15"
                   rx="4"
-                  fill="rgba(99, 102, 241, 0.16)"
+                  fill={
+                    node.isPublicExposure
+                      ? 'rgba(245, 158, 11, 0.22)'
+                      : 'rgba(99, 102, 241, 0.16)'
+                  }
                 />
                 <text
                   x={node.x + node.w - 30}
                   y={node.y + 16.5}
                   textAnchor="middle"
-                  fill="#a5b4fc"
+                  fill={node.isPublicExposure ? '#fcd34d' : '#a5b4fc'}
                   fontSize="8.5"
                   fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                   fontWeight="700"
@@ -682,7 +746,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'main.tf + SLSA-3',
       summary: 'Live Terraform HCL & Cloud Build canary pipeline synthesizer.',
       cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
-      mermaidDsl: `flowchart LR\n  subgraph DISCOVERY["Live GCP Inventory"]\n    INV["Discovered Resources (${projectId})"]\n  end\n  subgraph IAC["Reverse-Terraform Synthesizer"]\n    TF["${projectId}-enterprise-stack.tf (HCL)"]\n  end\n  subgraph CICD["SLSA-Level 3 Cloud Build"]\n    CB["cloudbuild.yaml (@sha256 Provenance)"]\n    CANARY["Canary Traffic Gate (0% -> 10% -> 100%)"]\n  end\n  INV -->|"Codify State"| TF\n  TF -->|"GitOps Trigger"| CB\n  CB -->|"Verified Rollout"| CANARY`,
+      mermaidDsl: null,
     },
     {
       id: 'STAGE_5_FINOPS_QUOTA_GUARD',
@@ -695,7 +759,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'Spend & HTTP 429',
       summary: 'Autonomous spend caps, API kill-switch & Startup 10X quota drafter.',
       cliCmd: `gcloud services list --enabled --project=${projectId}`,
-      mermaidDsl: `flowchart LR\n  subgraph TELEMETRY["Live Billing & API Telemetry"]\n    BURN["Monthly Run-Rate Telemetry"]\n    APIS["Enabled Google Cloud APIs"]\n  end\n  subgraph QUOTA["HTTP 429 Prevention"]\n    RADAR["Service Usage & Quota Radar"]\n    S10X["Startup 10X Quota & $350k Credit Drafter"]\n  end\n  subgraph KILLSWITCH["Autonomous Spend Guard"]\n    KILL["3-Tier Emergency API Kill-Switch"]\n  end\n  BURN -->|"SKU Cost Attribution"| RADAR\n  APIS -->|"24h Request & 429 Rate"| RADAR\n  RADAR -->|">=65% Saturation"| S10X\n  RADAR -->|"Runaway Spend Alert"| KILL`,
+      mermaidDsl: null,
     },
     {
       id: 'STAGE_6_SRE_RECYCLE_RECOVERY',
@@ -707,8 +771,8 @@ export default function EnterpriseStackPipelineBar({
       status: 'OPTIMAL',
       metricBadge: '30d Recovery Vault',
       summary: '14.4x SLO burn gate & 30-Day Cloud Recycle Bin recovery.',
-      cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=10`,
-      mermaidDsl: `flowchart LR\n  subgraph SRE["SRE Multi-Window Alerting"]\n    SLO["14.4x (1h) / 6.0x (6h) Error Budget Gate"]\n  end\n  subgraph AUDIT["30-Day Cloud Audit Ledger"]\n    LOGS["cloudaudit.googleapis.com/activity"]\n  end\n  subgraph VAULT["30-Day Cloud Recycle Bin"]\n    NATIVE["Native State Undelete (GCS 7d / BQ 168h / Secret / SA)"]\n    SHELL["Empty Shell Re-Creation (VM / Cloud Run / VPC)"]\n  end\n  SLO -->|"Incident Trigger"| LOGS\n  LOGS -->|"Data Intact"| NATIVE\n  LOGS -->|"Config Forensics"| SHELL`,
+      cliCmd: `gcloud logging read logName:cloudaudit.googleapis.com --project=${projectId} --limit=10 --format=json`,
+      mermaidDsl: null,
     },
   ];
 
