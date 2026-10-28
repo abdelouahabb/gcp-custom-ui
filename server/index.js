@@ -57668,6 +57668,9 @@ app.get(
           encryptedAiStudioVault.maskedKey ||
           (process.env.GEMINI_API_KEY ? 'ENV_GEMINI_API_KEY' : null),
         aiStudioKeyFingerprint: encryptedAiStudioVault.keyFingerprint || null,
+        transportCipher: encryptedAiStudioVault.transportCipher || null,
+        rsaPublicKeySpkiBase64: AI_VAULT_RSA_SPKI_BASE64,
+        rsaKeyFingerprint: AI_VAULT_RSA_FINGERPRINT,
         vertexAiApiEnabled: enabledServiceNamesSet.has('aiplatform.googleapis.com'),
         generativeLanguageApiEnabled: enabledServiceNamesSet.has(
           'generativelanguage.googleapis.com'
@@ -60804,7 +60807,9 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
     focusArea = 'FULL_SOC_TRIAGE',
     customQuestion = '',
     preferredProvider = 'AUTO', // 'AUTO' | 'AI_STUDIO_KEY' | 'VERTEX_AI_OAUTH'
+    encryptedKeyBase64 = '',
     inlineApiKey = '',
+    browserDirectResult = null,
     socSnapshot = {},
   } = req.body || {};
 
@@ -60822,16 +60827,58 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
-    // Optional: If operator provided an inline Google AI Studio API Key (AIzaSy...) directly in Pillar 05, seal it in AES-256-GCM RAM Vault immediately
-    if (inlineApiKey && String(inlineApiKey).trim().length >= 12) {
+    // Mode 2 Anti-Sniffing Wire Envelope: Decrypt RSA-OAEP-256 browser-encrypted key into AES-256-GCM Server RAM Vault
+    if (encryptedKeyBase64) {
+      try {
+        const decryptedBuf = crypto.privateDecrypt(
+          {
+            key: AI_VAULT_RSA_KEYPAIR.privateKey,
+            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+            oaepHash: 'sha256',
+          },
+          Buffer.from(String(encryptedKeyBase64), 'base64')
+        );
+        const unwrapped = JSON.parse(decryptedBuf.toString('utf8'));
+        const unwrappedKey = String(unwrapped.apiKey || '').trim();
+        if (unwrappedKey.length >= 12) {
+          encryptApiKeyToMemory(
+            unwrappedKey,
+            selectedModel,
+            `RSA-OAEP-256 Browser Ciphertext (${AI_VAULT_RSA_FINGERPRINT}) -> AES-256-GCM Server RAM`
+          );
+        }
+      } catch {
+        // ignore invalid RSA envelope
+      }
+    } else if (inlineApiKey && String(inlineApiKey).trim().length >= 12) {
       encryptApiKeyToMemory(
         String(inlineApiKey).trim(),
         selectedModel,
-        'SOC Pillar 05 Inline Seal -> AES-256-GCM Server RAM'
+        'SOC Pillar 05 Local Loopback -> AES-256-GCM Server RAM'
       );
     }
 
     const cleanCustomQuestion = String(customQuestion || '').trim();
+
+    // Mode 1 Anti-Sniffing Direct Browser -> Google HTTPS TLS 1.3 Receipt Sealing (0 bytes of API key ever sent over local HTTP)
+    if (browserDirectResult && browserDirectResult.briefingMarkdown) {
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'AI_INCIDENT_COMMANDER_BROWSER_DIRECT_TLS13',
+        target: cleanCustomQuestion
+          ? `${focusArea} ("${cleanCustomQuestion.slice(0, 60)}")`
+          : focusArea,
+        actor: account || 'soc-operator',
+        details: `Generated Ed25519-signed SOC Incident Commander briefing via Direct Browser -> Google HTTPS TLS 1.3 (${
+          browserDirectResult.resolvedModelId || selectedModel
+        }, 0 local HTTP key packets).`,
+      });
+      return res.json({
+        ok: true,
+        projectId,
+        receipt,
+      });
+    }
     const promptText = `You are the CloudPulse 2026 Autonomous Google Cloud SOC Incident Commander (${selectedModel}) protecting GCP project "${projectId}".
 Analyze the following 100% live Google Cloud REST API security telemetry and produce a structured, actionable Markdown incident & zero-trust remediation briefing:
 
