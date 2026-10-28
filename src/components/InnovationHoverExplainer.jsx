@@ -1948,6 +1948,96 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'Global Network World Map + Firewall X-Ray Engine',
     safetyMode: 'SIMULATION',
   },
+  VPC_BRIDGE_OPEN_SOC: {
+    badge: 'VPC <-> CLOUD SOC BIDIRECTIONAL BRIDGE',
+    title: 'Audit VPC Firewall Perimeter & 3-Vector Toxic Attack Paths in Cloud SOC',
+    whatItDoes:
+      'Hands off your live VPC firewall perimeter to the Wave 16 20-Pillar Autonomous Cloud SOC & SOAR War-Room, opening Pillar 02 (Toxic Combinations Graph) focused on any exposed 0.0.0.0/0 rules.',
+    enterpriseValue:
+      'Correlates network ingress (Vector 1) with attached VM/Cloud Run Service Account IAM privileges (Vector 2) and reachable BigQuery/GCS/Secret Manager crown jewels (Vector 3).',
+    gcpApis: 'compute.v1/firewalls · cloudresourcemanager.v1:getIamPolicy · Cloud SOC Pillar 02',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_BRIDGE_SOAR_QUARANTINE: {
+    badge: 'CLOUD SOC PILLAR 01 · SOAR IP QUARANTINE',
+    title: 'Open 1-Click SOAR Attacker IP / CIDR Quarantine (Priority-100 DENY)',
+    whatItDoes:
+      'Jumps to Cloud SOC Pillar 01 (MITRE ATT&CK Kill-Chains & SOAR Quarantine) pre-seeded to deploy or manage Priority-100 VPC INGRESS DENY rules against malicious caller IPs.',
+    enterpriseValue:
+      'Lets SecOps and NetOps engineers block active brute-force or credential-stuffing source CIDRs across the VPC perimeter in one click with an Ed25519 signed receipt.',
+    gcpApis: 'POST compute.v1/projects/{project}/global/firewalls (priority: 100, denied: all)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_BRIDGE_INV01_GUARDIAN: {
+    badge: 'CLOUD SOC PILLAR 20 · 12-INVARIANT GUARDIAN',
+    title: 'Open 12-Invariant Self-Healing Reconciler (`INV-01` Zero-Trust IAP)',
+    whatItDoes:
+      'Opens Cloud SOC Pillar 20 (Autonomous 12-Invariant Self-Healing Engine) focused on Invariant INV-01 (No public 0.0.0.0/0 SSH/RDP ingress; enforce Cloud IAP 35.235.240.0/20).',
+    enterpriseValue:
+      'Continuously verifies formal Zero-Trust network compliance alongside 11 other project-wide security invariants and generates live Terraform HCL diffs.',
+    gcpApis: 'GET / POST /api/project/{project}/soc/guardian-reconcile (INV-01 -> INV-12)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_BANNER_SEND_TO_SOC: {
+    badge: 'TOXIC ATTACK-PATH TRIAGE · CLOUD SOC',
+    title: 'Triage Flagged 0.0.0.0/0 Firewall Rule in Autonomous Cloud SOC',
+    whatItDoes:
+      'Sends the flagged high-risk 0.0.0.0/0 firewall rule directly into the Cloud SOC & SOAR War-Room with its ports, CIDRs, and priority pre-loaded in the Active VPC Perimeter Triage Banner.',
+    enterpriseValue:
+      'Enables 1-click transition from a VPC security advisory to full blast-radius inspection, IAP lockdown, and Gemini 3.8 SOC Incident Commander briefing.',
+    gcpApis: 'VPC & Firewall Studio -> Cloud SOC Pillar 02 & Pillar 05 (Gemini Commander)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_NET_SOC_EGRESS_AUDIT: {
+    badge: 'CLOUD SOC PILLAR 17 · EGRESS & SUBNET PGA',
+    title: 'Audit VPC Egress Route Table (`0.0.0.0/0` Hijack) & Subnet Private Google Access',
+    whatItDoes:
+      'Opens Cloud SOC Pillar 17 (DNSSEC, VPC Egress & KMS Forensics) for this VPC network to inspect custom 0.0.0.0/0 next-hop routes and verify Private Google Access (PGA) across all attached regional subnets.',
+    enterpriseValue:
+      'Detects unauthorized egress route hijacking and ensures private VMs can reach Google APIs without public internet traversal.',
+    gcpApis: 'compute.v1/routes · compute.v1/aggregated/subnetworks (privateIpGoogleAccess)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_SEND_TO_SOC: {
+    badge: 'SEND RULE TO CLOUD SOC & SOAR',
+    title: 'Inspect & Remediate This Firewall Rule in Autonomous Cloud SOC',
+    whatItDoes:
+      'Opens the Autonomous Cloud SOC & SOAR War-Room pre-seeded with this exact firewall rule (`ALLOW` rules open Toxic Attack-Path Graph; `DENY` rules open SOAR Quarantine; `EGRESS` rules open Route & PGA Forensics).',
+    enterpriseValue:
+      'Connects individual firewall rules directly to MITRE ATT&CK audit logs, 3-vector toxic path analysis, Ed25519 receipts, and ClickOps-to-GitOps (`main.tf`) export.',
+    gcpApis: 'Bidirectional VPC <-> Cloud SOC Context Handoff',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_BADGE_SOAR: {
+    badge: 'CLOUD SOC SOAR QUARANTINE GUARDRAIL',
+    title: 'High-Priority SOAR Perimeter Quarantine Rule (`DENY` Priority <= 200)',
+    whatItDoes:
+      'Indicates that this firewall rule is an active high-precedence `DENY` guardrail (such as a `/32` attacker IP block deployed from Cloud SOC Pillar 01 or a Priority-100 brute-force shield).',
+    enterpriseValue:
+      'Evaluated before standard Priority-1000 and Priority-65534 rules, dropping malicious packets at Google’s Andromeda edge before they ever reach VM network interfaces.',
+    gcpApis: 'compute.v1/firewalls (denied[], priority <= 200)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_OPEN_IN_VPC_STUDIO: {
+    badge: 'CLOUD SOC -> VPC FIREWALL STUDIO BRIDGE',
+    title: 'Inspect, Edit, or Simulate This Rule in VPC & Firewalls Studio',
+    whatItDoes:
+      'Jumps from the Cloud SOC alert or SOAR quarantine rule directly into the Enterprise VPC Networks & Zero-Trust Firewall Center with this exact rule highlighted, scrolled into view, and loaded into the Priority 0→65535 Packet Match Simulator.',
+    enterpriseValue:
+      'Eliminates manual searching when moving from SOC incident detection to deep firewall rule editing, CIDR tuning, or Global Map X-Ray packet tracing.',
+    gcpApis: 'Cloud SOC -> VPC Firewall Studio + Priority 0->65535 Packet Simulator',
+    safetyMode: 'READ_ONLY',
+  },
+  SOC_TOP_VPC_BRIDGE: {
+    badge: 'VPC & FIREWALL STUDIO BRIDGE',
+    title: 'Open Enterprise VPC Networks & Zero-Trust Firewall Center',
+    whatItDoes:
+      'Switches to the VPC & Firewalls Studio to manage ALLOW/DENY rules, toggle Firewall Rules Logging (`logConfig`), run Priority 0→65535 packet simulations, or launch 3D Global Map X-Ray traces.',
+    enterpriseValue:
+      'Provides a seamless 1-click bridge between the 20-Pillar Cloud SOC War-Room and the live VPC Firewall Policy Matrix.',
+    gcpApis: 'compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**

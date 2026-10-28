@@ -1684,26 +1684,27 @@ const DOC_SECTIONS = [
   },
   {
     id: 'global-map-3-pillar-command-dock-and-live-vpc-firewall-center',
-    wave: 'WAVE 19 GLOBAL MAP 3-PILLAR COMMAND DOCK & ENTERPRISE VPC FIREWALL STUDIO',
+    wave: 'WAVE 19 GLOBAL MAP 3-PILLAR COMMAND DOCK, ENTERPRISE VPC FIREWALL STUDIO & BIDIRECTIONAL CLOUD SOC BRIDGE',
     title:
-      '47. Global Map 3-Pillar Command Dock + Plain-English Jargon Decoder & Restored Top-of-Page Live VPC Firewall Rules Center (1-Click Logs: ON/OFF + Storage Ingestion Guardrail)',
-    badge: 'Global Map + VPC & Firewalls Tab (Top of Page)',
+      '47. Global Map 3-Pillar Command Dock + Restored Top-of-Page Live VPC Firewall Rules Center & Bidirectional Cloud SOC / SOAR Bridge',
+    badge: 'Global Map + VPC & Firewalls ↔ Cloud SOC (20 Pillars)',
     badgeColor:
       'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
     icon: ShieldCheck,
     targetTab: 'VPC_NETWORKS',
     problemSolved:
-      'The Global Map previously mixed 5 overlapping sub-modes and unexplained abbreviations (★ WINNER, SHADOWED, P-65535, CFE %) while closing an inspected Audit/Firewall event prevented re-inspecting it. Meanwhile, on the VPC & Firewalls tab, the Live VPC Firewall Rules CRUD studio needed to be prominently positioned at the very top of the page with 1-click live Firewall Logging toggles (Logs: ON / Logs: OFF), explicit Cloud Logging _Default storage ingestion warnings, strict CRITICAL/HIGH filtering on "0.0.0.0/0 Sensitive" & "Inspect N Flagged Rules", and hover explanation cards on every option.',
+      'The Global Map previously mixed 5 overlapping sub-modes and unexplained abbreviations (★ WINNER, SHADOWED, P-65535, CFE %) while closing an inspected Audit/Firewall event prevented re-inspecting it. Meanwhile, on the VPC & Firewalls tab, the Live VPC Firewall Rules CRUD studio needed to be prominently positioned at the very top of the page with 1-click live Firewall Logging toggles (Logs: ON / Logs: OFF), explicit Cloud Logging _Default storage ingestion warnings, strict CRITICAL/HIGH filtering on "0.0.0.0/0 Sensitive" & "Inspect N Flagged Rules", and a live bidirectional bridge to the 20-Pillar Autonomous Cloud SOC & SOAR War-Room.',
     howItWorks: [
       'Global Map 3-Pillar Command Dock with Lucide Icons & Plain-English Jargon Decoder (GlobalNetworkWorldMap.jsx): Streamlines map operations into (1) Firewall X-Ray & Packet Matrix, (2) Failover, Chaos & Teleport (with Greenest/Cheapest/Nearest smart recommendations), and (3) Audit & Log Replay (with a fixed toggleable Inspect Event / Close Inspection card and stopPropagation on the Close button so events can be re-inspected anytime).',
       'Top-of-Page Enterprise VPC Networks & Zero-Trust Firewall Center (VpcNetworksAndFirewalls.jsx + GET /api/project/:id/vpc-firewalls): Displays Live VPC Firewall Rules (ALLOW/DENY, INGRESS/EGRESS, Create/Edit/Delete, 4 Quick Templates, and Interactive Packet Priority Match Simulator) at the top of the VPC & Firewalls tab.',
       '1-Click Live Firewall Audit Logging Toggle (● Logs: ON / ○ Logs: OFF) & Cloud Logging Storage Ingestion Warning: Clicking the Logs badge on any firewall rule patches logConfig.enable (INCLUDE_ALL_METADATA) live via PATCH /api/project/:id/firewalls/:name, while the hover explainer warns that every matched TCP/UDP/ICMP connection writes a JSON log entry into the Cloud Logging _Default bucket (consuming the 50 GiB/mo Free Tier and billing $0.50/GiB beyond 50 GiB/mo).',
       'Strict 0.0.0.0/0 Sensitive Filter & Comprehensive Hover Explainers (InnovationHoverExplainer.jsx): Clicking "0.0.0.0/0 Sensitive" or "Inspect N Flagged Rules" strictly filters for CRITICAL and HIGH risk exposures (SSH:22, RDP:3389, DB ports, All-Ports open to 0.0.0.0/0), clears stale search/VPC filters, and smoothly scrolls to #live-vpc-firewall-rules-section.',
+      'Bidirectional VPC ↔ 20-Pillar Autonomous Cloud SOC & SOAR Bridge (VpcNetworksAndFirewalls.jsx ↔ AutonomousCloudSocStudio.jsx): Send any Firewall Rule or VPC Network directly into the Cloud SOC War-Room — routing ALLOW rules to Pillar 02 (3-Vector Toxic Attack Paths), DENY / SOAR quarantine rules (cloudpulse-soc-quarantine-* / Priority ≤ 200) to Pillar 01 (MITRE Kill-Chains & /32 Quarantine), EGRESS / VPC Subnets to Pillar 17 (DNSSEC, 0.0.0.0/0 Egress & Subnet PGA), and 0.0.0.0/0 SSH/RDP exposures to Pillar 20 (INV-01 Self-Healing Reconciler) — or jump from any Cloud SOC pillar straight back into the VPC & Firewall Studio with the exact rule or VPC pre-focused.',
     ],
     apisUsed: [
-      'GET /api/project/:id/vpc-firewalls & GET /api/project/:id/global-map/live-telemetry',
+      'GET /api/project/:id/vpc-firewalls, GET /api/project/:id/soc/overview & GET /api/project/:id/global-map/live-telemetry',
       'PATCH /api/project/:id/firewalls/:firewallName (enableLogging, sourceRanges, disabled, priority, allowed/denied)',
-      'POST /api/project/:id/provision (serviceType: VPC_FIREWALL) & DELETE /api/project/:id/resource',
+      'POST /api/project/:id/soc/remediate (QUARANTINE_ATTACKER_IP, LOCK_OPEN_VPC_FIREWALL_TO_IAP, ENFORCE_SUBNET_PRIVATE_GOOGLE_ACCESS) & POST /api/project/:id/soc/guardian-reconcile',
     ],
     billingImpact:
       'VPC Firewall rules and Global Map TLS 1.3 telemetry probes cost $0.00/mo; hover explainers explicitly warn before enabling Firewall Rules Logging on high-traffic rules so you stay within the 50 GiB/mo Cloud Logging Free Tier.',

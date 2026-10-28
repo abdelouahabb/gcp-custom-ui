@@ -234,6 +234,7 @@ export default function VpcNetworksAndFirewalls({
   onOpenProvisionVpc,
   onTestOnGlobalMap,
   onOpenLogsExplorer,
+  onOpenCloudSoc,
   onDeleteResource,
   onRefresh,
   loading = false,
@@ -246,6 +247,7 @@ export default function VpcNetworksAndFirewalls({
   const [localFirewalls, setLocalFirewalls] = useState(firewalls);
   const [directFetching, setDirectFetching] = useState(false);
   const [focusedSeedRuleName, setFocusedSeedRuleName] = useState(null);
+  const [focusedSeedSource, setFocusedSeedSource] = useState(null);
   const vpcs = localVpcs;
 
   useEffect(() => {
@@ -329,10 +331,13 @@ export default function VpcNetworksAndFirewalls({
     // Never set searchQuery to filter out the Live VPC Firewall Rules list!
     // Instead, keep all Live VPC Firewall Rules visible and highlight the seeded rule.
     setSearchQuery('');
-    setFilterMode('ALL');
-    setSelectedVpcFilter('ALL');
+    setFilterMode(initialRuleSeed.filterMode || 'ALL');
+    setSelectedVpcFilter(initialRuleSeed.vpcName || 'ALL');
     if (initialRuleSeed.ruleName) {
       setFocusedSeedRuleName(initialRuleSeed.ruleName);
+      setFocusedSeedSource(
+        initialRuleSeed.fromCloudSoc ? 'CLOUD_SOC' : 'GLOBAL_MAP'
+      );
     }
     if (initialRuleSeed.protocol) {
       setSimProtocol(String(initialRuleSeed.protocol).toLowerCase());
@@ -346,17 +351,29 @@ export default function VpcNetworksAndFirewalls({
     ) {
       setSimIp(initialRuleSeed.sourceIp);
     }
-    setActiveSubPanel('SIMULATOR');
+    setActiveSubPanel(
+      initialRuleSeed.openStudioMode !== undefined
+        ? initialRuleSeed.openStudioMode
+        : 'SIMULATOR'
+    );
     setTimeout(() => {
-      const el = document.getElementById('live-vpc-firewall-rules-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+      const cardEl = initialRuleSeed.ruleName
+        ? document.getElementById(`vpc-fw-card-${initialRuleSeed.ruleName}`)
+        : null;
+      const el =
+        cardEl || document.getElementById('live-vpc-firewall-rules-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 140);
   }, [
     initialRuleSeed?.nonce,
     initialRuleSeed?.ruleName,
     initialRuleSeed?.protocol,
     initialRuleSeed?.port,
     initialRuleSeed?.sourceIp,
+    initialRuleSeed?.filterMode,
+    initialRuleSeed?.vpcName,
+    initialRuleSeed?.openStudioMode,
+    initialRuleSeed?.fromCloudSoc,
   ]);
 
   const extractRuleTestSpec = (fw) => {
@@ -416,6 +433,44 @@ export default function VpcNetworksAndFirewalls({
       });
     } else if (onSelectTab) {
       onSelectTab('LOGS_SHELL');
+    }
+  };
+
+  const handleSendRuleToCloudSoc = (fw, pillarOverride = null) => {
+    const isDeny =
+      fw.action === 'DENY' || (Array.isArray(fw.denied) && fw.denied.length > 0);
+    const isEgress = (fw.direction || 'INGRESS').toUpperCase() === 'EGRESS';
+    const ranges = isEgress
+      ? fw.destinationRanges?.length
+        ? fw.destinationRanges
+        : ['0.0.0.0/0']
+      : fw.sourceRanges?.length
+      ? fw.sourceRanges
+      : ['0.0.0.0/0'];
+    const targetPillar =
+      pillarOverride ||
+      (isDeny
+        ? 'KILL_CHAINS'
+        : isEgress
+        ? 'DNS_EGRESS_KMS_FORENSICS'
+        : 'TOXIC_GRAPH');
+    const seed = {
+      sourceStudio: 'VPC_NETWORKS',
+      ruleName: fw.name,
+      vpcName: fw.network || 'default',
+      action: isDeny ? 'DENY' : 'ALLOW',
+      direction: isEgress ? 'EGRESS' : 'INGRESS',
+      priority: fw.priority ?? 1000,
+      protocols: fw.protocolsFormatted || [],
+      sourceRanges: ranges,
+      riskLevel: fw.risk?.level || 'MODERATE',
+      riskLabel: fw.risk?.label || 'Firewall Rule',
+      targetPillar,
+    };
+    if (onOpenCloudSoc) {
+      onOpenCloudSoc(seed);
+    } else if (onSelectTab) {
+      onSelectTab('CLOUD_SOC');
     }
   };
 
@@ -1086,6 +1141,13 @@ export default function VpcNetworksAndFirewalls({
     const exposedHighRisk = enrichedFirewalls.filter(
       (f) => f.risk.level === 'CRITICAL' || f.risk.level === 'HIGH'
     );
+    const soarQuarantineRules = enrichedFirewalls.filter(
+      (f) =>
+        f.action === 'DENY' &&
+        (String(f.name || '').startsWith('cloudpulse-soc-quarantine-') ||
+          String(f.name || '').startsWith('soc-') ||
+          (f.priority ?? 1000) <= 200)
+    );
     return {
       total,
       allowCount,
@@ -1094,6 +1156,7 @@ export default function VpcNetworksAndFirewalls({
       egressCount,
       disabledCount,
       exposedHighRisk,
+      soarQuarantineRules,
     };
   }, [enrichedFirewalls]);
 
@@ -1488,6 +1551,94 @@ export default function VpcNetworksAndFirewalls({
           </button>
         </div>
 
+        {/* Bidirectional VPC <-> Cloud SOC & SOAR Perimeter Bridge Strip */}
+        <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500/[0.08] via-indigo-500/[0.08] to-emerald-500/[0.08] border border-blue-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-2.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>VPC &harr; Cloud SOC &amp; SOAR Bridge</span>
+            </span>
+            <span className="text-xs font-mono text-zinc-700 dark:text-zinc-200">
+              <strong>{stats.exposedHighRisk.length}</strong> Toxic{' '}
+              <code>0.0.0.0/0</code> Exposure{stats.exposedHighRisk.length === 1 ? '' : 's'} ·{' '}
+              <strong>{stats.soarQuarantineRules.length}</strong> Active SOAR{' '}
+              <code>DENY</code> Guardrail{stats.soarQuarantineRules.length === 1 ? '' : 's'} ·{' '}
+              <strong>{vpcs.length}</strong> VPC Perimeter{vpcs.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              data-feature-id="VPC_BRIDGE_OPEN_SOC"
+              onClick={() => {
+                const topExposed = stats.exposedHighRisk[0] || enrichedFirewalls[0];
+                if (topExposed) {
+                  handleSendRuleToCloudSoc(topExposed, 'TOXIC_GRAPH');
+                } else if (onOpenCloudSoc) {
+                  onOpenCloudSoc({
+                    sourceStudio: 'VPC_NETWORKS',
+                    vpcName: vpcs[0]?.name || 'default',
+                    targetPillar: 'TOXIC_GRAPH',
+                  });
+                } else if (onSelectTab) {
+                  onSelectTab('CLOUD_SOC');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold transition-colors cursor-pointer"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>🛡️ Audit Toxic Paths in Cloud SOC &rarr;</span>
+            </button>
+
+            <button
+              type="button"
+              data-feature-id="VPC_BRIDGE_SOAR_QUARANTINE"
+              onClick={() => {
+                if (onOpenCloudSoc) {
+                  onOpenCloudSoc({
+                    sourceStudio: 'VPC_NETWORKS',
+                    ruleName:
+                      stats.soarQuarantineRules[0]?.name || 'soc-quarantine-cidr',
+                    vpcName: vpcs[0]?.name || 'default',
+                    quarantineIp: '198.51.100.77/32',
+                    targetPillar: 'KILL_CHAINS',
+                  });
+                } else if (onSelectTab) {
+                  onSelectTab('CLOUD_SOC');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/35 text-red-600 dark:text-red-300 text-xs font-mono font-extrabold transition-colors cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>⚡ SOAR /32 IP Quarantine ({stats.soarQuarantineRules.length})</span>
+            </button>
+
+            <button
+              type="button"
+              data-feature-id="VPC_BRIDGE_INV01_GUARDIAN"
+              onClick={() => {
+                const topExposed = stats.exposedHighRisk[0];
+                if (onOpenCloudSoc) {
+                  onOpenCloudSoc({
+                    sourceStudio: 'VPC_NETWORKS',
+                    ruleName: topExposed?.name || 'default-allow-ssh',
+                    vpcName: topExposed?.network || vpcs[0]?.name || 'default',
+                    riskLevel: topExposed?.risk?.level || 'SAFE',
+                    targetPillar: 'AUTONOMOUS_SELF_HEALING_GUARDIAN',
+                  });
+                } else if (onSelectTab) {
+                  onSelectTab('CLOUD_SOC');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-extrabold transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>🧬 12-Invariant Self-Healing (INV-01)</span>
+            </button>
+          </div>
+        </div>
+
         {/* High-Risk Public Port Exposure Alert Banner */}
         {stats.exposedHighRisk.length > 0 && (
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1502,36 +1653,51 @@ export default function VpcNetworksAndFirewalls({
                   exposes sensitive management ports (SSH 22 / RDP 3389 / DB) to{' '}
                   <code className="font-mono font-bold">0.0.0.0/0</code>. Click{' '}
                   <strong>Lock to IAP (35.235.240.0/20)</strong> on any flagged rule
-                  below or deploy a priority-100 <code className="font-mono">DENY</code>{' '}
-                  guardrail.
+                  below, deploy a priority-100 <code className="font-mono">DENY</code>{' '}
+                  guardrail, or triage the 3-vector blast radius in Cloud SOC.
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              data-feature-id="VPC_FW_KPI_EXPOSED"
-              onClick={() => {
-                const nextMode = filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED';
-                setFilterMode(nextMode);
-                setSearchQuery('');
-                setSelectedVpcFilter('ALL');
-                const el = document.getElementById(
-                  'live-vpc-firewall-rules-section'
-                );
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                data-feature-id="VPC_FW_KPI_EXPOSED"
+                onClick={() => {
+                  const nextMode = filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED';
+                  setFilterMode(nextMode);
+                  setSearchQuery('');
+                  setSelectedVpcFilter('ALL');
+                  const el = document.getElementById(
+                    'live-vpc-firewall-rules-section'
+                  );
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-mono font-bold text-xs shrink-0 cursor-pointer"
+              >
+                {filterMode === 'EXPOSED'
+                  ? `Showing ${stats.exposedHighRisk.length} Flagged Rule${
+                      stats.exposedHighRisk.length === 1 ? '' : 's'
+                    } (Click to Show All)`
+                  : `Inspect ${stats.exposedHighRisk.length} Flagged Rule${
+                      stats.exposedHighRisk.length === 1 ? '' : 's'
+                    }`}
+              </button>
+              <button
+                type="button"
+                data-feature-id="VPC_BANNER_SEND_TO_SOC"
+                onClick={() =>
+                  handleSendRuleToCloudSoc(
+                    stats.exposedHighRisk[0],
+                    'TOXIC_GRAPH'
+                  )
                 }
-              }}
-              className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-mono font-bold text-xs shrink-0 cursor-pointer"
-            >
-              {filterMode === 'EXPOSED'
-                ? `Showing ${stats.exposedHighRisk.length} Flagged Rule${
-                    stats.exposedHighRisk.length === 1 ? '' : 's'
-                  } (Click to Show All)`
-                : `Inspect ${stats.exposedHighRisk.length} Flagged Rule${
-                    stats.exposedHighRisk.length === 1 ? '' : 's'
-                  }`}
-            </button>
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-mono font-extrabold text-xs shrink-0 cursor-pointer"
+              >
+                🛡️ Triage in Cloud SOC &rarr;
+              </button>
+            </div>
           </div>
         )}
 
@@ -2258,7 +2424,7 @@ export default function VpcNetworksAndFirewalls({
                             : 'CUSTOM SUBNETS'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-zinc-500">
+                      <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-zinc-500 flex-wrap">
                         <span>BGP: {vpc.routingMode}</span>
                         <span>·</span>
                         <span>MTU: {vpc.mtu}</span>
@@ -2275,6 +2441,25 @@ export default function VpcNetworksAndFirewalls({
                         >
                           {rulesForVpc} Firewall Rules{' '}
                           {isSelectedFilter ? '(Filtered)' : ''}
+                        </button>
+                        <span>·</span>
+                        <button
+                          type="button"
+                          data-feature-id="VPC_NET_SOC_EGRESS_AUDIT"
+                          onClick={() => {
+                            if (onOpenCloudSoc) {
+                              onOpenCloudSoc({
+                                sourceStudio: 'VPC_NETWORKS',
+                                vpcName: vpc.name,
+                                targetPillar: 'DNS_EGRESS_KMS_FORENSICS',
+                              });
+                            } else if (onSelectTab) {
+                              onSelectTab('CLOUD_SOC');
+                            }
+                          }}
+                          className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                        >
+                          🛡️ SOC Egress &amp; PGA Audit &rarr;
                         </button>
                       </div>
                     </div>
@@ -2381,7 +2566,9 @@ export default function VpcNetworksAndFirewalls({
             <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded bg-sky-600 text-white text-[10px] font-extrabold">
-                  🎯 FOCUSED FROM GLOBAL MAP X-RAY
+                  {focusedSeedSource === 'CLOUD_SOC'
+                    ? '🛡️ FOCUSED FROM CLOUD SOC & SOAR WAR-ROOM'
+                    : '🎯 FOCUSED FROM GLOBAL MAP X-RAY'}
                 </span>
                 <span className="text-zinc-800 dark:text-zinc-200">
                   Rule:{' '}
@@ -2399,13 +2586,34 @@ export default function VpcNetworksAndFirewalls({
                   )}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setFocusedSeedRuleName(null)}
-                className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
-              >
-                ✕ Clear Focus
-              </button>
+              <div className="flex items-center gap-1.5">
+                {focusedSeedSource === 'CLOUD_SOC' && onOpenCloudSoc && (
+                  <button
+                    type="button"
+                    data-feature-id="VPC_BRIDGE_OPEN_SOC"
+                    onClick={() =>
+                      onOpenCloudSoc({
+                        sourceStudio: 'VPC_NETWORKS',
+                        ruleName: focusedSeedRuleName,
+                        targetPillar: 'TOXIC_GRAPH',
+                      })
+                    }
+                    className="px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer"
+                  >
+                    &larr; Return to Cloud SOC
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedSeedRuleName(null);
+                    setFocusedSeedSource(null);
+                  }}
+                  className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                >
+                  ✕ Clear Focus
+                </button>
+              </div>
             </div>
           )}
 
@@ -2503,6 +2711,7 @@ export default function VpcNetworksAndFirewalls({
 
                 return (
                   <div
+                    id={`vpc-fw-card-${fw.name}`}
                     key={fw.id || fw.name}
                     className={`bg-white dark:bg-[#202124] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
                       isFocusedFromMap
@@ -2597,6 +2806,22 @@ export default function VpcNetworksAndFirewalls({
                             {fw.risk.label}
                           </span>
 
+                          {/* SOAR Quarantine Guardrail Badge */}
+                          {isDeny &&
+                            (String(fw.name || '').startsWith(
+                              'cloudpulse-soc-quarantine-'
+                            ) ||
+                              String(fw.name || '').startsWith('soc-') ||
+                              (fw.priority ?? 1000) <= 200) && (
+                              <span
+                                data-feature-id="VPC_FW_BADGE_SOAR"
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-red-600 text-white cursor-help"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>SOAR QUARANTINE</span>
+                              </span>
+                            )}
+
                           {/* Interactive 1-Click Logs: ON / Logs: OFF Toggle Badge */}
                           <button
                             type="button"
@@ -2663,6 +2888,17 @@ export default function VpcNetworksAndFirewalls({
 
                       {/* Action Buttons Column: X-Ray on Map, Rule Logs, Lock to IAP, Restore Public, Enable/Disable Toggle, Edit, Delete */}
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <button
+                          type="button"
+                          data-feature-id="VPC_FW_SEND_TO_SOC"
+                          onClick={() => handleSendRuleToCloudSoc(fw)}
+                          title="Send this firewall rule to the Autonomous Cloud SOC & SOAR War-Room for 3-vector Toxic Attack-Path triage, /32 IP Quarantine, or Gemini SOC Commander briefing"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/35 transition-colors cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>🛡️ Cloud SOC ↗</span>
+                        </button>
+
                         <button
                           type="button"
                           data-feature-id="VPC_FW_XRAY_ON_MAP"

@@ -167,6 +167,9 @@ const SOC_PILLARS = [
 
 export default function AutonomousCloudSocStudio({
   projectId,
+  initialSocSeed,
+  onClearSocSeed,
+  onOpenVpcFirewallStudio,
   onRunInShell,
   onOpenHealthAndDrift,
   onNavigateTab,
@@ -377,6 +380,35 @@ export default function AutonomousCloudSocStudio({
   useEffect(() => {
     fetchSocOverview();
   }, [fetchSocOverview]);
+
+  useEffect(() => {
+    if (!initialSocSeed?.nonce) return;
+    if (initialSocSeed.targetPillar) {
+      setActivePillar(initialSocSeed.targetPillar);
+    } else if (initialSocSeed.ruleName) {
+      setActivePillar('TOXIC_GRAPH');
+    }
+    if (initialSocSeed.quarantineIp) {
+      setQuarantineIpInput(initialSocSeed.quarantineIp);
+    }
+  }, [
+    initialSocSeed?.nonce,
+    initialSocSeed?.targetPillar,
+    initialSocSeed?.ruleName,
+    initialSocSeed?.quarantineIp,
+  ]);
+
+  const handleJumpToVpcStudio = (seed = {}) => {
+    const payload = {
+      fromCloudSoc: true,
+      ...seed,
+    };
+    if (onOpenVpcFirewallStudio) {
+      onOpenVpcFirewallStudio(payload);
+    } else if (onNavigateTab) {
+      onNavigateTab('VPC_NETWORKS');
+    }
+  };
 
   useEffect(() => {
     if (activePillar === 'FLEET_SOC_MATRIX' && !fleetMatrix && !fleetLoading) {
@@ -630,6 +662,22 @@ export default function AutonomousCloudSocStudio({
 
             <button
               type="button"
+              data-feature-id="SOC_TOP_VPC_BRIDGE"
+              onClick={() =>
+                handleJumpToVpcStudio({
+                  ruleName: initialSocSeed?.ruleName || 'default-allow-ssh',
+                  vpcName: initialSocSeed?.vpcName || 'default',
+                })
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-emerald-500/45 text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer"
+              title="Open VPC Networks & Zero-Trust Firewall Studio with bidirectional SOC sync"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>🌐 VPC &amp; Firewall Studio &rarr;</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowGitOpsBridge((v) => !v)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer border ${
                 showGitOpsBridge
@@ -688,6 +736,136 @@ export default function AutonomousCloudSocStudio({
             </button>
           </div>
         </div>
+
+        {/* Active VPC & Firewall Perimeter Triage Context Banner (when seeded from VPC Networks & Firewalls Studio) */}
+        {initialSocSeed && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-500/15 via-indigo-500/15 to-emerald-500/15 border border-blue-400/50 space-y-2.5 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                  🛡️ VPC &harr; Cloud SOC Live Perimeter Handoff
+                </span>
+                {initialSocSeed.ruleName && (
+                  <span className="text-xs font-extrabold text-white">
+                    Rule:{' '}
+                    <span className="text-blue-300">
+                      {initialSocSeed.ruleName}
+                    </span>
+                  </span>
+                )}
+                {initialSocSeed.vpcName && (
+                  <span className="px-2 py-0.5 rounded bg-zinc-900/90 border border-zinc-700 text-zinc-200 text-[10px]">
+                    vpc:{initialSocSeed.vpcName}
+                  </span>
+                )}
+                {initialSocSeed.action && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                      initialSocSeed.action === 'DENY'
+                        ? 'bg-red-500/25 text-red-300 border border-red-500/40'
+                        : 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
+                    }`}
+                  >
+                    {initialSocSeed.action} {initialSocSeed.direction || 'INGRESS'} (P-{initialSocSeed.priority ?? 1000})
+                  </span>
+                )}
+                {Array.isArray(initialSocSeed.protocols) &&
+                  initialSocSeed.protocols.length > 0 && (
+                    <span className="text-[11px] text-zinc-300">
+                      Ports: {initialSocSeed.protocols.join(', ')}
+                    </span>
+                  )}
+                {Array.isArray(initialSocSeed.sourceRanges) &&
+                  initialSocSeed.sourceRanges.length > 0 && (
+                    <span className="text-[11px] text-amber-300">
+                      CIDR: {initialSocSeed.sourceRanges.join(', ')}
+                    </span>
+                  )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setActivePillar('TOXIC_GRAPH')}
+                  className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                    activePillar === 'TOXIC_GRAPH'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-blue-300 border border-blue-500/40'
+                  }`}
+                >
+                  Pillar 02: Toxic Attack Path
+                </button>
+                {initialSocSeed.ruleName &&
+                  initialSocSeed.action !== 'DENY' &&
+                  (initialSocSeed.sourceRanges || []).includes('0.0.0.0/0') && (
+                    <button
+                      type="button"
+                      disabled={Boolean(actionBusy)}
+                      onClick={() =>
+                        handleExecuteSocAction(
+                          `SEED_LOCK_IAP:${initialSocSeed.ruleName}`,
+                          {
+                            action: 'LOCK_OPEN_VPC_FIREWALL_TO_IAP',
+                            firewallRuleName: initialSocSeed.ruleName,
+                          }
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      🔒 Lock {initialSocSeed.ruleName} to IAP (35.235.240.0/20)
+                    </button>
+                  )}
+                <button
+                  type="button"
+                  onClick={() => setActivePillar('DNS_EGRESS_KMS_FORENSICS')}
+                  className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                    activePillar === 'DNS_EGRESS_KMS_FORENSICS'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-emerald-300 border border-emerald-500/40'
+                  }`}
+                >
+                  Pillar 17: VPC Egress &amp; PGA
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleRunAiCommander(
+                      `VPC_FIREWALL_TRIAGE:${
+                        initialSocSeed.ruleName || initialSocSeed.vpcName || 'default'
+                      }`
+                    )
+                  }
+                  disabled={aiLoading}
+                  className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  ✨ Gemini SOC Triage
+                </button>
+                <button
+                  type="button"
+                  data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                  onClick={() =>
+                    handleJumpToVpcStudio({
+                      ruleName: initialSocSeed.ruleName,
+                      vpcName: initialSocSeed.vpcName,
+                    })
+                  }
+                  className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-[10px] font-extrabold cursor-pointer"
+                >
+                  &larr; Return to VPC Studio
+                </button>
+                {onClearSocSeed && (
+                  <button
+                    type="button"
+                    onClick={onClearSocSeed}
+                    className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Live Health & Drift + ClickOps-to-GitOps (main.tf / imports.tf) Bridge Drawer */}
         {showGitOpsBridge && healthAndDriftBridge?.gitOpsBridge && (
@@ -974,6 +1152,19 @@ export default function AutonomousCloudSocStudio({
                       : 'Quarantine IP / CIDR Now'}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                  onClick={() =>
+                    handleJumpToVpcStudio({
+                      filterMode: 'DENY',
+                      ruleName: activeQuarantineRules[0]?.name || 'soc-block-cidr',
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
+                >
+                  <span>🌐 Open DENY Rules in VPC Studio &rarr;</span>
+                </button>
               </div>
             </div>
 
@@ -994,6 +1185,21 @@ export default function AutonomousCloudSocStudio({
                       <span className="text-zinc-500">
                         ({(r.sourceRanges || []).join(', ')} · priority {r.priority})
                       </span>
+                      <button
+                        type="button"
+                        data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                        onClick={() =>
+                          handleJumpToVpcStudio({
+                            ruleName: r.name,
+                            sourceIp: String((r.sourceRanges || [])[0] || '')
+                              .split('/')[0]
+                              .trim(),
+                          })
+                        }
+                        className="px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-[10px] text-blue-600 dark:text-blue-300 font-bold cursor-pointer"
+                      >
+                        Inspect in VPC &rarr;
+                      </button>
                       <button
                         type="button"
                         onClick={() =>
@@ -1336,17 +1542,31 @@ export default function AutonomousCloudSocStudio({
           <div className="space-y-2.5">
             {toxicCombinations.map((item) => {
               const isToxic = item.status === 'TOXIC_EXPOSED_PATH';
+              const isFirewallItem =
+                item.workloadType === 'VPC_FIREWALL' ||
+                item.workloadType === 'VPC_FIREWALL_RULE' ||
+                item.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP';
+              const isSeedFocused =
+                initialSocSeed?.ruleName &&
+                item.workloadName === initialSocSeed.ruleName;
               return (
                 <div
                   key={item.id}
                   className={`p-3.5 rounded-xl border space-y-2.5 ${
-                    isToxic
+                    isSeedFocused
+                      ? 'border-blue-500 ring-2 ring-blue-500/40 bg-blue-500/[0.06]'
+                      : isToxic
                       ? 'border-red-500/50 bg-red-500/5'
                       : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40'
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {isSeedFocused && (
+                        <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                          🎯 FOCUSED FROM VPC STUDIO
+                        </span>
+                      )}
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
                           isToxic
@@ -1366,45 +1586,62 @@ export default function AutonomousCloudSocStudio({
                       </span>
                     </div>
 
-                    {isToxic ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleExecuteSocAction(`REMEDIATE:${item.id}`, {
-                            action: item.remediationAction,
-                            serviceName: item.workloadName,
-                            region: item.region,
-                            firewallRuleName: item.workloadName,
-                          })
-                        }
-                        disabled={Boolean(actionBusy)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>
-                          {actionBusy === `REMEDIATE:${item.id}`
-                            ? 'Applying Zero-Trust Lock...'
-                            : item.remediationLabel}
-                        </span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleExecuteSocAction(`VERIFY_LOCK:${item.id}`, {
-                            action: item.remediationAction,
-                            serviceName: item.workloadName,
-                            region: item.region,
-                            firewallRuleName: item.workloadName,
-                          })
-                        }
-                        disabled={Boolean(actionBusy)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Re-Verify Zero-Trust Lock</span>
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {isFirewallItem && (
+                        <button
+                          type="button"
+                          data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                          onClick={() =>
+                            handleJumpToVpcStudio({
+                              ruleName: item.workloadName,
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-extrabold cursor-pointer"
+                        >
+                          <span>🌐 Edit / X-Ray in VPC Studio &rarr;</span>
+                        </button>
+                      )}
+
+                      {isToxic ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleExecuteSocAction(`REMEDIATE:${item.id}`, {
+                              action: item.remediationAction,
+                              serviceName: item.workloadName,
+                              region: item.region,
+                              firewallRuleName: item.workloadName,
+                            })
+                          }
+                          disabled={Boolean(actionBusy)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>
+                            {actionBusy === `REMEDIATE:${item.id}`
+                              ? 'Applying Zero-Trust Lock...'
+                              : item.remediationLabel}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleExecuteSocAction(`VERIFY_LOCK:${item.id}`, {
+                              action: item.remediationAction,
+                              serviceName: item.workloadName,
+                              region: item.region,
+                              firewallRuleName: item.workloadName,
+                            })
+                          }
+                          disabled={Boolean(actionBusy)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Re-Verify Zero-Trust Lock</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* 3-Vector Attack Path Row */}
@@ -3808,6 +4045,21 @@ export default function AutonomousCloudSocStudio({
                     100% SUBNET PGA ENFORCED ({dnsEgressAndKmsRadar.subnets.length}/{dnsEgressAndKmsRadar.subnets.length})
                   </span>
                 )}
+                <button
+                  type="button"
+                  data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                  onClick={() =>
+                    handleJumpToVpcStudio({
+                      vpcName:
+                        initialSocSeed?.vpcName ||
+                        dnsEgressAndKmsRadar.subnets[0]?.network ||
+                        'default',
+                    })
+                  }
+                  className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-extrabold cursor-pointer"
+                >
+                  🌐 Open VPC &amp; Subnets Studio &rarr;
+                </button>
                 {onNavigateTab && (
                   <button
                     type="button"
@@ -4506,6 +4758,21 @@ export default function AutonomousCloudSocStudio({
                         <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-[10px] font-mono font-bold">
                           VERIFIED LIVE
                         </span>
+                      )}
+                      {inv.id === 'INV-01' && (
+                        <button
+                          type="button"
+                          data-feature-id="SOC_OPEN_IN_VPC_STUDIO"
+                          onClick={() =>
+                            handleJumpToVpcStudio({
+                              ruleName: 'default-allow-ssh',
+                              filterMode: 'EXPOSED',
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                        >
+                          🌐 VPC Studio (0.0.0.0/0) &rarr;
+                        </button>
                       )}
                       <button
                         type="button"

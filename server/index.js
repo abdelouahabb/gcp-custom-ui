@@ -56545,9 +56545,16 @@ app.get(
       },
     ];
 
-    // Active SOC Quarantine Firewall Rules
+    // Active SOC Quarantine & High-Priority DENY Firewall Rules
     const activeQuarantineRules = firewallRules
-      .filter((fw) => String(fw.name || '').startsWith('cloudpulse-soc-quarantine-'))
+      .filter(
+        (fw) =>
+          String(fw.name || '').startsWith('cloudpulse-soc-quarantine-') ||
+          String(fw.name || '').startsWith('soc-') ||
+          (Array.isArray(fw.denied) &&
+            fw.denied.length > 0 &&
+            Number(fw.priority ?? 1000) <= 200)
+      )
       .map((fw) => ({
         name: fw.name,
         priority: fw.priority,

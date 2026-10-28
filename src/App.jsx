@@ -3876,6 +3876,7 @@ function CloudPulseCockpit() {
   const [logExplorerSeedSpec, setLogExplorerSeedSpec] = useState(null);
   const [globalMapXRaySeed, setGlobalMapXRaySeed] = useState(null);
   const [vpcStudioRuleSeed, setVpcStudioRuleSeed] = useState(null);
+  const [cloudSocSeed, setCloudSocSeed] = useState(null);
 
   const handleRunInShell = (cmd) => {
     setShellSeedCommand(cmd);
@@ -3910,7 +3911,15 @@ function CloudPulseCockpit() {
     setVpcStudioRuleSeed({ ...seed, nonce: Date.now() });
     setActiveTab('VPC_NETWORKS');
     showToast(
-      `Opened "${seed?.ruleName || 'Firewall Policy'}" in VPC & Firewalls Studio`
+      `Opened "${seed?.ruleName || seed?.vpcName || 'Firewall Policy'}" in VPC & Firewalls Studio`
+    );
+  };
+
+  const handleOpenInCloudSoc = (seed) => {
+    setCloudSocSeed({ ...seed, nonce: Date.now() });
+    setActiveTab('CLOUD_SOC');
+    showToast(
+      `Opened "${seed?.ruleName || seed?.vpcName || 'VPC Perimeter'}" in Cloud SOC & SOAR War-Room`
     );
   };
 
@@ -5664,6 +5673,7 @@ function CloudPulseCockpit() {
                     }
                     onTestOnGlobalMap={handleTestRuleOnGlobalMap}
                     onOpenLogsExplorer={handleOpenInLogsExplorer}
+                    onOpenCloudSoc={handleOpenInCloudSoc}
                     onDeleteResource={handleDeleteResource}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     loading={loadingOverview}
@@ -5866,6 +5876,9 @@ function CloudPulseCockpit() {
               {activeTab === 'CLOUD_SOC' && (
                 <AutonomousCloudSocStudio
                   projectId={selectedProjectId}
+                  initialSocSeed={cloudSocSeed}
+                  onClearSocSeed={() => setCloudSocSeed(null)}
+                  onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
                   onRunInShell={handleRunInShell}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onNavigateTab={handleNavigateStudioTab}
