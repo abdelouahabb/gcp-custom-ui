@@ -213,6 +213,10 @@ export default function AutonomousCloudSocStudio({
 
   // Gemini Incident Commander state
   const [selectedAiModel, setSelectedAiModel] = useState('gemini-3.8-flash');
+  const [aiPreferredProvider, setAiPreferredProvider] = useState('AUTO');
+  const [aiCustomQuestion, setAiCustomQuestion] = useState('');
+  const [inlineApiKeyInput, setInlineApiKeyInput] = useState('');
+  const [aiKeySaving, setAiKeySaving] = useState(false);
   const [aiBriefing, setAiBriefing] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -473,20 +477,92 @@ export default function AutonomousCloudSocStudio({
     }
   };
 
-  const handleRunAiCommander = async (focusArea = 'FULL_SOC_TRIAGE') => {
+  const handleSealAiStudioKey = async () => {
+    const cleanKey = String(inlineApiKeyInput || '').trim();
+    if (!cleanKey || cleanKey.length < 12) {
+      setStatusBanner({
+        type: 'error',
+        message: 'Please paste a valid Google AI Studio API Key (e.g., AIzaSy...).',
+      });
+      return;
+    }
+    setAiKeySaving(true);
+    try {
+      const res = await axios.post('/api/ai-vault/configure', {
+        apiKey: cleanKey,
+        model: selectedAiModel,
+      });
+      setInlineApiKeyInput('');
+      setStatusBanner({
+        type: 'success',
+        message:
+          res.data?.message ||
+          `Sealed Google AI Studio Key (${res.data?.maskedKey}) in AES-256-GCM RAM Vault!`,
+      });
+      await fetchSocOverview();
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to seal Google AI Studio API key.',
+      });
+    } finally {
+      setAiKeySaving(false);
+    }
+  };
+
+  const handleClearAiStudioKey = async () => {
+    setAiKeySaving(true);
+    try {
+      await axios.delete('/api/ai-vault/clear');
+      setStatusBanner({
+        type: 'success',
+        message: 'Cleared Google AI Studio API key from server RAM vault.',
+      });
+      await fetchSocOverview();
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to clear AI Studio key.',
+      });
+    } finally {
+      setAiKeySaving(false);
+    }
+  };
+
+  const handleRunAiCommander = async (
+    focusArea = 'FULL_SOC_TRIAGE',
+    customQuestionOverride = null
+  ) => {
     if (!projectId || !socData) return;
     setAiLoading(true);
+    setActivePillar('AI_COMMANDER');
     try {
+      const questionToSend =
+        typeof customQuestionOverride === 'string'
+          ? customQuestionOverride
+          : aiCustomQuestion;
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/soc/ai-commander`,
         {
           model: selectedAiModel,
           focusArea,
+          customQuestion: questionToSend,
+          preferredProvider: aiPreferredProvider,
+          inlineApiKey: String(inlineApiKeyInput || '').trim(),
           socSnapshot: socData,
         }
       );
+      if (inlineApiKeyInput && String(inlineApiKeyInput).trim().length >= 12) {
+        setInlineApiKeyInput('');
+        fetchSocOverview();
+      }
       setAiBriefing(res.data);
-      setActivePillar('AI_COMMANDER');
     } catch (err) {
       setStatusBanner({
         type: 'error',
@@ -828,13 +904,28 @@ export default function AutonomousCloudSocStudio({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    const seedQ = initialSocSeed.ruleName
+                      ? `Audit VPC firewall rule "${initialSocSeed.ruleName}" (${
+                          initialSocSeed.action || 'ALLOW'
+                        } ${initialSocSeed.direction || 'INGRESS'}, ports: ${(
+                          initialSocSeed.protocols || []
+                        ).join(', ') || 'all'}, CIDR: ${(
+                          initialSocSeed.sourceRanges || []
+                        ).join(', ') || '0.0.0.0/0'}) on VPC "${
+                          initialSocSeed.vpcName || 'default'
+                        }" and provide a zero-trust remediation plan.`
+                      : `Audit VPC network "${
+                          initialSocSeed.vpcName || 'default'
+                        }" egress routes, subnet Private Google Access, and firewall rules.`;
+                    setAiCustomQuestion(seedQ);
                     handleRunAiCommander(
                       `VPC_FIREWALL_TRIAGE:${
                         initialSocSeed.ruleName || initialSocSeed.vpcName || 'default'
-                      }`
-                    )
-                  }
+                      }`,
+                      seedQ
+                    );
+                  }}
                   disabled={aiLoading}
                   className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                 >
@@ -1986,7 +2077,7 @@ export default function AutonomousCloudSocStudio({
          ==================================================================== */}
       {activePillar === 'AI_COMMANDER' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1994,17 +2085,28 @@ export default function AutonomousCloudSocStudio({
                   <span>Gemini 3.8 Flash &amp; 3.1 Pro Autonomous SOC Incident Commander</span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Synthesizes live <code className="font-mono">cloudaudit</code> kill-chains, toxic attack paths, and canary tripwire status into an Ed25519-signed forensic briefing and containment runbook.
+                  Runs real LLM inference via either <strong className="text-zinc-700 dark:text-zinc-200">Keyless Google Cloud Vertex AI (using your active GCP OAuth2 token — no API key needed)</strong> or <strong className="text-zinc-700 dark:text-zinc-200">Google AI Studio (<code className="font-mono">AIzaSy...</code> AES-256-GCM RAM Vault)</strong>, with transparent fallback to the local Deterministic Telemetry Compiler.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={aiPreferredProvider}
+                  onChange={(e) => setAiPreferredProvider(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                  title="Choose how Gemini Incident Commander executes inference"
+                >
+                  <option value="AUTO">Engine: Auto (AI Studio Key → Vertex AI OAuth2 → Compiler)</option>
+                  <option value="VERTEX_AI_OAUTH">Engine: Keyless Vertex AI OAuth2 Only (No API Key)</option>
+                  <option value="AI_STUDIO_KEY">Engine: Google AI Studio API Key Only (AIzaSy...)</option>
+                  <option value="DETERMINISTIC_ONLY">Engine: Deterministic Telemetry Compiler ($0 Local)</option>
+                </select>
                 <select
                   value={selectedAiModel}
                   onChange={(e) => setSelectedAiModel(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
                 >
-                  <option value="gemini-3.8-flash">gemini-3.8-flash (Fast SOC Triage)</option>
-                  <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Forensic Reasoning)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash / 2.5-flash (Fast SOC Triage)</option>
+                  <option value="gemini-3.1-pro">gemini-3.1-pro / 2.5-pro (Deep Forensic Reasoning)</option>
                 </select>
                 <button
                   type="button"
@@ -2014,22 +2116,236 @@ export default function AutonomousCloudSocStudio({
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
-                    {aiLoading ? 'Generating Briefing...' : 'Generate Signed SOC Briefing'}
+                    {aiLoading ? 'Running SOC Inference...' : 'Generate Signed SOC Briefing'}
                   </span>
                 </button>
               </div>
             </div>
 
+            {/* Dual-Path Live Credential & Engine Readiness Bar (Keyless Vertex AI OAuth2 + Optional AI Studio Key Vault) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
+              {/* Path A: Keyless Google Cloud Vertex AI (OAuth2 Token) */}
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                      Path A · Keyless Vertex AI (GCP OAuth2 Token)
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                        socData?.aiCommanderStatus?.vertexAiApiEnabled
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                      }`}
+                    >
+                      {socData?.aiCommanderStatus?.vertexAiApiEnabled
+                        ? '🟢 VERTEX AI API ENABLED'
+                        : '🟡 VERTEX AI API NOT ENABLED'}
+                    </span>
+                  </div>
+                  {!socData?.aiCommanderStatus?.vertexAiApiEnabled && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleExecuteSocAction('ENABLE_VERTEX_AI_FOR_SOC', {
+                          action: 'ENABLE_VERTEX_AI_FOR_SOC',
+                        })
+                      }
+                      disabled={Boolean(actionBusy)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC'
+                        ? 'Enabling Vertex AI...'
+                        : '⚡ 1-Click Enable Vertex AI (No API Key Needed)'}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Uses your active Google Cloud login token against <code className="font-mono">us-central1-aiplatform.googleapis.com</code> and <code className="font-mono">generativelanguage.googleapis.com</code>. Zero API keys required.
+                </p>
+              </div>
+
+              {/* Path B: Google AI Studio API Key (AES-256-GCM Sealed RAM Vault) */}
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                      Path B · Google AI Studio Key Vault (<code className="font-mono">AIzaSy...</code>)
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                        socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
+                        aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      {socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
+                      aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
+                        ? `🔒 SEALED (${
+                            aiBriefing?.aiCommanderStatus?.aiStudioMaskedKey ||
+                            socData?.aiCommanderStatus?.aiStudioMaskedKey ||
+                            'AIza••••'
+                          })`
+                        : 'OPTIONAL · NOT CONFIGURED'}
+                    </span>
+                  </div>
+                  {(socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
+                    aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured) && (
+                    <button
+                      type="button"
+                      onClick={handleClearAiStudioKey}
+                      disabled={aiKeySaving}
+                      className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                    >
+                      Clear Key
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={inlineApiKeyInput}
+                    onChange={(e) => setInlineApiKeyInput(e.target.value)}
+                    placeholder="Paste Google AI Studio Key (AIzaSy...) to seal in AES-256-GCM RAM..."
+                    className="flex-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSealAiStudioKey}
+                    disabled={aiKeySaving || !inlineApiKeyInput.trim()}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {aiKeySaving ? 'Sealing...' : '🔒 Seal Key'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Custom Forensic Question Bar & Quick Investigation Presets */}
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  value={aiCustomQuestion}
+                  onChange={(e) => setAiCustomQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !aiLoading) {
+                      handleRunAiCommander('CUSTOM_FORENSIC_QUERY');
+                    }
+                  }}
+                  placeholder={`Ask Gemini SOC Commander anything about ${projectId} (e.g., "Audit my 0.0.0.0/0 VPC firewall rules and write the exact IAP lockdown commands")...`}
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRunAiCommander('CUSTOM_FORENSIC_QUERY')}
+                  disabled={aiLoading}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {aiLoading ? 'Analyzing...' : 'Ask Incident Commander →'}
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                  Quick Forensic Prompts:
+                </span>
+                {[
+                  {
+                    label: '🌐 Audit 0.0.0.0/0 VPC Firewalls & IAP Lock',
+                    focus: 'VPC_PERIMETER_TRIAGE',
+                    q: 'Analyze all exposed 0.0.0.0/0 VPC firewall rules in this project and provide exact gcloud + Terraform IAP (35.235.240.0/20) lockdown commands.',
+                  },
+                  {
+                    label: '🕵️ Explain Top CloudAudit Kill-Chains',
+                    focus: 'KILL_CHAIN_ATTRIBUTION',
+                    q: 'Analyze the top cloudaudit behavioral kill-chains, identify whether the callers are legitimate operators or suspicious actors, and recommend containment.',
+                  },
+                  {
+                    label: '🔑 Audit SA Keys & IAM Privilege Escalation',
+                    focus: 'IAM_SUPPLY_CHAIN_AUDIT',
+                    q: 'Inspect service account keys and IAM privilege-escalation paths in this project and provide a zero-downtime key rotation and WIF migration plan.',
+                  },
+                  {
+                    label: '🪣 Audit GCS Public Access & Secret Hygiene',
+                    focus: 'DATA_EXFILTRATION_DLP',
+                    q: 'Evaluate Cloud Storage publicAccessPrevention, Uniform Bucket-Level Access, and Secret Manager rotation hygiene for this project.',
+                  },
+                ].map((preset) => (
+                  <button
+                    key={preset.focus}
+                    type="button"
+                    onClick={() => {
+                      setAiCustomQuestion(preset.q);
+                      handleRunAiCommander(preset.focus, preset.q);
+                    }}
+                    disabled={aiLoading}
+                    className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-blue-500/10 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {aiBriefing && (
-              <div className="p-4 rounded-xl bg-zinc-950 border border-blue-500/40 text-zinc-100 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-blue-300 border-b border-zinc-800 pb-2">
-                  <span>Model: {aiBriefing.model}</span>
+              <div className="p-4 rounded-xl bg-zinc-950 border border-blue-500/40 text-zinc-100 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono border-b border-zinc-800 pb-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                        aiBriefing.isLiveLlm
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      }`}
+                    >
+                      {aiBriefing.isLiveLlm
+                        ? `🟢 LIVE GEMINI LLM (${aiBriefing.executionMode})`
+                        : '🟡 DETERMINISTIC TELEMETRY COMPILER (NO LIVE LLM USED)'}
+                    </span>
+                    <span className="text-blue-300 font-bold">
+                      Engine: {aiBriefing.engineUsed || aiBriefing.model}
+                    </span>
+                    {typeof aiBriefing.latencyMs === 'number' && (
+                      <span className="text-zinc-400">
+                        · {aiBriefing.latencyMs}ms
+                      </span>
+                    )}
+                    {aiBriefing.tokenUsage && (
+                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px]">
+                        Tokens: {aiBriefing.tokenUsage.promptTokens} in +{' '}
+                        {aiBriefing.tokenUsage.outputTokens} out ={' '}
+                        {aiBriefing.tokenUsage.totalTokens} total
+                      </span>
+                    )}
+                  </div>
                   {aiBriefing.receipt && (
-                    <span>
-                      Ed25519 Signature: {String(aiBriefing.receipt.signatureHex || '').slice(0, 28)}...
+                    <span className="text-emerald-400">
+                      Ed25519 Sig: {String(aiBriefing.receipt.signatureHex || '').slice(0, 24)}...
                     </span>
                   )}
                 </div>
+
+                {!aiBriefing.isLiveLlm &&
+                  Array.isArray(aiBriefing.diagnostics) &&
+                  aiBriefing.diagnostics.length > 0 && (
+                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-amber-200 space-y-1">
+                      <div className="font-extrabold text-amber-300">
+                        Why Live LLM Inference Fell Back to the Local Telemetry Compiler:
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 text-[10px] text-amber-100/90">
+                        {aiBriefing.diagnostics.map((d, idx) => (
+                          <li key={idx} className="break-all">
+                            {d}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="pt-1 text-[10px] text-emerald-300 font-bold">
+                        → Click &ldquo;⚡ 1-Click Enable Vertex AI (No API Key Needed)&rdquo; above to use your GCP OAuth token, OR paste a free Google AI Studio key (`AIzaSy...`).
+                      </div>
+                    </div>
+                  )}
+
                 <pre className="text-xs font-mono whitespace-pre-wrap text-zinc-200 leading-relaxed overflow-x-auto">
                   {aiBriefing.briefingMarkdown}
                 </pre>
