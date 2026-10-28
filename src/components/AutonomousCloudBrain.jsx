@@ -1315,6 +1315,7 @@ export default function AutonomousCloudBrain({
               </span>
             </div>
             <select
+              data-feature-id="PRE_CRIME_SCENARIO_SELECT"
               value={scenarioId}
               onChange={(e) => {
                 const nextId = e.target.value;
@@ -1878,6 +1879,7 @@ export default function AutonomousCloudBrain({
               <button
                 key={arch.id}
                 type="button"
+                data-feature-id={arch.id}
                 onClick={() => setSelectedArchetypeId(arch.id)}
                 className={`p-3 rounded-md border text-left font-mono transition-all cursor-pointer ${
                   active

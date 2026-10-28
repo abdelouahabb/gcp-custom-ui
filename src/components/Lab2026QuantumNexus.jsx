@@ -278,6 +278,7 @@ export default function Lab2026QuantumNexus({
                 <button
                   key={sim.id}
                   type="button"
+                  data-feature-id={sim.id}
                   onClick={() => setSimulationType(sim.id)}
                   className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer transition-all ${
                     simulationType === sim.id

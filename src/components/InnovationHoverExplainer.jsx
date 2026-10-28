@@ -2178,6 +2178,360 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'usageMetadata (promptTokenCount, candidatesTokenCount, totalTokenCount) + Ed25519 (RFC 8032)',
     safetyMode: 'READ_ONLY',
   },
+
+  // ============================================================================
+  // 2026 INNOVATION SUITE — ADDITIONAL SUB-TABS, PERSONA WAR-ROOM & BLUEPRINTS
+  // ============================================================================
+  FINOPS_PARK_COMPUTE: {
+    badge: 'NIGHT-MODE COMPUTE HIBERNATION ($0/HR COMPUTE)',
+    title: 'Park Compute Fleet (Stop Running VMs & Scale Warm Cloud Run to 0)',
+    whatItDoes:
+      'Calls `compute.instances.stop` on running non-production Compute Engine VMs and patches Cloud Run services to `minInstanceCount = 0` so active vCPU/RAM billing drops to $0.00/hr overnight.',
+    enterpriseValue:
+      'Eliminates 14+ hours/day of idle evening and weekend dev/staging compute burn while preserving attached Persistent Disks and state.',
+    gcpApis: 'compute.googleapis.com (instances.stop) · run.googleapis.com (services.patch)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FINOPS_WAKE_FLEET: {
+    badge: 'DAYTIME FLEET RESUME',
+    title: 'Wake Parked Compute VMs & Restore Warm Cloud Run Fleet',
+    whatItDoes:
+      'Calls `compute.instances.start` on parked Compute Engine VMs and restores Cloud Run warm baseline instances for daytime engineering workloads.',
+    enterpriseValue:
+      'Brings your entire development or staging environment back online in seconds after overnight FinOps hibernation.',
+    gcpApis: 'compute.googleapis.com (instances.start) · run.googleapis.com (services.patch)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BRIDGE_STARTUP_10X: {
+    badge: 'CANONICAL STUDIO DEEP-LINK',
+    title: 'Open Dedicated Startup 10X Mentor Studio',
+    whatItDoes:
+      'Navigates directly to the canonical Startup 10X Studio for Google for Startups credit runway modeling, burn-rate guardrails, and production launch readiness.',
+    enterpriseValue:
+      'Enforces zero duplication across studios by linking directly to the dedicated Startup 10X control plane.',
+    gcpApis: 'CloudPulse Studio Router (STARTUP_10X)',
+    safetyMode: 'READ_ONLY',
+  },
+  BRIDGE_MCP_HUB: {
+    badge: 'CANONICAL STUDIO DEEP-LINK',
+    title: 'Open Dedicated 48 Official Google Cloud MCP Servers Studio',
+    whatItDoes:
+      'Navigates directly to the 48 Official `*.googleapis.com/mcp` Remote MCP Control Plane (`505+` live JSON-RPC 2.0 tools, 4-server triage chains, and IDE exporter).',
+    enterpriseValue:
+      'Provides 1-click access to Google Cloud’s official Model Context Protocol registry without duplicating tools inside the Innovation Lab.',
+    gcpApis: 'https://*.googleapis.com/mcp (JSON-RPC 2.0)',
+    safetyMode: 'READ_ONLY',
+  },
+  BRIDGE_STORAGE_DLP: {
+    badge: 'CANONICAL STUDIO DEEP-LINK',
+    title: 'Open Storage RAM DLP X-Ray & SEC 17a-4 WORM Shield',
+    whatItDoes:
+      'Jumps directly to the Cloud Storage Studio RAM DLP X-Ray & WORM Ransomware Retention Lock workbench.',
+    enterpriseValue:
+      'Lets security engineers scan live bucket objects in volatile RAM for leaked keys/PII and lock retention policies in 1 click.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b',
+    safetyMode: 'READ_ONLY',
+  },
+  BRIDGE_IAM_SURGEON: {
+    badge: 'CANONICAL STUDIO DEEP-LINK',
+    title: 'Open IAM Surgeon, SA Key Kill-Switch & SHA-256 Time-Machine',
+    whatItDoes:
+      'Jumps directly to the IAM & Secret Manager Studio (`IAM_SURGEON`) to inspect over-privileged bindings, rotate or disable aged Service Account keys, and diff IAM policy snapshots.',
+    enterpriseValue:
+      'Connects architectural discovery directly to surgical least-privilege IAM enforcement.',
+    gcpApis: 'iam.googleapis.com · cloudresourcemanager.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  BRIDGE_CLOUD_SOC: {
+    badge: 'CANONICAL STUDIO DEEP-LINK',
+    title: 'Open 20-Pillar Autonomous Cloud SOC, Model Armor & Red-Team Ledger',
+    whatItDoes:
+      'Jumps directly to the 20-Pillar Cloud SOC & SOAR Studio for live Cloud Audit Logs kill-chain correlation, Toxic Attack Path graph, $0.00/mo Canary Tripwires, and Gemini 3 Incident Commander.',
+    enterpriseValue:
+      'Links infrastructure topology and posture directly to real-time autonomous threat containment.',
+    gcpApis: 'logging.googleapis.com · compute.googleapis.com · modelarmor.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  IAC_TAB_HCL: {
+    badge: 'REVERSE-TERRAFORM HCL COMPILER',
+    title: 'Full-Stack HashiCorp Terraform HCL (`main.tf`)',
+    whatItDoes:
+      'Introspects your live GCP VPCs, Firewall Rules, Compute VMs, Cloud Run services, and GCS Buckets and synthesizes a production-ready `main.tf` using the `hashicorp/google ~> 6.0` provider.',
+    enterpriseValue:
+      'Eliminates manual Terraform authoring by reverse-engineering live cloud resources into clean Infrastructure-as-Code.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  IAC_TAB_IMPORTS: {
+    badge: 'TERRAFORM 1.5+ DECLARATIVE STATE ADOPTION',
+    title: 'Terraform 1.5+ Declarative `import {}` Blocks (`imports.tf`)',
+    whatItDoes:
+      'Generates declarative `import { to = ... id = ... }` blocks for every live resource in your GCP project so `terraform plan -generate-config-out` adopts existing state with zero downtime.',
+    enterpriseValue:
+      'Brings legacy ClickOps projects under GitOps/Terraform state management without recreating or disrupting live workloads.',
+    gcpApis: 'Terraform 1.5+ Declarative Import Generator',
+    safetyMode: 'READ_ONLY',
+  },
+  IAC_TAB_GCLOUD: {
+    badge: 'REPRODUCIBLE CLI CLONE BLUEPRINT',
+    title: 'Executable `gcloud` Project Clone Script (`deploy.sh`)',
+    whatItDoes:
+      'Compiles your live VPC networks, firewall rules, Compute VMs, Cloud Run services, and GCS buckets into an idempotent Bash `gcloud` provisioning script.',
+    enterpriseValue:
+      'Enables 1-command disaster recovery cloning or staging environment replication into a fresh GCP project.',
+    gcpApis: 'Google Cloud SDK (`gcloud compute / run / storage`)',
+    safetyMode: 'READ_ONLY',
+  },
+  IAC_TAB_GITOPS_DELTA: {
+    badge: 'CLICKOPS-TO-GITOPS DRIFT PATCHER',
+    title: 'Session GitOps Delta (Live SRE War-Room & Cloud SOC Mutations → HCL)',
+    whatItDoes:
+      'Translates every live remediation or firewall lockdown executed during your current SRE War-Room or Cloud SOC session into a Git-ready Terraform HCL diff patch.',
+    enterpriseValue:
+      'Prevents your next CI/CD `terraform apply` from overwriting emergency incident response lockdowns made in the console.',
+    gcpApis: 'CloudPulse Flight Recorder ↔ GitOps HCL Serializer',
+    safetyMode: 'READ_ONLY',
+  },
+  IAC_TAB_C4_MERMAID: {
+    badge: 'LIVE C4 ARCHITECTURE VISUALIZER',
+    title: 'Interactive C4 Mermaid Architecture Diagram (Visual SVG + Code)',
+    whatItDoes:
+      'Renders a live, zoomable C4 Mermaid architecture diagram of your project’s 4-layer topology alongside copy-ready `flowchart TB` Markdown code for GitHub/GitLab READMEs.',
+    enterpriseValue:
+      'Keeps architecture documentation 100% synchronized with live production infrastructure.',
+    gcpApis: 'Mermaid v11 SVG Engine + Live GCP Inventory',
+    safetyMode: 'READ_ONLY',
+  },
+  ROLL_CALL: {
+    badge: '10-PERSONA ARCHITECTURE TRIBUNAL',
+    title: '10-Persona Roll-Call Voting Grid & Live GCP Remediator',
+    whatItDoes:
+      'Convenes 10 specialized cloud personas (Architect, Cloud Eng, Data Eng, NetOps, DevSecOps, AI/MLOps, SRE, DBRE, FinOps, K8s) to audit your live project, vote (`APPROVE` / `WARN` / `VETO`), and execute 1-click remediations.',
+    enterpriseValue:
+      'Replaces week-long architecture review board meetings with an instant, live-telemetry 10-domain engineering audit.',
+    gcpApis: 'POST /api/project/{project}/persona-tribunal/evaluate',
+    safetyMode: 'READ_ONLY',
+  },
+  RIPPLE_GRAPH: {
+    badge: 'CROSS-DOMAIN CAUSAL DEPENDENCY ENGINE',
+    title: 'Cross-Persona Ripple Chains (Multi-Hop Blast Radius)',
+    whatItDoes:
+      'Traces how a single finding in one domain (e.g., NetOps `0.0.0.0/0` firewall or IAM broad role) ripples across Data Engineering, FinOps, and SRE SLAs.',
+    enterpriseValue:
+      'Surfaces hidden cross-team failure chains before a change in networking or IAM breaks downstream data or AI workloads.',
+    gcpApis: 'Cross-Persona Causal Dependency Graph Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  PARETO_SOLVER: {
+    badge: 'MULTI-OBJECTIVE GAME-THEORY OPTIMIZER',
+    title: 'Pareto Conflict Solver (Security vs. Cost vs. Latency vs. Velocity)',
+    whatItDoes:
+      'Identifies architectural deadlocks where personas disagree (e.g., FinOps wants `minInstances=0` while SRE demands `0ms` cold starts) and computes the mathematically optimal Pareto-frontier resolution.',
+    enterpriseValue:
+      'Resolves classic Cost vs. Reliability vs. Security trade-offs with quantified engineering compromises and 1-click execution.',
+    gcpApis: 'Multi-Objective Pareto Frontier Solver',
+    safetyMode: 'READ_ONLY',
+  },
+  MERKLE_DIFF: {
+    badge: 'CRYPTOGRAPHIC STATE DIFF & UNDO CAPSULES',
+    title: 'T0 vs. T_Now SHA-256 Merkle State Diff & 1-Click Undo Capsules',
+    whatItDoes:
+      'Compares the cryptographic SHA-256 Merkle tree of your project at session start (`T0`) against current live state (`T_Now`) and provides 1-click reversible Undo Capsules for every mutation.',
+    enterpriseValue:
+      'Guarantees that every remediation executed in the 10-Persona War-Room is cryptographically auditable and instantaneously reversible.',
+    gcpApis: 'SHA-256 Merkle State Tree · Reversible Undo Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  MULTI_PROJECT_FLEET: {
+    badge: 'ORG-WIDE MULTI-PROJECT GOVERNANCE',
+    title: '[2030] Multi-Project Fleet Council (Cross-Project Posture Matrix)',
+    whatItDoes:
+      'Evaluates all accessible GCP projects in parallel across all 10 engineering personas to rank organizational health, quota pressure, and security drift.',
+    enterpriseValue:
+      'Gives platform engineering and CISO teams a single-pane executive scorecard across their entire multi-project GCP estate.',
+    gcpApis: 'cloudresourcemanager.googleapis.com · Parallel Fleet Tribunal',
+    safetyMode: 'READ_ONLY',
+  },
+  PRE_CRIME_72H: {
+    badge: 'T+72H PREDICTIVE DRIFT & QUOTA RADAR',
+    title: '[2030] T+72h Pre-Crime Forecaster (Quota, Cost & Drift Risk)',
+    whatItDoes:
+      'Projects resource consumption, regional quota exhaustion trajectories, and security drift 72 hours ahead based on live telemetry velocity.',
+    enterpriseValue:
+      'Catches impending quota walls, runaway billing spikes, and certificate/key expirations 3 days before production impact.',
+    gcpApis: 'Cloud Monitoring Velocity + Quota & FinOps Extrapolator',
+    safetyMode: 'READ_ONLY',
+  },
+  ZKP_BLIND_PROOF: {
+    badge: 'ZERO-KNOWLEDGE COMPLIANCE ATTESTATION',
+    title: '[2030] ZKP / Ed25519 Blinded Compliance Proof & Verifier',
+    whatItDoes:
+      'Generates an Ed25519-signed Zero-Knowledge-style blinded compliance proof attesting that your project satisfies SOC2/ISO27001/HIPAA invariants without exposing sensitive resource names or IPs.',
+    enterpriseValue:
+      'Lets enterprises prove continuous cloud compliance to external auditors and enterprise customers without leaking internal topology.',
+    gcpApis: 'Node.js crypto Ed25519 (RFC 8032) + SHA-256 Commitment Tree',
+    safetyMode: 'READ_ONLY',
+  },
+  INTENT_COMPILER: {
+    badge: 'DECLARATIVE INTENT-TO-CLOUD COMPILER',
+    title: '[2030] Natural-Language Intent-to-Control-Plane Compiler',
+    whatItDoes:
+      'Compiles high-level business andSLO constraints (e.g., "HIPAA-compliant EU AI inference under $150/mo with zero public IPs") into verified GCP REST mutations and Terraform HCL.',
+    enterpriseValue:
+      'Bridges business/compliance requirements directly to 10-persona-vetted Google Cloud control-plane configurations.',
+    gcpApis: 'Intent Constraint Solver + GCP REST / HCL Synthesizer',
+    safetyMode: 'READ_ONLY',
+  },
+  PRACTITIONER_WORKBENCH: {
+    badge: '6-PRACTITIONER AGENTLESS DEEP DIAGNOSTICS',
+    title: '[2030] 6-Practitioner Agentless Workbench (VM, NetOps, IAM, FinOps, Data, SecOps)',
+    whatItDoes:
+      'Runs agentless serial-port & control-plane X-Ray diagnostics across Compute VMs, VPC effective firewall hierarchy, IAM least-privilege diffing, BigQuery storage physics, and Cloud Audit anomalies.',
+    enterpriseValue:
+      'Replaces legacy 2010-era multi-tab console hunting with deep, single-click practitioner diagnostics.',
+    gcpApis: 'compute · iam · bigquery · storage · logging (*.googleapis.com)',
+    safetyMode: 'READ_ONLY',
+  },
+  ZERO_GRAVITY_TELEPORTER: {
+    badge: 'CROSS-PROJECT JUPITER BACKBONE MIGRATOR',
+    title: 'Zero-Gravity Cross-Project Teleporter (BigQuery, GCS & Secret Manager)',
+    whatItDoes:
+      'Clones BigQuery datasets, rewrites Cloud Storage buckets over Google’s internal Jupiter fiber (`rewriteTo`), and synchronizes Secret Manager payloads across GCP projects or regions.',
+    enterpriseValue:
+      'Eliminates local download/upload bottlenecks when migrating or promoting data and secrets between dev, staging, and prod projects.',
+    gcpApis: 'bigquery.googleapis.com · storage.googleapis.com · secretmanager.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BIGQUERY_DATASET_CLONE: {
+    badge: 'CROSS-PROJECT BIGQUERY CLONE',
+    title: 'BigQuery Dataset + Tables Cross-Project Clone Mode',
+    whatItDoes:
+      'Creates the destination BigQuery dataset and dispatches server-side `jobs.insert` table copy jobs across projects with zero local bandwidth usage.',
+    enterpriseValue:
+      'Clones analytical warehouse tables across environments in seconds at $0.00 BigQuery copy job compute cost.',
+    gcpApis: 'bigquery.googleapis.com/bigquery/v2 (datasets.insert · jobs.insert)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GCS_BUCKET_CLONE: {
+    badge: 'JUPITER FIBER OBJECT REWRITE',
+    title: 'Cloud Storage Bucket + Objects Cross-Project Rewrite Mode',
+    whatItDoes:
+      'Provisions the destination GCS bucket (with uniform bucket-level access) and executes server-side `objects.rewrite` directly over Google’s private backbone.',
+    enterpriseValue:
+      'Moves objects across buckets or projects at multi-gigabit backbone speeds without streaming bytes through your browser.',
+    gcpApis: 'storage.googleapis.com/storage/v1 (buckets.insert · objects.rewrite)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SECRET_MANAGER_SYNC: {
+    badge: 'ENCRYPTED VAULT REPLICATION',
+    title: 'Secret Manager Cross-Project Vault Sync Mode',
+    whatItDoes:
+      'Replicates the Secret Manager secret container into the destination project and seals the latest encrypted secret version payload.',
+    enterpriseValue:
+      'Synchronizes application credentials across staging and production projects without exposing plaintext secrets in terminal history.',
+    gcpApis: 'secretmanager.googleapis.com/v1 (secrets.create · secrets.addVersion)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FINOPS_AUTOPILOT: {
+    badge: 'QUANTUM NEXUS FINOPS CIRCUIT-BREAKER',
+    title: 'Autonomous FinOps Arbitrage & Spend Circuit-Breaker',
+    whatItDoes:
+      'Monitors live hourly burn velocity, identifies idle Compute VMs, unattached disks, and oversized Cloud Run instances, and enforces automated spend circuit-breakers.',
+    enterpriseValue:
+      'Prevents runaway weekend or anomaly cloud bills with surgical resource right-sizing and automated budget guardrails.',
+    gcpApis: 'billingbudgets.googleapis.com · compute.googleapis.com · run.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  COMPROMISE_CREDENTIAL: {
+    badge: 'CAUSAL BLAST-RADIUS SIMULATION',
+    title: 'Simulate Credential Breach (Service Account Key / IAM Token Compromise)',
+    whatItDoes:
+      'Traces the exact multi-hop lateral movement blast radius across your live VPCs, Compute VMs, GCS Buckets, BigQuery Datasets, and Secrets if the selected identity is compromised.',
+    enterpriseValue:
+      'Reveals toxic IAM over-privilege paths before an attacker can exploit a leaked Service Account key.',
+    gcpApis: 'Causal Blast-Radius Graph Engine (Zero-Mutation Simulation)',
+    safetyMode: 'SIMULATION',
+  },
+  OUTAGE_PROPAGATION: {
+    badge: 'CAUSAL BLAST-RADIUS SIMULATION',
+    title: 'Simulate Cascading Regional / Service Outage',
+    whatItDoes:
+      'Models how a failure in the selected VPC, subnet, database, or serverless backend cascades across dependent microservices and data pipelines.',
+    enterpriseValue:
+      'Identifies single points of failure (SPOFs) and missing multi-region failover paths with zero production disruption.',
+    gcpApis: 'Causal Blast-Radius Graph Engine (Zero-Mutation Simulation)',
+    safetyMode: 'SIMULATION',
+  },
+  COST_RUNAWAY: {
+    badge: 'CAUSAL BLAST-RADIUS SIMULATION',
+    title: 'Simulate DDoS / Autoscale Spend Spike',
+    whatItDoes:
+      'Calculates the worst-case 30-day financial blast radius if a public endpoint or serverless function experiences a 100x traffic surge or infinite retry loop.',
+    enterpriseValue:
+      'Pinpoints uncapped `maxInstanceCount` and egress amplification vectors before they trigger a billing shock.',
+    gcpApis: 'Causal Blast-Radius Graph Engine (Zero-Mutation Simulation)',
+    safetyMode: 'SIMULATION',
+  },
+  AI_RAG_GPU: {
+    badge: 'DREAM STACK COMPILER BLUEPRINT',
+    title: 'Enterprise GenAI RAG + NVIDIA L4 GPU Inference Stack',
+    whatItDoes:
+      'Scans all 40 GCP regions for NVIDIA L4 GPU availability, Carbon-Free Energy %, and Tier-1 pricing, then compiles a complete Cloud Run GPU + Vertex AI Vector Search + GCS RAG blueprint.',
+    enterpriseValue:
+      'Generates a cost-optimized, region-verified GenAI production stack with 1-click provisioning and executable `gcloud` scripts.',
+    gcpApis: 'run.googleapis.com · aiplatform.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  EU_GDPR_LAKEHOUSE: {
+    badge: 'DREAM STACK COMPILER BLUEPRINT',
+    title: 'Sovereign EU GDPR BigLake Iceberg + Dataform Lakehouse Stack',
+    whatItDoes:
+      'Compiles a strict EU-sovereign (`europe-west*`) Apache Iceberg V2 lakehouse architecture combining BigQuery, GCS CMEK/WORM storage, and Dataform ELT.',
+    enterpriseValue:
+      'Guarantees GDPR data residency and lowest European low-carbon pricing out of the box.',
+    gcpApis: 'bigquery.googleapis.com · biglake.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  FRUGAL_SPOT_MESH: {
+    badge: 'DREAM STACK COMPILER BLUEPRINT',
+    title: 'Zero-Waste Spot VM + Scale-to-Zero Cloud Run Microservice Mesh',
+    whatItDoes:
+      'Synthesizes an ultra-frugal startup architecture using Compute Engine Spot VMs (`-68%` discount), scale-to-zero Cloud Run, and Firestore NoSQL free-tier storage.',
+    enterpriseValue:
+      'Delivers maximum production throughput at the lowest possible monthly burn rate for bootstrapped and seed-stage teams.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · firestore.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_GREEN_HA: {
+    badge: 'DREAM STACK COMPILER BLUEPRINT',
+    title: '98%+ Carbon-Free Multi-Region Active-Active High-Availability Stack',
+    whatItDoes:
+      'Selects the highest Carbon-Free Energy (`CFE%`) regions globally and compiles an active-active multi-region Cloud Run + Cloud SQL HA + Global Anycast Load Balancer blueprint.',
+    enterpriseValue:
+      'Combines `99.99%` multi-region resilience with Scope-2 net-zero sustainability compliance.',
+    gcpApis: 'run.googleapis.com · sqladmin.googleapis.com · compute.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  PRE_CRIME_SCENARIO_SELECT: {
+    badge: '22-SCENARIO PRE-CRIME BILLING SIMULATOR',
+    title: '30-Day Pre-Crime Billing Trap & Anomaly Selector (22 Cloud Cost Traps)',
+    whatItDoes:
+      'Simulates 22 real-world Google Cloud billing disasters (leaked Gemini API key, Vertex Agent loop, unpartitioned BigQuery scan, Cloud NAT hairpin egress, forgotten A100 Workbench, Pub/Sub retry storm) against your live baseline burn.',
+    enterpriseValue:
+      'Shows the exact day and hour your monthly budget cap would breach and provides the exact 1-command mitigation and native GCP Spend Cap target.',
+    gcpApis: '100% Read-Only Mathematical Trajectory Engine + billingbudgets.googleapis.com',
+    safetyMode: 'SIMULATION',
+  },
+  INNOVATION_DOMAIN_FILTER_SELECT: {
+    badge: '16-STUDIO DOMAIN FILTER',
+    title: '2026 Innovation Lab Domain Category Filter (4×4 Bento Grid)',
+    whatItDoes:
+      'Filters the 16 non-overlapping 2026 Innovation Studios across 5 specialized engineering domains: Release/Drift/DR/Personas, Quantum Nexus Resilience, FinOps & Carbon, Topology & Latency, and Pre-Crime/Terraform IaC.',
+    enterpriseValue:
+      'Lets SREs, FinOps leads, and Cloud Architects jump directly to the studio cluster matching their operational workflow.',
+    gcpApis: 'CloudPulse 2026 Innovation Studio Router',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**
@@ -2432,7 +2786,7 @@ export default function GlobalInnovationHoverExplainer() {
 
   useEffect(() => {
     const HOVER_SELECTOR =
-      '[data-feature-id], [data-kpi-id], [data-hover-explain]';
+      'button, [data-feature-id], [data-kpi-id], [data-hover-explain]';
 
     const handleMouseOver = (e) => {
       const target = e.target?.closest?.(HOVER_SELECTOR);

@@ -888,6 +888,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                 return (
                   <div
                     key={mode.id}
+                    data-feature-id={mode.id}
                     onClick={() => setTeleportKind(mode.id)}
                     className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                       active

@@ -1105,6 +1105,7 @@ export default function Revolutionary2026Suite({
           <div className="grid grid-cols-2 gap-2 shrink-0">
             <button
               type="button"
+              data-feature-id="FINOPS_PARK_COMPUTE"
               disabled={hibernateBusy}
               onClick={() => handleHibernateToggle('SLEEP')}
               title="Stop all running VMs and scale warm Cloud Run instances to 0 (Active compute → $0/hr; Persistent Disks & unused Static External IPs still bill)"
@@ -1116,6 +1117,7 @@ export default function Revolutionary2026Suite({
 
             <button
               type="button"
+              data-feature-id="FINOPS_WAKE_FLEET"
               disabled={hibernateBusy}
               onClick={() => handleHibernateToggle('WAKE')}
               title="Wake parked Compute VMs and restore warm Cloud Run instances"
@@ -1137,6 +1139,7 @@ export default function Revolutionary2026Suite({
             </span>
             <select
               aria-label="Filter by Lab Domain"
+              data-feature-id="INNOVATION_DOMAIN_FILTER_SELECT"
               value={labCategory}
               onChange={(e) => {
                 const nextCat = e.target.value;
@@ -1402,6 +1405,7 @@ export default function Revolutionary2026Suite({
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
+                data-feature-id="BRIDGE_STARTUP_10X"
                 onClick={() => onSelectStudioTab('STARTUP_10X')}
                 title="Open dedicated Startup 10X Mentor Studio (Runway, Burn Guardrails & Launch Readiness)"
                 className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
@@ -1410,6 +1414,7 @@ export default function Revolutionary2026Suite({
               </button>
               <button
                 type="button"
+                data-feature-id="BRIDGE_MCP_HUB"
                 onClick={() => onSelectStudioTab('MCP_HUB')}
                 title="Open dedicated MCP Servers Studio (48 Official *.googleapis.com/mcp Endpoints)"
                 className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
@@ -1418,6 +1423,7 @@ export default function Revolutionary2026Suite({
               </button>
               <button
                 type="button"
+                data-feature-id="BRIDGE_STORAGE_DLP"
                 onClick={() => onSelectStudioTab('CLOUD_STORAGE', 'RAM_DLP')}
                 title="Open Storage RAM DLP X-Ray & SEC 17a-4 WORM Ransomware Shield inside Cloud Storage Studio"
                 className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
@@ -1426,6 +1432,7 @@ export default function Revolutionary2026Suite({
               </button>
               <button
                 type="button"
+                data-feature-id="BRIDGE_IAM_SURGEON"
                 onClick={() => onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')}
                 title="Open IAM Surgeon, SA Key Kill-Switch & SHA-256 Time-Machine inside IAM Studio"
                 className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
@@ -1434,6 +1441,7 @@ export default function Revolutionary2026Suite({
               </button>
               <button
                 type="button"
+                data-feature-id="BRIDGE_CLOUD_SOC"
                 onClick={() => onSelectStudioTab('CLOUD_SOC')}
                 title="Open 20-Pillar Cloud SOC, Vertex AI Model Armor & Red-Team Ledger"
                 className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
@@ -2096,6 +2104,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 flex-1">
               <button
                 type="button"
+                data-feature-id="IAC_TAB_HCL"
                 onClick={() => setIacFormat('TERRAFORM')}
                 title="Switch view to Full-Stack HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
                 className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
@@ -2108,6 +2117,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </button>
               <button
                 type="button"
+                data-feature-id="IAC_TAB_IMPORTS"
                 onClick={() => setIacFormat('TERRAFORM_IMPORT')}
                 title="Switch view to Terraform 1.5+ Declarative import {} blocks (imports.tf) to adopt existing GCP resources into Terraform state with zero downtime"
                 className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
@@ -2120,6 +2130,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </button>
               <button
                 type="button"
+                data-feature-id="IAC_TAB_GCLOUD"
                 onClick={() => setIacFormat('GCLOUD_SH')}
                 title="Switch view to a reproducible bash gcloud CLI script (deploy.sh) to clone your project infrastructure"
                 className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
@@ -2132,6 +2143,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </button>
               <button
                 type="button"
+                data-feature-id="IAC_TAB_GITOPS_DELTA"
                 onClick={() => setIacFormat('SESSION_GITOPS_DELTA')}
                 title="Inspect live ClickOps-to-GitOps Terraform HCL patches generated from your SRE War-Room & Cloud SOC actions"
                 className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
@@ -2144,6 +2156,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </button>
               <button
                 type="button"
+                data-feature-id="IAC_TAB_C4_MERMAID"
                 onClick={() => setIacFormat('MERMAID_C4')}
                 title="Render live C4 Mermaid Architecture Diagram (interactive SVG visualization + Mermaid flowchart source code)"
                 className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${

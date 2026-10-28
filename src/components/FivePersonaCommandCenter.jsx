@@ -939,6 +939,7 @@ export default function FivePersonaCommandCenter({
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={tab.id}
                 onClick={() => {
                   setTribunalSubTab(tab.id);
                   if (
