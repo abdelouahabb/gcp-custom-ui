@@ -1636,31 +1636,31 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
           `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
           token,
           projectId,
-          { timeout: 2200 }
+          { timeout: 5500 }
         ),
         gcpFetch(
           `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
           token,
           projectId,
-          { timeout: 2200 }
+          { timeout: 5500 }
         ),
         gcpFetch(
           `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
           token,
           projectId,
-          { timeout: 2200 }
+          { timeout: 5500 }
         ),
         gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
           token,
           projectId,
-          { timeout: 2400 }
+          { timeout: 5500 }
         ),
         gcpFetch(
           `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
           token,
           projectId,
-          { timeout: 2000 }
+          { timeout: 5500 }
         ),
         gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
@@ -71696,29 +71696,49 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       const { token } = await resolveRequestAuth(req);
       if (token) {
         const headers = { Authorization: `Bearer ${token}` };
-        const [bucketsRes, datasetsRes, networksRes, firewallsRes, servicesRes] =
-          await Promise.allSettled([
-            axios.get(
-              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
-              { headers, timeout: 4500 }
-            ),
-            axios.get(
-              `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
-              { headers, timeout: 4500 }
-            ),
-            axios.get(
-              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
-              { headers, timeout: 4500 }
-            ),
-            axios.get(
-              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
-              { headers, timeout: 4500 }
-            ),
-            axios.get(
-              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
-              { headers, timeout: 4500 }
-            ),
-          ]);
+        const [
+          bucketsRes,
+          datasetsRes,
+          networksRes,
+          firewallsRes,
+          vmsRes,
+          runRes,
+          gkeRes,
+          servicesRes,
+        ] = await Promise.allSettled([
+          axios.get(
+            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
+            { headers, timeout: 5000 }
+          ),
+          axios.get(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
+            { headers, timeout: 5000 }
+          ),
+        ]);
 
         if (bucketsRes.status === 'fulfilled') {
           for (const b of bucketsRes.value.data?.items || []) {
@@ -71775,6 +71795,63 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
                 priority: fw.priority ?? 1000,
                 sourceRanges: (fw.sourceRanges || []).join(', '),
               },
+            });
+          }
+        }
+        if (vmsRes.status === 'fulfilled') {
+          for (const [zoneKey, val] of Object.entries(vmsRes.value.data?.items || {})) {
+            const zone = zoneKey.replace('zones/', '');
+            for (const inst of val?.instances || []) {
+              const machineShort = (inst.machineType || '').split('/').pop() || 'e2-micro';
+              resources.push({
+                id: `gce-${inst.name}`,
+                name: inst.name,
+                type: 'Compute Engine VM',
+                category: 'compute',
+                region: zone,
+                zone,
+                storageClass: machineShort,
+                details: {
+                  zone,
+                  machineType: machineShort,
+                  status: inst.status || 'RUNNING',
+                  network:
+                    inst.networkInterfaces?.[0]?.network?.split('/').pop() || 'default',
+                },
+              });
+            }
+          }
+        }
+        if (runRes.status === 'fulfilled') {
+          for (const s of runRes.value.data?.services || []) {
+            if (isCloudRunServiceDeletedOrTombstoned(projectId, s)) continue;
+            const shortName = (s.name || '').split('/').pop();
+            const region = (s.name || '').split('/')[3] || 'us-central1';
+            if (shortName) {
+              resources.push({
+                id: `run-${shortName}`,
+                name: shortName,
+                type: 'Cloud Run Service',
+                category: 'compute',
+                region,
+                storageClass: 'GEN2_SCALE_TO_ZERO',
+                details: {
+                  region,
+                  uri: s.uri || '',
+                },
+              });
+            }
+          }
+        }
+        if (gkeRes.status === 'fulfilled') {
+          for (const c of gkeRes.value.data?.clusters || []) {
+            resources.push({
+              id: `gke-${c.name}`,
+              name: c.name,
+              type: c.autopilot?.enabled ? 'GKE Autopilot Cluster' : 'GKE Cluster',
+              category: 'compute',
+              region: c.location || 'us-central1',
+              storageClass: `k8s v${c.currentMasterVersion || '1.31'}`,
             });
           }
         }
@@ -71892,9 +71969,9 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         stepNumber: 3,
         title: '3. Compute Fleet & Scale-to-Zero Serverless',
         shortTitle: 'VMs & Cloud Run',
-        targetTab: 'CLOUD_RUN',
-        secondaryTab: 'VM_SSH',
-        secondaryLabel: 'Compute Engine VMs',
+        targetTab: 'VM_SSH',
+        secondaryTab: 'CLOUD_RUN',
+        secondaryLabel: 'Cloud Run Serverless Studio',
         status:
           vms.length > 0 && cloudRunSvcs.length === 0
             ? 'ACTION_RECOMMENDED'
@@ -71903,30 +71980,55 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             : 'READY',
         metricBadge: `${vms.length} VMs · ${cloudRunSvcs.length} Cloud Run · ${gkeClusters.length} GKE`,
         summary:
-          vms.length > 0
-            ? `${vms.length} live GCE VM(s) (${vms.map((v) => v.name).join(', ')}) & ${cloudRunSvcs.length} Cloud Run service(s). Eligible for 1-click VM → Cloud Run scale-to-$0.00 containerization.`
-            : `${cloudRunSvcs.length} Cloud Run scale-to-zero service(s) and ${vms.length} Always-Free / Spot VM(s) active.`,
-        cliCmd: `gcloud run services list --project=${projectId} --format="table(metadata.name,status.url,status.latestReadyRevisionName)"`,
-        stageItems: [
-          ...vms.slice(0, 4).map((vm) => ({
-            kind: 'Compute VM',
-            name: vm.name,
-            meta: `${vm.region || 'us-east1-b'} · ${vm.storageClass || 'e2-micro'}`,
-            targetTab: 'VM_SSH',
-          })),
-          ...cloudRunSvcs.slice(0, 4).map((s) => ({
-            kind: 'Cloud Run Gen2',
-            name: s.name,
-            meta: `${s.region || 'us-central1'} · Scale-to-Zero`,
-            targetTab: 'CLOUD_RUN',
-          })),
-          ...gkeClusters.slice(0, 2).map((c) => ({
-            kind: 'GKE Cluster',
-            name: c.name,
-            meta: c.region || 'us-central1',
-            targetTab: 'GKE_STUDIO',
-          })),
-        ],
+          vms.length + cloudRunSvcs.length + gkeClusters.length > 0
+            ? `${vms.length} live GCE VM(s)${vms.length ? ` (${vms.map((v) => v.name).join(', ')})` : ''}, ${cloudRunSvcs.length} Cloud Run service(s), and ${gkeClusters.length} GKE cluster(s) active in ${projectId}.`
+            : `0 running VMs or Cloud Run services in "${projectId}" ($0.00/hr compute idle). Launch a Free-Tier e2-micro VM, deploy a Scale-to-Zero Cloud Run container, or inspect recently deleted VMs in the 30-Day Recycle Bin.`,
+        cliCmd: `gcloud compute instances list --project=${projectId} && gcloud run services list --project=${projectId}`,
+        stageItems:
+          vms.length + cloudRunSvcs.length + gkeClusters.length > 0
+            ? [
+                ...vms.slice(0, 4).map((vm) => ({
+                  kind: 'Compute VM',
+                  name: vm.name,
+                  meta: `${vm.region || 'us-east1-b'} · ${vm.storageClass || 'e2-micro'}`,
+                  targetTab: 'VM_SSH',
+                })),
+                ...cloudRunSvcs.slice(0, 4).map((s) => ({
+                  kind: 'Cloud Run Gen2',
+                  name: s.name,
+                  meta: `${s.region || 'us-central1'} · Scale-to-Zero`,
+                  targetTab: 'CLOUD_RUN',
+                })),
+                ...gkeClusters.slice(0, 2).map((c) => ({
+                  kind: 'GKE Cluster',
+                  name: c.name,
+                  meta: c.region || 'us-central1',
+                  targetTab: 'GKE_STUDIO',
+                })),
+              ]
+            : [
+                {
+                  kind: '0 Active VMs ($0/hr)',
+                  name: '+ Launch Compute Engine VM',
+                  meta: 'Always-Free e2-micro (us-east1 / us-central1 / us-west1)',
+                  targetTab: 'VM_SSH',
+                  provisionType: 'COMPUTE_VM',
+                },
+                {
+                  kind: '0 Cloud Run ($0 Idle)',
+                  name: '+ Deploy Cloud Run Gen2 Service',
+                  meta: 'minInstances=0 · Scale-to-Zero Container',
+                  targetTab: 'CLOUD_RUN',
+                  provisionType: 'CLOUD_RUN',
+                },
+                {
+                  kind: '30-Day Recovery Vault',
+                  name: 'View Deleted VMs & Cloud Run (30d)',
+                  meta: 'Re-create deleted VM shell or restore container revision',
+                  targetTab: 'RECYCLE_BIN',
+                  subTab: 'COMPUTE_VM',
+                },
+              ],
       },
       {
         id: 'STAGE_4_CICD_TERRAFORM',

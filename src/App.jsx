@@ -4935,6 +4935,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5450,6 +5452,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5601,6 +5605,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5738,6 +5744,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5782,6 +5790,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5961,6 +5971,8 @@ function CloudPulseCockpit() {
                   <EnterpriseStackPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />

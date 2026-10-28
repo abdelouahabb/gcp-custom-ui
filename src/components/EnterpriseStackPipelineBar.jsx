@@ -35,6 +35,8 @@ const STAGE_ICONS = {
 export default function EnterpriseStackPipelineBar({
   projectId,
   activeTab,
+  overview,
+  onOpenProvision,
   onSelectTab,
   onRunInShell,
 }) {
@@ -65,7 +67,7 @@ export default function EnterpriseStackPipelineBar({
 
   useEffect(() => {
     fetchBlueprint();
-  }, [fetchBlueprint]);
+  }, [fetchBlueprint, overview?.resources?.length]);
 
   const handleCopy = (text, key) => {
     if (!text) return;
@@ -506,9 +508,13 @@ export default function EnterpriseStackPipelineBar({
                     {activeStage.stageItems.map((item, idx) => (
                       <div
                         key={`${item.name}-${idx}`}
-                        onClick={() =>
-                          onSelectTab && item.targetTab && onSelectTab(item.targetTab)
-                        }
+                        onClick={() => {
+                          if (item.provisionType && onOpenProvision) {
+                            onOpenProvision(item.provisionType);
+                          } else if (onSelectTab && item.targetTab) {
+                            onSelectTab(item.targetTab, item.subTab);
+                          }
+                        }}
                         className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
                       >
                         <div className="min-w-0">
