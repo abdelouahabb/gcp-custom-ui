@@ -1325,7 +1325,19 @@ export default function EmergencyApiKillSwitch({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:w-auto">
+        <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap">
+          {onNavigateTab && (
+            <button
+              type="button"
+              data-feature-id="RECYCLE_BIN"
+              onClick={() => onNavigateTab('RECYCLE_BIN', 'DISABLED_API')}
+              title="Open 30-Day Cloud Recycle Bin filtered to Disabled GCP APIs (BatchDisableServices / DisableService) to inspect & re-enable APIs turned off in the last 30 days"
+              className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span>Disabled APIs Recycle Bin (30d)</span>
+            </button>
+          )}
           <div className="relative flex-1 lg:w-64">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

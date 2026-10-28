@@ -807,6 +807,20 @@ export default function ResourceControlCenter({
             <AlertTriangle className="w-3.5 h-3.5" />
             <span>Stale / Leftovers ({staleResources.length})</span>
           </button>
+
+          {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
+          {onSelectTab && (
+            <button
+              type="button"
+              data-feature-id="RECYCLE_BIN"
+              onClick={() => onSelectTab('RECYCLE_BIN', 'ALL')}
+              title="Open 30-Day Cloud Recycle Bin: View deleted resources & disabled APIs from the last 30 days with honest Native Recovery vs. Empty Resource Shell Re-Creation badges"
+              className="inline-flex items-center gap-1.5 rounded-[8px] px-[12px] py-[8px] text-xs font-[600] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Recycle Bin (30d)</span>
+            </button>
+          )}
         </div>
 
         {/* Search Input */}

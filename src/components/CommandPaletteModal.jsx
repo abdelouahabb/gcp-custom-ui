@@ -759,6 +759,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-recycle-bin-30d',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open 30-Day Cloud Recycle Bin (Deleted Resources & Disabled GCP APIs)',
+        subtitle: 'Windows-style Recycle Bin for GCP: Inspect deleted resources & disabled APIs over 30 days with honest Native Data Recovery vs. Empty Resource Shell Re-Creation badges',
+        keywords: 'recycle bin trash deleted resources disabled apis undelete restore 30 days soft delete bigquery time travel cloudaudit',
+        badge: '30-DAY RECYCLE BIN',
+        badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: ShieldCheck,
+        run: () => {
+          onSelectTab('RECYCLE_BIN');
+          onClose();
+        }
+      },
+      {
         id: 'open-audit-who-changed-what',
         category: '2026 SRE & Developer Velocity',
         title: 'Open Live Cloud Audit "Who-Changed-What" Activity Timeline & Change Inspector',

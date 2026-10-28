@@ -234,6 +234,16 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'logging.googleapis.com/v2/entries:list · WebSocket PTY Shell',
     safetyMode: 'READ_ONLY',
   },
+  RECYCLE_BIN: {
+    badge: '30-DAY CLOUD RECYCLE BIN',
+    title: '30-Day Cloud Recycle Bin — Deleted Resources, Disabled APIs & Honest Recovery Guarantees',
+    whatItDoes:
+      'Scans 30 days of Cloud Audit Admin Activity destruct events (Delete*, Destroy*, DisableService) plus live GCS Soft-Delete Vaults, separating True Native Recovery (Disabled APIs, Soft-Deleted Buckets, BigQuery < 7d Time-Travel, SA/API Keys < 30d) from Empty Resource Shell Re-Creation (No Data Guarantee for VMs, Disks, Cloud SQL, or dropped Datasets).',
+    enterpriseValue:
+      'Gives engineers a Windows-style Recycle Bin to immediately see who deleted what or which API was disabled in the last 30 days—with transparent warnings when an action only re-provisions an empty resource shell without restoring internal data.',
+    gcpApis: 'logging.googleapis.com (cloudaudit.googleapis.com/activity) · storage.googleapis.com (softDeletePolicy) · serviceusage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
   DOCS_GUIDE: {
     badge: 'ARCHITECTURE & API REFERENCE',
     title: 'Interactive CloudPulse Architecture & Google Cloud API Guide',

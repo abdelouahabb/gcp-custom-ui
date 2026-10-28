@@ -3398,6 +3398,7 @@ function CloudPulseCockpit() {
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
   const [storageTargetBucket, setStorageTargetBucket] = useState('');
   const [storageTargetObject, setStorageTargetObject] = useState('');
+  const [recycleBinCategory, setRecycleBinCategory] = useState('ALL');
 
   const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
@@ -3455,6 +3456,8 @@ function CloudPulseCockpit() {
       setDataEngineerSubTab(subTab);
     } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(subTab);
+    } else if (normalizedTab === 'RECYCLE_BIN') {
+      setRecycleBinCategory(subTab || 'ALL');
     } else if (normalizedTab === 'CLOUD_STORAGE') {
       if (subTab) setStorageSubTab(subTab);
       if (extraTarget && typeof extraTarget === 'object') {
@@ -4936,7 +4939,7 @@ function CloudPulseCockpit() {
                     actionLoading={actionLoading}
                     onRunInShell={handleRunInShell}
                     onAskCopilot={handleOpenCopilotWithPrompt}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onSelectTab={handleNavigateStudioTab}
                   />
 
                   {/* 5-Domain Organized Studio Hub */}
@@ -5081,7 +5084,7 @@ function CloudPulseCockpit() {
                       enabledApis={overview?.enabledApis || []}
                       onRefresh={() => fetchProjectOverview(selectedProjectId)}
                       onOpenFinOps={() => setActiveTab('FINOPS')}
-                      onNavigateTab={(tabId) => setActiveTab(tabId)}
+                      onNavigateTab={handleNavigateStudioTab}
                       onRunInShell={handleRunInShell}
                       onShowToast={showToast}
                       onShowError={setErrorBanner}
@@ -5923,6 +5926,7 @@ function CloudPulseCockpit() {
               {activeTab === 'RECYCLE_BIN' && (
                 <CloudRecycleBinStudio
                   projectId={selectedProjectId}
+                  initialCategory={recycleBinCategory}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}

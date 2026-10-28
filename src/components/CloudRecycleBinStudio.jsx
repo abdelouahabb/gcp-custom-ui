@@ -47,6 +47,7 @@ function formatRelativeAge(ageHours) {
 
 export default function CloudRecycleBinStudio({
   projectId,
+  initialCategory = 'ALL',
   onRunInShell,
   onShowToast,
   onShowError,
@@ -56,13 +57,19 @@ export default function CloudRecycleBinStudio({
   const [windowDays, setWindowDays] = useState(30);
   const [binData, setBinData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [categoryTab, setCategoryTab] = useState('ALL');
+  const [categoryTab, setCategoryTab] = useState(initialCategory || 'ALL');
   const [actorFilter, setActorFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [restoringId, setRestoringId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [showLqlFilter, setShowLqlFilter] = useState(false);
+
+  useEffect(() => {
+    if (initialCategory) {
+      setCategoryTab(initialCategory);
+    }
+  }, [initialCategory]);
 
   const fetchRecycleBin = useCallback(
     async (daysOverride) => {
