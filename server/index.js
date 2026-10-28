@@ -71903,13 +71903,6 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       resources.reduce((acc, r) => acc + Number(r.monthlyCostUsd || 0), 0).toFixed(2)
     );
 
-    const vpcNamesList = vpcs.map((v) => v.name).slice(0, 2).join(', ') || 'default';
-    const fwNamesList = firewalls.map((f) => f.name).slice(0, 3).join(', ') || 'allow-iap-ssh';
-    const bucketNamesList = buckets.map((b) => b.name).slice(0, 2).join(', ');
-    const datasetNamesList = datasets.map((d) => d.name).slice(0, 2).join(', ');
-    const vmNamesList = vms.map((v) => v.name).slice(0, 2).join(', ');
-    const crNamesList = cloudRunSvcs.map((s) => s.name).slice(0, 2).join(', ');
-
     // Analyze actual firewall rules for 0.0.0.0/0 public exposure vs IAP (35.235.240.0/20) vs Internal CIDR
     const openPublicFw = firewalls.filter((fw) =>
       String(fw.details?.sourceRanges || '').includes('0.0.0.0/0')
@@ -71990,6 +71983,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       vpcs.length + firewalls.length > 0 ? stage1MermaidLines.join('\n') : null;
 
     // Dynamic Stage 2 Mermaid (Strictly omits GCS if 0 buckets, and strictly omits BigQuery if 0 datasets!)
+    const vpcNamesList = vpcs.map((v) => v.name).slice(0, 2).join(', ') || 'default';
     let stage2MermaidDsl = null;
     if (buckets.length + datasets.length > 0) {
       const s2Lines = [`flowchart LR`];
@@ -72574,9 +72568,9 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       `PROJECT_ID="${projectId}"`,
       `REGION="${primaryRegion}"`,
       ``,
-      `echo "==> [Stage 1/6] Verifying Zero-Trust VPC & IAP TCP-22 Bastion Perimeter..."`,
+      `echo "==> [Stage 1/6] Verifying Zero-Trust VPC & Firewall Perimeter..."`,
       `gcloud compute networks list --project="$PROJECT_ID"`,
-      `gcloud compute firewall-rules list --project="$PROJECT_ID" --filter="sourceRanges:35.235.240.0/20"`,
+      `gcloud compute firewall-rules list --project="$PROJECT_ID" --format="table(name,network,direction,allowed,sourceRanges)"`,
       ``,
       `echo "==> [Stage 2/6] Auditing Stateful Cloud Storage Buckets & BigQuery Datasets..."`,
       `gcloud storage buckets list --project="$PROJECT_ID" --format="table(name,location,storageClass)"`,
@@ -72595,80 +72589,6 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       `echo "==> [Stage 6/6] Checking 30-Day Cloud Audit Destructive Event Log..."`,
       `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project="$PROJECT_ID" --limit=5 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName,protoPayload.resourceName)"`,
     ].join('\n');
-
-    const archLines = [`flowchart LR`];
-    if (vpcs.length + firewalls.length > 0) {
-      archLines.push(`  subgraph S1["Stage 1: VPC & IAP Perimeter"]`);
-      if (vpcs.length > 0) {
-        archLines.push(`    VPC["VPC (${vpcs.length}): ${vpcNamesList}"]`);
-      }
-      if (firewalls.length > 0) {
-        archLines.push(`    FW["Firewall Rules (${firewalls.length} Active)"]`);
-      }
-      archLines.push(`  end`);
-      if (vpcs.length > 0 && firewalls.length > 0) {
-        archLines.push(`  FW -->|"Ingress Guardrail"| VPC`);
-      }
-    }
-    if (buckets.length + datasets.length > 0) {
-      archLines.push(`  subgraph S2["Stage 2: Storage & Lakehouse"]`);
-      if (buckets.length > 0) {
-        archLines.push(`    GCS["GCS Buckets (${buckets.length}): ${bucketNamesList}"]`);
-      }
-      if (datasets.length > 0) {
-        archLines.push(`    BQ["BigQuery Datasets (${datasets.length}): ${datasetNamesList}"]`);
-      }
-      archLines.push(`  end`);
-      if (vpcs.length > 0 && buckets.length > 0) {
-        archLines.push(`  VPC -->|"Private Google Access"| GCS`);
-      }
-      if (buckets.length > 0 && datasets.length > 0) {
-        archLines.push(`  GCS -->|"Lakehouse ELT"| BQ`);
-      }
-    }
-    if (vms.length + cloudRunSvcs.length + gkeClusters.length > 0) {
-      archLines.push(`  subgraph S3["Stage 3: Compute & Serverless"]`);
-      if (vms.length > 0) {
-        archLines.push(`    VMS["GCE VMs (${vms.length}): ${vmNamesList}"]`);
-      }
-      if (cloudRunSvcs.length > 0) {
-        archLines.push(`    CR["Cloud Run (${cloudRunSvcs.length}): ${crNamesList}"]`);
-      }
-      archLines.push(`  end`);
-      if (vpcs.length > 0 && vms.length > 0) {
-        archLines.push(`  VPC --> VMS`);
-      }
-      if (vpcs.length > 0 && cloudRunSvcs.length > 0) {
-        archLines.push(`  VPC --> CR`);
-      }
-    }
-    archLines.push(
-      `  subgraph S4["Stage 4: Terraform & SLSA-3 CI/CD"]`,
-      `    TF["main.tf (${resources.length} Active Resources)"]`,
-      `    CB["cloudbuild.yaml (@sha256 Canary)"]`,
-      `  end`,
-      `  subgraph S5["Stage 5: FinOps & Quota Guard"]`,
-      `    APIS["Enabled GCP APIs: ${enabledApis.length} Services"]`,
-      `    Q429["Startup 10X HTTP 429 Radar"]`,
-      `  end`,
-      `  subgraph S6["Stage 6: SRE & 30d Recycle Bin"]`,
-      `    SLO["14.4x Multi-Window Burn Gate"]`,
-      `    VAULT["30-Day Cloud Recycle Bin"]`,
-      `  end`
-    );
-    if (buckets.length > 0) {
-      archLines.push(`  GCS -->|"Codified in HCL"| TF`);
-    } else if (vpcs.length > 0) {
-      archLines.push(`  VPC -->|"Codified in HCL"| TF`);
-    }
-    archLines.push(
-      `  TF --> CB`,
-      `  CB --> APIS`,
-      `  APIS --> Q429`,
-      `  CB --> SLO`,
-      `  SLO --> VAULT`
-    );
-    const architectureMermaid = archLines.join('\n');
 
     return res.json({
       projectId,
@@ -72692,7 +72612,6 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         mainTf,
         cloudBuildYaml,
         pipelineDeploySh,
-        architectureMermaid,
       },
     });
   } catch (err) {

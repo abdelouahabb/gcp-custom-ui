@@ -786,8 +786,6 @@ export default function EnterpriseStackPipelineBar({
       ? blueprint?.artifacts?.mainTf
       : selectedArtifactTab === 'cloudBuildYaml'
       ? blueprint?.artifacts?.cloudBuildYaml
-      : selectedArtifactTab === 'architectureMermaid'
-      ? blueprint?.artifacts?.architectureMermaid
       : blueprint?.artifacts?.pipelineDeploySh;
 
   const activeArtifactFilename =
@@ -795,8 +793,6 @@ export default function EnterpriseStackPipelineBar({
       ? `${projectId}-enterprise-stack.tf`
       : selectedArtifactTab === 'cloudBuildYaml'
       ? `cloudbuild.yaml`
-      : selectedArtifactTab === 'architectureMermaid'
-      ? `${projectId}-6stage-architecture.mmd`
       : `pipeline-deploy-${projectId}.sh`;
 
   return (
