@@ -924,6 +924,31 @@ export default function VmFleetAndSsh({
               </button>
             )}
 
+            {onSelectTab && (
+              <>
+                <button
+                  type="button"
+                  data-feature-id="RECYCLE_BIN"
+                  onClick={() => onSelectTab('RECYCLE_BIN', 'COMPUTE_VM')}
+                  title="Open 30-Day Cloud Recycle Bin filtered to Deleted Compute Engine VMs (Empty Resource Shell Re-Creation vs. Snapshot Recovery)"
+                  className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Deleted VMs (30d)</span>
+                </button>
+                <button
+                  type="button"
+                  data-feature-id="ENTERPRISE_STACK_PIPELINE"
+                  onClick={() => onSelectTab('WAVE9_STUDIO')}
+                  title="Open Terraform HCL & Cloud Build CI/CD Synthesizer for this VM fleet"
+                  className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Terraform & CI/CD ↗</span>
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               data-feature-id="VM_REFRESH_FLEET"

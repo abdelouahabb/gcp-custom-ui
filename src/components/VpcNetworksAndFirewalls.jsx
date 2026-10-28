@@ -1351,6 +1351,31 @@ export default function VpcNetworksAndFirewalls({
               <span>Sync GCP</span>
             </button>
 
+            {onSelectTab && (
+              <>
+                <button
+                  type="button"
+                  data-feature-id="RECYCLE_BIN"
+                  onClick={() => onSelectTab('RECYCLE_BIN', 'VPC_FIREWALL')}
+                  title="Open 30-Day Cloud Recycle Bin filtered to Deleted VPC Networks & Firewall Rules (100% Stateless Config Re-Creation)"
+                  className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Deleted Firewalls (30d)</span>
+                </button>
+                <button
+                  type="button"
+                  data-feature-id="ENTERPRISE_STACK_PIPELINE"
+                  onClick={() => onSelectTab('WAVE9_STUDIO')}
+                  title="Open Terraform HCL & Cloud Build CI/CD Synthesizer for VPC Networks & Firewalls"
+                  className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Terraform & CI/CD ↗</span>
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               data-feature-id="VPC_FW_JUMP_RULES"

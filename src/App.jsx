@@ -94,6 +94,7 @@ import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
 import Startup10xMentorStudio from './components/Startup10xMentorStudio';
 import CloudRecycleBinStudio from './components/CloudRecycleBinStudio';
+import EnterpriseStackPipelineBar from './components/EnterpriseStackPipelineBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -4909,7 +4910,7 @@ function CloudPulseCockpit() {
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId, { force: true })
                     }
-                    onNavigateTab={(tabId) => setActiveTab(tabId)}
+                    onNavigateTab={handleNavigateStudioTab}
                     onScrollToApis={() => {
                       const scrollNow = () => {
                         const el = document.getElementById(
@@ -4929,6 +4930,13 @@ function CloudPulseCockpit() {
                         scrollNow();
                       }
                     }}
+                  />
+
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
                   />
 
                   <ResourceControlCenter
@@ -5594,7 +5602,7 @@ function CloudPulseCockpit() {
                       setSovereignSubTab('SECRETS_KMS_WAF');
                       setActiveTab('SOVEREIGN_STUDIO');
                     }}
-                    onSelectTab={(tab) => setActiveTab(tab)}
+                    onSelectTab={handleNavigateStudioTab}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
                     }
@@ -5722,7 +5730,7 @@ function CloudPulseCockpit() {
                     refreshTrigger={vmRefreshTrigger}
                     onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
                     onRunInShell={handleRunInShell}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onSelectTab={handleNavigateStudioTab}
                     onShowToast={showToast}
                   />
                   <StudioGcpAdvantageBar
@@ -5770,7 +5778,7 @@ function CloudPulseCockpit() {
                     loading={loadingOverview}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
-                    onSelectTab={(tab) => setActiveTab(tab)}
+                    onSelectTab={handleNavigateStudioTab}
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}
@@ -5925,16 +5933,24 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'RECYCLE_BIN' && (
-                <CloudRecycleBinStudio
-                  projectId={selectedProjectId}
-                  initialCategory={recycleBinCategory}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                  onRefreshParent={() =>
-                    fetchProjectOverview(selectedProjectId, { force: true })
-                  }
-                />
+                <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <CloudRecycleBinStudio
+                    projectId={selectedProjectId}
+                    initialCategory={recycleBinCategory}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId, { force: true })
+                    }
+                  />
+                </div>
               )}
 
               {activeTab === 'AWS_AZURE_PARITY' && (

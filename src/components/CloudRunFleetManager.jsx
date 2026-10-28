@@ -2033,6 +2033,31 @@ spec:
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onSelectTab && (
+              <>
+                <button
+                  type="button"
+                  data-feature-id="RECYCLE_BIN"
+                  onClick={() => onSelectTab('RECYCLE_BIN', 'CLOUD_RUN')}
+                  title="Open 30-Day Cloud Recycle Bin filtered to Deleted Cloud Run Services (Stateless Container Image Re-Deploy)"
+                  className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Deleted Cloud Run (30d)</span>
+                </button>
+                <button
+                  type="button"
+                  data-feature-id="ENTERPRISE_STACK_PIPELINE"
+                  onClick={() => onSelectTab('WAVE9_STUDIO')}
+                  title="Open Terraform HCL & SLSA-3 Cloud Build Canary Pipeline Synthesizer"
+                  className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Terraform & CI/CD ↗</span>
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               data-feature-id="CLOUDRUN_SYNC_FLEET"

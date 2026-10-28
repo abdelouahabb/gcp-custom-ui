@@ -71679,7 +71679,493 @@ app.post('/api/project/:projectId/recycle-bin/restore', async (req, res) => {
   }
 });
 
+// ============================================================================
+// WAVE 2 ENTERPRISE STACK & PIPELINE GLUE: LIVE 6-STAGE BLUEPRINT & IaC SYNTHESIZER
+// ============================================================================
+app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    let cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    let resources = Array.isArray(cachedOverview?.resources)
+      ? cachedOverview.resources
+      : [];
 
+    // If overview SWR cache is cold, perform a fast live parallel probe so we never return fake/empty state
+    if (resources.length === 0) {
+      const { token } = await resolveRequestAuth(req);
+      if (token) {
+        const headers = { Authorization: `Bearer ${token}` };
+        const [bucketsRes, datasetsRes, networksRes, servicesRes] = await Promise.allSettled([
+          axios.get(
+            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+            { headers, timeout: 4500 }
+          ),
+          axios.get(
+            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+            { headers, timeout: 4500 }
+          ),
+          axios.get(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+            { headers, timeout: 4500 }
+          ),
+          axios.get(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
+            { headers, timeout: 4500 }
+          ),
+        ]);
+
+        if (bucketsRes.status === 'fulfilled') {
+          for (const b of bucketsRes.value.data?.items || []) {
+            resources.push({
+              id: `gcs-${b.name}`,
+              name: b.name,
+              type: 'Cloud Storage Bucket',
+              category: 'storage',
+              region: b.location || 'US',
+              storageClass: b.storageClass || 'STANDARD',
+            });
+          }
+        }
+        if (datasetsRes.status === 'fulfilled') {
+          for (const d of datasetsRes.value.data?.datasets || []) {
+            const dsId = d.datasetReference?.datasetId;
+            if (dsId) {
+              resources.push({
+                id: `bq-${dsId}`,
+                name: dsId,
+                type: 'BigQuery Dataset',
+                category: 'data',
+                region: d.location || 'US',
+                storageClass: 'BIGQUERY_DATASET',
+              });
+            }
+          }
+        }
+        if (networksRes.status === 'fulfilled') {
+          for (const n of networksRes.value.data?.items || []) {
+            resources.push({
+              id: `vpc-${n.name}`,
+              name: n.name,
+              type: 'VPC Network',
+              category: 'network',
+              region: 'global',
+              storageClass: n.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
+            });
+          }
+        }
+        if (servicesRes.status === 'fulfilled') {
+          for (const s of servicesRes.value.data?.services || []) {
+            const svcName = (s.config?.name || s.name || '').split('/').pop();
+            if (svcName) {
+              resources.push({
+                id: `api-${svcName}`,
+                name: svcName,
+                type: 'Enabled GCP Service API',
+                category: 'compute',
+                region: 'global',
+                storageClass: svcName,
+                details: { serviceName: svcName },
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const vpcs = resources.filter((r) => r.type === 'VPC Network');
+    const firewalls = resources.filter((r) => r.type === 'VPC Firewall Rule');
+    const buckets = resources.filter((r) => r.type === 'Cloud Storage Bucket');
+    const datasets = resources.filter((r) => r.type === 'BigQuery Dataset');
+    const vms = resources.filter((r) => r.type === 'Compute Engine VM');
+    const cloudRunSvcs = resources.filter((r) => r.type === 'Cloud Run Service');
+    const gkeClusters = resources.filter((r) => (r.type || '').includes('GKE'));
+    const enabledApis = resources.filter((r) => r.type === 'Enabled GCP Service API');
+
+    // Inspect local flight recorder for recent 30-day deletions/Audit entries
+    const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const sessionEvents = flightRecorderByProject.get(projectId) || [];
+    const recentDestructiveEvents = sessionEvents.filter((ev) => {
+      const ts = new Date(ev.timestamp || Date.now()).getTime();
+      if (ts < thirtyDaysAgoMs) return false;
+      const t = String(ev.action || ev.type || '').toUpperCase();
+      return (
+        t.includes('DELETE') ||
+        t.includes('DISABLE') ||
+        t.includes('KILL') ||
+        t.includes('DESTROY') ||
+        t.includes('PURGE')
+      );
+    });
+
+    const totalMonthlySpendUsd = Number(
+      resources.reduce((acc, r) => acc + Number(r.monthlyCostUsd || 0), 0).toFixed(2)
+    );
+
+    const stages = [
+      {
+        id: 'STAGE_1_PERIMETER_IAM',
+        stepNumber: 1,
+        title: '1. Zero-Trust VPC & IAP Perimeter',
+        shortTitle: 'VPC & IAP Perimeter',
+        targetTab: 'VPC_NETWORKS',
+        secondaryTab: 'IAM_SECURITY',
+        status: vpcs.length > 0 ? 'OPTIMAL' : 'READY',
+        metricBadge: `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
+        summary:
+          vpcs.length > 0
+            ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
+            : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId} --format="table(name,network,direction,allowed,sourceRanges)"`,
+      },
+      {
+        id: 'STAGE_2_STORAGE_LAKEHOUSE',
+        stepNumber: 2,
+        title: '2. Stateful Storage & BigQuery Lakehouse',
+        shortTitle: 'Storage & Lakehouse',
+        targetTab: 'CLOUD_STORAGE',
+        secondaryTab: 'BIGQUERY_STUDIO',
+        status: buckets.length + datasets.length > 0 ? 'OPTIMAL' : 'READY',
+        metricBadge: `${buckets.length} GCS · ${datasets.length} BQ Datasets`,
+        summary:
+          buckets.length + datasets.length > 0
+            ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s) and ${datasets.length} BigQuery analytical dataset(s) connected for telemetry & lakehouse pipelines.`
+            : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
+        cliCmd: `gcloud storage buckets list --project=${projectId} --format="table(name,location,storageClass)"`,
+      },
+      {
+        id: 'STAGE_3_COMPUTE_SERVERLESS',
+        stepNumber: 3,
+        title: '3. Compute Fleet & Scale-to-Zero Serverless',
+        shortTitle: 'VMs & Cloud Run',
+        targetTab: 'CLOUD_RUN',
+        secondaryTab: 'VM_SSH',
+        status:
+          vms.length > 0 && cloudRunSvcs.length === 0
+            ? 'ACTION_RECOMMENDED'
+            : vms.length + cloudRunSvcs.length + gkeClusters.length > 0
+            ? 'OPTIMAL'
+            : 'READY',
+        metricBadge: `${vms.length} VMs · ${cloudRunSvcs.length} Cloud Run · ${gkeClusters.length} GKE`,
+        summary:
+          vms.length > 0
+            ? `${vms.length} live GCE VM(s) (${vms.map((v) => v.name).join(', ')}) & ${cloudRunSvcs.length} Cloud Run service(s). Eligible for 1-click VM → Cloud Run scale-to-$0.00 containerization.`
+            : `${cloudRunSvcs.length} Cloud Run scale-to-zero service(s) and ${vms.length} Always-Free / Spot VM(s) active.`,
+        cliCmd: `gcloud run services list --project=${projectId} --format="table(metadata.name,status.url,status.latestReadyRevisionName)"`,
+      },
+      {
+        id: 'STAGE_4_CICD_TERRAFORM',
+        stepNumber: 4,
+        title: '4. Terraform HCL & SLSA-3 CI/CD Pipeline',
+        shortTitle: 'Terraform & CI/CD',
+        targetTab: 'WAVE9_STUDIO',
+        secondaryTab: 'CLOUD_BUILD',
+        status: 'OPTIMAL',
+        metricBadge: `${resources.length} Live Resources Codified`,
+        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
+        cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
+      },
+      {
+        id: 'STAGE_5_FINOPS_QUOTA_GUARD',
+        stepNumber: 5,
+        title: '5. FinOps Spend Cap & HTTP 429 Quota Guard',
+        shortTitle: 'FinOps & Quota Radar',
+        targetTab: 'FINOPS',
+        secondaryTab: 'STARTUP_10X',
+        status: totalMonthlySpendUsd > 50 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
+        metricBadge: `$${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs`,
+        summary: `Current monthly run-rate is $${totalMonthlySpendUsd.toFixed(2)}/mo across ${enabledApis.length} enabled GCP service APIs with live HTTP 429 Quota Saturation & Startup 10X justification drafter.`,
+        cliCmd: `gcloud alpha services quota list --service=compute.googleapis.com --consumer=projects/${projectId} --limit=15`,
+      },
+      {
+        id: 'STAGE_6_SRE_RECYCLE_RECOVERY',
+        stepNumber: 6,
+        title: '6. SRE 14.4x Burn Gate & 30-Day Recycle Bin',
+        shortTitle: 'SRE & Recycle Bin',
+        targetTab: 'RECYCLE_BIN',
+        secondaryTab: 'SRE_WAR_ROOM',
+        status: 'OPTIMAL',
+        metricBadge: `${recentDestructiveEvents.length} Vault Events (30d)`,
+        summary: `Google SRE 1h/6h multi-window burn-rate gate paired with the 30-Day Cloud Recycle Bin distinguishing Native State Recovery from Empty Shell Re-Creation.`,
+        cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=15 --format=json`,
+      },
+    ];
+
+    const sanitizeTfId = (raw) =>
+      String(raw || 'resource')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/^([0-9])/, 'r_$1');
+
+    // Synthesize live main.tf from actual discovered resources
+    const tfBlocks = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Enterprise Stack Blueprint — Live Synthesized Terraform (HCL)`,
+      `# Target GCP Project : ${projectId}`,
+      `# Generated At       : ${new Date().toISOString()}`,
+      `# Codified Inventory : ${vpcs.length} VPCs, ${firewalls.length} Firewalls, ${buckets.length} GCS Buckets, ${datasets.length} BQ Datasets, ${vms.length} VMs, ${cloudRunSvcs.length} Cloud Run`,
+      `# ==============================================================================`,
+      ``,
+      `terraform {`,
+      `  required_version = ">= 1.6.0"`,
+      `  required_providers {`,
+      `    google = {`,
+      `      source  = "hashicorp/google"`,
+      `      version = "~> 5.20"`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `provider "google" {`,
+      `  project = "${projectId}"`,
+      `  region  = "us-central1"`,
+      `}`,
+      ``,
+    ];
+
+    // Stage 1: VPCs & Firewalls
+    if (vpcs.length > 0) {
+      tfBlocks.push(`# --- STAGE 1: ZERO-TRUST VPC PERIMETER ---`);
+      for (const vpc of vpcs.slice(0, 5)) {
+        const tfId = sanitizeTfId(vpc.name);
+        const autoSubnets = vpc.storageClass !== 'CUSTOM_SUBNETS';
+        tfBlocks.push(
+          `resource "google_compute_network" "${tfId}" {`,
+          `  name                    = "${vpc.name}"`,
+          `  project                 = "${projectId}"`,
+          `  auto_create_subnetworks = ${autoSubnets}`,
+          `}`,
+          ``
+        );
+      }
+    }
+
+    for (const fw of firewalls.slice(0, 6)) {
+      const tfId = sanitizeTfId(fw.name);
+      const netName = fw.details?.network || 'default';
+      tfBlocks.push(
+        `resource "google_compute_firewall" "${tfId}" {`,
+        `  name      = "${fw.name}"`,
+        `  project   = "${projectId}"`,
+        `  network   = "${netName}"`,
+        `  direction = "${fw.details?.direction || 'INGRESS'}"`,
+        `  allow {`,
+        `    protocol = "tcp"`,
+        `  }`,
+        `}`,
+        ``
+      );
+    }
+
+    // Stage 2: GCS Buckets & BigQuery Datasets
+    if (buckets.length > 0 || datasets.length > 0) {
+      tfBlocks.push(`# --- STAGE 2: STATEFUL STORAGE & BIGQUERY LAKEHOUSE ---`);
+      for (const b of buckets.slice(0, 8)) {
+        const tfId = sanitizeTfId(b.name);
+        tfBlocks.push(
+          `resource "google_storage_bucket" "${tfId}" {`,
+          `  name                        = "${b.name}"`,
+          `  project                     = "${projectId}"`,
+          `  location                    = "${b.region || 'US'}"`,
+          `  storage_class               = "${b.storageClass || 'STANDARD'}"`,
+          `  uniform_bucket_level_access = true`,
+          `  soft_delete_policy {`,
+          `    retention_duration_seconds = 604800 # 7-day native object recovery`,
+          `  }`,
+          `}`,
+          ``
+        );
+      }
+      for (const ds of datasets.slice(0, 8)) {
+        const tfId = sanitizeTfId(ds.name);
+        tfBlocks.push(
+          `resource "google_bigquery_dataset" "${tfId}" {`,
+          `  dataset_id                  = "${ds.name}"`,
+          `  project                     = "${projectId}"`,
+          `  location                    = "${ds.region || 'US'}"`,
+          `  max_time_travel_hours       = "168" # 7-day FOR SYSTEM_TIME AS OF recovery`,
+          `  delete_contents_on_destroy  = false`,
+          `}`,
+          ``
+        );
+      }
+    }
+
+    // Stage 3: Compute Engine VMs & Cloud Run Services
+    if (vms.length > 0 || cloudRunSvcs.length > 0) {
+      tfBlocks.push(`# --- STAGE 3: COMPUTE FLEET & CLOUD RUN SCALE-TO-ZERO ---`);
+      for (const vm of vms.slice(0, 6)) {
+        const tfId = sanitizeTfId(vm.name);
+        const zone = vm.zone || vm.details?.zone || vm.region || 'us-east1-b';
+        const machineType = vm.details?.machineType || vm.storageClass || 'e2-micro';
+        tfBlocks.push(
+          `resource "google_compute_instance" "${tfId}" {`,
+          `  name         = "${vm.name}"`,
+          `  project      = "${projectId}"`,
+          `  zone         = "${zone}"`,
+          `  machine_type = "${machineType}"`,
+          `  boot_disk {`,
+          `    initialize_params {`,
+          `      image = "debian-cloud/debian-12"`,
+          `    }`,
+          `  }`,
+          `  network_interface {`,
+          `    network = "${vm.details?.network || 'default'}"`,
+          `  }`,
+          `}`,
+          ``
+        );
+      }
+      for (const svc of cloudRunSvcs.slice(0, 6)) {
+        const tfId = sanitizeTfId(svc.name);
+        const region = svc.region || 'us-central1';
+        tfBlocks.push(
+          `resource "google_cloud_run_v2_service" "${tfId}" {`,
+          `  name     = "${svc.name}"`,
+          `  project  = "${projectId}"`,
+          `  location = "${region}"`,
+          `  template {`,
+          `    scaling {`,
+          `      min_instance_count = 0`,
+          `      max_instance_count = 10`,
+          `    }`,
+          `    containers {`,
+          `      image = "${svc.details?.image || `us-docker.pkg.dev/cloudrun/container/hello`}"`,
+          `    }`,
+          `  }`,
+          `}`,
+          ``
+        );
+      }
+    }
+
+    const mainTf = tfBlocks.join('\n');
+
+    const primaryCloudRunName = cloudRunSvcs[0]?.name || 'cloudpulse-control-plane';
+    const primaryRegion = cloudRunSvcs[0]?.region || 'us-central1';
+
+    const cloudBuildYaml = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Enterprise SLSA-Level 3 CI/CD Pipeline (cloudbuild.yaml)`,
+      `# Target Project : ${projectId}`,
+      `# Primary Service: ${primaryCloudRunName} (${primaryRegion})`,
+      `# Stages         : Build -> Artifact Registry Digest -> SRE Canary Gate -> Promote`,
+      `# ==============================================================================`,
+      `options:`,
+      `  logging: CLOUD_LOGGING_ONLY`,
+      `  machineType: 'E2_HIGHCPU_8'`,
+      `  requestedVerifyOption: VERIFIED`,
+      ``,
+      `steps:`,
+      `  # Step 1: Build immutable container image tagged with Git Commit SHA`,
+      `  - name: 'gcr.io/cloud-builders/docker'`,
+      `    id: 'build-container'`,
+      `    args:`,
+      `      - 'build'`,
+      `      - '-t'`,
+      `      - '${primaryRegion}-docker.pkg.dev/${projectId}/cloudpulse/${primaryCloudRunName}:$COMMIT_SHA'`,
+      `      - '.'`,
+      ``,
+      `  # Step 2: Push image & capture cryptographic @sha256 digest`,
+      `  - name: 'gcr.io/cloud-builders/docker'`,
+      `    id: 'push-container'`,
+      `    args:`,
+      `      - 'push'`,
+      `      - '${primaryRegion}-docker.pkg.dev/${projectId}/cloudpulse/${primaryCloudRunName}:$COMMIT_SHA'`,
+      ``,
+      `  # Step 3: Deploy Zero-Traffic Canary Revision to Cloud Run (${primaryCloudRunName})`,
+      `  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'`,
+      `    id: 'deploy-canary-zero-traffic'`,
+      `    entrypoint: 'gcloud'`,
+      `    args:`,
+      `      - 'run'`,
+      `      - 'deploy'`,
+      `      - '${primaryCloudRunName}'`,
+      `      - '--image=${primaryRegion}-docker.pkg.dev/${projectId}/cloudpulse/${primaryCloudRunName}:$COMMIT_SHA'`,
+      `      - '--region=${primaryRegion}'`,
+      `      - '--project=${projectId}'`,
+      `      - '--no-traffic'`,
+      `      - '--tag=canary'`,
+      ``,
+      `  # Step 4: Shift 10% Canary Traffic after HTTP Health Gate`,
+      `  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'`,
+      `    id: 'promote-canary-10pct'`,
+      `    entrypoint: 'gcloud'`,
+      `    args:`,
+      `      - 'run'`,
+      `      - 'services'`,
+      `      - 'update-traffic'`,
+      `      - '${primaryCloudRunName}'`,
+      `      - '--region=${primaryRegion}'`,
+      `      - '--project=${projectId}'`,
+      `      - '--to-tags=canary=10'`,
+    ].join('\n');
+
+    const pipelineDeploySh = [
+      `#!/usr/bin/env bash`,
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Enterprise 6-Stage Pipeline Verification & Deploy Script`,
+      `# Project: ${projectId}`,
+      `# ==============================================================================`,
+      `set -euo pipefail`,
+      `PROJECT_ID="${projectId}"`,
+      `REGION="${primaryRegion}"`,
+      ``,
+      `echo "==> [Stage 1/6] Verifying Zero-Trust VPC & IAP TCP-22 Bastion Perimeter..."`,
+      `gcloud compute networks list --project="$PROJECT_ID"`,
+      `gcloud compute firewall-rules list --project="$PROJECT_ID" --filter="sourceRanges:35.235.240.0/20"`,
+      ``,
+      `echo "==> [Stage 2/6] Auditing Stateful Cloud Storage Buckets & BigQuery Datasets..."`,
+      `gcloud storage buckets list --project="$PROJECT_ID" --format="table(name,location,storageClass)"`,
+      `bq ls --project_id="$PROJECT_ID"`,
+      ``,
+      `echo "==> [Stage 3/6] Inspecting Compute Engine VMs & Cloud Run Scale-to-Zero Fleet..."`,
+      `gcloud compute instances list --project="$PROJECT_ID"`,
+      `gcloud run services list --project="$PROJECT_ID" --region="$REGION"`,
+      ``,
+      `echo "==> [Stage 4/6] Validating Terraform & Cloud Build Pipeline History..."`,
+      `gcloud builds list --project="$PROJECT_ID" --limit=5`,
+      ``,
+      `echo "==> [Stage 5/6] Checking API Quota Headroom & Active Services..."`,
+      `gcloud services list --enabled --project="$PROJECT_ID" --limit=20`,
+      ``,
+      `echo "==> [Stage 6/6] Checking 30-Day Cloud Audit Destructive Event Log..."`,
+      `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project="$PROJECT_ID" --limit=5 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName,protoPayload.resourceName)"`,
+    ].join('\n');
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        totalResources: resources.length,
+        vpcs: vpcs.length,
+        firewalls: firewalls.length,
+        buckets: buckets.length,
+        datasets: datasets.length,
+        vms: vms.length,
+        cloudRun: cloudRunSvcs.length,
+        gke: gkeClusters.length,
+        enabledApis: enabledApis.length,
+        recentDestructiveEvents: recentDestructiveEvents.length,
+        totalMonthlySpendUsd,
+      },
+      stages,
+      artifacts: {
+        mainTf,
+        cloudBuildYaml,
+        pipelineDeploySh,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Enterprise Stack & Pipeline blueprint.',
+    });
+  }
+});
 
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');

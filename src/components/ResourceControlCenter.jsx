@@ -307,6 +307,124 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
   };
 }
 
+/**
+ * Generates a live Terraform (HCL) snippet for any selected GCP resource so
+ * enterprise teams can immediately codify or import live resources into their CI/CD stack.
+ */
+function synthesizeResourceTerraformHcl(resource, projectId) {
+  if (!resource) return '';
+  const rType = resource.type || '';
+  const rName = resource.name || 'resource';
+  const tfId = String(rName)
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/^([0-9])/, 'r_$1');
+  const region = resource.region || 'us-central1';
+  const zone = resource.zone || resource.details?.zone || 'us-east1-b';
+
+  if (rType === 'Cloud Storage Bucket' || resource.category === 'storage') {
+    return [
+      `resource "google_storage_bucket" "${tfId}" {`,
+      `  name                        = "${rName}"`,
+      `  project                     = "${projectId}"`,
+      `  location                    = "${region}"`,
+      `  storage_class               = "${resource.storageClass || 'STANDARD'}"`,
+      `  uniform_bucket_level_access = true`,
+      `  soft_delete_policy {`,
+      `    retention_duration_seconds = 604800`,
+      `  }`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'BigQuery Dataset') {
+    return [
+      `resource "google_bigquery_dataset" "${tfId}" {`,
+      `  dataset_id                 = "${rName}"`,
+      `  project                    = "${projectId}"`,
+      `  location                   = "${region}"`,
+      `  max_time_travel_hours      = "168"`,
+      `  delete_contents_on_destroy = false`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'Compute Engine VM') {
+    const machineType =
+      resource.details?.machineType || resource.storageClass || 'e2-micro';
+    return [
+      `resource "google_compute_instance" "${tfId}" {`,
+      `  name         = "${rName}"`,
+      `  project      = "${projectId}"`,
+      `  zone         = "${zone}"`,
+      `  machine_type = "${machineType}"`,
+      `  boot_disk {`,
+      `    initialize_params { image = "debian-cloud/debian-12" }`,
+      `  }`,
+      `  network_interface {`,
+      `    network = "${resource.details?.network || 'default'}"`,
+      `  }`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'Cloud Run Service') {
+    return [
+      `resource "google_cloud_run_v2_service" "${tfId}" {`,
+      `  name     = "${rName}"`,
+      `  project  = "${projectId}"`,
+      `  location = "${region}"`,
+      `  template {`,
+      `    scaling { min_instance_count = 0 max_instance_count = 10 }`,
+      `    containers {`,
+      `      image = "${resource.details?.image || 'us-docker.pkg.dev/cloudrun/container/hello'}"`,
+      `    }`,
+      `  }`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'VPC Network') {
+    return [
+      `resource "google_compute_network" "${tfId}" {`,
+      `  name                    = "${rName}"`,
+      `  project                 = "${projectId}"`,
+      `  auto_create_subnetworks = ${resource.storageClass !== 'CUSTOM_SUBNETS'}`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'VPC Firewall Rule') {
+    return [
+      `resource "google_compute_firewall" "${tfId}" {`,
+      `  name      = "${rName}"`,
+      `  project   = "${projectId}"`,
+      `  network   = "${resource.details?.network || 'default'}"`,
+      `  direction = "${resource.details?.direction || 'INGRESS'}"`,
+      `  allow { protocol = "tcp" }`,
+      `}`,
+    ].join('\n');
+  }
+
+  if (rType === 'Enabled GCP Service API') {
+    const svc =
+      resource.details?.serviceName || resource.storageClass || rName;
+    return [
+      `resource "google_project_service" "${tfId}" {`,
+      `  project                    = "${projectId}"`,
+      `  service                    = "${svc}"`,
+      `  disable_dependent_services = false`,
+      `}`,
+    ].join('\n');
+  }
+
+  return [
+    `# Terraform Import Target for ${rType}`,
+    `# Resource ID: ${resource.id}`,
+    `# URI: ${resource.uri || rName}`,
+  ].join('\n');
+}
+
 export default function ResourceControlCenter({
   resources = [],
   projectId,
@@ -1224,6 +1342,59 @@ export default function ResourceControlCenter({
                 ))}
               </div>
             )}
+
+            {/* Enterprise Stack & Pipeline Handoff (Live Terraform HCL + Cross-Studio Links) */}
+            <div className="bg-blue-500/5 border border-blue-500/25 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                  Enterprise Stack & Terraform Handoff
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      synthesizeResourceTerraformHcl(selectedResource, projectId)
+                    )
+                  }
+                  className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy .tf HCL</span>
+                </button>
+              </div>
+              <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-md p-2.5 text-[10px] font-mono overflow-x-auto max-h-36 leading-relaxed">
+                {synthesizeResourceTerraformHcl(selectedResource, projectId)}
+              </pre>
+              {onSelectTab && (
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetStudio =
+                        lineageById[selectedResource.id]?.targetTab || 'OVERVIEW';
+                      onSelectTab(targetStudio);
+                    }}
+                    className="px-2 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-colors cursor-pointer truncate"
+                  >
+                    Open Studio ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab('WAVE9_STUDIO')}
+                    className="px-2 py-1.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-semibold transition-colors cursor-pointer truncate"
+                  >
+                    CI/CD & IaC ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab('RECYCLE_BIN', 'ALL')}
+                    className="px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-semibold transition-colors cursor-pointer truncate"
+                  >
+                    30d Vault ↗
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Instant SRE & FinOps Action Buttons */}
             <div className="pt-2 flex flex-col gap-2">

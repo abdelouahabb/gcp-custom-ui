@@ -1634,17 +1634,31 @@ export default function EmergencyApiKillSwitch({
             </p>
           </div>
 
-          <button
-            type="button"
-            disabled={loadingQuotas}
-            onClick={fetchQuotaRadar}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${loadingQuotas ? 'animate-spin' : ''}`}
-            />
-            <span>{loadingQuotas ? 'Scanning Quotas...' : 'Scan Live Quotas'}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {onNavigateTab && (
+              <button
+                type="button"
+                data-feature-id="STARTUP_10X"
+                onClick={() => onNavigateTab('STARTUP_10X')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-xs font-mono font-bold cursor-pointer"
+                title="Open Startup 10X Studio to auto-draft an executive Google Cloud Quota Increase & $350k Credit Justification Packet"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Startup 10X Quota Drafter ↗</span>
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={loadingQuotas}
+              onClick={fetchQuotaRadar}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loadingQuotas ? 'animate-spin' : ''}`}
+              />
+              <span>{loadingQuotas ? 'Scanning Quotas...' : 'Scan Live Quotas'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Live 24h Cloud Monitoring serviceruntime.googleapis.com/api/request_count & HTTP 429 Telemetry Bar */}
@@ -1752,20 +1766,33 @@ export default function EmergencyApiKillSwitch({
                       <span>
                         Usage: <strong>{q.usage}</strong> / {q.limit} {q.unit}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(q.cliIncreaseCmd);
-                          setCopiedQuotaId(q.id);
-                          if (onShowToast) {
-                            onShowToast(`Copied Quota CLI for ${q.metric}`);
-                          }
-                          setTimeout(() => setCopiedQuotaId(null), 1800);
-                        }}
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
-                      >
-                        {copiedQuotaId === q.id ? '✓ Copied CLI' : 'Quota CLI'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onRunInShell && q.cliIncreaseCmd && (
+                          <button
+                            type="button"
+                            onClick={() => onRunInShell(q.cliIncreaseCmd)}
+                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                            title="Execute quota inspection / increase CLI directly in Cloud Shell"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>Run CLI</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(q.cliIncreaseCmd);
+                            setCopiedQuotaId(q.id);
+                            if (onShowToast) {
+                              onShowToast(`Copied Quota CLI for ${q.metric}`);
+                            }
+                            setTimeout(() => setCopiedQuotaId(null), 1800);
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                        >
+                          {copiedQuotaId === q.id ? '✓ Copied CLI' : 'Copy CLI'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

@@ -254,6 +254,16 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'logging.googleapis.com (cloudaudit.googleapis.com/activity) · storage.googleapis.com (softDeletePolicy) · serviceusage.googleapis.com',
     safetyMode: 'READ_ONLY',
   },
+  ENTERPRISE_STACK_PIPELINE: {
+    badge: '6-STAGE ENTERPRISE PIPELINE GLUE',
+    title: 'Enterprise 6-Stage Production Stack & Live IaC / SLSA-3 CI/CD Synthesizer',
+    whatItDoes:
+      'Connects your entire Google Cloud control plane into a unified 6-stage enterprise workflow: (1) Zero-Trust VPC & IAP Perimeter → (2) Stateful Cloud Storage & BigQuery Lakehouse → (3) Compute VMs & Scale-to-Zero Cloud Run → (4) Live Terraform HCL (main.tf) & SLSA-3 Cloud Build Canary Pipeline (cloudbuild.yaml) → (5) FinOps Spend Caps & HTTP 429 Quota Radar → (6) 14.4x SRE Burn Gate & 30-Day Recycle Bin.',
+    enterpriseValue:
+      'Transforms isolated cloud management tabs into a cohesive enterprise production pipeline—automatically codifying live resources into Terraform HCL and SLSA-3 CI/CD pipelines while preserving cross-studio context.',
+    gcpApis: 'compute · storage · bigquery · run · cloudbuild · serviceusage · logging',
+    safetyMode: 'READ_ONLY',
+  },
   DOCS_GUIDE: {
     badge: 'ARCHITECTURE & API REFERENCE',
     title: 'Interactive CloudPulse Architecture & Google Cloud API Guide',
