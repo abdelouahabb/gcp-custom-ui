@@ -3474,6 +3474,13 @@ function CloudPulseCockpit() {
               id: `${Date.now()}-${Math.random()}`,
               descriptor,
               onConfirm: () => {
+                if (typeof config.__onGatekeeperConfirmed === 'function') {
+                  try {
+                    config.__onGatekeeperConfirmed();
+                  } catch {
+                    // ignore callback errors
+                  }
+                }
                 if (config.headers && typeof config.headers.set === 'function') {
                   config.headers.set('x-confirmed-delete', 'true');
                 } else {
@@ -3950,12 +3957,17 @@ function CloudPulseCockpit() {
     }
   };
 
-  const handleDeleteResource = async (resource) => {
-    setActionLoading(true);
+  const handleDeleteResource = async (resource, options = {}) => {
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(selectedProjectId)}/resource`,
         {
+          __onGatekeeperConfirmed: () => {
+            setActionLoading(true);
+            if (typeof options.onConfirmed === 'function') {
+              options.onConfirmed();
+            }
+          },
           data: {
             resourceType: resource.type,
             name: resource.name,
@@ -3982,10 +3994,15 @@ function CloudPulseCockpit() {
       showToast(res.data.message || `Deleted ${resource.name} from ${selectedProjectId}`);
       await fetchProjectOverview(selectedProjectId, { force: true });
       setVmRefreshTrigger((c) => c + 1);
+      return true;
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) {
+        return false;
+      }
       setErrorBanner(
         err.response?.data?.error || `Failed to delete ${resource.name}`
       );
+      return false;
     } finally {
       setActionLoading(false);
     }

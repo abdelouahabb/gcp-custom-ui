@@ -376,8 +376,11 @@ export default function EmergencyApiKillSwitch({
   }, [filteredApis, searchQuery, showAllApis]);
 
   const handleToggleApi = async (serviceName, action) => {
-    setBusyApis((prev) => ({ ...prev, [serviceName]: action }));
     setConfirmDisableApi(null);
+    if (action !== 'DISABLE') {
+      setBusyApis((prev) => ({ ...prev, [serviceName]: action }));
+    }
+    let wasCancelled = false;
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/apis/toggle`,
@@ -385,6 +388,11 @@ export default function EmergencyApiKillSwitch({
           serviceName,
           action,
           disableDependentServices: true,
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setBusyApis((prev) => ({ ...prev, [serviceName]: action }));
+          },
         }
       );
       if (Array.isArray(res.data?.enabledApis)) {
@@ -400,6 +408,10 @@ export default function EmergencyApiKillSwitch({
       }
       if (onRefresh) await onRefresh();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) {
+        wasCancelled = true;
+        return;
+      }
       if (onShowError) {
         onShowError(
           err.response?.data?.error ||
@@ -408,13 +420,18 @@ export default function EmergencyApiKillSwitch({
         );
       }
     } finally {
-      setTimeout(() => {
+      const clearBusy = () => {
         setBusyApis((prev) => {
           const next = { ...prev };
           delete next[serviceName];
           return next;
         });
-      }, 2500);
+      };
+      if (wasCancelled) {
+        clearBusy();
+      } else {
+        setTimeout(clearBusy, 600);
+      }
     }
   };
 
@@ -1023,7 +1040,7 @@ export default function EmergencyApiKillSwitch({
                           )}
                           <button
                             type="button"
-                            onClick={() => setConfirmDisableApi(api.name)}
+                            onClick={() => handleToggleApi(api.name, 'DISABLE')}
                             className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                           >
                             <Power className="w-3 h-3" />

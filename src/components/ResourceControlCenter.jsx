@@ -316,12 +316,10 @@ export default function ResourceControlCenter({
   const [onlyStaleFilter, setOnlyStaleFilter] = useState(false);
   const [lineageDrawerOpen, setLineageDrawerOpen] = useState(false);
   const [lineageDrawerTab, setLineageDrawerTab] = useState('STALE'); // 'STALE' | 'ALL'
-  const [drawerConfirmDeleteId, setDrawerConfirmDeleteId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [selectedResourceId, setSelectedResourceId] = useState(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingIds, setDeletingIds] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedUri, setCopiedUri] = useState(false);
@@ -610,57 +608,46 @@ export default function ResourceControlCenter({
                             )}
                             {canDelete && lin.isStale && (
                               <div>
-                                {drawerConfirmDeleteId === item.id ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      disabled={actionLoading || isDeletingThis}
-                                      onClick={async () => {
-                                        setDeletingIds((prev) => ({
-                                          ...prev,
-                                          [item.id]: true,
-                                        }));
-                                        setDrawerConfirmDeleteId(null);
-                                        await onDeleteResource({
+                                <button
+                                  type="button"
+                                  disabled={actionLoading || isDeletingThis}
+                                  onClick={async () => {
+                                    try {
+                                      await onDeleteResource(
+                                        {
                                           ...item,
                                           name: isServiceApi
                                             ? item.details?.serviceName || item.storageClass
                                             : item.name,
-                                        });
-                                      }}
-                                      className="px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
-                                    >
-                                      {isDeletingThis
-                                        ? 'Working...'
-                                        : isServiceApi
-                                        ? 'Confirm Disable API'
-                                        : 'Confirm Delete'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setDrawerConfirmDeleteId(null)}
-                                      className="px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={actionLoading || isDeletingThis}
-                                    onClick={() => setDrawerConfirmDeleteId(item.id)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>
-                                      {isDeletingThis
-                                        ? 'Working...'
-                                        : isServiceApi
-                                        ? 'Disable API'
-                                        : 'Clean Up'}
-                                    </span>
-                                  </button>
-                                )}
+                                        },
+                                        {
+                                          onConfirmed: () => {
+                                            setDeletingIds((prev) => ({
+                                              ...prev,
+                                              [item.id]: true,
+                                            }));
+                                          },
+                                        }
+                                      );
+                                    } finally {
+                                      setDeletingIds((prev) => {
+                                        const next = { ...prev };
+                                        delete next[item.id];
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>
+                                    {isDeletingThis
+                                      ? 'Working...'
+                                      : isServiceApi
+                                      ? 'Disable API'
+                                      : 'Clean Up'}
+                                  </span>
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1352,86 +1339,56 @@ export default function ResourceControlCenter({
               ].includes(selectedResource.type) &&
                 onDeleteResource && (
                   <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                    {confirmDeleteId === selectedResource.id ? (
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 space-y-2">
-                        <div className="text-xs font-semibold text-red-600 dark:text-red-400">
-                          {selectedResource.type === 'Enabled GCP Service API' ? (
-                            <>
-                              Emergency Kill-Switch: Disable{' '}
-                              <span className="font-mono">
-                                {selectedResource.details?.serviceName ||
-                                  selectedResource.storageClass}
-                              </span>{' '}
-                              on {projectId}?
-                            </>
-                          ) : (
-                            <>
-                              Permanently delete {selectedResource.type}{' '}
-                              <span className="font-mono">
-                                {selectedResource.name}
-                              </span>
-                              ?
-                            </>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={actionLoading}
-                            onClick={async () => {
-                              const targetId = selectedResource.id;
-                              setDeletingIds((prev) => ({
-                                ...prev,
-                                [targetId]: true,
-                              }));
-                              setConfirmDeleteId(null);
-                              setSelectedResourceId(null);
-                              await onDeleteResource({
-                                ...selectedResource,
-                                name:
-                                  selectedResource.type ===
-                                  'Enabled GCP Service API'
-                                    ? selectedResource.details?.serviceName ||
-                                      selectedResource.storageClass
-                                    : selectedResource.name,
-                              });
-                            }}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-md px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50"
-                          >
-                            {actionLoading
-                              ? 'Working...'
-                              : selectedResource.type ===
+                    <button
+                      type="button"
+                      disabled={actionLoading || Boolean(deletingIds[selectedResource.id])}
+                      onClick={async () => {
+                        const targetId = selectedResource.id;
+                        try {
+                          const deleted = await onDeleteResource(
+                            {
+                              ...selectedResource,
+                              name:
+                                selectedResource.type ===
                                 'Enabled GCP Service API'
-                              ? 'Yes, Disable API Now'
-                              : 'Yes, Delete Permanently'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={() => setConfirmDeleteId(selectedResource.id)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>
-                          {selectedResource.type === 'Enabled GCP Service API'
-                            ? `Emergency Disable API (${
-                                selectedResource.details?.serviceName ||
-                                selectedResource.storageClass
-                              })`
-                            : `Delete ${selectedResource.type}`}
-                        </span>
-                      </button>
-                    )}
+                                  ? selectedResource.details?.serviceName ||
+                                    selectedResource.storageClass
+                                  : selectedResource.name,
+                            },
+                            {
+                              onConfirmed: () => {
+                                setDeletingIds((prev) => ({
+                                  ...prev,
+                                  [targetId]: true,
+                                }));
+                              },
+                            }
+                          );
+                          if (deleted) {
+                            setSelectedResourceId(null);
+                          }
+                        } finally {
+                          setDeletingIds((prev) => {
+                            const next = { ...prev };
+                            delete next[targetId];
+                            return next;
+                          });
+                        }
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>
+                        {deletingIds[selectedResource.id]
+                          ? 'Working...'
+                          : selectedResource.type === 'Enabled GCP Service API'
+                          ? `Emergency Disable API (${
+                              selectedResource.details?.serviceName ||
+                              selectedResource.storageClass
+                            })`
+                          : `Delete ${selectedResource.type}`}
+                      </span>
+                    </button>
                   </div>
                 )}
             </div>
