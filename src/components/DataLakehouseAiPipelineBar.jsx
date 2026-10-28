@@ -101,9 +101,8 @@ function inferLakehouseTabFromNodeId(nodeId = '', label = '') {
   }
   if (id.startsWith('PS') || text.includes('PUB/SUB')) {
     return {
-      targetTab: 'DATA_ENGINEER_STUDIO',
-      subTab: 'PUBSUB_STREAMING',
-      subtitle: 'Click to open Pub/Sub & Eventarc Studio',
+      targetTab: 'CLOUD_FUNCTIONS',
+      subtitle: 'Click to open Functions & Eventarc / Pub/Sub Studio',
     };
   }
   if (id.startsWith('BL') || text.includes('BIGLAKE') || text.includes('ICEBERG')) {
@@ -655,9 +654,8 @@ export default function DataLakehouseAiPipelineBar({
       stepNumber: 1,
       shortTitle: 'GCS Lake & Pub/Sub',
       targetTab: 'CLOUD_STORAGE',
-      secondaryTab: 'DATA_ENGINEER_STUDIO',
-      secondarySubTab: 'PUBSUB_STREAMING',
-      secondaryLabel: 'Pub/Sub & Eventarc Studio',
+      secondaryTab: 'CLOUD_FUNCTIONS',
+      secondaryLabel: 'Functions & Eventarc / Pub/Sub Studio',
       status: 'OPTIMAL',
       metricBadge: 'Raw Lake & Streams',
       summary: 'Cloud Storage raw lake landing zones & Pub/Sub event streams.',
@@ -914,7 +912,7 @@ export default function DataLakehouseAiPipelineBar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectTab(stage.targetTab, stage.secondarySubTab);
+                      onSelectTab(stage.targetTab);
                     }}
                     title={`Jump directly to ${stage.shortTitle} Studio`}
                     className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold transition-colors shrink-0 cursor-pointer"
@@ -1136,9 +1134,44 @@ export default function DataLakehouseAiPipelineBar({
               </div>
             )}
 
-          {/* Stage-Specific Content: Step 4 shows the Dataform SQLX / Airflow DAG / BQML Code Synthesizer; Steps 1, 2, 3, 5, 6 show Live Cards */}
+          {/* Stage-Specific Content: Step 4 shows discovered Live Dataform Repo cards + the Dataform SQLX / Airflow DAG / BQML Code Synthesizer; Steps 1, 2, 3, 5, 6 show Live Cards */}
           {activeStage?.id === 'STAGE_4_DATAFORM_AIRFLOW' ? (
             <div className="space-y-3">
+              {Array.isArray(activeStage?.stageItems) &&
+                activeStage.stageItems.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    {activeStage.stageItems.map((item, idx) => (
+                      <div
+                        key={`s4-${item.name}-${idx}`}
+                        onClick={() => {
+                          if (item.sqlPayload && onOpenBigQuerySql) {
+                            onOpenBigQuerySql(item.sqlPayload);
+                            onShowToast?.(
+                              `Loaded "${item.name}" into BigQuery Studio`
+                            );
+                          } else if (onSelectTab && item.targetTab) {
+                            onSelectTab(item.targetTab, item.subTab);
+                          }
+                        }}
+                        className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-bold">
+                            {item.kind}
+                          </div>
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {item.name}
+                          </div>
+                          <div className="text-[10px] font-mono text-zinc-500 truncate">
+                            {item.meta}
+                          </div>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button

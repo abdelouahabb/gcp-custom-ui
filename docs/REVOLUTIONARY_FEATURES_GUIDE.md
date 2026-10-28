@@ -788,6 +788,29 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - **Tier B — Empty Resource Shell Re-Creation Only (`NO_DATA_GUARANTEE`)**:
        - **Compute Engine VMs, Persistent Disks, Cloud SQL Instances, Deleted BigQuery Datasets, Cloud Run Services, GKE Clusters, Secret Manager Secrets, and Non-Soft-Deleted GCS Buckets**: Displays a prominent **`EMPTY SHELL RE-CREATE (NO DATA GUARANTEE)`** badge and red warning box explaining that Google Cloud permanently destroys the underlying disk blocks, database storage, or dataset tables upon deletion—so clicking **`Re-Create Empty Resource (No Data Guarantee)`** provisions a brand-new empty resource with the same name/region/type unless restored from a prior snapshot or backup.
 
+### 68. Wave 2: 6-Stage Enterprise Stack Pipeline Bar, Extended Compute/Artifact Discovery & Interactive Draggable SVG Mermaid Topology (`src/components/EnterpriseStackPipelineBar.jsx` & `server/index.js`)
+- **Where to find it**: Mounted at the top of **`Overview`**, **`VPC & Firewalls`**, **`VM Fleet & SSH`**, **`Cloud Run`**, **`Functions & Eventarc`**, **`GKE Studio`**, and **`Cloud Build`**.
+- **Why We Built This**:
+  - Cloud infrastructure spans 6 sequential lifecycle stages (Network Perimeter $\rightarrow$ Storage & Lakehouse $\rightarrow$ Compute & Serverless $\rightarrow$ Terraform & CI/CD $\rightarrow$ FinOps & Quotas $\rightarrow$ SRE & Recovery). Engineers needed a closed-by-default, single-selection 6-stage pipeline ribbon that connects these studios, discovers real live resources (including Persistent Disks, Cloud Functions, and Artifact Registry repositories), renders interactive draggable Mermaid flowcharts strictly when connected resources exist, and synthesizes production Terraform HCL + Cloud Build CI/CD code in 1 click.
+- **How It Works (`GET /api/project/:id/enterprise-pipeline/blueprint`)**:
+  1. **Strict Single-Stage Selection & Closed-by-Default UX**: Highlights only the single active drawer stage (when open) or the single primary home stage for the current studio tab (when closed).
+  2. **Expanded Stage 3 Discovery (`step3ExtendedProbeCache`)**: Probes Compute Engine VMs, Cloud Run Gen2 services, GKE clusters, **Persistent Disks (`compute.googleapis.com/compute/v1/projects/:id/aggregated/disks` — flagging unattached orphan disks)**, **Cloud Functions v2 (`cloudfunctions.googleapis.com/v2`)**, and **Artifact Registry repositories (`artifactregistry.googleapis.com/v1` across `us-central1`, `us-east1`, `europe-west1`, `us`, `global`)**, while preserving 1-click `+ Provision Compute VM (e2-micro Free)` and `+ Deploy Cloud Run Service (Gen2)` cards whenever `0 VMs` or `0 Cloud Run` exist.
+  3. **Interactive Draggable SVG Mermaid Canvas (`MermaidFlowchartSvg`)**: Supports pointer-captured dragging of any node or subgraph container, `−` / `100%` / `+` zoom, `↺ Reset Node Positions`, and 1-click node-to-studio routing—strictly rendered only on topology Stages 1–3 when `edges.length > 0` (zero `(0)` placeholder nodes).
+  4. **Stage 4 Live Stack IaC Synthesizer**: Codifies all discovered VPCs, Firewalls, GCS Buckets, BigQuery Datasets, VMs, Cloud Run services, Persistent Disks, Cloud Functions, Artifact Registry repositories, and `google_project_service` APIs into downloadable `main.tf`, `cloudbuild.yaml`, and `pipeline-deploy.sh` artifacts.
+
+### 69. Wave 3: 6-Stage Data, Lakehouse & AI Pipeline Bar, SQLX/Airflow/BQML Code Synthesizer & Zero-Noise Mermaid Guard (`src/components/DataLakehouseAiPipelineBar.jsx` & `server/index.js`)
+- **Where to find it**: Mounted at the top of the 5 core Lakehouse, Analytics & AI studios (**`Cloud Storage`**, **`BigQuery Studio`**, **`BigLake Iceberg`**, **`Data & Pipeline Studio`**, and **`MCP Servers Hub`**).
+- **Why We Built This**:
+  - Modern data and AI engineering on Google Cloud flows across 6 connected stages: Raw Lake Storage & Pub/Sub Ingestion $\rightarrow$ BigLake Iceberg & Zero-Copy OLTP Federation $\rightarrow$ BigQuery Medallion Warehouse $\rightarrow$ Dataform SQLX & Cloud Composer Airflow DAGs $\rightarrow$ BigQuery ML + Vertex AI Gemini 2.5 Flash $\rightarrow$ 168-Hour Time-Travel & Soft-Delete Lineage Vault.
+- **How It Works (`GET /api/project/:id/lakehouse-ai-pipeline/blueprint`)**:
+  1. **Live Parallel Lakehouse & AI Discovery (`wave3LakehouseProbeCache`)**: Probes Cloud Storage buckets, user Pub/Sub topics (filtering out hidden Google-managed `container-analysis-*`, `eventarc-*`, `gcf-*`, `cloud-builds`, and `firebase-*` system topics), BigLake connections (`bigqueryconnection.googleapis.com/v1beta1`), Cloud SQL instances, Cloud Spanner instances, BigQuery datasets & tables, Dataform repositories (`dataform.googleapis.com/v1beta1`), and enabled Data/AI service APIs.
+  2. **Strict Non-Zero Flow Mermaid Guard ("No Need to Draw If We Have Nothing to Show")**:
+     - Stage 1 only renders a Mermaid flowchart when **both** `buckets.length > 0` and `pubsubTopics.length > 0` (`Pub/Sub Topic --> GCS Bucket`).
+     - Stage 2 only renders a Mermaid flowchart when `bqConnections.length + sqlInstances.length + spannerInstances.length > 0` and at least one `-->` connection exists.
+     - Stage 3 only renders a Mermaid flowchart when `datasets.length > 0` and at least one `-->` connection exists.
+     - The frontend additionally verifies `parseMermaidFlowchartLr(activeStage.mermaidDsl).edges.length > 0` before displaying the Mermaid banner.
+  3. **Stage 4 Live Lakehouse Code Synthesizer & BigQuery SQL Handoffs**: Lists discovered Git-backed Dataform repositories as clickable cards and synthesizes tailored **Dataform Incremental SQLX (`medallion_lakehouse.sqlx`)**, **Cloud Composer Airflow 2.10+ DAG (`cloudpulse_lakehouse_dag.py`)**, and **BigQuery ML + Vertex AI Gemini 2.5 Flash (`bqml_gemini.sql` — `ML.GENERATE_TEXT`)** with 1-click **`Open in BigQuery Studio`** handoff across Stages 2, 3, 4, 5, and 6 (`FOR SYSTEM_TIME AS OF`).
+
 
 
 
