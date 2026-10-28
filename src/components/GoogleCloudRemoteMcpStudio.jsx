@@ -1037,13 +1037,23 @@ export default function GoogleCloudRemoteMcpStudio({
     if (!projectId) return;
     setProbingAgentRegistry(true);
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/gcloud-sdk-591/agent-registry-probe`,
-        { params: { location: 'global' } }
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
+        { action: 'SCAN_ALPHA_AGENT_REGISTRY', location: 'global' }
       );
-      setAgentRegistryProbe(res.data);
+      const probes = res.data?.probes || [];
+      const parsed = {
+        sdkVersion: '591.0.0 (GA)',
+        mcpServersCount: probes[0]?.count ?? 0,
+        agentsCount: probes[1]?.count ?? 0,
+        skillsCount: probes[2]?.count ?? 0,
+        publishersCount: probes[3]?.count ?? 0,
+        findingsCount: probes[4]?.count ?? 0,
+        probes,
+      };
+      setAgentRegistryProbe(parsed);
       notify(
-        `SDK 591.0.0 GA Agent Registry probed (${res.data?.mcpServersCount || 0} MCP servers, ${res.data?.agentsCount || 0} agents, ${res.data?.skillsCount || 0} skills).`
+        `SDK 591.0.0 GA Agent Registry probed (${parsed.mcpServersCount} MCP servers, ${parsed.agentsCount} agents, ${parsed.skillsCount} skills, ${parsed.publishersCount} publishers, ${parsed.findingsCount} findings).`
       );
     } catch (err) {
       notify(
