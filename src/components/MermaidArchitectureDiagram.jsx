@@ -69,7 +69,9 @@ export function parseMermaidFlowchart(rawCode = '') {
 
       while ((match = arrowRegex.exec(line)) !== null) {
         parts.push(line.slice(lastIndex, match.index).trim());
-        edgeLabels.push((match[1] || '').trim());
+        edgeLabels.push(
+          (match[1] || '').trim().replace(/^["']+|["']+$/g, '').trim()
+        );
         lastIndex = match.index + match[0].length;
       }
       parts.push(line.slice(lastIndex).trim());
@@ -196,10 +198,12 @@ const LAYER_STYLES = [
 
 export default function MermaidArchitectureDiagram({
   code = '',
+  chart = '',
   title = 'Live C4 Mermaid Architecture Diagram (Reverse-Compiled)',
-  defaultMode = 'SPLIT', // 'VISUAL' | 'SPLIT' | 'CODE'
+  defaultMode = 'VISUAL', // 'VISUAL' | 'SPLIT' | 'CODE'
   onCopy,
 }) {
+  const effectiveCode = code || chart || '';
   const [viewMode, setViewMode] = useState(defaultMode);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -209,7 +213,10 @@ export default function MermaidArchitectureDiagram({
   const dragOriginRef = useRef(null);
   const svgRef = useRef(null);
 
-  const parsed = useMemo(() => parseMermaidFlowchart(code), [code]);
+  const parsed = useMemo(
+    () => parseMermaidFlowchart(effectiveCode),
+    [effectiveCode]
+  );
 
   // Convert client mouse coordinates into SVG viewBox coordinates
   const clientToSvgPoint = (clientX, clientY) => {
@@ -424,11 +431,16 @@ export default function MermaidArchitectureDiagram({
   }, [parsed, nodeOffsets]);
 
   const handleCopyCode = () => {
-    navigator.clipboard?.writeText(code || '');
+    navigator.clipboard?.writeText(effectiveCode || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
     if (onCopy) onCopy();
   };
+
+  // Global Zero-Empty-Diagram Guard: Never render an empty Mermaid container if there are 0 nodes or 0 edges
+  if (!effectiveCode || parsed.nodes.length === 0 || parsed.edges.length === 0) {
+    return null;
+  }
 
   const handleDownloadSvg = () => {
     if (!svgRef.current) return;
@@ -920,7 +932,7 @@ export default function MermaidArchitectureDiagram({
       {/* Raw Mermaid Code Block (shown in SPLIT or CODE mode) */}
       {viewMode !== 'VISUAL' && (
         <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 border border-zinc-800 text-[10.5px] font-mono overflow-x-auto max-h-48">
-          {code}
+          {effectiveCode}
         </pre>
       )}
     </div>

@@ -75703,24 +75703,19 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
       }
     }
 
-    // --- Stage 5 Mermaid: Pub/Sub Budget Alert & Autonomous Cost-Kill ---
+    // --- Stage 5 Mermaid: Pub/Sub Budget Alert & Autonomous Cost-Kill (Strictly requires >= 1 live user Pub/Sub topic) ---
     let stage5MermaidDsl = null;
-    if (pubsubTopics.length > 0 || highBurnApis.length > 0) {
+    if (pubsubTopics.length > 0) {
       const s5Lines = [`flowchart LR`];
       const s5Edges = [];
       s5Lines.push(`  subgraph BUDGET["Cloud Billing Thresholds"]`);
       s5Lines.push(`    B50["50% / 80% / 100% Spend Alert"]`);
       s5Lines.push(`  end`);
-      s5Lines.push(`  subgraph PUBSUB_BUS["Pub/Sub Alert Bus"]`);
-      if (pubsubTopics.length > 0) {
-        pubsubTopics.slice(0, 2).forEach((t, idx) => {
-          s5Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
-          s5Edges.push(`  B50 -->|"JSON Budget Notification"| TOP${idx}`);
-        });
-      } else {
-        s5Lines.push(`    TOP0["Topic: ${primaryTopic}"]`);
-        s5Edges.push(`  B50 -->|"JSON Budget Notification"| TOP0`);
-      }
+      s5Lines.push(`  subgraph PUBSUB_BUS["Pub/Sub Alert Bus (${pubsubTopics.length} Active)"]`);
+      pubsubTopics.slice(0, 3).forEach((t, idx) => {
+        s5Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
+        s5Edges.push(`  B50 -->|"JSON Budget Notification"| TOP${idx}`);
+      });
       s5Lines.push(`  end`);
       s5Lines.push(`  subgraph ACTION["Autonomous Cost-Kill Target"]`);
       s5Lines.push(`    STOP["Stop Idle VMs & Cap Paid API Quotas"]`);

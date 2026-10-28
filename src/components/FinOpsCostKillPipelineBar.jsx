@@ -473,7 +473,9 @@ export default function FinOpsCostKillPipelineBar({
                 selectedStageObj.mermaidDsl.includes('-->') && (
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80">
                     <MermaidArchitectureDiagram
+                      code={selectedStageObj.mermaidDsl}
                       chart={selectedStageObj.mermaidDsl}
+                      defaultMode="VISUAL"
                       title={`Live ${selectedStageObj.shortTitle} Topology (${projectId})`}
                       subtitle={`Real-time FinOps, quota & cost-guardrail topology synthesized from live resources in ${projectId}`}
                     />
