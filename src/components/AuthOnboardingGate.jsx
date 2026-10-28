@@ -297,7 +297,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                 <h1 className="text-2xl font-extrabold tracking-tight">
                   CloudPulse <span className="text-blue-500">2026</span>
                 </h1>
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                   Mobile Gmail OAuth
                 </span>
               </div>

@@ -1345,10 +1345,10 @@ export default function CloudStorageStudio({
                           <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                             gs://{b.name}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
                             {b.location} ({b.locationType})
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
                             {b.storageClass}
                           </span>
                           {(b.name?.includes('-vmdisk-') ||

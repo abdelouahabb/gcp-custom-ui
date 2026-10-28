@@ -887,7 +887,7 @@ export default function VmFleetAndSsh({
                 <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">
                   {vms.length} live VM{vms.length === 1 ? '' : 's'} in {projectId}
                 </span>
-                <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full-full">
+                <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
                   13 Global Regions · E2/N2/C3/C4/Arm64/GPU
                 </span>
               </h3>

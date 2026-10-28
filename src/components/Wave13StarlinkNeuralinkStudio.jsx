@@ -548,14 +548,14 @@ export default function Wave13StarlinkNeuralinkStudio({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 GLOBAL EDGE &amp; PROMPT-TO-DAG STUDIO (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST &amp; TLS 1.3
               </span>
               {ledgerData?.publicKeyFingerprint && (
-                <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800">
                   Ed25519 Key ID: {ledgerData.publicKeyFingerprint.slice(0, 16)}...
                 </span>
               )}

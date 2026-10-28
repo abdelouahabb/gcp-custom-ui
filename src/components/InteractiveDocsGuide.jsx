@@ -1740,7 +1740,7 @@ export default function InteractiveDocsGuide({
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 text-zinc-900 dark:text-zinc-100 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
               <BookOpen className="w-3.5 h-3.5" />
               <span>INTERACTIVE ENGINEERING MANUAL & ARCHITECTURE GUIDE</span>
             </div>
@@ -1837,7 +1837,7 @@ export default function InteractiveDocsGuide({
                       {doc.wave}
                     </span>
                     <span
-                      className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full-full border ${doc.badgeColor}`}
+                      className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${doc.badgeColor}`}
                     >
                       Location: {doc.badge}
                     </span>

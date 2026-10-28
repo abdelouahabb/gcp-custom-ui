@@ -1204,7 +1204,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
                   MOONSHOT X1 · LIVE IN-MEMORY DLP & SECRET LEAK X-RAY
                 </span>
               </div>
@@ -1453,7 +1453,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X2 · SUB-100MS SERVERLESS COLD-START SURGEON
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1617,7 +1617,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-500/[0.06] border border-amber-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
                 MOONSHOT X3 · HIDDEN BANDWIDTH TAX &amp; DATA-GRAVITY RADAR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1730,7 +1730,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                 MOONSHOT X4 · RANSOMWARE SURVIVAL &amp; AIR-GAP AUDITOR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1859,7 +1859,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X5 · 12-METROPOLIS SPEED-OF-LIGHT UX MATRIX
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1955,7 +1955,7 @@ CMD ["server/index.js"]`;
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                 MOONSHOT X6 · OPTION 3 AES-256-GCM AI STUDIO BYOK VAULT
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 text-emerald-400 border border-emerald-500/30">

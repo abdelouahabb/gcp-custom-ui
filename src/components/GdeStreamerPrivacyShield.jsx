@@ -435,7 +435,7 @@ export default function GdeStreamerPrivacyShield({
           <div className="flex items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-mono font-extrabold">
                   <Video className="w-3 h-3" />
                   <span>GDE TUTORIAL PRIVACY SHIELD</span>
                 </span>

@@ -1241,7 +1241,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 PRE-CRIME FINOPS · BILLING TIME-CRYSTAL
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
@@ -1725,7 +1725,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 WHAT-IF BLAST-RADIUS X-RAY
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
@@ -1855,7 +1855,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 DREAM STACK COMPILER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">

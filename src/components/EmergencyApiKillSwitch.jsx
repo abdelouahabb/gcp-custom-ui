@@ -501,15 +501,15 @@ export default function EmergencyApiKillSwitch({
                 DEFCON-1 Project Emergency Kill-Switch (Billing Circuit Breaker)
               </span>
               {loadingBilling && !billingStatus ? (
-                <span className="text-[10px] font-mono bg-zinc-500/10 text-zinc-400 px-2 py-0.5 rounded-full-full">
+                <span className="text-[10px] font-mono bg-zinc-500/10 text-zinc-400 px-2 py-0.5 rounded-full">
                   CHECKING BILLING...
                 </span>
               ) : isBillingEnabled ? (
-                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full-full">
+                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
                   BILLING ENABLED · SPENDING ACTIVE
                 </span>
               ) : (
-                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full-full">
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                   BILLING UNLINKED · $0.00 LOCKDOWN ACTIVE
                 </span>
               )}
@@ -578,6 +578,7 @@ export default function EmergencyApiKillSwitch({
               !confirmKillBilling ? (
                 <button
                   type="button"
+                  data-feature-id="KILL_SWITCH_DETACH_BILLING"
                   onClick={() => setConfirmKillBilling(true)}
                   className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
                 >
@@ -606,6 +607,7 @@ export default function EmergencyApiKillSwitch({
                 )}
                 <button
                   type="button"
+                  data-feature-id="KILL_SWITCH_RESTORE_BILLING"
                   onClick={() => handleBillingKillSwitch('ENABLE')}
                   className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-md transition-colors cursor-pointer"
                 >

@@ -4237,14 +4237,14 @@ function CloudPulseCockpit() {
                   <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
                     CloudPulse <span className="text-zinc-500 dark:text-zinc-400">2026</span>
                   </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full-full">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     REAL PROJECT MODE
                   </span>
                   {gdePrivacyConfig.enabled && (
                     <span
                       title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full-full"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                       GDE TUTORIAL SHIELD ON
@@ -4869,7 +4869,7 @@ function CloudPulseCockpit() {
                           Every Google Cloud technology is organized into 5 dedicated, non-overlapping engineering domains — click any studio below to open its full control plane.
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
                         5 DOMAINS · 20 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
@@ -6234,7 +6234,7 @@ function MandatoryDeleteConfirmationModal({
             </div>
           </div>
           {queueLength > 1 && (
-            <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-black/30 border border-white/20 shrink-0">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/30 border border-white/20 shrink-0">
               1 of {queueLength} queued
             </span>
           )}

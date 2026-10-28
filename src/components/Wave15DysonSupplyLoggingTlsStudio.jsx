@@ -483,10 +483,10 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 SUPPLY-CHAIN SLSA &amp; LOG RCA STUDIO (VECTOR SQL, SLSA v1.0 PROVENANCE, LOG RCA &amp; TLS 1.3 X.509)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; SOCKET CRYPTO · ZERO AUTO-PROVISIONING
               </span>
             </div>
@@ -1313,11 +1313,11 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         </span>
                       </div>
                       {ep.ok ? (
-                        <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                           {ep.protocol} · {ep.alpnProtocol} · {ep.tlsHandshakeMs}ms
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
                           {ep.error}
                         </span>
                       )}

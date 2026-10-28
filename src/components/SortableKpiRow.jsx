@@ -96,7 +96,7 @@ function SortableKpiCard({ item }) {
         <div className="text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono">
           {item.value}
         </div>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
           <TrendingUp className="w-3 h-3" />
           {item.trendLabel}
         </span>
@@ -368,7 +368,7 @@ export default function SortableKpiRow({
             100% Live Google Cloud Project Telemetry (Click Card to Open Studio · Drag Handle to Reorder)
           </h6>
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold border transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-colors ${
               isSyncing
                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'

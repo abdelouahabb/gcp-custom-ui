@@ -660,11 +660,11 @@ export default function FivePersonaCommandCenter({
               <span className="px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-mono font-extrabold uppercase tracking-wider">
                 10-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; AUTONOMOUS LAUNCH COUNCIL
               </span>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '590.0.1 (2026.10.22)'}
               </span>
               {tribunalData?.merkleSealSha256 && (
-                <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                   SHA-256 SEAL: {tribunalData.merkleSealSha256.slice(0, 16)}...
                 </span>
               )}
@@ -823,7 +823,7 @@ export default function FivePersonaCommandCenter({
                   10-PERSONA ARCHITECTURE COUNCIL
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold ${
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                     tribunalData.overallVerdict?.includes('NO_GO') ||
                     tribunalData.overallVerdict?.includes('NO-GO')
                       ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'

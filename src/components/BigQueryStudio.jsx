@@ -484,7 +484,7 @@ export default function BigQueryStudio({
                 <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
                   BigQuery Capacitor Warehouse &amp; SQL Optimizer Studio
                 </h2>
-                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                   CAPACITOR STORAGE · DRY-RUN SQL X-RAY · SLOT FINOPS · 7D TIME-MACHINE
                 </span>
               </div>
@@ -1292,7 +1292,7 @@ export default function BigQueryStudio({
                 Simulate exact monthly savings from switching `storageBillingModel` to `PHYSICAL` compressed bytes and tuning `maxTimeTravelHours`.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               Projected Storage Savings: $
               {finopsComparison.monthlyStorageSavings.toFixed(2)}/mo (
               {finopsComparison.savingsPct}%)
@@ -1453,7 +1453,7 @@ export default function BigQueryStudio({
                 Rewind any table to the exact millisecond before a bad `DELETE`, `UPDATE`, or `DROP TABLE` without restoring backups or paying extra storage bytes.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
               Rewind Offset: -{rewindHoursAgo} Hours ({Math.round((rewindHoursAgo / 24) * 10) / 10} Days Ago)
             </span>
           </div>

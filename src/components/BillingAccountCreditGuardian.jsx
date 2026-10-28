@@ -1450,6 +1450,7 @@ ORDER BY
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
+            data-feature-id="FINOPS_AUTO_GRAB_CSV"
             onClick={handleAutoGrabCreditsCsv}
             disabled={autoGrabbingCsv}
             className="h-9 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
@@ -1480,6 +1481,7 @@ ORDER BY
 
           <button
             type="button"
+            data-feature-id="FINOPS_PASTE_BONUS_CSV_DRAWER"
             onClick={() => setShowConsoleSyncDrawer((p) => !p)}
             className="h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
@@ -1494,6 +1496,7 @@ ORDER BY
           {(syncedConsoleCredits.length > 0 || summary.hasImportedCredits) && (
             <button
               type="button"
+              data-feature-id="FINOPS_RESET_BONUS_CSV"
               onClick={handleClearConsoleCredits}
               className="h-9 px-3 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
               title="Clear all uploaded Remaining Bonus rows and upload a new CSV"
@@ -1506,6 +1509,7 @@ ORDER BY
           {billingAccounts.length > 0 && (
             <button
               type="button"
+              data-feature-id="FINOPS_BILLING_ACCOUNTS_DRAWER"
               onClick={() => setShowAccountsDrawer((p) => !p)}
               className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
             >
@@ -1516,6 +1520,7 @@ ORDER BY
 
           <button
             type="button"
+            data-feature-id="FINOPS_REFRESH_LIVE_APIS"
             onClick={() => loadBillingGuardian(true)}
             disabled={loading}
             className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
@@ -1978,6 +1983,7 @@ ORDER BY
                   <button
                     key={m.id}
                     type="button"
+                    data-feature-id={`FINOPS_MODE_${m.id}`}
                     onClick={() => {
                       setBudgetDefenseMode(m.id);
                       if (m.id === 'SPEND_CAP') {
@@ -3390,7 +3396,7 @@ ORDER BY
                 Google Cloud &ldquo;Always Free&rdquo; Tier Auditor & $0.00/Mo Architect
               </span>
               {alwaysFreeAudit?.summary && (
-                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   {alwaysFreeAudit.summary.withinFreeCount} /{' '}
                   {alwaysFreeAudit.summary.totalCategories} Services Inside Free Tier
                 </span>

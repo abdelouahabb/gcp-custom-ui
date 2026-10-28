@@ -5435,7 +5435,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <h2 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                   Interactive 40-Region Topology Canvas &amp; Live Firewall / Socket Streamer
                 </h2>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                   40 GCP REGIONS · 121 ZONES · {firewalls.length} LIVE VPC FIREWALL RULES
                 </span>
               </div>
@@ -5887,6 +5887,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <button
                     key={c.id}
                     type="button"
+                    data-feature-id={`GLOBAL_MAP_CAMERA_${c.id}`}
                     onClick={() => focusOnContinent(c.id)}
                     className={
                       c.highlight
@@ -8356,6 +8357,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         <button
                           key={f.id}
                           type="button"
+                          data-feature-id={`GLOBAL_MAP_TM_FILTER_${f.id}`}
                           onClick={() => setTimeMachineFilter(f.id)}
                           className={`px-2 py-0.5 rounded text-[9px] font-extrabold cursor-pointer border transition-colors ${
                             timeMachineFilter === f.id

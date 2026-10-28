@@ -2001,7 +2001,7 @@ export default function XtermWebSshTerminal({
                       : 'Auth: Metadata SSH Keys'}
                   </span>
                   <span
-                    className={`px-3 py-1 rounded-full-full text-[11px] font-extrabold border shrink-0 ${
+                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold border shrink-0 ${
                       isFocusedVmTransitional
                         ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
                         : isFocusedVmRunning

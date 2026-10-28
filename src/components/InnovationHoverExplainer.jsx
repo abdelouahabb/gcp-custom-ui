@@ -2532,6 +2532,472 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'CloudPulse 2026 Innovation Studio Router',
     safetyMode: 'READ_ONLY',
   },
+
+  // ============================================================================
+  // STARTUP 10X STUDIO — CREDIT TIERS & LIVE REMEDIATIONS
+  // ============================================================================
+  STARTUP_10X_CREDIT_TIER_SELECT: {
+    badge: 'GOOGLE FOR STARTUPS RUNWAY MODELER',
+    title: 'Google for Startups Credit Tier Selector ($2k · $25k · $100k · $350k AI)',
+    whatItDoes:
+      'Selects your active Google for Startups program credit tier ($2k Start, $25k Build, $100k Scale, or $350k AI/GPU Tier) to recalculate exact credit-cliff runway days against your live project burn rate.',
+    enterpriseValue:
+      'Prevents surprise credit exhaustion before Series A/B fundraising by modeling live burn velocity against remaining promotional credits.',
+    gcpApis: 'cloudbilling.googleapis.com + Startup 10X Runway Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  STARTUP_10X_PATCH_CPU_BOOST: {
+    badge: 'CLOUD RUN COLD-START SURGEON',
+    title: '1-Click Enable Cloud Run Startup CPU Boost (-1,430ms Cold Start)',
+    whatItDoes:
+      'Calls `PATCH https://run.googleapis.com/v2/...` to enable `startupCpuBoost = true` on the selected Cloud Run service so container initialization receives extra vCPU burst capacity.',
+    enterpriseValue:
+      'Slashes JVM, Python, and Node.js container cold-start latency by up to 65% during sudden traffic spikes.',
+    gcpApis: 'run.googleapis.com/v2 (projects.locations.services.patch)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_PATCH_BUCKET_SHIELD: {
+    badge: 'GCS CREDIT-DRAIN & PUBLIC SHIELD',
+    title: '1-Click Apply 30-Day Nearline Lifecycle & Public Access Prevention',
+    whatItDoes:
+      'Patches the selected Cloud Storage bucket via `storage.googleapis.com/storage/v1/b` to enforce `publicAccessPrevention = enforced` and a 30-day Standard-to-Nearline storage lifecycle rule.',
+    enterpriseValue:
+      'Stops silent storage credit drain on aging objects while locking out accidental public bucket exposure.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b (buckets.patch)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  STARTUP_10X_PATCH_BQ_OPTIMIZER: {
+    badge: 'BIGQUERY STARTUP FINOPS HARDENER',
+    title: '1-Click Optimize BigQuery Dataset (168h Time-Travel & FinOps Labels)',
+    whatItDoes:
+      'Patches the selected BigQuery dataset via `bigquery.googleapis.com/bigquery/v2` to enforce a 168-hour (7-day) Time-Travel window and attach `startup_10x` cost attribution labels.',
+    enterpriseValue:
+      'Protects startup analytics tables with full 7-day point-in-time recovery while enabling granular billing attribution.',
+    gcpApis: 'bigquery.googleapis.com/bigquery/v2 (datasets.patch)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+
+  // ============================================================================
+  // 48 OFFICIAL GOOGLE CLOUD REMOTE MCP SERVERS STUDIO
+  // ============================================================================
+  MCP_REFRESH_CORE_PROBE: {
+    badge: 'CORE REMOTE MCP HEALTH CHECK',
+    title: 'Refresh Core Official Google Cloud MCP Endpoints Probe',
+    whatItDoes:
+      'Re-runs fast JSON-RPC 2.0 `tools/list` probes against the core Google Cloud Remote MCP endpoints (`bigquery`, `storage`, `compute`, `cloudbilling`, `logging`, `iam`, `developerknowledge`).',
+    enterpriseValue:
+      'Verifies sub-second OAuth2 and JSON-RPC 2.0 readiness on your active GCP project in under 1 second.',
+    gcpApis: 'POST https://*.googleapis.com/mcp (JSON-RPC 2.0 tools/list)',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_PROBE_ALL_48_SERVERS: {
+    badge: '48-ENDPOINT FULL CATALOG DISCOVERY',
+    title: 'Probe All 48 Official `*.googleapis.com/mcp` Servers Live',
+    whatItDoes:
+      'Executes parallel JSON-RPC 2.0 `tools/list` discovery calls across all 48 official Google-managed Remote MCP servers to enumerate all 505+ live tool schemas and `readOnlyHint` / `destructiveHint` annotations.',
+    enterpriseValue:
+      'Gives AI platform engineers a complete, real-time readiness census of every official Google Cloud MCP server.',
+    gcpApis: 'POST https://*.googleapis.com/mcp (48 Official Endpoints)',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_CATEGORY_FILTER_SELECT: {
+    badge: 'MCP PRODUCT DOMAIN FILTER',
+    title: 'Filter 48 Official MCP Servers by Google Cloud Product Domain',
+    whatItDoes:
+      'Filters the 48 official Remote MCP servers across Core Infrastructure, Databases & Analytics, AI & Vertex, Security & IAM, Serverless & Containers, and Observability.',
+    enterpriseValue:
+      'Helps engineers quickly locate the exact `*.googleapis.com/mcp` endpoint and JSON-RPC tools for their workload.',
+    gcpApis: 'Official Google Cloud Remote MCP Registry',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_INVOKE_TOOL_CALL: {
+    badge: 'LIVE JSON-RPC 2.0 TOOLS/CALL EXECUTION',
+    title: 'Invoke Official Google Cloud Remote MCP `tools/call` on Active Project',
+    whatItDoes:
+      'Sends a live, OAuth2-authenticated JSON-RPC 2.0 `tools/call` request with your `params.arguments` payload directly to the selected `https://*.googleapis.com/mcp` endpoint, guarded by human-in-the-loop interception for `destructiveHint=true` tools.',
+    enterpriseValue:
+      'Lets you test and execute real Google Cloud MCP agent tools interactively before wiring them into Gemini CLI, Claude Code, or Cursor.',
+    gcpApis: 'POST https://*.googleapis.com/mcp (JSON-RPC 2.0 tools/call)',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_COPY_JSONRPC_CURL: {
+    badge: 'REPRODUCIBLE JSON-RPC 2.0 CURL EXPORT',
+    title: 'Copy Authenticated JSON-RPC 2.0 `cURL` Command',
+    whatItDoes:
+      'Generates and copies a ready-to-run `curl -X POST https://*.googleapis.com/mcp` command complete with `Authorization: Bearer $(gcloud auth print-access-token)`, `x-goog-user-project`, and the exact JSON-RPC 2.0 `tools/call` body.',
+    enterpriseValue:
+      'Allows instant CLI reproduction and CI/CD debugging of any Google Cloud Remote MCP tool call.',
+    gcpApis: 'JSON-RPC 2.0 over HTTPS TLS 1.3',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_RUN_TRIAGE_CHAIN: {
+    badge: '4-SERVER PARALLEL MCP ORCHESTRATION',
+    title: 'Execute 4-Server Autonomous Multi-MCP Triage Chain',
+    whatItDoes:
+      'Fires 4 coordinated JSON-RPC 2.0 `tools/call` requests in parallel across 4 distinct `*.googleapis.com/mcp` servers and correlates their structured responses with per-endpoint latency telemetry.',
+    enterpriseValue:
+      'Automates cross-domain incident root-cause analysis, zero-trust IAM auditing, and FinOps inspection in a single click.',
+    gcpApis: 'POST /api/project/{project}/mcp/triage-chain',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_INCIDENT_ROOT_CAUSE: {
+    badge: '4-SERVER SRE INCIDENT TRIAGE CHAIN',
+    title: 'SRE Incident Root-Cause Chain (Logging + Monitoring + Compute + Cloud Run MCP)',
+    whatItDoes:
+      'Queries `logging.googleapis.com/mcp`, `monitoring.googleapis.com/mcp`, `compute.googleapis.com/mcp`, and `run.googleapis.com/mcp` in parallel to correlate recent error spikes with live instance and container state.',
+    enterpriseValue:
+      'Compresses 20 minutes of multi-console incident war-room hunting into a single parallel MCP chain execution.',
+    gcpApis: 'logging · monitoring · compute · run (*.googleapis.com/mcp)',
+    safetyMode: 'READ_ONLY',
+  },
+  ZERO_TRUST_IAM_ASSET_AUDIT: {
+    badge: '4-SERVER ZERO-TRUST SECURITY CHAIN',
+    title: 'Zero-Trust IAM & Asset Audit Chain (IAM + Storage + Secret Manager + Resource Manager MCP)',
+    whatItDoes:
+      'Invokes `iam.googleapis.com/mcp`, `storage.googleapis.com/mcp`, `secretmanager.googleapis.com/mcp`, and `cloudresourcemanager.googleapis.com/mcp` in parallel to audit IAM bindings, bucket exposure, and secret versions.',
+    enterpriseValue:
+      'Provides an instant, grounded zero-trust security posture sweep across identity, storage, and secrets.',
+    gcpApis: 'iam · storage · secretmanager · cloudresourcemanager (*.googleapis.com/mcp)',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_QUOTA_DATABASE_PULSE: {
+    badge: '4-SERVER FINOPS & LAKEHOUSE CHAIN',
+    title: 'FinOps, Quota & Database Pulse Chain (Billing + BigQuery + Cloud SQL + Quotas MCP)',
+    whatItDoes:
+      'Calls `cloudbilling.googleapis.com/mcp`, `bigquery.googleapis.com/mcp`, `sqladmin.googleapis.com/mcp`, and `cloudquotas.googleapis.com/mcp` in parallel to inspect billing account linkages, datasets, database instances, and quota ceilings.',
+    enterpriseValue:
+      'Gives FinOps and data platform teams a unified view of warehouse footprint, database sizing, and billing health.',
+    gcpApis: 'cloudbilling · bigquery · sqladmin · cloudquotas (*.googleapis.com/mcp)',
+    safetyMode: 'READ_ONLY',
+  },
+  GROUNDED_ARCH_KNOWLEDGE_COPILOT: {
+    badge: '4-SERVER ARCHITECTURE KNOWLEDGE CHAIN',
+    title: 'Grounded Architecture & Developer Knowledge Chain (DevKnowledge + GKE + Artifact Registry + Cloud Build MCP)',
+    whatItDoes:
+      'Combines `developerknowledge.googleapis.com/mcp` official documentation search with live `container.googleapis.com/mcp`, `artifactregistry.googleapis.com/mcp`, and `cloudbuild.googleapis.com/mcp` inspection.',
+    enterpriseValue:
+      'Grounds architectural recommendations in both official 2026 Google Cloud documentation and your live container supply chain.',
+    gcpApis: 'developerknowledge · container · artifactregistry · cloudbuild (*.googleapis.com/mcp)',
+    safetyMode: 'READ_ONLY',
+  },
+  ESTATE_FINOPS: {
+    badge: 'GROUNDED MULTI-MCP REVIEW PRESET',
+    title: 'Full-Estate FinOps & Idle Resource Audit Prompt',
+    whatItDoes:
+      'Loads a specialized FinOps review prompt instructing Gemini 3.8 Flash to analyze live outputs from the Billing, Storage, BigQuery, and Logging Remote MCP servers for waste and cost optimization.',
+    enterpriseValue:
+      'Produces zero-hallucination cost reduction recommendations backed by live MCP telemetry and `gcloud` commands.',
+    gcpApis: '5 Official *.googleapis.com/mcp Servers + Vertex AI Gemini 3.8 Flash',
+    safetyMode: 'READ_ONLY',
+  },
+  ZERO_TRUST_SECURITY: {
+    badge: 'GROUNDED MULTI-MCP REVIEW PRESET',
+    title: 'Zero-Trust IAM, Public Exposure & Audit Log Review Prompt',
+    whatItDoes:
+      'Configures the Multi-MCP Agent to cross-examine live Storage bucket ACLs, BigQuery dataset permissions, and Cloud Audit Logs via Remote MCP.',
+    enterpriseValue:
+      'Identifies high-risk identity and data exposures with grounded remediation commands.',
+    gcpApis: '5 Official *.googleapis.com/mcp Servers + Vertex AI Gemini 3.8 Flash',
+    safetyMode: 'READ_ONLY',
+  },
+  DATA_LAKEHOUSE: {
+    badge: 'GROUNDED MULTI-MCP REVIEW PRESET',
+    title: 'BigQuery & Cloud Storage Data Lakehouse Optimization Prompt',
+    whatItDoes:
+      'Directs the Multi-MCP Agent to evaluate BigQuery dataset storage billing models, time-travel windows, and GCS bucket lifecycle policies.',
+    enterpriseValue:
+      'Optimizes analytical storage and query performance using live BigQuery and GCS MCP schemas.',
+    gcpApis: 'bigquery.googleapis.com/mcp · storage.googleapis.com/mcp + Gemini 3.8 Flash',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_RELIABILITY: {
+    badge: 'GROUNDED MULTI-MCP REVIEW PRESET',
+    title: 'SRE Reliability, Error Budget & Log Anomaly Review Prompt',
+    whatItDoes:
+      'Focuses the Multi-MCP Agent on recent Cloud Logging severity patterns, regional redundancy, and official Google Cloud SRE best practices from `developerknowledge.googleapis.com/mcp`.',
+    enterpriseValue:
+      'Accelerates post-incident reviews and production readiness audits.',
+    gcpApis: 'logging.googleapis.com/mcp · developerknowledge.googleapis.com/mcp + Gemini 3.8 Flash',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_EXECUTE_GROUNDED_REVIEW: {
+    badge: 'GEMINI 3.8 FLASH + 5 LIVE MCP SERVERS',
+    title: 'Execute Grounded Multi-MCP Architecture Review',
+    whatItDoes:
+      'Invokes 5 official `*.googleapis.com/mcp` servers live (`cloudbilling`, `storage`, `bigquery`, `logging`, `developerknowledge`), feeds their real JSON-RPC 2.0 outputs into Gemini 3.8 Flash, and synthesizes a grounded engineering report.',
+    enterpriseValue:
+      'Eliminates LLM hallucinations by grounding every recommendation on live JSON-RPC responses from your project.',
+    gcpApis: 'POST /api/project/{project}/mcp/agent-chat',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_IDE_TARGET_BTN: {
+    badge: 'IDE MCP CONFIGURATION TARGET',
+    title: 'Select Developer IDE / CLI Target (`GEMINI_CLI` · `CLAUDE_CODE` · `CURSOR`)',
+    whatItDoes:
+      'Formats the generated `mcpServers` JSON configuration block (`httpUrl`, OAuth2 bearer headers, and `x-goog-user-project`) for Gemini CLI (`~/.gemini/settings.json`), Claude Code, or Cursor IDE.',
+    enterpriseValue:
+      'Lets developers connect their local AI coding assistant to official Google Cloud Remote MCP servers in seconds.',
+    gcpApis: 'Official Google Cloud Remote MCP Specification',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_COPY_IDE_CONFIG: {
+    badge: '1-CLICK IDE CONFIG BUNDLE COPY',
+    title: 'Copy Selected `*.googleapis.com/mcp` IDE Configuration JSON',
+    whatItDoes:
+      'Copies the complete JSON configuration bundle for all checked Google Cloud Remote MCP servers directly to your clipboard.',
+    enterpriseValue:
+      'Provides zero-friction onboarding for AI-assisted cloud engineering in Gemini CLI, Claude Code, and Cursor.',
+    gcpApis: 'Browser Clipboard API',
+    safetyMode: 'READ_ONLY',
+  },
+
+  // ============================================================================
+  // GLOBAL NETWORK WORLD MAP — CONTINENT CAMERAS & TIME-MACHINE FILTERS
+  // ============================================================================
+  GLOBAL_MAP_CAMERA_WORLD: {
+    badge: '40-REGION GLOBAL VIEWPORT',
+    title: 'Reset Map Viewport to Full 40-Region & 121-Zone Global View',
+    whatItDoes:
+      'Resets pan and zoom coordinates to display all 40 Google Cloud regions, 121 availability zones, and transoceanic subsea fiber cables simultaneously.',
+    enterpriseValue:
+      'Gives a complete planetary view of global traffic routing, carbon intensity, and active cloud assets.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_MY_LOCATION: {
+    badge: 'CLIENT ORIGIN GEOLOCATION LOCK',
+    title: 'Center Map on Your Live Client Edge Origin & Nearest GCP PoP',
+    whatItDoes:
+      'Focuses the map camera on your detected client origin city and highlights the lowest-latency submarine/terrestrial fiber path to the nearest Google Cloud edge region.',
+    enterpriseValue:
+      'Lets engineers visually inspect first-mile client-to-Cloud-Front-End (GFE) ingress routing and RTT.',
+    gcpApis: 'Client Edge Geolocation & Speed-of-Light RTT Solver',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_AMERICAS: {
+    badge: 'CONTINENTAL CAMERA PRESET',
+    title: 'Focus Map on North America GCP Regions (`us-*` & `northamerica-*`)',
+    whatItDoes:
+      'Zooms the interactive topology canvas into North American Google Cloud regions (`us-central1`, `us-east1/4/5`, `us-west1/2/3/4`, `us-south1`, `northamerica-northeast1/2`).',
+    enterpriseValue:
+      'Simplifies inspection of dense US and Canadian multi-region architectures and VPC peering meshes.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_SOUTH_AMERICA: {
+    badge: 'CONTINENTAL CAMERA PRESET',
+    title: 'Focus Map on South America GCP Regions (`southamerica-east1` & `west1`)',
+    whatItDoes:
+      'Zooms the interactive topology canvas into São Paulo (`southamerica-east1`), Santiago (`southamerica-west1`), and South Atlantic subsea fiber corridors.',
+    enterpriseValue:
+      'Highlights LATAM data residency and Monet/Curie subsea cable termination paths.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_EUROPE: {
+    badge: 'CONTINENTAL CAMERA PRESET',
+    title: 'Focus Map on European & GDPR Sovereign Regions (`europe-*`)',
+    whatItDoes:
+      'Zooms the interactive topology canvas into all European Google Cloud regions (`europe-west1..12`, `europe-north1`, `europe-central2`, `europe-southwest1`).',
+    enterpriseValue:
+      'Ideal for verifying EU GDPR data residency boundaries and low-carbon Nordic/Swiss regional deployments.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_MIDDLE_EAST: {
+    badge: 'CONTINENTAL CAMERA PRESET',
+    title: 'Focus Map on Middle East & Africa GCP Regions (`me-*` & `africa-south1`)',
+    whatItDoes:
+      'Zooms the interactive topology canvas into Doha (`me-central1`), Dammam (`me-central2`), Tel Aviv (`me-west1`), and Johannesburg (`africa-south1`).',
+    enterpriseValue:
+      'Provides clear visibility into MEA sovereign cloud regions and Equiano/Blue-Raman subsea cable routes.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_CAMERA_ASIA_PACIFIC: {
+    badge: 'CONTINENTAL CAMERA PRESET',
+    title: 'Focus Map on Asia-Pacific & Oceania GCP Regions (`asia-*` & `australia-*`)',
+    whatItDoes:
+      'Zooms the interactive topology canvas into Tokyo, Osaka, Seoul, Singapore, Mumbai, Delhi, Taiwan, Hong Kong, Jakarta, Sydney, and Melbourne regions.',
+    enterpriseValue:
+      'Inspects APAC trans-Pacific fiber latency and regional failover paths.',
+    gcpApis: 'Global Network Canvas Camera Controller',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_TM_FILTER_ALL: {
+    badge: 'PACKET & AUDIT TIME-MACHINE FILTER',
+    title: 'Show All Captured Packet Verdicts, TLS Handshakes & Cloud Audit Events',
+    whatItDoes:
+      'Displays the complete chronological stream of allowed packets, firewall-denied drops, live TLS 1.3 socket handshakes, and `cloudaudit.googleapis.com` mutations in the Time-Machine.',
+    enterpriseValue:
+      'Provides a unified timeline for replaying network and control-plane events side by side.',
+    gcpApis: 'Global Map Packet & Audit Time-Machine',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_TM_FILTER_ALLOW: {
+    badge: 'PACKET & AUDIT TIME-MACHINE FILTER',
+    title: 'Filter Time-Machine to `ALLOW` Firewall Verdicts Only',
+    whatItDoes:
+      'Filters the Time-Machine event ledger to show only ingress/egress flows permitted by active VPC firewall rules or Cloud IAP.',
+    enterpriseValue:
+      'Helps NetOps engineers verify that legitimate production traffic is matching the intended firewall priority rule.',
+    gcpApis: 'compute.googleapis.com (firewalls) · Packet Verdict Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_TM_FILTER_DENY: {
+    badge: 'PACKET & AUDIT TIME-MACHINE FILTER',
+    title: 'Filter Time-Machine to `DENY` / Blocked Intrusion Packets Only',
+    whatItDoes:
+      'Isolates blocked SSH/RDP brute-force probes and denied ingress/egress packets in the Time-Machine replay ledger.',
+    enterpriseValue:
+      'Lets SecOps analysts inspect blocked attack origins and click any dropped packet to trace the exact blocking firewall rule.',
+    gcpApis: 'compute.googleapis.com (firewalls) · Packet Verdict Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_TM_FILTER_AUDIT_TLS: {
+    badge: 'PACKET & AUDIT TIME-MACHINE FILTER',
+    title: 'Filter Time-Machine to Live Cloud Audit Logs & TLS 1.3 Socket Events',
+    whatItDoes:
+      'Filters the Time-Machine stream to real `cloudaudit.googleapis.com` control-plane events and live regional TLS 1.3 handshake probes.',
+    enterpriseValue:
+      'Separates real Google Cloud control-plane telemetry from simulated chaos wave packets.',
+    gcpApis: 'logging.googleapis.com (`cloudaudit.googleapis.com`) · TLS 1.3 Probes',
+    safetyMode: 'READ_ONLY',
+  },
+
+  // ============================================================================
+  // OVERVIEW & FINOPS / BILLING CREDITS GUARDIAN STUDIO
+  // ============================================================================
+  OVERVIEW_LINEAGE_TOGGLE: {
+    badge: 'FORENSIC RESOURCE LINEAGE & STALE DETECTOR',
+    title: 'Inspect Resource Lineage, Creator Attribution & Stale Leftovers',
+    whatItDoes:
+      'Opens the Forensic Lineage Drawer showing why each GCP resource was created, what workload it is attached to, and which unattached Persistent Disks, Static External IPs, or stopped VMs are silently billing.',
+    enterpriseValue:
+      'Eliminates "what is this resource and can I safely delete it?" guesswork across shared cloud projects.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  OVERVIEW_LINEAGE_TAB_STALE: {
+    badge: 'ORPHANED RESOURCE FILTER',
+    title: 'Stale & Leftover Resources View (Unattached Disks, Unused IPs & Idle VMs)',
+    whatItDoes:
+      'Isolates orphaned resources left behind after demo teardowns or migrations that continue to incur hourly storage or IPv4 reservation charges.',
+    enterpriseValue:
+      'Surfaces immediate FinOps cleanup targets with 1-click deletion and safety verification.',
+    gcpApis: 'Resource Lineage & Orphan Heuristic Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  OVERVIEW_LINEAGE_TAB_ALL: {
+    badge: 'FULL PROJECT DEPENDENCY GRAPH',
+    title: 'All Resource Origins & Attachments View',
+    whatItDoes:
+      'Displays the complete attachment lineage for every active VM, Cloud Run service, VPC network, firewall rule, and Storage bucket in the project.',
+    enterpriseValue:
+      'Provides end-to-end dependency visibility before modifying or decommissioning infrastructure.',
+    gcpApis: 'CloudPulse Multi-Service Lineage Correlator',
+    safetyMode: 'READ_ONLY',
+  },
+  OVERVIEW_FILTER_STALE_ONLY: {
+    badge: 'INVENTORY TABLE STALE FILTER',
+    title: 'Filter Live Resource Inventory Table to Stale Leftovers Only',
+    whatItDoes:
+      'Filters the main Resource Control Center table below to display only stale, stopped, or unattached resources.',
+    enterpriseValue:
+      'Speeds up bulk FinOps hygiene and post-migration cleanup.',
+    gcpApis: 'Resource Control Center Filter State',
+    safetyMode: 'READ_ONLY',
+  },
+  KILL_SWITCH_DETACH_BILLING: {
+    badge: 'EMERGENCY PROJECT BILLING KILL-SWITCH',
+    title: 'Sever Project Billing Account (`PUT /v1/projects/{id}/billingInfo`)',
+    whatItDoes:
+      'Opens the 2-step safety confirmation to detach the active Cloud Billing account from this project (`billingAccountName: ""`) and optionally stop all running Compute Engine VMs.',
+    enterpriseValue:
+      'Provides an ultimate hard-stop emergency brake if a credential leak or runaway loop threatens catastrophic cloud spend.',
+    gcpApis: 'cloudbilling.googleapis.com/v1/projects/{id}/billingInfo',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  KILL_SWITCH_RESTORE_BILLING: {
+    badge: '1-TAP BILLING RE-LINK',
+    title: 'Restore & Re-Link Cloud Billing Account to Project',
+    whatItDoes:
+      'Calls `PUT https://cloudbilling.googleapis.com/v1/projects/{id}/billingInfo` to re-attach the selected open Cloud Billing account and resume normal project operations.',
+    enterpriseValue:
+      'Restores project billing in 1 click after an emergency lockdown drill or incident containment.',
+    gcpApis: 'cloudbilling.googleapis.com/v1/projects/{id}/billingInfo',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FINOPS_AUTO_GRAB_CSV: {
+    badge: '1-CLICK CHROME CDP & DOWNLOADS CREDITS INGESTOR',
+    title: 'Auto-Grab Google Cloud Console Remaining Bonus Credits `.CSV`',
+    whatItDoes:
+      'Automatically triggers `button[id$="billingtest-download-credits-csv"]` via Chrome DevTools Protocol (if active) or scans `~/Downloads` and `~/Desktop` for the newest Google Cloud Billing Credits `.csv` export and ingests exact Remaining Bonus balances.',
+    enterpriseValue:
+      'Bridges Google Cloud Console’s non-API Promotional Credits table into CloudPulse in 1 click with automatic expiration countdowns.',
+    gcpApis: 'POST /api/project/{project}/billing/auto-grab-credits-csv',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_PASTE_BONUS_CSV_DRAWER: {
+    badge: 'MANUAL / PASTE CREDITS CSV SYNC',
+    title: 'Open Remaining Bonus Credits CSV Paste & Auto-Clicker Drawer',
+    whatItDoes:
+      'Toggles the Remaining Bonus CSV synchronization drawer where you can paste raw CSV rows from `console.cloud.google.com/billing/.../credits` or copy the 1-line DevTools DOM auto-clicker.',
+    enterpriseValue:
+      'Ensures 100% accurate promotional credit tracking across all Google for Startups and Free Trial grants.',
+    gcpApis: 'IndexedDB + Server Credits Ledger Sync',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_RESET_BONUS_CSV: {
+    badge: 'CREDITS LEDGER RESET',
+    title: 'Clear & Reset Imported Remaining Bonus CSV Grants',
+    whatItDoes:
+      'Clears cached promotional credit CSV rows from IndexedDB and server memory so you can import a fresh export.',
+    enterpriseValue:
+      'Keeps credit runway calculations clean when switching billing accounts or refreshing grants.',
+    gcpApis: 'DELETE /api/project/{project}/billing/console-credits',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_BILLING_ACCOUNTS_DRAWER: {
+    badge: 'MULTI-BILLING ACCOUNT INSPECTOR',
+    title: 'Inspect Linked & Accessible Google Cloud Billing Accounts',
+    whatItDoes:
+      'Opens the Billing Accounts drawer listing all `billingAccounts/*` returned by `cloudbilling.googleapis.com/v1/billingAccounts`, their open/closed status, and linked projects.',
+    enterpriseValue:
+      'Gives FinOps admins visibility across multiple organizational and personal billing accounts.',
+    gcpApis: 'cloudbilling.googleapis.com/v1/billingAccounts',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_REFRESH_LIVE_APIS: {
+    badge: 'LIVE CLOUD BILLING & BUDGETS SYNC',
+    title: 'Refresh Live Cloud Billing, Budgets, SKUs & Free-Tier Telemetry',
+    whatItDoes:
+      'Re-queries `cloudbilling.googleapis.com`, `billingbudgets.googleapis.com`, and live resource usage across your project (auto-refreshes every 2 minutes in the background).',
+    enterpriseValue:
+      'Keeps net/gross spend, active budget thresholds, and Free-Tier usage bars up to the minute.',
+    gcpApis: 'cloudbilling.googleapis.com · billingbudgets.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  FINOPS_MODE_SPEND_CAP: {
+    badge: 'NATIVE GOOGLE CLOUD SPEND CAP MODE',
+    title: 'Mode 1: Native API Spend Cap (`spendCap.inputState = CONFIGURED`)',
+    whatItDoes:
+      'Configures a native Google Cloud Billing Budget with `spendCap` enabled so Google Cloud automatically pauses the selected eligible service when gross spend reaches 100% of your cap.',
+    enterpriseValue:
+      'Provides automated, server-side Google Cloud service suspension at 100% budget without writing custom Cloud Functions.',
+    gcpApis: 'billingbudgets.googleapis.com/v1 (budgets.create with spendCap)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FINOPS_MODE_PUBSUB_ALERT: {
+    badge: 'PUB/SUB KILL-SWITCH BUDGET MODE',
+    title: 'Mode 2: Whole-Project Budget + Cloud Pub/Sub Kill-Switch Topic',
+    whatItDoes:
+      'Creates a whole-project Cloud Billing Budget (`INCLUDE_ALL_CREDITS` supported) wired to publish 50%, 80%, and 100% JSON threshold alerts to a Cloud Pub/Sub topic.',
+    enterpriseValue:
+      'Covers all GCP services simultaneously and triggers automated Pub/Sub billing circuit-breakers.',
+    gcpApis: 'billingbudgets.googleapis.com/v1 · pubsub.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
 };
 
 /**

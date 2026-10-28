@@ -2280,7 +2280,7 @@ export default function AwsAzureEnvySuiteStudio({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
             <div
-              className={`inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full-full border ${
+              className={`inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                 isChinaSuite
                   ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
                   : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
@@ -3099,12 +3099,12 @@ export default function AwsAzureEnvySuiteStudio({
                       </span>
                     </div>
                     {isReadOnlyModule ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>READ-ONLY DIAGNOSTIC TOOL · $0.00/HR</span>
                       </span>
                     ) : isModuleDisabled ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>
                           {moduleDisabledApis.length > 0
@@ -3113,7 +3113,7 @@ export default function AwsAzureEnvySuiteStudio({
                         </span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                         <span>
                           FEATURE ACTIVE ({activeModuleItems.length} Active Resource
                           {activeModuleItems.length === 1 ? '' : 's'})
@@ -3773,16 +3773,16 @@ export default function AwsAzureEnvySuiteStudio({
                             >
                               {grp.displayName}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                               {grp.environment}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                               {grp.memberCount} resource(s) · $
                               {grp.totalMonthlyUsd.toFixed(2)}/mo ($
                               {Number(grp.totalHourlyUsd || 0).toFixed(3)}/hr)
                             </span>
                             {isDeleting && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
                                 <Clock className="w-3 h-3" />
                                 <span>DELETING GROUP...</span>
                               </span>
@@ -4248,7 +4248,7 @@ export default function AwsAzureEnvySuiteStudio({
                     stop-loss fuses that automatically throttle or park compute.
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full-full text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
                   Live Burn: $
                   {Number(spendFuse.currentEstimatedMonthlyUsd || 0).toFixed(2)}
                   /mo
@@ -4548,12 +4548,12 @@ export default function AwsAzureEnvySuiteStudio({
                             </td>
                             <td className="py-2.5 px-3">
                               {isAllowed ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                   <CheckCircle2 className="w-3 h-3" />
                                   <span>ALLOWED</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
                                   <AlertTriangle className="w-3 h-3" />
                                   <span>DENIED</span>
                                 </span>

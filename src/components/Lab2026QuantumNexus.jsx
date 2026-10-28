@@ -201,7 +201,7 @@ export default function Lab2026QuantumNexus({
                 <h4 className="text-sm sm:text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
                   2026 Quantum Nexus — 5-in-1 Cloud Resilience &amp; Governance Suite
                 </h4>
-                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                   5 WORLD-FIRST CAPABILITIES LIVE
                 </span>
               </div>
@@ -315,7 +315,7 @@ export default function Lab2026QuantumNexus({
                       {node.category}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                         isSelected
                           ? 'bg-red-600 text-white'
                           : isAffected
@@ -693,7 +693,7 @@ export default function Lab2026QuantumNexus({
                 Continuous arbitrage across Spot VMs, Cloud Run request-only CPU throttling, BigLake/BigQuery slot pricing, and an automated hard-cap circuit-breaker.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-extrabold">
+            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-extrabold">
               Identified Arbitrage Savings: $
               {data?.finopsAutopilot?.totalMonthlySavingsPotentialUsd ?? 112.3}/mo
             </span>
@@ -1087,7 +1087,7 @@ export default function Lab2026QuantumNexus({
                       {t.type}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         tripped
                           ? 'bg-red-600 text-white'
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'

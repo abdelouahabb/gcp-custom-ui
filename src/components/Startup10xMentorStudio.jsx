@@ -198,7 +198,7 @@ export default function Startup10xMentorStudio({
       <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
               <Rocket className="w-3.5 h-3.5" />
               <span>
                 GOOGLE FOR STARTUPS MENTOR EDITION · 10X SCALE &amp; BOTTLENECK RADAR
@@ -215,6 +215,7 @@ export default function Startup10xMentorStudio({
           <div className="flex flex-wrap items-center gap-2">
             <select
               aria-label="Select Google for Startups Credit Tier"
+              data-feature-id="STARTUP_10X_CREDIT_TIER_SELECT"
               value={creditTierUsd}
               onChange={(e) => setCreditTierUsd(Number(e.target.value))}
               className="h-9 px-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
@@ -350,7 +351,7 @@ export default function Startup10xMentorStudio({
                 <strong>Direct VPC Egress</strong>.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
               LIVE run.googleapis.com/v2 PATCH
             </span>
           </div>
@@ -398,6 +399,7 @@ export default function Startup10xMentorStudio({
                   {!svc.startupCpuBoost && (
                     <button
                       type="button"
+                      data-feature-id="STARTUP_10X_PATCH_CPU_BOOST"
                       disabled={
                         busyTarget === `PATCH_CLOUD_RUN_10X_BOOST:${svc.name}`
                       }
@@ -687,6 +689,7 @@ gcloud beta quotas preferences create \\
                   </div>
                   <button
                     type="button"
+                    data-feature-id="STARTUP_10X_PATCH_BUCKET_SHIELD"
                     disabled={
                       busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
                     }
@@ -728,6 +731,7 @@ gcloud beta quotas preferences create \\
                   </div>
                   <button
                     type="button"
+                    data-feature-id="STARTUP_10X_PATCH_BQ_OPTIMIZER"
                     disabled={
                       busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
                     }

@@ -1037,7 +1037,7 @@ export default function EngineerWishlistWave2({
                 : 'CPU-Only Workload Mode (Click to Test L4 GPU)'}
             </button>
 
-            <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+            <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
               Target: {evalResult.dst.name} · {evalResult.dst.cfePercent}% CFE ·{' '}
               {evalResult.dst.priceMultiplier.toFixed(2)}x Rate
             </span>

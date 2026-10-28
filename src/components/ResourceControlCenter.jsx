@@ -416,12 +416,12 @@ export default function ResourceControlCenter({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 <Sparkles className="w-3 h-3" />
                 <span>Resource Lineage & Orphan Forensics</span>
               </span>
               {staleResources.length > 0 ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                   <AlertTriangle className="w-3 h-3" />
                   <span>
                     {staleResources.length} Stale / Leftover Resource
@@ -429,7 +429,7 @@ export default function ResourceControlCenter({
                   </span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <CheckCircle2 className="w-3 h-3" />
                   <span>0 Stale / Leftover Resources</span>
                 </span>
@@ -450,6 +450,7 @@ export default function ResourceControlCenter({
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
+              data-feature-id="OVERVIEW_LINEAGE_TOGGLE"
               onClick={() => {
                 setLineageDrawerOpen((open) => !open);
                 if (!lineageDrawerOpen) {
@@ -484,6 +485,7 @@ export default function ResourceControlCenter({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  data-feature-id="OVERVIEW_LINEAGE_TAB_STALE"
                   onClick={() => setLineageDrawerTab('STALE')}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                     lineageDrawerTab === 'STALE'
@@ -498,6 +500,7 @@ export default function ResourceControlCenter({
                 </button>
                 <button
                   type="button"
+                  data-feature-id="OVERVIEW_LINEAGE_TAB_ALL"
                   onClick={() => setLineageDrawerTab('ALL')}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                     lineageDrawerTab === 'ALL'
@@ -514,6 +517,7 @@ export default function ResourceControlCenter({
 
               <button
                 type="button"
+                data-feature-id="OVERVIEW_FILTER_STALE_ONLY"
                 onClick={() => {
                   setOnlyStaleFilter((prev) => !prev);
                   setCurrentPage(1);

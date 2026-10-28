@@ -952,7 +952,7 @@ Format your response with clear Markdown headings:${
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-extrabold">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>WAVE 16 · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
               </span>
@@ -968,7 +968,7 @@ Format your response with clear Markdown headings:${
                 </span>
               )}
               {summary.canaryHitsCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
+                <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
                   CANARY TRIPWIRE HIT ({summary.canaryHitsCount}) · ACTIVE INTRUSION ALERT
                 </span>
               )}
@@ -3470,7 +3470,7 @@ Format your response with clear Markdown headings:${
         <div className="p-5 rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-zinc-950 via-red-950/20 to-zinc-950 text-zinc-100 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-1.5 max-w-3xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
                 <Lock className="w-3.5 h-3.5" />
                 <span>COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
               </div>

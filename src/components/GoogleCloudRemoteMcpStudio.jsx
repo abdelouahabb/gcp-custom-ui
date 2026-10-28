@@ -983,7 +983,7 @@ export default function GoogleCloudRemoteMcpStudio({
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
                 2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE · JSON-RPC 2.0 OVER HTTPS
@@ -1019,6 +1019,7 @@ export default function GoogleCloudRemoteMcpStudio({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              data-feature-id="MCP_REFRESH_CORE_PROBE"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(false)}
               className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
@@ -1030,6 +1031,7 @@ export default function GoogleCloudRemoteMcpStudio({
             </button>
             <button
               type="button"
+              data-feature-id="MCP_PROBE_ALL_48_SERVERS"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(true)}
               className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
@@ -1117,6 +1119,7 @@ export default function GoogleCloudRemoteMcpStudio({
             </div>
             <select
               aria-label="Filter by MCP Product Category"
+              data-feature-id="MCP_CATEGORY_FILTER_SELECT"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer shrink-0"
@@ -1378,6 +1381,7 @@ export default function GoogleCloudRemoteMcpStudio({
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                     <button
                       type="button"
+                      data-feature-id="MCP_INVOKE_TOOL_CALL"
                       disabled={callingTool}
                       onClick={() => handleInvokeMcpTool(false)}
                       className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
@@ -1392,6 +1396,7 @@ export default function GoogleCloudRemoteMcpStudio({
 
                     <button
                       type="button"
+                      data-feature-id="MCP_COPY_JSONRPC_CURL"
                       onClick={() =>
                         copyToClipboard(
                           `curl -s -X POST "${serverToolsData?.endpointUrl}" \\\n  -H "Authorization: Bearer $(gcloud auth print-access-token)" \\\n  -H "Content-Type: application/json" \\\n  -H "x-goog-user-project: ${projectId}" \\\n  -d '${JSON.stringify({
@@ -1489,6 +1494,7 @@ export default function GoogleCloudRemoteMcpStudio({
           </div>
           <button
             type="button"
+            data-feature-id="MCP_RUN_TRIAGE_CHAIN"
             disabled={runningChain}
             onClick={() => handleRunTriageChain(activeChainId)}
             className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
@@ -1508,6 +1514,7 @@ export default function GoogleCloudRemoteMcpStudio({
             return (
               <div
                 key={ch.id}
+                data-feature-id={ch.id}
                 onClick={() => handleRunTriageChain(ch.id)}
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
                   active
@@ -1600,6 +1607,7 @@ export default function GoogleCloudRemoteMcpStudio({
               <button
                 key={preset.label}
                 type="button"
+                data-feature-id={preset.id}
                 onClick={() => setAgentPrompt(preset.prompt)}
                 className="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
               >
@@ -1617,6 +1625,7 @@ export default function GoogleCloudRemoteMcpStudio({
             />
             <button
               type="submit"
+              data-feature-id="MCP_EXECUTE_GROUNDED_REVIEW"
               disabled={runningAgent}
               className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
@@ -1683,6 +1692,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 <button
                   key={t}
                   type="button"
+                  data-feature-id="MCP_IDE_TARGET_BTN"
                   onClick={() => setIdeTarget(t)}
                   className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                     ideTarget === t
@@ -1723,6 +1733,7 @@ export default function GoogleCloudRemoteMcpStudio({
 
           <button
             type="button"
+            data-feature-id="MCP_COPY_IDE_CONFIG"
             onClick={() =>
               copyToClipboard(ideConfigJson, `${ideTarget} Remote MCP Config`)
             }

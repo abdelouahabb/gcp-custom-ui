@@ -2000,7 +2000,7 @@ spec:
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
               Cloud Run Serverless Command Center ({services.length} Services)
             </h3>
-            <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full-full">
+            <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
               run.googleapis.com/v2 · GEN2
             </span>
           </div>
@@ -2041,7 +2041,7 @@ spec:
             <Zap className="w-3.5 h-3.5" />
             <span>Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)</span>
             {schedulerJobsState.data && (
-              <span className="px-1.5 py-0.2 rounded-full-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
                 {schedulerJobsState.data.schedulerJobsCount || 0} Cron ·{' '}
                 {schedulerJobsState.data.cloudRunJobsCount || 0} Jobs
               </span>
@@ -2078,7 +2078,7 @@ spec:
             <span>App Engine Exterminator & $0/mo Neutralizer</span>
             {appEngineState.data?.summary && (
               <span
-                className={`px-1.5 py-0.2 rounded-full-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
+                className={`px-1.5 py-0.2 rounded-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
                   appEngineState.data.summary.activeServicesCount === 0
                     ? 'text-zinc-500 dark:text-zinc-400'
                     : 'text-red-700 dark:text-red-300'
@@ -2107,7 +2107,7 @@ spec:
             <HardDrive className="w-3.5 h-3.5" />
             <span>Search Dead Containers & GCS Artifacts</span>
             {artifactScanState.data?.summary && (
-              <span className="px-1.5 py-0.2 rounded-full-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
                 {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
                 {artifactScanState.data.summary.totalStorageObjectsCount} GCS
               </span>
@@ -2173,7 +2173,7 @@ spec:
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-extrabold">
                   <Zap className="w-3 h-3" />
                   <span>CLOUD SCHEDULER → CLOUD RUN V2 JOBS CONVERTER</span>
                 </span>
@@ -2836,7 +2836,7 @@ spec:
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
                   <Layers className="w-3 h-3" />
                   <span>GCLOUD 590.0.0 GA · GCLOUD RUN COMPOSE UP STUDIO</span>
                 </span>
@@ -3268,7 +3268,7 @@ services:
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold border ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
                       !isAppServing
                         ? 'bg-zinc-200 dark:bg-zinc-800/90 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
                         : 'bg-red-500/20 border-red-400/40 text-red-700 dark:text-red-300'
@@ -3456,7 +3456,7 @@ services:
                     This project does not have a legacy App Engine application or permanent <code>default</code> service. All serverless workloads are running cleanly on Cloud Run v2!
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 font-mono font-bold text-[11px] shrink-0">
+                <span className="px-2.5 py-1 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 font-mono font-bold text-[11px] shrink-0">
                   $0.00/mo App Engine Burn
                 </span>
               </div>
@@ -3484,7 +3484,7 @@ services:
                         <div className="p-3.5 rounded-xl bg-zinc-200/60 dark:bg-zinc-900/80 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="px-2.5 py-0.5 rounded-full-full bg-zinc-300/80 dark:bg-zinc-800 border border-zinc-400/50 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono font-extrabold text-[11px]">
+                              <span className="px-2.5 py-0.5 rounded-full bg-zinc-300/80 dark:bg-zinc-800 border border-zinc-400/50 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono font-extrabold text-[11px]">
                                 DISABLED · 0 ACTIVE SERVICES
                               </span>
                               <span className="font-mono text-xs line-through text-zinc-400 dark:text-zinc-500">
@@ -3985,7 +3985,7 @@ services:
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-amber-500/20 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-extrabold">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-extrabold">
                     <HardDrive className="w-3 h-3" />
                     <span>ARTIFACT REGISTRY & CLOUD STORAGE HYGIENE SCANNER</span>
                   </span>
@@ -4499,7 +4499,7 @@ services:
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
                   <span>BEYOND GCP CONSOLE YAML EXPORT · LIVE KNATIVE → KUBERNETES AST TRANSPILER</span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
@@ -7198,7 +7198,7 @@ services:
                     <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-white dark:bg-zinc-950 p-4 rounded-xl">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
                             <span>
                                CLOUD RUN REVISION TIME-MACHINE · CRASH-LOOP AUTOPSY · CONFIG & SECRET DIFF
                             </span>

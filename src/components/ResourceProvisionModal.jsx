@@ -2151,7 +2151,7 @@ export default function ResourceProvisionModal({
                     Runtime Service Account (iam.serviceAccounts.actAs)
                   </span>
                   {defaultComputeSaMissing && (
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                       Default Compute SA Deleted · Auto-Bound Custom SA
                     </span>
                   )}
@@ -4586,7 +4586,7 @@ export default function ResourceProvisionModal({
                     <span>2026 Serverless GPU Accelerator (Gen2 AI Inference)</span>
                   </label>
                   {runGpuAccelerator !== 'NONE' && (
-                    <span className="text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full-full">
+                    <span className="text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">
                       Auto-enforced: ≥4 vCPU · ≥16Gi RAM · Instance Billing
                     </span>
                   )}
@@ -5924,7 +5924,7 @@ export default function ResourceProvisionModal({
                         Step 0 · 2026 GKE Sovereign & AI Cluster Compliance Blueprints
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
                       {gkeComplianceRegime === 'custom'
                         ? 'UNLOCKED CUSTOM ARCHITECTURE'
                         : `ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
@@ -6691,7 +6691,7 @@ export default function ResourceProvisionModal({
                 <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                   Live Pre-Deploy FinOps Cost Calculator
                 </span>
-                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                   {liveCostEstimate.badge}
                 </span>
               </div>

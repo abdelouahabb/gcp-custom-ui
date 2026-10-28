@@ -713,7 +713,7 @@ export default function SreWarRoomPerimeterStudio({
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#141518] p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] font-mono font-bold">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] font-mono font-bold">
               <Flame className="w-3.5 h-3.5 text-red-500" />
               <span>
                 WAVE-8 · 12-PILLAR PRINCIPAL SRE INCIDENT WAR-ROOM, MULTI-WINDOW SLO BURN RADAR &amp; ZERO-EXFIL ARCHITECT

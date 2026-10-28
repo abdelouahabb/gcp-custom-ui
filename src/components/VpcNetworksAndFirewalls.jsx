@@ -1554,7 +1554,7 @@ export default function VpcNetworksAndFirewalls({
         {/* Bidirectional VPC <-> Cloud SOC & SOAR Perimeter Bridge Strip */}
         <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500/[0.08] via-indigo-500/[0.08] to-emerald-500/[0.08] border border-blue-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-2.5 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider shrink-0">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>VPC &harr; Cloud SOC &amp; SOAR Bridge</span>
             </span>

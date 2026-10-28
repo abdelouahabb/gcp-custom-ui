@@ -891,13 +891,13 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 2026 DATA ENGINEERING STUDIO
               </span>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 GCloud SDK {data.gcloudSdkVersion}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                 Bronze → Silver → Gold Medallion ELT
               </span>
             </div>
@@ -1114,7 +1114,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   Provisions Bronze (Raw), Silver (Deduplicated &amp; PII-Hashed), and Gold (Executive Mart) datasets &amp; tables in 1 click.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 PHYSICAL BILLING (-54%)
               </span>
             </div>
@@ -1869,7 +1869,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                 0 BREAKING DOWNSTREAM CHANGES
               </span>
               {onOpenBigQuerySql && (

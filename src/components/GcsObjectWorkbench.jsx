@@ -3041,7 +3041,7 @@ export default function GcsObjectWorkbench({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         {isPub ? (
-                          <span className="px-2 py-0.5 rounded-full-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
                             <Globe className="w-3 h-3" />
                             <span>
                               PUBLIC ON INTERNET (
@@ -3049,13 +3049,13 @@ export default function GcsObjectWorkbench({
                             </span>
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
                             <Lock className="w-3 h-3" />
                             <span>PRIVATE (Zero-Trust Protected)</span>
                           </span>
                         )}
                         <span
-                          className={`px-2 py-0.5 rounded-full-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
+                          className={`px-2 py-0.5 rounded-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
                         >
                           {scopeDetails.badge}
                         </span>
