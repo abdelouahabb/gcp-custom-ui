@@ -4418,13 +4418,13 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
           <div className="space-y-1 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
                 100% LIVE PROJECT GEO-CONTROL PLANE · ZERO GIMMICK
               </span>
               <button
                 type="button"
                 onClick={() => focusOnClientOrigin(3.2, { scrollToMap: true })}
-                className="px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                className="px-2.5 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
                 title="Click to scroll and zoom the World Map directly to your live client location (IP Hidden for Privacy)"
               >
                 PROBING LIVE FROM: {liveClientOriginNode.city},{' '}
@@ -4440,7 +4440,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       scrollToMap: true,
                     })
                   }
-                  className="px-2.5 py-0.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer transition-colors"
+                  className="px-2.5 py-0.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer transition-colors"
                   title="Click to select and scroll to your fastest live GCP region on the World Map"
                 >
                   FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.tcpMs}ms TCP / {liveGeoTelemetry.fastestRegion.totalRttMs}ms TLS)
@@ -4459,7 +4459,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 onClick={() => onSelectTab('VPC_NETWORKS')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer shadow-sm"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Open Global VPC &amp; $0 Reachability Prover</span>
@@ -4469,7 +4469,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               type="button"
               onClick={() => fetchLiveGeoTelemetry(true)}
               disabled={geoLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin' : ''}`}
@@ -4545,7 +4545,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 type="button"
                 data-feature-id={tab.featureId}
                 onClick={() => setActiveGeoTab(tab.id)}
-                className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-start gap-2 text-left leading-snug ${
+                className={`w-full h-full px-3 py-2.5 rounded-md text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-start gap-2 text-left leading-snug ${
                   active
                     ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -4607,17 +4607,17 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     </div>
                     <div className="flex items-center gap-1">
                       {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
                           SELECTED
                         </span>
                       )}
                       {isFastest && (
-                        <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-extrabold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
                           FASTEST
                         </span>
                       )}
                       <span
-                        className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold ${
                           isSelected
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                             : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
@@ -4692,10 +4692,10 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         <span className="font-extrabold text-zinc-900 dark:text-white">
                           {asset.assetType}: {asset.name}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                           Location: {asset.location} ({asset.locationType})
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                           {asset.sovereigntyZone}
                         </span>
                       </div>
@@ -4706,7 +4706,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           isMulti
                             ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                             : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
@@ -4718,7 +4718,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         <button
                           type="button"
                           onClick={() => onRunInShell(asset.replicationCli)}
-                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                          className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                         >
                           Run in Cloud Shell
                         </button>
@@ -4757,7 +4757,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <div className="p-3 rounded-xl bg-amber-500/[0.08] dark:bg-amber-500/[0.10] border border-amber-500/35 space-y-2.5 text-xs font-mono">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9.5px] font-extrabold uppercase tracking-wider">
+                      <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9.5px] font-extrabold uppercase tracking-wider">
                         {pinnedList.length > 0
                           ? `${pinnedList.length} Pinned Override Bottleneck${
                               pinnedList.length > 1 ? 's' : ''
@@ -4813,7 +4813,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                                     <span className="underline">{po.effectiveLimit}</span>{' '}
                                     (Native Default is {po.defaultLimit})
                                   </span>
-                                  <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[9px] font-bold">
+                                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-500 text-[9px] font-bold">
                                     {po.overrideSource}
                                   </span>
                                 </div>
@@ -4837,7 +4837,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                                       targetLimit: po.defaultLimit,
                                     })
                                   }
-                                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                                  className="px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
                                 >
                                   {isBusy
                                     ? 'Submitting QuotaPreference...'
@@ -4860,7 +4860,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         {mismatches.map((mm) => (
                           <span
                             key={mm.id}
-                            className="px-2 py-0.5 rounded bg-white/70 dark:bg-zinc-900 border border-amber-500/30"
+                            className="px-2 py-0.5 rounded-full bg-white/70 dark:bg-zinc-900 border border-amber-500/30"
                           >
                             {mm.summary}
                           </span>
@@ -4907,17 +4907,17 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       </span>
                       <div className="flex items-center gap-1">
                         {isSelected && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
                             SELECTED
                           </span>
                         )}
                         {hasPinnedN2d && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[8.5px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[8.5px] font-extrabold">
                             PINNED N2D
                           </span>
                         )}
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                          className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                             totalOnDemandGpusLim > 0
                               ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30'
                               : 'bg-zinc-500/10 text-zinc-500'
@@ -4925,7 +4925,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         >
                           GPUs: {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
                           {rq.status}
                         </span>
                       </div>
@@ -5124,14 +5124,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     Live VPC Firewall Rules ({firewalls.length} Active in{' '}
                     {projectId})
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                     compute.v1/global/firewalls · Priority 0 → 65535
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleOpenRuleInVpcStudio('')}
-                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
                 >
                   🛡️ Open Full VPC &amp; Firewalls Studio ↗
                 </button>
@@ -5180,11 +5180,11 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               {fw.name}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] font-bold">
+                              <span className="px-1.5 py-0.5 rounded-full bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] font-bold">
                                 P-{fw.priority ?? 1000}
                               </span>
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                                className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold ${
                                   isDeny
                                     ? 'bg-red-500/20 text-red-500'
                                     : 'bg-emerald-500/20 text-emerald-500'
@@ -5244,11 +5244,11 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       </span>
                       <div className="flex items-center gap-1">
                         {isSelected && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
                             SELECTED
                           </span>
                         )}
-                        <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
                           {sn.ipCidrRange}
                         </span>
                       </div>
@@ -5294,14 +5294,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-                <span className="px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
                   Fleet Avg CFE: {orbitalMapMetrics.avgCfe}% Clean
                 </span>
                 {Object.entries(orbitalMapMetrics.continents).map(
                   ([cont, count]) => (
                     <span
                       key={cont}
-                      className="px-2 py-1 rounded-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+                      className="px-2 py-1 rounded-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
                     >
                       {cont}: <strong>{count}</strong>
                     </span>
@@ -5318,7 +5318,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     key={bp.id}
                     type="button"
                     onClick={() => setMapStackBlueprint(bp.id)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer space-y-1.5 ${
+                    className={`p-3 rounded-md border text-left transition-all cursor-pointer space-y-1.5 ${
                       active
                         ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 shadow-xs'
                         : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
@@ -5328,7 +5328,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
                         {bp.title}
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
                         {bp.estIdleCost}
                       </span>
                     </div>
@@ -5378,7 +5378,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <button
                   type="submit"
                   disabled={mapDeployingStack}
-                  className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                  className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                 >
                   <span>
                     {mapDeployingStack
@@ -5435,7 +5435,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <h2 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                   Interactive 40-Region Topology Canvas &amp; Live Firewall / Socket Streamer
                 </h2>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                   40 GCP REGIONS · 121 ZONES · {firewalls.length} LIVE VPC FIREWALL RULES
                 </span>
               </div>
@@ -5448,7 +5448,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 type="button"
                 data-feature-id="DREAM_BRAIN"
                 onClick={() => onSelectTab('INNOVATION_LAB')}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles className="w-3 h-3" />
                 <span>Pre-Crime Bill &amp; Dream Stack</span>
@@ -5501,7 +5501,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 type="button"
                 data-feature-id={mode.featureId}
                 onClick={() => handleSelectSimMode(mode.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-zinc-900 dark:text-zinc-100'
@@ -5523,7 +5523,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     </span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold shrink-0 ${
                       active
                         ? 'bg-white/20 text-white'
                         : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -5573,7 +5573,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           return (
             <div className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-hidden">
               {/* Left: Live Telemetry Badge */}
-              <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
+              <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>LIVE SOCKETS · {firewalls.length} FIREWALLS</span>
               </span>
@@ -5582,7 +5582,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 gap-3 shrink-0">
                 <span
                   title={`Matched Rule: ${httpsEdgeEval.ruleName}`}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-bold ${
                     httpsEdgeEval.verdict === 'ALLOW'
                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
@@ -5610,7 +5610,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
 
                 <span
                   title={`Matched Rule: ${sshPublicEval.ruleName}`}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-bold ${
                     sshPublicEval.verdict === 'ALLOW'
                       ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
                       : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
@@ -5639,7 +5639,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
                     <span
                       title={`Matched Rule: ${rdpPublicEval.ruleName}`}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
                     >
                       <span>RDP :3389</span>
                       <span>EXPOSED</span>
@@ -5652,7 +5652,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
                     <span
                       title={`Latest Cloud Logging Event: ${latestLogSummary}`}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold"
                     >
                       <span>Logs: {liveLogCount}</span>
                       {latestLogSummary && (
@@ -6200,7 +6200,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       e.stopPropagation();
                       handleReleaseMapSelection();
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                    className="px-2.5 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
                   >
                     Unselect {selectedRegion.name}
                   </button>
@@ -6212,7 +6212,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       e.stopPropagation();
                       handleResetMapCamera();
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                    className="px-2.5 py-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
                   >
                     Reset View (1.0x)
                   </button>
@@ -7422,7 +7422,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     type="button"
                     data-feature-id={tab.featureId}
                     onClick={() => setActive10xDockTab(tab.id)}
-                    className={`flex items-center justify-between gap-1.5 h-8.5 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer min-w-0 ${
+                    className={`flex items-center justify-between gap-1.5 h-8.5 px-2.5 rounded-md text-[10.5px] font-extrabold transition-all cursor-pointer min-w-0 ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -7441,7 +7441,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       <span className="truncate">{tab.label}</span>
                     </div>
                     <span
-                      className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                      className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                         isActive ? 'bg-white/20 text-white' : tab.badgeColor
                       }`}
                     >
@@ -7460,7 +7460,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 onClick={() => setShowJargonGuide((v) => !v)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-extrabold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[10px] font-extrabold transition-colors cursor-pointer ${
                   showJargonGuide
                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300'
                     : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 hover:border-blue-500/40'
@@ -7666,7 +7666,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <div className="flex items-center gap-1.5">
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-1 h-7 bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2.5 rounded-lg text-[10.5px] cursor-pointer shadow-xs"
+                      className="inline-flex items-center gap-1 h-7 bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2.5 rounded-md text-[10.5px] cursor-pointer shadow-xs"
                     >
                       <Send className="w-3 h-3" />
                       <span>Fire Packet on Map</span>
@@ -7685,7 +7685,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               customPacketXRay.winningRule.name
                             )
                           }
-                          className="inline-flex items-center gap-1 h-7 bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-2.5 rounded-lg text-[10px] cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1 h-7 bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-2.5 rounded-md text-[10px] cursor-pointer disabled:opacity-50"
                         >
                           <Lock className="w-3 h-3" />
                           <span>
@@ -7705,7 +7705,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                             : 'ALLOW'
                         )
                       }
-                      className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-white font-extrabold text-[10px] cursor-pointer disabled:opacity-50 ${
+                      className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-white font-extrabold text-[10px] cursor-pointer disabled:opacity-50 ${
                         customPacketXRay.verdict === 'ALLOW'
                           ? 'bg-red-600 hover:bg-red-500'
                           : 'bg-emerald-600 hover:bg-emerald-500'
@@ -7731,7 +7731,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           customPacketXRay.verdict === 'ALLOW'
                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
                             : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40'
@@ -7762,7 +7762,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     </div>
 
                     {customPacketXRay.shadowedRules.length > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                         ⚡ Shadows {customPacketXRay.shadowedRules.length}{' '}
                         lower-priority rule(s):{' '}
                         {customPacketXRay.shadowedRules
@@ -7825,7 +7825,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               <span className="shrink-0 w-5 text-right font-mono text-[9px] opacity-60">
                                 #{idx + 1}
                               </span>
-                              <span className="shrink-0 px-1.5 py-0.5 rounded bg-black/15 dark:bg-white/10 font-mono font-extrabold text-[9.5px]">
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-black/15 dark:bg-white/10 font-mono font-extrabold text-[9.5px]">
                                 P-{step.priority}
                               </span>
                               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -7840,7 +7840,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               <span className="hidden md:inline text-[9px] opacity-75 truncate max-w-64">
                                 {step.reason}
                               </span>
-                              <span className="shrink-0 uppercase text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                              <span className="shrink-0 uppercase text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10">
                                 {isWinner
                                   ? '★ WINNER (1ST MATCH)'
                                   : isShadowed
@@ -7897,7 +7897,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             severedRegions.includes(srcReg.id)
                               ? 'bg-red-500/20 text-red-500 border border-red-500/40 animate-pulse'
                               : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40'
@@ -7933,7 +7933,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         <button
                           type="button"
                           onClick={() => toggleSeverRegion(srcReg.id)}
-                          className={`h-7 px-2.5 rounded-lg text-[10px] font-extrabold text-white cursor-pointer ${
+                          className={`h-7 px-2.5 rounded-md text-[10px] font-extrabold text-white cursor-pointer ${
                             severedRegions.includes(srcReg.id)
                               ? 'bg-emerald-600 hover:bg-emerald-500'
                               : 'bg-red-600 hover:bg-red-500'
@@ -7970,7 +7970,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           onClick={() =>
                             handleTeleportFailoverService(srcReg.id, dstReg.id)
                           }
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shadow-xs"
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           <Sparkles className="w-3 h-3" />
                           <span>
@@ -7995,7 +7995,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                   <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
                     <span
-                      className={`shrink-0 px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                      className={`shrink-0 px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                         isLogFeedLocked
                           ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
                           : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 animate-pulse'
@@ -8012,7 +8012,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         : '● LIVE STREAM'}
                     </span>
                     {bufferedLogCount > 0 && (
-                      <span className="shrink-0 px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
                         +{bufferedLogCount} new buffered
                       </span>
                     )}
@@ -8139,11 +8139,11 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <div className="p-2.5 rounded-xl bg-sky-500/[0.08] dark:bg-sky-950/35 border border-sky-500/40 space-y-2 text-[10px] font-mono">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/40 font-extrabold">
+                        <span className="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/40 font-extrabold">
                           🔍 FORENSIC EVENT INSPECTOR
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 rounded font-extrabold ${
+                          className={`px-1.5 py-0.5 rounded-full font-extrabold ${
                             timeMachineActiveEvent.verdict === 'ALLOW'
                               ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                               : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
@@ -8167,14 +8167,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               timeMachineActiveEvent
                             )
                           }
-                          className="h-6 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[9.5px] cursor-pointer shadow-xs"
+                          className="h-6 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[9.5px] cursor-pointer shadow-xs"
                         >
                           🚀 Open in Cloud Logs Explorer ↗
                         </button>
                         <button
                           type="button"
                           onClick={() => setShowForensicDeepDiveModal(true)}
-                          className="h-6 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[9.5px] cursor-pointer"
                         >
                           📄 Full Raw JSON &amp; Rule Trace
                         </button>
@@ -8186,7 +8186,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               'md'
                             )
                           }
-                          className="h-6 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[9.5px] cursor-pointer"
                         >
                           📥 Export Report (.md)
                         </button>
@@ -8202,7 +8202,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               }
                             )
                           }
-                          className="h-6 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[9.5px] cursor-pointer"
                         >
                           🛡️ VPC Rule Studio ↗
                         </button>
@@ -8213,7 +8213,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               scrollToMap: true,
                             })
                           }
-                          className="h-6 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[9.5px] cursor-pointer"
                         >
                           🎯 Zoom Map to {timeMachineActiveEvent.regionId} (3.4x)
                         </button>
@@ -8229,14 +8229,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                             setCustomPort(timeMachineActiveEvent.port || 443);
                             setActive10xDockTab('FIREWALL_XRAY');
                           }}
-                          className="h-6 px-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2.5 rounded-md bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-[9.5px] cursor-pointer"
                         >
                           🔬 Trace in Firewall X-Ray (Pillar 1)
                         </button>
                         <button
                           type="button"
                           onClick={handleResumeLiveStream}
-                          className="h-6 px-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-extrabold text-[9.5px] cursor-pointer"
+                          className="h-6 px-2 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-extrabold text-[9.5px] cursor-pointer"
                         >
                           ✕ Close Inspector
                         </button>
@@ -8404,7 +8404,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           key={ev.id}
                           type="button"
                           onClick={() => handleInspectEvent(ev, idx)}
-                          className={`w-full px-2.5 py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                          className={`w-full px-2.5 py-1.5 rounded-md border text-[10px] font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                             active
                               ? 'bg-sky-500/20 border-sky-400 text-sky-700 dark:text-sky-200 shadow-xs ring-1 ring-sky-400/50'
                               : isLiveHead
@@ -8417,7 +8417,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               #{idx + 1}
                             </span>
                             <span
-                              className={`shrink-0 px-1.5 py-0.5 rounded text-[8.5px] font-extrabold ${
+                              className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8.5px] font-extrabold ${
                                 ev.verdict === 'ALLOW'
                                   ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                                   : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
@@ -8428,7 +8428,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                             <span className="shrink-0 font-mono text-[9.5px] text-zinc-400">
                               [{ev.timestamp}]
                             </span>
-                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono text-[9px]">
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono text-[9px]">
                               {ev.category}
                             </span>
                             <span className="shrink-0 font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -8441,7 +8441,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
                             <span
-                              className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded font-extrabold ${
+                              className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded-full font-extrabold ${
                                 active
                                   ? 'bg-sky-500 text-white'
                                   : isLiveHead
@@ -8470,7 +8470,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                                     handleResumeLiveStream();
                                   }
                                 }}
-                                className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 hover:text-red-500 text-zinc-700 dark:text-zinc-300 text-[9px] font-extrabold"
+                                className="px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 hover:text-red-500 text-zinc-700 dark:text-zinc-300 text-[9px] font-extrabold"
                               >
                                 ✕
                               </span>
@@ -8503,10 +8503,10 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <h3 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
                     {selectedRegion.name}
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                     {selectedRegion.cfePercent}% CFE Green Grid
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
                     GPS {selectedRegion.gpsLabel}
                   </span>
                 </div>
@@ -8516,7 +8516,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
                   {selectedWorkloads.totalCount} Resource
                   {selectedWorkloads.totalCount === 1 ? '' : 's'}
                 </span>
@@ -8640,22 +8640,22 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                             </span>
                           </div>
                           <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[9.5px] text-zinc-700 dark:text-zinc-300">
-                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                            <span className="px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
                               L4: <strong>{liveQuota.l4GpusUsed ?? 0}/{liveQuota.l4GpusLimit ?? 0}</strong>
                               {(liveQuota.spotL4GpusLimit ?? 0) > 0 && ` (Spot:${liveQuota.spotL4GpusLimit})`}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                            <span className="px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
                               A100: <strong>{liveQuota.a100GpusUsed ?? 0}/{liveQuota.a100GpusLimit ?? 0}</strong>
                               {(liveQuota.spotA100GpusLimit ?? 0) > 0 && ` (Spot:${liveQuota.spotA100GpusLimit})`}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                            <span className="px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
                               T4: <strong>{liveQuota.t4GpusUsed ?? 0}/{liveQuota.t4GpusLimit ?? 0}</strong>
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                            <span className="px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
                               V100: <strong>{liveQuota.v100GpusUsed ?? 0}/{liveQuota.v100GpusLimit ?? 0}</strong>
                             </span>
                             {(liveQuota.tpuV5ePodSliceLimit ?? 0) > 0 && (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300">
+                              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300">
                                 TPU v5e: <strong>{liveQuota.tpuV5ePodSliceUsed ?? 0}/{liveQuota.tpuV5ePodSliceLimit}</strong>
                               </span>
                             )}
@@ -8731,12 +8731,12 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           {zoneName}
                         </span>
                         {isZoneDown ? (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-500 font-extrabold">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 font-extrabold">
                             OUTAGE
                           </span>
                         ) : (
                           isZoneActive && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 font-extrabold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 font-extrabold">
                               SELECTED
                             </span>
                           )
@@ -8744,11 +8744,11 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       </div>
                       <div className="flex items-center gap-1.5 text-[10px]">
                         {zoneVms.length > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-bold">
                             {zoneVms.length} VM{zoneVms.length === 1 ? '' : 's'}
                           </span>
                         ) : idx === 0 && selectedWorkloads.cloudRun.length > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                             {selectedWorkloads.cloudRun.length} Cloud Run
                           </span>
                         ) : (
@@ -8782,7 +8782,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   {selectedRegion.name} SKU & Pricing Profile
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded font-bold ${
+                  className={`px-2 py-0.5 rounded-full font-bold ${
                     selectedRegionProfile.priceMultiplier <= 1.06
                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                       : selectedRegionProfile.priceMultiplier <= 1.16
@@ -8796,7 +8796,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <span
-                  className={`px-2 py-0.5 rounded border font-bold ${
+                  className={`px-2 py-0.5 rounded-full border font-bold ${
                     selectedRegionProfile.capabilities.cloudRunGpuL4
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
                       : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-300'
@@ -8807,7 +8807,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     : 'No Cloud Run GPU'}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded border font-bold ${
+                  className={`px-2 py-0.5 rounded-full border font-bold ${
                     selectedRegionProfile.capabilities.computeGpuG2L4
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
                       : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-300'
@@ -8818,7 +8818,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     : 'No G2 GPU VMs'}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded border font-bold ${
+                  className={`px-2 py-0.5 rounded-full border font-bold ${
                     selectedRegionProfile.capabilities.computeAiMegaHub
                       ? 'bg-blue-500/15 border-blue-500/30 text-blue-600 dark:text-blue-300'
                       : 'bg-zinc-200/60 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500'
@@ -8918,7 +8918,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           .dst.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-left cursor-pointer"
+                    className="p-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-emerald-600 dark:text-emerald-300 truncate flex items-center gap-1">
                       <Leaf className="w-3 h-3 shrink-0" />
@@ -8954,7 +8954,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           .cheapestGreenCompatible.dst.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
+                    className="p-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate flex items-center gap-1">
                       <Zap className="w-3 h-3 shrink-0" />
@@ -8992,7 +8992,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           .sameContinentCompatible.dst.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
+                    className="p-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate flex items-center gap-1">
                       <Globe className="w-3 h-3 shrink-0" />
@@ -9044,7 +9044,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         setMigrationTargetRegionId(bestId);
                         focusOnRegion(bestId, 3.4);
                       }}
-                      className="w-full mt-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      className="w-full mt-1 py-1 px-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                     >
                       Switch to Greenest GPU-Capable Region:{' '}
                       {
@@ -9148,7 +9148,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     );
                   }
                 }}
-                className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Navigation className="w-3 h-3" />
                 <span>
@@ -9184,7 +9184,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                         {res.name}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
                         {res.type}
                       </span>
                     </div>
@@ -9204,7 +9204,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     zone: selectedZoneName,
                   })
                 }
-                className="py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                className="py-2 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
               >
                 Drop-Pod VM in {selectedZoneName}
               </button>
@@ -9217,7 +9217,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     zone: selectedZoneName,
                   })
                 }
-                className="py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                className="py-2 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
               >
                 Deploy Cloud Run in {selectedRegion.id}
               </button>
@@ -9241,7 +9241,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 />
                 <span>Live Global Packet &amp; Firewall Verdict Stream</span>
                 {isLogFeedLocked && (
-                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[9px] font-extrabold">
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[9px] font-extrabold">
                     {isHoveringLogList ? '⏸ HOVER-LOCKED' : '⏸ FROZEN'}
                   </span>
                 )}
@@ -9299,7 +9299,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       <div className="space-y-0.5 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                               ev.verdict === 'ALLOW'
                                 ? 'bg-emerald-500/20 text-emerald-500'
                                 : 'bg-red-500/20 text-red-500'
@@ -9376,11 +9376,11 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-md bg-sky-600 text-white font-extrabold text-[11px]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-sky-600 text-white font-extrabold text-[11px]">
                     🔍 CLOUD LOGGING &amp; PACKET FORENSIC DEEP-DIVE
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                    className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                       inspectedForensicBundle.verdict === 'ALLOW'
                         ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
                         : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40'
@@ -9416,7 +9416,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   onClick={() =>
                     handleOpenEventInLogsExplorer(inspectedForensicBundle)
                   }
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] cursor-pointer shadow-sm"
+                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] cursor-pointer shadow-sm"
                 >
                   🚀 Open in Cloud Logs Explorer &amp; Shell Studio ↗
                 </button>
@@ -9433,7 +9433,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       }
                     )
                   }
-                  className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] cursor-pointer"
                 >
                   🛡️ Open in VPC &amp; Firewalls Studio ↗
                 </button>
@@ -9442,7 +9442,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   onClick={() =>
                     handleExportForensicReport(inspectedForensicBundle, 'md')
                   }
-                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
                 >
                   📥 Export .MD Report
                 </button>
@@ -9451,7 +9451,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   onClick={() =>
                     handleExportForensicReport(inspectedForensicBundle, 'json')
                   }
-                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
                 >
                   📥 Export .JSON
                 </button>
@@ -9463,21 +9463,21 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       scrollToMap: true,
                     });
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] cursor-pointer"
                 >
                   🎯 Zoom Map to {inspectedForensicBundle.regionId}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForensicDeepDiveModal(false)}
-                  className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-700 dark:text-sky-300 font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-700 dark:text-sky-300 font-extrabold text-[11px] cursor-pointer"
                 >
                   📌 Minimize to Dock
                 </button>
                 <button
                   type="button"
                   onClick={handleResumeLiveStream}
-                  className="px-2.5 py-1.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-extrabold text-[11px] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-extrabold text-[11px] cursor-pointer"
                 >
                   ✕ Close
                 </button>
@@ -9637,7 +9637,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                               ({step.action} {step.portsSummary})
                             </span>
                           </div>
-                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[8.5px] font-extrabold uppercase">
+                          <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-[8.5px] font-extrabold uppercase">
                             {isWinner
                               ? '★ WINNER'
                               : isShadowed
@@ -9712,7 +9712,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         onClick={() =>
                           focusOnRegion(reg.id, 3.5, { scrollToMap: true })
                         }
-                        className={`p-2.5 rounded-xl border text-left font-mono transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-md border text-left font-mono transition-all cursor-pointer ${
                           isSel
                             ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm'
                             : cnt > 0
@@ -9725,7 +9725,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                             {reg.name}
                           </span>
                           {cnt > 0 ? (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                               {cnt} live
                             </span>
                           ) : (

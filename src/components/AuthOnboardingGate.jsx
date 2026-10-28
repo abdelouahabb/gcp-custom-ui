@@ -297,7 +297,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                 <h1 className="text-2xl font-extrabold tracking-tight">
                   CloudPulse <span className="text-blue-500">2026</span>
                 </h1>
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                   Mobile Gmail OAuth
                 </span>
               </div>
@@ -319,7 +319,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('GMAIL_OAUTH');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                   authTab === 'GMAIL_OAUTH'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -335,7 +335,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('DETECTED');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                   authTab === 'DETECTED'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -351,7 +351,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('TOKEN');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                   authTab === 'TOKEN'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -367,7 +367,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('ADC_JSON');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                   authTab === 'ADC_JSON'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -398,7 +398,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   <button
                     type="button"
                     onClick={handleStartGmailPkceSignIn}
-                    className="w-full bg-white hover:bg-zinc-50 text-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-4 text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-3"
+                    className="w-full bg-white hover:bg-zinc-50 text-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md py-3 px-4 text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-3"
                   >
                     {/* Google G SVG */}
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -686,7 +686,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                       key={p.projectId}
                       type="button"
                       onClick={() => setSelectedProject(p.projectId)}
-                      className={`p-3.5 rounded-xl border text-left transition-all flex items-start justify-between gap-2 ${
+                      className={`p-3.5 rounded-md border text-left transition-all flex items-start justify-between gap-2 ${
                         isSel
                           ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/40'
                           : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
@@ -713,7 +713,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               type="button"
               disabled={!selectedProject}
               onClick={handleFinishOnboarding}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <FolderGit2 className="w-4 h-4" />
               <span>Launch Live Cockpit for {selectedProject}</span>

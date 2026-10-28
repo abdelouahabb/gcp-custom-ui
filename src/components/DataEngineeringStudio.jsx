@@ -891,13 +891,13 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 2026 DATA ENGINEERING STUDIO
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 GCloud SDK {data.gcloudSdkVersion}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                 Bronze → Silver → Gold Medallion ELT
               </span>
             </div>
@@ -914,7 +914,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               type="button"
               onClick={fetchOverview}
               disabled={loading}
-              className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="px-3.5 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Sync Data Mesh</span>
@@ -1042,7 +1042,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   data-feature-id={t.id}
                   onClick={() => setActiveSubTab(t.id)}
                   title={`${t.label} (${t.badge})`}
-                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     isActive
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -1061,7 +1061,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     <span className="truncate">{t.label}</span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
                       isActive
                         ? 'bg-white/20 text-white'
                         : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -1114,7 +1114,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   Provisions Bronze (Raw), Silver (Deduplicated &amp; PII-Hashed), and Gold (Executive Mart) datasets &amp; tables in 1 click.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
+              <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 PHYSICAL BILLING (-54%)
               </span>
             </div>
@@ -1248,7 +1248,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <span className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-300">
                   Smart Engine Advisor: {engineRecommendation.engine}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
                   Est. ${engineRecommendation.estMonthlyUsd}/mo
                 </span>
               </div>
@@ -1298,7 +1298,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               type="button"
               onClick={handleDeployMedallion}
               disabled={busyAction === 'DEPLOY_MEDALLION'}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'DEPLOY_MEDALLION'
                 ? 'Provisioning Bronze → Silver → Gold Datasets & Running Initial Dedup MERGE...'
@@ -1328,7 +1328,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       {p.name}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                         {p.status}
                       </span>
                       <button
@@ -1354,15 +1354,15 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-                    <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/25">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/25">
                       {p.bronzeDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
-                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/25">
                       {p.silverDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
-                    <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/25">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/25">
                       {p.goldDataset}
                     </span>
                   </div>
@@ -1434,7 +1434,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => setDialect('DATAFORM_SQLX')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold cursor-pointer ${
                     dialect === 'DATAFORM_SQLX'
                       ? 'bg-blue-600 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
@@ -1445,7 +1445,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => setDialect('DBT_SQL')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold cursor-pointer ${
                     dialect === 'DBT_SQL'
                       ? 'bg-blue-600 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
@@ -1510,7 +1510,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               <button
                 type="button"
                 onClick={() => copyText(generatedTransformationCode, 'sqlx')}
-                className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
               >
                 {copiedKey === 'sqlx' ? (
                   <>
@@ -1531,7 +1531,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 type="button"
                 onClick={handleRunAutoCleanSql}
                 disabled={busyAction === 'RUN_SQL'}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {busyAction === 'RUN_SQL'
                   ? 'Running Auto-Clean & QUALIFY Deduplication on BigQuery...'
@@ -1545,7 +1545,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       `-- Dataform / dbt Auto-Clean & QUALIFY Deduplication Model (${cleanSourceDs}.${cleanSourceTable} -> ${cleanTargetDs}.${cleanTargetTable})\nSELECT\n  TRIM(CAST(${dedupKey} AS STRING)) AS ${dedupKey},\n  SAFE_CAST(${orderByCol} AS TIMESTAMP) AS ${orderByCol},\n  TO_HEX(SHA256(LOWER(TRIM(CAST(user_email AS STRING))))) AS user_email_sha256,\n  SAFE_CAST(revenue_usd AS NUMERIC) AS revenue_usd\nFROM \`${projectId}.${cleanSourceDs}.${cleanSourceTable}\`\nWHERE ${dedupKey} IS NOT NULL\nQUALIFY ROW_NUMBER() OVER (\n  PARTITION BY ${dedupKey}\n  ORDER BY ${orderByCol} DESC\n) = 1;`
                     )
                   }
-                  className="py-2.5 px-3.5 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-extrabold cursor-pointer transition-colors"
+                  className="py-2.5 px-3.5 rounded-md bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-extrabold cursor-pointer transition-colors"
                 >
                   Open in BigQuery SQL X-Ray →
                 </button>
@@ -1626,7 +1626,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 type="button"
                 onClick={handleCreateDataformRepo}
                 disabled={busyAction === 'CREATE_DATAFORM'}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {busyAction === 'CREATE_DATAFORM' ? 'Creating...' : '+ Create Repo'}
               </button>
@@ -1656,7 +1656,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       onClick={() =>
                         handleDeleteResource('DATAFORM_REPO', r.id, r.region)
                       }
-                      className="p-1.5 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
+                      className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
                       title={`Delete Dataform Repository ${r.id}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1726,7 +1726,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               type="button"
               onClick={handleCreateDataplexScan}
               disabled={busyAction === 'CREATE_SCAN'}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'CREATE_SCAN'
                 ? 'Creating Dataplex Scan via dataplex.googleapis.com/v1...'
@@ -1742,7 +1742,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <div>
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
                       {s.id}{' '}
-                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-500">
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-emerald-500/15 text-emerald-500">
                         {s.type}
                       </span>
                     </div>
@@ -1755,7 +1755,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     onClick={() =>
                       handleDeleteResource('DATAPLEX_SCAN', s.id, s.location)
                     }
-                    className="p-1.5 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
+                    className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1816,7 +1816,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               type="button"
               onClick={handleCreateDataProduct}
               disabled={busyAction === 'CREATE_PRODUCT'}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'CREATE_PRODUCT'
                 ? 'Publishing Data Product & Syncing dbt Manifest...'
@@ -1832,7 +1832,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <div className="space-y-1">
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                       <span>{dp.displayName}</span>
-                      <span className="px-2 py-0.5 rounded text-[9px] bg-blue-500/15 text-blue-400">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] bg-blue-500/15 text-blue-400">
                         Quality {dp.qualityScore}%
                       </span>
                     </div>
@@ -1845,7 +1845,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     onClick={() =>
                       handleDeleteResource('DATA_PRODUCT', dp.id, dp.location)
                     }
-                    className="p-1.5 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
+                    className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1869,7 +1869,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+              <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                 0 BREAKING DOWNSTREAM CHANGES
               </span>
               {onOpenBigQuerySql && (
@@ -1886,7 +1886,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     const ddl = `-- Zero-Breakage Schema Contract View (${cleanSourceDs}.${cleanSourceTable} -> ${cleanTargetDs}.v_${cleanTargetTable}_contract)\nCREATE OR REPLACE VIEW \`${projectId}.${cleanTargetDs}.v_${cleanTargetTable}_contract\` AS\nSELECT\n${selectLines}\nFROM \`${projectId}.${cleanSourceDs}.${cleanSourceTable}\`\nWHERE ${dedupKey} IS NOT NULL\nQUALIFY ROW_NUMBER() OVER (PARTITION BY ${dedupKey} ORDER BY ${orderByCol} DESC) = 1;`;
                     onOpenBigQuerySql(ddl);
                   }}
-                  className="px-3 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                  className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
                 >
                   Synthesize Contract View DDL in BigQuery Studio →
                 </button>
@@ -1895,7 +1895,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => onNavigateTab('CLOUD_SOC')}
-                  className="px-2.5 py-1 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
                 >
                   Audit PII Columns in Cloud SOC →
                 </button>
@@ -1930,7 +1930,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       {m.targetField}
                     </td>
                     <td className="py-2.5 pr-3">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25 text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/25 text-[10px]">
                         {m.targetType}
                       </span>
                     </td>
@@ -2045,7 +2045,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <Workflow className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>&ldquo;Composer-Lite&rdquo; Serverless DAG Transpiler (`workflows.googleapis.com/v1`)</span>
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                   SAVES ~$348/MO
                 </span>
               </div>
@@ -2069,7 +2069,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 type="button"
                 onClick={handleDeployServerlessDag}
                 disabled={busyAction === 'DEPLOY_DAG'}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {busyAction === 'DEPLOY_DAG'
                   ? 'Deploying...'
@@ -2096,7 +2096,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     onClick={() =>
                       handleDeleteResource('SERVERLESS_DAG', d.id, d.region)
                     }
-                    className="p-1.5 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
+                    className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -2132,7 +2132,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       key={env}
                       type="button"
                       onClick={() => setDakEnvName(env)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold uppercase cursor-pointer ${
                         dakEnvName === env
                           ? 'bg-blue-600 text-white'
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
@@ -2149,7 +2149,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <button
                     type="button"
                     onClick={() => setDakFileTab('DEPLOYMENT_YAML')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold cursor-pointer ${
                       dakFileTab === 'DEPLOYMENT_YAML'
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
@@ -2160,7 +2160,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <button
                     type="button"
                     onClick={() => setDakFileTab('ORCHESTRATION_YAML')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold cursor-pointer ${
                       dakFileTab === 'ORCHESTRATION_YAML'
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
@@ -2181,7 +2181,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                         'DAK_YAML'
                       )
                     }
-                    className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
+                    className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
                   >
                     {copiedKey === 'DAK_YAML' ? (
                       <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -2194,7 +2194,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     type="button"
                     onClick={handleDeployDakBundle}
                     disabled={busyAction === 'DAK_DEPLOY'}
-                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {busyAction === 'DAK_DEPLOY'
                       ? 'Applying Bundle...'
@@ -2238,7 +2238,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                           {u.kind}
                         </span>
                         <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
@@ -2252,7 +2252,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     <button
                       type="button"
                       onClick={() => copyText(u.uri, u.uri)}
-                      className="px-2 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                      className="px-2 py-1 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
                     >
                       {copiedKey === u.uri ? '✓ Copied' : 'Copy URI'}
                     </button>
@@ -2319,7 +2319,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   type="button"
                   onClick={handleRunDakSearch}
                   disabled={busyAction === 'DAK_SEARCH'}
-                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'DAK_SEARCH' ? 'Searching...' : 'Search Catalog'}
                 </button>
@@ -2339,7 +2339,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                           {r.system}
                         </span>
                         <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate">
@@ -2357,7 +2357,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       <button
                         type="button"
                         onClick={() => copyText(r.dakUri, r.entryName)}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                        className="px-2.5 py-1 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
                       >
                         {copiedKey === r.entryName ? '✓ Copied' : 'Copy URI'}
                       </button>
@@ -2371,7 +2371,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                                 `-- Dataplex Semantic Catalog Asset: ${r.displayName} (${r.dakUri})\nSELECT *\nFROM \`${projectId}.${r.displayName.includes('.') ? r.displayName : `analytics_lakehouse.${r.displayName}`}\`\nLIMIT 100;`
                               )
                             }
-                            className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer shrink-0"
+                            className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer shrink-0"
                           >
                             Query in BQ →
                           </button>
@@ -2407,7 +2407,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   type="button"
                   onClick={handleRunSparkRcaDoctor}
                   disabled={busyAction === 'SPARK_RCA'}
-                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-2 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'SPARK_RCA'
                     ? 'Streaming...'
@@ -2487,7 +2487,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     Never pay for idle master/worker VMs again. Submit PySpark/Ray directly to Serverless Batches with sub-30s startup.
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                   $0.00/HR IDLE
                 </span>
               </div>
@@ -2581,7 +2581,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 type="button"
                 disabled={busyAction === 'SUBMIT_SPARK'}
                 onClick={handleSubmitServerlessSpark}
-                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Play className="w-4 h-4" />
                 <span>
@@ -2595,7 +2595,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => setActiveSubTab('ICEBERG_50_MATRIX')}
-                  className="px-2.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
                   50 Iceberg Playbooks →
                 </button>
@@ -2606,14 +2606,14 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       ? onOpenBigLakeStudio('COMPACTION_DOCTOR')
                       : onNavigateTab?.('BIGLAKE_STUDIO', 'COMPACTION_DOCTOR')
                   }
-                  className="px-2.5 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
                 >
                   BigLake Z-Order Compaction →
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
-                  className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
                 >
                   Spanner Graph Export →
                 </button>
@@ -2644,7 +2644,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                           Runtime {b.runtimeVersion || '2.2 (Spark 3.5 + Iceberg)'} · {b.state || 'SUCCEEDED'}
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                         $0.00 Idle
                       </span>
                     </div>
@@ -2667,7 +2667,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => copyText(sparkArtifacts.pysparkCode, 'PYSPARK_CODE')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'PYSPARK_CODE' ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -2691,7 +2691,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       <button
                         type="button"
                         onClick={() => onRunInShell(sparkArtifacts.cliCmd)}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                       >
                         Run in Cloud Shell
                       </button>
@@ -2699,7 +2699,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     <button
                       type="button"
                       onClick={() => copyText(sparkArtifacts.cliCmd, 'SPARK_CLI')}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                     >
                       {copiedKey === 'SPARK_CLI' ? 'Copied' : 'Copy CLI'}
                     </button>
@@ -2725,10 +2725,10 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                <span className="px-2.5 py-1 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
                   100% Native Google Cloud Lakehouse Workspace
                 </span>
-                <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono font-bold">
                   BigFrames (`bigframes.pandas`) · BigQuery `AI.FORECAST` (TimesFM) &amp; `AI.GENERATE_TABLE` (Gemini 2.5 Flash) · Dataform SQLX Assertions · Vertex AI Model Registry
                 </span>
               </div>
@@ -2739,7 +2739,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     ? onOpenBigLakeStudio('DATABRICKS_UNITY_BRIDGE')
                     : onNavigateTab?.('BIGLAKE_STUDIO', 'DATABRICKS_UNITY_BRIDGE')
                 }
-                className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-semibold cursor-pointer"
+                className="px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-semibold cursor-pointer"
               >
                 Need Cross-Cloud Federation? Open Unity &amp; Glue Bridge →
               </button>
@@ -2856,7 +2856,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     key={cell.id}
                     type="button"
                     onClick={() => setLakehouseActiveCell(cell.id)}
-                    className={`w-full h-11 px-3 rounded-xl border text-left font-mono transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    className={`w-full h-11 px-3 rounded-md border text-left font-mono transition-all cursor-pointer flex items-center justify-between gap-2 ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                         : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
@@ -2866,7 +2866,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       <span className="text-xs font-bold truncate">{cell.title}</span>
                     </div>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0 ${
+                      className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
                         isSelected
                           ? 'bg-white/20 text-white'
                           : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -3026,7 +3026,7 @@ FROM ML.EVALUATE(MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree
                         <button
                           type="button"
                           onClick={() => onOpenBigQuerySql(runnableSql)}
-                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Run Cell Live in BigQuery Studio →
                         </button>
@@ -3043,7 +3043,7 @@ FROM ML.EVALUATE(MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree
                                 : `python3 -c ${JSON.stringify(activeCellObj.code)}`
                             )
                           }
-                          className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Execute in Cloud Shell
                         </button>
@@ -3051,7 +3051,7 @@ FROM ML.EVALUATE(MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree
                       <button
                         type="button"
                         onClick={() => copyText(activeCellObj.code, 'LAKEHOUSE_CELL')}
-                        className="px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono font-semibold cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono font-semibold cursor-pointer"
                       >
                         {copiedKey === 'LAKEHOUSE_CELL' ? 'Copied!' : 'Copy Cell'}
                       </button>
@@ -3076,7 +3076,7 @@ FROM ML.EVALUATE(MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree
                   Toggle declarative data quality expectations below to synthesize both the legacy `@dlt.table` specification and its 100% free Google Cloud Dataform SQLX + BigQuery live assertion verification query.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
                 Dataform Orchestration Fee: $0.00/mo
               </span>
             </div>
@@ -3166,7 +3166,7 @@ ${dltExpectNonNull ? `@dlt.expect_or_drop("valid_${dedupKey}", "${dedupKey} IS N
                             `-- Live BigQuery Data Quality Assertion Verification for ${projectId}.${cleanTargetDs}.${cleanTargetTable}\nSELECT\n  COUNT(*) AS total_rows,\n  COUNTIF(${dedupKey} IS NULL OR ${orderByCol} IS NULL) AS null_key_violations,\n  COUNT(*) - COUNT(DISTINCT ${dedupKey}) AS duplicate_key_violations,\n  COUNTIF(revenue_usd < 0) AS negative_revenue_violations\nFROM \`${projectId}.${cleanTargetDs}.${cleanTargetTable}\`;`
                           )
                         }
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-mono font-bold cursor-pointer"
                       >
                         Verify Assertions in BigQuery →
                       </button>

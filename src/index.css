@@ -105,4 +105,23 @@ html:not(.dark) .text-slate-300 {
   background-color: #202124;
 }
 
+/* ============================================================================
+ * CloudPulse 2026 Standardized Affordance Rule:
+ * 1. Actionable Buttons (<button>) -> Crisp Slightly-Rounded Square (4px-6px)
+ * 2. Informational Tags / Status Badges (<span> pills) -> Fully Rounded (9999px)
+ * ============================================================================ */
+button:not([role="switch"]).rounded-full,
+button:not([role="switch"]).rounded-3xl,
+button:not([role="switch"]).rounded-2xl,
+button:not([role="switch"]).rounded-xl,
+button:not([role="switch"]).rounded-lg {
+  border-radius: 0.375rem !important; /* 6px crisp actionable button */
+}
+
+span[class*="px-"][class*="bg-"]:not([class*="absolute"]),
+span[class*="px-"][class*="border"]:not([class*="absolute"]) {
+  border-radius: 9999px;
+}
+
+
 

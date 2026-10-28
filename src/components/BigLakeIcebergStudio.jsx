@@ -1005,10 +1005,10 @@ OPTIONS (
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 BIGLAKE &amp; APACHE ICEBERG OPEN LAKEHOUSE STUDIO
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 Open Parquet in gs:// · Zero Data Duplication · Multi-Engine ACID
               </span>
             </div>
@@ -1030,7 +1030,7 @@ OPTIONS (
               fetchBigLakeCatalogs();
               fetchBucketsAndDatasets();
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -1110,7 +1110,7 @@ OPTIONS (
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 title={`${tab.label} (${tab.badge})`}
-                className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -1129,7 +1129,7 @@ OPTIONS (
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 ${
                     isActive
                       ? 'bg-white/20 text-white'
                       : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
@@ -1158,7 +1158,7 @@ OPTIONS (
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                     Official Google Cloud BigLake Metastore &amp; Iceberg REST Catalogs (`/biglake/metastore/catalogs`)
                   </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                     biglake.googleapis.com/v1
                   </span>
                 </div>
@@ -1171,7 +1171,7 @@ OPTIONS (
                 onClick={() =>
                   setCredentialVendingEnabled((v) => !v)
                 }
-                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer shrink-0 ${
                   credentialVendingEnabled
                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border-zinc-300 dark:border-zinc-700'
@@ -1230,7 +1230,7 @@ OPTIONS (
               <button
                 type="submit"
                 disabled={creatingCatalog}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>
@@ -1258,7 +1258,7 @@ OPTIONS (
                         <span className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-100">
                           {cat.id}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
                           {cat.location}
                         </span>
                       </div>
@@ -1271,7 +1271,7 @@ OPTIONS (
                       onClick={() =>
                         handleDeleteBigLakeCatalog(cat.location, cat.id)
                       }
-                      className="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-500 text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-500 text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Delete
                     </button>
@@ -1300,7 +1300,7 @@ OPTIONS (
                   <span className="text-xs font-extrabold font-mono text-red-500">
                     Legacy External Table (Old Way)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-500 font-bold">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-red-500/20 text-red-500 font-bold">
                     AVOID IN PROD
                   </span>
                 </div>
@@ -1317,7 +1317,7 @@ OPTIONS (
                   <span className="text-xs font-extrabold font-mono text-blue-600 dark:text-blue-400">
                     BigLake + Apache Iceberg (Open Lakehouse)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                     MULTI-ENGINE WINNER
                   </span>
                 </div>
@@ -1334,7 +1334,7 @@ OPTIONS (
                   <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
                     Native BigQuery Table (`Capacitor`)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold">
                     PURE SQL WAREHOUSE
                   </span>
                 </div>
@@ -1375,7 +1375,7 @@ OPTIONS (
                   key={m.id}
                   type="button"
                   onClick={() => setBigLakeUseCase(m.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer ${
                     bigLakeUseCase === m.id
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -1558,7 +1558,7 @@ OPTIONS (
                       `bq mk --connection --connection_type=CLOUD_RESOURCE --project_id=${projectId} --location=${bigLakeLocation} ${bigLakeConnectionId}`
                     )
                   }
-                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                  className="w-full py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Run Step 1 in Cloud Shell →
                 </button>
@@ -1589,7 +1589,7 @@ OPTIONS (
                 <button
                   type="button"
                   onClick={() => onRunInShell(bigLakeArtifacts.step2BucketIamCli)}
-                  className="w-full py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                  className="w-full py-1.5 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Run Step 2 in Cloud Shell →
                 </button>
@@ -1623,7 +1623,7 @@ OPTIONS (
                 <button
                   type="button"
                   onClick={() => onOpenBigQuerySql(bigLakeArtifacts.primaryDdl)}
-                  className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-extrabold cursor-pointer"
+                  className="w-full py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-extrabold cursor-pointer"
                 >
                   Open Step 3 in BigQuery SQL Executor →
                 </button>
@@ -1671,7 +1671,7 @@ OPTIONS (
                     Streaming ingestion into Iceberg creates thousands of tiny Parquet files and manifest snapshots that slow down BigQuery &amp; Spark scans.
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                   FILE COMPACTION
                 </span>
               </div>
@@ -1783,7 +1783,7 @@ OPTIONS (
                   onClick={() =>
                     copyText(compactionArtifacts.bqExportMetadataSql, 'EXP_META')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'EXP_META' ? 'Copied' : 'Copy SQL'}
                 </button>
@@ -1803,7 +1803,7 @@ OPTIONS (
                   onClick={() =>
                     copyText(compactionArtifacts.sparkCompactionSql, 'COMPACT_SQL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'COMPACT_SQL' ? 'Copied' : 'Copy Maintenance SQL'}
                 </button>
@@ -1869,7 +1869,7 @@ OPTIONS (
                 <div className="text-xs font-extrabold font-mono uppercase text-emerald-600 dark:text-emerald-400">
                   BigLake Omni Cross-Cloud Lakehouse ($0 Egress)
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   AWS S3 &amp; AZURE
                 </span>
               </div>
@@ -1896,7 +1896,7 @@ OPTIONS (
                       setOmniRegion(c.region);
                       setOmniUri(c.uri);
                     }}
-                    className={`py-1.5 px-2.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                    className={`py-1.5 px-2.5 rounded-md text-xs font-mono font-bold border cursor-pointer ${
                       omniCloud === c.id
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
@@ -1945,7 +1945,7 @@ OPTIONS (
                   onClick={() =>
                     copyText(omniAndGovernanceArtifacts.rlsDdl, 'RLS_DDL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'RLS_DDL' ? 'Copied' : 'Copy Governance SQL'}
                 </button>
@@ -1965,7 +1965,7 @@ OPTIONS (
                   onClick={() =>
                     copyText(omniAndGovernanceArtifacts.omniCliAndDdl, 'OMNI_DDL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'OMNI_DDL' ? 'Copied' : 'Copy Omni Blueprint'}
                 </button>
@@ -2004,7 +2004,7 @@ OPTIONS (
                 Databricks Unity Catalog &amp; AWS Glue Federation + 100% Native Google Cloud Replacement Studio
               </strong>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono font-extrabold">
+                <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono font-extrabold">
                   gcloud alpha biglake iceberg catalogs · $0.00 DBU Tax
                 </span>
                 <button
@@ -2017,7 +2017,7 @@ OPTIONS (
                           'GCP_LAKEHOUSE_WORKSPACE'
                         )
                   }
-                  className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                  className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Open 100% Native GCP Lakehouse Workspace (BigFrames + AI.FORECAST + DLT) →
                 </button>
@@ -2230,7 +2230,7 @@ OPTIONS (
                   type="button"
                   onClick={handleCreateFederatedCatalog}
                   disabled={creatingFedCatalog}
-                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all"
+                  className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all"
                 >
                   {creatingFedCatalog
                     ? 'Provisioning Federated Catalog...'
@@ -2243,7 +2243,7 @@ OPTIONS (
                   onClick={() =>
                     onOpenBigQuerySql?.(transpiledDatabricksBundle.nativeBigQuerySql)
                   }
-                  className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs cursor-pointer"
+                  className="px-3 py-2 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs cursor-pointer"
                 >
                   Query Federated Table in BigQuery →
                 </button>
@@ -2295,7 +2295,7 @@ OPTIONS (
                         'FED_RUNBOOK'
                       )
                     }
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedId === 'FED_RUNBOOK' ? 'Copied!' : 'Copy Runbook'}
                   </button>
@@ -2307,7 +2307,7 @@ OPTIONS (
                           `bq ls --location="${activeRegionPair.gcpRegion}" ${projectId}.${fedCatalogName}`
                         )
                       }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 text-white cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 text-white cursor-pointer"
                     >
                       Validate in Cloud Shell
                     </button>
@@ -2331,7 +2331,7 @@ OPTIONS (
                   On Databricks, you pay a software DBU surcharge ($0.15–$0.70/DBU) on top of underlying GCE VMs—even when interactive clusters sit idle between notebook cells. Compare against BigQuery ($0 idle) + Dataproc Serverless Spark 2.2 ($0.00 DBU tax, &lt;5s startup, scales to $0).
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-extrabold">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-extrabold">
                 Saves ${databricksTcoComparison.monthlySavingsUsd.toLocaleString()}/mo (${databricksTcoComparison.annualSavingsUsd.toLocaleString()}/yr · -{databricksTcoComparison.savingsPercent}%)
               </span>
             </div>
@@ -2553,7 +2553,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
                           'TRANSPILED_PYSPARK'
                         )
                       }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                     >
                       {copiedId === 'TRANSPILED_PYSPARK' ? 'Copied!' : 'Copy PySpark'}
                     </button>
@@ -2561,7 +2561,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
                       type="button"
                       onClick={handleSubmitTranspiledSparkLive}
                       disabled={submittingNativeSpark}
-                      className="px-3 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                      className="px-3 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                     >
                       {submittingNativeSpark
                         ? 'Submitting to Dataproc Serverless...'
@@ -2588,7 +2588,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
                           'TRANSPILED_BQ_SQL'
                         )
                       }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                     >
                       {copiedId === 'TRANSPILED_BQ_SQL' ? 'Copied!' : 'Copy SQL'}
                     </button>
@@ -2599,7 +2599,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
                           transpiledDatabricksBundle.nativeBigQuerySql
                         )
                       }
-                      className="px-3 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                      className="px-3 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                     >
                       Open in BigQuery SQL Studio →
                     </button>

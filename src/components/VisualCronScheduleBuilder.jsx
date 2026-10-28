@@ -188,7 +188,7 @@ export default function VisualCronScheduleBuilder({
           <span>{label}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
             {humanSummary}
           </span>
           <button

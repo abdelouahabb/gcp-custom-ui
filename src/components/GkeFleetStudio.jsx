@@ -455,7 +455,7 @@ spec:
       <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED GOOGLE KUBERNETES ENGINE (GKE) AUTOPILOT & SPOT GPU STUDIO
@@ -604,7 +604,7 @@ spec:
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>1-Click GKE Compliance & Cluster Deployer</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM'
                   : `ENFORCING ${gkeBlueprint.toUpperCase()}`}
@@ -862,10 +862,10 @@ spec:
                         <div>
                           <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <span>{c.name}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px]">
                               {c.autopilot ? 'AUTOPILOT' : 'STANDARD'}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px]">
                               {c.status}
                             </span>
                           </div>
@@ -1300,7 +1300,7 @@ spec:
               <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>GKE Spot GPU vs. On-Demand Node-Pool FinOps Calculator</span>
             </div>
-            <span className="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
               Spot GPU Savings: -${monthlyGpuSavingsUsd.toLocaleString()}/month
             </span>
           </div>

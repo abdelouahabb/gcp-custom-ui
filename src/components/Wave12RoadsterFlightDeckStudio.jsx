@@ -532,10 +532,10 @@ export default function Wave12RoadsterFlightDeckStudio({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-600 text-white">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-600 text-white">
                 AUTONOMOUS DRIFT &amp; MIGRATION DECK (DRIFT RECONCILER, CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
                 100% LIVE GCP REST + 12-LANE MCP TELEMETRY
               </span>
             </div>
@@ -559,7 +559,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               type="button"
               disabled={loadingAutopilot}
               onClick={fetchAutopilotRadar}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingAutopilot ? 'animate-spin' : ''}`}
@@ -630,7 +630,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                 type="button"
                 data-feature-id={t.id}
                 onClick={() => setActiveTab(t.id)}
-                className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
+                className={`p-3 rounded-md border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-white/90 dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
@@ -669,7 +669,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                   Live Aerodynamic &amp; Zero-Trust Hull Vectors
                 </h3>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">
                 Score: {autopilotData?.flightReadinessScore ?? 92}/100
               </span>
             </div>
@@ -685,7 +685,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                       {vec.label}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                         vec.status === 'OPTIMAL'
                           ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                           : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
@@ -741,7 +741,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                             man.severity === 'CRITICAL'
                               ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                               : man.severity === 'HIGH'
@@ -757,11 +757,11 @@ export default function Wave12RoadsterFlightDeckStudio({
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-mono">
                         {man.estimatedMonthlySavingsUsd > 0 && (
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
                             Saves ${man.estimatedMonthlySavingsUsd}/mo
                           </span>
                         )}
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                           +{man.securityGainPts} Posture Pts
                         </span>
                       </div>
@@ -776,7 +776,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                         type="button"
                         disabled={isBusy}
                         onClick={() => handleExecuteManeuver(man)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5" />
                         <span>
@@ -789,7 +789,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                       <button
                         type="button"
                         onClick={() => copyText(man.cliEquivalent)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                       >
                         <Copy className="w-3 h-3" />
                         <span>Copy gcloud CLI</span>
@@ -855,7 +855,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               type="button"
               disabled={loadingInventory}
               onClick={fetchTeleportInventory}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingInventory ? 'animate-spin' : ''}`}
@@ -1013,7 +1013,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               <button
                 type="submit"
                 disabled={teleporting}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Rocket className="w-3.5 h-3.5" />
                 <span>
@@ -1068,7 +1068,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               type="button"
               disabled={runningMegacast}
               onClick={handleRunLudicrousMegacast}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>
@@ -1123,7 +1123,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold">
                             {lane.laneId}
                           </span>
                           <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1131,7 +1131,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[10.5px]">
-                          <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                             {lane.badge}
                           </span>
                           <span className="text-zinc-500">
@@ -1181,7 +1181,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                 key={pr.label}
                 type="button"
                 onClick={() => setMissionBrief(pr.brief)}
-                className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10.5px] font-mono font-bold cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10.5px] font-mono font-bold cursor-pointer"
               >
                 {pr.label}
               </button>
@@ -1198,7 +1198,7 @@ export default function Wave12RoadsterFlightDeckStudio({
             <button
               type="submit"
               disabled={runningDirector}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>

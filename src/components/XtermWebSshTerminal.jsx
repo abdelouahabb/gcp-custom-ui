@@ -949,7 +949,7 @@ export default function XtermWebSshTerminal({
 
               {focusedVm && (
                 <span
-                  className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md border ${
+                  className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full border ${
                     isFocusedVmTransitional
                       ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
                       : isFocusedVmRunning
@@ -992,7 +992,7 @@ export default function XtermWebSshTerminal({
                         setViewMode('LIVE_SSH_PTY');
                         onSelectVm(focusedVm);
                       }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
                       title={`Connect interactive Xterm.js SSH to ${customUsername}@${focusedVm.name}`}
                     >
                       <Play className="w-3 h-3 fill-current" />
@@ -1004,7 +1004,7 @@ export default function XtermWebSshTerminal({
                     type="button"
                     disabled={isFocusedVmTransitional}
                     onClick={() => handleTriggerVmPower('STOP', false)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-red-500/15 hover:bg-red-600 text-red-600 dark:text-red-300 hover:text-white border border-red-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-red-500/15 hover:bg-red-600 text-red-600 dark:text-red-300 hover:text-white border border-red-500/30 transition-colors cursor-pointer disabled:opacity-50"
                     title={`Stop VM "${focusedVm.name}" directly from Xterm.js`}
                   >
                     <Square className="w-2.5 h-2.5 fill-current" />
@@ -1015,7 +1015,7 @@ export default function XtermWebSshTerminal({
                     type="button"
                     disabled={isFocusedVmTransitional}
                     onClick={() => handleTriggerVmPower('RESET', false)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
                     title={`Reboot VM "${focusedVm.name}"`}
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -1028,7 +1028,7 @@ export default function XtermWebSshTerminal({
                     type="button"
                     disabled={isFocusedVmTransitional}
                     onClick={() => handleTriggerVmPower('START', true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                     title={`Start VM "${focusedVm.name}" and automatically launch SSH once RUNNING`}
                   >
                     <Play className="w-3 h-3 fill-current" />
@@ -1043,7 +1043,7 @@ export default function XtermWebSshTerminal({
                     type="button"
                     disabled={isFocusedVmTransitional}
                     onClick={() => handleTriggerVmPower('START', false)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
                     title={`Start VM "${focusedVm.name}" without opening SSH`}
                   >
                     <Play className="w-2.5 h-2.5" />
@@ -1059,7 +1059,7 @@ export default function XtermWebSshTerminal({
               <button
                 type="button"
                 onClick={() => setReconnectNonce((n) => n + 1)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                 title="Reconnect interactive Web-SSH PTY session"
               >
                 <RefreshCw className="w-3 h-3" />
@@ -1075,7 +1075,7 @@ export default function XtermWebSshTerminal({
                     }
                     onDisconnect();
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 hover:bg-red-600 text-zinc-700 dark:text-zinc-300 hover:text-white border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 hover:bg-red-600 text-zinc-700 dark:text-zinc-300 hover:text-white border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                   title="Disconnect the active SSH session"
                 >
                   <PowerOff className="w-3 h-3" />
@@ -1089,7 +1089,7 @@ export default function XtermWebSshTerminal({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
               title={
                 isExpanded
                   ? 'Restore split-pane layout'
@@ -1483,7 +1483,7 @@ export default function XtermWebSshTerminal({
                 </span>
                 {scpEngineUsed && (
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
                       scpEngineUsed.includes('IAP')
                         ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                         : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
@@ -1503,7 +1503,7 @@ export default function XtermWebSshTerminal({
                   type="button"
                   disabled={Boolean(scpActionBusy)}
                   onClick={() => scpFileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
                   title="Upload one or more files from your laptop to this VM directory (or drag-and-drop files anywhere)"
                 >
                   <Upload className="w-3 h-3" />
@@ -1530,7 +1530,7 @@ export default function XtermWebSshTerminal({
                       isNew: true,
                     });
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
                   <span>+ New File</span>
@@ -1539,7 +1539,7 @@ export default function XtermWebSshTerminal({
                 <button
                   type="button"
                   onClick={() => setScpNewFolderPrompt((v) => !v)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
                 >
                   <Folder className="w-3 h-3 text-amber-400" />
                   <span>+ Folder</span>
@@ -1549,7 +1549,7 @@ export default function XtermWebSshTerminal({
                   type="button"
                   disabled={scpLoading}
                   onClick={() => fetchScpDirectory(scpPath)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw
                     className={`w-3 h-3 ${scpLoading ? 'animate-spin' : ''}`}
@@ -1564,7 +1564,7 @@ export default function XtermWebSshTerminal({
               <button
                 type="button"
                 onClick={() => fetchScpDirectory(scpParentPath || '/')}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
                 title="Go to parent directory (..)"
               >
                 <CornerLeftUp className="w-3 h-3" />
@@ -1587,7 +1587,7 @@ export default function XtermWebSshTerminal({
                 />
                 <button
                   type="submit"
-                  className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer shrink-0"
+                  className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer shrink-0"
                 >
                   Go
                 </button>
@@ -1604,7 +1604,7 @@ export default function XtermWebSshTerminal({
                   key={bm.label}
                   type="button"
                   onClick={() => fetchScpDirectory(bm.path)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
                     scpPath === bm.path
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                       : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border-zinc-200 dark:border-zinc-800'
@@ -1636,14 +1636,14 @@ export default function XtermWebSshTerminal({
                   type="button"
                   disabled={scpActionBusy === 'mkdir'}
                   onClick={handleCreateScpFolder}
-                  className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                  className="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
                 >
                   {scpActionBusy === 'mkdir' ? 'Creating...' : 'Create Folder'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setScpNewFolderPrompt(false)}
-                  className="px-2 py-1 rounded-lg text-zinc-400 hover:text-white text-[10px]"
+                  className="px-2 py-1 rounded-md text-zinc-400 hover:text-white text-[10px]"
                 >
                   Cancel
                 </button>
@@ -1704,7 +1704,7 @@ export default function XtermWebSshTerminal({
                       type="button"
                       disabled={scpActionBusy === 'save-file'}
                       onClick={handleSaveScpEditorFile}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       <Save className="w-3 h-3" />
                       <span>
@@ -1723,7 +1723,7 @@ export default function XtermWebSshTerminal({
                           name: scpEditorFile.fileName,
                         })
                       }
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
                     >
                       <Download className="w-3 h-3" />
                       <span>Download to Laptop</span>
@@ -1732,7 +1732,7 @@ export default function XtermWebSshTerminal({
                   <button
                     type="button"
                     onClick={() => setScpEditorFile(null)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
                   >
                     ✕ Close Editor
                   </button>
@@ -1995,13 +1995,13 @@ export default function XtermWebSshTerminal({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold">
+                  <span className="px-2.5 py-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold">
                     {identityInfo?.osLoginEnabled
                       ? 'Auth: GCP IAM OS Login'
                       : 'Auth: Metadata SSH Keys'}
                   </span>
                   <span
-                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold border shrink-0 ${
+                    className={`px-3 py-1 rounded-full-full text-[11px] font-extrabold border shrink-0 ${
                       isFocusedVmTransitional
                         ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
                         : isFocusedVmRunning
@@ -2075,7 +2075,7 @@ export default function XtermWebSshTerminal({
                         type="button"
                         disabled={identityBusy}
                         onClick={() => handleSelectSshUserProfile(cand)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-300 shadow-sm'
                             : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-700'
@@ -2100,7 +2100,7 @@ export default function XtermWebSshTerminal({
                     <button
                       type="button"
                       onClick={() => onSelectVm && onSelectVm(focusedVm)}
-                      className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+                      className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>
@@ -2114,7 +2114,7 @@ export default function XtermWebSshTerminal({
                         setViewMode('SCP_FILE_MANAGER');
                         fetchScpDirectory(scpPath || '~');
                       }}
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
                       title="Open Visual SCP / SFTP Remote File Browser, Uploader & In-Place Editor"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
@@ -2126,7 +2126,7 @@ export default function XtermWebSshTerminal({
                         type="button"
                         disabled={isFocusedVmTransitional}
                         onClick={() => handleTriggerVmPower('STOP', false)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-600 dark:text-red-300 hover:text-white border border-red-500/30 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-md bg-red-500/15 hover:bg-red-600 text-red-600 dark:text-red-300 hover:text-white border border-red-500/30 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Square className="w-3 h-3 fill-current" />
                         <span>Stop VM</span>
@@ -2140,7 +2140,7 @@ export default function XtermWebSshTerminal({
                         type="button"
                         disabled={isFocusedVmTransitional}
                         onClick={() => handleTriggerVmPower('START', true)}
-                        className="flex-1 min-w-[220px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50"
+                        className="flex-1 min-w-[220px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>
@@ -2155,7 +2155,7 @@ export default function XtermWebSshTerminal({
                       <button
                         type="button"
                         onClick={() => handleTriggerVmPower('START', false)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer"
                       >
                         <Play className="w-3 h-3" />
                         <span>Start VM Only</span>
@@ -2172,7 +2172,7 @@ export default function XtermWebSshTerminal({
                     <button
                       type="button"
                       onClick={() => onOpenMigrateVm(focusedVm)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/25 text-[10px] font-bold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/25 text-[10px] font-bold transition-colors cursor-pointer"
                     >
                       <Rocket className="w-3 h-3" />
                       <span>Modernize {focusedVm.name} → Cloud Run</span>
@@ -2183,7 +2183,7 @@ export default function XtermWebSshTerminal({
                       <button
                         type="button"
                         onClick={() => onSelectTab('VPC_NETWORKS')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
                       >
                         <Shield className="w-3 h-3 text-emerald-500" />
                         <span>VPC Firewall / IAP (0.0.0.0/0 ↔ IAP)</span>
@@ -2191,7 +2191,7 @@ export default function XtermWebSshTerminal({
                       <button
                         type="button"
                         onClick={() => onSelectTab('CLOUD_RUN')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
                       >
                         <span>Cloud Run Fleet</span>
                         <ArrowUpRight className="w-3 h-3" />

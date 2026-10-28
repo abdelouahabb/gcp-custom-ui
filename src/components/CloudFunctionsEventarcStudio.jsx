@@ -921,10 +921,10 @@ main:
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
                 CLOUD FUNCTIONS (v1 & v2) + DEMYSTIFIED EVENTARC STUDIO
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 2M Invocations/Mo Free Tier
               </span>
             </div>
@@ -945,7 +945,7 @@ main:
               disabled={iamDoctorBusy}
               onClick={handleRunIamDoctor}
               title="Automatically grant roles/pubsub.publisher to the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker so v2 Eventarc triggers never fail with Permission Denied"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
@@ -960,7 +960,7 @@ main:
               disabled={loading}
               onClick={fetchFunctionsOverview}
               title="Refresh live Cloud Functions (v1 & v2), Eventarc triggers, buckets, and Pub/Sub topics"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
@@ -1052,7 +1052,7 @@ main:
                       {b.label}
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
                     {b.status}
                   </span>
                 </div>
@@ -1097,7 +1097,7 @@ main:
                 type="button"
                 title={`${tab.label} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                   active
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -1116,7 +1116,7 @@ main:
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
                     active
                       ? 'bg-white/20 text-white'
                       : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -1156,7 +1156,7 @@ main:
                       setTriggerCategory('GCS_OBJECT');
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
                     wizardMode === 'BEGINNER'
                       ? 'bg-amber-500 text-zinc-950 shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
@@ -1171,7 +1171,7 @@ main:
                     setTriggerCategory('UNIVERSAL_AUDIT');
                     setFnGen('GEN_2');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer ${
                     wizardMode === 'ADVANCED'
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
@@ -1196,7 +1196,7 @@ main:
                           setGcsEventType(rec.eventTypeDefault);
                         }
                       }}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`p-3 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between ${
                         active
                           ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
                           : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/40'
@@ -1251,7 +1251,7 @@ main:
                         key={grp.id}
                         type="button"
                         onClick={() => setAdvGroupFilter(grp.id)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer transition-all ${
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold cursor-pointer transition-all ${
                           advGroupFilter === grp.id
                             ? 'bg-blue-600 text-white'
                             : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -1290,7 +1290,7 @@ main:
                           setCustomEventType(preset.eventType);
                           setFnName(preset.suggestedFnName);
                         }}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        className={`p-3 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between ${
                           isSelected
                             ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
                             : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/40'
@@ -1301,7 +1301,7 @@ main:
                             <span className="text-[10px] font-mono font-bold text-blue-400">
                               {preset.badge}
                             </span>
-                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
                               $0 Free
                             </span>
                           </div>
@@ -1345,7 +1345,7 @@ main:
                 type="button"
                 disabled={Boolean(testingFn)}
                 onClick={() => handleTestCloudEvent(null)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -1408,7 +1408,7 @@ main:
                   >
                     2. TRANSPORT & BILLING
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-black/40 text-[9.5px]">
+                  <span className="px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-black/40 text-[9.5px]">
                     {activeRecipe.transportMode === 'CLOUD_AUDIT_LOGS'
                       ? 'AUDIT LOG BUS'
                       : '$0 FREE BUS'}
@@ -1723,7 +1723,7 @@ main:
                     <button
                       type="button"
                       onClick={() => setEnableRetry((v) => !v)}
-                      className="w-full h-[34px] rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 text-xs font-mono text-blue-600 dark:text-blue-300 text-left truncate"
+                      className="w-full h-[34px] rounded-md border border-blue-500/40 bg-blue-500/10 px-3 text-xs font-mono text-blue-600 dark:text-blue-300 text-left truncate"
                     >
                       {enableRetry
                         ? '✓ Exponential Backoff Retry ON (--retry)'
@@ -1808,7 +1808,7 @@ main:
                       setCopiedCmd(true);
                       setTimeout(() => setCopiedCmd(false), 1800);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                   >
                     {copiedCmd ? (
                       <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -1822,7 +1822,7 @@ main:
                     <button
                       type="button"
                       onClick={() => onRunInShell(gcloudDeployCommand)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-blue-500/40 bg-blue-500/10 text-blue-500 dark:text-blue-300 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-blue-500/40 bg-blue-500/10 text-blue-500 dark:text-blue-300 cursor-pointer"
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Send to Cloud Shell</span>
@@ -1834,7 +1834,7 @@ main:
                   type="button"
                   disabled={deploying}
                   onClick={() => handleDeployFunction(null)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-mono font-extrabold bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   <Rocket className="w-4 h-4" />
                   <span>
@@ -1916,7 +1916,7 @@ main:
               <button
                 type="button"
                 onClick={() => setActiveSubTab('TRIGGER_WIZARD')}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500 text-zinc-950 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-md text-xs font-mono font-bold bg-amber-500 text-zinc-950 cursor-pointer"
               >
                 Open Trigger Wizard
               </button>
@@ -1934,7 +1934,7 @@ main:
                         {fn.name}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                           fn.generation === 'GEN_2'
                             ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
                             : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
@@ -1944,7 +1944,7 @@ main:
                           ? '2nd Gen (v2 · Eventarc)'
                           : '1st Gen (v1 Legacy · 1 req/inst)'}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                         {fn.location} · {fn.runtime} · {fn.memory} ·{' '}
                         {fn.concurrency}x concurrency
                       </span>
@@ -1960,7 +1960,7 @@ main:
                     <button
                       type="button"
                       onClick={() => handleTestCloudEvent(fn)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 cursor-pointer"
                     >
                       Test CloudEvent
                     </button>
@@ -1987,7 +1987,7 @@ main:
                             enableRetry: true,
                           })
                         }
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                        className="px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                       >
                         1-Click Upgrade v1 → v2 (-78% Cost)
                       </button>
@@ -1996,7 +1996,7 @@ main:
                     <button
                       type="button"
                       onClick={() => handleDeleteFunction(fn)}
-                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/15 cursor-pointer"
+                      className="p-1.5 rounded-md text-red-500 hover:bg-red-500/15 cursor-pointer"
                       title={`Delete ${fn.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -2122,7 +2122,7 @@ main:
                   Stop guessing between Eventarc, Pub/Sub, Cloud Tasks, Cloud Workflows, and Cloud Scheduler. Pick the exact right primitive for every pattern:
                 </p>
               </div>
-              <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                 CHOREOGRAPHY VS ORCHESTRATION
               </span>
             </div>
@@ -2224,7 +2224,7 @@ main:
                   <button
                     type="button"
                     onClick={() => setWorkflowIncludeCallback((v) => !v)}
-                    className={`p-2 rounded-lg border text-[10.5px] font-mono font-bold cursor-pointer ${
+                    className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                       workflowIncludeCallback
                         ? 'border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-300'
                         : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
@@ -2235,7 +2235,7 @@ main:
                   <button
                     type="button"
                     onClick={() => setWorkflowIncludeRetry((v) => !v)}
-                    className={`p-2 rounded-lg border text-[10.5px] font-mono font-bold cursor-pointer ${
+                    className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                       workflowIncludeRetry
                         ? 'border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
                         : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
@@ -2250,7 +2250,7 @@ main:
                 type="button"
                 disabled={workflowBusy}
                 onClick={handleDeployWorkflow}
-                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Rocket className="w-4 h-4" />
                 <span>
@@ -2292,7 +2292,7 @@ main:
                     <button
                       type="button"
                       onClick={() => onRunInShell(workflowArtifacts.cliCmd)}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                     >
                       Deploy in Cloud Shell
                     </button>
@@ -2300,7 +2300,7 @@ main:
                   <button
                     type="button"
                     onClick={() => copyText(workflowArtifacts.yaml, 'WF_YAML')}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'WF_YAML' ? 'Copied' : 'Copy YAML'}
                   </button>

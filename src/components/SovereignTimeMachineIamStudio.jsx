@@ -849,7 +849,7 @@ export default function SovereignTimeMachineIamStudio({
       <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>WAVE-7 SOVEREIGN ZERO-TRUST & MERKLE TIME-MACHINE STUDIO</span>
             </div>
@@ -957,7 +957,7 @@ export default function SovereignTimeMachineIamStudio({
                       if (tab.section) setIamSectionView(tab.section);
                     }
                   }}
-                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -976,7 +976,7 @@ export default function SovereignTimeMachineIamStudio({
                     <span className="truncate">{tab.label}</span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-mono shrink-0 ${
                       active
                         ? 'bg-black/25 text-blue-100'
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
@@ -1089,7 +1089,7 @@ export default function SovereignTimeMachineIamStudio({
                 <span className="text-[11px] font-mono text-amber-400 font-bold">
                   SA Keys & Tokens Vault
                 </span>
-                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
                   Open →
                 </span>
               </div>
@@ -1152,7 +1152,7 @@ export default function SovereignTimeMachineIamStudio({
               <button
                 type="button"
                 onClick={() => setExpandAllIamRoles((v) => !v)}
-                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono cursor-pointer"
               >
                 {expandAllIamRoles
                   ? '▴ Collapse IAM Roles to Top 3'
@@ -1274,7 +1274,7 @@ export default function SovereignTimeMachineIamStudio({
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${badgeColor}`}
                             >
                               {isProtectedOwner
                                 ? 'SOVEREIGN ROOT OWNER · Protected Identity'
@@ -1287,7 +1287,7 @@ export default function SovereignTimeMachineIamStudio({
                               → {item.member}
                             </span>
                             {item.condition && (
-                              <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
                                 JIT Condition Active: {item.condition.title}
                               </span>
                             )}
@@ -1305,7 +1305,7 @@ export default function SovereignTimeMachineIamStudio({
                           {isProtectedOwner ? (
                             <span
                               title="Self-Lockout Guardrail: Your root Project Owner identity is protected from accidental privilege reduction or JIT expiration."
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full-[8px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold"
                             >
                               <ShieldCheck className="w-3.5 h-3.5" />
                               <span>
@@ -1455,7 +1455,7 @@ export default function SovereignTimeMachineIamStudio({
                   <span className="text-sm font-extrabold text-zinc-900 dark:text-white">
                     Service Account `.json` Key, OAuth2 Token & Stolen-Credential Kill-Switch Vault
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
                     {iamData?.userManagedKeys?.length || 0} Active JSON Keys ·{' '}
                     {iamData?.mintedTokens?.length || 0} Minted Tokens
                   </span>
@@ -1675,7 +1675,7 @@ export default function SovereignTimeMachineIamStudio({
                   <button
                     type="submit"
                     disabled={saActionBusy || newSaAccountId.trim().length < 6}
-                    className="h-[36px] px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="h-[36px] px-4 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {saActionBusy
                       ? 'Provisioning SA & Binding Scoped Roles...'
@@ -1742,7 +1742,7 @@ export default function SovereignTimeMachineIamStudio({
                     }
                   }}
                   title="Bind resource-level roles/iam.serviceAccountUser (iam.serviceAccounts.actAs) on this Service Account so you can deploy Cloud Run, VM, and GKE workloads with it"
-                  className="w-full h-[36px] px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1"
+                  className="w-full h-[36px] px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Grant `actAs`</span>
@@ -1755,7 +1755,7 @@ export default function SovereignTimeMachineIamStudio({
                   disabled={saActionBusy || !selectedSaEmail}
                   onClick={() => handleCreateAndDownloadSaKey(selectedSaEmail)}
                   title="Mint a new RSA-2048 Service Account JSON key file on Google Cloud IAM and immediately download the .json credentials file"
-                  className="w-full h-[36px] px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="w-full h-[36px] px-3 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
                   <span>Create & Download `.json` Key</span>
@@ -1768,7 +1768,7 @@ export default function SovereignTimeMachineIamStudio({
                   disabled={saActionBusy || !selectedSaEmail}
                   onClick={() => handleMintSaToken(selectedSaEmail)}
                   title="Mint a short-lived 1-hour OAuth2 Bearer access token for this Service Account and download it"
-                  className="w-full h-[36px] px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  className="w-full h-[36px] px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>Mint & Download 1h Token</span>
@@ -1803,11 +1803,11 @@ export default function SovereignTimeMachineIamStudio({
                           <span className="font-extrabold text-zinc-900 dark:text-white truncate">
                             {k.serviceAccountEmail}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                             Key ID: {k.keyId?.slice(0, 12)}...
                           </span>
                           {k.hasVaultPrivateKey && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                               ✓ Full Private `.json` in Session Vault
                             </span>
                           )}
@@ -1828,7 +1828,7 @@ export default function SovereignTimeMachineIamStudio({
                             )
                           }
                           title="Download this Service Account key (.json private credentials if created in this session, or X.509 PEM public certificate metadata)"
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           ⬇Download `.json`
                         </button>
@@ -1852,7 +1852,7 @@ export default function SovereignTimeMachineIamStudio({
                             )
                           }
                           title="Mint & download a brand-new .json key and atomically revoke this compromised key"
-                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Rotate & Download New `.json`...
                         </button>
@@ -1871,7 +1871,7 @@ export default function SovereignTimeMachineIamStudio({
                             )
                           }
                           title="Review & approve permanently revoking this stolen Service Account JSON key"
-                          className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Revoke Stolen Key...</span>
@@ -1906,7 +1906,7 @@ export default function SovereignTimeMachineIamStudio({
                           <span className="font-extrabold text-zinc-900 dark:text-white">
                             {t.serviceAccountEmail}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                             {t.tokenId}
                           </span>
                         </div>
@@ -1921,7 +1921,7 @@ export default function SovereignTimeMachineIamStudio({
                           onClick={() =>
                             handleCopy(t.accessToken, `OAuth2 token ${t.tokenId}`)
                           }
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Copy Bearer Token
                         </button>
@@ -1934,7 +1934,7 @@ export default function SovereignTimeMachineIamStudio({
                               JSON.stringify(t, null, 2)
                             )
                           }
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           ⬇Download `.json`
                         </button>
@@ -1955,7 +1955,7 @@ export default function SovereignTimeMachineIamStudio({
                               }
                             )
                           }
-                          className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Revoke Token...</span>
@@ -2019,7 +2019,7 @@ export default function SovereignTimeMachineIamStudio({
                             }
                           )
                         }
-                        className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 border ${
+                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold cursor-pointer shrink-0 border ${
                           sa.disabled
                             ? 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30'
                             : 'bg-red-600/20 text-red-700 dark:text-red-300 border-red-500/40 hover:bg-red-600/30'
@@ -2042,7 +2042,7 @@ export default function SovereignTimeMachineIamStudio({
                     4. Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the `.json` Key Forever")
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
                   $0.00/mo · Zero Static Keys Stored in GitHub
                 </span>
               </div>
@@ -2073,7 +2073,7 @@ export default function SovereignTimeMachineIamStudio({
                   <button
                     type="submit"
                     disabled={wifBusy || !githubRepoSlug.trim()}
-                    className="w-full h-[36px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-mono font-extrabold cursor-pointer"
+                    className="w-full h-[36px] px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-mono font-extrabold cursor-pointer"
                   >
                     {wifBusy
                       ? 'Provisioning OIDC Pool...'
@@ -2125,7 +2125,7 @@ export default function SovereignTimeMachineIamStudio({
                       {wifResult.stepsCompleted.map((st, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px]"
+                          className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px]"
                         >
                           ✓ {st}
                         </span>
@@ -2147,7 +2147,7 @@ export default function SovereignTimeMachineIamStudio({
               <div className="w-full max-w-2xl rounded-2xl border border-amber-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 shadow-2xl p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                   <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                       <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       <span>MANDATORY IAM CHANGE APPROVAL & IMPACT REVIEW</span>
                     </div>
@@ -2175,7 +2175,7 @@ export default function SovereignTimeMachineIamStudio({
                   <button
                     type="button"
                     onClick={() => setPendingIamApproval(null)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-mono cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-mono cursor-pointer"
                   >
                     ✕ Cancel
                   </button>
@@ -2278,7 +2278,7 @@ export default function SovereignTimeMachineIamStudio({
                             key={r}
                             type="button"
                             onClick={() => setApprovalCustomRole(r)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer border ${
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-mono cursor-pointer border ${
                               approvalCustomRole === r
                                 ? 'bg-emerald-600 text-white border-emerald-400 font-bold'
                                 : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/40'
@@ -2328,7 +2328,7 @@ export default function SovereignTimeMachineIamStudio({
                   <button
                     type="button"
                     onClick={() => setPendingIamApproval(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    className="px-4 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2339,7 +2339,7 @@ export default function SovereignTimeMachineIamStudio({
                       Boolean(remediatingId)
                     }
                     onClick={handleConfirmIamRemediate}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-40"
                   >
                     <ShieldCheck className="w-4 h-4" />
                     <span>
@@ -2396,7 +2396,7 @@ export default function SovereignTimeMachineIamStudio({
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                     tmData?.inSync
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : 'bg-red-500/15 text-red-400 border border-red-500/30'
@@ -2510,7 +2510,7 @@ export default function SovereignTimeMachineIamStudio({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono font-bold">
                         {d.type} · {d.severity}
                       </span>
                       <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -2619,7 +2619,7 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-extrabold border ${
+                      className={`px-2.5 py-0.5 rounded-full-full text-[10.5px] font-mono font-extrabold border ${
                         fin.withinFreeTier
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
                           : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
@@ -2727,7 +2727,7 @@ export default function SovereignTimeMachineIamStudio({
                     Provision New Secret (`secretmanager.googleapis.com`)
                   </span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
                   Strict Compliance Locks
                 </span>
               </div>
@@ -3062,22 +3062,22 @@ export default function SovereignTimeMachineIamStudio({
                                 <span className="font-extrabold text-zinc-900 dark:text-zinc-100 break-all">
                                   {s.secretId}
                                 </span>
-                                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                                   v{s.latestEnabledVersion || '1'} ACTIVE
                                 </span>
-                                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px]">
+                                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px]">
                                   {s.enabledVersionsCount || 0} Enabled ·{' '}
                                   {(s.disabledVersionsCount || 0) +
                                     (s.destroyedVersionsCount || 0)}{' '}
                                   Disabled/Destroyed ($0)
                                 </span>
                                 {mountedList.length > 0 && (
-                                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
                                     Mounted by {mountedList.length} Cloud Run Ref(s)
                                   </span>
                                 )}
                                 {s.rotationSchedule?.rotationPeriod && (
-                                  <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
                                     Auto-Rotate Active
                                   </span>
                                 )}
@@ -3214,7 +3214,7 @@ export default function SovereignTimeMachineIamStudio({
                                               Version {v.version}
                                             </span>
                                             <span
-                                              className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border ${
+                                              className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold border ${
                                                 isEnabled
                                                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                                                   : isDisabled
@@ -3324,7 +3324,7 @@ export default function SovereignTimeMachineIamStudio({
                                     {s.accessorMembers.map((mem) => (
                                       <span
                                         key={mem}
-                                        className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
+                                        className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
                                       >
                                         ✓ {mem}
                                       </span>
@@ -3406,7 +3406,7 @@ export default function SovereignTimeMachineIamStudio({
                                       {mountedList.map((mw, mIdx) => (
                                         <span
                                           key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
-                                          className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-200 border border-blue-500/30 text-[10px] font-mono"
+                                          className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-200 border border-blue-500/30 text-[10px] font-mono"
                                         >
                                           {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
                                         </span>

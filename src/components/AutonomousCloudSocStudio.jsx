@@ -952,23 +952,23 @@ Format your response with clear Markdown headings:${
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-extrabold">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>WAVE 16 · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
                 100% REAL GCP REST APIs · $0.00/MO SIEM LICENSE TAX
               </span>
-              <span className="px-2 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-mono font-bold">
                 12-Invariant Guardian: {selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount} ({selfHealingGuardian.complianceScorePct}%)
               </span>
               {healthAndDriftBridge?.merkleSnapshot?.merkleRootShort && (
-                <span className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-bold">
                   Health &amp; Drift Merkle: {healthAndDriftBridge.merkleSnapshot.merkleRootShort}
                 </span>
               )}
               {summary.canaryHitsCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
+                <span className="px-2.5 py-0.5 rounded-full-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
                   CANARY TRIPWIRE HIT ({summary.canaryHitsCount}) · ACTIVE INTRUSION ALERT
                 </span>
               )}
@@ -1005,7 +1005,7 @@ Format your response with clear Markdown headings:${
                   vpcName: initialSocSeed?.vpcName || 'default',
                 })
               }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-emerald-500/45 text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-emerald-500/45 text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer"
               title="Open VPC Networks & Zero-Trust Firewall Studio with bidirectional SOC sync"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -1015,7 +1015,7 @@ Format your response with clear Markdown headings:${
             <button
               type="button"
               onClick={() => setShowGitOpsBridge((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold transition-colors cursor-pointer border ${
                 showGitOpsBridge
                   ? 'bg-blue-600 border-blue-400 text-white'
                   : 'bg-zinc-900 hover:bg-zinc-800 border-blue-500/40 text-blue-300'
@@ -1031,7 +1031,7 @@ Format your response with clear Markdown headings:${
             <button
               type="button"
               onClick={() => setActivePillar('AUTONOMOUS_SELF_HEALING_GUARDIAN')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
               title="Open 12-Invariant Zero-Trust Compliance Engine & 1-Click Self-Healing Reconciler"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -1043,7 +1043,7 @@ Format your response with clear Markdown headings:${
             <button
               type="button"
               onClick={() => setActivePillar('DEFCON1_LOCKDOWN')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Defcon-1 Lockdown</span>
@@ -1053,7 +1053,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={() => handleRunAiCommander('FULL_SOC_TRIAGE')}
               disabled={aiLoading || loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
@@ -1065,7 +1065,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={() => fetchSocOverview()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>{loading ? 'Scanning GCP Control Planes...' : 'Rescan SOC'}</span>
@@ -1078,7 +1078,7 @@ Format your response with clear Markdown headings:${
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-500/15 via-indigo-500/15 to-emerald-500/15 border border-blue-400/50 space-y-2.5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase">
                   🛡️ VPC &harr; Cloud SOC Live Perimeter Handoff
                 </span>
                 {initialSocSeed.ruleName && (
@@ -1090,13 +1090,13 @@ Format your response with clear Markdown headings:${
                   </span>
                 )}
                 {initialSocSeed.vpcName && (
-                  <span className="px-2 py-0.5 rounded bg-zinc-900/90 border border-zinc-700 text-zinc-200 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-200 text-[10px]">
                     vpc:{initialSocSeed.vpcName}
                   </span>
                 )}
                 {initialSocSeed.action && (
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                       initialSocSeed.action === 'DENY'
                         ? 'bg-red-500/25 text-red-300 border border-red-500/40'
                         : 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
@@ -1223,7 +1223,7 @@ Format your response with clear Markdown headings:${
           <div className="p-3.5 rounded-xl bg-zinc-900/95 border border-blue-500/40 space-y-2.5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold uppercase">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold uppercase">
                   Health &amp; Drift &harr; Cloud SOC Bidirectional Bridge
                 </span>
                 <span className="text-xs font-bold text-white">
@@ -1400,7 +1400,7 @@ Format your response with clear Markdown headings:${
                 key={p.id}
                 type="button"
                 onClick={() => setActivePillar(p.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
                   isActive
                     ? 'bg-blue-500/20 border-blue-400 text-white shadow-md'
                     : 'bg-zinc-900/70 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300'
@@ -1438,7 +1438,7 @@ Format your response with clear Markdown headings:${
             )}
             <span className="font-bold">{statusBanner.message}</span>
             {statusBanner.receipt && (
-              <span className="px-2 py-0.5 rounded bg-zinc-900 text-blue-300 font-mono text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-blue-300 font-mono text-[10px]">
                 Ed25519 Signed: {String(statusBanner.receipt.signatureHex || '').slice(0, 20)}...
               </span>
             )}
@@ -1494,7 +1494,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy) || !quarantineIpInput.trim()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>
@@ -1512,7 +1512,7 @@ Format your response with clear Markdown headings:${
                       ruleName: activeQuarantineRules[0]?.name || 'soc-block-cidr',
                     })
                   }
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
                 >
                   <span>🌐 Open DENY Rules in VPC Studio &rarr;</span>
                 </button>
@@ -1528,7 +1528,7 @@ Format your response with clear Markdown headings:${
                   {activeQuarantineRules.map((r) => (
                     <div
                       key={r.name}
-                      className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-xs font-mono"
+                      className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-xs font-mono"
                     >
                       <span className="font-bold text-red-600 dark:text-red-300">
                         {r.name}
@@ -1622,7 +1622,7 @@ Format your response with clear Markdown headings:${
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                               chain.hasCanaryHit
                                 ? 'bg-red-600 text-white'
                                 : chain.severityLevel === 'CRITICAL'
@@ -1636,7 +1636,7 @@ Format your response with clear Markdown headings:${
                           </span>
                           {exp?.actorBadgeLabel && (
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold border ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
                                 exp.actorClassification === 'PURPLE_TEAM_SIMULATION'
                                   ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40'
                                   : exp.actorClassification ===
@@ -1654,7 +1654,7 @@ Format your response with clear Markdown headings:${
                           <span className="font-mono text-xs font-extrabold text-zinc-900 dark:text-white">
                             {chain.principalEmail}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[10px]">
+                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[10px]">
                             IP: {chain.callerIp}
                           </span>
                           <span className="text-[11px] font-mono text-zinc-500">
@@ -1671,7 +1671,7 @@ Format your response with clear Markdown headings:${
                                 [chain.id]: !isExpanded,
                               }))
                             }
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold cursor-pointer border ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold cursor-pointer border ${
                               isExpanded
                                 ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-700'
                                 : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -1695,7 +1695,7 @@ Format your response with clear Markdown headings:${
                                 })
                               }
                               disabled={Boolean(actionBusy)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Lock className="w-3 h-3" />
                               <span>Quarantine {chain.callerIp}/32</span>
@@ -1709,7 +1709,7 @@ Format your response with clear Markdown headings:${
                                   `gcloud logging read 'protoPayload.authenticationInfo.principalEmail="${chain.principalEmail}"' --project=${projectId} --limit=15`
                                 )
                               }
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
                             >
                               <Terminal className="w-3 h-3" />
                               <span>Audit CLI</span>
@@ -1723,7 +1723,7 @@ Format your response with clear Markdown headings:${
                         {(chain.tactics || []).map((t) => (
                           <span
                             key={t}
-                            className="px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10px]"
+                            className="px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10px]"
                           >
                             {t}
                           </span>
@@ -1777,7 +1777,7 @@ Format your response with clear Markdown headings:${
                                   >
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-300 text-[10px] font-extrabold">
+                                        <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-300 text-[10px] font-extrabold">
                                           +{reason.riskPoints} pts · {reason.tactic}
                                         </span>
                                         <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1914,12 +1914,12 @@ Format your response with clear Markdown headings:${
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {isSeedFocused && (
-                        <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
                           🎯 FOCUSED FROM VPC STUDIO
                         </span>
                       )}
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                           isToxic
                             ? 'bg-red-600 text-white'
                             : item.severity === 'MEDIUM'
@@ -1947,7 +1947,7 @@ Format your response with clear Markdown headings:${
                               ruleName: item.workloadName,
                             })
                           }
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-extrabold cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-extrabold cursor-pointer"
                         >
                           <span>🌐 Edit / X-Ray in VPC Studio &rarr;</span>
                         </button>
@@ -1965,7 +1965,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>
@@ -1986,7 +1986,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Re-Verify Zero-Trust Lock</span>
@@ -2056,7 +2056,7 @@ Format your response with clear Markdown headings:${
                         {sa.email}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                           sa.userManagedKeysCount > 0
                             ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
                             : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
@@ -2069,7 +2069,7 @@ Format your response with clear Markdown headings:${
                       <button
                         type="button"
                         onClick={() => setActivePillar('WIF_IDENTITY_FREEZE')}
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
                       >
                         Manage SA Freeze (:disable)
                       </button>
@@ -2081,7 +2081,7 @@ Format your response with clear Markdown headings:${
                               `gcloud iam service-accounts keys list --iam-account=${sa.email} --project=${projectId}`
                             )
                           }
-                          className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
                         >
                           Audit Keys CLI
                         </button>
@@ -2144,7 +2144,7 @@ Format your response with clear Markdown headings:${
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           w.posture === 'SLSA_HARDENED'
                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                             : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
@@ -2173,7 +2173,7 @@ Format your response with clear Markdown headings:${
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       Enforce Binary Auth
                     </button>
@@ -2185,7 +2185,7 @@ Format your response with clear Markdown headings:${
                             `gcloud run services describe ${w.serviceName} --region=${w.region} --project=${projectId} --format="value(spec.template.spec.containers[0].image)"`
                           )
                         }
-                        className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                       >
                         Inspect Image CLI
                       </button>
@@ -2224,7 +2224,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -2242,7 +2242,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>
@@ -2269,7 +2269,7 @@ Format your response with clear Markdown headings:${
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         c.deployed
                           ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
                           : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
@@ -2306,7 +2306,7 @@ Format your response with clear Markdown headings:${
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      className="w-full py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       Arm $0.00/mo Tripwire
                     </button>
@@ -2320,7 +2320,7 @@ Format your response with clear Markdown headings:${
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="w-full py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className="w-full py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                     >
                       Disarm &amp; Delete Canary
                     </button>
@@ -2374,7 +2374,7 @@ Format your response with clear Markdown headings:${
                   data-feature-id="SOC_AI_GENERATE_BRIEFING"
                   onClick={() => handleRunAiCommander('FULL_SOC_TRIAGE')}
                   disabled={aiLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -2398,7 +2398,7 @@ Format your response with clear Markdown headings:${
                     </span>
                     <span
                       data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         socData?.aiCommanderStatus?.vertexAiApiEnabled
                           ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                           : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
@@ -2419,7 +2419,7 @@ Format your response with clear Markdown headings:${
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC'
                         ? 'Enabling Vertex AI...'
@@ -2444,7 +2444,7 @@ Format your response with clear Markdown headings:${
                     </span>
                     <span
                       data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         browserSocVaultMeta.configured ||
                         socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
                         aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
@@ -2496,7 +2496,7 @@ Format your response with clear Markdown headings:${
                     data-feature-id="SOC_AI_SEAL_KEY_BTN"
                     onClick={handleSealAiStudioKey}
                     disabled={aiKeySaving || !inlineApiKeyInput.trim()}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                    className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
                   >
                     {aiKeySaving ? 'Sealing...' : '🔒 Seal Key'}
                   </button>
@@ -2521,7 +2521,7 @@ Format your response with clear Markdown headings:${
                   data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
                   onClick={() => setAiTransportMode('BROWSER_DIRECT_TLS13')}
                   title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key ever traverse local HTTP!"
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
                     aiTransportMode === 'BROWSER_DIRECT_TLS13'
                       ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/50'
@@ -2534,7 +2534,7 @@ Format your response with clear Markdown headings:${
                   data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
                   onClick={() => setAiTransportMode('RSA_OAEP_SERVER_VAULT')}
                   title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
                     aiTransportMode === 'RSA_OAEP_SERVER_VAULT'
                       ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
@@ -2567,7 +2567,7 @@ Format your response with clear Markdown headings:${
                   data-feature-id="SOC_AI_ASK_COMMANDER_BTN"
                   onClick={() => handleRunAiCommander('CUSTOM_FORENSIC_QUERY')}
                   disabled={aiLoading}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                  className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
                 >
                   {aiLoading ? 'Analyzing...' : 'Ask Incident Commander →'}
                 </button>
@@ -2621,7 +2621,7 @@ Format your response with clear Markdown headings:${
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       data-feature-id="SOC_AI_PROVENANCE_BADGE"
-                      className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                      className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                         aiBriefing.isLiveLlm
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                           : 'bg-red-500/20 text-red-300 border border-red-500/40'
@@ -2642,7 +2642,7 @@ Format your response with clear Markdown headings:${
                       </span>
                     )}
                     {aiBriefing.tokenUsage && (
-                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px]">
                         Tokens: {aiBriefing.tokenUsage.promptTokens} in +{' '}
                         {aiBriefing.tokenUsage.outputTokens} out ={' '}
                         {aiBriefing.tokenUsage.totalTokens} total
@@ -2793,7 +2793,7 @@ Format your response with clear Markdown headings:${
                     setCheckpointLabelInput('');
                   }}
                   disabled={Boolean(actionBusy)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>
@@ -2853,7 +2853,7 @@ Format your response with clear Markdown headings:${
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[10px]">
                         {cp.checkpointId}
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -2877,7 +2877,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>
@@ -2976,7 +2976,7 @@ Format your response with clear Markdown headings:${
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               isLocked
                                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                                 : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
@@ -3006,7 +3006,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>
@@ -3025,7 +3025,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Re-Verify Bucket Lock</span>
@@ -3170,7 +3170,7 @@ Format your response with clear Markdown headings:${
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           sa.disabled
                             ? 'bg-zinc-700 text-zinc-200'
                             : sa.isHighPrivilege
@@ -3204,7 +3204,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
                       sa.disabled
                         ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                         : 'bg-red-600 hover:bg-red-500 text-white'
@@ -3241,7 +3241,7 @@ Format your response with clear Markdown headings:${
                       `gcloud iam workload-identity-pools list --location=global --project=${projectId}`
                     )
                   }
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
                 >
                   <Terminal className="w-3 h-3" />
                   <span>Audit WIF Pools in Shell</span>
@@ -3261,7 +3261,7 @@ Format your response with clear Markdown headings:${
                         `gcloud iam workload-identity-pools list --location=global --project=${projectId}`
                       )
                     }
-                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
                   >
                     Verify Zero WIF Surface CLI
                   </button>
@@ -3281,7 +3281,7 @@ Format your response with clear Markdown headings:${
                       <div className="text-[11px] text-zinc-500">{p.description}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold">
                         {p.state}
                       </span>
                       {onRunInShell && (
@@ -3328,7 +3328,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={fetchFleetSocMatrix}
               disabled={fleetLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${fleetLoading ? 'animate-spin' : ''}`} />
               <span>
@@ -3340,10 +3340,10 @@ Format your response with clear Markdown headings:${
           {fleetMatrix ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-                <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold">
+                <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold">
                   Active Projects Scanned: {fleetMatrix.projectsCount}
                 </span>
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 font-bold">
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 font-bold">
                   Fleet Average SOC Posture: {fleetMatrix.fleetAverageScore}/100
                 </span>
                 <span className="text-zinc-500">
@@ -3371,7 +3371,7 @@ Format your response with clear Markdown headings:${
                         </span>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           proj.socPostureScore >= 85
                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                             : proj.socPostureScore >= 65
@@ -3428,7 +3428,7 @@ Format your response with clear Markdown headings:${
                           type="button"
                           onClick={handleRunGuardianReconcile}
                           disabled={guardianReconcileLoading}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           <span>1-Click Self-Heal Project</span>
@@ -3442,7 +3442,7 @@ Format your response with clear Markdown headings:${
                               `gcloud projects describe ${proj.projectId} && gcloud compute firewall-rules list --project=${proj.projectId}`
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                         >
                           <Terminal className="w-3 h-3" />
                           <span>Audit {proj.projectId} in Shell</span>
@@ -3470,7 +3470,7 @@ Format your response with clear Markdown headings:${
         <div className="p-5 rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-zinc-950 via-red-950/20 to-zinc-950 text-zinc-100 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-1.5 max-w-3xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
                 <Lock className="w-3.5 h-3.5" />
                 <span>COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
               </div>
@@ -3492,7 +3492,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 title="Restore default-allow-ssh back to 0.0.0.0/0 so plain gcloud compute ssh works from bash without --tunnel-through-iap"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -3507,7 +3507,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-extrabold shadow-lg shadow-red-600/30 cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-md bg-red-600 hover:bg-red-500 text-white text-sm font-extrabold shadow-lg shadow-red-600/30 cursor-pointer disabled:opacity-50"
               >
                 <Lock className="w-4 h-4" />
                 <span>
@@ -3548,7 +3548,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 1 Only
               </button>
@@ -3564,7 +3564,7 @@ Format your response with clear Markdown headings:${
                 type="button"
                 onClick={handleRunGuardianReconcile}
                 disabled={guardianReconcileLoading}
-                className="w-full py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 2 Only
               </button>
@@ -3584,7 +3584,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 3 Only
               </button>
@@ -3604,7 +3604,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 4 Only
               </button>
@@ -3625,7 +3625,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                className="w-full py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
               >
                 Run Stage 5 Only
               </button>
@@ -3652,10 +3652,10 @@ Format your response with clear Markdown headings:${
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="px-2.5 py-1 rounded bg-red-500/15 border border-red-500/30 text-red-500 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-500 font-bold">
                 {iamEscalationGraph.criticalPathsCount} Critical Vector(s)
               </span>
-              <span className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
+              <span className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
                 {iamEscalationGraph.totalPathsCount} Total Escalation Paths
               </span>
             </div>
@@ -3676,7 +3676,7 @@ Format your response with clear Markdown headings:${
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                         p.severity === 'CRITICAL'
                           ? 'bg-red-600 text-white'
                           : p.severity === 'HIGH'
@@ -3710,7 +3710,7 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Sever Escalation Edge</span>
@@ -3725,7 +3725,7 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
                       >
                         <ShieldCheck className="w-3 h-3" />
                         <span>Seal in IAM Vault</span>
@@ -3739,7 +3739,7 @@ Format your response with clear Markdown headings:${
                             `gcloud projects get-iam-policy ${projectId} --flatten="bindings[].members" --filter="bindings.role:${p.role}"`
                           )
                         }
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                       >
                         <Terminal className="w-3 h-3" />
                         <span>Inspect CLI</span>
@@ -3785,7 +3785,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>
@@ -3804,7 +3804,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>
@@ -3893,7 +3893,7 @@ Format your response with clear Markdown headings:${
                         })
                       }
                       disabled={Boolean(actionBusy)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>Purge Static Key &amp; Enforce OS Login</span>
@@ -3928,7 +3928,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={handleRunDeepProbe}
               disabled={deepProbeLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${deepProbeLoading ? 'animate-spin' : ''}`}
@@ -3950,7 +3950,7 @@ Format your response with clear Markdown headings:${
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold">
                         {ep.type}
                       </span>
                       <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -3960,7 +3960,7 @@ Format your response with clear Markdown headings:${
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           ep.unauthPosture.includes('UNAUTHENTICATED_PUBLIC_200')
                             ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
                             : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
@@ -3981,7 +3981,7 @@ Format your response with clear Markdown headings:${
                               })
                             }
                             disabled={Boolean(actionBusy)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                           >
                             <Lock className="w-3 h-3" />
                             <span>Revoke Public allUsers</span>
@@ -3997,7 +3997,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <Lock className="w-3 h-3" />
                           <span>Verify App Engine DENY</span>
@@ -4008,7 +4008,7 @@ Format your response with clear Markdown headings:${
                         type="button"
                         onClick={handleRunDeepProbe}
                         disabled={deepProbeLoading}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>Re-Probe TLS 1.3</span>
@@ -4018,7 +4018,7 @@ Format your response with clear Markdown headings:${
                         <button
                           type="button"
                           onClick={() => onRunInShell(`curl -Iv ${ep.url}`)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                         >
                           <Terminal className="w-3 h-3" />
                           <span>curl -Iv in Shell</span>
@@ -4084,7 +4084,7 @@ Format your response with clear Markdown headings:${
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             ds.isPublicAcl
                               ? 'bg-red-600 text-white'
                               : ds.sensitiveColumnsCount > 0
@@ -4112,7 +4112,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer disabled:opacity-50 ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold cursor-pointer disabled:opacity-50 ${
                             ds.isPublicAcl
                               ? 'bg-red-600 hover:bg-red-500 text-white'
                               : 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -4133,7 +4133,7 @@ Format your response with clear Markdown headings:${
                                 `bq show --format=prettyjson ${projectId}:${ds.datasetId}`
                               )
                             }
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                           >
                             <Terminal className="w-3 h-3" />
                             <span>Inspect Dataset CLI</span>
@@ -4171,7 +4171,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Key className="w-3.5 h-3.5" />
                 <span>Arm $0/mo Honey-Secret Canary</span>
@@ -4191,7 +4191,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   1-Click Provision SOC Honey-Secret Now
                 </button>
@@ -4205,7 +4205,7 @@ Format your response with clear Markdown headings:${
                   >
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
                           {sec.rotationStatus}
                         </span>
                         <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -4228,7 +4228,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Rotate Secret Version (:addVersion)</span>
@@ -4242,7 +4242,7 @@ Format your response with clear Markdown headings:${
                             })
                           }
                           disabled={Boolean(actionBusy)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <Zap className="w-3.5 h-3.5" />
                           <span>Fire Canary Tripwire Test</span>
@@ -4279,7 +4279,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={handleRunPurpleTeamDrill}
               disabled={purpleDrillLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-4 h-4" />
               <span>
@@ -4293,10 +4293,10 @@ Format your response with clear Markdown headings:${
           {purpleDrillResult ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-                <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
                   Detection Coverage: {purpleDrillResult.detectionCoveragePct}%
                 </span>
-                <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
+                <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                   Total Stopwatch Latency: {purpleDrillResult.totalDrillLatencyMs}ms
                 </span>
                 <span className="text-zinc-500">
@@ -4390,7 +4390,7 @@ Format your response with clear Markdown headings:${
                 type="button"
                 onClick={() => handleRunAiRedTeamAudit(customRedTeamPrompt)}
                 disabled={aiRedTeamLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>
@@ -4418,7 +4418,7 @@ Format your response with clear Markdown headings:${
               type="button"
               onClick={() => handleRunAiRedTeamAudit(customRedTeamPrompt)}
               disabled={aiRedTeamLoading || !customRedTeamPrompt.trim()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>Fire Custom Adversarial Payload</span>
@@ -4464,7 +4464,7 @@ Format your response with clear Markdown headings:${
                       <span className="font-extrabold text-zinc-900 dark:text-white">
                         [{vec.mitreAtlasId}] {vec.category}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                         {vec.status}
                       </span>
                     </div>
@@ -4489,7 +4489,7 @@ Format your response with clear Markdown headings:${
                         type="button"
                         onClick={() => handleRunAiRedTeamAudit(vec.adversarialPayload)}
                         disabled={aiRedTeamLoading}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         <Zap className="w-3 h-3" />
                         <span>Re-Fire Vector Against {selectedAiModel}</span>
@@ -4503,7 +4503,7 @@ Format your response with clear Markdown headings:${
                             message: `Copied Model-Armor rule for [${vec.mitreAtlasId}] to clipboard!`,
                           });
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                       >
                         <FileCode2 className="w-3 h-3" />
                         <span>Copy Guardrail Rule</span>
@@ -4586,7 +4586,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -4610,7 +4610,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   Create DNSSEC-Hardened Zone Now
                 </button>
@@ -4625,7 +4625,7 @@ Format your response with clear Markdown headings:${
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             !z.isHardened
                               ? 'bg-red-500/20 text-red-600 dark:text-red-300'
                               : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
@@ -4651,7 +4651,7 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {z.isHardened
                           ? 'Re-Verify DNSSEC Signing'
@@ -4680,7 +4680,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>
@@ -4690,7 +4690,7 @@ Format your response with clear Markdown headings:${
                     </span>
                   </button>
                 ) : (
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold">
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold">
                     100% SUBNET PGA ENFORCED ({dnsEgressAndKmsRadar.subnets.length}/{dnsEgressAndKmsRadar.subnets.length})
                   </span>
                 )}
@@ -4705,7 +4705,7 @@ Format your response with clear Markdown headings:${
                         'default',
                     })
                   }
-                  className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-extrabold cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-extrabold cursor-pointer"
                 >
                   🌐 Open VPC &amp; Subnets Studio &rarr;
                 </button>
@@ -4713,7 +4713,7 @@ Format your response with clear Markdown headings:${
                   <button
                     type="button"
                     onClick={() => onNavigateTab('SRE_WAR_ROOM')}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-blue-300 text-[11px] font-mono font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-blue-300 text-[11px] font-mono font-bold cursor-pointer"
                   >
                     VPC-SC Perimeter Architect (SRE War-Room) &rarr;
                   </button>
@@ -4734,7 +4734,7 @@ Format your response with clear Markdown headings:${
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             sn.privateIpGoogleAccess
                               ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                               : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
@@ -4762,7 +4762,7 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         1-Tap Enable PGA
                       </button>
@@ -4799,7 +4799,7 @@ Format your response with clear Markdown headings:${
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           rt.isCustomInternetHijackRisk
                             ? 'bg-red-500/20 text-red-500'
                             : 'bg-emerald-500/20 text-emerald-500'
@@ -4858,7 +4858,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Key className="w-3 h-3" />
                   <span>
@@ -4882,7 +4882,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     Create Zero-Trust KMS KeyRing Now
                   </button>
@@ -4903,7 +4903,7 @@ Format your response with clear Markdown headings:${
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-500">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-500">
                           ACTIVE_KEYRING
                         </span>
                         <button
@@ -4947,10 +4947,10 @@ Format your response with clear Markdown headings:${
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="px-2.5 py-1 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                 Enabled APIs: {apiSurfaceMinimizer.enabledApisCount}
               </span>
-              <span className="px-2.5 py-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
                 Unused High-Risk: {apiSurfaceMinimizer.unusedHighRiskApisCount}
               </span>
             </div>
@@ -4965,7 +4965,7 @@ Format your response with clear Markdown headings:${
                 <div className="min-w-0 space-y-0.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         svc.isUnusedHighRisk
                           ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
                           : svc.isProtectedCore
@@ -4998,7 +4998,7 @@ Format your response with clear Markdown headings:${
                       })
                     }
                     disabled={Boolean(actionBusy)}
-                    className={`px-2.5 py-1 rounded-lg text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0 ${
+                    className={`px-2.5 py-1 rounded-md text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0 ${
                       svc.isUnusedHighRisk
                         ? 'bg-red-600 hover:bg-red-500'
                         : 'bg-zinc-700 hover:bg-zinc-600'
@@ -5016,7 +5016,7 @@ Format your response with clear Markdown headings:${
                         );
                       }
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded-md bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer shrink-0"
                   >
                     Core Guarded (Verify CLI)
                   </button>
@@ -5054,7 +5054,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>
@@ -5102,7 +5102,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -5127,7 +5127,7 @@ Format your response with clear Markdown headings:${
                     })
                   }
                   disabled={Boolean(actionBusy)}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   Create Immutable-Tag Repository Now
                 </button>
@@ -5143,7 +5143,7 @@ Format your response with clear Markdown headings:${
                       <span className="font-extrabold text-zinc-900 dark:text-white">
                         {repo.location}/{repo.name} ({repo.format})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
                         {repo.encryptionType}
                       </span>
                     </div>
@@ -5161,7 +5161,7 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {repo.immutableTags
                           ? 'Re-Verify Immutable Tags'
@@ -5204,7 +5204,7 @@ Format your response with clear Markdown headings:${
                   })
                 }
                 disabled={Boolean(actionBusy)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 title="Restore default-allow-ssh back to 0.0.0.0/0 so plain gcloud compute ssh works from bash without --tunnel-through-iap"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -5215,7 +5215,7 @@ Format your response with clear Markdown headings:${
                 type="button"
                 onClick={handleRunGuardianReconcile}
                 disabled={guardianReconcileLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>
@@ -5372,7 +5372,7 @@ Format your response with clear Markdown headings:${
                       [{inv.id}] {inv.title}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                         inv.passed
                           ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                           : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
@@ -5398,13 +5398,13 @@ Format your response with clear Markdown headings:${
                           type="button"
                           onClick={handleHealSingleInvariant}
                           disabled={Boolean(actionBusy) || guardianReconcileLoading}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           <span>1-Click Heal {inv.id} Now</span>
                         </button>
                       ) : (
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-[10px] font-mono font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-[10px] font-mono font-bold">
                           VERIFIED LIVE
                         </span>
                       )}
@@ -5418,7 +5418,7 @@ Format your response with clear Markdown headings:${
                               filterMode: 'EXPOSED',
                             })
                           }
-                          className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                          className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
                         >
                           🌐 VPC Studio (0.0.0.0/0) &rarr;
                         </button>
@@ -5426,7 +5426,7 @@ Format your response with clear Markdown headings:${
                       <button
                         type="button"
                         onClick={handleOpenInvariantPillar}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                       >
                         Inspect Pillar &rarr;
                       </button>

@@ -1065,7 +1065,7 @@ export default function CloudStorageStudio({
               <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
                 Google Cloud Storage Fleet &amp; Object Intelligence Studio
               </h2>
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                 CLOUD STORAGE &amp; OBJECT INTELLIGENCE STUDIO
               </span>
               <span className="text-xs font-mono text-zinc-500">
@@ -1081,7 +1081,7 @@ export default function CloudStorageStudio({
             <button
               type="button"
               onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
-              className="w-full h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
+              className="w-full h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5 shrink-0" />
               <span>+ Create Bucket</span>
@@ -1095,7 +1095,7 @@ export default function CloudStorageStudio({
                   handleListS3Compatible(true, s3ProviderType);
                 }
               }}
-              className="w-full h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+              className="w-full h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
               <span>Import S3 / MinIO</span>
@@ -1105,7 +1105,7 @@ export default function CloudStorageStudio({
               type="button"
               onClick={() => fetchBuckets()}
               disabled={loadingBuckets}
-              className="w-full h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+              className="w-full h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 shrink-0 ${loadingBuckets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
@@ -1262,7 +1262,7 @@ export default function CloudStorageStudio({
                     }
                   }}
                   title={t.label}
-                  className={`w-full h-10 px-2.5 rounded-xl font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                  className={`w-full h-10 px-2.5 rounded-md font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                       : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -1316,7 +1316,7 @@ export default function CloudStorageStudio({
               <button
                 type="button"
                 onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold cursor-pointer"
+                className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold cursor-pointer"
               >
                 + Provision First Cloud Storage Bucket
               </button>
@@ -1345,10 +1345,10 @@ export default function CloudStorageStudio({
                           <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                             gs://{b.name}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
                             {b.location} ({b.locationType})
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
                             {b.storageClass}
                           </span>
                           {(b.name?.includes('-vmdisk-') ||
@@ -1360,7 +1360,7 @@ export default function CloudStorageStudio({
                                 if (onSelectTab) onSelectTab('CLOUD_RUN');
                               }}
                               title="Persistent Cloud Storage FUSE Disk Bucket attached via volumes[].gcs to Cloud Run Gen2. Click to inspect attached Cloud Run services."
-                              className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/35 font-bold cursor-pointer"
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/35 font-bold cursor-pointer"
                             >
                               CLOUD RUN GEN2 PERSISTENT FUSE DISK (volumes[].gcs) →
                             </button>
@@ -1388,7 +1388,7 @@ export default function CloudStorageStudio({
                     {/* Governance Badges */}
                     <div className="flex flex-wrap gap-1.5 text-[10px]">
                       <span
-                        className={`px-2 py-0.5 rounded border font-bold ${
+                        className={`px-2 py-0.5 rounded-full border font-bold ${
                           b.publicAccessPrevention === 'enforced'
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
                             : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-300'
@@ -1400,7 +1400,7 @@ export default function CloudStorageStudio({
                       </span>
 
                       <span
-                        className={`px-2 py-0.5 rounded border font-bold ${
+                        className={`px-2 py-0.5 rounded-full border font-bold ${
                           b.uniformBucketLevelAccess
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
                             : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-300'
@@ -1412,7 +1412,7 @@ export default function CloudStorageStudio({
                       </span>
 
                       <span
-                        className={`px-2 py-0.5 rounded border font-bold ${
+                        className={`px-2 py-0.5 rounded-full border font-bold ${
                           b.versioningEnabled
                             ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-300'
                             : 'bg-zinc-200/60 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500'
@@ -1424,7 +1424,7 @@ export default function CloudStorageStudio({
                       </span>
 
                       <span
-                        className={`px-2 py-0.5 rounded border font-bold ${
+                        className={`px-2 py-0.5 rounded-full border font-bold ${
                           b.softDeleteDays > 0
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
                             : 'bg-zinc-200/60 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500'
@@ -1436,7 +1436,7 @@ export default function CloudStorageStudio({
                       </span>
 
                       <span
-                        className={`px-2 py-0.5 rounded border font-bold ${
+                        className={`px-2 py-0.5 rounded-full border font-bold ${
                           b.lifecycleRules?.length > 0 || b.autoclassEnabled
                             ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-300'
                             : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-300'
@@ -1465,7 +1465,7 @@ export default function CloudStorageStudio({
                               onClick={() =>
                                 handleChangeBucketStorageClass(b, sc)
                               }
-                              className={`w-full h-7 px-2 rounded-lg border font-bold cursor-pointer inline-flex items-center justify-center truncate ${
+                              className={`w-full h-7 px-2 rounded-md border font-bold cursor-pointer inline-flex items-center justify-center truncate ${
                                 b.storageClass === sc
                                   ? 'bg-blue-600 text-white border-blue-500'
                                   : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-blue-500/40'
@@ -1483,7 +1483,7 @@ export default function CloudStorageStudio({
                           setSelectedBucketName(b.name);
                           setActiveSubTab('OBJECTS');
                         }}
-                        className="sm:col-span-4 w-full h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer inline-flex items-center justify-center truncate"
+                        className="sm:col-span-4 w-full h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer inline-flex items-center justify-center truncate"
                       >
                         Browse & Upload Objects →
                       </button>
@@ -1498,7 +1498,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={isHardened || busyKey === `harden-${b.name}`}
                         onClick={() => handleHardenBucket(b)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
                       >
                         <Lock className="w-3 h-3 shrink-0" />
                         <span className="truncate">
@@ -1514,7 +1514,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `lifecycle-${b.name}`}
                         onClick={() => handleApplySmartLifecycle(b)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
                       >
                         <Leaf className="w-3 h-3 shrink-0" />
                         <span className="truncate">
@@ -1528,7 +1528,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `cors-${b.name}`}
                         onClick={() => handleEnableCors(b)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
                       >
                         <Globe className="w-3 h-3 shrink-0" />
                         <span className="truncate">Enable Web CORS</span>
@@ -1538,7 +1538,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `delete-${b.name}`}
                         onClick={() => handleEmptyAndDeleteBucket(b)}
-                        className="w-full h-8 px-2 rounded-lg bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
                         title="Empties all object versions and deletes bucket without 409 BucketNotEmpty error"
                       >
                         <Trash2 className="w-3 h-3 shrink-0" />
@@ -1609,7 +1609,7 @@ export default function CloudStorageStudio({
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-extrabold">
+                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold">
                   AWS4-HMAC-SHA256
                 </span>
                 <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1627,7 +1627,7 @@ export default function CloudStorageStudio({
 
             <div className="flex items-center gap-2">
               <span
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                   s3UseSandboxDemo
                     ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30'
                     : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
@@ -1683,7 +1683,7 @@ export default function CloudStorageStudio({
                         handleListS3Compatible(true, p.id);
                       }
                     }}
-                    className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`w-full p-3 rounded-md border text-left transition-all cursor-pointer ${
                       active
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -1755,7 +1755,7 @@ export default function CloudStorageStudio({
                   <button
                     type="button"
                     onClick={() => setS3PathStyle(true)}
-                    className={`w-full h-full rounded-lg font-bold border text-[10px] cursor-pointer ${
+                    className={`w-full h-full rounded-md font-bold border text-[10px] cursor-pointer ${
                       s3PathStyle
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800'
@@ -1766,7 +1766,7 @@ export default function CloudStorageStudio({
                   <button
                     type="button"
                     onClick={() => setS3PathStyle(false)}
-                    className={`w-full h-full rounded-lg font-bold border text-[10px] cursor-pointer ${
+                    className={`w-full h-full rounded-md font-bold border text-[10px] cursor-pointer ${
                       !s3PathStyle
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800'
@@ -1838,7 +1838,7 @@ export default function CloudStorageStudio({
                 type="button"
                 disabled={s3LoadingList}
                 onClick={() => handleListS3Compatible(false)}
-                className="w-full h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="w-full h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 shrink-0 ${
@@ -1854,7 +1854,7 @@ export default function CloudStorageStudio({
                 type="button"
                 disabled={s3LoadingList}
                 onClick={() => handleListS3Compatible(true)}
-                className="w-full h-9 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
+                className="w-full h-9 px-3 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
                 <HardDrive className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">
@@ -1865,7 +1865,7 @@ export default function CloudStorageStudio({
               <button
                 type="button"
                 onClick={handleGenerateS3TransferJob}
-                className="w-full h-9 px-3 rounded-xl bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
+                className="w-full h-9 px-3 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
                 <Terminal className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
                 <span className="truncate">
@@ -1888,7 +1888,7 @@ export default function CloudStorageStudio({
                   onClick={() => {
                     setS3RemoteBucket(rb.name);
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold border cursor-pointer ${
                     s3RemoteBucket === rb.name
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -1918,7 +1918,7 @@ export default function CloudStorageStudio({
                             : s3RemoteObjects.map((o) => o.key)
                         )
                       }
-                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-[10px] font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-[10px] font-bold cursor-pointer"
                     >
                       {s3SelectedKeys.length === s3RemoteObjects.length
                         ? 'Deselect All'
@@ -1939,7 +1939,7 @@ export default function CloudStorageStudio({
                   s3Importing
                 }
                 onClick={handleImportS3Compatible}
-                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold cursor-pointer inline-flex items-center gap-2 disabled:opacity-40 shadow-xs"
+                className="h-9 px-4 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold cursor-pointer inline-flex items-center gap-2 disabled:opacity-40 shadow-xs"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>
@@ -1992,10 +1992,10 @@ export default function CloudStorageStudio({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 text-[10px]">
-                        <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-bold">
                           {formatBytes(obj.size)}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
                           {obj.storageClass || 'STANDARD'}
                         </span>
                       </div>
@@ -2022,7 +2022,7 @@ export default function CloudStorageStudio({
                         }
                         setActiveSubTab('OBJECTS');
                       }}
-                      className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Open in Object Workbench (M02) →</span>
@@ -2030,7 +2030,7 @@ export default function CloudStorageStudio({
                     <button
                       type="button"
                       onClick={() => setActiveSubTab('DLP_XRAY')}
-                      className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      className="h-8 px-3 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <ShieldAlert className="w-3.5 h-3.5" />
                       <span>Scan Imported Files with RAM DLP (M06) →</span>
@@ -2052,7 +2052,7 @@ export default function CloudStorageStudio({
                           const sql = `-- Federated Query on Imported ${s3ProviderType} Objects in gs://${selectedBucket.name}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics_lakehouse.imported_${s3ProviderType.toLowerCase()}_ext\`\nOPTIONS (\n  format = '${bqFmt}',\n  uris = ['gs://${selectedBucket.name}/${firstKey}']\n);\n\nSELECT * FROM \`${projectId}.analytics_lakehouse.imported_${s3ProviderType.toLowerCase()}_ext\` LIMIT 100;`;
                           onOpenBigQuerySql(sql);
                         }}
-                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <span>Query Imported Data in BigQuery SQL →</span>
                       </button>
@@ -2068,7 +2068,7 @@ export default function CloudStorageStudio({
                         await handleInspectObject({ name: it.gcsObjectName });
                         setActiveSubTab('OBJECTS');
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/40 text-[10px] font-bold text-zinc-800 dark:text-zinc-200 hover:border-blue-500 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 border border-emerald-500/40 text-[10px] font-bold text-zinc-800 dark:text-zinc-200 hover:border-blue-500 cursor-pointer"
                     >
                       gs://{selectedBucket?.name}/{it.gcsObjectName} ({formatBytes(it.bytes)}) →
                     </button>
@@ -2176,7 +2176,7 @@ export default function CloudStorageStudio({
                 type="button"
                 onClick={() => handleApplySmartLifecycle(selectedBucket)}
                 disabled={busyKey === `lifecycle-${selectedBucket.name}`}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer shadow-sm"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer shadow-sm"
               >
                 1-Tap Deploy Smart Lifecycle to gs://{selectedBucket.name}
               </button>
@@ -2335,7 +2335,7 @@ export default function CloudStorageStudio({
                       .id
                   )
                 }
-                className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-emerald-500/40 text-left cursor-pointer hover:border-emerald-500"
+                className="p-3 rounded-md bg-white/85 dark:bg-zinc-950/80 border border-emerald-500/40 text-left cursor-pointer hover:border-emerald-500"
               >
                 <div className="text-[10px] font-extrabold text-emerald-500">
                   GREENEST REGION ({bucketTeleportAnalysis.recommendations.greenestCompatible.dst.cfePercent}% CFE)
@@ -2360,7 +2360,7 @@ export default function CloudStorageStudio({
                       .cheapestGreenCompatible.dst.id
                   )
                 }
-                className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-blue-500/40 text-left cursor-pointer hover:border-blue-500"
+                className="p-3 rounded-md bg-white/85 dark:bg-zinc-950/80 border border-blue-500/40 text-left cursor-pointer hover:border-blue-500"
               >
                 <div className="text-[10px] font-extrabold text-blue-500">
                   LOWEST COST + CLEAN TIER-1 (1.00x)
@@ -2385,7 +2385,7 @@ export default function CloudStorageStudio({
                       .sameContinentCompatible.dst.id
                   )
                 }
-                className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-blue-500/40 text-left cursor-pointer hover:border-blue-500"
+                className="p-3 rounded-md bg-white/85 dark:bg-zinc-950/80 border border-blue-500/40 text-left cursor-pointer hover:border-blue-500"
               >
                 <div className="text-[10px] font-extrabold text-blue-400">
                   SAME-CONTINENT LOW-EGRESS ($0.02/GB)
@@ -2461,7 +2461,7 @@ export default function CloudStorageStudio({
               disabled={
                 !selectedBucket || busyKey === `teleport-${selectedBucket?.name}`
               }
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer shadow-sm disabled:opacity-50"
+              className="px-4 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer shadow-sm disabled:opacity-50"
             >
               {busyKey === `teleport-${selectedBucket?.name}`
                 ? 'Teleporting Bucket & Objects...'

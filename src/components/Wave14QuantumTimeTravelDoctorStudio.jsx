@@ -500,10 +500,10 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 SELF-HEALING CLOUD DOCTOR &amp; PITR (POINT-IN-TIME RECOVERY SQL, DRIFT AUTO-REMEDIATION, IAM GRAPH &amp; PQC VAULT)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; CRYPTO · ZERO SIMULATION
               </span>
             </div>
@@ -557,7 +557,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               type="button"
               data-feature-id={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`h-20 p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+              className={`h-20 p-3.5 rounded-md border text-left transition-all flex flex-col justify-between cursor-pointer ${
                 active
                   ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                   : 'bg-white dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
@@ -565,7 +565,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             >
               <div className="flex items-center justify-between gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                     active
                       ? 'bg-black/25 text-blue-100'
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
@@ -613,7 +613,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={() => executeTimeTravelQuery(false)}
                   disabled={runningTimeTravel}
-                  className="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${runningTimeTravel ? 'animate-spin' : ''}`}
@@ -624,7 +624,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={() => executeTimeTravelQuery(true)}
                   disabled={runningTimeTravel}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>
@@ -656,7 +656,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                           setSelectedTable(t.tableId);
                           setSelectedLocation(t.location || 'US');
                         }}
-                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono cursor-pointer transition-all ${
+                        className={`px-2.5 py-1 rounded-md border text-[11px] font-mono cursor-pointer transition-all ${
                           isSelected
                             ? 'bg-blue-600 text-white border-blue-500 font-bold'
                             : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
@@ -931,7 +931,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 type="button"
                 onClick={fetchSelfHealingAudit}
                 disabled={loadingAudit}
-                className="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
@@ -942,7 +942,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 type="button"
                 onClick={() => handleHealResources('ALL')}
                 disabled={Boolean(healingResource) || auditData?.driftedCount === 0}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -966,11 +966,11 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-[10px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                    <span className="px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-[10px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
                       {r.kind} · {r.location}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         r.compliant
                           ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                           : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
@@ -1010,7 +1010,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                     type="button"
                     onClick={() => handleHealResources(r.resourceId)}
                     disabled={Boolean(healingResource)}
-                    className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
+                    className="w-full py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
                   >
                     {healingResource === r.resourceId
                       ? 'Patching Live...'
@@ -1046,7 +1046,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={fetchIamBlastRadius}
                   disabled={loadingIam}
-                  className="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${loadingIam ? 'animate-spin' : ''}`}
@@ -1057,7 +1057,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={() => handleGenerateIamAiPlan('')}
                   disabled={generatingIamPlan}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1113,11 +1113,11 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/70 space-y-2.5"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold uppercase">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold uppercase">
                       {p.principalType}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         p.blastRadiusScore >= 60
                           ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                           : p.blastRadiusScore >= 30
@@ -1135,7 +1135,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                     {p.roles.map((r, idx) => (
                       <span
                         key={`${r.role}-${idx}`}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
                           r.tier === 'PRIMITIVE_GOD_MODE'
                             ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 font-bold'
                             : r.tier === 'SERVICE_ADMIN'
@@ -1197,7 +1197,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 <button
                   type="submit"
                   disabled={sealingEnvelope}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>
@@ -1210,7 +1210,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   type="button"
                   onClick={handleDecryptQuantumEnvelope}
                   disabled={decryptingEnvelope}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Unlock className="w-3.5 h-3.5" />
                   <span>

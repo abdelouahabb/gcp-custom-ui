@@ -520,10 +520,10 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 CLOUD SPANNER STUDIO · RELATIONAL + ISO GQL GRAPH + SCANN VECTOR
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 Granular 100 PU = $65.70/mo · Up to 99.999% TrueTime SLA
               </span>
             </div>
@@ -542,7 +542,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             type="button"
             disabled={loading}
             onClick={fetchSpannerFleet}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -648,7 +648,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 title={tab.label}
-                className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -667,7 +667,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 ${
                     isActive
                       ? 'bg-white/20 text-white'
                       : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
@@ -694,7 +694,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 <div className="text-xs font-extrabold uppercase tracking-wider font-mono text-blue-600 dark:text-blue-400">
                   Granular Processing Unit (PU) Sizer &amp; Provisioner
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   100 PU = 1/10th Node
                 </span>
               </div>
@@ -831,7 +831,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 type="button"
                 disabled={actionBusy === 'CREATE_SPANNER_INSTANCE'}
                 onClick={handleCreateSpannerInstance}
-                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Rocket className="w-4 h-4" />
                 <span>
@@ -876,7 +876,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                           {inst.edition || spannerEdition}
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
                         {inst.state || 'READY'}
                       </span>
                     </div>
@@ -897,7 +897,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                         key={ed.id}
                         type="button"
                         onClick={() => setSpannerEdition(ed.id)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                           active
                             ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-500/10'
                             : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900'
@@ -930,7 +930,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     <button
                       type="button"
                       onClick={() => onRunInShell(spannerArtifacts.cliCmd)}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                     >
                       Run in Cloud Shell
                     </button>
@@ -938,7 +938,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   <button
                     type="button"
                     onClick={() => copyText(spannerArtifacts.cliCmd, 'SPANNER_CLI')}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'SPANNER_CLI' ? 'Copied' : 'Copy CLI'}
                   </button>
@@ -969,7 +969,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     Unlike standard foreign keys, Spanner physically co-locates child rows inside the same storage split as their parent row for 0-network-hop joins.
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                   0-HOP SPLIT
                 </span>
               </div>
@@ -1041,7 +1041,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                       setSelectedGqlPreset(preset.id);
                       setGqlExecuted(true);
                     }}
-                    className={`w-full p-2.5 rounded-xl border text-left text-xs font-mono font-bold transition-all cursor-pointer ${
+                    className={`w-full p-2.5 rounded-md border text-left text-xs font-mono font-bold transition-all cursor-pointer ${
                       selectedGqlPreset === preset.id
                         ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300'
                         : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300'
@@ -1064,7 +1064,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 <button
                   type="button"
                   onClick={() => copyText(spannerArtifacts.interleavedDdl, 'GRAPH_DDL')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'GRAPH_DDL' ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -1095,7 +1095,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                         );
                       }
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                   >
                     <Play className="w-3 h-3" />
                     <span>Run ISO GQL</span>
@@ -1105,7 +1105,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     onClick={() =>
                       copyText(spannerArtifacts.activePreset.query, 'GQL_QUERY')
                     }
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'GQL_QUERY' ? (
                       <Check className="w-3 h-3 text-emerald-400" />
@@ -1181,7 +1181,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     Configure Google Research ScaNN (`VECTOR INDEX`) directly on `ARRAY&lt;FLOAT32&gt;` columns with zero external vector database drift.
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   ACID VECTORS
                 </span>
               </div>
@@ -1284,7 +1284,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 <button
                   type="button"
                   onClick={() => copyText(vectorRagArtifacts.vectorDdl, 'VEC_DDL')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'VEC_DDL' ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -1309,7 +1309,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   onClick={() =>
                     copyText(vectorRagArtifacts.hybridGraphRagSql, 'HYBRID_RAG')
                   }
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'HYBRID_RAG' ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -1343,7 +1343,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   How Spanner achieves external consistency (linearizability) across continents without global lock contention, using GPS + Rubidium atomic clocks in every datacenter:
                 </p>
               </div>
-              <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 ZERO-RPO EXTERNAL CONSISTENCY
               </span>
             </div>
@@ -1399,7 +1399,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                         key={d.id}
                         type="button"
                         onClick={() => setSpannerDialect(d.id)}
-                        className={`py-1.5 px-2.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                        className={`py-1.5 px-2.5 rounded-md text-xs font-mono font-bold border cursor-pointer ${
                           spannerDialect === d.id
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
@@ -1469,7 +1469,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   onClick={() =>
                     copyText(cdcAndMigrationArtifacts.cdcDdl, 'CDC_DDL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'CDC_DDL' ? 'Copied' : 'Copy CDC DDL'}
                 </button>
@@ -1489,7 +1489,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                       onClick={() =>
                         onRunInShell(cdcAndMigrationArtifacts.cdcPipelineCmd)
                       }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                     >
                       Run in Cloud Shell
                     </button>
@@ -1499,7 +1499,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     onClick={() =>
                       copyText(cdcAndMigrationArtifacts.cdcPipelineCmd, 'CDC_CMD')
                     }
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'CDC_CMD' ? 'Copied' : 'Copy CLI'}
                   </button>

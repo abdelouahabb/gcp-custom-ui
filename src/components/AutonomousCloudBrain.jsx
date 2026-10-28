@@ -1241,7 +1241,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 PRE-CRIME FINOPS · BILLING TIME-CRYSTAL
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
@@ -1263,7 +1263,7 @@ export default function AutonomousCloudBrain({
               type="button"
               onClick={handleToggleAndSyncLiveCircuitBreaker}
               disabled={syncingLiveBudget}
-              className={`h-9 px-3.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
+              className={`h-9 px-3.5 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 autoBreakerArmed
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
@@ -1284,7 +1284,7 @@ export default function AutonomousCloudBrain({
               <button
                 type="button"
                 onClick={onOpenFinOps}
-                className="h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-extrabold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                className="h-9 px-3 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-extrabold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
               >
                 <span>Native Spend Caps (FinOps) →</span>
               </button>
@@ -1294,7 +1294,7 @@ export default function AutonomousCloudBrain({
               <button
                 type="button"
                 onClick={onHibernateSleep}
-                className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                className="h-9 px-3.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
               >
                 <Moon className="w-3.5 h-3.5 shrink-0" />
                 <span>Emergency Park Compute</span>
@@ -1310,7 +1310,7 @@ export default function AutonomousCloudBrain({
               <label className="block text-[10px] uppercase text-zinc-400 font-bold">
                 What Happens If... (Select Cost Scenario to Forecast):
               </label>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
                 100% Read-Only Math Projection · Zero Traffic Sent
               </span>
             </div>
@@ -1499,7 +1499,7 @@ export default function AutonomousCloudBrain({
                 Unguarded Anomaly Bill (If Unstopped)
               </div>
               {timeCrystalForecast.isExponential && (
-                <span className="px-1.5 py-0.2 rounded bg-red-500/15 text-red-500 border border-red-500/30 text-[9px] font-bold">
+                <span className="px-1.5 py-0.2 rounded-full bg-red-500/15 text-red-500 border border-red-500/30 text-[9px] font-bold">
                   {timeCrystalForecast.compoundRate}x/d EXP
                 </span>
               )}
@@ -1699,7 +1699,7 @@ export default function AutonomousCloudBrain({
               onClick={() =>
                 handleCopy(activeScenario.mitigationCmd, 'MITIGATION')
               }
-              className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+              className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
             >
               {copiedCmd === 'MITIGATION' ? (
                 <>
@@ -1724,7 +1724,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 WHAT-IF BLAST-RADIUS X-RAY
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
@@ -1748,7 +1748,7 @@ export default function AutonomousCloudBrain({
                   key={node.id}
                   type="button"
                   onClick={() => setSelectedBlastNodeId(node.id)}
-                  className={`w-full p-2.5 rounded-xl border text-left font-mono text-xs transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  className={`w-full p-2.5 rounded-md border text-left font-mono text-xs transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     isSelected
                       ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 font-bold'
                       : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-amber-500/40'
@@ -1760,7 +1760,7 @@ export default function AutonomousCloudBrain({
                       {node.kind} · {node.region}
                     </div>
                   </div>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
                     Inspect
                   </span>
                 </button>
@@ -1779,7 +1779,7 @@ export default function AutonomousCloudBrain({
                     {activeBlastNode.name} ({activeBlastNode.region})
                   </h5>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-500 font-extrabold text-xs">
+                <span className="px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-500 font-extrabold text-xs">
                   Blast Severity: {blastCascade.impactScore}/100
                 </span>
               </div>
@@ -1827,7 +1827,7 @@ export default function AutonomousCloudBrain({
                   onClick={() =>
                     handleCopy(blastCascade.remediation, 'BLAST_CMD')
                   }
-                  className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
                 >
                   {copiedCmd === 'BLAST_CMD' ? (
                     <>
@@ -1854,7 +1854,7 @@ export default function AutonomousCloudBrain({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 DREAM STACK COMPILER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
@@ -1879,7 +1879,7 @@ export default function AutonomousCloudBrain({
                 key={arch.id}
                 type="button"
                 onClick={() => setSelectedArchetypeId(arch.id)}
-                className={`p-3 rounded-xl border text-left font-mono transition-all cursor-pointer ${
+                className={`p-3 rounded-md border text-left font-mono transition-all cursor-pointer ${
                   active
                     ? 'bg-emerald-500/20 border-emerald-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
                     : 'bg-white/80 dark:bg-zinc-950/75 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50'
@@ -1972,7 +1972,7 @@ export default function AutonomousCloudBrain({
                 onClick={() =>
                   handleCopy(compiledBlueprint.script, 'BLUEPRINT_SH')
                 }
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer flex items-center gap-1"
               >
                 {copiedCmd === 'BLUEPRINT_SH' ? (
                   <>

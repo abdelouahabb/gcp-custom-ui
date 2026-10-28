@@ -690,7 +690,7 @@ export default function LogStreamerAndShell({
   const getSeverityBadge = (sev) => {
     if (sev === 'ERROR' || sev === 'CRITICAL') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-500/20">
           <AlertCircle className="w-3 h-3" />
           {sev}
         </span>
@@ -698,14 +698,14 @@ export default function LogStreamerAndShell({
     }
     if (sev === 'WARNING') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-500/20">
           <AlertTriangle className="w-3 h-3" />
           WARN
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-500/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-500/20">
         <Info className="w-3 h-3" />
         INFO
       </span>
@@ -744,11 +744,11 @@ export default function LogStreamerAndShell({
         <div className="bg-sky-500/[0.08] dark:bg-sky-950/35 border-2 border-sky-500/50 rounded-2xl p-4 shadow-sm space-y-3 text-xs font-mono">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-md bg-sky-500 text-white font-extrabold text-[11px]">
+              <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-white font-extrabold text-[11px]">
                 🔍 GLOBAL MAP FORENSIC TRACE LOADED
               </span>
               <span
-                className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                   activeMapForensicSpec.verdict === 'ALLOW'
                     ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                     : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
@@ -775,7 +775,7 @@ export default function LogStreamerAndShell({
                   onClick={() =>
                     executeShellCommand(activeMapForensicSpec.gcloudCommand)
                   }
-                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] cursor-pointer"
                 >
                   ▶ Run Live gcloud logging read in Cloud Shell
                 </button>
@@ -783,7 +783,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setActiveMapForensicSpec(null)}
-                className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] cursor-pointer"
+                className="px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] cursor-pointer"
               >
                 ✕ Dismiss
               </button>
@@ -839,21 +839,21 @@ export default function LogStreamerAndShell({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-extrabold">
                 <Zap className="w-3.5 h-3.5" />
                 <span>2026 NEURAL CHRONO-LOG & TRACE STUDIO</span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                 <Layers className="w-3 h-3" />
                 <span>Drain3 Clustering: {chronoData?.stats?.deduplicationRatioPct || 68}% Noise Collapsed</span>
               </span>
               {chronoData?.stats?.dlpLeakCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-mono font-bold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-mono font-bold">
                   <ShieldAlert className="w-3 h-3" />
                   <span>{chronoData.stats.dlpLeakCount} DLP Token/Key Leaks Detected</span>
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
                 <Clock className="w-3 h-3" />
                 <span>{activeTimeZone} ({utcOffsetLabel})</span>
               </span>
@@ -919,7 +919,7 @@ export default function LogStreamerAndShell({
               <button
                 type="submit"
                 disabled={loadingChrono}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${loadingChrono ? 'animate-spin' : ''}`}
@@ -930,7 +930,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowCompiledSqlModal((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer"
               >
                 <Database className="w-3.5 h-3.5 text-blue-500" />
                 <span>{showCompiledSqlModal ? 'Hide LQL / BigQuery SQL' : 'View LQL & BigQuery SQL'}</span>
@@ -939,7 +939,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowLqlTutorialModal((v) => !v)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer border transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold cursor-pointer border transition-colors ${
                   showLqlTutorialModal
                     ? 'bg-emerald-600 text-white border-emerald-500'
                     : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
@@ -961,7 +961,7 @@ export default function LogStreamerAndShell({
                     ? 'BILLABLE TOKEN WARNING: Gemini / Vertex AI neural LLM calls are currently enabled (~130 tokens/query). Click to lock back to $0.00 Local NLP.'
                     : '0 LLM tokens consumed ($0.00). Click only if you want to authorize Gemini RAM Vault / Vertex AI token consumption.'
                 }
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer border transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold cursor-pointer border transition-colors ${
                   allowNeuralLlmTokens
                     ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/50'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
@@ -1015,7 +1015,7 @@ export default function LogStreamerAndShell({
               <div className="flex flex-wrap items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
                       INTERACTIVE ENGINEERING GUIDE
                     </span>
                     <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -1206,23 +1206,23 @@ export default function LogStreamerAndShell({
               <div className="p-2.5 rounded-lg bg-white dark:bg-[#1a1b1e] border border-blue-500/25 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
                       <Cpu className="w-3 h-3" />
                       <span>NLP Engine: {nlp.engine}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
                       <Sparkles className="w-3 h-3" />
                       <span>
                         TF-IDF Intent: {nlp.intent?.topIntentLabel || 'General Telemetry Exploration'}{' '}
                         ({cosinePct}% Cosine)
                       </span>
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                       Ranker: Okapi BM25 + NER Slot Scorer
                     </span>
                     {tokGuard && (
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                           tokGuard.totalTokenCount > 0
                             ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
                             : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
@@ -1260,7 +1260,7 @@ export default function LogStreamerAndShell({
                     {nerBadges.map((badge, idx) => (
                       <span
                         key={`${badge.type}-${idx}`}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono"
                       >
                         <strong className="text-blue-600 dark:text-blue-400">
                           {badge.type}:
@@ -1360,7 +1360,7 @@ export default function LogStreamerAndShell({
         <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
                 SAVED SRE VIEWS
               </span>
               {(chronoData?.savedSreViews || []).map((sv) => {
@@ -1376,7 +1376,7 @@ export default function LogStreamerAndShell({
                       setSeverityFilter(sv.severity || 'ALL');
                       fetchChronoLogs({ naturalLanguage: sv.nl, lqlFilter: sv.lql });
                     }}
-                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-emerald-600 text-white border-emerald-500'
                         : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40'
@@ -1392,7 +1392,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => handleCopy(buildShareablePermalink(), 'copy-permalink')}
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#202124] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-[#202124] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
               >
                 {copiedId === 'copy-permalink' ? (
                   <>
@@ -1410,7 +1410,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowPostmortemModal((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1 ${
+                className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1 ${
                   showPostmortemModal
                     ? 'bg-blue-600 text-white border-blue-500'
                     : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/25'
@@ -1430,7 +1430,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-blue-500/40 space-y-2.5 font-mono text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
                     INCIDENT POSTMORTEM &amp; FORENSIC BUNDLE EXPORTER
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -1510,7 +1510,7 @@ export default function LogStreamerAndShell({
           <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
                   CLICKHOUSE / HYPERDX / LOKI HISTOGRAM + INFRA OVERLAY
                 </span>
                 <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
@@ -1626,7 +1626,7 @@ export default function LogStreamerAndShell({
                           {/* Top Infra Event Marker Badge */}
                           {showInfraOverlay && b.infraMarker && (
                             <span
-                              className={`text-[8px] font-mono font-extrabold px-1 rounded mb-0.5 truncate max-w-full ${
+                              className={`text-[8px] font-mono font-extrabold px-1 rounded-full mb-0.5 truncate max-w-full ${
                                 b.infraMarker.type === 'QUOTA_EXHAUSTION'
                                   ? 'bg-red-600 text-white'
                                   : b.infraMarker.type === 'REVISION_DEPLOY'
@@ -1817,7 +1817,7 @@ export default function LogStreamerAndShell({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveChronoTab(tab.id)}
-                  className={`w-full h-10 px-3 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center justify-between gap-2 ${
+                  className={`w-full h-10 px-3 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
                       : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -1870,7 +1870,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowFacetSidebar((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
                   showFacetSidebar
                     ? 'bg-blue-600/15 text-blue-700 dark:text-blue-300 border-blue-500/40'
                     : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
@@ -1883,7 +1883,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setLiveTailActive((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
                   liveTailActive
                     ? 'bg-emerald-600 text-white border-emerald-500'
                     : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
@@ -1896,7 +1896,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowPinnedOnly((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border cursor-pointer ${
                   showPinnedOnly
                     ? 'bg-amber-600 text-white border-amber-500'
                     : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
@@ -1908,7 +1908,7 @@ export default function LogStreamerAndShell({
               <button
                 type="button"
                 onClick={() => setShowPayloadDiffModal((v) => !v)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border cursor-pointer ${
                   showPayloadDiffModal
                     ? 'bg-blue-600 text-white border-blue-500'
                     : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30'
@@ -1976,7 +1976,7 @@ export default function LogStreamerAndShell({
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-blue-500/40 space-y-3 font-mono text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
                     SIDE-BY-SIDE LOG PAYLOAD DIFF
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -2074,7 +2074,7 @@ export default function LogStreamerAndShell({
                         className="w-full px-2.5 py-2 flex items-center justify-between text-left text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer"
                       >
                         <span className="truncate">{facet.label}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-500">
+                        <span className="px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-500">
                           {facet.distinctCount} distinct
                         </span>
                       </button>
@@ -2196,7 +2196,7 @@ export default function LogStreamerAndShell({
                               </td>
                               <td className="py-2 px-2 whitespace-nowrap">
                                 <span
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                                     entry.httpStatus >= 500
                                       ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                                       : entry.httpStatus >= 400
@@ -2219,7 +2219,7 @@ export default function LogStreamerAndShell({
                                     {Object.entries(grokGroups).map(([k, v]) => (
                                       <span
                                         key={k}
-                                        className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[9.5px]"
+                                        className="px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[9.5px]"
                                       >
                                         <strong>{k}:</strong> {String(v).slice(0, 36)}
                                       </span>
@@ -2285,7 +2285,7 @@ export default function LogStreamerAndShell({
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {getSeverityBadge(entry.severity)}
                                 <span
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                                     entry.httpStatus >= 500
                                       ? 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30'
                                       : entry.httpStatus >= 400
@@ -2295,7 +2295,7 @@ export default function LogStreamerAndShell({
                                 >
                                   {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
                                 </span>
-                                <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
+                                <span className="px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
                                   {entry.serviceName}
                                 </span>
                                 <span className="text-[10.5px] font-mono text-zinc-500">
@@ -2303,13 +2303,13 @@ export default function LogStreamerAndShell({
                                 </span>
                                 {chronoData?.compiledQuery?.naturalLanguage &&
                                   typeof entry.nlpRelevancePct === 'number' && (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
                                       <Cpu className="w-2.5 h-2.5" />
                                       <span>BM25 Match: {entry.nlpRelevancePct}%</span>
                                     </span>
                                   )}
                                 {entry.dlpFindings?.length > 0 && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold">
                                     <ShieldAlert className="w-3 h-3" />
                                     <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
                                   </span>
@@ -2330,7 +2330,7 @@ export default function LogStreamerAndShell({
                                   {Object.entries(grokGroups).map(([k, v]) => (
                                     <span
                                       key={k}
-                                      className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono"
+                                      className="px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono"
                                     >
                                       <strong>{k}=</strong>
                                       {String(v).slice(0, 48)}
@@ -2347,7 +2347,7 @@ export default function LogStreamerAndShell({
                                 {getFlattenedKvPills(entry).map((pill) => (
                                   <span
                                     key={pill.key}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono"
                                   >
                                     <span className="text-zinc-400">{pill.key}:</span>
                                     <span className="text-zinc-800 dark:text-zinc-200 font-semibold">
@@ -2492,7 +2492,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
                     CLICKHOUSE / SIGNOZ / VICTORIALOGS STATS AGGREGATOR
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -2531,7 +2531,7 @@ export default function LogStreamerAndShell({
                           </td>
                           <td className="py-2.5 px-2.5">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
                                 svc.errorRatePct >= 40
                                   ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30'
                                   : svc.errorRatePct > 0
@@ -2606,7 +2606,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
                     VECTOR / LOGSTASH / OPENOBSERVE LIVE GROK PARSER
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -2623,7 +2623,7 @@ export default function LogStreamerAndShell({
                     key={gx.id}
                     type="button"
                     onClick={() => setGrokPatternInput(gx.pattern)}
-                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold border cursor-pointer ${
                       grokPatternInput === gx.pattern
                         ? 'bg-blue-600 text-white border-blue-500'
                         : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -2673,7 +2673,7 @@ export default function LogStreamerAndShell({
                           {Object.entries(groups).map(([k, v]) => (
                             <span
                               key={k}
-                              className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-bold"
+                              className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-bold"
                             >
                               {k} = &quot;{String(v)}&quot;
                             </span>
@@ -2699,7 +2699,7 @@ export default function LogStreamerAndShell({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     {getSeverityBadge(cluster.severity)}
-                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-extrabold">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-extrabold">
                       {cluster.count}× occurrences ({cluster.sharePct}% of stream)
                     </span>
                     <span className="text-xs font-mono text-zinc-500">
@@ -2767,7 +2767,7 @@ export default function LogStreamerAndShell({
             <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2 font-mono">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-extrabold">
+                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-extrabold">
                     SIGNOZ / DRAIN3 ANOMALY BASELINE DIFF
                   </span>
                   <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -2776,10 +2776,10 @@ export default function LogStreamerAndShell({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-extrabold">
-                  <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
+                  <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
                     Error Rate: +{chronoData.anomalyBaselineDiff.overallErrorDeltaPct}%
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                     P95 Delta: +{chronoData.anomalyBaselineDiff.overallP95DeltaMs}ms
                   </span>
                 </div>
@@ -2806,7 +2806,7 @@ export default function LogStreamerAndShell({
                     <div className="flex flex-wrap items-center gap-2">
                       {getSeverityBadge(item.severity)}
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
                           item.classification === 'NEW_INCIDENT_SPIKE'
                             ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
                             : item.classification === 'ELEVATED_REGRESSION'
@@ -2861,7 +2861,7 @@ export default function LogStreamerAndShell({
                     key={tw.traceId}
                     type="button"
                     onClick={() => setSelectedTraceId(tw.traceId)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold border cursor-pointer ${
                       activeWaterfall?.traceId === tw.traceId
                         ? 'bg-blue-600 text-white border-blue-500'
                         : 'bg-zinc-100 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -2910,7 +2910,7 @@ export default function LogStreamerAndShell({
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                               span.httpStatus >= 500
                                 ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/40'
                                 : span.httpStatus >= 400
@@ -2964,7 +2964,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
                     POLYGLOT OPEN-SOURCE LOG QUERY TRANSPILER
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -2986,7 +2986,7 @@ export default function LogStreamerAndShell({
                     key={fmt.id}
                     type="button"
                     onClick={() => setActiveTranspilerLang(fmt.id)}
-                    className={`w-full h-9 px-2.5 rounded-lg text-[11px] font-bold border cursor-pointer transition-colors ${
+                    className={`w-full h-9 px-2.5 rounded-md text-[11px] font-bold border cursor-pointer transition-colors ${
                       activeTranspilerLang === fmt.id
                         ? 'bg-blue-600 text-white border-blue-500'
                         : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -3070,7 +3070,7 @@ export default function LogStreamerAndShell({
                       <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
                         {rec.sourceName}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold">
                         Save ${rec.monthlyCostUsd.toFixed(2)}/mo ({rec.estimatedGibPerMonth} GiB)
                       </span>
                     </div>
@@ -3122,7 +3122,7 @@ export default function LogStreamerAndShell({
                     className="p-3 rounded-lg bg-white dark:bg-[#202124] border border-red-500/30 space-y-1.5"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 text-[10.5px] font-mono font-extrabold">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-[10.5px] font-mono font-extrabold">
                         <ShieldAlert className="w-3 h-3" />
                         <span>{alert.type}: {alert.label}</span>
                       </span>
@@ -3160,7 +3160,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-extrabold mr-2">
                     LIVE GIT CLI (`git log`, `git show`, `git blame -L`)
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -3195,7 +3195,7 @@ export default function LogStreamerAndShell({
                     type="button"
                     disabled={gitBlameLoading}
                     onClick={() => handleRunLiveGitBlame()}
-                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                   >
                     {gitBlameLoading ? 'Running git blame...' : 'Run Live git blame'}
                   </button>
@@ -3241,10 +3241,10 @@ export default function LogStreamerAndShell({
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {getSeverityBadge(item.severity)}
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-extrabold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-extrabold">
                           {item.filePath}:{item.lineNumber}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-bold">
                           Commit {item.gitCommitSha} ({item.committedAgo} by {item.gitAuthor})
                         </span>
                       </div>
@@ -3330,7 +3330,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-2">
                     LIVE CLOUD LOGGING &amp; MONITORING SLO ENGINE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -3385,7 +3385,7 @@ export default function LogStreamerAndShell({
                             {slo.serviceName}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold border shrink-0 ${
+                            className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold border shrink-0 ${
                               isCrit
                                 ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
                                 : isWarn
@@ -3444,7 +3444,7 @@ export default function LogStreamerAndShell({
                             e.stopPropagation();
                             handleCreateLiveLogMetric(slo);
                           }}
-                          className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer disabled:opacity-50"
+                          className="w-full py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer disabled:opacity-50"
                         >
                           {creatingMetricId === slo.metricName
                             ? 'Creating Metric in GCP...'
@@ -3489,7 +3489,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-2">
                     LIVE LINUX `/proc/net/snmp` + LIVE `tls.connect` PROBE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -3575,7 +3575,7 @@ export default function LogStreamerAndShell({
                     type="button"
                     disabled={probeLoading}
                     onClick={() => handleRunLiveNetworkProbe()}
-                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                   >
                     {probeLoading ? 'Probing Endpoint...' : 'Run Live DNS / TCP / TLS Probe'}
                   </button>
@@ -3608,7 +3608,7 @@ export default function LogStreamerAndShell({
                         <span className="text-[10.5px] text-zinc-500">
                           ({row.podOrRevision})
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
                           {row.kernelProbe}
                         </span>
                       </div>
@@ -3686,7 +3686,7 @@ export default function LogStreamerAndShell({
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
                     LIVE `POST https://logging.googleapis.com/v2/entries:write`
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -3741,7 +3741,7 @@ export default function LogStreamerAndShell({
                       type="button"
                       disabled={replayLoading}
                       onClick={() => handleReplayCanaryScenario(sc.id)}
-                      className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                      className="w-full py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                     >
                       {replayLoading
                         ? 'Writing to Cloud Logging API...'
@@ -3756,7 +3756,7 @@ export default function LogStreamerAndShell({
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <div>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold mr-2 ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold mr-2 ${
                           replayResult.gcpWriteSucceeded
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                             : 'bg-red-500/20 text-red-700 dark:text-red-300'
@@ -3793,7 +3793,7 @@ export default function LogStreamerAndShell({
                             {chk.stage}
                           </span>
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                            className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold ${
                               chk.status === 'PASS'
                                 ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                                 : 'bg-red-500/20 text-red-700 dark:text-red-300'
@@ -3823,14 +3823,14 @@ export default function LogStreamerAndShell({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-mono font-extrabold">
                 <History className="w-3.5 h-3.5" />
                 <span>LIVE CLOUD AUDIT "WHO-CHANGED-WHAT" TIMELINE</span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                 400-Day Admin Activity Retention · $0.00/mo Always Free
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
                 <Clock className="w-3 h-3" />
                 <span>TZ: {activeTimeZone} ({utcOffsetLabel})</span>
               </span>
@@ -3860,7 +3860,7 @@ export default function LogStreamerAndShell({
               type="button"
               disabled={loadingAudit}
               onClick={fetchAuditTimeline}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
@@ -3984,7 +3984,7 @@ export default function LogStreamerAndShell({
                       <div className="space-y-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold border ${getCategoryBadge(
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${getCategoryBadge(
                               ev.actionCategory
                             )}`}
                           >
@@ -3993,11 +3993,11 @@ export default function LogStreamerAndShell({
                           <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
                             {ev.humanSummary}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono">
+                          <span className="px-1.5 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono">
                             {ev.serviceName}
                           </span>
                           {ev.region && ev.region !== 'global' && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-mono">
                               {ev.region}
                             </span>
                           )}
@@ -4101,7 +4101,7 @@ export default function LogStreamerAndShell({
                               className="text-[10.5px] flex items-center gap-2"
                             >
                               <span
-                                className={`px-1.5 py-0.5 rounded font-bold ${
+                                className={`px-1.5 py-0.5 rounded-full font-bold ${
                                   d.action === 'ADD'
                                     ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                                     : 'bg-red-500/20 text-red-700 dark:text-red-300'
@@ -4218,11 +4218,11 @@ export default function LogStreamerAndShell({
                           <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
                             {formatLogDate(log.timestamp)}
                           </span>
-                          <span className="font-mono text-[10px] bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+                          <span className="font-mono text-[10px] bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.5 rounded-full">
                             {log.service}
                           </span>
                           <span
-                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
                               log.source === 'LIVE_GCP'
                                 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
                                 : 'text-blue-600 dark:text-blue-400 bg-blue-500/10'
@@ -4283,7 +4283,7 @@ export default function LogStreamerAndShell({
               </p>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded">
+              <span className="inline-flex items-center gap-1 text-[10.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>Safe Guardrails ON</span>
               </span>
@@ -4306,7 +4306,7 @@ export default function LogStreamerAndShell({
                 type="button"
                 disabled={shellRunning}
                 onClick={() => executeShellCommand(q.cmd)}
-                className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 $ {q.label}
               </button>
@@ -4396,12 +4396,12 @@ export default function LogStreamerAndShell({
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.engine && (
-                        <span className="px-1.5 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[9.5px] text-blue-700 dark:text-blue-300">
+                        <span className="px-1.5 py-0.5 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[9.5px] text-blue-700 dark:text-blue-300">
                           {item.engine}
                         </span>
                       )}
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                        className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold ${
                           item.exitCode === 0
                             ? 'bg-emerald-500/15 text-emerald-400'
                             : 'bg-red-500/20 text-red-400'

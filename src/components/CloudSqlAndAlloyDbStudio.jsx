@@ -509,7 +509,7 @@ WITH (m = 16, ef_construction = 64);`;
       <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED CLOUD SQL (MYSQL & POSTGRESQL) + GOOGLE CLOUD ALLOYDB AI VECTOR STUDIO
@@ -655,7 +655,7 @@ WITH (m = 16, ef_construction = 64);`;
                   type="button"
                   onClick={() => setActiveSubTab(t.id)}
                   title={`${t.label} (${t.badge})`}
-                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -674,7 +674,7 @@ WITH (m = 16, ef_construction = 64);`;
                     <span className="truncate">{t.label}</span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
                       active
                         ? 'bg-white/20 text-white'
                         : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -704,7 +704,7 @@ WITH (m = 16, ef_construction = 64);`;
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Relational & AI Database Compliance Studio</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM MODE'
                   : `ENFORCING ${sqlBlueprint.toUpperCase()}`}
@@ -1081,10 +1081,10 @@ WITH (m = 16, ef_construction = 64);`;
                       <div>
                         <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                           <span>{c.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px]">
                             ALLOYDB ({c.databaseVersion})
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px]">
                             {c.state}
                           </span>
                         </div>
@@ -1120,10 +1120,10 @@ WITH (m = 16, ef_construction = 64);`;
                               : 'PostgreSQL'}{' '}
                             {inst.name}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px]">
                             {inst.databaseVersion} · {inst.edition}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px]">
                             Score: {inst.postureScore}/100
                           </span>
                         </div>

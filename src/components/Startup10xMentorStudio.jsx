@@ -198,7 +198,7 @@ export default function Startup10xMentorStudio({
       <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
               <Rocket className="w-3.5 h-3.5" />
               <span>
                 GOOGLE FOR STARTUPS MENTOR EDITION · 10X SCALE &amp; BOTTLENECK RADAR
@@ -232,7 +232,7 @@ export default function Startup10xMentorStudio({
               disabled={loading}
               onClick={fetchStartupAudit}
               title="Re-scan live Cloud Run, Cloud SQL, GCS, BigQuery, VPC Firewalls, and IAM bindings for Startup 10X scaling bottlenecks"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -306,7 +306,7 @@ export default function Startup10xMentorStudio({
                 data-feature-id={m.id}
                 onClick={() => setActiveModule(m.id)}
                 title={`${m.title} — ${m.subtitle}`}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`p-3 rounded-md border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -350,7 +350,7 @@ export default function Startup10xMentorStudio({
                 <strong>Direct VPC Egress</strong>.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+            <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
               LIVE run.googleapis.com/v2 PATCH
             </span>
           </div>
@@ -372,15 +372,15 @@ export default function Startup10xMentorStudio({
                       <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
                         {svc.name}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono text-zinc-700 dark:text-zinc-300">
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono text-zinc-700 dark:text-zinc-300">
                         {svc.region}
                       </span>
                       {svc.startupCpuBoost ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                           ✓ CPU Boost ON (~420ms boot)
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
                           ⚠ CPU Boost OFF (~1,850ms cold start)
                         </span>
                       )}
@@ -409,7 +409,7 @@ export default function Startup10xMentorStudio({
                         )
                       }
                       title={`Enable startupCpuBoost=true on Cloud Run service ${svc.name} in ${svc.region} to cut cold-start latency by ~1,430ms`}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                     >
                       {busyTarget === `PATCH_CLOUD_RUN_10X_BOOST:${svc.name}`
                         ? 'Patching Cloud Run...'

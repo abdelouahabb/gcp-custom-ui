@@ -225,7 +225,7 @@ function McpFormattedMarkdown({ content, onCopy }) {
                       className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/70 text-xs text-zinc-700 dark:text-zinc-200"
                     >
                       {isNumbered ? (
-                        <span className="mt-0.5 px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-extrabold shrink-0">
+                        <span className="mt-0.5 px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-extrabold shrink-0">
                           #{cleanNumber}
                         </span>
                       ) : (
@@ -607,7 +607,7 @@ function McpStructuredPayloadView({
                           {metaEntries.map(([mk, mv]) => (
                             <span
                               key={mk}
-                              className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono"
+                              className="px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono"
                             >
                               {mk}: {String(mv).slice(0, 28)}
                             </span>
@@ -983,7 +983,7 @@ export default function GoogleCloudRemoteMcpStudio({
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
                 2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE · JSON-RPC 2.0 OVER HTTPS
@@ -1021,7 +1021,7 @@ export default function GoogleCloudRemoteMcpStudio({
               type="button"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(false)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingCatalog ? 'animate-spin' : ''}`}
@@ -1032,7 +1032,7 @@ export default function GoogleCloudRemoteMcpStudio({
               type="button"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
             >
               <Activity className="w-3.5 h-3.5" />
               <span>
@@ -1098,7 +1098,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 Click any server to run live JSON-RPC <code className="font-mono">tools/list</code>
               </p>
             </div>
-            <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold">
               {filteredServers.length} shown
             </span>
           </div>
@@ -1155,11 +1155,11 @@ export default function GoogleCloudRemoteMcpStudio({
                       <span>{srv.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                         {srv.stage}
                       </span>
                       {srv.toolCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-extrabold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-extrabold">
                           {srv.toolCount} tools
                         </span>
                       )}
@@ -1195,7 +1195,7 @@ export default function GoogleCloudRemoteMcpStudio({
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
               {serverToolsData?.latencyMs && (
-                <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                   tools/list: {serverToolsData.latencyMs}ms ({serverToolsData.toolCount || 0} tools)
                 </span>
               )}
@@ -1222,7 +1222,7 @@ export default function GoogleCloudRemoteMcpStudio({
                         key={t.name}
                         type="button"
                         onClick={() => handleSelectTool(t)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer ${
                           active
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
@@ -1248,13 +1248,13 @@ export default function GoogleCloudRemoteMcpStudio({
                       Tool: <span className="text-blue-600 dark:text-blue-400">{activeToolObj.name}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-                      <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                         readOnlyHint: {String(Boolean(activeToolObj.annotations?.readOnlyHint))}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                         destructiveHint: {String(Boolean(activeToolObj.annotations?.destructiveHint))}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                         idempotentHint: {String(Boolean(activeToolObj.annotations?.idempotentHint))}
                       </span>
                     </div>
@@ -1289,13 +1289,13 @@ export default function GoogleCloudRemoteMcpStudio({
                                       {propKey}
                                     </span>
                                     {propSchema?.type && (
-                                      <span className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] text-zinc-600 dark:text-zinc-400">
+                                      <span className="px-1.5 py-0.5 rounded-full bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] text-zinc-600 dark:text-zinc-400">
                                         {String(propSchema.type)}
                                       </span>
                                     )}
                                   </div>
                                   <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                                       isReq
                                         ? 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
                                         : 'bg-zinc-200/60 dark:bg-zinc-800 text-zinc-500'
@@ -1360,14 +1360,14 @@ export default function GoogleCloudRemoteMcpStudio({
                         <button
                           type="button"
                           onClick={() => handleInvokeMcpTool(true)}
-                          className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-extrabold cursor-pointer"
+                          className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-extrabold cursor-pointer"
                         >
                           Confirm &amp; Execute Destructive MCP Tool
                         </button>
                         <button
                           type="button"
                           onClick={() => setDestructivePending(null)}
-                          className="px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                          className="px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -1380,7 +1380,7 @@ export default function GoogleCloudRemoteMcpStudio({
                       type="button"
                       disabled={callingTool}
                       onClick={() => handleInvokeMcpTool(false)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       <Play className="w-3.5 h-3.5" />
                       <span>
@@ -1412,7 +1412,7 @@ export default function GoogleCloudRemoteMcpStudio({
                           'JSON-RPC cURL command'
                         )
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       <span>Copy JSON-RPC cURL</span>
@@ -1427,7 +1427,7 @@ export default function GoogleCloudRemoteMcpStudio({
                   <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           toolCallResult.ok
                             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                             : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
@@ -1450,7 +1450,7 @@ export default function GoogleCloudRemoteMcpStudio({
                             toolCallResult.missingServiceApi
                           )
                         }
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {enablingApi
                           ? `Enabling ${toolCallResult.missingServiceApi}...`
@@ -1491,7 +1491,7 @@ export default function GoogleCloudRemoteMcpStudio({
             type="button"
             disabled={runningChain}
             onClick={() => handleRunTriageChain(activeChainId)}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5" />
             <span>
@@ -1520,7 +1520,7 @@ export default function GoogleCloudRemoteMcpStudio({
                     <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
                       {ch.label}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-bold shrink-0">
+                    <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-bold shrink-0">
                       {ch.badge}
                     </span>
                   </div>
@@ -1542,7 +1542,7 @@ export default function GoogleCloudRemoteMcpStudio({
               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                 Chain Telemetry: {chainResult.title}
               </span>
-              <span className="px-2.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
                 {chainResult.passedSteps}/{chainResult.totalSteps} MCP Endpoints Responded ·{' '}
                 {chainResult.totalWallTimeMs}ms Total Wall Time
               </span>
@@ -1557,7 +1557,7 @@ export default function GoogleCloudRemoteMcpStudio({
                     <span className="font-extrabold text-blue-600 dark:text-blue-400">
                       {st.serverId}.googleapis.com/mcp &rarr; {st.toolName}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                       {st.latencyMs}ms · HTTP {st.httpStatus}
                     </span>
                   </div>
@@ -1601,7 +1601,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 key={preset.label}
                 type="button"
                 onClick={() => setAgentPrompt(preset.prompt)}
-                className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                className="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
               >
                 {preset.label}
               </button>
@@ -1618,7 +1618,7 @@ export default function GoogleCloudRemoteMcpStudio({
             <button
               type="submit"
               disabled={runningAgent}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
@@ -1651,7 +1651,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 {(agentResult.mcpTraces || []).map((tr) => (
                   <span
                     key={`${tr.serverId}-${tr.toolName}`}
-                    className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                    className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                   >
                     {tr.serverId}:{tr.toolName} ({tr.latencyMs}ms)
                   </span>
@@ -1726,7 +1726,7 @@ export default function GoogleCloudRemoteMcpStudio({
             onClick={() =>
               copyToClipboard(ideConfigJson, `${ideTarget} Remote MCP Config`)
             }
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold cursor-pointer"
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" />
             <span>

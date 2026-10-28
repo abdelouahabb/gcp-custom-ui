@@ -483,10 +483,10 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 SUPPLY-CHAIN SLSA &amp; LOG RCA STUDIO (VECTOR SQL, SLSA v1.0 PROVENANCE, LOG RCA &amp; TLS 1.3 X.509)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; SOCKET CRYPTO · ZERO AUTO-PROVISIONING
               </span>
             </div>
@@ -542,7 +542,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               type="button"
               data-feature-id={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+              className={`p-3.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                 active
                   ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                   : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/40'
@@ -550,7 +550,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
             >
               <div className="flex items-center justify-between w-full">
                 <span
-                  className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md ${
+                  className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full ${
                     active
                       ? 'bg-black/25 text-blue-100'
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
@@ -599,7 +599,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 type="button"
                 onClick={handleRunBqAnomalyVector}
                 disabled={runningBq || !selectedDataset || !selectedTable}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -628,7 +628,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                           setSelectedDataset(t.datasetId);
                           setSelectedTable(t.tableId);
                         }}
-                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono cursor-pointer transition-all ${
+                        className={`px-2.5 py-1 rounded-md border text-[11px] font-mono cursor-pointer transition-all ${
                           isSelected
                             ? 'bg-blue-600 text-white border-blue-500 font-bold'
                             : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
@@ -788,7 +788,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                           >
                             <td className="py-2 px-3">
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                   isAnomaly
                                     ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                                     : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
@@ -843,7 +843,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 type="button"
                 onClick={fetchSupplyChainProvenance}
                 disabled={loadingSupply}
-                className="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0"
+                className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${loadingSupply ? 'animate-spin' : ''}`}
@@ -932,7 +932,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                                 {(img.imageSizeBytes / (1024 * 1024)).toFixed(1)} MB
                               </td>
                               <td className="py-2 px-3 text-right">
-                                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
                                   Load Digest
                                 </span>
                               </td>
@@ -957,7 +957,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                       type="button"
                       onClick={handleSignSlsaAttestation}
                       disabled={signingSlsa}
-                      className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <span>
@@ -1077,7 +1077,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   type="button"
                   onClick={fetchCloudLogs}
                   disabled={loadingLogs}
-                  className="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${loadingLogs ? 'animate-spin' : ''}`}
@@ -1088,7 +1088,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   type="button"
                   onClick={handleRunLogAiSurgeon}
                   disabled={runningLogAi || !logData?.entries?.length}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1224,7 +1224,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                             </td>
                             <td className="py-2 px-3">
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                   isErr
                                     ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                                     : isWarn
@@ -1275,7 +1275,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 type="button"
                 onClick={handleInspectTlsEndpoints}
                 disabled={runningTls}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${runningTls ? 'animate-spin' : ''}`}
@@ -1313,11 +1313,11 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         </span>
                       </div>
                       {ep.ok ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                           {ep.protocol} · {ep.alpnProtocol} · {ep.tlsHandshakeMs}ms
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
+                        <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
                           {ep.error}
                         </span>
                       )}

@@ -2530,12 +2530,12 @@ export default function GlobalInnovationHoverExplainer() {
     >
       {/* Top Badge & Safety Mode */}
       <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
           <Sparkles className="w-3 h-3 shrink-0" />
           <span className="truncate">{info.badge}</span>
         </span>
         <span
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
             isMutation
               ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
               : isSimulation

@@ -487,16 +487,16 @@ export default function GeminiCopilotModal({
                 <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">
                   Project Health, Lineage & State Drift Center
                 </h2>
-                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700">
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700">
                   {projectId}
                 </span>
                 {synthesisData?.merkleSnapshot?.merkleRootShort && (
-                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
                     Merkle: {synthesisData.merkleSnapshot.merkleRootShort}
                   </span>
                 )}
                 <span
-                  className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border ${
+                  className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${
                     totalFindings === 0
                       ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                       : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
@@ -519,7 +519,7 @@ export default function GeminiCopilotModal({
             <button
               type="button"
               onClick={handleDownloadSignedDossier}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer transition-colors"
               title="Download Cryptographically Signed SHA-256 Executive Audit Dossier (JSON)"
             >
               <Download className="w-3.5 h-3.5" />
@@ -529,7 +529,7 @@ export default function GeminiCopilotModal({
               type="button"
               onClick={runLiveProjectAudit}
               disabled={loadingScan}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin' : ''}`}
@@ -540,7 +540,7 @@ export default function GeminiCopilotModal({
               type="button"
               onClick={onClose}
               aria-label="Close Health and Drift modal"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-200 hover:bg-red-600 dark:bg-zinc-800 dark:hover:bg-red-600 text-zinc-900 dark:text-zinc-100 hover:text-white border border-zinc-300 dark:border-zinc-700 text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-zinc-200 hover:bg-red-600 dark:bg-zinc-800 dark:hover:bg-red-600 text-zinc-900 dark:text-zinc-100 hover:text-white border border-zinc-300 dark:border-zinc-700 text-xs font-extrabold transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
               <span>Close</span>
@@ -698,7 +698,7 @@ export default function GeminiCopilotModal({
                           onSelectTab('VPC_NETWORKS');
                           onClose();
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
+                        className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
                         <span>Open VPC Studio</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -723,7 +723,7 @@ export default function GeminiCopilotModal({
                           <div className="space-y-0.5">
                             <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                               <span className="font-mono">{fw.name}</span>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                                 Priority {fw.priority ?? 1000} · {fw.network || 'default'}
                               </span>
                             </div>
@@ -743,7 +743,7 @@ export default function GeminiCopilotModal({
                             type="button"
                             disabled={busyActionId === `fw-${fw.name}`}
                             onClick={() => handleLockFirewallToIap(fw)}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                           >
                             <Lock className="w-3.5 h-3.5" />
                             <span>
@@ -791,7 +791,7 @@ export default function GeminiCopilotModal({
                           <div className="space-y-0.5">
                             <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                               <span className="font-mono">{z.name}</span>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
                                 {z.kind} · {z.location}
                               </span>
                             </div>
@@ -806,7 +806,7 @@ export default function GeminiCopilotModal({
                               type="button"
                               disabled={busyActionId === `z-${z.id}`}
                               onClick={() => handleExterminateZombie(z)}
-                              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
                               <Zap className="w-3.5 h-3.5" />
                               <span>
@@ -847,7 +847,7 @@ export default function GeminiCopilotModal({
                         onSelectTab('OVERVIEW');
                         onClose();
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>Open Full Lineage in Overview</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -873,7 +873,7 @@ export default function GeminiCopilotModal({
                         >
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                                 {item.staleBadge}
                               </span>
                               <span className="text-[11px] font-mono text-zinc-500">
@@ -896,14 +896,14 @@ export default function GeminiCopilotModal({
                                     type="button"
                                     disabled={isBusy}
                                     onClick={() => handleCleanStaleResource(item)}
-                                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                                   >
                                     {isBusy ? 'Working...' : `Confirm ${item.actionLabel}`}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setConfirmCleanupId(null)}
-                                    className="px-2.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer"
+                                    className="px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -913,7 +913,7 @@ export default function GeminiCopilotModal({
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => setConfirmCleanupId(item.id)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   <span>{item.actionLabel}</span>
@@ -954,7 +954,7 @@ export default function GeminiCopilotModal({
                       <button
                         type="button"
                         onClick={() => setGitOpsViewMode('DIFF')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold cursor-pointer ${
                           gitOpsViewMode === 'DIFF'
                             ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -965,7 +965,7 @@ export default function GeminiCopilotModal({
                       <button
                         type="button"
                         onClick={() => setGitOpsViewMode('IMPORTS')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold cursor-pointer ${
                           gitOpsViewMode === 'IMPORTS'
                             ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -991,7 +991,7 @@ export default function GeminiCopilotModal({
                             );
                           }
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                       >
                         <Copy className="w-3.5 h-3.5" />
                         <span>Copy HCL</span>
@@ -1055,7 +1055,7 @@ export default function GeminiCopilotModal({
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                               {rb.badge}
                             </span>
                             <span className="text-xs font-mono text-zinc-400">
@@ -1078,7 +1078,7 @@ export default function GeminiCopilotModal({
                           type="button"
                           disabled={busyActionId === `dag-${rb.id}`}
                           onClick={() => handleExecuteRunbookDag(rb.id)}
-                          className="w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="w-full py-2 px-3 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                         >
                           <Zap className="w-3.5 h-3.5" />
                           <span>
@@ -1134,7 +1134,7 @@ export default function GeminiCopilotModal({
                               onSelectTab('CLOUD_SOC');
                               onClose();
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                           >
                             <span>Open Cloud SOC</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -1145,7 +1145,7 @@ export default function GeminiCopilotModal({
                               onSelectTab('SRE_WAR_ROOM');
                               onClose();
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                           >
                             <span>Open SRE War-Room</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -1207,7 +1207,7 @@ export default function GeminiCopilotModal({
                             'EXECUTE_DEFCON1_LOCKDOWN'
                           )
                         }
-                        className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="px-3.5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         <Lock className="w-3.5 h-3.5" />
                         <span>
@@ -1229,7 +1229,7 @@ export default function GeminiCopilotModal({
                               { canaryType: 'CANARY_SECRET_MANAGER' }
                             )
                           }
-                          className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                         >
                           <Zap className="w-3.5 h-3.5" />
                           <span>Arm $0.00/mo Honey-Secret Canary</span>
@@ -1248,7 +1248,7 @@ export default function GeminiCopilotModal({
                               'HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
                             )
                           }
-                          className="px-3.5 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-md bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Enforce OS Login + Block Serial Port</span>
@@ -1307,7 +1307,7 @@ export default function GeminiCopilotModal({
                       type="button"
                       disabled={loadingFleet}
                       onClick={handleScanFleetMatrix}
-                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <RefreshCw
                         className={`w-3.5 h-3.5 ${
@@ -1349,7 +1349,7 @@ export default function GeminiCopilotModal({
                               </td>
                               <td className="py-2 pl-2 text-right">
                                 {row.projectId === projectId ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
                                     Active
                                   </span>
                                 ) : (
@@ -1359,7 +1359,7 @@ export default function GeminiCopilotModal({
                                       onSwitchProject &&
                                       onSwitchProject(row.projectId)
                                     }
-                                    className="px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
+                                    className="px-2.5 py-1 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
                                   >
                                     Switch
                                   </button>
@@ -1400,7 +1400,7 @@ export default function GeminiCopilotModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-extrabold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-extrabold transition-colors cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             <span>Close Health &amp; Drift</span>

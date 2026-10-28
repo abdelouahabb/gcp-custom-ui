@@ -27,7 +27,7 @@ export function LakehouseTrackBadge({ track = 'GA' }) {
     return (
       <span
         title="Google Cloud ALPHA Track (gcloud alpha / v1alpha): Early Access Preview with no SLA."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
         <span>[ALPHA · EARLY ACCESS]</span>
@@ -38,7 +38,7 @@ export function LakehouseTrackBadge({ track = 'GA' }) {
     return (
       <span
         title="Google Cloud BETA Track (gcloud beta / v1beta): Public Preview undergoing final stabilization."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
         <span>[BETA · PUBLIC PREVIEW]</span>
@@ -48,7 +48,7 @@ export function LakehouseTrackBadge({ track = 'GA' }) {
   return (
     <span
       title="Google Cloud GA Track: Generally Available production capability."
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
       <span>[GA · PRODUCTION]</span>
@@ -1196,7 +1196,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
                 <Layers className="w-3.5 h-3.5" />
                 <span>50-PLAYBOOK APACHE ICEBERG &amp; BORDERLESS LAKEHOUSE MATRIX</span>
               </span>
@@ -1222,7 +1222,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               type="button"
               onClick={() => handleProbeEstate(false)}
               disabled={probing}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${probing ? 'animate-spin' : ''}`}
@@ -1351,12 +1351,12 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 Showing <strong className="text-zinc-900 dark:text-zinc-100">{filteredPlaybooks.length}</strong> of 50 playbooks
               </span>
               {selectedDomain !== 'ALL' && (
-                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold">
                   Domain: {LAKEHOUSE_DOMAINS.find((d) => d.id === selectedDomain)?.shortLabel}
                 </span>
               )}
               {trackFilter !== 'ALL' && (
-                <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                   Track: {trackFilter}
                 </span>
               )}
@@ -1406,7 +1406,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 >
                   <div className="space-y-1.5 min-h-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                      <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
                         PLAYBOOK #{String(pb.num).padStart(2, '0')}
                       </span>
                       <LakehouseTrackBadge track={pb.track} />
@@ -1429,7 +1429,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         setSelectedPlaybookId(pb.id);
                         setViewMode('SPLIT_WORKBENCH');
                       }}
-                      className="w-full h-8 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                      className="w-full h-8 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <span>Open Workbench</span>
                       <ArrowRight className="w-3 h-3" />
@@ -1440,7 +1440,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         setSelectedPlaybookId(pb.id);
                         setViewMode('METADATA_XRAY');
                       }}
-                      className="w-full h-8 px-2.5 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                      className="w-full h-8 px-2.5 rounded-md bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <span>Inspect v2 Meta</span>
                     </button>
@@ -1571,14 +1571,14 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               <button
                 type="button"
                 onClick={() => setViewMode('SPLIT_WORKBENCH')}
-                className="w-full h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-10 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Back to Split Playbook Workbench</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('BENTO_MATRIX_GRID')}
-                className="w-full h-10 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-10 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>View All 50 Bento Cards</span>
               </button>
@@ -1666,7 +1666,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
                         {row.engine}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[9px] font-extrabold shrink-0">
+                      <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[9px] font-extrabold shrink-0">
                         {row.badge}
                       </span>
                     </div>
@@ -1705,14 +1705,14 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   key={pb.id}
                   type="button"
                   onClick={() => setSelectedPlaybookId(pb.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                  className={`w-full text-left p-3 rounded-md border transition-all cursor-pointer space-y-1.5 ${
                     isSelected
                       ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 shadow-sm'
                       : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
                       PLAYBOOK #{String(pb.num).padStart(2, '0')}
                     </span>
                     <LakehouseTrackBadge track={pb.track} />
@@ -1737,7 +1737,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
                       PLAYBOOK #{String(activePlaybook.num).padStart(2, '0')} OF
                       50
                     </span>
@@ -1886,7 +1886,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         key={ct.id}
                         type="button"
                         onClick={() => setCodeEngineTab(ct.id)}
-                        className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                        className={`w-full h-10 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                           active
                             ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
                             : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -1929,7 +1929,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         : synthesizedCode.cliCode;
                     copyText(txt, `${activePlaybook.id}_${codeEngineTab}`);
                   }}
-                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                  className="w-full h-11 px-3 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
                 >
                   {copiedKey === `${activePlaybook.id}_${codeEngineTab}` ? (
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -1951,7 +1951,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       );
                     }
                   }}
-                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                  className="w-full h-11 px-3 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
                 >
                   <Database className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                   <span className="truncate">Open DDL in BigQuery</span>
@@ -1969,7 +1969,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       );
                     }
                   }}
-                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                  className="w-full h-11 px-3 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
                 >
                   <Terminal className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span className="truncate">Send CLI to Cloud Shell</span>
@@ -1979,7 +1979,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   type="button"
                   disabled={executing}
                   onClick={handleExecutePlaybook}
-                  className="w-full h-11 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="w-full h-11 px-3 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   <Play className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">
@@ -2033,7 +2033,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       key={sim.id}
                       type="button"
                       onClick={() => setSimulatorTab(sim.id)}
-                      className={`w-full h-10 px-3 rounded-xl text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-center gap-2 transition-all ${
+                      className={`w-full h-10 px-3 rounded-md text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-center gap-2 transition-all ${
                         active
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'

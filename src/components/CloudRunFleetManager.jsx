@@ -2000,7 +2000,7 @@ spec:
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
               Cloud Run Serverless Command Center ({services.length} Services)
             </h3>
-            <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full-full">
               run.googleapis.com/v2 · GEN2
             </span>
           </div>
@@ -2041,7 +2041,7 @@ spec:
             <Zap className="w-3.5 h-3.5" />
             <span>Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)</span>
             {schedulerJobsState.data && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
                 {schedulerJobsState.data.schedulerJobsCount || 0} Cron ·{' '}
                 {schedulerJobsState.data.cloudRunJobsCount || 0} Jobs
               </span>
@@ -2078,7 +2078,7 @@ spec:
             <span>App Engine Exterminator & $0/mo Neutralizer</span>
             {appEngineState.data?.summary && (
               <span
-                className={`px-1.5 py-0.2 rounded-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
+                className={`px-1.5 py-0.2 rounded-full-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
                   appEngineState.data.summary.activeServicesCount === 0
                     ? 'text-zinc-500 dark:text-zinc-400'
                     : 'text-red-700 dark:text-red-300'
@@ -2107,7 +2107,7 @@ spec:
             <HardDrive className="w-3.5 h-3.5" />
             <span>Search Dead Containers & GCS Artifacts</span>
             {artifactScanState.data?.summary && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
                 {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
                 {artifactScanState.data.summary.totalStorageObjectsCount} GCS
               </span>
@@ -2173,11 +2173,11 @@ spec:
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-extrabold">
                   <Zap className="w-3 h-3" />
                   <span>CLOUD SCHEDULER → CLOUD RUN V2 JOBS CONVERTER</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                   <span>Up to 24h (86,400s) Timeout · 0 Open Ports · CLOUD_RUN_TASK_INDEX Sharding · volumes[].gcs FUSE</span>
                 </span>
               </div>
@@ -2193,7 +2193,7 @@ spec:
                 type="button"
                 onClick={() => handleFetchSchedulerAndJobs(false)}
                 disabled={schedulerJobsState.loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -2205,7 +2205,7 @@ spec:
               <button
                 type="button"
                 onClick={() => setShowSchedulerToJobsStudio(false)}
-                className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Close
               </button>
@@ -2309,7 +2309,7 @@ spec:
                           {sj.name} ({sj.region})
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] ${
+                          className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                             sj.isAlreadyCloudRunJobTrigger
                               ? 'bg-emerald-600 text-white'
                               : 'bg-amber-500 text-zinc-950'
@@ -2674,7 +2674,7 @@ spec:
                 type="button"
                 disabled={convertingToJob || !jobConvertForm.jobName}
                 onClick={handleConvertSchedulerToJob}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {convertingToJob ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -2738,13 +2738,13 @@ spec:
                           <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
                             {jb.name}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
                             {jb.region} · {jb.taskCount} Shard(s) · Timeout {jb.taskTimeout}
                           </span>
                           {(jb.persistentDiskBuckets || []).map((bkt) => (
                             <span
                               key={bkt}
-                              className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-mono text-[10px] font-bold"
+                              className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-mono text-[10px] font-bold"
                             >
                               Disk: gs://{bkt}
                             </span>
@@ -2808,7 +2808,7 @@ spec:
                           {jb.recentExecutions.slice(0, 3).map((ex) => (
                             <span
                               key={ex.name}
-                              className={`px-1.5 py-0.5 rounded font-mono text-[10px] ${
+                              className={`px-1.5 py-0.5 rounded-full font-mono text-[10px] ${
                                 ex.failedCount > 0
                                   ? 'bg-red-500/15 text-red-500'
                                   : ex.runningCount > 0
@@ -2836,11 +2836,11 @@ spec:
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
                   <Layers className="w-3 h-3" />
                   <span>GCLOUD 590.0.0 GA · GCLOUD RUN COMPOSE UP STUDIO</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-500 bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded">
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-500 bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded-full">
                   <span>x-google-cloudrun: ingress-container: true · Multi-Container Sidecars · Shared RAM Volumes</span>
                 </span>
               </div>
@@ -2854,7 +2854,7 @@ spec:
             <button
               type="button"
               onClick={() => setShowComposeStudio(false)}
-              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
             >
               Close
             </button>
@@ -3093,7 +3093,7 @@ services:
                   type="button"
                   onClick={() => handleExecuteComposeAction('VALIDATE_DRY_RUN')}
                   disabled={Boolean(composeActionBusy)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>
@@ -3107,7 +3107,7 @@ services:
                   type="button"
                   onClick={() => handleExecuteComposeAction('DEPLOY_COMPOSE_UP')}
                   disabled={Boolean(composeActionBusy)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Rocket className="w-3.5 h-3.5" />
                   <span>
@@ -3129,7 +3129,7 @@ services:
                         }`
                       )
                     }
-                    className="inline-flex items-center gap-1 px-2.5 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Run CLI in Shell</span>
@@ -3191,7 +3191,7 @@ services:
                                 </td>
                                 <td className="py-1.5 px-2.5">
                                   <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
                                       ps.role === 'INGRESS_CONTAINER'
                                         ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                                         : 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30'
@@ -3268,7 +3268,7 @@ services:
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold border ${
                       !isAppServing
                         ? 'bg-zinc-200 dark:bg-zinc-800/90 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
                         : 'bg-red-500/20 border-red-400/40 text-red-700 dark:text-red-300'
@@ -3281,7 +3281,7 @@ services:
                         : 'APP ENGINE SERVICE & VERSION EXTERMINATOR (MISSING FROM GCP CONSOLE UI)'}
                     </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 px-2 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 px-2 py-0.5 rounded-full">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Direct REST v1 Service Delete + Default Service $0.00/mo Neutralizer</span>
                   </span>
@@ -3307,7 +3307,7 @@ services:
                       })
                     }
                     disabled={Boolean(appEngineActionBusy)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50 ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50 ${
                       isAppServing
                         ? 'bg-red-600 hover:bg-red-500 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
@@ -3328,7 +3328,7 @@ services:
                   type="button"
                   onClick={() => handleFetchAppEngineOverview(false)}
                   disabled={appEngineState.loading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${
@@ -3343,7 +3343,7 @@ services:
                 <button
                   type="button"
                   onClick={() => setShowAppEngineExterminator(false)}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
                   Close
                 </button>
@@ -3456,7 +3456,7 @@ services:
                     This project does not have a legacy App Engine application or permanent <code>default</code> service. All serverless workloads are running cleanly on Cloud Run v2!
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 font-mono font-bold text-[11px] shrink-0">
+                <span className="px-2.5 py-1 rounded-full-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 font-mono font-bold text-[11px] shrink-0">
                   $0.00/mo App Engine Burn
                 </span>
               </div>
@@ -3484,13 +3484,13 @@ services:
                         <div className="p-3.5 rounded-xl bg-zinc-200/60 dark:bg-zinc-900/80 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="px-2.5 py-0.5 rounded-full bg-zinc-300/80 dark:bg-zinc-800 border border-zinc-400/50 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono font-extrabold text-[11px]">
+                              <span className="px-2.5 py-0.5 rounded-full-full bg-zinc-300/80 dark:bg-zinc-800 border border-zinc-400/50 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono font-extrabold text-[11px]">
                                 DISABLED · 0 ACTIVE SERVICES
                               </span>
                               <span className="font-mono text-xs line-through text-zinc-400 dark:text-zinc-500">
                                 service/default ({svc.primaryVersionId || 'last-version'})
                               </span>
-                              <span className="px-2 py-0.5 rounded bg-zinc-300/60 dark:bg-zinc-800/90 border border-zinc-400/40 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 font-mono font-bold text-[10px]">
+                              <span className="px-2 py-0.5 rounded-full bg-zinc-300/60 dark:bg-zinc-800/90 border border-zinc-400/40 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 font-mono font-bold text-[10px]">
                                 UNAVAILABLE · OFFLINE ($0.00/MO)
                               </span>
                             </div>
@@ -3505,7 +3505,7 @@ services:
                                     })
                                   }
                                   disabled={Boolean(appEngineActionBusy)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-700 hover:bg-zinc-600 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
                                 >
                                   <Lock className="w-3 h-3" />
                                   <span>
@@ -3518,7 +3518,7 @@ services:
                               <button
                                 type="button"
                                 onClick={() => setShowRawTombstoneMetadata((v) => !v)}
-                                className="px-2.5 py-1 rounded-lg bg-zinc-300/60 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border border-zinc-400/40 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold cursor-pointer"
+                                className="px-2.5 py-1 rounded-md bg-zinc-300/60 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border border-zinc-400/40 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold cursor-pointer"
                               >
                                 {showRawTombstoneMetadata
                                   ? 'Hide Raw GCP API Tombstone Shell'
@@ -3577,23 +3577,23 @@ services:
                               service/{svc.id}
                             </span>
                             {isAlreadyMinimalFloor ? (
-                              <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono font-bold">
+                              <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono font-bold">
                                 DISABLED · UNAVAILABLE IN GCP ($0.00/MO)
                               </span>
                             ) : isDefault ? (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
                                 DEFAULT SERVICE (API-LOCKED FROM DIRECT DELETE · USE $0/MO TOMBSTONE)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-bold">
+                              <span className="px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-bold">
                                 NON-DEFAULT SERVICE (DIRECT REST DELETE UNLOCKED)
                               </span>
                             )}
-                            <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono">
+                            <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono">
                               {svc.versionsCount} Version(s) · {svc.zombieVersionsCount} Zombie(s) · ${Number(svc.estimatedMonthlyUsd || 0).toFixed(2)}/mo
                             </span>
                             {svc.iapEnabled && (
-                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 text-[10px] font-mono font-bold">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 text-[10px] font-mono font-bold">
                                 App Engine IAP Enabled
                               </span>
                             )}
@@ -3611,7 +3611,7 @@ services:
                             >
                               <div className="flex flex-wrap items-center gap-2 font-bold">
                                 <span
-                                  className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                                     svc.migrationReadiness.canMigrateAutomatically
                                       ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                                       : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
@@ -3727,7 +3727,7 @@ services:
                                 }
                                 disabled={Boolean(appEngineActionBusy)}
                                 title="Deletes all 0%-traffic versions in default, stops the remaining required version, and locks App Engine to USER_DISABLED ($0.00/mo)"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                               >
                                 <Zap className="w-3.5 h-3.5" />
                                 <span>
@@ -3747,7 +3747,7 @@ services:
                                 })
                               }
                               disabled={Boolean(appEngineActionBusy)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>
@@ -3768,7 +3768,7 @@ services:
                                     : `gcloud app services delete ${svc.id} --project=${projectId} --quiet`
                                 )
                               }
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
                             >
                               <Terminal className="w-3 h-3" />
                               <span>CLI</span>
@@ -3806,7 +3806,7 @@ services:
                                     </td>
                                     <td className="py-2 px-3">
                                       <span
-                                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                                           ver.servingStatus === 'SERVING'
                                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                                             : 'bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30'
@@ -3860,7 +3860,7 @@ services:
                                         {isDefault && ver.trafficPercent === 100 && svc.versionsCount === 1 ? (
                                           <span
                                             title="Google Cloud API permanently forbids deleting the sole 100%-traffic version inside the default service (default can never have 0 versions). Because the version is STOPPED and the app is USER_DISABLED, it costs $0.00/mo."
-                                            className="px-2 py-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold"
+                                            className="px-2 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold"
                                           >
                                             GCP API Lock (Last Version in default · $0/mo)
                                           </span>
@@ -3985,11 +3985,11 @@ services:
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-extrabold">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-amber-500/20 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-extrabold">
                     <HardDrive className="w-3 h-3" />
                     <span>ARTIFACT REGISTRY & CLOUD STORAGE HYGIENE SCANNER</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                     <Lock className="w-3 h-3" />
                     <span>Active Cloud Run Containers Protected from Deletion</span>
                   </span>
@@ -4010,7 +4010,7 @@ services:
                   type="button"
                   onClick={() => handleScanDeadArtifacts(false)}
                   disabled={artifactScanState.loading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${
@@ -4024,7 +4024,7 @@ services:
                 <button
                   type="button"
                   onClick={() => setShowArtifactHunter(false)}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
                   Close
                 </button>
@@ -4199,7 +4199,7 @@ services:
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                                 isDeletingImg
                                   ? 'bg-red-500/20 text-red-400 border-red-500/40'
                                   : !img.isDead
@@ -4267,7 +4267,7 @@ services:
 
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingImg ? (
-                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
+                            <span className="px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
                               Deleting in GCP...
                             </span>
                           ) : img.isDead ? (
@@ -4275,7 +4275,7 @@ services:
                               type="button"
                               disabled={busyThis}
                               onClick={() => handleDeleteDeadContainerImage(img)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>
@@ -4283,7 +4283,7 @@ services:
                               </span>
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
                               <Lock className="w-3 h-3" />
                               <span>Protected (Serving Cloud Run)</span>
                             </span>
@@ -4329,7 +4329,7 @@ services:
                             gs://{b.name} ({b.objectsCount} obj · {b.totalSizeMb} MB)
                           </span>
                           {isDeletingBucket ? (
-                            <span className="px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
+                            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                               DELETING BUCKET...
                             </span>
                           ) : (
@@ -4389,7 +4389,7 @@ services:
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                                 isDeletingObj
                                   ? 'bg-red-500/20 text-red-400 border-red-500/40'
                                   : obj.isBuildStagingArtifact
@@ -4433,7 +4433,7 @@ services:
 
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingObj ? (
-                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
+                            <span className="px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
                               Deleting in GCP...
                             </span>
                           ) : (
@@ -4441,7 +4441,7 @@ services:
                               type="button"
                               disabled={busyObj}
                               onClick={() => handleDeleteSingleGcsArtifact(obj)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>
@@ -4499,7 +4499,7 @@ services:
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
                   <span>BEYOND GCP CONSOLE YAML EXPORT · LIVE KNATIVE → KUBERNETES AST TRANSPILER</span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
@@ -4609,7 +4609,7 @@ services:
                         [sampleSrv.id]: { ...cfg, [tog.key]: !active },
                       }))
                     }
-                    className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                    className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                       active
                         ? 'bg-blue-600/30 border-blue-400 text-white'
                         : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-400'
@@ -4721,7 +4721,7 @@ services:
                     type="button"
                     disabled={isGraduating}
                     onClick={() => handleGraduateServiceToGke(sampleSrv)}
-                    className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-2 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {isGraduating
                       ? 'Graduating Cloud Run Service to GKE...'
@@ -4740,7 +4740,7 @@ services:
                         `global-gke-yaml-${sampleSrv.id}`
                       )
                     }
-                    className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                    className="py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                   >
                     {copiedId === `global-gke-yaml-${sampleSrv.id}`
                       ? '✓ Copied K8s YAML'
@@ -4819,7 +4819,7 @@ services:
                   type="button"
                   disabled={Boolean(quickDeploying)}
                   onClick={() => handleQuickDeployTemplate(tpl)}
-                  className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isDeployingThis ? (
                     <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
@@ -4868,7 +4868,7 @@ services:
               Runtime Service Account (iam.serviceAccounts.actAs):
             </span>
             {defaultComputeSaMissing && (
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                 Default Compute SA Deleted · Using Custom SA
               </span>
             )}
@@ -4935,7 +4935,7 @@ services:
             <button
               type="button"
               onClick={onOpenProvisionCloudRun}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Open Cloud Run Deployment Studio</span>
@@ -4944,7 +4944,7 @@ services:
               type="button"
               disabled={Boolean(quickDeploying)}
               onClick={() => handleQuickDeployTemplate(QUICK_TEMPLATES[0])}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Rocket className="w-3.5 h-3.5" />
               <span>1-Tap Deploy Hello Cloud Run</span>
@@ -4952,7 +4952,7 @@ services:
             <button
               type="button"
               onClick={() => setShowGlobalGkeTranspiler(true)}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Open Cloud Run → GKE Transpiler</span>
@@ -5007,11 +5007,11 @@ services:
                       >
                         {srv.name}
                       </span>
-                      <span className="text-[10px] font-mono bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-mono bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-full">
                         {srv.region}
                       </span>
                       <span
-                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                           isDeleting
                             ? 'bg-red-500/20 text-red-500'
                             : isUpdating
@@ -5098,7 +5098,7 @@ services:
                       {srv.enableDirectVpc && (
                         <span
                           title={`Direct VPC Egress Network: ${srv.vpcNetwork} / Subnet: ${srv.vpcSubnetwork} (${srv.vpcEgress})`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
                         >
                           <Network className="w-3 h-3" />
                           <span>
@@ -5154,7 +5154,7 @@ services:
                       {(srv.multiContainerCount || 1) > 1 && (
                         <span
                           title={`Multi-Container Sidecar Pod (${srv.multiContainerCount} containers sharing 127.0.0.1 and volume mounts)`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
                         >
                           <Layers className="w-3 h-3" />
                           <span>{srv.multiContainerCount}-Container Sidecar Pod</span>
@@ -5165,7 +5165,7 @@ services:
                       {srv.serviceAccount && (
                         <span
                           title={`Runtime Service Account: ${srv.serviceAccount}`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           <span>
@@ -5180,7 +5180,7 @@ services:
                           title={`Mounted Secret Manager references: ${(srv.secretEnvRefs || [])
                             .map((s) => `${s.name} → ${s.secretName}:${s.version}`)
                             .join(', ')}`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           <span>
@@ -5265,7 +5265,7 @@ services:
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'IAP')}
                       title="App Engine-Style 1-Click Direct Cloud IAP Control Plane ($0.00/mo · Zero Load Balancer): Toggle Google Sign-In IAP and manage roles/iap.httpsResourceAccessor principals"
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer ${
                         activeDrawer === 'IAP'
                           ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                           : srv.iapEnabled
@@ -5283,7 +5283,7 @@ services:
                       type="button"
                       onClick={() => handleLoadServiceIntoJobForm(srv)}
                       title="Convert this Cloud Run Service into a Cloud Run v2 Batch Job (up to 24h timeout, parallel task sharding via CLOUD_RUN_TASK_INDEX, persistent GCS FUSE disk, and Cloud Scheduler :run trigger)"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20 transition-colors cursor-pointer"
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>→ Cloud Run Job</span>
@@ -5293,7 +5293,7 @@ services:
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'CONVERT_GKE')}
                       title="Convert this Cloud Run service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU) & deploy to GKE in 1 click"
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer ${
                         activeDrawer === 'CONVERT_GKE'
                           ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                           : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20'
@@ -5306,7 +5306,7 @@ services:
                     <button
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'TUNE')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
                         activeDrawer === 'TUNE'
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -5320,7 +5320,7 @@ services:
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'TRAFFIC')}
                       title="Open Cloud Run Revision Time-Machine, Crash-Loop Log Autopsy, Revision-to-Revision Diff & 1-Click Rollback"
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
                         activeDrawer === 'TRAFFIC'
                           ? 'bg-blue-600 text-white border-blue-600'
                           : srv.hasCrashedRevision
@@ -5338,7 +5338,7 @@ services:
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'LOCAL_TUNNEL')}
                       title="Open 127.0.0.1 Zero-Public-IP Developer Port-Forward Tunnel (gcloud run services proxy with automatic OIDC Bearer token injection)"
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer ${
                         activeDrawer === 'LOCAL_TUNNEL'
                           ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                           : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
@@ -5356,7 +5356,7 @@ services:
                           ? `SSH is active on ${srv.name} — click to disconnect & turn SSH off`
                           : `Open interactive @xterm/xterm Container SSH session (gcloud beta run services ssh ${srv.name})`
                       }
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm cursor-pointer ${
                         activeDrawer === 'SSH_TERMINAL'
                           ? 'bg-blue-600 hover:bg-red-600 text-white'
                           : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -5378,7 +5378,7 @@ services:
                             `gcloud run services describe ${srv.name} --region=${srv.region} --project=${projectId}`
                           )
                         }
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-mono bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 cursor-pointer"
                         title="Inspect in Mobile Cloud Shell"
                       >
                         <Terminal className="w-3.5 h-3.5" />
@@ -5400,7 +5400,7 @@ services:
                           setConfirmDeleteId(srv.id);
                         }
                       }}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
                         isConfirmingDelete
                           ? 'bg-red-600 text-white border-red-500 shadow-sm'
                           : 'text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25'
@@ -5444,7 +5444,7 @@ services:
                           onClick={() =>
                             handleCopy(recreateCli, `recreate-${srv.id}`)
                           }
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 font-mono text-[11px] font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 font-mono text-[11px] font-bold cursor-pointer"
                           title={recreateCli}
                         >
                           {copiedId === `recreate-${srv.id}` ? (
@@ -5576,14 +5576,14 @@ services:
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(null)}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-mono font-semibold text-xs cursor-pointer"
+                            className="px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-mono font-semibold text-xs cursor-pointer"
                           >
                             Keep Service Safe
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteService(srv)}
-                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs shadow-sm cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs shadow-sm cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>
@@ -5610,7 +5610,7 @@ services:
                         {srv.cpu} vCPU · {srv.memory}
                       </span>
                       {Number(srv.gpuCount || 0) > 0 && (
-                        <span className="text-[10px] bg-blue-500/20 text-blue-500 border border-blue-500/30 px-1.5 py-0.2 rounded">
+                        <span className="text-[10px] bg-blue-500/20 text-blue-500 border border-blue-500/30 px-1.5 py-0.2 rounded-full">
                           {srv.gpuCount}x {srv.gpuType || 'nvidia-l4'}
                         </span>
                       )}
@@ -5708,11 +5708,11 @@ services:
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold uppercase bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                               APP ENGINE-STYLE 1-CLICK CLOUD IAP · ZERO LOAD BALANCER ($0.00/MO)
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                                 isIapOn
                                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                                   : 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30'
@@ -5735,7 +5735,7 @@ services:
                             type="button"
                             onClick={() => handleInspectServiceIap(srv)}
                             disabled={iapEntry.loading}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50 cursor-pointer"
+                            className="px-2.5 py-1 rounded-md text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50 cursor-pointer"
                           >
                             {iapEntry.loading ? 'Inspecting...' : 'Refresh IAP State'}
                           </button>
@@ -5788,7 +5788,7 @@ services:
                           </div>
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[9.5px] ${
+                              className={`px-1.5 py-0.5 rounded-full text-[9.5px] ${
                                 iapData.annotationEnabled || srv.iapEnabled
                                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
                                   : 'bg-zinc-500/15 text-zinc-500'
@@ -5797,7 +5797,7 @@ services:
                               Annotation: {iapData.annotationEnabled || srv.iapEnabled ? 'TRUE' : 'FALSE'}
                             </span>
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[9.5px] ${
+                              className={`px-1.5 py-0.5 rounded-full text-[9.5px] ${
                                 iapData.iapServiceAgentHasInvoker || srv.iapServiceAgentBound
                                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
                                   : 'bg-zinc-500/15 text-zinc-500'
@@ -5852,7 +5852,7 @@ services:
                                   : currentAccessors.join(', ')
                               )
                             }
-                            className="px-3.5 py-2 rounded-lg text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                            className="px-3.5 py-2 rounded-md text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                           >
                             {busyState === 'IAP'
                               ? 'Orchestrating 4-Step IAP...'
@@ -5866,7 +5866,7 @@ services:
                               type="button"
                               disabled={Boolean(busyState)}
                               onClick={() => handleToggleServiceIap(srv, false)}
-                              className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 cursor-pointer disabled:opacity-50"
+                              className="px-3 py-2 rounded-md text-xs font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 cursor-pointer disabled:opacity-50"
                             >
                               Disable Cloud IAP
                             </button>
@@ -5882,7 +5882,7 @@ services:
                               Org-Less (@gmail.com) Project OAuth 2.0 Client Binder (projects/{iapData.projectNumber || '<PROJECT_NUMBER>'}/iap_web:iapSettings)
                             </div>
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                                 iapData.oauthClientConfigured
                                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                                   : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
@@ -5951,7 +5951,7 @@ services:
                                   STEP 0{st.step}
                                 </span>
                                 <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
                                     st.status === 'COMPLETED'
                                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
                                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-300'
@@ -6049,7 +6049,7 @@ services:
                                 },
                               }))
                             }
-                            className={`p-2 rounded-lg border text-left text-xs font-mono transition-colors ${
+                            className={`p-2 rounded-md border text-left text-xs font-mono transition-colors ${
                               form.billingMode === 'REQUEST_BASED' &&
                               (!form.gpuAccelerator ||
                                 form.gpuAccelerator === 'NONE')
@@ -6075,7 +6075,7 @@ services:
                                 },
                               }))
                             }
-                            className={`p-2 rounded-lg border text-left text-xs font-mono transition-colors ${
+                            className={`p-2 rounded-md border text-left text-xs font-mono transition-colors ${
                               form.billingMode === 'INSTANCE_BASED' ||
                               (form.gpuAccelerator &&
                                 form.gpuAccelerator !== 'NONE')
@@ -6136,7 +6136,7 @@ services:
                                     },
                                   }));
                                 }}
-                                className={`p-2 rounded-lg border text-xs font-mono transition-colors ${
+                                className={`p-2 rounded-md border text-xs font-mono transition-colors ${
                                   active
                                     ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 font-bold'
                                     : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -6414,7 +6414,7 @@ services:
                               },
                             }))
                           }
-                          className={`w-full h-[34px] rounded-lg px-2.5 text-xs font-mono border text-left flex items-center truncate ${
+                          className={`w-full h-[34px] rounded-md px-2.5 text-xs font-mono border text-left flex items-center truncate ${
                             form.startupCpuBoost
                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                               : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
@@ -6583,7 +6583,7 @@ services:
                                   type="button"
                                   onClick={() => onOpenSecretManagerStudio()}
                                   title="Open Dedicated Secret Manager Lifecycle Studio to rotate versions, disable old versions ($0/mo), manage IAM secretAccessor bindings, and track your 6 Free Active Versions quota"
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                                 >
                                   <KeyRound className="w-3 h-3 text-amber-400" />
                                   <span>
@@ -6604,7 +6604,7 @@ services:
                                         : livePairs.map((p) => p.name)
                                     )
                                   }
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm transition-colors cursor-pointer"
                                 >
                                   <ShieldCheck className="w-3.5 h-3.5" />
                                   <span>
@@ -6625,7 +6625,7 @@ services:
                               <span className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
                                 Monthly Free Tier: First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month
                               </span>
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono font-bold text-[9.5px]">
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono font-bold text-[9.5px]">
                                 Beyond 6 Free: $0.06 / active version / mo · $0.03 / 10k access ops
                               </span>
                             </div>
@@ -6694,7 +6694,7 @@ services:
                               <span
                                 key={`mounted-${ref.name}`}
                                 title={`Mounted from Secret Manager: ${ref.secret} (version: ${ref.version})`}
-                                className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
                               >
                                 <Lock className="w-2.5 h-2.5" />
                                 <span>
@@ -7175,7 +7175,7 @@ services:
                         type="button"
                         onClick={() => handleSaveTuneConfig(srv)}
                         disabled={Boolean(busyState)}
-                        className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-md transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Rocket className="w-3.5 h-3.5" />
                         <span>Deploy Updated Revision</span>
@@ -7198,7 +7198,7 @@ services:
                     <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-white dark:bg-zinc-950 p-4 rounded-xl">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
                             <span>
                                CLOUD RUN REVISION TIME-MACHINE · CRASH-LOOP AUTOPSY · CONFIG & SECRET DIFF
                             </span>
@@ -7222,7 +7222,7 @@ services:
                                 })
                               }
                               title={`Shift 100% of live traffic on ${srv.name} to known-healthy revision ${srv.lastHealthyRevision} in <2 seconds`}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm cursor-pointer"
                             >
                               <Zap className="w-3 h-3" />
                               <span>
@@ -7254,7 +7254,7 @@ services:
                           {(srv.traffic || []).map((t, idx) => (
                             <span
                               key={idx}
-                              className="text-xs font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-md font-bold"
+                              className="text-xs font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full font-bold"
                             >
                               <strong>{t.percent}%</strong> →{' '}
                               {t.revision === 'LATEST'
@@ -7311,25 +7311,25 @@ services:
                                         {rev.shortName}
                                       </span>
                                       {isCrashed ? (
-                                        <span className="text-[9.5px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded">
+                                        <span className="text-[9.5px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded-full">
                                           CRASHED ({rev.failureReason || 'FAILED'})
                                         </span>
                                       ) : isReconciling ? (
-                                        <span className="text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                        <span className="text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
                                           DEPLOYING
                                         </span>
                                       ) : (
-                                        <span className="text-[9.5px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                        <span className="text-[9.5px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-full">
                                           ✓ HEALTHY
                                         </span>
                                       )}
                                       {isLatestReady && (
-                                        <span className="text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                                        <span className="text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-full">
                                           LATEST READY
                                         </span>
                                       )}
                                       {trafficPct > 0 && (
-                                        <span className="text-[9.5px] font-mono font-extrabold bg-emerald-600 text-white px-1.5 py-0.5 rounded">
+                                        <span className="text-[9.5px] font-mono font-extrabold bg-emerald-600 text-white px-1.5 py-0.5 rounded-full">
                                           {trafficPct}% LIVE TRAFFIC
                                         </span>
                                       )}
@@ -7496,7 +7496,7 @@ services:
                                         fixPayload: diagnosis.fixPayload || {},
                                       })
                                     }
-                                    className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-md text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                                   >
                                     {diagnosis.recommendedActionLabel}
                                   </button>
@@ -7508,7 +7508,7 @@ services:
                                     <button
                                       type="button"
                                       onClick={() => onOpenSecretManagerStudio()}
-                                      className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm cursor-pointer"
+                                      className="px-3 py-1.5 rounded-md text-[11px] font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm cursor-pointer"
                                     >
                                       {diagnosis.recommendedActionLabel}
                                     </button>
@@ -7525,7 +7525,7 @@ services:
                                         mode: 'INSTANT_TRAFFIC_PIN',
                                       })
                                     }
-                                    className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                                   >
                                      Rollback 100% Traffic to {report.baselineRevision.shortName}
                                   </button>
@@ -7546,7 +7546,7 @@ services:
                               <span className="text-[10.5px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400">
                                 Revision Config & Secret Diff: {diff.baselineRevision} (Previous) → {report?.revisionName} (Selected)
                               </span>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 font-bold">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 font-bold">
                                 {diff.totalChangesCount} Spec Change(s) Detected
                               </span>
                             </div>
@@ -7686,7 +7686,7 @@ services:
                                         : ''}
                                     </span>
                                     <span
-                                      className={`px-1 rounded text-[9px] uppercase font-bold shrink-0 ${
+                                      className={`px-1 rounded-full text-[9px] uppercase font-bold shrink-0 ${
                                         isErr
                                           ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                                           : isWarn
@@ -7760,7 +7760,7 @@ services:
                             type="button"
                             disabled={isTimeMachineBusy}
                             onClick={() => handleApplyTraffic(srv)}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-md transition-colors cursor-pointer"
                           >
                             Apply Canary Split
                           </button>
@@ -7884,7 +7884,7 @@ services:
                                   [srv.id]: { ...cfg, [tog.key]: !active },
                                 }))
                               }
-                              className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                              className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                                 active
                                   ? 'bg-blue-600/30 border-blue-400 text-white'
                                   : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-400'
@@ -8002,7 +8002,7 @@ services:
                               type="button"
                               disabled={isGraduating}
                               onClick={() => handleGraduateServiceToGke(srv)}
-                              className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                              className="flex-1 py-2 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                             >
                               {isGraduating
                                 ? 'Graduating to GKE...'
@@ -8021,7 +8021,7 @@ services:
                                   `gke-yaml-${srv.id}`
                                 )
                               }
-                              className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                              className="py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                             >
                               {copiedId === `gke-yaml-${srv.id}`
                                 ? '✓ Copied YAML'

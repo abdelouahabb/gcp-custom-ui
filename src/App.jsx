@@ -4237,14 +4237,14 @@ function CloudPulseCockpit() {
                   <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
                     CloudPulse <span className="text-zinc-500 dark:text-zinc-400">2026</span>
                   </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full-full">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     REAL PROJECT MODE
                   </span>
                   {gdePrivacyConfig.enabled && (
                     <span
                       title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full-full"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                       GDE TUTORIAL SHIELD ON
@@ -4277,7 +4277,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setActiveTab('OVERVIEW')}
                 title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
                   activeTab === 'OVERVIEW'
                     ? 'bg-blue-600 text-white border-blue-400/40'
                     : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
@@ -4295,7 +4295,7 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open 10-Persona Enterprise Architecture Board & Pre-Flight War-Room: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps, (06) AI/MLOps Engineer, (07) SRE Commander, (08) Database Reliability Engineer (DBRE), (09) FinOps & GreenOps, and (10) K8s & IDP Platform Engineer"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>10-Persona Board</span>
@@ -4309,7 +4309,7 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>SDK 590.0.1 Lab</span>
@@ -4327,7 +4327,7 @@ function CloudPulseCockpit() {
                     }
                   }}
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span className="hidden md:inline text-[11px] font-sans font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
@@ -4413,7 +4413,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('GCS_BUCKET')}
                 title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" />
                 <span>Provision Resource</span>
@@ -4869,7 +4869,7 @@ function CloudPulseCockpit() {
                           Every Google Cloud technology is organized into 5 dedicated, non-overlapping engineering domains — click any studio below to open its full control plane.
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+                      <span className="px-2.5 py-1 rounded-full-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
                         5 DOMAINS · 20 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
@@ -4944,7 +4944,7 @@ function CloudPulseCockpit() {
                                 type="button"
                                 data-feature-id={item.id}
                                 onClick={() => setActiveTab(item.id)}
-                                className="w-full text-left p-2 rounded-lg bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                                className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
                               >
                                 <div className="min-w-0">
                                   <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -5914,7 +5914,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 title={tab.tip}
-                className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                className={`flex flex-col items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
                   isActive
                     ? 'text-blue-600 dark:text-blue-400'
                     : 'text-zinc-500 dark:text-zinc-400'
@@ -6213,17 +6213,17 @@ function MandatoryDeleteConfirmationModal({
                       : 'CloudPulse 2026 Destructive Action Gatekeeper')}
                 </span>
                 {normalizedTrack === 'ALPHA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-red-500/20 text-red-300 border border-red-500/40">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-red-500/20 text-red-300 border border-red-500/40">
                     [ALPHA · EARLY ACCESS]
                   </span>
                 )}
                 {normalizedTrack === 'BETA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
                     [BETA · PUBLIC PREVIEW]
                   </span>
                 )}
                 {normalizedTrack === 'GA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
                     [GA · LIVE GCP API]
                   </span>
                 )}
@@ -6234,7 +6234,7 @@ function MandatoryDeleteConfirmationModal({
             </div>
           </div>
           {queueLength > 1 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/30 border border-white/20 shrink-0">
+            <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-black/30 border border-white/20 shrink-0">
               1 of {queueLength} queued
             </span>
           )}
@@ -6264,7 +6264,7 @@ function MandatoryDeleteConfirmationModal({
                     : 'Target Resource to Destroy')}
               </span>
               <span
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold text-white ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold text-white ${
                   isOneTapAction ? 'bg-amber-600' : 'bg-red-600'
                 }`}
               >
@@ -6300,7 +6300,7 @@ function MandatoryDeleteConfirmationModal({
           <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-2">
             <div className="font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
               <span>1. What Happens Next (Live Cloud Execution Sequence)</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30">
                 PRE-EXECUTION PREVIEW
               </span>
             </div>
@@ -6311,7 +6311,7 @@ function MandatoryDeleteConfirmationModal({
                     key={idx}
                     className="flex items-start gap-2.5 p-2 rounded-lg bg-white/75 dark:bg-zinc-900/80 border border-blue-500/20"
                   >
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0 mt-0.5">
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0 mt-0.5">
                       STEP 0{idx + 1}
                     </span>
                     <span className="font-medium text-[11px] sm:text-xs break-words">
@@ -6340,7 +6340,7 @@ function MandatoryDeleteConfirmationModal({
           <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
             <div className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
               <span>2. Google Cloud Billing & Cost Impact Warning</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40">
                 FINOPS GUARDRAIL
               </span>
             </div>
@@ -6366,14 +6366,14 @@ function MandatoryDeleteConfirmationModal({
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-md text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
               Cancel (Do Not Execute) [Esc]
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className={`px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-md text-xs font-mono font-extrabold text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 isOneTapAction
                   ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
                   : 'bg-red-600 hover:bg-red-500 shadow-red-600/30'

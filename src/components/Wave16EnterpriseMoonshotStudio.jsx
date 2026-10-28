@@ -223,7 +223,7 @@ export default function Wave16EnterpriseMoonshotStudio({
       <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase">
               <Sparkles className="w-3 h-3" />
               <span>MULTI-REGION DR GAMEDAY &amp; SQL SURGEON · LIVE GCP CONTROL PLANE</span>
             </div>
@@ -237,7 +237,7 @@ export default function Wave16EnterpriseMoonshotStudio({
             disabled={loading}
             onClick={fetchWave16}
             title="Refresh live telemetry across Storage, BigQuery, Cloud Run, and IAM"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -258,7 +258,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                 data-feature-id={t.id}
                 onClick={() => setActiveTab(t.id)}
                 title={`${t.title} — ${t.subtitle}`}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                className={`p-3 rounded-md border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -314,7 +314,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       disabled={busyId === c.resourceName}
                       onClick={() => handleApplyLifecycle(c.resourceName)}
                       title={`Apply 30d Nearline -> 90d Coldline Lifecycle Policy to gs://${c.resourceName}`}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                     >
                       {busyId === c.resourceName
                         ? 'Patching Bucket...'
@@ -485,7 +485,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                     type="button"
                     onClick={handleDownloadDrReport}
                     title={`Download JSON Disaster Recovery Audit Report for ${projectId} (${blackoutRegion} outage simulation)`}
-                    className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    className="h-9 px-3.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1.5"
                   >
                     <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <span>Export DR Report (.json)</span>
@@ -507,7 +507,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                         type="button"
                         onClick={() => setBlackoutRegion(reg)}
                         title={`Simulate a complete regional blackout in ${reg} (${cnt} project asset(s) hosted in ${reg})`}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer ${
                           active
                             ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -544,7 +544,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       </span>
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-[10px] font-bold">
                         SHA-256: {drDrillReceipt.sha256Signature || 'verified'}
                       </span>
                       <button
@@ -583,7 +583,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       </span>
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-[10px] font-bold">
                         RPO: 0s · RTO: 2s · SHA-256: {drVaultReceipt.sha256Signature || 'verified'}
                       </span>
                       <button
@@ -671,7 +671,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       type="button"
                       onClick={handleProtectAllInRegion}
                       title={`Enable Object Versioning and Multi-Region DR Mirroring for all ${spofCount} single-region SPOF resource(s) in ${blackoutRegion}`}
-                      className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      className="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <span>
@@ -679,7 +679,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       </span>
                     </button>
                   ) : (
-                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
                       ✓ 100% OF {blackoutRegion.toUpperCase()} ASSETS SURVIVE OUTAGE
                     </span>
                   )}
@@ -757,7 +757,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-2">
                           {a.isProvisionedDrVault && (
-                            <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold">
                               NEW · PROVISIONED US MULTI-REGION VAULT
                             </span>
                           )}
@@ -771,7 +771,7 @@ export default function Wave16EnterpriseMoonshotStudio({
 
                         <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded border text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${
                               isSpof
                                 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                                 : isAuto
@@ -788,7 +788,7 @@ export default function Wave16EnterpriseMoonshotStudio({
 
                           <span
                             title="RPO (Recovery Point Objective) = max seconds of data loss during regional outage. RTO (Recovery Time Objective) = seconds required to restore traffic."
-                            className="px-2 py-0.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300 font-bold"
+                            className="px-2 py-0.5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300 font-bold"
                           >
                             RPO (Data Loss): {a.rpoSeconds}s · RTO (Recovery Time): {a.rtoSeconds}s
                           </span>
@@ -984,7 +984,7 @@ export default function Wave16EnterpriseMoonshotStudio({
               disabled={busyId === 'DRY_RUN'}
               onClick={handleDryRunSql}
               title="Execute a live $0.00 BigQuery Dry-Run (dryRun=true) to verify exact bytes scanned and on-demand query cost"
-              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
             >
               {busyId === 'DRY_RUN'
                 ? 'Running BigQuery Dry-Run...'

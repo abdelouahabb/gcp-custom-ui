@@ -26,7 +26,7 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
     return (
       <span
         title="Google Cloud GA Track (Promoted in SDK 590.0.1 · 2026.10.22): Production General Availability command group."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
         <span>[GA · PROMOTED 590.0.1]</span>
@@ -37,7 +37,7 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
     return (
       <span
         title="Google Cloud BETA Track (gcloud beta / v1beta): Public Preview capability undergoing final stabilization before GA."
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
         <span>[BETA · PUBLIC PREVIEW]</span>
@@ -48,7 +48,7 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
     return (
       <span
         title="Combined Google Cloud GA + BETA + ALPHA Track (SDK 590.0.1)"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 shrink-0"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
         <span>[GA + BETA + ALPHA]</span>
@@ -58,7 +58,7 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   return (
     <span
       title="Google Cloud ALPHA Track (gcloud alpha / v1alpha): Early Access Preview with no SLA; flags and schemas may evolve without notice."
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/40 shrink-0"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
       <span>[ALPHA · EARLY ACCESS]</span>
@@ -358,7 +358,7 @@ export default function GcloudAlphaBetaStudio({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
                   GCLOUD {overview?.sdk?.coreVersion || '590.0.1'} CLI LAB
@@ -432,7 +432,7 @@ export default function GcloudAlphaBetaStudio({
               type="button"
               onClick={fetchOverview}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -487,7 +487,7 @@ export default function GcloudAlphaBetaStudio({
           ].map((c) => (
             <span
               key={c.k}
-              className="px-2 py-0.5 rounded-md bg-white/80 dark:bg-zinc-900/80 border border-zinc-300/80 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300"
+              className="px-2 py-0.5 rounded-full bg-white/80 dark:bg-zinc-900/80 border border-zinc-300/80 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300"
             >
               <strong>{c.k}</strong>={c.v}
             </span>
@@ -531,7 +531,7 @@ export default function GcloudAlphaBetaStudio({
                   setWaveFilter('ALL');
                   setTrackFilter('ALL');
                 }}
-                className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="h-8 px-2.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Reset Filter
               </button>
@@ -562,7 +562,7 @@ export default function GcloudAlphaBetaStudio({
               type="button"
               data-feature-id={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
-              className={`w-full h-24 text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+              className={`w-full h-24 text-left p-3 rounded-md border transition-all cursor-pointer flex flex-col justify-between ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : 'bg-white dark:bg-[#202124] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -572,7 +572,7 @@ export default function GcloudAlphaBetaStudio({
                 <span className="inline-flex items-center gap-1">
                   <Icon className="w-4 h-4 shrink-0 opacity-80" />
                   <span
-                    className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
+                    className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-full ${
                       tab.wave === 'WAVE_3'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                         : tab.wave === 'WAVE_2'
@@ -626,7 +626,7 @@ export default function GcloudAlphaBetaStudio({
                 <button
                   type="button"
                   onClick={() => onSelectStudioTab(activeTabMeta.ownerStudioTab)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
                   <span>{activeTabMeta.ownerStudioLabel}</span>
                 </button>
@@ -706,7 +706,7 @@ export default function GcloudAlphaBetaStudio({
                     instances: workerInstances,
                   })
                 }
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -723,7 +723,7 @@ export default function GcloudAlphaBetaStudio({
                     '[BETA] worker-pools deploy CLI'
                   )
                 }
-                className="p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="p-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 title="Copy [BETA] CLI command"
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -795,7 +795,7 @@ export default function GcloudAlphaBetaStudio({
                       .filter(Boolean),
                   })
                 }
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Globe className="w-3.5 h-3.5" />
                 <span>
@@ -812,7 +812,7 @@ export default function GcloudAlphaBetaStudio({
                     '[BETA] multi-region-services CLI'
                   )
                 }
-                className="p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="p-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
               </button>
@@ -874,7 +874,7 @@ export default function GcloudAlphaBetaStudio({
                     image: workerImage,
                   })
                 }
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
@@ -891,7 +891,7 @@ export default function GcloudAlphaBetaStudio({
                       `gcloud beta run instances list --project=${projectId} --region=${region}`
                     )
                   }
-                  className="px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-mono font-semibold cursor-pointer"
+                  className="px-2.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-mono font-semibold cursor-pointer"
                   title="Run in Cloud Shell"
                 >
                   $ Shell
@@ -941,7 +941,7 @@ export default function GcloudAlphaBetaStudio({
               onClick={() =>
                 executeAlphaBetaAction('SCAN_ALPHA_AGENT_REGISTRY')
               }
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
               <span>
@@ -1008,7 +1008,7 @@ export default function GcloudAlphaBetaStudio({
               <button
                 type="button"
                 onClick={() => onSelectStudioTab('MCP_HUB')}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer shrink-0"
+                className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer shrink-0"
               >
                 Open Dedicated MCP Servers Tab →
               </button>
@@ -1083,7 +1083,7 @@ export default function GcloudAlphaBetaStudio({
                   resourceName: troubleshootResource,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
@@ -1178,7 +1178,7 @@ export default function GcloudAlphaBetaStudio({
                   pamJustification,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <KeyRound className="w-4 h-4" />
               <span>
@@ -1232,7 +1232,7 @@ export default function GcloudAlphaBetaStudio({
                   'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING'
                 )
               }
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Activity className="w-4 h-4" />
               <span>
@@ -1337,7 +1337,7 @@ export default function GcloudAlphaBetaStudio({
               onClick={() =>
                 executeAlphaBetaAction('RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE')
               }
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <FileCode2 className="w-4 h-4" />
               <span>
@@ -1401,7 +1401,7 @@ export default function GcloudAlphaBetaStudio({
                   samplePromptText,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <ShieldAlert className="w-4 h-4" />
               <span>
@@ -1466,7 +1466,7 @@ export default function GcloudAlphaBetaStudio({
                   modelArmorTemplateId,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Play className="w-4 h-4" />
               <span>
@@ -1541,7 +1541,7 @@ export default function GcloudAlphaBetaStudio({
                   { devKnowledgeQuery }
                 )
               }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Globe className="w-4 h-4" />
               <span>
@@ -1629,7 +1629,7 @@ export default function GcloudAlphaBetaStudio({
                   quotaService,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Activity className="w-4 h-4" />
               <span>
@@ -1718,7 +1718,7 @@ export default function GcloudAlphaBetaStudio({
                   }
                 )
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Play className="w-4 h-4" />
               <span>
@@ -1766,7 +1766,7 @@ export default function GcloudAlphaBetaStudio({
               onClick={() =>
                 executeAlphaBetaAction('SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST')
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
@@ -1843,7 +1843,7 @@ export default function GcloudAlphaBetaStudio({
                   celExpression,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Play className="w-4 h-4" />
               <span>
@@ -1897,7 +1897,7 @@ export default function GcloudAlphaBetaStudio({
                   { clusterDirectorId }
                 )
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
               <span>
@@ -1972,7 +1972,7 @@ export default function GcloudAlphaBetaStudio({
                   }
                 )
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Play className="w-4 h-4" />
               <span>
@@ -2005,7 +2005,7 @@ export default function GcloudAlphaBetaStudio({
                 onClick={() =>
                   executeAlphaBetaAction('SCAN_WAVE3_GCLOUD_590_FRONTIER')
                 }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -2100,7 +2100,7 @@ export default function GcloudAlphaBetaStudio({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-extrabold">
                         {item.badge}
                       </span>
                       <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
@@ -2317,7 +2317,7 @@ export default function GcloudAlphaBetaStudio({
                     : ' · All Required APIs Active'}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono font-bold">
                 --billing-project={lastReceipt.quotaProjectEnforced || projectId}
               </span>
             </div>

@@ -1074,7 +1074,7 @@ export default function Revolutionary2026Suite({
             <h3 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
               2026 Beyond-Console Innovation Lab
             </h3>
-            <span className="text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-0.5 rounded-md">
+            <span className="text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-0.5 rounded-full">
               ENTERPRISE ARCHITECTURE SUITE
             </span>
           </div>
@@ -1108,7 +1108,7 @@ export default function Revolutionary2026Suite({
               disabled={hibernateBusy}
               onClick={() => handleHibernateToggle('SLEEP')}
               title="Stop all running VMs and scale warm Cloud Run instances to 0 (Active compute → $0/hr; Persistent Disks & unused Static External IPs still bill)"
-              className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               <Moon className="w-3.5 h-3.5 shrink-0" />
               <span>{hibernateBusy ? 'Parking...' : 'Park Compute'}</span>
@@ -1119,7 +1119,7 @@ export default function Revolutionary2026Suite({
               disabled={hibernateBusy}
               onClick={() => handleHibernateToggle('WAKE')}
               title="Wake parked Compute VMs and restore warm Cloud Run instances"
-              className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="h-8 px-3 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               <Sun className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
               <span>Wake Fleet</span>
@@ -1192,7 +1192,7 @@ export default function Revolutionary2026Suite({
               <button
                 type="button"
                 onClick={() => setLabCategory('ALL')}
-                className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="h-8 px-2.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Reset Filter
               </button>
@@ -1367,7 +1367,7 @@ export default function Revolutionary2026Suite({
                   data-feature-id={t.id}
                   onClick={() => setSubTab(t.id)}
                   title={t.tip}
-                  className={`w-full h-11 px-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                  className={`w-full h-11 px-3 rounded-md border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
@@ -1380,7 +1380,7 @@ export default function Revolutionary2026Suite({
                     </span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-mono shrink-0 ${
                       active
                         ? 'bg-black/25 text-blue-100'
                         : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
@@ -1404,7 +1404,7 @@ export default function Revolutionary2026Suite({
                 type="button"
                 onClick={() => onSelectStudioTab('STARTUP_10X')}
                 title="Open dedicated Startup 10X Mentor Studio (Runway, Burn Guardrails & Launch Readiness)"
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Startup 10X Studio →
               </button>
@@ -1412,7 +1412,7 @@ export default function Revolutionary2026Suite({
                 type="button"
                 onClick={() => onSelectStudioTab('MCP_HUB')}
                 title="Open dedicated MCP Servers Studio (48 Official *.googleapis.com/mcp Endpoints)"
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 48 Official MCP Servers →
               </button>
@@ -1420,7 +1420,7 @@ export default function Revolutionary2026Suite({
                 type="button"
                 onClick={() => onSelectStudioTab('CLOUD_STORAGE', 'RAM_DLP')}
                 title="Open Storage RAM DLP X-Ray & SEC 17a-4 WORM Ransomware Shield inside Cloud Storage Studio"
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Storage RAM DLP &amp; WORM Lock →
               </button>
@@ -1428,7 +1428,7 @@ export default function Revolutionary2026Suite({
                 type="button"
                 onClick={() => onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')}
                 title="Open IAM Surgeon, SA Key Kill-Switch & SHA-256 Time-Machine inside IAM Studio"
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 IAM Surgeon &amp; SA Key Kill-Switch →
               </button>
@@ -1436,7 +1436,7 @@ export default function Revolutionary2026Suite({
                 type="button"
                 onClick={() => onSelectStudioTab('CLOUD_SOC')}
                 title="Open 20-Pillar Cloud SOC, Vertex AI Model Armor & Red-Team Ledger"
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/50 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Cloud SOC &amp; Model Armor →
               </button>
@@ -1572,12 +1572,12 @@ export default function Revolutionary2026Suite({
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Public Internet Exposed (
                   {publicFirewalls.length + publicRun.length})
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   IAM / VPC Protected ({vpcs.length + buckets.length})
                 </span>
@@ -1628,7 +1628,7 @@ export default function Revolutionary2026Suite({
                             .join(' ')}
                         </div>
                       </div>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
                         0.0.0.0/0 →
                       </span>
                     </div>
@@ -1639,7 +1639,7 @@ export default function Revolutionary2026Suite({
                   onClick={() =>
                     onSelectStudioTab && onSelectStudioTab('VPC_NETWORKS')
                   }
-                  className="w-full py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 text-center cursor-pointer transition-colors"
+                  className="w-full py-1.5 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 text-center cursor-pointer transition-colors"
                 >
                   Open Firewall &amp; IAP Perimeter Studio →
                 </button>
@@ -1663,7 +1663,7 @@ export default function Revolutionary2026Suite({
                     >
                       <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                         <span>vpc/{vpc.name}</span>
-                        <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded-full">
                           MTU {vpc.mtu} →
                         </span>
                       </div>
@@ -1678,7 +1678,7 @@ export default function Revolutionary2026Suite({
                   type="button"
                   onClick={() => onOpenProvision && onOpenProvision('VPC_NETWORK')}
                   title="Open the Live Resource Provisioner pre-set to create a new custom or auto-mode VPC Network"
-                  className="w-full py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                  className="w-full py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                 >
                   + Provision VPC Network
                 </button>
@@ -1712,7 +1712,7 @@ export default function Revolutionary2026Suite({
                         >
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                             <span>VM: {vm.name}</span>
-                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded-full">
                               {vm.zone} · SSH/SCP →
                             </span>
                           </div>
@@ -1732,7 +1732,7 @@ export default function Revolutionary2026Suite({
                         >
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                             <span>Run: {srv.name}</span>
-                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded-full">
                               {srv.region} →
                             </span>
                           </div>
@@ -1751,7 +1751,7 @@ export default function Revolutionary2026Suite({
                     type="button"
                     onClick={() => onOpenProvision && onOpenProvision('CLOUD_RUN')}
                     title="Open the Live Resource Provisioner to deploy a new serverless Cloud Run container service"
-                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                    className="py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                   >
                     + Deploy Run
                   </button>
@@ -1761,7 +1761,7 @@ export default function Revolutionary2026Suite({
                       onOpenProvision && onOpenProvision('COMPUTE_VM')
                     }
                     title="Open the Live Resource Provisioner to launch a new Compute Engine VM instance"
-                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                    className="py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                   >
                     + Launch VM
                   </button>
@@ -1789,7 +1789,7 @@ export default function Revolutionary2026Suite({
                     >
                       <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between gap-2">
                         <span className="truncate">gs://{b.name}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shrink-0">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shrink-0">
                           Workbench →
                         </span>
                       </div>
@@ -1807,7 +1807,7 @@ export default function Revolutionary2026Suite({
                     type="button"
                     onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
                     title="Open the Live Resource Provisioner to create a compliant Cloud Storage bucket"
-                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                    className="py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                   >
                     + Create Bucket
                   </button>
@@ -1821,7 +1821,7 @@ export default function Revolutionary2026Suite({
                       )
                     }
                     title="Open S3 / MinIO / Ceph RGW Multi-Cloud Bucket Importer (M03)"
-                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                    className="py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                   >
                     Import S3/MinIO
                   </button>
@@ -1881,7 +1881,7 @@ export default function Revolutionary2026Suite({
                   <span className="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold">
                     Night-Mode FinOps Sleep Switch
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 whitespace-nowrap">
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 whitespace-nowrap">
                     REST + CLOUD SCHEDULER
                   </span>
                 </div>
@@ -1900,7 +1900,7 @@ export default function Revolutionary2026Suite({
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('SLEEP')}
                   title="Stop all running Compute VMs and scale warm Cloud Run instances to minInstances=0 (Note: Persistent Disks & Static External IPs still incur GCP storage/reservation charges)"
-                  className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  className="h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Moon className="w-3.5 h-3.5 shrink-0" />
                   <span>{hibernateBusy ? 'Parking...' : 'Park Compute'}</span>
@@ -1910,7 +1910,7 @@ export default function Revolutionary2026Suite({
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('WAKE')}
                   title="Restart parked Compute Engine VMs and restore Cloud Run services for active daytime workloads"
-                  className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  className="h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   <span>Wake Fleet</span>
@@ -1930,7 +1930,7 @@ export default function Revolutionary2026Suite({
                     Important Billing Notice: What Still Charges While Parked?
                   </h4>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 whitespace-nowrap shrink-0">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 whitespace-nowrap shrink-0">
                   UNALLOCATED &amp; DISK FLOOR
                 </span>
               </div>
@@ -1959,7 +1959,7 @@ export default function Revolutionary2026Suite({
                     <h4 className="text-xs font-extrabold font-mono uppercase text-zinc-900 dark:text-zinc-100">
                       Google Cloud Scheduler + Compute Instance Schedules
                     </h4>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                       TZ: {activeTimeZone} ({utcOffsetLabel})
                     </span>
                   </div>
@@ -1987,7 +1987,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
                       setCopiedType('CLOUD_SCHEDULER_CLI');
                       setTimeout(() => setCopiedType(null), 1800);
                     }}
-                    className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 shadow-sm transition-colors cursor-pointer"
+                    className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 shadow-sm transition-colors cursor-pointer"
                   >
                     {copiedType === 'CLOUD_SCHEDULER_CLI' ? (
                       <>
@@ -2037,7 +2037,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
                       {item.name}
                     </span>{' '}
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                       {item.category}
                     </span>
                     <div className="text-[11px] text-zinc-500">
@@ -2098,7 +2098,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 type="button"
                 onClick={() => setIacFormat('TERRAFORM')}
                 title="Switch view to Full-Stack HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
-                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'TERRAFORM'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2110,7 +2110,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 type="button"
                 onClick={() => setIacFormat('TERRAFORM_IMPORT')}
                 title="Switch view to Terraform 1.5+ Declarative import {} blocks (imports.tf) to adopt existing GCP resources into Terraform state with zero downtime"
-                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'TERRAFORM_IMPORT'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2122,7 +2122,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 type="button"
                 onClick={() => setIacFormat('GCLOUD_SH')}
                 title="Switch view to a reproducible bash gcloud CLI script (deploy.sh) to clone your project infrastructure"
-                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'GCLOUD_SH'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2134,7 +2134,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 type="button"
                 onClick={() => setIacFormat('SESSION_GITOPS_DELTA')}
                 title="Inspect live ClickOps-to-GitOps Terraform HCL patches generated from your SRE War-Room & Cloud SOC actions"
-                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'SESSION_GITOPS_DELTA'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2146,7 +2146,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 type="button"
                 onClick={() => setIacFormat('MERMAID_C4')}
                 title="Render live C4 Mermaid Architecture Diagram (interactive SVG visualization + Mermaid flowchart source code)"
-                className={`w-full h-9 px-3 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
+                className={`w-full h-9 px-3 rounded-md text-xs font-mono font-bold border cursor-pointer transition-colors truncate ${
                   iacFormat === 'MERMAID_C4'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2180,7 +2180,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 setTimeout(() => setCopiedType(null), 1800);
               }}
               title="Copy the complete generated Infrastructure-as-Code blueprint to your clipboard"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-md cursor-pointer shrink-0"
             >
               {copiedType === iacFormat ? (
                 <>
@@ -2246,7 +2246,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   <button
                     type="button"
                     onClick={() => onSelectStudioTab('CLOUD_SOC')}
-                    className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold cursor-pointer truncate"
+                    className="h-8 px-3 rounded-md bg-white dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold cursor-pointer truncate"
                   >
                     Open 20-Pillar Cloud SOC →
                   </button>
@@ -2255,7 +2255,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                     onClick={() =>
                       onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')
                     }
-                    className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold cursor-pointer truncate"
+                    className="h-8 px-3 rounded-md bg-white dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold cursor-pointer truncate"
                   >
                     Open IAM Surgeon &amp; SA Key Kill-Switch →
                   </button>
@@ -2266,7 +2266,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 onClick={fetchExtraData}
                 disabled={loadingAudit}
                 title="Re-query live GCP Compute Firewalls, Cloud Run ingress policies, and IAM Service Accounts"
-                className="h-8 inline-flex items-center justify-center gap-1.5 text-xs font-mono font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-lg cursor-pointer"
+                className="h-8 inline-flex items-center justify-center gap-1.5 text-xs font-mono font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-md cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
@@ -2288,7 +2288,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               >
                 <div className="flex items-center justify-between gap-2">
                   <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                       f.severity === 'HIGH'
                         ? 'bg-red-500/20 text-red-500'
                         : 'bg-amber-500/20 text-amber-500'
@@ -2368,7 +2368,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       <div className="text-[11px] text-zinc-500">{sa.email}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                         {sa.disabled ? 'DISABLED' : 'ACTIVE IAM SA'}
                       </span>
                       {onSelectStudioTab && (
@@ -2416,7 +2416,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 key={item.id}
                 type="button"
                 onClick={() => setSubTab(item.id)}
-                className={`w-full px-3 py-2 rounded-lg text-left border transition-colors cursor-pointer flex items-center justify-between gap-2 ${
+                className={`w-full px-3 py-2 rounded-md text-left border transition-colors cursor-pointer flex items-center justify-between gap-2 ${
                   subTab === item.id
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -2424,7 +2424,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               >
                 <span className="text-xs font-bold truncate">{item.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-mono font-bold shrink-0 ${
                     subTab === item.id
                       ? 'bg-white/20 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
@@ -2511,14 +2511,14 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                   OWASP LLM01 GUARD
                 </span>
                 {onSelectStudioTab && (
                   <button
                     type="button"
                     onClick={() => onSelectStudioTab('CLOUD_SOC')}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
                   >
                     Ed25519 AI Red-Team Ledger (Cloud SOC) →
                   </button>
@@ -2545,7 +2545,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   key={preset.label}
                   type="button"
                   onClick={() => setPromptToTest(preset.text)}
-                  className="w-full h-8 px-2.5 rounded-lg text-[10.5px] font-mono bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 truncate cursor-pointer"
+                  className="w-full h-8 px-2.5 rounded-md text-[10.5px] font-mono bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 truncate cursor-pointer"
                 >
                   Test: {preset.label}
                 </button>
@@ -2563,7 +2563,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               type="button"
               disabled={armorBusy}
               onClick={handleScanModelArmor}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
@@ -2604,7 +2604,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       <span>
                         <strong>{t.detector}</strong>: {t.detail}
                       </span>
-                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-amber-700 dark:text-amber-300">
+                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-amber-700 dark:text-amber-300">
                         {t.severity}
                       </span>
                     </div>
@@ -2636,7 +2636,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 <button
                   type="button"
                   onClick={() => onSelectStudioTab('FINOPS')}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer shrink-0"
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer shrink-0"
                   title="Configure a surgical Native Spend Cap on Gemini API / Vertex AI via billingbudgets.googleapis.com/v1"
                 >
                   Gemini / Vertex Spend Cap (FinOps) →

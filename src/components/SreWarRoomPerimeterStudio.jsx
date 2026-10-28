@@ -713,7 +713,7 @@ export default function SreWarRoomPerimeterStudio({
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#141518] p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] font-mono font-bold">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] font-mono font-bold">
               <Flame className="w-3.5 h-3.5 text-red-500" />
               <span>
                 WAVE-8 · 12-PILLAR PRINCIPAL SRE INCIDENT WAR-ROOM, MULTI-WINDOW SLO BURN RADAR &amp; ZERO-EXFIL ARCHITECT
@@ -742,7 +742,7 @@ export default function SreWarRoomPerimeterStudio({
                     setSloTarget(opt.val);
                     fetchWarRoom(opt.val);
                   }}
-                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                  className={`px-2.5 py-1 rounded-md font-bold cursor-pointer transition-all ${
                     sloTarget === opt.val
                       ? 'bg-red-600 text-white'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
@@ -758,7 +758,7 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={Boolean(drillBusy)}
                 onClick={() => handleIncidentDrill('INJECT_CASCADE_DRILL')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>
@@ -772,7 +772,7 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={Boolean(drillBusy)}
                 onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -786,7 +786,7 @@ export default function SreWarRoomPerimeterStudio({
             <button
               type="button"
               onClick={() => setShowPostmortemPreview((p) => !p)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 text-xs font-bold cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 text-xs font-bold cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 text-blue-500" />
               <span>Blameless Postmortem.md</span>
@@ -795,7 +795,7 @@ export default function SreWarRoomPerimeterStudio({
             <button
               type="button"
               onClick={fetchAllTelemetry}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -925,7 +925,7 @@ export default function SreWarRoomPerimeterStudio({
                     'Blameless Postmortem Markdown'
                   )
                 }
-                className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer"
+                className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer"
               >
                 Copy Postmortem.md
               </button>
@@ -952,7 +952,7 @@ export default function SreWarRoomPerimeterStudio({
                 key={p.id}
                 type="button"
                 onClick={() => setActivePillar(p.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active
                     ? 'bg-red-600 text-white border-red-400 shadow-md'
                     : isAlert
@@ -962,7 +962,7 @@ export default function SreWarRoomPerimeterStudio({
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded truncate ${
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full truncate ${
                       active
                         ? 'bg-white/20 text-white'
                         : isAlert
@@ -1013,7 +1013,7 @@ export default function SreWarRoomPerimeterStudio({
                   <button
                     type="button"
                     onClick={() => setActivePillar('UPTIME_AND_ALERT_POLICIES')}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold cursor-pointer"
                   >
                     [ARMED · {alertPolicies.length} Alert Policy Active] Manage Uptime &amp; Alerts &rarr;
                   </button>
@@ -1026,7 +1026,7 @@ export default function SreWarRoomPerimeterStudio({
                         action: 'CREATE_SLO_ALERT_POLICY',
                       })
                     }
-                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {actionBusy === 'SLO_ARM_ALERT'
                       ? 'Arming P1 Alert...'
@@ -1038,7 +1038,7 @@ export default function SreWarRoomPerimeterStudio({
                   <button
                     type="button"
                     onClick={() => setActivePillar('LOG_BASED_METRICS_SLI')}
-                    className="px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-400 text-xs font-mono font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-400 text-xs font-mono font-extrabold cursor-pointer"
                   >
                     [VERIFIED · {logBasedMetrics.length} Golden SLIs Active] Manage Log-Based SLIs &rarr;
                   </button>
@@ -1051,7 +1051,7 @@ export default function SreWarRoomPerimeterStudio({
                         action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
                       })
                     }
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {actionBusy === 'SLO_BOOT_SLI'
                       ? 'Provisioning SLIs...'
@@ -1134,7 +1134,7 @@ export default function SreWarRoomPerimeterStudio({
               <button
                 type="button"
                 onClick={() => setActivePillar('CHANGE_CORRELATION_TIMELINE')}
-                className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold cursor-pointer"
               >
                 Inspect All {timeline.length} Raw Events &rarr;
               </button>
@@ -1170,7 +1170,7 @@ export default function SreWarRoomPerimeterStudio({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                             isCrit
                               ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                               : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
@@ -1195,7 +1195,7 @@ export default function SreWarRoomPerimeterStudio({
                               Boolean(actionBusy) || Boolean(drillBusy)
                             }
                             onClick={handleClusterRemediate}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>
@@ -1203,7 +1203,7 @@ export default function SreWarRoomPerimeterStudio({
                             </span>
                           </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>NOMINAL · 0 Active Burn</span>
                           </span>
@@ -1215,7 +1215,7 @@ export default function SreWarRoomPerimeterStudio({
                             <button
                               type="button"
                               onClick={() => onNavigateTab('CLOUD_SOC')}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
                             >
                               <span>Inspect in Cloud SOC &rarr;</span>
                             </button>
@@ -1225,7 +1225,7 @@ export default function SreWarRoomPerimeterStudio({
                           <button
                             type="button"
                             onClick={() => onRunInShell(c.hotfixCli)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
                           >
                             <Terminal className="w-3.5 h-3.5" />
                             <span>Run in Shell</span>
@@ -1237,7 +1237,7 @@ export default function SreWarRoomPerimeterStudio({
                           onClick={() =>
                             handleCopy(c.hotfixCli, 'Hotfix CLI')
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono cursor-pointer"
                         >
                           {copiedText === c.hotfixCli ? (
                             <Check className="w-3 h-3 text-emerald-500" />
@@ -1255,7 +1255,7 @@ export default function SreWarRoomPerimeterStudio({
                               [c.clusterKey]: !prev[c.clusterKey],
                             }))
                           }
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono cursor-pointer"
                         >
                           {isExpanded ? (
                             <ChevronUp className="w-3.5 h-3.5" />
@@ -1335,7 +1335,7 @@ export default function SreWarRoomPerimeterStudio({
             <button
               type="button"
               onClick={() => setActivePillar('BLACKBOX_SYNTHETIC_PROBER')}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+              className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
             >
               Run Live Synthetic Probe Across Fleet &rarr;
             </button>
@@ -1349,7 +1349,7 @@ export default function SreWarRoomPerimeterStudio({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold mr-2">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold mr-2">
                       {w.type}
                     </span>
                     <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1360,7 +1360,7 @@ export default function SreWarRoomPerimeterStudio({
                     </span>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       String(w.status).includes('HEALTHY') ||
                       String(w.status).includes('ONLINE')
                         ? 'bg-emerald-500/20 text-emerald-500'
@@ -1426,7 +1426,7 @@ export default function SreWarRoomPerimeterStudio({
                                 : 'start',
                           })
                         }
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {w.status === 'HEALTHY_RUNNING'
                           ? '1-Click Reset VM'
@@ -1450,7 +1450,7 @@ export default function SreWarRoomPerimeterStudio({
                           setActivePillar('BLACKBOX_SYNTHETIC_PROBER');
                           handleRunSyntheticProbe(targetUrl);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
                       >
                         [UPTIME MONITORED] Probe Live &rarr;
                       </button>
@@ -1468,7 +1468,7 @@ export default function SreWarRoomPerimeterStudio({
                                 : `${projectId}.appspot.com`,
                           })
                         }
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         + Monitor Uptime
                       </button>
@@ -1478,7 +1478,7 @@ export default function SreWarRoomPerimeterStudio({
                       <button
                         type="button"
                         onClick={() => onNavigateTab(w.studioTab)}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                       >
                         Open Studio &rarr;
                       </button>
@@ -1520,7 +1520,7 @@ export default function SreWarRoomPerimeterStudio({
                     path: newUptimePath.trim() || '/',
                   })
                 }
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>
@@ -1563,7 +1563,7 @@ export default function SreWarRoomPerimeterStudio({
                       path: '/',
                     })
                   }
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   Bootstrap Global HTTPS Uptime Check Now
                 </button>
@@ -1642,7 +1642,7 @@ export default function SreWarRoomPerimeterStudio({
                       `CloudPulse SRE P1 Fast-Burn Alert (${projectId})`,
                   })
                 }
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>
@@ -1674,7 +1674,7 @@ export default function SreWarRoomPerimeterStudio({
                       action: 'CREATE_SLO_ALERT_POLICY',
                     })
                   }
-                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   Arm 14.4x P1 Alert Policy Now
                 </button>
@@ -1766,7 +1766,7 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={syntheticLoading}
                 onClick={() => handleRunSyntheticProbe()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -1787,7 +1787,7 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={syntheticLoading}
                 onClick={() => handleRunSyntheticProbe()}
-                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
               >
                 Launch 5-Endpoint Synthetic Sweep Now
               </button>
@@ -1831,7 +1831,7 @@ export default function SreWarRoomPerimeterStudio({
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             p.reachable
                               ? 'bg-emerald-500/20 text-emerald-500'
                               : 'bg-red-500/20 text-red-500'
@@ -1862,7 +1862,7 @@ export default function SreWarRoomPerimeterStudio({
                         onClick={() =>
                           setActivePillar('UPTIME_AND_ALERT_POLICIES')
                         }
-                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
+                        className="px-3 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
                       >
                         [60s UPTIME CHECK ACTIVE] View Uptime &amp; Alerts &rarr;
                       </button>
@@ -1878,7 +1878,7 @@ export default function SreWarRoomPerimeterStudio({
                             path: p.path || '/',
                           })
                         }
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         + Register as 60s Cloud Monitoring Uptime Check
                       </button>
@@ -1916,7 +1916,7 @@ export default function SreWarRoomPerimeterStudio({
                   action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
                 })
               }
-              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+              className={`px-3.5 py-2 rounded-md text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
                 allGoldenSlisActive
                   ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-mono'
                   : 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -1955,7 +1955,7 @@ export default function SreWarRoomPerimeterStudio({
                   metricFilter: customMetricFilter,
                 })
               }
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               + Create Custom Log-Based SLI Metric
             </button>
@@ -1974,7 +1974,7 @@ export default function SreWarRoomPerimeterStudio({
                     action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
                   })
                 }
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
               >
                 Provision 3 Golden SLI Metrics Now
               </button>
@@ -2039,14 +2039,14 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={Boolean(drillBusy)}
                 onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {drillBusy === 'RESOLVE_INCIDENT'
                   ? 'Mitigating All Drills...'
                   : '1-Click Mitigate & Resolve Active Chaos Drill (Reset SLO Burn)'}
               </button>
             ) : (
-              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold">
+              <span className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold">
                 [ALL DRILLS NOMINAL · 0 ACTIVE FAULTS]
               </span>
             )}
@@ -2088,7 +2088,7 @@ export default function SreWarRoomPerimeterStudio({
                     <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
                       {sc.title}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-mono font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-mono font-bold">
                       {sc.badge}
                     </span>
                   </div>
@@ -2100,7 +2100,7 @@ export default function SreWarRoomPerimeterStudio({
                     type="button"
                     disabled={Boolean(drillBusy)}
                     onClick={() => handleIncidentDrill(sc.id)}
-                    className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {drillBusy === sc.id
                       ? 'Injecting Live Telemetry...'
@@ -2111,7 +2111,7 @@ export default function SreWarRoomPerimeterStudio({
                       type="button"
                       disabled={Boolean(drillBusy)}
                       onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                     >
                       Resolve Active Drill
                     </button>
@@ -2150,7 +2150,7 @@ export default function SreWarRoomPerimeterStudio({
                   key={m.id}
                   type="button"
                   onClick={() => setAiModel(m.id)}
-                  className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${
+                  className={`px-3 py-1 rounded-md font-bold cursor-pointer ${
                     aiModel === m.id
                       ? 'bg-blue-600 text-white'
                       : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
@@ -2175,7 +2175,7 @@ export default function SreWarRoomPerimeterStudio({
                   setAiPrompt(preset);
                   handleRunAiSreCommander(preset);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/20 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/20 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 {preset}
               </button>
@@ -2194,7 +2194,7 @@ export default function SreWarRoomPerimeterStudio({
               type="button"
               disabled={aiCommanderLoading}
               onClick={() => handleRunAiSreCommander()}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               {aiCommanderLoading
                 ? `Synthesizing with ${aiModel}...`
@@ -2239,7 +2239,7 @@ export default function SreWarRoomPerimeterStudio({
                     'Analyze live project SLO posture and output immediate remediation steps'
                   )
                 }
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
               >
                 Generate Live SRE Briefing Now
               </button>
@@ -2294,7 +2294,7 @@ export default function SreWarRoomPerimeterStudio({
                   key={f.id}
                   type="button"
                   onClick={() => setTimelineFilter(f.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold cursor-pointer ${
                     timelineFilter === f.id
                       ? 'bg-red-600 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
@@ -2330,7 +2330,7 @@ export default function SreWarRoomPerimeterStudio({
                 <div className="space-y-0.5 max-w-3xl">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                         ev.effectiveIsTrueError
                           ? 'bg-red-500/20 text-red-400'
                           : ev.mitigated
@@ -2390,7 +2390,7 @@ export default function SreWarRoomPerimeterStudio({
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <span>VPC-SC Exfiltration Perimeter Architect</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
                 199.36.153.4/30 Enforced
               </span>
             </div>
@@ -2422,7 +2422,7 @@ export default function SreWarRoomPerimeterStudio({
                   key={bp.id}
                   type="button"
                   onClick={() => applyPerimeterBlueprint(bp.id)}
-                  className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
+                  className={`p-2.5 rounded-md border text-left cursor-pointer transition-all ${
                     perimeterBlueprint === bp.id
                       ? 'bg-emerald-600/15 border-emerald-500 text-zinc-900 dark:text-white'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2477,7 +2477,7 @@ export default function SreWarRoomPerimeterStudio({
               <button
                 type="button"
                 onClick={() => handleCopy(vpcScCli, 'VPC-SC Perimeter CLI')}
-                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                className="flex-1 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
               >
                 Copy VPC-SC Perimeter Spec (`access-context-manager`)
               </button>
@@ -2485,7 +2485,7 @@ export default function SreWarRoomPerimeterStudio({
                 <button
                   type="button"
                   onClick={() => onRunInShell(vpcScCli)}
-                  className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                  className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                 >
                   Run in Shell
                 </button>
@@ -2513,7 +2513,7 @@ export default function SreWarRoomPerimeterStudio({
                     action: 'ENFORCE_ALL_SUBNETS_PGA',
                   })
                 }
-                className={`px-3 py-1.5 rounded-lg text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                className={`px-3 py-1.5 rounded-md text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
                   allSubnetsPgaEnabled
                     ? 'bg-zinc-800 hover:bg-zinc-700 border border-emerald-500/40'
                     : 'bg-emerald-600 hover:bg-emerald-500'
@@ -2546,7 +2546,7 @@ export default function SreWarRoomPerimeterStudio({
                     </div>
 
                     {sn.privateIpGoogleAccess ? (
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                         PGA ENABLED
                       </span>
                     ) : (
@@ -2583,7 +2583,7 @@ export default function SreWarRoomPerimeterStudio({
                   Provision Resilient Pub/Sub Topic + Dead-Letter Queue (`-dlq`)
                 </span>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
                 Zero-Message-Loss Lock
               </span>
             </div>
@@ -2610,7 +2610,7 @@ export default function SreWarRoomPerimeterStudio({
                   key={bp.id}
                   type="button"
                   onClick={() => applyDlqBlueprint(bp.id)}
-                  className={`p-2 rounded-lg border text-left cursor-pointer ${
+                  className={`p-2 rounded-md border text-left cursor-pointer ${
                     dlqBlueprint === bp.id
                       ? 'bg-red-600/15 border-red-500 text-zinc-900 dark:text-white'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2680,7 +2680,7 @@ export default function SreWarRoomPerimeterStudio({
             <button
               type="submit"
               disabled={provisioningPubsub || !topicName.trim()}
-              className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="w-full py-2 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               {provisioningPubsub
                 ? 'Provisioning Topic + DLQ + Subscription...'
@@ -2747,7 +2747,7 @@ export default function SreWarRoomPerimeterStudio({
                         </button>
                       )}
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           s.hasDlqProtection
                             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
@@ -2768,7 +2768,7 @@ export default function SreWarRoomPerimeterStudio({
                   type="button"
                   disabled={provisioningPubsub}
                   onClick={() => handleProvisionPubsubPair()}
-                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   1-Click Bootstrap `sre-incident-events` + `-dlq` Triad
                 </button>
@@ -2801,7 +2801,7 @@ export default function SreWarRoomPerimeterStudio({
                 type="button"
                 disabled={Boolean(actionBusy) || Boolean(drillBusy)}
                 onClick={handleReconcileAllSreInvariants}
-                className={`px-3 py-1.5 rounded-lg text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                className={`px-3 py-1.5 rounded-md text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
                   compliantSreCount === sreReadinessInvariants.length
                     ? 'bg-emerald-600 hover:bg-emerald-500'
                     : 'bg-red-600 hover:bg-red-500'
@@ -2821,7 +2821,7 @@ export default function SreWarRoomPerimeterStudio({
                     action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
                   })
                 }
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {actionBusy === 'RB_MERKLE_SNAP'
                   ? 'Sealing Checkpoint...'
@@ -2846,7 +2846,7 @@ export default function SreWarRoomPerimeterStudio({
                       {inv.id}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                         inv.compliant
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                           : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
@@ -2869,7 +2869,7 @@ export default function SreWarRoomPerimeterStudio({
                       type="button"
                       disabled={Boolean(actionBusy) || Boolean(drillBusy)}
                       onClick={inv.onReconcile}
-                      className="flex-1 py-1.5 px-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      className="flex-1 py-1.5 px-2.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       {inv.reconcileLabel}
                     </button>
@@ -2877,7 +2877,7 @@ export default function SreWarRoomPerimeterStudio({
                     <button
                       type="button"
                       onClick={() => setActivePillar(inv.pillar)}
-                      className="flex-1 py-1.5 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold cursor-pointer"
+                      className="flex-1 py-1.5 px-2.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold cursor-pointer"
                     >
                       Inspect Live Resource &rarr;
                     </button>
@@ -2945,7 +2945,7 @@ export default function SreWarRoomPerimeterStudio({
                     action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
                   })
                 }
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
               >
                 1-Click Seal Merkle State Snapshot
               </button>
@@ -2954,7 +2954,7 @@ export default function SreWarRoomPerimeterStudio({
                 <button
                   type="button"
                   onClick={() => onOpenHealthAndDrift()}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   Open 1-Tap Health &amp; Drift Hub &rarr;
                 </button>
@@ -2965,21 +2965,21 @@ export default function SreWarRoomPerimeterStudio({
                   <button
                     type="button"
                     onClick={() => onNavigateTab('INNOVATION_LAB', 'TERRAFORM')}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     Open 2026 Innovation Lab (GitOps &amp; Moonshots) &rarr;
                   </button>
                   <button
                     type="button"
                     onClick={() => onNavigateTab('SOVEREIGN_STUDIO', 'TIME_MACHINE')}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     Open SHA-256 Time-Machine &amp; Drift Radar &rarr;
                   </button>
                   <button
                     type="button"
                     onClick={() => onNavigateTab('CLOUD_SOC')}
-                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     Open Wave 16 Autonomous Cloud SOC &rarr;
                   </button>
@@ -2988,7 +2988,7 @@ export default function SreWarRoomPerimeterStudio({
                     onClick={() =>
                       onNavigateTab('AWS_AZURE_PARITY', 'EVENTBRIDGE_PIPES')
                     }
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     AWS &amp; Azure Parity (EventBridge &amp; Route 53) &rarr;
                   </button>
@@ -3000,7 +3000,7 @@ export default function SreWarRoomPerimeterStudio({
                         'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
                       )
                     }
-                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer"
+                    className="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     Alibaba 11.11 Surge &amp; Huawei DataV NOC &rarr;
                   </button>

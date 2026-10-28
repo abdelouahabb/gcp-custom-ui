@@ -416,12 +416,12 @@ export default function ResourceControlCenter({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 <Sparkles className="w-3 h-3" />
                 <span>Resource Lineage & Orphan Forensics</span>
               </span>
               {staleResources.length > 0 ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                   <AlertTriangle className="w-3 h-3" />
                   <span>
                     {staleResources.length} Stale / Leftover Resource
@@ -429,7 +429,7 @@ export default function ResourceControlCenter({
                   </span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <CheckCircle2 className="w-3 h-3" />
                   <span>0 Stale / Leftover Resources</span>
                 </span>
@@ -456,7 +456,7 @@ export default function ResourceControlCenter({
                   setLineageDrawerTab(staleResources.length > 0 ? 'STALE' : 'ALL');
                 }
               }}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer ${
                 lineageDrawerOpen
                   ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
                   : 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -485,7 +485,7 @@ export default function ResourceControlCenter({
                 <button
                   type="button"
                   onClick={() => setLineageDrawerTab('STALE')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                     lineageDrawerTab === 'STALE'
                       ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
@@ -499,7 +499,7 @@ export default function ResourceControlCenter({
                 <button
                   type="button"
                   onClick={() => setLineageDrawerTab('ALL')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                     lineageDrawerTab === 'ALL'
                       ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
@@ -518,7 +518,7 @@ export default function ResourceControlCenter({
                   setOnlyStaleFilter((prev) => !prev);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-colors cursor-pointer ${
                   onlyStaleFilter
                     ? 'bg-amber-500 text-zinc-950 border-amber-400'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
@@ -572,7 +572,7 @@ export default function ResourceControlCenter({
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                                   lin.isStale
                                     ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                                     : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
@@ -599,7 +599,7 @@ export default function ResourceControlCenter({
                               <button
                                 type="button"
                                 onClick={() => onSelectTab(lin.targetTab)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-bold transition-colors cursor-pointer"
                               >
                                 <span>Open Studio →</span>
                               </button>
@@ -624,7 +624,7 @@ export default function ResourceControlCenter({
                                             : item.name,
                                         });
                                       }}
-                                      className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                      className="px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
                                     >
                                       {isDeletingThis
                                         ? 'Working...'
@@ -635,7 +635,7 @@ export default function ResourceControlCenter({
                                     <button
                                       type="button"
                                       onClick={() => setDrawerConfirmDeleteId(null)}
-                                      className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
+                                      className="px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
                                     >
                                       Cancel
                                     </button>
@@ -645,7 +645,7 @@ export default function ResourceControlCenter({
                                     type="button"
                                     disabled={actionLoading || isDeletingThis}
                                     onClick={() => setDrawerConfirmDeleteId(item.id)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                     <span>
@@ -917,7 +917,7 @@ export default function ResourceControlCenter({
                                   </span>
                                   {lineageById[row.id]?.badgeLabel && !isRowDeleting && (
                                     <span
-                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                      className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold ${
                                         lineageById[row.id]?.isStale
                                           ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                                           : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700'
@@ -927,7 +927,7 @@ export default function ResourceControlCenter({
                                     </span>
                                   )}
                                   {isRowDeleting && (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
                                       DELETING...
                                     </span>
                                   )}
@@ -947,7 +947,7 @@ export default function ResourceControlCenter({
 
                           <td className="py-3.5 px-3">
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
                                 row.source === 'LIVE_GCP'
                                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-500/20'
                                   : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-500/20'
@@ -960,7 +960,7 @@ export default function ResourceControlCenter({
                           </td>
 
                           <td className="py-3.5 px-3">
-                            <span className="font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 text-[11px]">
+                            <span className="font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800 rounded-full px-1.5 py-0.5 text-[11px]">
                               {row.region}
                             </span>
                           </td>
@@ -1021,7 +1021,7 @@ export default function ResourceControlCenter({
                   aria-label="First page"
                   disabled={safePage <= 1}
                   onClick={() => setCurrentPage(1)}
-                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronsLeft className="w-4 h-4" />
                 </button>
@@ -1030,7 +1030,7 @@ export default function ResourceControlCenter({
                   aria-label="Previous page"
                   disabled={safePage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1041,7 +1041,7 @@ export default function ResourceControlCenter({
                   onClick={() =>
                     setCurrentPage((p) => Math.min(totalPages, p + 1))
                   }
-                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1050,7 +1050,7 @@ export default function ResourceControlCenter({
                   aria-label="Last page"
                   disabled={safePage >= totalPages}
                   onClick={() => setCurrentPage(totalPages)}
-                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronsRight className="w-4 h-4" />
                 </button>
@@ -1064,7 +1064,7 @@ export default function ResourceControlCenter({
           <div className="w-full lg:w-1/3 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-lg transition-all duration-300 space-y-4">
             <div className="flex items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   {selectedResource.type}
                 </span>
                 <h4 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1 break-all">
@@ -1075,7 +1075,7 @@ export default function ResourceControlCenter({
                 type="button"
                 aria-label="Close resource details"
                 onClick={() => setSelectedResourceId(null)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1132,7 +1132,7 @@ export default function ResourceControlCenter({
                     Why Is This Resource Here?
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                       lineageById[selectedResource.id].isStale
                         ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                         : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'

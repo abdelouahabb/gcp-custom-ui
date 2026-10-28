@@ -190,15 +190,15 @@ export default function LocalDevTunnelBar({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-extrabold">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-extrabold">
             <Network className="w-3.5 h-3.5" />
             <span>127.0.0.1 ZERO-PUBLIC-IP DEVELOPER BRIDGE</span>
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
             <DollarSign className="w-3 h-3" />
             <span>Saves $7.30/mo per Private VM / DB (No Public IPv4 Needed)</span>
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono">
             <Lock className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             <span>IAP TCP 35.235.240.0/20 + Automatic OIDC Bearer Injection</span>
           </span>
@@ -349,7 +349,7 @@ export default function LocalDevTunnelBar({
               type="button"
               disabled={starting || !resourceName.trim()}
               onClick={() => handleStartTunnel()}
-              className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+              className="w-full py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>
@@ -397,14 +397,14 @@ export default function LocalDevTunnelBar({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10.5px] font-mono font-extrabold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10.5px] font-mono font-extrabold">
                       127.0.0.1:{t.localPort} -&gt; {t.resourceName}:{t.remotePort}
                     </span>
                     <span className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400">
                       {t.engine}
                     </span>
                     {t.pid && (
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9.5px] font-mono">
+                      <span className="px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9.5px] font-mono">
                         PID {t.pid}
                       </span>
                     )}
@@ -516,7 +516,7 @@ export default function LocalDevTunnelBar({
                       </strong>{' '}
                       {probe.detail}
                       {probe.httpProbe?.statusCode && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-white">
+                        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-white">
                           HTTP {probe.httpProbe.statusCode}
                         </span>
                       )}

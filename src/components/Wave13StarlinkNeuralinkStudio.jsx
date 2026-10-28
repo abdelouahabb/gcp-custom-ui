@@ -548,14 +548,14 @@ export default function Wave13StarlinkNeuralinkStudio({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
                 GLOBAL EDGE &amp; PROMPT-TO-DAG STUDIO (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST &amp; TLS 1.3
               </span>
               {ledgerData?.publicKeyFingerprint && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800">
+                <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800">
                   Ed25519 Key ID: {ledgerData.publicKeyFingerprint.slice(0, 16)}...
                 </span>
               )}
@@ -608,7 +608,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               type="button"
               data-feature-id={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`h-20 p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+              className={`h-20 p-3.5 rounded-md border text-left transition-all flex flex-col justify-between cursor-pointer ${
                 active
                   ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                   : 'bg-white dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
@@ -616,7 +616,7 @@ export default function Wave13StarlinkNeuralinkStudio({
             >
               <div className="flex items-center justify-between gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                     active
                       ? 'bg-black/25 text-blue-100'
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
@@ -662,7 +662,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               type="button"
               onClick={() => runStarlinkProbe()}
               disabled={probingOrbital}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-bold flex items-center gap-2 shrink-0 cursor-pointer"
+              className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-bold flex items-center gap-2 shrink-0 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${probingOrbital ? 'animate-spin' : ''}`}
@@ -694,7 +694,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               <button
                 type="button"
                 onClick={() => setActiveTab('CRYPTO_BLACKBOX_LEDGER')}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-mono font-bold shrink-0 cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-emerald-600 text-white text-[11px] font-mono font-bold shrink-0 cursor-pointer"
               >
                 Inspect Ed25519 Block
               </button>
@@ -717,7 +717,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                           isDeployed
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                             : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
@@ -775,7 +775,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       type="button"
                       onClick={() => runStarlinkProbe()}
                       disabled={probingOrbital}
-                      className="px-2.5 py-1.5 rounded-xl border bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50 text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-md border bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50 text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Re-Probe Region
                     </button>
@@ -783,7 +783,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       type="button"
                       onClick={() => handleEngageOrbitalFailover(c)}
                       disabled={executingFailover}
-                      className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Stream Live Heartbeat
                     </button>
@@ -814,7 +814,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 </p>
               </div>
               {compiledDag?.dagSha256 && (
-                <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold">
+                <span className="px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold">
                   DAG SHA-256: {compiledDag.dagSha256.slice(0, 18)}...
                 </span>
               )}
@@ -832,7 +832,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                     setDagRegion(preset.region);
                     runNeuralinkCompile(preset.prompt, preset.slug, preset.region);
                   }}
-                  className={`h-11 px-3 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer truncate ${
+                  className={`h-11 px-3 rounded-md border text-left text-xs font-bold transition-all cursor-pointer truncate ${
                     stackSlug === preset.slug
                       ? 'bg-blue-600 text-white border-blue-500'
                       : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
@@ -885,7 +885,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       runNeuralinkCompile(thoughtPrompt, stackSlug, dagRegion)
                     }
                     disabled={compilingDag}
-                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono font-bold shrink-0 cursor-pointer"
+                    className="px-3 py-2 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono font-bold shrink-0 cursor-pointer"
                   >
                     Compile
                   </button>
@@ -903,7 +903,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                   {compiledDag.schemaFields.map((f) => (
                     <span
                       key={f.name}
-                      className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-blue-500/30 text-[10px] font-mono text-zinc-800 dark:text-zinc-200"
+                      className="px-2 py-0.5 rounded-full bg-white dark:bg-zinc-900 border border-blue-500/30 text-[10px] font-mono text-zinc-800 dark:text-zinc-200"
                     >
                       <strong>{f.name}</strong>:{' '}
                       <span className="text-blue-600 dark:text-blue-400">
@@ -930,12 +930,12 @@ export default function Wave13StarlinkNeuralinkStudio({
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-extrabold">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-extrabold">
                             NODE {node.step} · {node.kind}
                           </span>
                           {receipt && (
                             <span
-                              className={`px-1.5 py-0.5 rounded font-mono text-[9.5px] font-bold ${
+                              className={`px-1.5 py-0.5 rounded-full font-mono text-[9.5px] font-bold ${
                                 receipt.ok
                                   ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                                   : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
@@ -1025,7 +1025,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 type="button"
                 onClick={handleMaterializeNeuralinkDag}
                 disabled={materializingDag}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 cursor-pointer shadow-sm"
+                className="px-5 py-2.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -1063,7 +1063,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               <button
                 type="submit"
                 disabled={runningCouncil}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-4 py-2 rounded-md bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>
@@ -1080,7 +1080,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                   key={idx}
                   type="button"
                   onClick={() => setCouncilTopic(t)}
-                  className={`p-2.5 rounded-xl border text-left text-[11px] font-medium transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-md border text-left text-[11px] font-medium transition-all cursor-pointer ${
                     councilTopic === t
                       ? 'border-amber-500 bg-amber-500/10 text-zinc-900 dark:text-white font-bold'
                       : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400'
@@ -1101,7 +1101,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-[10px] font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-[10px] font-extrabold">
                         {ag.verdict}
                       </span>
                       <span className="text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
@@ -1152,7 +1152,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <button
                   type="button"
                   onClick={() => copyText(councilData.consensusMarkdown)}
-                  className="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 flex items-center gap-1 cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
                   <span>Copy Markdown</span>
@@ -1186,7 +1186,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-extrabold">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-extrabold">
                   {ledgerData?.allSignaturesValid
                     ? `ALL ${ledgerData?.chainLength || 0} Ed25519 SIGNATURES VERIFIED`
                     : 'VERIFYING CHAIN...'}
@@ -1195,7 +1195,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                   type="button"
                   onClick={fetchBlackBoxLedger}
                   disabled={loadingLedger}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                  className="px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-200 cursor-pointer"
                 >
                   Re-Verify Signatures
                 </button>
@@ -1216,7 +1216,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               <button
                 type="submit"
                 disabled={sealingBlock}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <Key className="w-3.5 h-3.5" />
                 <span>
@@ -1255,7 +1255,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-extrabold">
                         BLOCK #{blk.blockIndex} · {blk.eventType}
                       </span>
                       <span className="text-xs font-bold text-zinc-900 dark:text-white">

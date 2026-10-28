@@ -243,13 +243,13 @@ export default function PersonaContextualHelper({
       const openFw = netOps.packetPathTracer?.openInternetRulesCount || 0;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             IPAM Overlaps: {overlaps}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             0.0.0.0/0 Rules: {openFw}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Subnets Audited: {netOps.ipamAllocationMap?.totalSubnetsAudited || 0}
           </span>
         </div>
@@ -261,13 +261,13 @@ export default function PersonaContextualHelper({
       const highRiskPaths = devSecOps.iamPrivilegeEscalation?.highRiskPathCount || 0;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Mutable :latest Tags: {mutableCount}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Static JSON SA Keys: {activeKeys}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Escalation Paths: {highRiskPaths}
           </span>
         </div>
@@ -278,13 +278,13 @@ export default function PersonaContextualHelper({
       const totalGates = cloudEng.preflightValidator?.totalGates || 5;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Pre-Flight Gates: {gatesPassed}/{totalGates} PASS
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Live .tf Export Ready ({cloudEng.clickOpsToGitOps?.resourcesExported || 0} resources)
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Undo Sagas: {(cloudEng.undoSagaLedger || []).length}
           </span>
         </div>
@@ -296,13 +296,13 @@ export default function PersonaContextualHelper({
       const lineageNodes = (dataEng.columnLineageGraph?.nodes || dataEng.columnLineageDag || []).length;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Freshness SLA: {freshnessSla}%
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Quarantine DLQ: {dlqRows} rows
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Lineage Nodes: {lineageNodes}
           </span>
         </div>
@@ -311,13 +311,13 @@ export default function PersonaContextualHelper({
     if (persona === 'AI_MLOPS') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Model Armor: {aiMlOps.modelArmorFirewall?.status || 'ENFORCED_GA'}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Cache Hit: {aiMlOps.smartModelRouter?.contextCacheHitRatePct || 81.5}% (-80% Cost)
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             RAG Recall: {aiMlOps.ragVectorIndexSync?.recallScorePct || 97.9}%
           </span>
         </div>
@@ -326,13 +326,13 @@ export default function PersonaContextualHelper({
     if (persona === 'SRE_ONCALL') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             1h Burn Rate: {sreOncall.sloBurnFreezeGate?.burnRate1h || 1.2}x (&lt;14.4x)
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             SLO Budget Left: {sreOncall.sloBurnFreezeGate?.remainingErrorBudgetPct || 84.2}%
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Toil Saved: {sreOncall.toilEliminationLedger?.hoursSavedLast30d || 19.5}h/mo
           </span>
         </div>
@@ -341,13 +341,13 @@ export default function PersonaContextualHelper({
     if (persona === 'DBRE') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Blocking PIDs: {dbre.lockTreeAndHotKeyInspector?.activeBlockingPids || 0}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Pool: {dbre.connectionPoolGuard?.activeConnections || 24}/{dbre.connectionPoolGuard?.maxConnections || 400} conns
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             PITR Clone: {dbre.pitrCloneVerification?.cloneDurationSec || 1.6}s (RPO=0)
           </span>
         </div>
@@ -356,13 +356,13 @@ export default function PersonaContextualHelper({
     if (persona === 'FINOPS_ENG') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Unit Cost: ${finopsEng.unitEconomicsAttribution?.costPer1kRequestsUsd || 0.0042}/1k req
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             CUD Coverage: {finopsEng.cudAndSpotOptimizer?.currentCudCoveragePct || 72}%
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             GreenOps Top CFE: 98%
           </span>
         </div>
@@ -371,13 +371,13 @@ export default function PersonaContextualHelper({
     if (persona === 'PLATFORM_K8S') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             OOMKilled (24h): {platformK8s.oomAndCpuRightSizer?.oomKilledPodsLast24h || 0}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Mesh: {platformK8s.serviceMeshMtlsMap?.mtlsEnforcement?.split(' ')[0] || 'STRICT'} mTLS
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Reclaimable RAM: {platformK8s.oomAndCpuRightSizer?.estimatedMemoryReclaimGiB || 6.5} GiB
           </span>
         </div>
@@ -388,13 +388,13 @@ export default function PersonaContextualHelper({
     const wArchScore = arch.wellArchitectedScorecard?.overallScore || 95;
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           Well-Architected: {wArchScore}/100
         </span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           Single-Region SPOFs: {spofCount}
         </span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           vs AWS Save: ${arch.multiCloudArbitrage?.monthlySavingsVsAwsUsd || 160}/mo
         </span>
       </div>
@@ -411,7 +411,7 @@ export default function PersonaContextualHelper({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${meta.accentBg} ${meta.accentText} ${meta.accentBorder}`}>
+              <span className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full border ${meta.accentBg} ${meta.accentText} ${meta.accentBorder}`}>
                 [{meta.badge}]
               </span>
               <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -437,7 +437,7 @@ export default function PersonaContextualHelper({
               type="button"
               onClick={() => fetchPersonaOverview(true)}
               title="Refresh live GCP telemetry for this persona helper"
-              className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+              className="p-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -447,7 +447,7 @@ export default function PersonaContextualHelper({
                 type="button"
                 onClick={() => onOpenFullBoard(persona)}
                 title="Open the 10-Persona Enterprise Architecture Council"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
               >
                 <span>10-Persona Architecture Council</span>
                 <ArrowRight className="w-3 h-3" />
@@ -457,7 +457,7 @@ export default function PersonaContextualHelper({
             <button
               type="button"
               onClick={() => setExpanded((prev) => !prev)}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${meta.accentBg} ${meta.accentText} ${meta.accentBorder}`}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${meta.accentBg} ${meta.accentText} ${meta.accentBorder}`}
             >
               <span>{expanded ? 'Hide Helper Tools' : 'Open Helper Tools'}</span>
               {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -516,7 +516,7 @@ export default function PersonaContextualHelper({
                         protocol: 'TCP'
                       })
                     }
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>{executingAction === 'RUN_NETOPS_CONNECTIVITY_TRACE' ? 'Tracing...' : 'Run 4-Hop Trace'}</span>
@@ -571,7 +571,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => onRunInShell(netOps.packetPathTracer.gcloudConnectivityTestCmd)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Run Connectivity Test in Cloud Shell</span>
@@ -604,7 +604,7 @@ export default function PersonaContextualHelper({
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{art.service}</div>
                         <div className="text-[10px] text-zinc-500 truncate">{art.slsaLevel} · Vulns: 0</div>
                       </div>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                         {art.digestPinned ? '@sha256 PINNED' : 'MUTABLE TAG'}
                       </span>
                     </div>
@@ -614,7 +614,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC'}
                   onClick={() => executeContextualAction('VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>
@@ -637,7 +637,7 @@ export default function PersonaContextualHelper({
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         <span className="font-bold text-zinc-800 dark:text-zinc-200">{ep.vector}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                        <span className="px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                           {ep.status}
                         </span>
                       </div>
@@ -667,7 +667,7 @@ export default function PersonaContextualHelper({
                     onClick={() =>
                       handleCopy('oidc-yaml', devSecOps.zeroKeyWorkloadIdentity?.githubActionsOidcYaml || '')
                     }
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'oidc-yaml' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>Copy OIDC YAML</span>
@@ -676,7 +676,7 @@ export default function PersonaContextualHelper({
                     <button
                       type="button"
                       onClick={() => onRunInShell(devSecOps.zeroKeyWorkloadIdentity.CLIProvisionCommand)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Run WIF CLI</span>
@@ -727,7 +727,7 @@ export default function PersonaContextualHelper({
                       region: 'us-central1'
                     })
                   }
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>
@@ -764,7 +764,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => handleCopy('tf-hcl', cloudEng.clickOpsToGitOps?.terraformHcl || '')}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'tf-hcl' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>Copy main.tf</span>
@@ -773,7 +773,7 @@ export default function PersonaContextualHelper({
                     <button
                       type="button"
                       onClick={() => onRunInShell(cloudEng.clickOpsToGitOps.gcloudScript)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Send CLI to Shell</span>
@@ -864,7 +864,7 @@ export default function PersonaContextualHelper({
                     type="button"
                     disabled={executingAction === 'REPLAY_DATA_ENG_QUARANTINE_DLQ'}
                     onClick={() => executeContextualAction('REPLAY_DATA_ENG_QUARANTINE_DLQ')}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>
@@ -875,7 +875,7 @@ export default function PersonaContextualHelper({
                     <button
                       type="button"
                       onClick={() => onOpenBigQuerySql(dataEng.quarantineDlqReplay.autoRepairSql)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                     >
                       Open in BQ SQL
                     </button>
@@ -899,7 +899,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => onRunInShell(dataEng.slotContentionSparkBalancer.sparkSubmitCommand)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Offload Heavy Merge to Serverless Spark</span>
@@ -940,7 +940,7 @@ export default function PersonaContextualHelper({
                       region: blackoutRegion
                     })
                   }
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>
@@ -1022,7 +1022,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
                   onClick={() => executeContextualAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1091,7 +1091,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
                   onClick={() => executeContextualAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Flame className="w-3.5 h-3.5" />
                   <span>
@@ -1135,7 +1135,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => onRunInShell(sreOncall.sloBurnFreezeGate.canaryRollbackCmd)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Stage 1-Click Canary Traffic Rollback</span>
@@ -1164,7 +1164,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
                   onClick={() => executeContextualAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <HardDrive className="w-3.5 h-3.5" />
                   <span>
@@ -1217,7 +1217,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => onRunInShell(dbre.pitrCloneVerification.dryRunCloneCmd)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Stage PITR Clone Verification CLI</span>
@@ -1245,7 +1245,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
                   onClick={() => executeContextualAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <DollarSign className="w-3.5 h-3.5" />
                   <span>
@@ -1305,7 +1305,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
                   onClick={() => executeContextualAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Cpu className="w-3.5 h-3.5" />
                   <span>
@@ -1346,7 +1346,7 @@ export default function PersonaContextualHelper({
                   <button
                     type="button"
                     onClick={() => onRunInShell(platformK8s.goldenPathScaffolder.scaffoldCli)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Deploy Golden-Path Service in Shell</span>

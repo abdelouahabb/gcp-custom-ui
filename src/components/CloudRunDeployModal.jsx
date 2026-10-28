@@ -37,7 +37,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
           >
             <X className="w-4 h-4" />
           </button>

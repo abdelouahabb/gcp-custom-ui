@@ -1204,7 +1204,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
+                <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
                   MOONSHOT X1 · LIVE IN-MEMORY DLP & SECRET LEAK X-RAY
                 </span>
               </div>
@@ -1245,7 +1245,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 disabled={!selectedDlpBucket || scanningDlp}
                 onClick={() => handleRunDlpScan(selectedDlpBucket)}
                 title="Stream live objects from the selected GCS bucket into server RAM and scan against 11 credential, API key, and GDPR/PCI PII detectors without writing to disk"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${scanningDlp ? 'animate-spin' : ''}`}
@@ -1258,7 +1258,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 disabled={!selectedDlpBucket || busyKey === 'inject-canary'}
                 onClick={handleInjectCanaryLeakObject}
                 title="Upload a safe, synthetic canary test file (canary-audit/leaked-staging-secrets.env) into your bucket and trigger an immediate DLP X-Ray scan so you can test live detection & 1-Tap Redaction"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>+ Inject Canary Leak File (Test Live)</span>
@@ -1269,7 +1269,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                   type="button"
                   onClick={() => onOpenObjectInWorkbench(selectedDlpBucket, '')}
                   title={`Open gs://${selectedDlpBucket} in the Cloud Storage Multi-Format Object Workbench (M02)`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Open Bucket in Object Workbench (M02) →</span>
@@ -1343,7 +1343,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-500 border border-red-500/30">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-500 border border-red-500/30">
                         {obj.highestSeverity} LEAK
                       </span>
                       <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1362,7 +1362,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                             )
                           }
                           title={`Open gs://${dlpScanResult.bucket}/${obj.objectName} in the Line-Numbered Object Workbench (M02) to inspect lines, diff versions, or selectively redact`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Open &amp; Edit in Object Workbench (M02) →</span>
@@ -1373,7 +1373,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                         disabled={busyKey === `redact-${obj.objectName}`}
                         onClick={() => handleRedactObjectInPlace(obj.objectName)}
                         title={`Sanitize and overwrite gs://${dlpScanResult.bucket}/${obj.objectName} in-place by replacing all matched credentials & PII tokens with [REDACTED_BY_CLOUDPULSE_DLP]`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>
@@ -1453,7 +1453,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X2 · SUB-100MS SERVERLESS COLD-START SURGEON
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1512,7 +1512,7 @@ CMD ["server/index.js"]`;
                 disabled={busyKey === `coldstart-${activeRunObj.name}`}
                 onClick={handleApplyColdStartSurgery}
                 title={`Patch Cloud Run service "${activeRunObj.name}" via GCP Cloud Run v2 API to enable startupCpuBoost=true and EXECUTION_ENVIRONMENT_GEN2`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>
@@ -1617,7 +1617,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-500/[0.06] border border-amber-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
                 MOONSHOT X3 · HIDDEN BANDWIDTH TAX &amp; DATA-GRAVITY RADAR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1689,18 +1689,18 @@ CMD ["server/index.js"]`;
                 className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
                     {link.compute.type}: {link.compute.name} ({link.compute.region})
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
                     {link.data.type}: {link.data.name} ({link.data.region})
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       link.ratePerGb === 0
                         ? 'bg-emerald-500/15 text-emerald-500'
                         : link.tier === 'CROSS_CONTINENT_TRANSOCEANIC'
@@ -1730,7 +1730,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                 MOONSHOT X4 · RANSOMWARE SURVIVAL &amp; AIR-GAP AUDITOR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1779,7 +1779,7 @@ CMD ["server/index.js"]`;
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
                       <span
-                        className={`px-2 py-0.5 rounded ${
+                        className={`px-2 py-0.5 rounded-full ${
                           b.pap
                             ? 'bg-emerald-500/15 text-emerald-500'
                             : 'bg-red-500/15 text-red-500'
@@ -1788,7 +1788,7 @@ CMD ["server/index.js"]`;
                         PAP: {b.pap ? 'Enforced' : 'Inherited'}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded ${
+                        className={`px-2 py-0.5 rounded-full ${
                           b.ubla
                             ? 'bg-emerald-500/15 text-emerald-500'
                             : 'bg-amber-500/15 text-amber-500'
@@ -1796,11 +1796,11 @@ CMD ["server/index.js"]`;
                       >
                         IAM: {b.ubla ? 'Uniform' : 'Fine-Grained ACL'}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-500">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-500">
                         Soft-Delete: {b.softDelDays}d
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded ${
+                        className={`px-2 py-0.5 rounded-full ${
                           b.versioning || b.wormDays > 0
                             ? 'bg-emerald-500/15 text-emerald-500'
                             : 'bg-amber-500/15 text-amber-500'
@@ -1824,7 +1824,7 @@ CMD ["server/index.js"]`;
                         type="button"
                         onClick={() => onOpenObjectInWorkbench(b.name, '')}
                         title={`Open gs://${b.name} in the Object Workbench (M02) to inspect noncurrent object versions, restore soft-deleted generations, or toggle temporaryHold / eventBasedHold`}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                        className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
                       >
                         Version Time-Machine &amp; Holds (M02) →
                       </button>
@@ -1834,7 +1834,7 @@ CMD ["server/index.js"]`;
                       disabled={busyKey === `airgap-${b.name}`}
                       onClick={() => handleAirGapLockBucket(b.name)}
                       title={`Harden gs://${b.name} in 1 click via Google Cloud Storage API: enforces publicAccessPrevention='enforced', uniformBucketLevelAccess=true, versioningEnabled=true, and a 30-day Soft-Delete recovery window`}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                     >
                       {busyKey === `airgap-${b.name}`
                         ? 'Hardening...'
@@ -1859,7 +1859,7 @@ CMD ["server/index.js"]`;
         <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X5 · 12-METROPOLIS SPEED-OF-LIGHT UX MATRIX
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1895,7 +1895,7 @@ CMD ["server/index.js"]`;
                 type="button"
                 onClick={() => setEnableGlobalAnycastCdn((v) => !v)}
                 title="Simulate terminating client TLS 1.3 handshakes at Google's nearest Global Anycast Edge PoP (Cloud Load Balancing + Cloud CDN) instead of traversing transoceanic fiber to the origin"
-                className={`px-3.5 py-2 rounded-xl text-xs font-mono font-extrabold border cursor-pointer transition-all ${
+                className={`px-3.5 py-2 rounded-md text-xs font-mono font-extrabold border cursor-pointer transition-all ${
                   enableGlobalAnycastCdn
                     ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                     : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
@@ -1955,21 +1955,21 @@ CMD ["server/index.js"]`;
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                 MOONSHOT X6 · OPTION 3 AES-256-GCM AI STUDIO BYOK VAULT
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 text-emerald-400 border border-emerald-500/30">
                 {vaultStatus.configured
                   ? `SEALED IN RAM (${vaultStatus.maskedKey} · ${vaultStatus.keyFingerprint})`
                   : 'ZERO-KEY DETERMINISTIC MODE (SEAL KEY TO UNLOCK LIVE GEMINI 3.8 FLASH / 3.1 PRO)'}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 ACTIVE ENGINE:{' '}
                 {selectedGeminiModel === 'CUSTOM' && customModelId.trim()
                   ? customModelId.trim()
                   : selectedGeminiModel}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 {transportMode === 'BROWSER_DIRECT_TLS13'
                   ? 'ZERO LOCAL HTTP HOP: Direct Browser -> Google HTTPS TLS 1.3'
                   : `RSA-OAEP-256 WIRE ENVELOPE (${
@@ -2003,7 +2003,7 @@ CMD ["server/index.js"]`;
             type="button"
             onClick={handleDiscoverLiveModels}
             disabled={discoveringModels}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
             title="Query Google AI Studio /v1beta/models over HTTPS TLS 1.3 to auto-discover newly released Gemini models"
           >
             <RefreshCw
@@ -2032,7 +2032,7 @@ CMD ["server/index.js"]`;
               data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
               onClick={() => setTransportMode('BROWSER_DIRECT_TLS13')}
               title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key or prompt ever traverse local HTTP!"
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'BROWSER_DIRECT_TLS13'
                   ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/50'
@@ -2046,7 +2046,7 @@ CMD ["server/index.js"]`;
               data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
               onClick={() => setTransportMode('RSA_OAEP_SERVER_VAULT')}
               title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'RSA_OAEP_SERVER_VAULT'
                   ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
@@ -2097,7 +2097,7 @@ CMD ["server/index.js"]`;
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
               <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 flex items-start gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 font-extrabold">
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 font-extrabold">
                   STEP 1
                 </span>
                 <span className="text-zinc-700 dark:text-zinc-300">
@@ -2119,9 +2119,9 @@ CMD ["server/index.js"]`;
                 type="button"
                 onClick={focusAndHighlightKeyInput}
                 title="Click to jump directly to the encrypted API key input box below"
-                className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 hover:border-amber-500 flex items-start gap-2 text-left cursor-pointer"
+                className="p-2 rounded-md bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 hover:border-amber-500 flex items-start gap-2 text-left cursor-pointer"
               >
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 font-extrabold">
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 font-extrabold">
                   STEP 2
                 </span>
                 <span className="text-zinc-700 dark:text-zinc-300">
@@ -2131,7 +2131,7 @@ CMD ["server/index.js"]`;
                 </span>
               </button>
               <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 flex items-start gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
                   STEP 3
                 </span>
                 <span className="text-zinc-700 dark:text-zinc-300">
@@ -2201,7 +2201,7 @@ CMD ["server/index.js"]`;
                     ? 'Encrypt and seal your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave (0 bytes sent over local HTTP)'
                     : 'Encrypt your API key in the browser with RSA-OAEP-256 and seal it inside the Node.js server AES-256-GCM RAM Vault'
                 }
-                className={`flex-1 px-3 py-2 rounded-lg text-white text-xs font-mono font-bold cursor-pointer transition-all ${
+                className={`flex-1 px-3 py-2 rounded-md text-white text-xs font-mono font-bold cursor-pointer transition-all ${
                   apiKeyInput.trim()
                     ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
                     : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-600'
@@ -2215,7 +2215,7 @@ CMD ["server/index.js"]`;
                 <button
                   type="button"
                   onClick={handleClearVault}
-                  className="px-2.5 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
+                  className="px-2.5 py-2 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
                   title="Zero-fill and wipe the encrypted API key from Browser WebCrypto memory and Server RAM Vault"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -2287,7 +2287,7 @@ CMD ["server/index.js"]`;
                   handleAskGeminiArchitect(q);
                 }}
                 title={`Run this SRE prompt against your live ${projectId} telemetry: "${q}"`}
-                className="text-[10.5px] font-mono px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500 cursor-pointer"
+                className="text-[10.5px] font-mono px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500 cursor-pointer"
               >
                 {q}
               </button>
@@ -2315,7 +2315,7 @@ CMD ["server/index.js"]`;
                     } (8,192 output token budget)`
                   : 'Run local Deterministic SRE Co-Architect preview (or paste an AIzaSy... key above to auto-seal and query live Gemini)'
               }
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {askingAi
                 ? `Synthesizing (${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel})...`
@@ -2376,7 +2376,7 @@ CMD ["server/index.js"]`;
                   </span>
                   {aiResponse.finishReason && (
                     <span
-                      className={`px-1.5 py-0.5 rounded border ${
+                      className={`px-1.5 py-0.5 rounded-full border ${
                         aiResponse.finishReason === 'STOP'
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                           : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
@@ -2387,7 +2387,7 @@ CMD ["server/index.js"]`;
                   )}
                   {aiResponse.tokenUsage &&
                     aiResponse.tokenUsage.totalTokens > 0 && (
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border border-zinc-200 dark:border-zinc-800">
+                      <span className="px-1.5 py-0.5 rounded-full bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border border-zinc-200 dark:border-zinc-800">
                         Out: {aiResponse.tokenUsage.outputTokens} tok
                         {aiResponse.tokenUsage.thoughtTokens > 0
                           ? ` · Thinking: ${aiResponse.tokenUsage.thoughtTokens} tok`

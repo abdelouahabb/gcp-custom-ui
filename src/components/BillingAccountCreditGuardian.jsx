@@ -1421,12 +1421,12 @@ ORDER BY
               Remaining Bonus & Cloud Billing Guardian
             </h2>
             {billingInfo.billingAccountId && (
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 {billingInfo.displayName} ({billingInfo.billingAccountId})
               </span>
             )}
             <span
-              className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                 billingInfo.billingEnabled
                   ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
@@ -1435,7 +1435,7 @@ ORDER BY
               {billingInfo.billingEnabled ? 'BILLING ACTIVE' : 'UNLINKED / CLOSED'}
             </span>
             {idbStats.synced && (
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                 INDEXEDDB SYNCED ({idbStats.accountsCount} accts ·{' '}
                 {idbStats.budgetsCount} budgets · {idbStats.grantsCount} grants ·{' '}
                 {idbStats.ledgerRowsCount} rows)
@@ -1452,7 +1452,7 @@ ORDER BY
             type="button"
             onClick={handleAutoGrabCreditsCsv}
             disabled={autoGrabbingCsv}
-            className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            className="h-9 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
             title='Clicks button[id$="billingtest-download-credits-csv"] via CDP (if enabled) and auto-ingests the latest Credits CSV from ~/Downloads or ~/Desktop'
           >
             <RefreshCw
@@ -1481,7 +1481,7 @@ ORDER BY
           <button
             type="button"
             onClick={() => setShowConsoleSyncDrawer((p) => !p)}
-            className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            className="h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
             <CreditCard className="w-3.5 h-3.5 shrink-0" />
             <span>
@@ -1495,7 +1495,7 @@ ORDER BY
             <button
               type="button"
               onClick={handleClearConsoleCredits}
-              className="h-9 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+              className="h-9 px-3 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
               title="Clear all uploaded Remaining Bonus rows and upload a new CSV"
             >
               <XCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1507,7 +1507,7 @@ ORDER BY
             <button
               type="button"
               onClick={() => setShowAccountsDrawer((p) => !p)}
-              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+              className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
             >
               <Building2 className="w-3.5 h-3.5 shrink-0" />
               <span>Billing Accounts ({billingAccounts.length})</span>
@@ -1518,7 +1518,7 @@ ORDER BY
             type="button"
             onClick={() => loadBillingGuardian(true)}
             disabled={loading}
-            className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
             title="Live APIs auto-refresh every 2 minutes in the background without blocking page entry"
           >
             <RefreshCw
@@ -1557,7 +1557,7 @@ ORDER BY
                 type="button"
                 onClick={handleAutoGrabCreditsCsv}
                 disabled={autoGrabbingCsv}
-                className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 shrink-0 ${
@@ -1579,7 +1579,7 @@ ORDER BY
                     'Console Download CSV Auto-Clicker JS'
                   )
                 }
-                className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-8 px-3 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                 title="Copies JS snippet targeting button[id$='billingtest-download-credits-csv']"
               >
                 {copiedId === 'dom-auto-click-csv' ? (
@@ -1603,7 +1603,7 @@ ORDER BY
                 <button
                   type="button"
                   onClick={handleClearConsoleCredits}
-                  className="h-8 px-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-mono font-bold cursor-pointer"
+                  className="h-8 px-2.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-mono font-bold cursor-pointer"
                 >
                   Reset / Clear Bonus ({enrichedGrants.length})
                 </button>
@@ -1633,7 +1633,7 @@ ORDER BY
               type="button"
               onClick={() => handleSyncConsoleCredits()}
               disabled={syncingConsoleCredits}
-              className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              className="h-8 px-3.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>
@@ -1680,7 +1680,7 @@ ORDER BY
                     </div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                       acct.open
                         ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
@@ -1867,7 +1867,7 @@ ORDER BY
                 </code>
                 )
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 GoogleCloudBillingBudgetsV1SpendCap
               </span>
             </div>
@@ -1884,7 +1884,7 @@ ORDER BY
               <button
                 type="button"
                 onClick={onOpenEmergencyKillSwitch}
-                className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-extrabold cursor-pointer"
+                className="px-2.5 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-extrabold cursor-pointer"
                 title="Jump to DEFCON-1 Project Billing Unlink & Granular API Kill-Switch"
               >
                 DEFCON-1 Emergency Kill-Switch →
@@ -1894,14 +1894,14 @@ ORDER BY
               type="button"
               onClick={() => loadSpendCapCatalog()}
               disabled={loadingSpendCapCatalog}
-              className="px-2.5 py-1.5 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+              className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
             >
               {loadingSpendCapCatalog ? 'Syncing Catalog...' : 'Sync Budgets'}
             </button>
             <button
               type="button"
               onClick={() => setShowSpendCapComposer((prev) => !prev)}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
+              className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
             >
               {showSpendCapComposer
                 ? 'Close Spend Cap Composer'
@@ -1984,7 +1984,7 @@ ORDER BY
                         setNewBudgetCreditTreatment('EXCLUDE_ALL_CREDITS');
                       }
                     }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                       active
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -2031,7 +2031,7 @@ ORDER BY
                         key={srv.name}
                         type="button"
                         onClick={() => setSelectedServiceResource(srv.name)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
                           active
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -2042,7 +2042,7 @@ ORDER BY
                             {srv.displayName}
                           </span>
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                               active
                                 ? 'bg-black/25 text-white'
                                 : srv.enabledInProject
@@ -2108,7 +2108,7 @@ ORDER BY
                       )
                     )
                   }
-                  className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer shrink-0"
+                  className="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer shrink-0"
                 >
                   Apply Recommended Gross Cap ($
                   {Math.max(
@@ -2216,7 +2216,7 @@ ORDER BY
               <button
                 type="submit"
                 disabled={budgetBusyKey === 'CREATE_BUDGET'}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
+                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
               >
                 {budgetBusyKey === 'CREATE_BUDGET'
                   ? 'Provisioning in Cloud Billing API...'
@@ -2291,24 +2291,24 @@ ORDER BY
                     </div>
                     <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
                       {isReconciling && (
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                           RECONCILING
                         </span>
                       )}
                       {isEnforced ? (
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
                           ENFORCED · PAUSED
                         </span>
                       ) : isAwaiting ? (
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                           AWAITING_NEXT_PERIOD (LIFTED)
                         </span>
                       ) : isConfigured ? (
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                           SPEND CAP ARMED
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                           ALERT ONLY
                         </span>
                       )}
@@ -2323,7 +2323,7 @@ ORDER BY
                           type="button"
                           onClick={() => handleSpendCapAction(b.name, 'LIFT_CAP')}
                           disabled={budgetBusyKey === `LIFT_CAP:${b.name}`}
-                          className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer"
+                          className="px-2 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer"
                           title="PATCH ?updateMask=spendCap.inputState -> AWAITING_NEXT_PERIOD (Lifts cap for rest of month)"
                         >
                           {budgetBusyKey === `LIFT_CAP:${b.name}`
@@ -2336,7 +2336,7 @@ ORDER BY
                           type="button"
                           onClick={() => handleSpendCapAction(b.name, 'ARM_CAP')}
                           disabled={budgetBusyKey === `ARM_CAP:${b.name}`}
-                          className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer"
+                          className="px-2 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer"
                           title="PATCH ?updateMask=spendCap.inputState -> CONFIGURED"
                         >
                           {budgetBusyKey === `ARM_CAP:${b.name}`
@@ -2370,7 +2370,7 @@ ORDER BY
                             budgetBusyKey ===
                             `RAISE_AMOUNT_AND_UNPAUSE:${b.name}`
                           }
-                          className="px-2 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer"
+                          className="px-2 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer"
                           title="Executes atomic 2-step PATCH (lifts ENFORCED lock first if needed to prevent FAILED_PRECONDITION, then updates specifiedAmount)"
                         >
                           {budgetBusyKey ===
@@ -2397,7 +2397,7 @@ ORDER BY
                             );
                           }
                         }}
-                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                        className="px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
                       >
                         Copy PATCH curl
                       </button>
@@ -2405,7 +2405,7 @@ ORDER BY
                         type="button"
                         onClick={() => handleDeleteBudget(b.name)}
                         disabled={budgetBusyKey === `DELETE:${b.name}`}
-                        className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/25 text-[10px] font-bold cursor-pointer"
+                        className="px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/25 text-[10px] font-bold cursor-pointer"
                       >
                         Delete
                       </button>
@@ -2517,7 +2517,7 @@ ORDER BY
                       );
                     }
                   }}
-                  className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                  className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
                   title="Downloads a Tampermonkey/Violentmonkey userscript that automatically triggers button[id$='billingtest-download-credits-csv'] whenever you open GCP Billing Credits"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -2527,7 +2527,7 @@ ORDER BY
                   <button
                     type="button"
                     onClick={() => onOpenBigQuerySql(bqCreditExportSql)}
-                    className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                    className="h-8 px-3 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
                   >
                     <Database className="w-3.5 h-3.5 shrink-0" />
                     <span>Audit Credits in BigQuery</span>
@@ -2748,7 +2748,7 @@ ORDER BY
                                 ))}
                               </select>
                             </label>
-                            <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold">
                               Shut Off All Resources ≥12h Before {expIso}
                             </span>
                           </div>
@@ -2790,7 +2790,7 @@ ORDER BY
                           >
                             <div className="space-y-1.5">
                               <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
                                   {bp.badge}
                                 </span>
                                 <span className="text-[10.5px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
@@ -2832,7 +2832,7 @@ ORDER BY
                                       targetHarvestRegion
                                     )
                                   }
-                                  className="h-7 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-mono font-extrabold cursor-pointer transition-all"
+                                  className="h-7 px-2.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-mono font-extrabold cursor-pointer transition-all"
                                 >
                                   {bp.provisionBtnLabel} ({targetHarvestRegion})
                                 </button>
@@ -2847,7 +2847,7 @@ ORDER BY
                                     bp.cliLabel
                                   )
                                 }
-                                className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                                className="h-7 px-2.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
                               >
                                 {copiedId === bp.cliId
                                   ? 'Copied!'
@@ -2860,7 +2860,7 @@ ORDER BY
                                 <button
                                   type="button"
                                   onClick={() => onOpenBigQuerySql(bp.cliCmd)}
-                                  className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                                  className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                                 >
                                   Open in BigQuery
                                 </button>
@@ -2869,7 +2869,7 @@ ORDER BY
                                   <button
                                     type="button"
                                     onClick={() => onRunInShell(bp.cliCmd)}
-                                    className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                                    className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                                   >
                                     Run in Shell
                                   </button>
@@ -2903,7 +2903,7 @@ ORDER BY
                                 'Pre-Expiry Auto-Shutdown CLI'
                               )
                             }
-                            className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
+                            className="h-8 px-3 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
                           >
                             {copiedId === 'harvester-cutoff'
                               ? 'Copied Guard CLI'
@@ -2913,7 +2913,7 @@ ORDER BY
                             <button
                               type="button"
                               onClick={() => onRunInShell(safeCutoffCmd)}
-                              className="h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                              className="h-8 px-3 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                             >
                               Arm 12h Cutoff Guard
                             </button>
@@ -2963,7 +2963,7 @@ ORDER BY
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`h-7 px-2.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer whitespace-nowrap ${
+                  className={`h-7 px-2.5 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer whitespace-nowrap ${
                     statusFilter === tab.id
                       ? 'bg-blue-600 text-white border-blue-500'
                       : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
@@ -2975,7 +2975,7 @@ ORDER BY
               <button
                 type="button"
                 onClick={handleClearConsoleCredits}
-                className="h-7 px-2.5 rounded-lg text-[11px] font-mono font-bold border bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 transition-all cursor-pointer whitespace-nowrap"
+                className="h-7 px-2.5 rounded-md text-[11px] font-mono font-bold border bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 transition-all cursor-pointer whitespace-nowrap"
               >
                 Reset All Credits
               </button>
@@ -3267,7 +3267,7 @@ ORDER BY
               </span>
               {egressRadar && (
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                     (egressRadar.stoppedLeftovers?.length || 0) === 0 &&
                     (egressRadar.egressWarnings?.length || 0) === 0
                       ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
@@ -3289,7 +3289,7 @@ ORDER BY
             type="button"
             onClick={scanEgressAndLeftovers}
             disabled={loadingEgressRadar}
-            className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            className="h-8 px-3 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -3390,7 +3390,7 @@ ORDER BY
                 Google Cloud &ldquo;Always Free&rdquo; Tier Auditor & $0.00/Mo Architect
               </span>
               {alwaysFreeAudit?.summary && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   {alwaysFreeAudit.summary.withinFreeCount} /{' '}
                   {alwaysFreeAudit.summary.totalCategories} Services Inside Free Tier
                 </span>
@@ -3429,7 +3429,7 @@ ORDER BY
                 key={f.id}
                 type="button"
                 onClick={() => setAlwaysFreeFilter(f.id)}
-                className={`h-7 px-2.5 rounded-lg text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                className={`h-7 px-2.5 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
                   alwaysFreeFilter === f.id
                     ? 'bg-emerald-600 text-white border-emerald-500'
                     : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -3443,7 +3443,7 @@ ORDER BY
               type="button"
               onClick={scanAlwaysFreeAuditor}
               disabled={loadingAlwaysFree}
-              className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              className="h-7 px-2.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3 h-3 ${loadingAlwaysFree ? 'animate-spin' : ''}`}
@@ -3482,7 +3482,7 @@ ORDER BY
                 onClick={() =>
                   handleRunAlwaysFreeEnforcer('ENFORCE_ARTIFACT_REGISTRY_CLEANUP')
                 }
-                className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+                className="w-full py-1.5 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
               >
                 {enforcerBusy === 'ENFORCE_ARTIFACT_REGISTRY_CLEANUP'
                   ? 'Applying Cleanup Policy...'
@@ -3507,7 +3507,7 @@ ORDER BY
                     'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION'
                   )
                 }
-                className="w-full py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+                className="w-full py-1.5 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
               >
                 {enforcerBusy === 'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION'
                   ? 'Patching _Default Log Sink...'
@@ -3530,7 +3530,7 @@ ORDER BY
                 onClick={() =>
                   handleRunAlwaysFreeEnforcer('TRIM_EXCESS_SECRET_VERSIONS')
                 }
-                className="w-full py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+                className="w-full py-1.5 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
               >
                 {enforcerBusy === 'TRIM_EXCESS_SECRET_VERSIONS'
                   ? 'Disabling Redundant Versions...'
@@ -3574,7 +3574,7 @@ ORDER BY
                         {item.product} ↗
                       </a>
                       <span
-                        className={`shrink-0 px-2 py-0.5 rounded text-[9.5px] font-mono font-extrabold border ${
+                        className={`shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold border ${
                           isFree
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                             : 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40'
@@ -3610,7 +3610,7 @@ ORDER BY
                           `${item.product} $0/mo CLI`
                         )
                       }
-                      className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                      className="h-7 px-2.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
                     >
                       {copiedId === `free-cli-${item.id}`
                         ? '✓ Copied $0 CLI'
@@ -3621,7 +3621,7 @@ ORDER BY
                       <button
                         type="button"
                         onClick={() => onRunInShell(item.zeroDollarCli)}
-                        className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                       >
                         Run $0 Spec in Shell
                       </button>
@@ -3632,7 +3632,7 @@ ORDER BY
                       <button
                         type="button"
                         onClick={() => onOpenSecretManagerStudio()}
-                        className="h-7 px-2.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                        className="h-7 px-2.5 rounded-md bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
                       >
                         Open Secret Studio →
                       </button>
@@ -3645,7 +3645,7 @@ ORDER BY
                           onClick={() =>
                             onOpenProvision(item.provisionServiceType)
                           }
-                          className="h-7 px-2.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          className="h-7 px-2.5 rounded-md bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
                         >
                           Open Studio →
                         </button>
@@ -3708,7 +3708,7 @@ ORDER BY
                     'BigQuery Promotional Credits SQL'
                   )
                 }
-                className="h-7 px-2.5 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-7 px-2.5 rounded-md bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 {copiedId === 'bq-credits-sql' ? (
                   <Check className="w-3 h-3 text-emerald-500" />
@@ -3721,7 +3721,7 @@ ORDER BY
                 <button
                   type="button"
                   onClick={() => onOpenBigQuerySql(bqCreditExportSql)}
-                  className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <span>Open in BigQuery Studio</span>
                 </button>
@@ -3749,7 +3749,7 @@ ORDER BY
                     'gcloud billing budgets create CLI'
                   )
                 }
-                className="h-7 px-2.5 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-7 px-2.5 rounded-md bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 {copiedId === 'gcloud-budget-cli' ? (
                   <Check className="w-3 h-3 text-emerald-500" />
@@ -3764,7 +3764,7 @@ ORDER BY
                 <button
                   type="button"
                   onClick={() => onRunInShell(budgetAlertCli)}
-                  className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <span>Run in Cloud Shell</span>
                 </button>

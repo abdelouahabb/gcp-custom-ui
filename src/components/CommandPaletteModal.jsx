@@ -1051,7 +1051,7 @@ export default function CommandPaletteModal({
             type="button"
             onClick={toggleVoiceInput}
             title="Voice-to-Cloud Natural Language Input"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-all shrink-0 ${
               isListening
                 ? 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300 animate-pulse'
                 : 'bg-white dark:bg-slate-800/90 hover:bg-zinc-100 dark:hover:bg-slate-700 border-zinc-200 dark:border-slate-700 text-zinc-700 dark:text-slate-300'
@@ -1063,7 +1063,7 @@ export default function CommandPaletteModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 dark:text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-slate-800"
+            className="p-1.5 rounded-md text-zinc-500 dark:text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-slate-800"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1136,7 +1136,7 @@ export default function CommandPaletteModal({
                   type="button"
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onClick={() => action.run()}
-                  className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between gap-3 transition-all ${
+                  className={`w-full text-left px-3.5 py-3 rounded-md flex items-center justify-between gap-3 transition-all ${
                     isSelected
                       ? 'bg-blue-500/15 border border-blue-500/30'
                       : 'hover:bg-zinc-100 dark:hover:bg-slate-800/60 border border-transparent'
@@ -1149,11 +1149,11 @@ export default function CommandPaletteModal({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">{action.title}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${action.badgeColor}`}>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono border ${action.badgeColor}`}>
                           {action.badge}
                         </span>
                         {action.nlpMatchPct && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                             NLP Match {action.nlpMatchPct}%
                           </span>
                         )}

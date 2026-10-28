@@ -460,7 +460,7 @@ export default function MermaidArchitectureDiagram({
           <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate">
             {title}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
             {parsed.layers.length} Layers · {parsed.nodes.length} Nodes ·{' '}
             {parsed.edges.length} Flows
           </span>
@@ -558,7 +558,7 @@ export default function MermaidArchitectureDiagram({
               type="button"
               onClick={handleDownloadSvg}
               title="Export rendered C4 architecture diagram as a scalable vector graphic (.svg)"
-              className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
             >
               <Download className="w-3 h-3" />
               <span>Export .svg</span>
@@ -569,7 +569,7 @@ export default function MermaidArchitectureDiagram({
             type="button"
             onClick={handleCopyCode}
             title="Copy Mermaid flowchart code to clipboard"
-            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+            className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
           >
             {copied ? (
               <>

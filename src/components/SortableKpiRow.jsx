@@ -86,7 +86,7 @@ function SortableKpiCard({ item }) {
           {...listeners}
           onClick={(e) => e.stopPropagation()}
           title="Drag handle to reorder KPI card"
-          className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-grab active:cursor-grabbing rounded-lg transition-colors shrink-0"
+          className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-grab active:cursor-grabbing rounded-md transition-colors shrink-0"
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -96,7 +96,7 @@ function SortableKpiCard({ item }) {
         <div className="text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono">
           {item.value}
         </div>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
           <TrendingUp className="w-3 h-3" />
           {item.trendLabel}
         </span>
@@ -104,7 +104,7 @@ function SortableKpiCard({ item }) {
 
       <div className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
         <span className="truncate">{item.subtitle}</span>
-        <span className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded shrink-0">
+        <span className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded-full shrink-0">
           {item.badge}
         </span>
       </div>
@@ -368,7 +368,7 @@ export default function SortableKpiRow({
             100% Live Google Cloud Project Telemetry (Click Card to Open Studio · Drag Handle to Reorder)
           </h6>
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold border transition-colors ${
               isSyncing
                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
@@ -397,7 +397,7 @@ export default function SortableKpiRow({
         <button
           type="button"
           onClick={() => setShowPalette((p) => !p)}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-2.5 py-1 rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-2.5 py-1 rounded-md transition-colors"
         >
           <Palette className="w-3.5 h-3.5" />
           <span>{showPalette ? 'Hide Palette' : 'Customize Chart Palette'}</span>

@@ -435,7 +435,7 @@ export default function GdeStreamerPrivacyShield({
           <div className="flex items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-mono font-extrabold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full-full bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-mono font-extrabold">
                   <Video className="w-3 h-3" />
                   <span>GDE TUTORIAL PRIVACY SHIELD</span>
                 </span>
@@ -454,7 +454,7 @@ export default function GdeStreamerPrivacyShield({
             <button
               type="button"
               onClick={() => updateConfig({ enabled: !config.enabled })}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer border ${
+              className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold cursor-pointer border ${
                 config.enabled
                   ? 'bg-red-600 text-white border-red-500'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'

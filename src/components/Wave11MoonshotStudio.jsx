@@ -495,10 +495,10 @@ export default function Wave11MoonshotStudio({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 RELEASE &amp; MULTI-PROJECT GOVERNANCE STUDIO (100% LIVE GCP APIS)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                 CLOUD DEPLOY + FIRESTORE NOSQL + ACTIVE ASSIST RECOMMENDER + MULTI-PROJECT MATRIX
               </span>
             </div>
@@ -549,7 +549,7 @@ export default function Wave11MoonshotStudio({
               type="button"
               onClick={handleDownloadExecutiveReport}
               title="Download printable Executive HTML/PDF Architecture & Readiness Dossier for clients"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export Client Dossier (.html)</span>
@@ -560,7 +560,7 @@ export default function Wave11MoonshotStudio({
               onClick={fetchWave11Overview}
               disabled={loading}
               title="Refresh live Wave 11 telemetry from Google Cloud REST APIs"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -582,7 +582,7 @@ export default function Wave11MoonshotStudio({
                 data-feature-id={tab.id}
                 title={`${tab.label} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`w-full p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
+                className={`w-full p-3 rounded-md border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -618,7 +618,7 @@ export default function Wave11MoonshotStudio({
                 <PlusCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Provision Live Cloud Deploy Canary Pipeline</span>
               </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                 GA · LIVE REST API
               </span>
             </div>
@@ -671,7 +671,7 @@ export default function Wave11MoonshotStudio({
               <button
                 type="submit"
                 disabled={creatingPipeline}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 {creatingPipeline
                   ? 'Provisioning Targets & Pipeline on clouddeploy.googleapis.com...'
@@ -730,7 +730,7 @@ export default function Wave11MoonshotStudio({
                         <div className="font-mono font-extrabold text-sm text-zinc-950 dark:text-white">
                           {p.name}
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                           {p.readyCondition}
                         </span>
                       </div>
@@ -745,7 +745,7 @@ export default function Wave11MoonshotStudio({
                             {idx > 0 && (
                               <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
                             )}
-                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
                               {st.targetId}
                               {st.hasCanary &&
                                 ` (Canary ${st.canaryPercentages.join('%→')}%)`}
@@ -778,7 +778,7 @@ export default function Wave11MoonshotStudio({
                           </div>
                         </div>
                         {t.requireApproval && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                             APPROVAL GATE
                           </span>
                         )}
@@ -806,7 +806,7 @@ export default function Wave11MoonshotStudio({
                   type="button"
                   onClick={handleCreateFirestoreDb}
                   disabled={creatingDb}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
                 >
                   {creatingDb ? 'Creating (default)...' : 'Init (default) DB'}
                 </button>
@@ -856,7 +856,7 @@ export default function Wave11MoonshotStudio({
               <button
                 type="submit"
                 disabled={savingDoc}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-md text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 {savingDoc
                   ? 'Writing to firestore.googleapis.com/v1...'
@@ -893,7 +893,7 @@ export default function Wave11MoonshotStudio({
                         {db.type} · PITR: {db.pointInTimeRecoveryEnablement}
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                       LIVE
                     </span>
                   </div>
@@ -931,7 +931,7 @@ export default function Wave11MoonshotStudio({
                           type="button"
                           onClick={() => handleDeleteFirestoreDoc(doc.id)}
                           title={`Delete Firestore document ${doc.collectionId}/${doc.id}`}
-                          className="p-1 rounded-lg hover:bg-red-500/15 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                          className="p-1 rounded-md hover:bg-red-500/15 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -961,7 +961,7 @@ export default function Wave11MoonshotStudio({
                   Direct from <code>recommender.googleapis.com/v1</code> (VM Rightsizing, Idle IPs, Idle Disks, IAM Least-Privilege)
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              <span className="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Save ${wave11Data?.finopsQuotas?.totalMonthlySavingsUsd ?? 0}/mo
               </span>
             </div>
@@ -984,7 +984,7 @@ export default function Wave11MoonshotStudio({
                     className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                         {rec.category} · {rec.priority}
                       </span>
                       <span className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
@@ -1032,7 +1032,7 @@ export default function Wave11MoonshotStudio({
                   </div>
                   <div className="text-right shrink-0">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         q.status === 'CRITICAL'
                           ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
                           : q.status === 'ELEVATED'
@@ -1071,7 +1071,7 @@ export default function Wave11MoonshotStudio({
                 type="button"
                 onClick={handleRunMultiProjectScan}
                 disabled={loadingMultiProject}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -1114,7 +1114,7 @@ export default function Wave11MoonshotStudio({
                         </td>
                         <td className="py-2.5 px-3">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               p.billingEnabled
                                 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                 : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -1139,7 +1139,7 @@ export default function Wave11MoonshotStudio({
                             <button
                               type="button"
                               onClick={() => onSelectProject(p.projectId)}
-                              className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-[10px] font-bold cursor-pointer"
+                              className="px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-[10px] font-bold cursor-pointer"
                             >
                               Switch
                             </button>
@@ -1172,7 +1172,7 @@ export default function Wave11MoonshotStudio({
                 type="button"
                 onClick={handleRunStressAudit}
                 disabled={runningStressAudit}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Activity
                   className={`w-3.5 h-3.5 ${
@@ -1256,7 +1256,7 @@ export default function Wave11MoonshotStudio({
                           </td>
                           <td className="py-2 px-3">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 r.status === 'LIVE_VERIFIED'
                                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                   : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
@@ -1296,7 +1296,7 @@ export default function Wave11MoonshotStudio({
                   <button
                     type="button"
                     onClick={() => onRunInShell(selfHostData.cliOneLiner)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                   >
                     <Terminal className="w-3.5 h-3.5" />
                     <span>Deploy in Cloud Shell</span>
@@ -1307,7 +1307,7 @@ export default function Wave11MoonshotStudio({
                   onClick={() =>
                     handleCopy('cli', selfHostData?.cliOneLiner || '')
                   }
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
                 >
                   {copiedKey === 'cli' ? (
                     <Check className="w-3.5 h-3.5 text-emerald-500" />

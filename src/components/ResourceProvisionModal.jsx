@@ -1782,7 +1782,7 @@ export default function ResourceProvisionModal({
             <div>
               <h3 className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <span>Provision GCP Resource</span>
-                <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">
                   {projectId}
                 </span>
               </h3>
@@ -1796,7 +1796,7 @@ export default function ResourceProvisionModal({
             type="button"
             aria-label="Close Provisioning Studio"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1814,7 +1814,7 @@ export default function ResourceProvisionModal({
                   type="button"
                   onClick={() => handleTabSwitch(t.id)}
                   title={t.desc}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0 ${
+                  className={`p-2.5 rounded-md border text-left transition-all cursor-pointer min-w-0 ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'bg-zinc-50/70 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
@@ -1905,7 +1905,7 @@ export default function ResourceProvisionModal({
                     setGkeGpuAcceleratorType('NONE');
                   }
                 }}
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
+                className="shrink-0 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
               >
                 {serviceType === 'COMPUTE_VM'
                   ? 'Lock Always Free VM (e2-micro + 30GB pd-standard)'
@@ -2047,7 +2047,7 @@ export default function ResourceProvisionModal({
                   <span className="truncate font-bold text-blue-600 dark:text-blue-400">
                     {gkeMode} · {gkeLocation} ({gkeReleaseChannel})
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                     {gkeEnableWorkloadIdentity ? 'WI + ' : ''}
                     {gkeEnablePrivateNodes ? 'PRIVATE' : 'PUBLIC'}
                   </span>
@@ -2151,7 +2151,7 @@ export default function ResourceProvisionModal({
                     Runtime Service Account (iam.serviceAccounts.actAs)
                   </span>
                   {defaultComputeSaMissing && (
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                       Default Compute SA Deleted · Auto-Bound Custom SA
                     </span>
                   )}
@@ -2240,7 +2240,7 @@ export default function ResourceProvisionModal({
                       Live Pre-Provision Simulation (`projects.testIamPermissions` + `actAs` + Egress)
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         preflightData.ready
                           ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                           : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
@@ -2306,7 +2306,7 @@ export default function ResourceProvisionModal({
                   <button
                     type="button"
                     onClick={() => setAutoCreateSubnetworks(true)}
-                    className={`py-2 px-3 rounded-lg border text-xs font-mono font-semibold transition-colors ${
+                    className={`py-2 px-3 rounded-md border text-xs font-mono font-semibold transition-colors ${
                       autoCreateSubnetworks
                         ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -2317,7 +2317,7 @@ export default function ResourceProvisionModal({
                   <button
                     type="button"
                     onClick={() => setAutoCreateSubnetworks(false)}
-                    className={`py-2 px-3 rounded-lg border text-xs font-mono font-semibold transition-colors ${
+                    className={`py-2 px-3 rounded-md border text-xs font-mono font-semibold transition-colors ${
                       !autoCreateSubnetworks
                         ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -2357,7 +2357,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => setFirewallAction('ALLOW')}
-                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallAction === 'ALLOW'
                           ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2368,7 +2368,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => setFirewallAction('DENY')}
-                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallAction === 'DENY'
                           ? 'bg-red-500/15 border-red-500 text-red-600 dark:text-red-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2387,7 +2387,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => setFirewallDirection('INGRESS')}
-                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallDirection === 'INGRESS'
                           ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2398,7 +2398,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => setFirewallDirection('EGRESS')}
-                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallDirection === 'EGRESS'
                           ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2560,7 +2560,7 @@ export default function ResourceProvisionModal({
                         key={f.id}
                         type="button"
                         onClick={() => handleSelectMachineFamily(f.id)}
-                        className={`p-2 rounded-lg border text-left transition-all ${
+                        className={`p-2 rounded-md border text-left transition-all ${
                           active
                             ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
                             : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
@@ -2726,7 +2726,7 @@ export default function ResourceProvisionModal({
                 <button
                   type="button"
                   onClick={() => setAllowHttp((v) => !v)}
-                  className={`p-2 rounded-lg border text-[11px] font-mono text-left transition-colors ${
+                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
                     allowHttp
                       ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2738,7 +2738,7 @@ export default function ResourceProvisionModal({
                 <button
                   type="button"
                   onClick={() => setAllowHttps((v) => !v)}
-                  className={`p-2 rounded-lg border text-[11px] font-mono text-left transition-colors ${
+                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
                     allowHttps
                       ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2750,7 +2750,7 @@ export default function ResourceProvisionModal({
                 <button
                   type="button"
                   onClick={() => setShieldedSecureBoot((v) => !v)}
-                  className={`p-2 rounded-lg border text-[11px] font-mono text-left transition-colors ${
+                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
                     shieldedSecureBoot
                       ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2764,7 +2764,7 @@ export default function ResourceProvisionModal({
                 <button
                   type="button"
                   onClick={() => setDeletionProtection((v) => !v)}
-                  className={`p-2 rounded-lg border text-[11px] font-mono text-left transition-colors ${
+                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
                     deletionProtection
                       ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2828,7 +2828,7 @@ export default function ResourceProvisionModal({
                     <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                       1-Tap Cloud Storage Regulatory Blueprints (Strict Guardrail Enforcement)
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                       {isGcsCustom
                         ? 'Custom Mode: All Options Unlocked'
                         : `Enforcing ${gcsComplianceRegime.toUpperCase()} · ${gcsDataClassification.toUpperCase()}`}
@@ -2878,7 +2878,7 @@ export default function ResourceProvisionModal({
                           <div className="text-[11px] font-bold flex items-center justify-between">
                             <span>{bp.title}</span>
                             {active && bp.id !== 'custom' && (
-                              <span className="text-[9px] font-mono px-1 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                              <span className="text-[9px] font-mono px-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300">
                                 LOCKED
                               </span>
                             )}
@@ -3203,7 +3203,7 @@ export default function ResourceProvisionModal({
                             </div>
                           </div>
                         </label>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                           RPO: {gcsRpo}
                         </span>
                       </div>
@@ -3493,7 +3493,7 @@ export default function ResourceProvisionModal({
                         </div>
                       </div>
                     </label>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded border bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
                       PAP: {gcsPublicAccessPrevention.toUpperCase()}
                     </span>
                   </div>
@@ -4535,7 +4535,7 @@ export default function ResourceProvisionModal({
                     type="button"
                     disabled={runGpuAccelerator !== 'NONE'}
                     onClick={() => setRunBillingMode('REQUEST_BASED')}
-                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                    className={`p-2.5 rounded-md border text-left transition-all ${
                       runBillingMode === 'REQUEST_BASED' &&
                       runGpuAccelerator === 'NONE'
                         ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300'
@@ -4544,7 +4544,7 @@ export default function ResourceProvisionModal({
                   >
                     <div className="text-xs font-bold font-mono flex items-center justify-between">
                       <span>Request-based Billing</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                         $0 Idle
                       </span>
                     </div>
@@ -4557,7 +4557,7 @@ export default function ResourceProvisionModal({
                   <button
                     type="button"
                     onClick={() => setRunBillingMode('INSTANCE_BASED')}
-                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                    className={`p-2.5 rounded-md border text-left transition-all ${
                       runBillingMode === 'INSTANCE_BASED' ||
                       runGpuAccelerator !== 'NONE'
                         ? 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-300'
@@ -4566,7 +4566,7 @@ export default function ResourceProvisionModal({
                   >
                     <div className="text-xs font-bold font-mono flex items-center justify-between">
                       <span>Instance-based Billing</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400">
                         Always-On CPU/GPU
                       </span>
                     </div>
@@ -4586,7 +4586,7 @@ export default function ResourceProvisionModal({
                     <span>2026 Serverless GPU Accelerator (Gen2 AI Inference)</span>
                   </label>
                   {runGpuAccelerator !== 'NONE' && (
-                    <span className="text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full-full">
                       Auto-enforced: ≥4 vCPU · ≥16Gi RAM · Instance Billing
                     </span>
                   )}
@@ -4616,7 +4616,7 @@ export default function ResourceProvisionModal({
                         key={g.id}
                         type="button"
                         onClick={() => handleSelectGpuAccelerator(g.id)}
-                        className={`p-2 rounded-lg border text-left transition-all ${
+                        className={`p-2 rounded-md border text-left transition-all ${
                           active
                             ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 shadow-sm'
                             : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
@@ -4642,7 +4642,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => setRunGpuZonalRedundancy((v) => !v)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-mono font-semibold border transition-colors ${
+                      className={`px-3 py-1 rounded-md text-[11px] font-mono font-semibold border transition-colors ${
                         runGpuZonalRedundancy
                           ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                           : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -4885,7 +4885,7 @@ export default function ResourceProvisionModal({
                     <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-700 dark:text-blue-300">
                       2026 Direct VPC Egress Network (`template.vpcAccess`)
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
+                    <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
                       $0.00 Connector Tax
                     </span>
                   </div>
@@ -4893,7 +4893,7 @@ export default function ResourceProvisionModal({
                   <button
                     type="button"
                     onClick={() => setRunEnableDirectVpc((v) => !v)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer ${
                       runEnableDirectVpc
                         ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                         : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -4995,7 +4995,7 @@ export default function ResourceProvisionModal({
                     <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-amber-700 dark:text-amber-300">
                       2026 Cloud Run Attached Storage Volume Mounts
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                    <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
                       BETA · Gen2 FUSE / RAM / NFS
                     </span>
                   </div>
@@ -5310,7 +5310,7 @@ export default function ResourceProvisionModal({
                         1-Tap BigQuery Regulatory, FinOps & Lakehouse Blueprints (Strict Guardrail Enforcement)
                       </span>
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                       {isBqCustom
                         ? 'Custom Mode: All Controls Unlocked'
                         : `Strict Enforcement Active: ${bqComplianceRegime.toUpperCase()}`}
@@ -5352,7 +5352,7 @@ export default function ResourceProvisionModal({
                           type="button"
                           onClick={() => applyBqCompliancePreset(bp.id)}
                           title={`Select ${bp.title} (${bp.sub})`}
-                          className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                          className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                             active
                               ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 shadow-sm'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
@@ -5361,7 +5361,7 @@ export default function ResourceProvisionModal({
                           <div className="text-[11px] font-bold font-mono flex items-center justify-between">
                             <span>{bp.title}</span>
                             {active && bp.id !== 'standard' && (
-                              <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                              <span className="text-[9px] px-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300">
                                 LOCKED
                               </span>
                             )}
@@ -5404,7 +5404,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px]">
                         STEP 1
                       </span>
                       <span>Dataset Residency & Geo-Redundancy Topology</span>
@@ -5445,7 +5445,7 @@ export default function ResourceProvisionModal({
                               ? 'Disabled: AI Vector & Iceberg blueprint requires Single Region placement for low-latency GPU co-location'
                               : 'Multi-Region Continental Geo-Redundancy (US or EU)'
                           }
-                          className={`p-2 rounded-lg border text-left text-xs font-mono transition-all ${
+                          className={`p-2 rounded-md border text-left text-xs font-mono transition-all ${
                             isAiVector
                               ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800 text-zinc-400'
                               : bqLocationType === 'MULTI_REGION'
@@ -5472,7 +5472,7 @@ export default function ResourceProvisionModal({
                             }
                           }}
                           title="Single Region Low-Latency Co-Location with Cloud Run & Compute VMs"
-                          className={`p-2 rounded-lg border text-left text-xs font-mono transition-all cursor-pointer ${
+                          className={`p-2 rounded-md border text-left text-xs font-mono transition-all cursor-pointer ${
                             bqLocationType === 'REGIONAL'
                               ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 font-bold'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -5550,7 +5550,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-emerald-500/[0.04] dark:bg-emerald-950/15 border border-emerald-500/25 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-[10px]">
                         STEP 2
                       </span>
                       <span>
@@ -5569,7 +5569,7 @@ export default function ResourceProvisionModal({
                       type="button"
                       onClick={() => setBqStorageBillingModel('PHYSICAL')}
                       title="Bill on compressed Capacitor bytes stored on disk ($0.04/GB active, $0.02/GB long-term) — saves 50%-75% on analytical tables with >2:1 compression ratio"
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                         bqStorageBillingModel === 'PHYSICAL'
                           ? 'bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -5579,7 +5579,7 @@ export default function ResourceProvisionModal({
                         <span className="text-xs font-bold font-mono">
                           PHYSICAL (Compressed Bytes)
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
                           {lockPhysicalBilling
                             ? 'Enforced by Blueprint'
                             : 'Recommended (-54% Cost)'}
@@ -5603,7 +5603,7 @@ export default function ResourceProvisionModal({
                           ? `Disabled: ${bqComplianceRegime.toUpperCase()} enforces PHYSICAL compressed storage billing. Switch to GCP Console Standard to unlock Logical billing.`
                           : 'Bill on uncompressed logical bytes ($0.02/GB active, $0.01/GB long-term)'
                       }
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         lockPhysicalBilling
                           ? 'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                           : bqStorageBillingModel === 'LOGICAL'
@@ -5615,7 +5615,7 @@ export default function ResourceProvisionModal({
                         <span className="text-xs font-bold font-mono">
                           {lockPhysicalBilling ? '[LOCKED] ' : ''}LOGICAL (Uncompressed Bytes)
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-500/15 text-zinc-500">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-zinc-500/15 text-zinc-500">
                           {lockPhysicalBilling
                             ? 'Blocked by Compliance'
                             : 'Free Time-Travel Bytes'}
@@ -5632,7 +5632,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px]">
                         STEP 3
                       </span>
                       <span>
@@ -5754,7 +5754,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono text-[10px]">
                         STEP 4
                       </span>
                       <span>
@@ -5924,7 +5924,7 @@ export default function ResourceProvisionModal({
                         Step 0 · 2026 GKE Sovereign & AI Cluster Compliance Blueprints
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
                       {gkeComplianceRegime === 'custom'
                         ? 'UNLOCKED CUSTOM ARCHITECTURE'
                         : `ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
@@ -5966,7 +5966,7 @@ export default function ResourceProvisionModal({
                           type="button"
                           onClick={() => applyGkeCompliancePreset(preset.id)}
                           title={`Activate ${preset.title}: ${preset.sub}`}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
                             active
                               ? 'bg-blue-600 text-white border-blue-500 shadow-md'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
@@ -6012,7 +6012,7 @@ export default function ResourceProvisionModal({
                           ? 'Locked by AI / Spot GPU Blueprint: Direct GPU node pool tuning requires GKE Standard mode'
                           : 'Google manages all nodes, security hardening, and auto-provisioning. Billed strictly per running Pod vCPU/GiB.'
                       }
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         lockModeStandard
                           ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                           : gkeMode === 'AUTOPILOT'
@@ -6040,7 +6040,7 @@ export default function ResourceProvisionModal({
                           ? `Locked by ${gkeComplianceRegime.toUpperCase()}: Zero-Trust Enclaves require GKE Autopilot immutable node hardening`
                           : 'Full control over GCE machine types, Spot VM discounts (-68%), and dedicated NVIDIA L4 / T4 / A100 GPUs.'
                       }
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         lockModeAutopilot
                           ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                           : gkeMode === 'STANDARD'
@@ -6409,7 +6409,7 @@ export default function ResourceProvisionModal({
                           key={preset.id}
                           type="button"
                           onClick={() => applySqlCompliancePreset(preset.id)}
-                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          className={`text-left p-2.5 rounded-md border transition-all cursor-pointer ${
                             active
                               ? 'bg-blue-600/15 border-blue-500 shadow-sm'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -6419,7 +6419,7 @@ export default function ResourceProvisionModal({
                             <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
                               {preset.title}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
                               {preset.badge}
                             </span>
                           </div>
@@ -6442,7 +6442,7 @@ export default function ResourceProvisionModal({
                     <button
                       type="button"
                       onClick={() => handleSelectModalSqlEngine('POSTGRES')}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                         sqlEngineFamily === 'POSTGRES'
                           ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -6450,7 +6450,7 @@ export default function ResourceProvisionModal({
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>PostgreSQL (16 / 17 / 15)</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
                           Unlocks Cloud SQL + AlloyDB
                         </span>
                       </div>
@@ -6468,7 +6468,7 @@ export default function ResourceProvisionModal({
                           ? 'AI Vector AlloyDB blueprint requires PostgreSQL 16 (`alloydb_scann`). Switch to Custom Mode to select MySQL.'
                           : 'Select MySQL 8.4 LTS or 8.0 on Cloud SQL'
                       }
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         lockAlloyDbOnly
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlEngineFamily === 'MYSQL'
@@ -6478,7 +6478,7 @@ export default function ResourceProvisionModal({
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>MySQL (8.4 LTS / 8.0) {lockAlloyDbOnly ? '[LOCKED]' : ''}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
                           Cloud SQL Dedicated
                         </span>
                       </div>
@@ -6494,7 +6494,7 @@ export default function ResourceProvisionModal({
                       type="button"
                       disabled={lockAlloyDbOnly}
                       onClick={() => handleSelectModalSqlArchitecture('CLOUD_SQL')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         lockAlloyDbOnly
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlArchitecture === 'CLOUD_SQL'
@@ -6520,7 +6520,7 @@ export default function ResourceProvisionModal({
                           ? 'Google Cloud AlloyDB is a 100% PostgreSQL-compatible engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
                           : 'Select Google Cloud AlloyDB Disaggregated Colossus + Columnar + ScaNN Architecture'
                       }
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-md border text-left transition-all ${
                         sqlEngineFamily === 'MYSQL'
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlArchitecture === 'ALLOYDB'
@@ -6691,7 +6691,7 @@ export default function ResourceProvisionModal({
                 <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                   Live Pre-Deploy FinOps Cost Calculator
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                   {liveCostEstimate.badge}
                 </span>
               </div>

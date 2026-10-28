@@ -429,7 +429,7 @@ export default function StudioGcpAdvantageBar({
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+              <span className="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                 {meta.badge}
               </span>
               <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
@@ -444,7 +444,7 @@ export default function StudioGcpAdvantageBar({
             type="button"
             disabled={loading}
             onClick={fetchAudit}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
             <span>Sync Live API</span>
@@ -452,7 +452,7 @@ export default function StudioGcpAdvantageBar({
           <button
             type="button"
             onClick={() => setExpanded((p) => !p)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 cursor-pointer"
           >
             <span>{expanded ? 'Hide Tools' : 'Open Tools'}</span>
             {expanded ? (
@@ -501,7 +501,7 @@ export default function StudioGcpAdvantageBar({
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveVpcTool(tab.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer flex items-center gap-2 ${
+                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center gap-2 ${
                         active
                           ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
                           : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -578,7 +578,7 @@ export default function StudioGcpAdvantageBar({
                     <button
                       type="submit"
                       disabled={provingReachability}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
                     >
                       {provingReachability
                         ? 'Verifying...'
@@ -680,7 +680,7 @@ export default function StudioGcpAdvantageBar({
                   <button
                     type="submit"
                     disabled={creatingSubnet}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
                   >
                     {creatingSubnet
                       ? 'Spanning...'
@@ -709,7 +709,7 @@ export default function StudioGcpAdvantageBar({
                   <button
                     type="submit"
                     disabled={reservingIp}
-                    className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                    className="px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
                   >
                     {reservingIp
                       ? 'Reserving Anycast IPv4...'
@@ -745,7 +745,7 @@ export default function StudioGcpAdvantageBar({
                       `gcloud beta run deploy llm-l4-serverless --image=us-docker.pkg.dev/cloudrun/container/hello --region=us-central1 --gpu=1 --gpu-type=nvidia-l4 --cpu=4 --memory=16Gi --no-gpu-zonal-redundancy --min-instances=0 --max-instances=3 --execution-environment=gen2 --project=${projectId}`
                     )
                   }
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                 >
                   <Terminal className="w-3.5 h-3.5" />
                   <span>Deploy Scale-to-$0 NVIDIA L4 GPU Service in Shell</span>
@@ -804,7 +804,7 @@ export default function StudioGcpAdvantageBar({
                 <button
                   type="submit"
                   disabled={runningTimeTravel}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
                 >
                   {runningTimeTravel
                     ? 'Dry-Running...'
@@ -916,7 +916,7 @@ export default function StudioGcpAdvantageBar({
                     type="button"
                     disabled={updatingVmName === v.name}
                     onClick={() => handleEnforceVmLiveMigration(v)}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
                   >
                     {updatingVmName === v.name
                       ? `Updating ${v.name}...`
@@ -936,7 +936,7 @@ export default function StudioGcpAdvantageBar({
                 <button
                   type="button"
                   onClick={() => setActiveIamTool('IAM_SURGEON')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
                     activeIamTool === 'IAM_SURGEON'
                       ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -951,7 +951,7 @@ export default function StudioGcpAdvantageBar({
                 <button
                   type="button"
                   onClick={() => setActiveIamTool('OIDC_FEDERATION')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
                     activeIamTool === 'OIDC_FEDERATION'
                       ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -991,7 +991,7 @@ export default function StudioGcpAdvantageBar({
                         <button
                           type="button"
                           onClick={() => onRunInShell(b.remediationCli)}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
+                          className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
                         >
                           Apply Least-Privilege in Shell
                         </button>
@@ -1033,7 +1033,7 @@ export default function StudioGcpAdvantageBar({
                           `gcloud iam workload-identity-pools create "${wifPoolId}" --location="global" --display-name="Zero-Key GitHub OIDC Pool" --project="${projectId}" && gcloud iam workload-identity-pools providers create-oidc "github-provider" --location="global" --workload-identity-pool="${wifPoolId}" --issuer-uri="https://token.actions.githubusercontent.com" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository=='${wifRepo}'" --project="${projectId}"`
                         )
                       }
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                     >
                       Provision Keyless OIDC Pool in Cloud Shell
                     </button>

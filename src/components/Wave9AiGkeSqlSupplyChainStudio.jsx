@@ -479,7 +479,7 @@ options:
       <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 GITHUB → GOOGLE CLOUD BUILD (`cloudbuild.googleapis.com`) → ARTIFACT REGISTRY → CLOUD RUN / GKE
@@ -538,7 +538,7 @@ options:
                 type="button"
                 title={tab.tip}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`w-full h-11 px-3.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                className={`w-full h-11 px-3.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -546,7 +546,7 @@ options:
               >
                 <span className="truncate">{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono shrink-0 ${
                     active
                       ? 'bg-white/20 text-white'
                       : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
@@ -629,7 +629,7 @@ options:
                     1-Click GitHub Repo → Cloud Build → Artifact Registry Pipeline
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono">
                   SLSA L3 Provenance Lock
                 </span>
               </div>
@@ -992,7 +992,7 @@ options:
                             Build #{String(b.id).slice(0, 8)}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               b.status === 'SUCCESS'
                                 ? 'bg-emerald-500/15 text-emerald-400'
                                 : b.status === 'WORKING' || b.status === 'QUEUED'
@@ -1097,7 +1097,7 @@ options:
                       Provision Artifact Registry (`artifactregistry.googleapis.com`)
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
                     Tag-Mutation Lock
                   </span>
                 </div>
@@ -1261,16 +1261,16 @@ options:
                               >
                                 {repo.shortName}
                               </span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
                                 {repo.location}
                               </span>
                               {isDeletingRepo ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/40">
                                   DELETING REPO...
                                 </span>
                               ) : (
                                 <span
-                                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                                     repo.immutableTags
                                       ? 'bg-emerald-500/15 text-emerald-400'
                                       : 'bg-amber-500/15 text-amber-400'
@@ -1291,7 +1291,7 @@ options:
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isDeletingRepo ? (
-                              <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
+                              <span className="px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                                 Deleting in GCP...
                               </span>
                             ) : confirmRepoName === repo.name ? (
@@ -1436,7 +1436,7 @@ options:
                             {img.repository} · {img.sizeMb} MB
                           </span>
                           {isDeletingThis && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/40">
                               DELETING CONTAINER...
                             </span>
                           )}
@@ -1465,7 +1465,7 @@ options:
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isDeletingThis ? (
-                          <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
+                          <span className="px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                             Deleting in GCP...
                           </span>
                         ) : (

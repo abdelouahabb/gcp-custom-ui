@@ -884,10 +884,10 @@ export default function VmFleetAndSsh({
             <div>
               <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2 flex-wrap">
                 <span>Compute Engine Studio & Live Web SSH</span>
-                <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">
                   {vms.length} live VM{vms.length === 1 ? '' : 's'} in {projectId}
                 </span>
-                <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full-full">
                   13 Global Regions · E2/N2/C3/C4/Arm64/GPU
                 </span>
               </h3>
@@ -958,7 +958,7 @@ export default function VmFleetAndSsh({
                 <button
                   type="button"
                   onClick={() => setSelectedRegionFilter('ALL')}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                  className={`px-3 py-1 rounded-md text-xs font-mono font-bold border transition-colors cursor-pointer ${
                     selectedRegionFilter === 'ALL'
                       ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/50'
@@ -977,7 +977,7 @@ export default function VmFleetAndSsh({
                       key={reg}
                       type="button"
                       onClick={() => setSelectedRegionFilter(reg)}
-                      className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                      className={`px-3 py-1 rounded-md text-xs font-mono font-bold border transition-colors cursor-pointer ${
                         selectedRegionFilter === reg
                           ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                           : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/50'
@@ -993,7 +993,7 @@ export default function VmFleetAndSsh({
                   <button
                     type="button"
                     onClick={resetAllVmFilters}
-                    className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                   >
                     Reset Filters
                   </button>
@@ -1309,7 +1309,7 @@ export default function VmFleetAndSsh({
                           {vm.name}
                         </h4>
                         <span
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                             isDeleting
                               ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
                               : isTransitional
@@ -1323,17 +1323,17 @@ export default function VmFleetAndSsh({
                         </span>
 
                         {vm.spotInstance ? (
-                          <span className="text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
                             SPOT VM
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
                             STANDARD VM
                           </span>
                         )}
 
                         {vm.shieldedVm && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded">
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
                             <ShieldCheck className="w-3 h-3" />
                             <span>SHIELDED</span>
                           </span>
@@ -1347,7 +1347,7 @@ export default function VmFleetAndSsh({
                                 ? `${vm.guestAccelerators[0].count}x ${vm.guestAccelerators[0].type}`
                                 : acc.types[0] || 'NVIDIA GPU';
                             return (
-                              <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full">
                                 GPU: {label}
                               </span>
                             );
@@ -1355,13 +1355,13 @@ export default function VmFleetAndSsh({
                           if (acc.hasTpu) {
                             const label = acc.types[0] || 'Cloud TPU';
                             return (
-                              <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-full">
                                 TPU: {label}
                               </span>
                             );
                           }
                           return (
-                            <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 px-1.5 py-0.5 rounded-full">
                               CPU-ONLY
                             </span>
                           );
@@ -1398,10 +1398,10 @@ export default function VmFleetAndSsh({
                       </div>
 
                       <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex flex-wrap items-center gap-2">
-                        <span className="font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[11px]">
+                        <span className="font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full text-[11px]">
                           {vmReg}
                         </span>
-                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px]">
+                        <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-full text-[11px]">
                           {vm.zone}
                         </span>
                         <span>·</span>
@@ -1573,7 +1573,7 @@ export default function VmFleetAndSsh({
                               machineType: resizeMachineTarget,
                             })
                           }
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded-lg"
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded-md"
                         >
                           Apply Resize
                         </button>
@@ -1614,7 +1614,7 @@ export default function VmFleetAndSsh({
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                            <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                               LIVE VM FILESYSTEM EXTRACTOR → CLOUD RUN GEN2 MIGRATOR
                             </span>
                             <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono">
@@ -1669,7 +1669,7 @@ export default function VmFleetAndSsh({
                                     migrateForm.targetPath
                                   )
                                 }
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                               >
                                 {inspectingVmContainers ? (
                                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1722,7 +1722,7 @@ export default function VmFleetAndSsh({
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span
-                                  className={`px-2 py-0.5 rounded font-bold ${
+                                  className={`px-2 py-0.5 rounded-full font-bold ${
                                     detectedVmRuntimeInfo.sshSucceeded
                                       ? 'bg-emerald-500/20 text-emerald-500'
                                       : 'bg-amber-500/20 text-amber-500'
@@ -1870,7 +1870,7 @@ export default function VmFleetAndSsh({
                               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-2.5 text-xs">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <div className="font-bold font-mono text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px]">
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[11px]">
                                       mfit Score: {detectedVmRuntimeInfo.mfitAssessment.overallFitScore}/100
                                     </span>
                                     <span>
@@ -1896,7 +1896,7 @@ export default function VmFleetAndSsh({
                                         <div className="flex items-center justify-between gap-1 font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-0.5">
                                           <span>{dim.label}</span>
                                           <span
-                                            className={`px-1.5 py-0.2 rounded text-[9px] ${
+                                            className={`px-1.5 py-0.2 rounded-full text-[9px] ${
                                               dim.status === 'PASS'
                                                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
@@ -2481,7 +2481,7 @@ export default function VmFleetAndSsh({
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                                <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-zinc-100">
+                                <span className="px-2 py-0.5 rounded-full bg-zinc-900/80 text-zinc-100">
                                   Provisioned Disk:{' '}
                                   {detectedVmRuntimeInfo?.diskMigrationGuardrails
                                     ?.totalProvisionedDiskGb || 15}{' '}
@@ -2490,7 +2490,7 @@ export default function VmFleetAndSsh({
                                     ?.provisionedGceMonthlyUsd ?? '1.50'}
                                   /mo GCE PD)
                                 </span>
-                                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
                                   Target Dir Used:{' '}
                                   {(
                                     (detectedVmRuntimeInfo?.diskMigrationGuardrails
@@ -2649,7 +2649,7 @@ export default function VmFleetAndSsh({
                                 )
                               }
                               title="Build a permanent Docker image from the extracted VM directory via Google Cloud Build (gcloud builds submit) and deploy to Cloud Run"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 cursor-pointer"
                             >
                               <Terminal className="w-3.5 h-3.5 text-emerald-400" />
                               <span>Build Image via Cloud Build in Shell</span>
@@ -2660,7 +2660,7 @@ export default function VmFleetAndSsh({
                             type="button"
                             disabled={migratingToCloudRun || !migrateForm.serviceName}
                             onClick={() => handleExecuteVmToCloudRunMigration(vm)}
-                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                           >
                             {migratingToCloudRun ? (
                               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -2724,7 +2724,7 @@ export default function VmFleetAndSsh({
                                 </span>
                               )}
                               {migrationResult.canaryVerification && (
-                                <span className="inline-block ml-1.5 px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">
+                                <span className="inline-block ml-1.5 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px]">
                                   Canary Probe: HTTP {migrationResult.canaryVerification.httpStatus} ({migrationResult.canaryVerification.latencyMs}ms) Verified
                                 </span>
                               )}
@@ -2742,7 +2742,7 @@ export default function VmFleetAndSsh({
                                   await handlePowerAction(vm, 'START');
                                   setActiveSshVm(vm);
                                 }}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs cursor-pointer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs cursor-pointer"
                                 title={`Start stopped VM "${vm.name}" and reconnect Xterm.js SSH`}
                               >
                                 <Play className="w-3 h-3 fill-current" />
@@ -2753,7 +2753,7 @@ export default function VmFleetAndSsh({
                               <button
                                 type="button"
                                 onClick={() => onSelectTab('CLOUD_STORAGE')}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer"
                               >
                                 <HardDrive className="w-3 h-3" />
                                 <span>Inspect Disk Bucket</span>
@@ -2763,7 +2763,7 @@ export default function VmFleetAndSsh({
                               <button
                                 type="button"
                                 onClick={() => onSelectTab('CLOUD_RUN')}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer"
                               >
                                 <span>Open Cloud Run Fleet &amp; Jobs</span>
                                 <ExternalLink className="w-3 h-3" />
@@ -2791,7 +2791,7 @@ export default function VmFleetAndSsh({
 
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {isDeleting ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-red-500 bg-red-500/10 border border-red-500/25 px-3 py-1 rounded-md">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-red-500 bg-red-500/10 border border-red-500/25 px-3 py-1 rounded-full">
                           <RefreshCw className="w-3 h-3 animate-spin" />
                           <span>Terminating & Releasing Disk/IP...</span>
                         </span>

@@ -501,15 +501,15 @@ export default function EmergencyApiKillSwitch({
                 DEFCON-1 Project Emergency Kill-Switch (Billing Circuit Breaker)
               </span>
               {loadingBilling && !billingStatus ? (
-                <span className="text-[10px] font-mono bg-zinc-500/10 text-zinc-400 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-mono bg-zinc-500/10 text-zinc-400 px-2 py-0.5 rounded-full-full">
                   CHECKING BILLING...
                 </span>
               ) : isBillingEnabled ? (
-                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full-full">
                   BILLING ENABLED · SPENDING ACTIVE
                 </span>
               ) : (
-                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full-full">
                   BILLING UNLINKED · $0.00 LOCKDOWN ACTIVE
                 </span>
               )}
@@ -579,7 +579,7 @@ export default function EmergencyApiKillSwitch({
                 <button
                   type="button"
                   onClick={() => setConfirmKillBilling(true)}
-                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
                 >
                   <Power className="w-4 h-4" />
                   <span>KILL PROJECT BILLING (STOP SPENDING)</span>
@@ -607,7 +607,7 @@ export default function EmergencyApiKillSwitch({
                 <button
                   type="button"
                   onClick={() => handleBillingKillSwitch('ENABLE')}
-                  className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-md transition-colors cursor-pointer"
                 >
                   <Unlock className="w-3.5 h-3.5" />
                   <span>Restore & Re-Link Billing</span>
@@ -659,14 +659,14 @@ export default function EmergencyApiKillSwitch({
               <button
                 type="button"
                 onClick={() => handleBillingKillSwitch('DISABLE')}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-md shadow-sm transition-colors cursor-pointer"
               >
                 Yes, Unlink Billing & Freeze Spend
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmKillBilling(false)}
-                className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs px-3 py-2 rounded-lg transition-colors cursor-pointer"
+                className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs px-3 py-2 rounded-md transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -686,7 +686,7 @@ export default function EmergencyApiKillSwitch({
                 Surgical Alternative to Unlinking Billing: Native Per-Service Spend Caps (
                 <code>GoogleCloudBillingBudgetsV1SpendCap</code>)
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 PAUSE 1 SERVICE AT 100% GROSS CAP
               </span>
             </div>
@@ -713,7 +713,7 @@ export default function EmergencyApiKillSwitch({
               <button
                 type="button"
                 onClick={onOpenFinOps}
-                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
+                className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
               >
                 Open Full Spend Cap Studio (FinOps) →
               </button>
@@ -744,7 +744,7 @@ export default function EmergencyApiKillSwitch({
                         {srv.displayName}
                       </span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                        className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                           outState === 'ENFORCED'
                             ? 'bg-red-500/15 text-red-600 dark:text-red-400'
                             : outState === 'CONFIGURED'
@@ -947,7 +947,7 @@ export default function EmergencyApiKillSwitch({
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
                         isDisabling
                           ? 'bg-red-500/20 text-red-500'
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
@@ -1042,7 +1042,7 @@ export default function EmergencyApiKillSwitch({
               <button
                 type="button"
                 onClick={() => setShowAllApis((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline px-3 py-1.5 rounded-lg bg-blue-500/5 border border-blue-500/20"
+                className="inline-flex items-center gap-1.5 text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline px-3 py-1.5 rounded-md bg-blue-500/5 border border-blue-500/20"
               >
                 {showAllApis ? (
                   <>
@@ -1123,15 +1123,15 @@ export default function EmergencyApiKillSwitch({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10.5px] font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10.5px] font-mono font-extrabold">
                 LIVE API QUOTA SATURATION & HTTP 429 EARLY-WARNING RADAR
               </span>
               {quotaRadar?.criticalCount > 0 ? (
-                <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
+                <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
                   {quotaRadar.criticalCount} Quota(s) Near HTTP 429 Exhaustion (&ge;85%)
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                   ✓ 0 HTTP 429 Quota Bottlenecks ({quotaRadar?.totalQuotasTracked || 0} Limits Monitored)
                 </span>
               )}
@@ -1145,7 +1145,7 @@ export default function EmergencyApiKillSwitch({
             type="button"
             disabled={loadingQuotas}
             onClick={fetchQuotaRadar}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${loadingQuotas ? 'animate-spin' : ''}`}
@@ -1184,7 +1184,7 @@ export default function EmergencyApiKillSwitch({
                         </div>
                       </div>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
                           isCrit
                             ? 'bg-red-600 text-white'
                             : isWarn

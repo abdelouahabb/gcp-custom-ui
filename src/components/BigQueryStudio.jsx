@@ -484,7 +484,7 @@ export default function BigQueryStudio({
                 <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
                   BigQuery Capacitor Warehouse &amp; SQL Optimizer Studio
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                   CAPACITOR STORAGE · DRY-RUN SQL X-RAY · SLOT FINOPS · 7D TIME-MACHINE
                 </span>
               </div>
@@ -499,7 +499,7 @@ export default function BigQueryStudio({
               type="button"
               onClick={() => onOpenBigLakeStudio?.()}
               title="Open the dedicated BigLake & Apache Iceberg Open Lakehouse Studio tab"
-              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-xl px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Open BigLake &amp; Iceberg Studio →</span>
@@ -509,7 +509,7 @@ export default function BigQueryStudio({
               type="button"
               onClick={() => onOpenProvision?.('BIGQUERY_DATASET')}
               title="Open the 5-Step BigQuery Enterprise Compliance & Lakehouse Dataset Provisioning Modal"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>+ Create Compliant Dataset</span>
@@ -520,7 +520,7 @@ export default function BigQueryStudio({
               onClick={fetchDatasets}
               disabled={loadingDatasets}
               title="Sync live BigQuery datasets, storage billing models, time-travel windows & table counts from Google Cloud"
-              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-md px-3 py-2 text-xs font-mono font-semibold transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -601,7 +601,7 @@ export default function BigQueryStudio({
                   type="button"
                   onClick={() => setActiveSubTab(t.id)}
                   title={t.tip}
-                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                       : 'bg-zinc-50 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -621,7 +621,7 @@ export default function BigQueryStudio({
                   </div>
                   {t.badge && (
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
                         active
                           ? 'bg-white/20 text-white'
                           : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -655,7 +655,7 @@ export default function BigQueryStudio({
                 type="button"
                 onClick={() => onOpenProvision?.('BIGQUERY_DATASET')}
                 title="Provision your first compliant BigQuery dataset in seconds"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2.5 text-xs font-bold shadow-sm cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>Launch BigQuery Compliance & Lakehouse Editor</span>
@@ -679,11 +679,11 @@ export default function BigQueryStudio({
                           <span className="font-mono text-sm font-black text-zinc-950 dark:text-white">
                             {projectId}.{ds.datasetId}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                             {ds.location}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                               isPhysical
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
@@ -693,14 +693,14 @@ export default function BigQueryStudio({
                               ? 'PHYSICAL COMPRESSED BILLING'
                               : 'LOGICAL UNCOMPRESSED BILLING'}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                             {ds.maxTimeTravelHours}h Time-Travel
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                             {ds.tableCount} Table(s)
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                               ds.postureScore >= 80
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
@@ -730,7 +730,7 @@ export default function BigQueryStudio({
                               )
                             }
                             title="Switch dataset storageBillingModel from LOGICAL to PHYSICAL compressed bytes to save 50%-75% on high-compression tables"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
                           >
                             <Zap className="w-3.5 h-3.5" />
                             <span>1-Tap Physical Billing (-54%)</span>
@@ -755,7 +755,7 @@ export default function BigQueryStudio({
                               ? 'Expand Time-Travel window to maximum 168 hours (7 days)'
                               : 'Trim Time-Travel window to 48 hours (2 days) to minimize physical time-travel storage overhead'
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
                         >
                           <Clock className="w-3.5 h-3.5" />
                           <span>
@@ -777,7 +777,7 @@ export default function BigQueryStudio({
                               )
                             }
                             title="Enforce a 90-day defaultPartitionExpirationMs on this dataset so old partitions automatically expire"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>Enforce 90d Partition TTL</span>
@@ -796,7 +796,7 @@ export default function BigQueryStudio({
                               )
                             }
                             title="Set defaultRoundingMode=ROUND_HALF_EVEN (Banker's Rounding) for GAAP/FINRA financial NUMERIC precision"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
                           >
                             <Sliders className="w-3.5 h-3.5" />
                             <span>Set ROUND_HALF_EVEN</span>
@@ -810,7 +810,7 @@ export default function BigQueryStudio({
                             setActiveSubTab('TABLES_SQL');
                           }}
                           title={`Explore tables & run Dry-Run SQL Cost Estimator in ${ds.datasetId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
                         >
                           <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                           <span>Tables & SQL X-Ray</span>
@@ -823,7 +823,7 @@ export default function BigQueryStudio({
                             handleDeleteDataset(ds.datasetId, ds.location)
                           }
                           title={`Delete BigQuery dataset ${projectId}.${ds.datasetId} (including tables)`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Delete</span>
@@ -984,7 +984,7 @@ export default function BigQueryStudio({
                   type="submit"
                   disabled={creatingTable || !selectedDatasetId}
                   title="Create a real Partitioned + Clustered analytical table in the selected dataset with TIMESTAMP, NUMERIC, and JSON columns"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-md py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                 >
                   {creatingTable
                     ? 'Creating Partitioned Table...'
@@ -1018,7 +1018,7 @@ export default function BigQueryStudio({
                           <span className="font-bold text-zinc-900 dark:text-zinc-100">
                             {t.tableId}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
                             {t.timePartitioning?.type
                               ? `PARTITIONED (${t.timePartitioning.type})`
                               : t.type}
@@ -1082,7 +1082,7 @@ export default function BigQueryStudio({
                     type="button"
                     onClick={() => setSqlInput(q.sql)}
                     title={`Load sample SQL query: ${q.label}`}
-                    className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
+                    className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
                   >
                     {q.label}
                   </button>
@@ -1103,7 +1103,7 @@ export default function BigQueryStudio({
                     disabled={runningQuery}
                     onClick={() => handleExecuteQuery(true)}
                     title="Run a $0.00 BigQuery Dry-Run X-Ray + Automatic SQL Optimization Pass"
-                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>
@@ -1118,7 +1118,7 @@ export default function BigQueryStudio({
                     disabled={runningQuery}
                     onClick={() => handleExecuteQuery(false)}
                     title={`Execute live BigQuery SQL query protected by maximumBytesBilled=${maxBytesGuardGb}GB circuit-breaker`}
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>2. Execute Live SQL (Protected)</span>
@@ -1132,7 +1132,7 @@ export default function BigQueryStudio({
                       setSqlInput(queryResult.optimizationReport.optimizedSql)
                     }
                     title="Replace editor SQL with the automatically optimized SQL query"
-                    className="inline-flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-xl px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
                     <span>Apply Optimized SQL</span>
@@ -1222,7 +1222,7 @@ export default function BigQueryStudio({
                               <span className="text-zinc-900 dark:text-zinc-100">
                                 {i + 1}. {opt.rule}
                               </span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                                 {opt.impact}
                               </span>
                             </div>
@@ -1292,7 +1292,7 @@ export default function BigQueryStudio({
                 Simulate exact monthly savings from switching `storageBillingModel` to `PHYSICAL` compressed bytes and tuning `maxTimeTravelHours`.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <span className="px-2.5 py-1 rounded-full-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               Projected Storage Savings: $
               {finopsComparison.monthlyStorageSavings.toFixed(2)}/mo (
               {finopsComparison.savingsPct}%)
@@ -1453,7 +1453,7 @@ export default function BigQueryStudio({
                 Rewind any table to the exact millisecond before a bad `DELETE`, `UPDATE`, or `DROP TABLE` without restoring backups or paying extra storage bytes.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+            <span className="px-3 py-1 rounded-full-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
               Rewind Offset: -{rewindHoursAgo} Hours ({Math.round((rewindHoursAgo / 24) * 10) / 10} Days Ago)
             </span>
           </div>
@@ -1556,7 +1556,7 @@ export default function BigQueryStudio({
                     setActiveSubTab('TABLES_SQL');
                   }}
                   title={`Load "${card.title}" into the SQL Dry-Run Cost Estimator & Live Executor`}
-                  className="w-full mt-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                  className="w-full mt-2 py-1.5 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                 >
                   Load into SQL X-Ray & Execute →
                 </button>

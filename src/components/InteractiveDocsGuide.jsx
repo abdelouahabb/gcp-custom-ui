@@ -1740,7 +1740,7 @@ export default function InteractiveDocsGuide({
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 text-zinc-900 dark:text-zinc-100 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
               <BookOpen className="w-3.5 h-3.5" />
               <span>INTERACTIVE ENGINEERING MANUAL & ARCHITECTURE GUIDE</span>
             </div>
@@ -1760,7 +1760,7 @@ export default function InteractiveDocsGuide({
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs px-4 py-3 rounded-xl shadow-sm transition-colors shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs px-4 py-3 rounded-md shadow-sm transition-colors shrink-0 cursor-pointer"
           >
             <Command className="w-4 h-4" />
             <span>Press ⌘K for Voice & Natural Language Ops</span>
@@ -1812,7 +1812,7 @@ export default function InteractiveDocsGuide({
                   setSelectedWave('ALL');
                   setSearchQuery('');
                 }}
-                className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
+                className="h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
               >
                 Reset
               </button>
@@ -1833,11 +1833,11 @@ export default function InteractiveDocsGuide({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-500">
+                    <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-500">
                       {doc.wave}
                     </span>
                     <span
-                      className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${doc.badgeColor}`}
+                      className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full-full border ${doc.badgeColor}`}
                     >
                       Location: {doc.badge}
                     </span>
@@ -1853,7 +1853,7 @@ export default function InteractiveDocsGuide({
                   onClick={() =>
                     onNavigateToFeature(doc.targetTab, doc.targetSubTab)
                   }
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-2 rounded-xl transition-colors shrink-0 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-2 rounded-md transition-colors shrink-0 cursor-pointer"
                 >
                   <span>Launch Feature</span>
                   <ArrowRight className="w-3.5 h-3.5" />

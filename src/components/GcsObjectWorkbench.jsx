@@ -1426,7 +1426,7 @@ export default function GcsObjectWorkbench({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px]">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                 IMAGE PREVIEW
               </span>
               {imageDimensions && (
@@ -1521,7 +1521,7 @@ export default function GcsObjectWorkbench({
             <button
               type="button"
               onClick={() => handleDownloadObject(inspectedObject.objectName)}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Full Binary</span>
@@ -1593,7 +1593,7 @@ export default function GcsObjectWorkbench({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span>{col}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                           {colTypes[cIdx]}
                           {tableSortCol === cIdx ? (tableSortAsc ? ' ↑' : ' ↓') : ''}
                         </span>
@@ -1742,7 +1742,7 @@ export default function GcsObjectWorkbench({
                       {item.preview}
                     </span>
                   ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-500">
                       {item.valType}
                     </span>
                   )}
@@ -1904,7 +1904,7 @@ export default function GcsObjectWorkbench({
         <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px]">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
-              className={`px-2 py-0.5 rounded font-extrabold border ${
+              className={`px-2 py-0.5 rounded-full font-extrabold border ${
                 previewAnalysis.valid
                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
                   : 'bg-red-500/15 text-red-500 border-red-500/30'
@@ -2033,14 +2033,14 @@ export default function GcsObjectWorkbench({
             <button
               type="button"
               onClick={() => handleReplaceInEditor(false)}
-              className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold cursor-pointer"
+              className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-[11px] font-bold cursor-pointer"
             >
               Replace Next
             </button>
             <button
               type="button"
               onClick={() => handleReplaceInEditor(true)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold cursor-pointer"
+              className="px-2.5 py-1 rounded-md bg-emerald-600 text-white text-[11px] font-bold cursor-pointer"
             >
               Replace All
             </button>
@@ -2139,7 +2139,7 @@ export default function GcsObjectWorkbench({
           {inspectedObject && (
             <>
               <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+              <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
                 {inspectedObject.objectName.split('/').pop()}
               </span>
             </>
@@ -2156,7 +2156,7 @@ export default function GcsObjectWorkbench({
               );
               setShowComposerBar((v) => !v);
             }}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+            className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>+ New Object / Template</span>
@@ -2189,7 +2189,7 @@ export default function GcsObjectWorkbench({
                 key={r.id}
                 type="button"
                 onClick={() => setLayoutRatio(r.id)}
-                className={`px-2 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                className={`px-2 py-1 rounded-md font-bold cursor-pointer transition-all ${
                   layoutRatio === r.id
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -2207,7 +2207,7 @@ export default function GcsObjectWorkbench({
         <div className="p-2.5 rounded-xl bg-zinc-50/90 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-[11px]">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-              <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[9.5px] font-extrabold uppercase">
+              <span className="px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[9.5px] font-extrabold uppercase">
                 Connected Studios
               </span>
               <span className="truncate">
@@ -2287,7 +2287,7 @@ export default function GcsObjectWorkbench({
                   type="button"
                   onClick={item.onClick}
                   title={item.title}
-                  className="w-full h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
+                  className="w-full h-9 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="p-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
@@ -2329,7 +2329,7 @@ export default function GcsObjectWorkbench({
                     setComposerContentType(tpl.contentType);
                     setComposerBody(tpl.body);
                   }}
-                  className="px-2 py-0.5 rounded-lg bg-white dark:bg-zinc-900 border border-emerald-500/30 hover:border-emerald-500 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                  className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-emerald-500/30 hover:border-emerald-500 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer"
                 >
                   {tpl.label}
                 </button>
@@ -2337,7 +2337,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => setShowComposerBar(false)}
-                className="px-2 py-0.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold cursor-pointer ml-2"
+                className="px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold cursor-pointer ml-2"
               >
                 Close
               </button>
@@ -2388,7 +2388,7 @@ export default function GcsObjectWorkbench({
             <button
               type="submit"
               disabled={busyKey === 'create-composer-obj' || !selectedBucket}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyKey === 'create-composer-obj'
                 ? 'Creating in GCS...'
@@ -2428,7 +2428,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => setExplorerMode('FOLDER')}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md font-bold cursor-pointer ${
                   explorerMode === 'FOLDER'
                     ? 'bg-blue-600 text-white'
                     : 'text-zinc-500'
@@ -2439,7 +2439,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => setExplorerMode('FLAT')}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md font-bold cursor-pointer ${
                   explorerMode === 'FLAT'
                     ? 'bg-blue-600 text-white'
                     : 'text-zinc-500'
@@ -2453,7 +2453,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => setShowAllVersions((v) => !v)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold border cursor-pointer ${
+                className={`px-2 py-1 rounded-md text-[10px] font-bold border cursor-pointer ${
                   showAllVersions
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
                     : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-500 border-zinc-300 dark:border-zinc-800'
@@ -2465,7 +2465,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => fetchObjects(selectedBucket?.name)}
-                className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-blue-500 cursor-pointer"
+                className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-blue-500 cursor-pointer"
                 title="Refresh objects"
               >
                 <RefreshCw
@@ -2524,7 +2524,7 @@ export default function GcsObjectWorkbench({
                       );
                       setSelectedObjectNames(allSelected ? [] : allVisibleNames);
                     }}
-                    className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
+                    className="px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
                   >
                     <CheckSquare className="w-3 h-3 text-blue-500" />
                     <span>
@@ -2537,7 +2537,7 @@ export default function GcsObjectWorkbench({
                     <button
                       type="button"
                       onClick={() => setSelectedObjectNames([])}
-                      className="px-2 py-1 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
+                      className="px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
                     >
                       Clear
                     </button>
@@ -2551,7 +2551,7 @@ export default function GcsObjectWorkbench({
                   }
                   onClick={handleDownloadSelectedBundle}
                   title="Package selected objects into a single POSIX .tar archive and download"
-                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
+                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
                 >
                   <Archive className="w-3 h-3" />
                   <span>
@@ -2579,7 +2579,7 @@ export default function GcsObjectWorkbench({
                 <button
                   type="button"
                   onClick={() => setCurrentFolderPrefix('')}
-                  className="px-3 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-bold cursor-pointer"
+                  className="px-3 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold cursor-pointer"
                 >
                   Return to Bucket Root
                 </button>
@@ -2598,7 +2598,7 @@ export default function GcsObjectWorkbench({
                       lastSlash >= 0 ? `${trimmed.slice(0, lastSlash + 1)}` : ''
                     );
                   }}
-                  className="w-full py-2 px-2.5 flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg cursor-pointer"
+                  className="w-full py-2 px-2.5 flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-md cursor-pointer"
                 >
                   <CornerLeftUp className="w-3.5 h-3.5" />
                   <span>.. (Up to parent folder)</span>
@@ -2666,7 +2666,7 @@ export default function GcsObjectWorkbench({
                           <span className="truncate" title={o.name}>
                             {displayName}
                           </span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold shrink-0">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold shrink-0">
                             {fmt}
                           </span>
                         </div>
@@ -2677,7 +2677,7 @@ export default function GcsObjectWorkbench({
                             {o.storageClass}
                           </span>
                           {o.timeDeleted && (
-                            <span className="px-1 rounded bg-amber-500/20 text-amber-400">
+                            <span className="px-1 rounded-full bg-amber-500/20 text-amber-400">
                               ARCHIVED GEN
                             </span>
                           )}
@@ -2704,7 +2704,7 @@ export default function GcsObjectWorkbench({
                             onShowToast(`Copied Authenticated HTTPS URL: ${url}`);
                           }
                         }}
-                        className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
                         title="Copy Authenticated HTTPS URL (https://storage.cloud.google.com/...)"
                       >
                         {copiedKey === `row-url-${o.name}` ? (
@@ -2717,7 +2717,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="button"
                         onClick={() => handleDownloadObject(o.name)}
-                        className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
                         title="Download object to laptop"
                       >
                         <Download className="w-3 h-3" />
@@ -2729,7 +2729,7 @@ export default function GcsObjectWorkbench({
                         disabled={
                           busyKey === `obj-del-${o.name}-${o.generation}`
                         }
-                        className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
+                        className="p-1.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
                         title="Delete object"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -2765,7 +2765,7 @@ export default function GcsObjectWorkbench({
                 <button
                   type="button"
                   onClick={() => setShowComposerBar(true)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer"
+                  className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer"
                 >
                   + Create New Object from Template
                 </button>
@@ -2780,14 +2780,14 @@ export default function GcsObjectWorkbench({
                     <span className="text-xs font-extrabold text-zinc-900 dark:text-white break-all">
                       gs://{inspectedObject.bucketName}/{inspectedObject.objectName}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                       {activeFormat}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                       Gen #{String(inspectedObject.metadata?.generation || '').slice(-6)}
                     </span>
                     {previewAnalysis.hasUnsavedChanges && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 font-extrabold border border-amber-500/40">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-extrabold border border-amber-500/40">
                         UNSAVED EDITS
                       </span>
                     )}
@@ -2809,7 +2809,7 @@ export default function GcsObjectWorkbench({
                     onClick={() =>
                       handleDownloadObject(inspectedObject.objectName)
                     }
-                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Download full object to laptop"
                   >
                     <Download className="w-3.5 h-3.5 shrink-0" />
@@ -2819,7 +2819,7 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={() => setShowRenameBar((v) => !v)}
-                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Rename, move, duplicate, or copy across buckets"
                   >
                     <Edit3 className="w-3.5 h-3.5 shrink-0" />
@@ -2833,7 +2833,7 @@ export default function GcsObjectWorkbench({
                         r === 'FULL_STUDIO' ? 'COMPACT_LEFT' : 'FULL_STUDIO'
                       )
                     }
-                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Toggle Full-Width Editor Workspace"
                   >
                     {layoutRatio === 'FULL_STUDIO' ? (
@@ -2856,7 +2856,7 @@ export default function GcsObjectWorkbench({
                       disabled={
                         busyKey === `save-obj-${inspectedObject.objectName}`
                       }
-                      className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs"
+                      className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs"
                     >
                       <Save className="w-3.5 h-3.5 shrink-0" />
                       <span>
@@ -2882,7 +2882,7 @@ export default function GcsObjectWorkbench({
                         {secretFindings.map((f) => (
                           <span
                             key={f.id}
-                            className="px-1.5 py-0.5 rounded bg-white/80 dark:bg-zinc-900 border border-amber-500/30 text-[10px] font-mono font-bold"
+                            className="px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-zinc-900 border border-amber-500/30 text-[10px] font-mono font-bold"
                           >
                             [{f.severity}] {f.label} ({f.count}x)
                           </span>
@@ -2893,7 +2893,7 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={handleAutoRedactSecrets}
-                    className="h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+                    className="h-8 px-3 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>1-Tap Auto-Redact Secrets</span>
@@ -2963,7 +2963,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="submit"
                         disabled={busyKey === `rename-${inspectedObject.objectName}`}
-                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer shrink-0"
+                        className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer shrink-0"
                       >
                         {renameDeleteSource ? 'Move / Rename' : 'Copy Object'}
                       </button>
@@ -3041,7 +3041,7 @@ export default function GcsObjectWorkbench({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         {isPub ? (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
                             <Globe className="w-3 h-3" />
                             <span>
                               PUBLIC ON INTERNET (
@@ -3049,13 +3049,13 @@ export default function GcsObjectWorkbench({
                             </span>
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
                             <Lock className="w-3 h-3" />
                             <span>PRIVATE (Zero-Trust Protected)</span>
                           </span>
                         )}
                         <span
-                          className={`px-2 py-0.5 rounded-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
+                          className={`px-2 py-0.5 rounded-full-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
                         >
                           {scopeDetails.badge}
                         </span>
@@ -3089,7 +3089,7 @@ export default function GcsObjectWorkbench({
                               busyKey === `pub-${inspectedObject.objectName}`
                             }
                             onClick={() => handleTogglePublicAccess(false)}
-                            className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                            className="px-3 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
                           >
                             <Lock className="w-3 h-3" />
                             <span>
@@ -3105,7 +3105,7 @@ export default function GcsObjectWorkbench({
                               busyKey === `pub-${inspectedObject.objectName}`
                             }
                             onClick={() => handleTogglePublicAccess(true)}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors ${scopeDetails.btnClass}`}
+                            className={`px-3 py-1 rounded-md text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors ${scopeDetails.btnClass}`}
                           >
                             <Unlock className="w-3 h-3" />
                             <span>
@@ -3276,7 +3276,7 @@ export default function GcsObjectWorkbench({
                     <button
                       type="button"
                       onClick={() => setStudioMode('SPLIT')}
-                      className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                      className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                         studioMode === 'SPLIT'
                           ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                           : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3290,7 +3290,7 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={() => setStudioMode('PREVIEW')}
-                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                       studioMode === 'PREVIEW'
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3305,7 +3305,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="button"
                         onClick={() => setStudioMode('EDITOR')}
-                        className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                        className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                           studioMode === 'EDITOR'
                             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3318,7 +3318,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="button"
                         onClick={() => setStudioMode('DIFF')}
-                        className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                        className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                           studioMode === 'DIFF'
                             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3336,7 +3336,7 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={() => setStudioMode('VERSIONS')}
-                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                       studioMode === 'VERSIONS'
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3349,7 +3349,7 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={() => setStudioMode('METADATA')}
-                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                       studioMode === 'METADATA'
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3392,10 +3392,10 @@ export default function GcsObjectWorkbench({
                             <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                               Live Generation vs Unsaved Editor Buffer
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-bold">
                               +{diff.added} added
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-500 font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 font-bold">
                               -{diff.removed} removed
                             </span>
                           </div>
@@ -3407,7 +3407,7 @@ export default function GcsObjectWorkbench({
                                   inspectedObject.textPreview || ''
                                 )
                               }
-                              className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-500 font-bold text-[11px] cursor-pointer"
+                              className="px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-500 font-bold text-[11px] cursor-pointer"
                             >
                               Revert to Saved Generation
                             </button>
@@ -3468,7 +3468,7 @@ export default function GcsObjectWorkbench({
                       type="button"
                       onClick={() => fetchObjectVersions(inspectedObject.objectName)}
                       disabled={loadingVersions}
-                      className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      className="h-8 px-3 rounded-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${loadingVersions ? 'animate-spin' : ''}`} />
                       <span>Refresh Generations ({objectVersions.length})</span>
@@ -3496,7 +3496,7 @@ export default function GcsObjectWorkbench({
                                 Generation #{ver.generation}
                               </span>
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                   ver.isLive
                                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
@@ -3518,7 +3518,7 @@ export default function GcsObjectWorkbench({
                               type="button"
                               disabled={loadingCompareGen}
                               onClick={() => handleCompareGeneration(ver)}
-                              className="w-full h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                              className="w-full h-8 px-2.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                             >
                               <GitCompare className="w-3 h-3 shrink-0" />
                               <span>Diff vs Live</span>
@@ -3531,7 +3531,7 @@ export default function GcsObjectWorkbench({
                                 busyKey === `restore-gen-${ver.generation}`
                               }
                               onClick={() => handleRestoreGeneration(ver)}
-                              className="w-full h-8 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40"
+                              className="w-full h-8 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40"
                             >
                               <RotateCcw className="w-3 h-3 shrink-0" />
                               <span>
@@ -3623,7 +3623,7 @@ export default function GcsObjectWorkbench({
                         onClick={() =>
                           handleGenerateSignedUrl(signedUrlTtl, signedUrlMethod)
                         }
-                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <Key className="w-3.5 h-3.5" />
                         <span>
@@ -3648,7 +3648,7 @@ export default function GcsObjectWorkbench({
                             setSignedUrlTtl(opt.ttl);
                             handleGenerateSignedUrl(opt.ttl, signedUrlMethod);
                           }}
-                          className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                          className={`w-full h-8 rounded-md font-bold border text-[11px] cursor-pointer ${
                             signedUrlTtl === opt.ttl
                               ? 'bg-blue-600 text-white border-blue-600'
                               : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -3665,7 +3665,7 @@ export default function GcsObjectWorkbench({
                             setSignedUrlMethod(verb);
                             handleGenerateSignedUrl(signedUrlTtl, verb);
                           }}
-                          className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                          className={`w-full h-8 rounded-md font-bold border text-[11px] cursor-pointer ${
                             signedUrlMethod === verb
                               ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
                               : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -3776,7 +3776,7 @@ export default function GcsObjectWorkbench({
                               !inspectedObject.metadata?.temporaryHold
                             )
                           }
-                          className={`h-8 px-3 rounded-lg font-bold text-[11px] cursor-pointer shrink-0 ${
+                          className={`h-8 px-3 rounded-md font-bold text-[11px] cursor-pointer shrink-0 ${
                             inspectedObject.metadata?.temporaryHold
                               ? 'bg-amber-600 text-white'
                               : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
@@ -3809,7 +3809,7 @@ export default function GcsObjectWorkbench({
                               !inspectedObject.metadata?.eventBasedHold
                             )
                           }
-                          className={`h-8 px-3 rounded-lg font-bold text-[11px] cursor-pointer shrink-0 ${
+                          className={`h-8 px-3 rounded-md font-bold text-[11px] cursor-pointer shrink-0 ${
                             inspectedObject.metadata?.eventBasedHold
                               ? 'bg-amber-600 text-white'
                               : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
@@ -3838,7 +3838,7 @@ export default function GcsObjectWorkbench({
                                   sc
                                 )
                               }
-                              className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                              className={`w-full h-8 rounded-md font-bold border text-[11px] cursor-pointer ${
                                 isCurrent
                                   ? 'bg-blue-600 text-white border-blue-600'
                                   : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
@@ -3862,7 +3862,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="submit"
                         disabled={busyKey === `meta-${inspectedObject.objectName}`}
-                        className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] cursor-pointer"
+                        className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] cursor-pointer"
                       >
                         {busyKey === `meta-${inspectedObject.objectName}`
                           ? 'Patching...'

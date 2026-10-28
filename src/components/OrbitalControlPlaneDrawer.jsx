@@ -404,7 +404,7 @@ export default function OrbitalControlPlaneDrawer({
                 key={tab.id}
                 type="button"
                 onClick={() => onSelectDrawer(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -420,16 +420,16 @@ export default function OrbitalControlPlaneDrawer({
         <div className="flex items-center gap-2 flex-wrap">
           {/* Continental Footprint & Carbon CFE% Micro-Badges */}
           <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-mono">
-            <span className="px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
+            <span className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
               Grid CFE: {orbitalMetrics.avgCfe}% Clean
             </span>
-            <span className="px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold">
+            <span className="px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold">
               Posture: Grade {orbitalMetrics.postureGrade}
             </span>
             {Object.entries(orbitalMetrics.continents).map(([cont, count]) => (
               <span
                 key={cont}
-                className="px-2 py-1 rounded-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+                className="px-2 py-1 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
               >
                 {cont}: <strong className="text-zinc-900 dark:text-zinc-100">{count}</strong>
               </span>
@@ -440,7 +440,7 @@ export default function OrbitalControlPlaneDrawer({
             type="button"
             onClick={onCloseDrawer}
             title="Close drawer"
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             <span>Close</span>
@@ -470,7 +470,7 @@ export default function OrbitalControlPlaneDrawer({
                   onCloseDrawer();
                   onNavigateTab('GLOBAL_MAP');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 <Globe className="w-3.5 h-3.5 text-blue-500" />
                 <span>Inspect 40 Regions on Global Map →</span>
@@ -486,7 +486,7 @@ export default function OrbitalControlPlaneDrawer({
                   key={bp.id}
                   type="button"
                   onClick={() => setSelectedBlueprint(bp.id)}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer space-y-2 ${
+                  className={`p-3.5 rounded-md border text-left transition-all cursor-pointer space-y-2 ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 shadow-xs'
                       : 'bg-zinc-50 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
@@ -496,7 +496,7 @@ export default function OrbitalControlPlaneDrawer({
                     <div className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
                       {bp.title}
                     </div>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                       {bp.estIdleCost}
                     </span>
                   </div>
@@ -507,7 +507,7 @@ export default function OrbitalControlPlaneDrawer({
                     {bp.resources.map((r) => (
                       <span
                         key={r}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800"
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800"
                       >
                         + {r}
                       </span>
@@ -556,7 +556,7 @@ export default function OrbitalControlPlaneDrawer({
               <button
                 type="submit"
                 disabled={deployingStack}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 px-4 rounded-md transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Rocket className="w-4 h-4" />
                 <span>
@@ -620,7 +620,7 @@ export default function OrbitalControlPlaneDrawer({
             <button
               type="button"
               onClick={fetchFlightRecorder}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingFlight ? 'animate-spin' : ''}`}
@@ -659,7 +659,7 @@ export default function OrbitalControlPlaneDrawer({
                           region: ev.undoPayload.region,
                         })
                       }
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-500/20 dark:hover:bg-red-500/30 border border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 text-[11px] font-bold shrink-0 cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-500/20 dark:hover:bg-red-500/30 border border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 text-[11px] font-bold shrink-0 cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>1-Tap Rewind / Delete</span>
@@ -696,7 +696,7 @@ export default function OrbitalControlPlaneDrawer({
                     <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
                     <span>Scale-to-Zero Enforcer</span>
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
                     {orbitalMetrics.warmRunCount} Warm Services
                   </span>
                 </div>
@@ -708,7 +708,7 @@ export default function OrbitalControlPlaneDrawer({
                 type="button"
                 disabled={Boolean(enforcerBusy)}
                 onClick={() => handleRunRealAutopilotAction('FREE_TIER')}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>
@@ -727,7 +727,7 @@ export default function OrbitalControlPlaneDrawer({
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
                     <span>12-Invariant Self-Healer</span>
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold">
                     Posture {orbitalMetrics.postureGrade} ({orbitalMetrics.riskyFwCount} Open FW)
                   </span>
                 </div>
@@ -739,7 +739,7 @@ export default function OrbitalControlPlaneDrawer({
                 type="button"
                 disabled={Boolean(enforcerBusy)}
                 onClick={() => handleRunRealAutopilotAction('SOC_GUARDIAN')}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -758,7 +758,7 @@ export default function OrbitalControlPlaneDrawer({
                     <Moon className="w-3.5 h-3.5 text-amber-500" />
                     <span>Night-Mode Fleet Switch</span>
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                     VMs + Cloud Run
                   </span>
                 </div>
@@ -771,7 +771,7 @@ export default function OrbitalControlPlaneDrawer({
                   type="button"
                   disabled={Boolean(enforcerBusy)}
                   onClick={() => handleRunRealAutopilotAction('HIBERNATE_SLEEP')}
-                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                 >
                   <Moon className="w-3.5 h-3.5" />
                   <span>
@@ -782,7 +782,7 @@ export default function OrbitalControlPlaneDrawer({
                   type="button"
                   disabled={Boolean(enforcerBusy)}
                   onClick={() => handleRunRealAutopilotAction('HIBERNATE_WAKE')}
-                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-md bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                 >
                   <Sun className="w-3.5 h-3.5" />
                   <span>
