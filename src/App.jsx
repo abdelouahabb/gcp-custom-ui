@@ -3000,32 +3000,123 @@ function classifyDestructiveAxiosConfig(config) {
         ? body.sourceRanges.join(', ')
         : String(body.sourceRanges || '');
       const isIapLock = nextRanges.includes('35.235.240.0/20');
+      const isPublicRestore =
+        nextRanges === '0.0.0.0/0' &&
+        body.enableLogging === undefined &&
+        body.priority === undefined;
+      const isLoggingOnlyToggle =
+        typeof body.enableLogging === 'boolean' &&
+        body.sourceRanges === undefined &&
+        body.disabled === undefined &&
+        body.priority === undefined;
+      const isPauseResumeOnly =
+        typeof body.disabled === 'boolean' &&
+        body.sourceRanges === undefined &&
+        body.enableLogging === undefined &&
+        body.priority === undefined;
+
+      if (isLoggingOnlyToggle) {
+        const turningOn = body.enableLogging === true;
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: turningOn
+            ? `Enable VPC Firewall Rules Logging (Logs: ON) on "${fwName}"?`
+            : `Disable VPC Firewall Rules Logging (Logs: OFF) on "${fwName}"?`,
+          headerBadge: 'VPC Firewall Audit Logging & Cloud Logging Storage Gatekeeper',
+          targetLabel: 'Target VPC Firewall Rule Logging Configuration',
+          resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1 · logConfig)',
+          targetName: `${fwName} (logConfig.enable: ${turningOn ? 'false → true' : 'true → false'})`,
+          location: 'Global VPC Perimeter → Cloud Logging _Default Bucket',
+          projectId,
+          method: turningOn ? 'ENABLE FIREWALL LOGS' : 'DISABLE FIREWALL LOGS',
+          endpoint: rawUrl,
+          confirmLabel: turningOn
+            ? `Enable Logs: ON for "${fwName}"`
+            : `Disable Logs: OFF for "${fwName}" ($0.00/mo)`,
+          cancelToast: `Firewall logging change on "${fwName}" cancelled.`,
+          whatHappensNext: turningOn
+            ? `1. Patches logConfig.enable = true (INCLUDE_ALL_METADATA) on "${fwName}" via PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fwName}.\n2. Streams a JSON connection record (source/dest IP, port, protocol, VM, rule disposition) to Cloud Logging (logName=".../logs/compute.googleapis.com%2Ffirewall") for every connection matching "${fwName}".\n3. Immediately updates the rule card badge to "● Logs: ON".`
+            : `1. Patches logConfig.enable = false on "${fwName}" via PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fwName}.\n2. Immediately stops ingesting per-connection JSON firewall logs into your Cloud Logging _Default storage bucket while keeping "${fwName}"'s packet filtering active.\n3. Updates the rule card badge to "○ Logs: OFF".`,
+          costWarning: turningOn
+            ? `STORAGE INGESTION & BILLING WARNING: Enabling Firewall Rules Logging ("Logs: ON") causes Google Cloud to ingest and store a JSON log entry in your Cloud Logging "_Default" storage bucket for EVERY TCP/UDP/ICMP connection matching "${fwName}". On busy rules, this can rapidly ingest gigabytes of log data into storage—consuming your 50 GiB/month Cloud Logging Free Tier and billing $0.50 / GiB ingested beyond 50 GiB/mo (plus $0.01/GiB-mo if retained past 30 days).`
+            : `ZERO COST ($0.00/MO): Disabling Firewall Rules Logging immediately halts new connection log data ingestion into Cloud Logging storage for "${fwName}".`,
+          impactWarning: turningOn
+            ? `Activates real-time connection audit logging into Cloud Logging storage for "${fwName}" without changing which packets are allowed or denied.`
+            : `Stops connection audit logging for "${fwName}" while keeping its ALLOW/DENY packet filtering unchanged.`,
+        };
+      }
+
+      if (isPauseResumeOnly) {
+        const pausing = body.disabled === true;
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: pausing
+            ? `Pause (Disable Enforcement) Firewall Rule "${fwName}"?`
+            : `Re-Enable Firewall Rule "${fwName}" on "${projectId}"?`,
+          headerBadge: 'VPC Firewall Enforcement State Gatekeeper',
+          targetLabel: 'Target VPC Firewall Rule',
+          resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
+          targetName: `${fwName} (disabled: ${pausing ? 'false → true' : 'true → false'})`,
+          location: 'Global VPC Perimeter',
+          projectId,
+          method: pausing ? 'PAUSE FIREWALL RULE' : 'ENABLE FIREWALL RULE',
+          endpoint: rawUrl,
+          confirmLabel: pausing
+            ? `Pause Rule "${fwName}" ($0.00)`
+            : `Re-Enable Rule "${fwName}" ($0.00)`,
+          cancelToast: `Firewall state toggle on "${fwName}" cancelled.`,
+          whatHappensNext: pausing
+            ? `1. Patches disabled = true on "${fwName}" via compute.googleapis.com/v1.\n2. Google Cloud Andromeda stops evaluating "${fwName}" against live packets while preserving the rule definition in your VPC for instant re-activation.`
+            : `1. Patches disabled = false on "${fwName}" via compute.googleapis.com/v1.\n2. Google Cloud Andromeda immediately resumes enforcing "${fwName}" across all matching VPC subnets and VMs.`,
+          costWarning: `ZERO COST ($0.00/MO): Pausing or re-enabling a VPC Firewall rule incurs $0.00/mo.`,
+          impactWarning: pausing
+            ? `Packets previously matched by "${fwName}" will fall through to lower-priority rules (or the priority-65535 implied fallback rule).`
+            : `Immediately resumes live packet enforcement for "${fwName}" in project "${projectId}".`,
+        };
+      }
+
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: isIapLock
           ? `Lock Firewall Rule "${fwName}" to Google Cloud IAP (35.235.240.0/20)?`
+          : isPublicRestore
+          ? `Restore Public Internet (0.0.0.0/0) on Firewall Rule "${fwName}"?`
           : `Update Live VPC Firewall Rule "${fwName}" on "${projectId}"?`,
         headerBadge: 'VPC Firewall X-Ray & Zero-Trust IAP Gatekeeper',
-        targetLabel: 'Target VPC Firewall Rule to Harden',
+        targetLabel: 'Target VPC Firewall Rule to Update',
         resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
         targetName: isIapLock
           ? `${fwName} (sourceRanges: 0.0.0.0/0 → 35.235.240.0/20)`
+          : isPublicRestore
+          ? `${fwName} (sourceRanges: 35.235.240.0/20 → 0.0.0.0/0)`
           : `projects/${projectId}/global/firewalls/${fwName}`,
         location: 'Global VPC Perimeter',
         projectId,
-        method: isIapLock ? 'LOCK TO CLOUD IAP' : 'PATCH FIREWALL RULE',
+        method: isIapLock
+          ? 'LOCK TO CLOUD IAP'
+          : isPublicRestore
+          ? 'RESTORE 0.0.0.0/0'
+          : 'PATCH FIREWALL RULE',
         endpoint: rawUrl,
         confirmLabel: isIapLock
           ? `Restrict "${fwName}" to Cloud IAP (35.235.240.0/20)`
+          : isPublicRestore
+          ? `Restore 0.0.0.0/0 on "${fwName}"`
           : `Update Firewall Rule "${fwName}" ($0.00)`,
         cancelToast: `Firewall rule update on "${fwName}" cancelled.`,
         whatHappensNext: isIapLock
           ? `1. Replaces Open Public Internet (0.0.0.0/0) with Cloud IAP CIDR: Updates "${fwName}" in-place so only Google Cloud Identity-Aware Proxy's TCP forwarding range (35.235.240.0/20) is permitted.\n2. Blocks Direct Public Internet Brute-Force While Keeping Browser/CLI SSH Alive: Immediately flips the World Map's public exposure verdict to LOCKED while preserving authenticated "--tunnel-through-iap" sessions.\n3. Enables Firewall Hit Logging & Audit Trail: Activates VPC Firewall Rule Logging on "${fwName}" and records the change in Cloud Audit Logs.`
-          : `1. Updates Live Firewall Rule "${fwName}" In-Place: Applies your requested source CIDR ranges (${nextRanges || 'configured CIDRs'}), priority, or enabled/disabled state across the VPC network.\n2. Recalculates Live World Map Verdicts: Immediately re-evaluates all packet trajectories against the updated "${fwName}" rule.\n3. Enables Audit Logging: Records the configuration update in Google Cloud Audit Logs.`,
-        costWarning: `ZERO COST ($0.00/MO): Modifying VPC Firewall rules and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
+          : `1. Updates Live Firewall Rule "${fwName}" In-Place: Applies your requested source CIDR ranges (${nextRanges || 'configured CIDRs'}), priority, logging (${body.enableLogging ? 'Logs: ON' : 'Logs: OFF'}), or enabled/disabled state across the VPC network.\n2. Recalculates Live World Map Verdicts: Immediately re-evaluates all packet trajectories against the updated "${fwName}" rule.\n3. Enables Audit Logging: Records the configuration update in Google Cloud Audit Logs.`,
+        costWarning: body.enableLogging
+          ? `STORAGE INGESTION NOTICE: Modifying VPC Firewall rules is $0.00/mo, but because "Logs: ON" (enableLogging: true) is active, Google Cloud will write connection records into your Cloud Logging "_Default" bucket (50 GiB/mo Free Tier; $0.50/GiB beyond 50 GiB/mo).`
+          : `ZERO COST ($0.00/MO): Modifying VPC Firewall rules and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
         impactWarning: isIapLock
           ? `Direct unauthenticated public internet connections to "${fwName}" will be dropped; authorized engineers continue connecting seamlessly via Cloud IAP.`
+          : isPublicRestore
+          ? `WARNING: Restoring 0.0.0.0/0 opens "${fwName}" back up to all public IPv4 addresses on the internet.`
           : `Immediately updates packet filtering for all VMs matching firewall rule "${fwName}" in project "${projectId}".`,
       };
     }
@@ -4905,17 +4996,6 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GLOBAL_MAP' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="NETOPS"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Global Network World Map · 4-Hop Tracer & IPAM"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <GlobalNetworkWorldMap
                     projectId={selectedProjectId}
                     overview={overview}
@@ -4928,6 +5008,18 @@ function CloudPulseCockpit() {
                     onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
                     onSelectTab={(tabId) => setActiveTab(tabId)}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <PersonaContextualHelper
+                    persona="NETOPS"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Global Network World Map · 4-Hop Tracer & IPAM"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -4968,6 +5060,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'STARTUP_10X' && (
                 <div className="space-y-4">
+                  <Startup10xMentorStudio
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <PersonaContextualHelper
                     persona="ARCHITECT"
                     projectId={selectedProjectId}
@@ -4980,59 +5078,32 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                  <Startup10xMentorStudio
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                 </div>
               )}
 
               {activeTab === 'MCP_HUB' && (
                 <div className="space-y-4">
+                  <GoogleCloudRemoteMcpStudio
+                    projectId={selectedProjectId}
+                    onShowToast={showToast}
+                  />
                   <PersonaContextualHelper
                     persona="AI_MLOPS"
                     projectId={selectedProjectId}
                     studioContextLabel="MCP & Agent Hub · Model Armor Firewall, Smart Router & RAG Recall"
-                    defaultExpanded={true}
+                    defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
-                  />
-                  <GoogleCloudRemoteMcpStudio
-                    projectId={selectedProjectId}
-                    onShowToast={showToast}
                   />
                 </div>
               )}
 
               {activeTab === 'CLOUD_STORAGE' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="CLOUD_ENG"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Cloud Storage Studio · .tf Exporter & Undo Saga"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="STORAGE"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     initialSubTab={storageSubTab}
@@ -5051,35 +5122,33 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="STORAGE"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Cloud Storage Studio · .tf Exporter & Undo Saga"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                 </div>
               )}
 
               {activeTab === 'BIGQUERY_STUDIO' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="DATA_ENG"
-                    projectId={selectedProjectId}
-                    studioContextLabel="BigQuery Studio · Column Lineage Guard & DLQ Replay"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="BIGQUERY"
-                    onRunInShell={handleRunInShell}
-                    onLoadBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                    }}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <BigQueryStudio
                     projectId={selectedProjectId}
                     initialSql={bigQueryInitialSql}
@@ -5106,26 +5175,36 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                </div>
-              )}
-
-              {activeTab === 'BIGLAKE_STUDIO' && (
-                <div className="space-y-4">
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="BIGQUERY"
+                    onRunInShell={handleRunInShell}
+                    onLoadBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                    }}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <PersonaContextualHelper
                     persona="DATA_ENG"
                     projectId={selectedProjectId}
-                    studioContextLabel="BigLake & Iceberg · Schema Evolution & Spark Offload"
+                    studioContextLabel="BigQuery Studio · Column Lineage Guard & DLQ Replay"
+                    defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
                     onOpenBigQuerySql={(sqlText) => {
                       if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
                     }}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                </div>
+              )}
+
+              {activeTab === 'BIGLAKE_STUDIO' && (
+                <div className="space-y-4">
                   <BigLakeIcebergStudio
                     projectId={selectedProjectId}
                     initialSubTab={bigLakeSubTab}
@@ -5146,15 +5225,11 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                </div>
-              )}
-
-              {activeTab === 'DATA_ENGINEER_STUDIO' && (
-                <div className="space-y-4">
                   <PersonaContextualHelper
                     persona="DATA_ENG"
                     projectId={selectedProjectId}
-                    studioContextLabel="Data Engineering Studio · Column Lineage, DLQ & Spark"
+                    studioContextLabel="BigLake & Iceberg · Schema Evolution & Spark Offload"
+                    defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
@@ -5166,6 +5241,11 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                </div>
+              )}
+
+              {activeTab === 'DATA_ENGINEER_STUDIO' && (
+                <div className="space-y-4">
                   <DataEngineeringStudio
                     projectId={selectedProjectId}
                     initialSubTab={dataEngineerSubTab}
@@ -5186,39 +5266,27 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Data Engineering Studio · Column Lineage, DLQ & Spark"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                 </div>
               )}
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="DBRE"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud SQL & AlloyDB · Lock-Tree, Concurrent Index & 1.6s PITR Clone"
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="DATA_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud SQL & AlloyDB · Federated Lineage & Pre-Flight"
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onOpenBigQuerySql={(sqlText) => {
-                        if (sqlText) setBigQueryInitialSql(sqlText);
-                        setActiveTab('BIGQUERY_STUDIO');
-                      }}
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
                   <CloudSqlAndAlloyDbStudio
                     projectId={selectedProjectId}
                     onOpenProvisionCloudSql={() =>
@@ -5236,16 +5304,54 @@ function CloudPulseCockpit() {
                     }
                     onShowToast={showToast}
                   />
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="DBRE"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud SQL & AlloyDB · Lock-Tree, Concurrent Index & 1.6s PITR Clone"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="DATA_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud SQL & AlloyDB · Federated Lineage & Pre-Flight"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onOpenBigQuerySql={(sqlText) => {
+                        if (sqlText) setBigQueryInitialSql(sqlText);
+                        setActiveTab('BIGQUERY_STUDIO');
+                      }}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                 </div>
               )}
 
               {activeTab === 'WAVE9_STUDIO' && (
                 <div className="space-y-4">
+                  <Wave9AiGkeSqlSupplyChainStudio
+                    projectId={selectedProjectId}
+                    onTriggerToast={showToast}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                  />
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <PersonaContextualHelper
                       persona="DEVSECOPS"
                       projectId={selectedProjectId}
                       studioContextLabel="Cloud Build & Supply Chain · SLSA-3 @sha256 & Zero-Key OIDC"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5257,6 +5363,7 @@ function CloudPulseCockpit() {
                       persona="AI_MLOPS"
                       projectId={selectedProjectId}
                       studioContextLabel="Vertex AI Pipeline · Model Armor & Accelerator Zone Finder"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5265,29 +5372,11 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
-                  <Wave9AiGkeSqlSupplyChainStudio
-                    projectId={selectedProjectId}
-                    onTriggerToast={showToast}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                  />
                 </div>
               )}
 
               {activeTab === 'WAVE10_FRONTIER' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="DBRE"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Spanner Graph & Vector Studio · Hot-Key Inspector & Zero-Downtime DDL"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
@@ -5300,21 +5389,32 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                </div>
-              )}
-
-              {activeTab === 'SOVEREIGN_STUDIO' && (
-                <div className="space-y-4">
                   <PersonaContextualHelper
-                    persona="DEVSECOPS"
+                    persona="DBRE"
                     projectId={selectedProjectId}
-                    studioContextLabel="IAM & Zero-Trust Studio · Escalation Paths, @sha256 & OIDC WIF"
+                    studioContextLabel="Spanner Graph & Vector Studio · Hot-Key Inspector & Zero-Downtime DDL"
+                    defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'SOVEREIGN_STUDIO' && (
+                <div className="space-y-4">
+                  <SovereignTimeMachineIamStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={sovereignSubTab}
+                    onTriggerToast={showToast}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}
@@ -5326,27 +5426,39 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                  <SovereignTimeMachineIamStudio
+                  <PersonaContextualHelper
+                    persona="DEVSECOPS"
                     projectId={selectedProjectId}
-                    initialSubTab={sovereignSubTab}
-                    onTriggerToast={showToast}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
+                    studioContextLabel="IAM & Zero-Trust Studio · Escalation Paths, @sha256 & OIDC WIF"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                 </div>
               )}
 
               {activeTab === 'SRE_WAR_ROOM' && (
                 <div className="space-y-4">
+                  <SreWarRoomPerimeterStudio
+                    projectId={selectedProjectId}
+                    onTriggerToast={showToast}
+                    onRunInShell={handleRunInShell}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                  />
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <PersonaContextualHelper
                       persona="SRE_ONCALL"
                       projectId={selectedProjectId}
                       studioContextLabel="SRE War-Room · 14.4x SLO Freeze Gate, Change Correlator & Chaos"
-                      defaultExpanded={true}
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5358,6 +5470,7 @@ function CloudPulseCockpit() {
                       persona="ARCHITECT"
                       projectId={selectedProjectId}
                       studioContextLabel="SRE War-Room · Region Blackout SPOF Drill & Org Guardrails"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5366,55 +5479,11 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
-                  <SreWarRoomPerimeterStudio
-                    projectId={selectedProjectId}
-                    onTriggerToast={showToast}
-                    onRunInShell={handleRunInShell}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                  />
                 </div>
               )}
 
               {activeTab === 'CLOUD_RUN' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="CLOUD_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud Run Fleet · Pre-Flight Validator & .tf Export"
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="DEVSECOPS"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud Run Revisions · Binary Authz @sha256 Digest Gate"
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="CLOUD_RUN"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <CloudRunFleetManager
                     projectId={selectedProjectId}
                     initialServices={overview?.cloudRunServices || []}
@@ -5433,15 +5502,57 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="CLOUD_RUN"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="CLOUD_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud Run Fleet · Pre-Flight Validator & .tf Export"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="DEVSECOPS"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud Run Revisions · Binary Authz @sha256 Digest Gate"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                 </div>
               )}
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
                 <div className="space-y-4">
+                  <CloudFunctionsEventarcStudio
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <PersonaContextualHelper
                     persona="CLOUD_ENG"
                     projectId={selectedProjectId}
                     studioContextLabel="Cloud Functions & Eventarc · Pre-Flight & .tf Export"
+                    defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
@@ -5449,22 +5560,36 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                  <CloudFunctionsEventarcStudio
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
                 </div>
               )}
 
               {activeTab === 'GKE_STUDIO' && (
                 <div className="space-y-4">
+                  <GkeFleetStudio
+                    projectId={selectedProjectId}
+                    onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
+                    onRunInShell={handleRunInShell}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="GKE_FINOPS"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <PersonaContextualHelper
                       persona="PLATFORM_K8S"
                       projectId={selectedProjectId}
                       studioContextLabel="GKE Fleet · Pod OOM/CPU Right-Sizer, Scale-Down Blocker & STRICT mTLS"
-                      defaultExpanded={true}
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5476,6 +5601,7 @@ function CloudPulseCockpit() {
                       persona="CLOUD_ENG"
                       projectId={selectedProjectId}
                       studioContextLabel="GKE Kubernetes Fleet · Pre-Flight Quota & .tf Export"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -5484,40 +5610,20 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="GKE_FINOPS"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <GkeFleetStudio
-                    projectId={selectedProjectId}
-                    onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
-                    onRunInShell={handleRunInShell}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                  />
                 </div>
               )}
 
               {activeTab === 'VM_SSH' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="CLOUD_ENG"
+                  <VmFleetAndSsh
                     projectId={selectedProjectId}
-                    studioContextLabel="Compute Engine VM Fleet · Pre-Flight, .tf Export & Undo Saga"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
+                    account={contextData.account}
+                    onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
+                    refreshTrigger={vmRefreshTrigger}
+                    onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
                     onRunInShell={handleRunInShell}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
                     onShowToast={showToast}
-                    onShowError={setErrorBanner}
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}
@@ -5530,15 +5636,17 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
-                  <VmFleetAndSsh
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
                     projectId={selectedProjectId}
-                    account={contextData.account}
-                    onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
-                    refreshTrigger={vmRefreshTrigger}
-                    onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
+                    studioContextLabel="Compute Engine VM Fleet · Pre-Flight, .tf Export & Undo Saga"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
                     onRunInShell={handleRunInShell}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
                     onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                 </div>
               )}
@@ -5590,41 +5698,6 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="FINOPS_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="FinOps & GreenOps · Unit Cost ($/1k req), Zombie Reaper & 98% CFE"
-                      defaultExpanded={true}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="ARCHITECT"
-                      projectId={selectedProjectId}
-                      studioContextLabel="FinOps Studio · 3-Cloud Arbitrage (GCP vs AWS vs Azure) & Guardrails"
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="GKE_FINOPS"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <BillingAccountCreditGuardian
                     projectId={selectedProjectId}
                     liveBurn={liveBurn}
@@ -5683,22 +5756,47 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     onOpenCopilot={handleOpenCopilotWithPrompt}
                   />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="GKE_FINOPS"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="FINOPS_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="FinOps & GreenOps · Unit Cost ($/1k req), Zombie Reaper & 98% CFE"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="ARCHITECT"
+                      projectId={selectedProjectId}
+                      studioContextLabel="FinOps Studio · 3-Cloud Arbitrage (GCP vs AWS vs Azure) & Guardrails"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                 </div>
               )}
 
               {activeTab === 'LOGS_SHELL' && (
                 <div className="space-y-4">
-                  <PersonaContextualHelper
-                    persona="SRE_ONCALL"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Logs & Cloud Shell · Golden-Signal Change Correlator & SLO Burn Gate"
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
                   <LogStreamerAndShell
                     logs={overview?.logs || []}
                     projectId={selectedProjectId}
@@ -5707,6 +5805,18 @@ function CloudPulseCockpit() {
                     initialLogExplorerSpec={logExplorerSeedSpec}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
+                  />
+                  <PersonaContextualHelper
+                    persona="SRE_ONCALL"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Logs & Cloud Shell · Golden-Signal Change Correlator & SLO Burn Gate"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                 </div>
               )}

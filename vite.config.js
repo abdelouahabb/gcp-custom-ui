@@ -136,7 +136,10 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('echarts') || id.includes('zrender')) {
+              if (id.includes('zrender')) {
+                return 'vendor-zrender';
+              }
+              if (id.includes('echarts')) {
                 return 'vendor-echarts';
               }
               if (id.includes('@xterm')) {
@@ -153,6 +156,21 @@ export default defineConfig(({ mode }) => {
                 return 'vendor-react';
               }
               return 'vendor-core';
+            }
+            if (
+              id.includes('src/components/AutonomousCloudSocStudio') ||
+              id.includes('src/components/GoogleCloudRemoteMcpStudio') ||
+              id.includes('src/components/SreWarRoomPerimeterStudio')
+            ) {
+              return 'studio-soc-mcp';
+            }
+            if (
+              id.includes('src/components/FivePersonaCommandCenter') ||
+              id.includes('src/components/GcloudAlphaBetaFrontierStudio') ||
+              id.includes('src/components/Startup10xMentorStudio') ||
+              id.includes('src/components/InnovationHoverExplainer')
+            ) {
+              return 'studio-persona-frontier';
             }
             if (id.includes('src/components/AwsAzureEnvySuiteStudio')) {
               return 'studio-multi-cloud-parity';
