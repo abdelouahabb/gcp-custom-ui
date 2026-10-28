@@ -60792,14 +60792,14 @@ app.get('/api/soc/fleet-matrix', async (req, res) => {
   }
 });
 
-// 3. POST /api/project/:projectId/soc/ai-commander -> Grounded Gemini 3.8 Flash / 3.1 Pro Incident Commander (Live Google AI Studio Key + Keyless Vertex AI OAuth2 + Transparent Deterministic Telemetry Compiler)
+// 3. POST /api/project/:projectId/soc/ai-commander -> 100% Real Gemini Incident Commander (Keyless Vertex AI OAuth2 + Google AI Studio Vault — Zero Synthetic Fallback)
 app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
   const { projectId } = req.params;
   const {
     model = 'gemini-3.8-flash',
     focusArea = 'FULL_SOC_TRIAGE',
     customQuestion = '',
-    preferredProvider = 'AUTO', // 'AUTO' | 'AI_STUDIO_KEY' | 'VERTEX_AI_OAUTH' | 'DETERMINISTIC_ONLY'
+    preferredProvider = 'AUTO', // 'AUTO' | 'AI_STUDIO_KEY' | 'VERTEX_AI_OAUTH'
     inlineApiKey = '',
     socSnapshot = {},
   } = req.body || {};
@@ -60807,23 +60807,10 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
   const t0 = Date.now();
   const isProRequested = String(model || '').includes('pro');
   const selectedModel = isProRequested ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
+  // Map 2026 UI aliases directly to real live Vertex AI / AI Studio production model IDs first so zero time is wasted on 404s
   const candidateModels = isProRequested
-    ? Array.from(
-        new Set([
-          model,
-          'gemini-2.5-pro',
-          'gemini-2.5-flash',
-          'gemini-2.0-flash',
-        ])
-      )
-    : Array.from(
-        new Set([
-          model,
-          'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-1.5-flash',
-        ])
-      );
+    ? ['gemini-2.5-pro', 'gemini-2.5-flash']
+    : ['gemini-2.5-flash', 'gemini-2.5-pro'];
 
   try {
     const { token, account } = await resolveRequestAuth(req);
@@ -60871,11 +60858,11 @@ Format your response with clear Markdown headings:${
 ### 3. Toxic Combinations & Supply-Chain Hardening Plan
 ### 4. Copy-Ready Zero-Cost gcloud & Terraform Containment Runbook (for project ${projectId})`;
 
-    let briefingMarkdown = '';
-    let resolvedModelId = selectedModel;
-    let executionMode = 'DETERMINISTIC_TELEMETRY_COMPILER';
+    let briefingMarkdown = null;
+    let resolvedModelId = null;
+    let executionMode = 'UNAVAILABLE';
     let isLiveLlm = false;
-    let engineUsed = 'Deterministic Telemetry Compiler (Local Rule Engine)';
+    let engineUsed = null;
     let tokenUsage = null;
     const diagnostics = [];
 
@@ -60884,10 +60871,7 @@ Format your response with clear Markdown headings:${
     // ========================================================================
     // ENGINE 1: GOOGLE AI STUDIO API KEY (`generativelanguage.googleapis.com`)
     // ========================================================================
-    if (
-      preferredProvider !== 'VERTEX_AI_OAUTH' &&
-      preferredProvider !== 'DETERMINISTIC_ONLY'
-    ) {
+    if (preferredProvider !== 'VERTEX_AI_OAUTH') {
       if (sealedApiKey) {
         for (const cand of candidateModels) {
           try {
@@ -60902,7 +60886,7 @@ Format your response with clear Markdown headings:${
                   maxOutputTokens: 2048,
                 },
               },
-              { timeout: 18000 }
+              { timeout: 35000 }
             );
             const candidateObj = gRes.data?.candidates?.[0] || {};
             const parts = candidateObj?.content?.parts || [];
@@ -60943,7 +60927,7 @@ Format your response with clear Markdown headings:${
         }
       } else {
         diagnostics.push(
-          '[AI_STUDIO_VAULT] No Google AI Studio API Key (AIzaSy...) is currently sealed in the RAM Vault.'
+          '[AI_STUDIO_VAULT] No Google AI Studio API Key (AIzaSy...) is sealed in the RAM Vault.'
         );
       }
     }
@@ -60951,11 +60935,7 @@ Format your response with clear Markdown headings:${
     // ========================================================================
     // ENGINE 2: KEYLESS GOOGLE CLOUD VERTEX AI (`aiplatform.googleapis.com`) VIA USER'S GCP OAUTH2 TOKEN
     // ========================================================================
-    if (
-      !briefingMarkdown &&
-      preferredProvider !== 'AI_STUDIO_KEY' &&
-      preferredProvider !== 'DETERMINISTIC_ONLY'
-    ) {
+    if (!briefingMarkdown && preferredProvider !== 'AI_STUDIO_KEY') {
       const encProj = encodeURIComponent(projectId);
       for (const cand of candidateModels) {
         try {
@@ -60966,9 +60946,15 @@ Format your response with clear Markdown headings:${
             method: 'POST',
             body: {
               contents: [{ role: 'user', parts: [{ text: promptText }] }],
-              generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+              generationConfig: {
+                temperature: 0.2,
+                maxOutputTokens: 2048,
+                ...(cand.includes('2.5-flash')
+                  ? { thinkingConfig: { thinkingBudget: 0 } }
+                  : {}),
+              },
             },
-            timeout: 15000,
+            timeout: 45000,
           });
           const candidateObj = vRes?.candidates?.[0] || {};
           const parts = candidateObj?.content?.parts || [];
@@ -61003,7 +60989,6 @@ Format your response with clear Markdown headings:${
           const errMsg =
             vErr.response?.data?.error?.message || vErr.message || 'Vertex AI call failed';
           diagnostics.push(`[VERTEX_AI_${cand}] ${errMsg}`);
-          // If Vertex AI API is not enabled (403) or permission denied, don't spam all 4 models on the same disabled API
           if (
             vErr.response?.status === 403 ||
             String(errMsg).includes('has not been used in project') ||
@@ -61013,153 +60998,37 @@ Format your response with clear Markdown headings:${
           }
         }
       }
-
-      // Secondary keyless OAuth2 attempt via generativelanguage.googleapis.com with Bearer token + x-goog-user-project
-      if (!briefingMarkdown) {
-        for (const cand of ['gemini-2.5-flash', 'gemini-2.0-flash']) {
-          try {
-            const glOauthRes = await gcpFetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-                cand
-              )}:generateContent`,
-              token,
-              projectId,
-              {
-                method: 'POST',
-                body: {
-                  contents: [{ role: 'user', parts: [{ text: promptText }] }],
-                  generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-                },
-                timeout: 14000,
-              }
-            );
-            const parts = glOauthRes?.candidates?.[0]?.content?.parts || [];
-            const textOut = parts
-              .filter((p) => !p.thought && typeof p.text === 'string')
-              .map((p) => p.text)
-              .join('\n');
-            if (textOut) {
-              briefingMarkdown = textOut;
-              resolvedModelId = cand;
-              executionMode = 'LIVE_VERTEX_AI_OAUTH';
-              isLiveLlm = true;
-              const usage = glOauthRes?.usageMetadata || {};
-              tokenUsage = {
-                promptTokens: usage.promptTokenCount || 0,
-                outputTokens: usage.candidatesTokenCount || 0,
-                thoughtTokens: usage.thoughtsTokenCount || 0,
-                totalTokens: usage.totalTokenCount || 0,
-              };
-              engineUsed = `Live Generative Language OAuth2 (generativelanguage.googleapis.com · ${cand} · Keyless GCP Token)`;
-              diagnostics.push(
-                `[GENLANG_OAUTH_SUCCESS] Generated live keyless response via generativelanguage.googleapis.com (${cand}).`
-              );
-              break;
-            }
-          } catch (glErr) {
-            const errMsg =
-              glErr.response?.data?.error?.message || glErr.message || 'OAuth call failed';
-            diagnostics.push(`[GENLANG_OAUTH_${cand}] ${errMsg}`);
-            break;
-          }
-        }
-      }
-    }
-
-    // ========================================================================
-    // ENGINE 3: TRANSPARENT DETERMINISTIC TELEMETRY COMPILER (FALLBACK OR EXPLICIT)
-    // ========================================================================
-    if (!briefingMarkdown) {
-      executionMode = 'DETERMINISTIC_TELEMETRY_COMPILER';
-      isLiveLlm = false;
-      resolvedModelId = 'deterministic-soc-rule-engine-v3';
-      engineUsed =
-        'Deterministic SOC Telemetry Rule Compiler (Local Engine — Enable Vertex AI or Seal AI Studio Key for Live Gemini LLM)';
-
-      const s = socSnapshot.summary || {};
-      const topChains = (socSnapshot.killChains || []).slice(0, 4);
-      const toxics = (socSnapshot.toxicCombinations || []).filter(
-        (t) => t.status === 'TOXIC_EXPOSED_PATH'
-      );
-      briefingMarkdown = [
-        ...(cleanCustomQuestion
-          ? [
-              `### 0. Direct Forensic Answer: "${cleanCustomQuestion}"`,
-              `- **Evaluated Against Live \`${projectId}\` Telemetry (Deterministic Rule Compiler)**:`,
-              `  - **Focus Area**: \`${focusArea}\` · **Posture Score**: **${
-                s.socPostureScore ?? 100
-              }/100 (${s.socGrade || 'A'})**`,
-              `  - **Exposed Toxic Entrypoints**: **${toxics.length}** (${
-                toxics.map((t) => `\`${t.workloadName}\``).join(', ') || '0 found'
-              })`,
-              `  - **Unencrypted / Unhardened Buckets**: **${
-                s.unhardenedBucketsCount || 0
-              }** · **User-Managed SA Keys**: **${s.userManagedSaKeysCount || 0}**`,
-              `  - *Tip: To get open-ended generative reasoning from Gemini on this question, click **"⚡ Enable Vertex AI API (Keyless OAuth2)"** or paste a free Google AI Studio \`AIzaSy...\` key in the bar above.*`,
-              '',
-            ]
-          : []),
-        `### 1. Executive Threat & Blast-Radius Assessment (${projectId})`,
-        `- **Target GCP Project**: \`${projectId}\` · **SOC Posture Score**: **${
-          s.socPostureScore ?? 100
-        }/100 (${s.socGrade || 'A'})**`,
-        `- **Live Audit Events Correlated**: **${
-          s.auditEventsCount || 0
-        }** events grouped into **${
-          s.killChainsCount || 0
-        }** behavioral actor chains (**${
-          s.criticalChainsCount || 0
-        }** elevated/critical).`,
-        `- **Toxic Attack Paths Detected**: **${
-          toxics.length
-        }** exposed path(s) across **${
-          s.totalWorkloadsInspected || 0
-        }** inspected workloads.`,
-        `- **Active $0.00/mo Canary Tripwires Armed**: **${
-          s.deployedCanariesCount || 0
-        } / 3** (**${s.canaryHitsCount || 0}** tripwire intrusion alert(s)).`,
-        '',
-        `### 2. Behavioral Kill-Chain & Audit Log Forensics`,
-        ...(topChains.length > 0
-          ? topChains.map(
-              (c) =>
-                `- **Actor \`${c.principalEmail}\` from \`${
-                  c.callerIp
-                }\`** — Risk Score **${c.riskScore}/100 (${
-                  c.severityLevel
-                })** · Tactics: \`${(c.tactics || []).join(
-                  ' -> '
-                )}\` · Methods: \`${(c.sampleMethods || []).join(', ')}\``
-            )
-          : [
-              '- No multi-stage privilege-escalation chains detected in the active lookback window.',
-            ]),
-        '',
-        `### 3. Toxic Combinations & Supply-Chain Hardening Plan`,
-        ...(toxics.length > 0
-          ? toxics.map(
-              (t) =>
-                `- **[${t.severity}] ${t.workloadType} \`${t.workloadName}\`**: ${t.vector1Ingress} -> ${t.vector2Identity} -> Reachable: ${t.vector3CrownJewels}. **Action**: *${t.remediationLabel}*.`
-            )
-          : [
-              '- **Zero Toxic Combinations Active**: All inspected Cloud Run, VPC Firewall, and App Engine entrypoints are either IAM/IAP-gated or isolated from high-privilege runtime identities.',
-            ]),
-        '',
-        `### 4. Copy-Ready Zero-Cost gcloud Containment Runbook (for project \`${projectId}\`)`,
-        '```bash',
-        `# 1. Inspect recent IAM & Service Account key mutations in ${projectId}`,
-        `gcloud logging read 'logName:"cloudaudit.googleapis.com%2Factivity" AND (protoPayload.methodName:"SetIamPolicy" OR protoPayload.methodName:"CreateServiceAccountKey")' --project=${projectId} --limit=20 --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName,protoPayload.requestMetadata.callerIp)"`,
-        '',
-        `# 2. Lock world-open 0.0.0.0/0 SSH/RDP VPC Firewall rules to Google Cloud IAP (35.235.240.0/20 — $0.00/mo)`,
-        `gcloud compute firewall-rules update default-allow-ssh --source-ranges=35.235.240.0/20 --project=${projectId}`,
-        '',
-        `# 3. Enable Direct Cloud Run IAP ($0.00/mo Google Sign-In) on any exposed Cloud Run service`,
-        `gcloud run services update <SERVICE_NAME> --region=us-central1 --iap --project=${projectId}`,
-        '```',
-      ].join('\n');
     }
 
     const totalLatencyMs = Date.now() - t0;
+
+    // ZERO SYNTHETIC FALLBACK: If neither live LLM engine succeeded, return isLiveLlm: false and briefingMarkdown: null
+    if (!isLiveLlm || !briefingMarkdown) {
+      return res.json({
+        ok: false,
+        projectId,
+        model: selectedModel,
+        resolvedModelId: null,
+        executionMode: 'NO_LIVE_LLM_AVAILABLE',
+        isLiveLlm: false,
+        engineUsed: null,
+        latencyMs: totalLatencyMs,
+        tokenUsage: null,
+        diagnostics,
+        aiCommanderStatus: {
+          aiStudioVaultConfigured: Boolean(
+            encryptedAiStudioVault.ciphertextHex || process.env.GEMINI_API_KEY
+          ),
+          aiStudioMaskedKey:
+            encryptedAiStudioVault.maskedKey ||
+            (process.env.GEMINI_API_KEY ? 'ENV_GEMINI_API_KEY' : null),
+          aiStudioKeyFingerprint: encryptedAiStudioVault.keyFingerprint || null,
+        },
+        briefingMarkdown: null,
+        receipt: null,
+      });
+    }
+
     const receipt = appendSocForensicReceipt(projectId, {
       timestamp: new Date().toISOString(),
       action: `AI_INCIDENT_COMMANDER_${executionMode}`,
@@ -61167,7 +61036,9 @@ Format your response with clear Markdown headings:${
         ? `${focusArea} ("${cleanCustomQuestion.slice(0, 60)}")`
         : focusArea,
       actor: account || 'soc-operator',
-      details: `Generated Ed25519-signed SOC Incident Commander briefing via ${engineUsed} in ${totalLatencyMs}ms.`,
+      details: `Generated Ed25519-signed SOC Incident Commander briefing via ${engineUsed} in ${totalLatencyMs}ms (${
+        tokenUsage?.totalTokens || 0
+      } tokens).`,
     });
 
     return res.json({

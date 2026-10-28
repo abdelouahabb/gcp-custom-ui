@@ -2093,12 +2093,11 @@ export default function AutonomousCloudSocStudio({
                   value={aiPreferredProvider}
                   onChange={(e) => setAiPreferredProvider(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
-                  title="Choose how Gemini Incident Commander executes inference"
+                  title="Choose how Gemini Incident Commander executes live inference"
                 >
-                  <option value="AUTO">Engine: Auto (AI Studio Key → Vertex AI OAuth2 → Compiler)</option>
+                  <option value="AUTO">Engine: Auto (AI Studio Key → Keyless Vertex AI OAuth2)</option>
                   <option value="VERTEX_AI_OAUTH">Engine: Keyless Vertex AI OAuth2 Only (No API Key)</option>
                   <option value="AI_STUDIO_KEY">Engine: Google AI Studio API Key Only (AIzaSy...)</option>
-                  <option value="DETERMINISTIC_ONLY">Engine: Deterministic Telemetry Compiler ($0 Local)</option>
                 </select>
                 <select
                   value={selectedAiModel}
@@ -2296,16 +2295,18 @@ export default function AutonomousCloudSocStudio({
                       className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
                         aiBriefing.isLiveLlm
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : 'bg-red-500/20 text-red-300 border border-red-500/40'
                       }`}
                     >
                       {aiBriefing.isLiveLlm
                         ? `🟢 LIVE GEMINI LLM (${aiBriefing.executionMode})`
-                        : '🟡 DETERMINISTIC TELEMETRY COMPILER (NO LIVE LLM USED)'}
+                        : '🔴 LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
                     </span>
-                    <span className="text-blue-300 font-bold">
-                      Engine: {aiBriefing.engineUsed || aiBriefing.model}
-                    </span>
+                    {aiBriefing.engineUsed && (
+                      <span className="text-blue-300 font-bold">
+                        Engine: {aiBriefing.engineUsed}
+                      </span>
+                    )}
                     {typeof aiBriefing.latencyMs === 'number' && (
                       <span className="text-zinc-400">
                         · {aiBriefing.latencyMs}ms
@@ -2326,29 +2327,32 @@ export default function AutonomousCloudSocStudio({
                   )}
                 </div>
 
-                {!aiBriefing.isLiveLlm &&
-                  Array.isArray(aiBriefing.diagnostics) &&
-                  aiBriefing.diagnostics.length > 0 && (
-                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-amber-200 space-y-1">
-                      <div className="font-extrabold text-amber-300">
-                        Why Live LLM Inference Fell Back to the Local Telemetry Compiler:
-                      </div>
-                      <ul className="list-disc list-inside space-y-0.5 text-[10px] text-amber-100/90">
-                        {aiBriefing.diagnostics.map((d, idx) => (
-                          <li key={idx} className="break-all">
-                            {d}
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="pt-1 text-[10px] text-emerald-300 font-bold">
-                        → Click &ldquo;⚡ 1-Click Enable Vertex AI (No API Key Needed)&rdquo; above to use your GCP OAuth token, OR paste a free Google AI Studio key (`AIzaSy...`).
-                      </div>
+                {!aiBriefing.isLiveLlm && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] font-mono text-red-200 space-y-1.5">
+                    <div className="font-extrabold text-red-300">
+                      No synthetic or simulated response was generated. Live Gemini API call did not complete:
                     </div>
-                  )}
+                    {Array.isArray(aiBriefing.diagnostics) &&
+                      aiBriefing.diagnostics.length > 0 && (
+                        <ul className="list-disc list-inside space-y-0.5 text-[10px] text-red-100/90">
+                          {aiBriefing.diagnostics.map((d, idx) => (
+                            <li key={idx} className="break-all">
+                              {d}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    <div className="pt-1 text-[10px] text-emerald-300 font-bold">
+                      → Enable Vertex AI API above (Keyless OAuth2) or seal a Google AI Studio key (`AIzaSy...`) to run real Gemini inference.
+                    </div>
+                  </div>
+                )}
 
-                <pre className="text-xs font-mono whitespace-pre-wrap text-zinc-200 leading-relaxed overflow-x-auto">
-                  {aiBriefing.briefingMarkdown}
-                </pre>
+                {aiBriefing.isLiveLlm && aiBriefing.briefingMarkdown && (
+                  <pre className="text-xs font-mono whitespace-pre-wrap text-zinc-200 leading-relaxed overflow-x-auto">
+                    {aiBriefing.briefingMarkdown}
+                  </pre>
+                )}
               </div>
             )}
           </div>
