@@ -904,6 +904,7 @@ export default function VmFleetAndSsh({
             {vms.length > 0 && (
               <button
                 type="button"
+                data-feature-id="VM_MIGRATE_TO_CLOUD_RUN"
                 onClick={() => {
                   const targetVm =
                     filteredVms[0] || vms[0];
@@ -921,6 +922,7 @@ export default function VmFleetAndSsh({
 
             <button
               type="button"
+              data-feature-id="VM_REFRESH_FLEET"
               disabled={loadingVms}
               onClick={() => fetchVms(false)}
               className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-medium transition-colors shadow-sm disabled:opacity-50"
@@ -937,6 +939,7 @@ export default function VmFleetAndSsh({
 
             <button
               type="button"
+              data-feature-id="VM_OPEN_PROVISION_STUDIO"
               onClick={onOpenProvisionVm}
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >

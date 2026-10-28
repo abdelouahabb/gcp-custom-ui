@@ -1080,6 +1080,7 @@ export default function CloudStorageStudio({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 sm:w-[430px]">
             <button
               type="button"
+              data-feature-id="GCS_CREATE_BUCKET_BTN"
               onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
               className="w-full h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
             >
@@ -1089,6 +1090,7 @@ export default function CloudStorageStudio({
 
             <button
               type="button"
+              data-feature-id="GCS_IMPORT_S3_BTN"
               onClick={() => {
                 setActiveSubTab('S3_COMPATIBLE_IMPORT');
                 if (s3RemoteObjects.length === 0) {
@@ -1103,6 +1105,7 @@ export default function CloudStorageStudio({
 
             <button
               type="button"
+              data-feature-id="GCS_REFRESH_FLEET_BTN"
               onClick={() => fetchBuckets()}
               disabled={loadingBuckets}
               className="w-full h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
@@ -1191,6 +1194,7 @@ export default function CloudStorageStudio({
               <div className="flex items-center gap-2 font-mono text-xs">
                 <span className="text-zinc-500 font-bold">Active Bucket:</span>
                 <select
+                  data-feature-id="GCS_ACTIVE_BUCKET_SELECT"
                   value={selectedBucket?.name || ''}
                   onChange={(e) => {
                     setSelectedBucketName(e.target.value);
@@ -1252,6 +1256,7 @@ export default function CloudStorageStudio({
                 <button
                   key={t.id}
                   type="button"
+                  data-feature-id={`GCS_TAB_${t.id}`}
                   onClick={() => {
                     setActiveSubTab(t.id);
                     if (

@@ -473,6 +473,7 @@ spec:
             {onOpenProvisionGke && (
               <button
                 type="button"
+                data-feature-id="GKE_CREATE_CLUSTER_WIZARD"
                 onClick={onOpenProvisionGke}
                 title="Open the full 5-Step GKE Compliance & Architecture Wizard in the Provisioning Modal"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
@@ -484,6 +485,7 @@ spec:
 
             <button
               type="button"
+              data-feature-id="GKE_REFRESH_FLEET"
               onClick={fetchGkeFleet}
               title="Refresh live GKE clusters and Vertex AI endpoints from container.googleapis.com"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
@@ -575,6 +577,7 @@ spec:
             <button
               key={t.id}
               type="button"
+              data-feature-id={`GKE_TAB_${t.id}`}
               onClick={() => setActiveSubTab(t.id)}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
                 active

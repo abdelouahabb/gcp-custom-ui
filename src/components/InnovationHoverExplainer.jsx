@@ -2998,6 +2998,370 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'billingbudgets.googleapis.com/v1 · pubsub.googleapis.com/v1',
     safetyMode: 'LIVE_MUTATION',
   },
+
+  // ============================================================================
+  // DOMAIN II: VM, CLOUD STORAGE, CLOUD RUN, GKE, CLOUD BUILD & FUNCTIONS
+  // ============================================================================
+  VM_MIGRATE_TO_CLOUD_RUN: {
+    badge: 'VM-TO-SERVERLESS TRANSPILER (`mfit` + `m2c`)',
+    title: 'Migrate 24/7 Compute Engine VM → Scale-to-$0 Cloud Run Gen2 Service',
+    whatItDoes:
+      'Introspects the selected Compute Engine VM’s boot disk, open ports, and environment, generates a Migrate-to-Containers (`m2c`) Dockerfile & Cloud Build pipeline, and deploys an auto-scaling Cloud Run Gen2 service (`minInstances = 0`).',
+    enterpriseValue:
+      'Eliminates 24/7 idle VM compute charges by modernizing legacy Linux VMs into serverless containers.',
+    gcpApis: 'compute.googleapis.com · cloudbuild.googleapis.com · run.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  VM_REFRESH_FLEET: {
+    badge: 'MULTI-ZONE COMPUTE FLEET SYNC',
+    title: 'Refresh Live Compute Engine VM Fleet (`aggregatedList`)',
+    whatItDoes:
+      'Calls `compute.googleapis.com/compute/v1/projects/{project}/aggregated/instances` to refresh VM power states, machine types, Spot status, internal/external IPs, and attached disks across all zones.',
+    enterpriseValue:
+      'Provides real-time visibility across all regional and zonal Compute Engine instances.',
+    gcpApis: 'compute.googleapis.com/compute/v1 (instances.aggregatedList)',
+    safetyMode: 'READ_ONLY',
+  },
+  VM_OPEN_PROVISION_STUDIO: {
+    badge: 'LIVE COMPUTE ENGINE PROVISIONER',
+    title: 'Open Compute Engine VM Provisioning Studio',
+    whatItDoes:
+      'Opens the interactive VM Provisioning Modal supporting E2/N2/C3/C4/Arm64/GPU machine families, Spot VM discounts (-68%), Shielded VM, and startup scripts.',
+    enterpriseValue:
+      'Launches hardened, cost-transparent Compute Engine instances in seconds.',
+    gcpApis: 'compute.googleapis.com/compute/v1 (instances.insert)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GCS_CREATE_BUCKET_BTN: {
+    badge: '5-STEP COMPLIANCE BUCKET WIZARD',
+    title: 'Create New Cloud Storage Bucket (`storage.buckets.insert`)',
+    whatItDoes:
+      'Opens the 5-Step Cloud Storage Provisioning Wizard with Public Access Prevention (`enforced`), Uniform Bucket-Level Access, Soft Delete retention, and storage class selection.',
+    enterpriseValue:
+      'Guarantees every newly created bucket is secure-by-default and compliant with SEC/GDPR/HIPAA standards.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b (buckets.insert)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GCS_IMPORT_S3_BTN: {
+    badge: 'NATIVE AWS4-HMAC-SHA256 MULTI-CLOUD IMPORTER',
+    title: 'Import Objects from AWS S3, MinIO, Ceph RGW or Cloudflare R2',
+    whatItDoes:
+      'Opens the S3-Compatible Multi-Cloud Importer using a native `AWS4-HMAC-SHA256` signer to list and stream-import objects from AWS S3, MinIO, Ceph RGW, or Cloudflare R2 directly into your active GCS bucket.',
+    enterpriseValue:
+      'Accelerates multi-cloud and on-prem object storage migrations into Google Cloud Storage without third-party agents.',
+    gcpApis: 'AWS4-HMAC-SHA256 S3 Signer → storage.googleapis.com/upload/storage/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GCS_REFRESH_FLEET_BTN: {
+    badge: 'LIVE CLOUD STORAGE FLEET SYNC',
+    title: 'Refresh Cloud Storage Buckets, IAM Posture & Object Samples',
+    whatItDoes:
+      'Queries `storage.googleapis.com/storage/v1/b` to refresh bucket metadata, Public Access Prevention status, Uniform IAM locks, lifecycle rules, and object samples.',
+    enterpriseValue:
+      'Keeps storage security posture scores and lifecycle FinOps metrics synchronized with live GCP state.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_ACTIVE_BUCKET_SELECT: {
+    badge: 'ACTIVE BUCKET CONTEXT SWITCHER',
+    title: 'Select Active Cloud Storage Bucket (`gs://...`)',
+    whatItDoes:
+      'Switches the active bucket inspected across all 7 Cloud Storage Studio modules (Object Workbench, Lifecycle FinOps, Region Teleporter, RAM DLP X-Ray, and Ransomware Auditor).',
+    enterpriseValue:
+      'Lets engineers pivot seamlessly between governance, object editing, and DLP scanning on any bucket.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket}',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_BUCKETS: {
+    badge: 'CLOUD STORAGE MODULE 1/7',
+    title: 'Bucket Governance, Zero-Trust PAP & Uniform IAM Hardener',
+    whatItDoes:
+      'Audits every bucket in your project for Public Access Prevention (`enforced`), Uniform Bucket-Level Access (`UBLA`), versioning, and soft-delete retention with 1-click hardening.',
+    enterpriseValue:
+      'Prevents accidental public data leaks and enforces enterprise bucket governance.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b (buckets.patch)',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_OBJECTS: {
+    badge: 'CLOUD STORAGE MODULE 2/7',
+    title: 'Live In-Browser Object Workbench (Inspect, Edit, Version, Sign & Upload)',
+    whatItDoes:
+      'Lists live objects inside the selected bucket, inspects/edits text & JSON payloads in-browser, manages object generation versions, and generates V4 Signed URLs.',
+    enterpriseValue:
+      'Replaces CLI `gsutil` downloads for inspecting configs, rotating object versions, and sharing temporary signed links.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket}/o',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_S3_COMPATIBLE_IMPORT: {
+    badge: 'CLOUD STORAGE MODULE 3/7',
+    title: 'S3 / MinIO / Ceph RGW / Cloudflare R2 Multi-Cloud Importer',
+    whatItDoes:
+      'Connects to any S3-compatible endpoint via `AWS4-HMAC-SHA256` or provisions a managed Google Cloud Storage Transfer Service (`storagetransfer.googleapis.com`) job.',
+    enterpriseValue:
+      'Unifies hybrid on-prem MinIO/Ceph and AWS S3 data migration into a single workbench.',
+    gcpApis: 'storagetransfer.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_FINOPS_LIFECYCLE: {
+    badge: 'CLOUD STORAGE MODULE 4/7',
+    title: '4-Tier Storage Lifecycle FinOps Simulator & 1-Click Rule Patcher',
+    whatItDoes:
+      'Models monthly savings across Standard (`$0.020/GB`), Nearline (`$0.010/GB`), Coldline (`$0.004/GB`), and Archive (`$0.0012/GB`) tiers and patches `lifecycle.rule` onto the active bucket.',
+    enterpriseValue:
+      'Cuts long-term storage bills by up to 94% through automated age-based tiering.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket} (lifecycle.rule)',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_TELEPORT: {
+    badge: 'CLOUD STORAGE MODULE 5/7',
+    title: '40-Region Bucket Teleporter & Carbon CFE% Optimizer',
+    whatItDoes:
+      'Compares storage pricing, data-gravity egress, and Carbon-Free Energy (`CFE%`) across all 40 GCP regions and clones the bucket + objects over Google’s Jupiter fiber (`objects.rewrite`).',
+    enterpriseValue:
+      'Co-locates storage buckets with compute/BigQuery workloads to eliminate cross-region data transfer fees.',
+    gcpApis: 'storage.googleapis.com/storage/v1 (buckets.insert · objects.rewrite)',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_DLP_XRAY: {
+    badge: 'CLOUD STORAGE MODULE 6/7',
+    title: 'Volatile RAM DLP Secret & PII X-Ray Scanner',
+    whatItDoes:
+      'Streams live bucket objects into volatile server RAM (never written to disk) to detect leaked `AIzaSy...` Gemini keys, GCP Service Account JSONs, AWS keys, JWTs, and PII with 1-click redaction.',
+    enterpriseValue:
+      'Finds and redacts exposed secrets inside cloud storage buckets before attackers or auditors do.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket}/o (RAM Stream)',
+    safetyMode: 'READ_ONLY',
+  },
+  GCS_TAB_RANSOMWARE_AIRGAP: {
+    badge: 'CLOUD STORAGE MODULE 7/7',
+    title: 'SEC Rule 17a-4 WORM Retention & Ransomware Air-Gap Auditor',
+    whatItDoes:
+      'Audits buckets against ransomware deletion threats and applies 30-day Soft Delete, Object Versioning, and immutable WORM retention policies.',
+    enterpriseValue:
+      'Guarantees that even a compromised admin credential cannot permanently wipe production backups.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket} (softDeletePolicy · retentionPolicy)',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_SCHEDULER_TO_JOBS: {
+    badge: '24H BATCH & SHARDED CLOUD RUN V2 JOBS',
+    title: 'Cloud Scheduler HTTP → Native Cloud Run v2 Batch Jobs Converter',
+    whatItDoes:
+      'Converts fragile Cloud Scheduler HTTP webhooks (capped at 30m timeout and requiring an open port) into native Cloud Run v2 Batch Jobs (`run.googleapis.com/v2/.../jobs`) supporting up to 24-hour timeouts, 10,000 parallel shards (`CLOUD_RUN_TASK_INDEX`), and GCS FUSE volumes.',
+    enterpriseValue:
+      'Eliminates HTTP 504 timeout failures on long-running ETL, ML, and batch jobs while closing exposed web ports.',
+    gcpApis: 'run.googleapis.com/v2 (jobs) · cloudscheduler.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_DOCKER_COMPOSE_GA: {
+    badge: 'GCLOUD 590.0.0 GA COMPOSE DEPLOYER',
+    title: 'Docker Compose to Cloud Run v2 (`gcloud run compose up` GA)',
+    whatItDoes:
+      'Deploys multi-container `compose.yaml` stacks (ingress container + sidecars + shared in-memory/GCS volumes) directly to Cloud Run v2 or exports any live Cloud Run service into a portable `compose.yaml`.',
+    enterpriseValue:
+      'Lets developers move seamlessly between local `docker compose up` and serverless Cloud Run v2 multi-container deployments.',
+    gcpApis: 'run.googleapis.com/v2 (services · sidecar containers)',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_APP_ENGINE_EXTERMINATOR: {
+    badge: 'APP ENGINE $0/MO NEUTRALIZER & MIGRATOR',
+    title: 'App Engine Service Exterminator, Default Service Neutralizer & Cloud Run Migrator',
+    whatItDoes:
+      'Deletes non-default App Engine services via `appengine.googleapis.com/v1`, tombstones the non-deletable `default` App Engine service to `$0.00/mo` (`servingStatus: USER_DISABLED` + dummy `f1-micro` manual scaling), or migrates App Engine services to Cloud Run.',
+    enterpriseValue:
+      'Stops surprise bills from legacy App Engine Flex/Standard instances that the standard GCP Console refuses to delete.',
+    gcpApis: 'appengine.googleapis.com/v1 (apps.patch · services.delete)',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_DEAD_ARTIFACT_HUNTER: {
+    badge: 'ORPHAN CONTAINER & STAGING BUCKET SWEEPER',
+    title: 'Dead Container Digest & Leftover Cloud Build Staging Artifact Hunter',
+    whatItDoes:
+      'Cross-references every container image in Artifact Registry and every staging object in `gs://*_cloudbuild` against your active Cloud Run and GKE workloads to isolate dead, unreferenced images.',
+    enterpriseValue:
+      'Reclaims wasted Artifact Registry and Cloud Storage GBs from old CI/CD builds in 1 click.',
+    gcpApis: 'artifactregistry.googleapis.com/v1 · storage.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_TO_GKE_TRANSPILER: {
+    badge: '6-MANIFEST KUBERNETES GRADUATION ENGINE',
+    title: 'Cloud Run → Production GKE Kubernetes 6-Resource Bundle Transpiler',
+    whatItDoes:
+      'Transpiles any live Cloud Run service into a hardened 6-resource Kubernetes manifest bundle (`Deployment`, `Service`, `HorizontalPodAutoscaler`, `PodDisruptionBudget`, `NetworkPolicy`, and Spot GPU / `/dev/shm` volume mounts).',
+    enterpriseValue:
+      'Provides a zero-rewrite graduation path when a serverless service outgrows Cloud Run into GKE Autopilot or Standard.',
+    gcpApis: 'run.googleapis.com/v2 → container.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_SYNC_FLEET: {
+    badge: 'MULTI-REGION CLOUD RUN V2 SYNC',
+    title: 'Sync Live Cloud Run Services across All GCP Regions',
+    whatItDoes:
+      'Queries `run.googleapis.com/v2` across regions to refresh container revisions, traffic splits, CPU/Memory/L4 GPU allocations, scaling bounds, and Direct Cloud IAP status.',
+    enterpriseValue:
+      'Keeps your serverless fleet inventory and cost telemetry 100% current.',
+    gcpApis: 'run.googleapis.com/v2 (projects.locations.services.list)',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDRUN_CREATE_JOB_BTN: {
+    badge: 'CLOUD RUN V2 BATCH JOB COMPOSER',
+    title: 'Create or Convert a Cloud Run v2 Batch Job',
+    whatItDoes:
+      'Opens the Cloud Run v2 Batch Job Studio to provision a run-to-completion container job with up to 24h timeout, parallel task sharding, and optional Cloud Scheduler trigger.',
+    enterpriseValue:
+      'Ideal for serverless data processing, database migrations, and scheduled batch workloads.',
+    gcpApis: 'run.googleapis.com/v2 (projects.locations.jobs.create)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  CLOUDRUN_DEPLOY_SERVICE_BTN: {
+    badge: 'CLOUD RUN V2 SERVICE DEPLOYER',
+    title: 'Deploy New Cloud Run v2 Container Service',
+    whatItDoes:
+      'Opens the Cloud Run Provisioning Studio supporting Request-based vs. Instance-based billing, NVIDIA L4 GPUs, Direct VPC Egress, and $0/mo Direct Cloud IAP.',
+    enterpriseValue:
+      'Deploys production-hardened serverless microservices in seconds.',
+    gcpApis: 'run.googleapis.com/v2 (projects.locations.services.create)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GKE_CREATE_CLUSTER_WIZARD: {
+    badge: '5-STEP GKE COMPLIANCE WIZARD',
+    title: 'Open 5-Step GKE Autopilot & Spot GPU Cluster Provisioning Wizard',
+    whatItDoes:
+      'Launches the guided 5-Step GKE Cluster Wizard enforcing Workload Identity OIDC (`*.svc.id.goog`), Shielded Nodes, Binary Authorization, Private Nodes, and Spot GPU node-pools.',
+    enterpriseValue:
+      'Provisions SEC/GDPR/HIPAA-compliant Kubernetes clusters while leveraging Google Cloud’s $74.40/mo cluster management credit.',
+    gcpApis: 'container.googleapis.com/v1 (projects.locations.clusters.create)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GKE_REFRESH_FLEET: {
+    badge: 'LIVE GKE FLEET SYNC',
+    title: 'Refresh Live GKE Autopilot & Standard Clusters',
+    whatItDoes:
+      'Calls `container.googleapis.com/v1/projects/{project}/locations/-/clusters` to refresh cluster status, Kubernetes versions, node counts, and Workload Identity pools.',
+    enterpriseValue:
+      'Maintains real-time visibility across all regional and zonal GKE clusters.',
+    gcpApis: 'container.googleapis.com/v1 (clusters.list)',
+    safetyMode: 'READ_ONLY',
+  },
+  GKE_TAB_FLEET_DEPLOY: {
+    badge: 'GKE STUDIO MODULE 1/3',
+    title: 'Live GKE Fleet & 1-Click Compliance Cluster Provisioner',
+    whatItDoes:
+      'Displays all active GKE clusters in your project alongside the 1-Click GKE Compliance Deployer (SEC/FedRAMP, GDPR EU, HIPAA, Spot GPU AI, or Custom).',
+    enterpriseValue:
+      'Combines live cluster lifecycle management with compliance-locked provisioning.',
+    gcpApis: 'container.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  GKE_TAB_WORKLOAD_YAML: {
+    badge: 'GKE STUDIO MODULE 2/3',
+    title: 'Kubernetes Workload & GPU Pod YAML Composer & Deployer',
+    whatItDoes:
+      'Synthesizes hardened Kubernetes `Deployment` + `Service` YAML manifests with `RuntimeDefault` seccomp profiles, CPU/Memory limits, and `nvidia.com/gpu` resource requests.',
+    enterpriseValue:
+      'Generates copy-ready `kubectl apply` and `gcloud container clusters get-credentials` workflows.',
+    gcpApis: 'Kubernetes apps/v1 Deployment & v1 Service Generator',
+    safetyMode: 'READ_ONLY',
+  },
+  GKE_TAB_GPU_FINOPS: {
+    badge: 'GKE STUDIO MODULE 3/3',
+    title: 'Spot GPU & AI Node-Pool FinOps Calculator (-68% Savings)',
+    whatItDoes:
+      'Compares On-Demand vs. Spot VM pricing across NVIDIA L4, A100 (40GB/80GB), and H100 GPUs and generates the exact `gcloud container node-pools create --spot` command.',
+    enterpriseValue:
+      'Saves up to 68% on AI training and batch inference Kubernetes node pools.',
+    gcpApis: 'container.googleapis.com/v1 (nodePools.create)',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDBUILD_SYNC_BTN: {
+    badge: 'LIVE CI/CD & REGISTRY SYNC',
+    title: 'Sync Live Cloud Build Jobs & Artifact Registry Container Digests',
+    whatItDoes:
+      'Re-queries `cloudbuild.googleapis.com/v1` and `artifactregistry.googleapis.com/v1` to refresh build statuses, log streams, repositories, and container image SHA-256 digests.',
+    enterpriseValue:
+      'Provides real-time CI/CD pipeline and container supply-chain telemetry.',
+    gcpApis: 'cloudbuild.googleapis.com/v1 · artifactregistry.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUD_BUILD_GITHUB: {
+    badge: 'CLOUD BUILD MODULE 1/2',
+    title: 'GitHub → Cloud Build (`Dockerfile` / Buildpacks) → Artifact Registry → Cloud Run / GKE',
+    whatItDoes:
+      'Clones any GitHub repository into Google Cloud Build, builds via `Dockerfile` or Zero-Dockerfile Google Cloud Buildpacks, pushes `@sha256` images to Artifact Registry, and auto-deploys to Cloud Run or GKE.',
+    enterpriseValue:
+      'Leverages Google Cloud Build’s 120 free build-minutes/day with SLSA Level 3 provenance.',
+    gcpApis: 'cloudbuild.googleapis.com/v1 (projects.builds.create)',
+    safetyMode: 'READ_ONLY',
+  },
+  SUPPLY_CHAIN_AR: {
+    badge: 'CLOUD BUILD MODULE 2/2',
+    title: 'Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
+    whatItDoes:
+      'Inspects all Artifact Registry Docker repositories and `@sha256` digests, identifies untagged orphan digests accumulating storage charges, and sweeps them in 1 click.',
+    enterpriseValue:
+      'Enforces immutable image tag security while eliminating wasted container registry storage costs.',
+    gcpApis: 'artifactregistry.googleapis.com/v1 (repositories · dockerImages)',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_EVENTARC_IAM_DOCTOR: {
+    badge: '1-TAP EVENTARC IAM PERMISSION HEALER',
+    title: '1-Tap Eventarc IAM Auto-Doctor (Fix `v2` Trigger Permission Denied Errors)',
+    whatItDoes:
+      'Automatically grants the 3 hidden service-agent IAM roles required by Cloud Functions `v2` & Eventarc (`roles/pubsub.publisher` on the GCS Service Agent, `roles/eventarc.eventReceiver`, and `roles/run.invoker`).',
+    enterpriseValue:
+      'Fixes the #1 reason Cloud Functions Gen2 Eventarc deployments fail with cryptic IAM permission errors.',
+    gcpApis: 'cloudresourcemanager.googleapis.com (setIamPolicy) · storage.googleapis.com (serviceAccount)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FUNCTIONS_SYNC_BTN: {
+    badge: 'LIVE FUNCTIONS & EVENTARC SYNC',
+    title: 'Sync Live Cloud Functions (`v1` & `v2`), Eventarc Triggers & Workflows',
+    whatItDoes:
+      'Refreshes all 1st Gen and 2nd Gen Cloud Functions, Eventarc triggers, Pub/Sub topics, and Cloud Workflows across your project.',
+    enterpriseValue:
+      'Provides a unified inventory of event-driven serverless functions and orchestrations.',
+    gcpApis: 'cloudfunctions.googleapis.com/v2 · eventarc.googleapis.com/v1 · workflows.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_TRIGGER_WIZARD: {
+    badge: 'CLOUD FUNCTIONS MODULE 1/4',
+    title: 'Plain-English Eventarc Trigger Wizard & 4-Hop Visual Pipeline (130+ GCP Services)',
+    whatItDoes:
+      'Configures Cloud Functions `v1` and `v2` triggers in plain English across GCS Objects, Pub/Sub, BigQuery Jobs, Cron Schedules, HTTPS Webhooks, and 130+ Universal Cloud Audit Log events, complete with generated Node.js/Python/Go CloudEvents code.',
+    enterpriseValue:
+      'Demystifies Eventarc CloudEvents filters and highlights free Pub/Sub transport vs. billed Audit Log triggers.',
+    gcpApis: 'cloudfunctions.googleapis.com/v2 · eventarc.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_LIVE_FLEET: {
+    badge: 'CLOUD FUNCTIONS MODULE 2/4',
+    title: 'Live Cloud Functions Fleet & 1-Click `v1` → `v2` Upgrader',
+    whatItDoes:
+      'Lists all deployed 1st Gen (`v1`) and 2nd Gen (`v2`) functions and provides a 1-click upgrade path from legacy 1-request-per-instance `v1` functions to high-concurrency `v2` on Cloud Run.',
+    enterpriseValue:
+      'Modernizes legacy functions to support up to 1,000 concurrent requests per instance and 60-minute timeouts.',
+    gcpApis: 'cloudfunctions.googleapis.com/v2',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_FINOPS_COMPARE: {
+    badge: 'CLOUD FUNCTIONS MODULE 3/4',
+    title: '1st Gen (`v1`) vs. 2nd Gen (`v2`) Concurrency & FinOps Cost Calculator',
+    whatItDoes:
+      'Models how Gen2 multi-request concurrency (`80–1,000` concurrent requests per container instance) slashes active instance hours and cold starts compared to Gen1 (`1` request per instance).',
+    enterpriseValue:
+      'Quantifies exact monthly dollar savings (up to 78%) before migrating I/O-bound functions to Gen2.',
+    gcpApis: 'Cloud Functions v1 vs. v2 FinOps Pricing Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_CHOREOGRAPHER: {
+    badge: 'CLOUD FUNCTIONS MODULE 4/4',
+    title: 'Serverless Messaging Decision Matrix & Durable Cloud Workflows Saga Deployer',
+    whatItDoes:
+      'Compares Eventarc vs. Pub/Sub vs. Cloud Tasks vs. Cloud Workflows and deploys durable YAML Cloud Workflows sagas (with `$0.00/hr` 7-day human approval callbacks).',
+    enterpriseValue:
+      'Ensures architects pick the right Google Cloud messaging primitive and deploy exactly-once distributed sagas.',
+    gcpApis: 'workflows.googleapis.com/v1 · pubsub.googleapis.com/v1 · cloudtasks.googleapis.com/v2',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**

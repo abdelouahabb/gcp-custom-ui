@@ -942,6 +942,7 @@ main:
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              data-feature-id="FUNCTIONS_EVENTARC_IAM_DOCTOR"
               disabled={iamDoctorBusy}
               onClick={handleRunIamDoctor}
               title="Automatically grant roles/pubsub.publisher to the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker so v2 Eventarc triggers never fail with Permission Denied"
@@ -957,6 +958,7 @@ main:
 
             <button
               type="button"
+              data-feature-id="FUNCTIONS_SYNC_BTN"
               disabled={loading}
               onClick={fetchFunctionsOverview}
               title="Refresh live Cloud Functions (v1 & v2), Eventarc triggers, buckets, and Pub/Sub topics"
@@ -1095,6 +1097,7 @@ main:
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={`FUNCTIONS_TAB_${tab.id}`}
                 title={`${tab.label} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${

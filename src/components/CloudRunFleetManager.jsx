@@ -2030,6 +2030,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_SCHEDULER_TO_JOBS"
             onClick={handleToggleSchedulerToJobsStudio}
             title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
@@ -2050,6 +2051,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_DOCKER_COMPOSE_GA"
             onClick={() => setShowComposeStudio((v) => !v)}
             title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
@@ -2064,6 +2066,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_APP_ENGINE_EXTERMINATOR"
             onClick={handleToggleAppEngineExterminator}
             title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
@@ -2096,6 +2099,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_DEAD_ARTIFACT_HUNTER"
             onClick={handleToggleArtifactHunter}
             title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
@@ -2116,6 +2120,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_TO_GKE_TRANSPILER"
             onClick={() => setShowGlobalGkeTranspiler((v) => !v)}
             title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
@@ -2130,6 +2135,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_SYNC_FLEET"
             onClick={() => fetchCloudRunFleet(false)}
             disabled={loading}
             className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
@@ -2144,6 +2150,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_CREATE_JOB_BTN"
             onClick={() => {
               setShowSchedulerToJobsStudio(true);
               if (!schedulerJobsState.data && !schedulerJobsState.loading) {
@@ -2158,6 +2165,7 @@ spec:
 
           <button
             type="button"
+            data-feature-id="CLOUDRUN_DEPLOY_SERVICE_BTN"
             onClick={onOpenProvisionCloudRun}
             className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
           >

@@ -495,6 +495,7 @@ options:
 
           <button
             type="button"
+            data-feature-id="CLOUDBUILD_SYNC_BTN"
             onClick={() => {
               fetchCloudBuild();
               fetchSupplyChain();
@@ -536,6 +537,7 @@ options:
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={tab.id}
                 title={tab.tip}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full h-11 px-3.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
