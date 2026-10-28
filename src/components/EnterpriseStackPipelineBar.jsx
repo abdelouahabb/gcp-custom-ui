@@ -968,8 +968,12 @@ export default function EnterpriseStackPipelineBar({
             </div>
           )}
 
-          {/* Live Mermaid Architecture & Dataflow Topology (Closed by default until user opens it) */}
-          {activeStage && (activeStage.mermaidTopology || activeStage.mermaidDsl) && (
+          {/* Live Mermaid Architecture & Dataflow Topology (Only for Infrastructure Topology Stages 1–3 when non-zero resources exist; closed by default) */}
+          {activeStage &&
+            ['STAGE_1_PERIMETER_IAM', 'STAGE_2_STORAGE_LAKEHOUSE', 'STAGE_3_COMPUTE_SERVERLESS'].includes(
+              activeStage.id
+            ) &&
+            activeStage.mermaidDsl && (
             <div className="rounded-xl border border-indigo-500/25 bg-gradient-to-r from-indigo-500/[0.04] via-blue-500/[0.03] to-emerald-500/[0.04] p-3 space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div
@@ -1139,17 +1143,6 @@ export default function EnterpriseStackPipelineBar({
                   >
                     pipeline-deploy.sh (6-Stage Verifier)
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedArtifactTab('architectureMermaid')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
-                      selectedArtifactTab === 'architectureMermaid'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                    }`}
-                  >
-                    architecture.mmd (Full 6-Stage Mermaid Graph)
-                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1188,11 +1181,6 @@ export default function EnterpriseStackPipelineBar({
                   </button>
                 </div>
               </div>
-
-              {selectedArtifactTab === 'architectureMermaid' &&
-                activeArtifactContent && (
-                  <MermaidFlowchartSvg dsl={activeArtifactContent} />
-                )}
 
               <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-3.5 text-[11px] font-mono overflow-x-auto max-h-72 leading-relaxed">
                 {activeArtifactContent || '# Synthesizing live project infrastructure...'}
