@@ -5570,13 +5570,14 @@ function CloudPulseCockpit() {
                 <div className="space-y-4">
                   <DataLakehouseAiPipelineBar
                     projectId={selectedProjectId}
-                    activeStudioTab={activeTab}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
                     onOpenBigQuerySql={(sqlText) => {
                       if (sqlText) setBigQueryInitialSql(sqlText);
                       setActiveTab('BIGQUERY_STUDIO');
                     }}
+                    onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
                   <Wave10Frontier2026Studio

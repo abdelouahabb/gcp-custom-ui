@@ -784,10 +784,20 @@ export default function EnterpriseStackPipelineBar({
     },
   ];
 
-  const activeStage =
-    stages.find((s) => s.id === selectedStageId) ||
-    stages.find((s) => s.targetTab === activeTab || s.secondaryTab === activeTab) ||
+  const homeStage =
+    stages.find((s) => s.targetTab === activeTab) ||
+    (activeTab === 'CLOUD_FUNCTIONS' || activeTab === 'CLOUD_RUN'
+      ? stages.find((s) => s.id === 'STAGE_3_WORKLOAD_COMPUTE')
+      : stages.find((s) => s.secondaryTab === activeTab)) ||
     stages[0];
+
+  const activeStage =
+    (selectedStageId && stages.find((s) => s.id === selectedStageId)) ||
+    homeStage;
+
+  // Strict single-selection: highlight ONLY the open drawer stage (when drawerOpen)
+  // or ONLY the single primary home stage for the current studio tab.
+  const activeHighlightedStageId = drawerOpen ? activeStage?.id : homeStage?.id;
 
   const activeArtifactContent =
     selectedArtifactTab === 'mainTf'
@@ -882,16 +892,14 @@ export default function EnterpriseStackPipelineBar({
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
         {stages.map((stage, idx) => {
           const IconComponent = STAGE_ICONS[stage.id] || Layers;
-          const isCurrentTab =
-            activeTab === stage.targetTab || activeTab === stage.secondaryTab;
-          const isSelectedStage = activeStage?.id === stage.id && drawerOpen;
+          const isHighlighted = activeHighlightedStageId === stage.id;
           const isActionRecommended = stage.status === 'ACTION_RECOMMENDED';
 
           return (
             <div
               key={stage.id}
               onClick={() => {
-                if (drawerOpen && selectedStageId === stage.id) {
+                if (drawerOpen && activeStage?.id === stage.id) {
                   setDrawerOpen(false);
                 } else {
                   setSelectedStageId(stage.id);
@@ -908,7 +916,7 @@ export default function EnterpriseStackPipelineBar({
                 }
               }}
               className={`group relative rounded-xl p-2.5 border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                isCurrentTab || isSelectedStage
+                isHighlighted
                   ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500/60 shadow-sm ring-1 ring-blue-500/30'
                   : 'bg-zinc-50/70 dark:bg-[#202124] hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70 border-zinc-200 dark:border-zinc-800'
               }`}
@@ -917,7 +925,7 @@ export default function EnterpriseStackPipelineBar({
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
                     className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-mono font-extrabold shrink-0 ${
-                      isCurrentTab || isSelectedStage
+                      isHighlighted
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                     }`}
@@ -930,7 +938,7 @@ export default function EnterpriseStackPipelineBar({
                 </div>
                 <IconComponent
                   className={`w-3.5 h-3.5 shrink-0 ${
-                    isCurrentTab || isSelectedStage
+                    isHighlighted
                       ? 'text-blue-600 dark:text-blue-400'
                       : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200'
                   }`}

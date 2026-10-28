@@ -732,10 +732,20 @@ export default function DataLakehouseAiPipelineBar({
     },
   ];
 
-  const activeStage =
-    stages.find((s) => s.id === selectedStageId) ||
-    stages.find((s) => s.targetTab === activeTab || s.secondaryTab === activeTab) ||
+  const homeStage =
+    stages.find((s) => s.targetTab === activeTab) ||
+    (activeTab === 'WAVE10_FRONTIER'
+      ? stages.find((s) => s.id === 'STAGE_2_BIGLAKE_FEDERATION')
+      : stages.find((s) => s.secondaryTab === activeTab)) ||
     stages[0];
+
+  const activeStage =
+    (selectedStageId && stages.find((s) => s.id === selectedStageId)) ||
+    homeStage;
+
+  // Strict single-selection: highlight ONLY the open drawer stage (when drawerOpen)
+  // or ONLY the single primary home stage for the current studio tab.
+  const activeHighlightedStageId = drawerOpen ? activeStage?.id : homeStage?.id;
 
   const activeArtifactContent =
     selectedArtifactTab === 'dataformSqlx'
@@ -830,16 +840,14 @@ export default function DataLakehouseAiPipelineBar({
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
         {stages.map((stage, idx) => {
           const IconComponent = STAGE_ICONS[stage.id] || Database;
-          const isCurrentTab =
-            activeTab === stage.targetTab || activeTab === stage.secondaryTab;
-          const isSelectedStage = activeStage?.id === stage.id && drawerOpen;
+          const isHighlighted = activeHighlightedStageId === stage.id;
           const isActionRecommended = stage.status === 'ACTION_RECOMMENDED';
 
           return (
             <div
               key={stage.id}
               onClick={() => {
-                if (drawerOpen && selectedStageId === stage.id) {
+                if (drawerOpen && activeStage?.id === stage.id) {
                   setDrawerOpen(false);
                 } else {
                   setSelectedStageId(stage.id);
@@ -856,7 +864,7 @@ export default function DataLakehouseAiPipelineBar({
                 }
               }}
               className={`group relative rounded-xl p-2.5 border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                isCurrentTab || isSelectedStage
+                isHighlighted
                   ? 'bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
                   : 'bg-zinc-50/70 dark:bg-[#202124] hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70 border-zinc-200 dark:border-zinc-800'
               }`}
@@ -865,7 +873,7 @@ export default function DataLakehouseAiPipelineBar({
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
                     className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-mono font-extrabold shrink-0 ${
-                      isCurrentTab || isSelectedStage
+                      isHighlighted
                         ? 'bg-emerald-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                     }`}
@@ -878,7 +886,7 @@ export default function DataLakehouseAiPipelineBar({
                 </div>
                 <IconComponent
                   className={`w-3.5 h-3.5 shrink-0 ${
-                    isCurrentTab || isSelectedStage
+                    isHighlighted
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200'
                   }`}
