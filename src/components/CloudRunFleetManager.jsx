@@ -2004,8 +2004,6 @@ spec:
     }
   };
 
-  const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
-
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
       {/* Header: Top Title & Primary Actions + Structured 6-Module Workbench Bar */}
@@ -4875,62 +4873,37 @@ services:
         );
       })()}
 
-      {/* Quick 1-Tap Cloud Run Templates & Self-Deploy Banner */}
+      {/* Quick 1-Tap Cloud Run Templates & Runtime Service Account Bar */}
       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 shrink-0">
             <Zap className="w-3.5 h-3.5 text-blue-500" />
-            <span>1-Tap Instant Deploy Blueprints:</span>
+            <span>1-Tap Instant Deploy:</span>
           </span>
 
-          {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
-          <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 px-3 py-1 rounded-md border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
-            <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-            <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
-              {selfDeployCmd}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleCopy(selfDeployCmd, 'self-deploy')}
-              className="text-blue-500 hover:text-blue-400 shrink-0 inline-flex items-center gap-1 ml-1 cursor-pointer font-bold"
-            >
-              {copiedId === 'self-deploy' ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+            {QUICK_TEMPLATES.map((tpl) => {
+              const isDeployingThis = quickDeploying === tpl.label;
+              return (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  disabled={Boolean(quickDeploying)}
+                  onClick={() => handleQuickDeployTemplate(tpl)}
+                  className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 px-3 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isDeployingThis ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
+                  ) : (
+                    <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {QUICK_TEMPLATES.map((tpl) => {
-            const isDeployingThis = quickDeploying === tpl.label;
-            return (
-              <button
-                key={tpl.label}
-                type="button"
-                disabled={Boolean(quickDeploying)}
-                onClick={() => handleQuickDeployTemplate(tpl)}
-                className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 px-3 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {isDeployingThis ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
-                ) : (
-                  <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                )}
-                <span className="truncate">
-                  {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
-                </span>
-              </button>
-            );
-          })}
         </div>
 
         {/* Runtime Service Account Selector for 1-Tap Instant Deploy */}
