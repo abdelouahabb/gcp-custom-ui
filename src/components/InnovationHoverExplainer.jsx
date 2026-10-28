@@ -2208,7 +2208,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     whatItDoes:
       'Navigates directly to the canonical Startup 10X Studio for Google for Startups credit runway modeling, burn-rate guardrails, and production launch readiness.',
     enterpriseValue:
-      'Enforces zero duplication across studios by linking directly to the dedicated Startup 10X control plane.',
+      'Provides direct 1-click navigation to the dedicated Startup 10X control plane.',
     gcpApis: 'CloudPulse Studio Router (STARTUP_10X)',
     safetyMode: 'READ_ONLY',
   },
@@ -2218,7 +2218,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     whatItDoes:
       'Navigates directly to the 48 Official `*.googleapis.com/mcp` Remote MCP Control Plane (`505+` live JSON-RPC 2.0 tools, 4-server triage chains, and IDE exporter).',
     enterpriseValue:
-      'Provides 1-click access to Google Cloud’s official Model Context Protocol registry without duplicating tools inside the Innovation Lab.',
+      'Provides 1-click access to Google Cloud’s official Model Context Protocol registry.',
     gcpApis: 'https://*.googleapis.com/mcp (JSON-RPC 2.0)',
     safetyMode: 'READ_ONLY',
   },
@@ -2524,9 +2524,9 @@ export const INNOVATION_FEATURE_GUIDE = {
   },
   INNOVATION_DOMAIN_FILTER_SELECT: {
     badge: '16-STUDIO DOMAIN FILTER',
-    title: '2026 Innovation Lab Domain Category Filter (4×4 Bento Grid)',
+    title: '2026 Innovation Lab Domain Category Filter',
     whatItDoes:
-      'Filters the 16 non-overlapping 2026 Innovation Studios across 5 specialized engineering domains: Release/Drift/DR/Personas, Quantum Nexus Resilience, FinOps & Carbon, Topology & Latency, and Pre-Crime/Terraform IaC.',
+      'Filters the 16 specialized 2026 Innovation Studios across 5 engineering domains: Release/Drift/DR/Personas, Quantum Nexus Resilience, FinOps & Carbon, Topology & Latency, and Pre-Crime/Terraform IaC.',
     enterpriseValue:
       'Lets SREs, FinOps leads, and Cloud Architects jump directly to the studio cluster matching their operational workflow.',
     gcpApis: 'CloudPulse 2026 Innovation Studio Router',

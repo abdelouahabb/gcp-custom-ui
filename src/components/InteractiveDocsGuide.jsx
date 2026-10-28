@@ -142,13 +142,13 @@ const DOC_SECTIONS = [
     id: 'wave16-autonomous-cloud-soc-and-zero-trust-soar-war-room',
     wave: 'WAVE 16 MOONSHOT · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & PURPLE-TEAM SOAR WAR-ROOM ($0.00/MO SIEM LICENSE TAX)',
     title:
-      'Wave 16: 20-Pillar (4x5 Bento Grid) Autonomous Google Cloud Security Operations Center (SOC) & Purple-Team SOAR War-Room — MITRE Kill-Chains + Forensic Breach Attribution Explainer, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine, Transitive Escalation Solver, TLS 1.3 Socket Prober, Purple-Team BAS Stopwatch, Model-Armor AI Red-Team, DNSSEC/VPC Egress/KMS, API Surface Minimizer, Binary Authorization & 12-Invariant Self-Healing Reconciler',
+      'Wave 16: 20-Pillar Autonomous Google Cloud Security Operations Center (SOC) & Purple-Team SOAR War-Room — MITRE Kill-Chains + Forensic Breach Attribution Explainer, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine, Transitive Escalation Solver, TLS 1.3 Socket Prober, Purple-Team BAS Stopwatch, Model-Armor AI Red-Team, DNSSEC/VPC Egress/KMS, API Surface Minimizer, Binary Authorization & 12-Invariant Self-Healing Reconciler',
     badge: 'CLOUD SOC TAB (PRIMARY STARRED)',
     badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldAlert,
     targetTab: 'CLOUD_SOC',
     problemSolved:
-      'Legacy cloud SIEMs (Chronicle, Splunk, Datadog SIEM, SCC Enterprise) cost $3,000–$25,000+/mo yet act as passive log viewers that flood operators with uncorrelated alerts while requiring manual multi-tab CLI/Console actions during an active intrusion. CloudPulse Wave 16 turns your live Google Cloud control plane into a $0.00/mo, 20-pillar (4x5 Bento Grid) autonomous detection, deception, IAM rollback, TLS 1.3 socket inspection, Purple-Team BAS stopwatch, Model-Armor AI Red-Team, 12-invariant self-healing reconciler, and 1-click SOAR containment war-room.',
+      'Legacy cloud SIEMs (Chronicle, Splunk, Datadog SIEM, SCC Enterprise) cost $3,000–$25,000+/mo yet act as passive log viewers that flood operators with uncorrelated alerts while requiring manual multi-tab CLI/Console actions during an active intrusion. CloudPulse Wave 16 turns your live Google Cloud control plane into a $0.00/mo, 20-pillar autonomous detection, deception, IAM rollback, TLS 1.3 socket inspection, Purple-Team BAS stopwatch, Model-Armor AI Red-Team, 12-invariant self-healing reconciler, and 1-click SOAR containment war-room.',
     howItWorks: [
       'Pillars 01–05 (MITRE Kill-Chains + Forensic Breach Attribution Explainer & /32 IP Quarantine, 3-Vector Toxic Combinations, Supply-Chain @sha256 & .json SA Key Disabler, $0.00/mo Canary Deception Grid, and Gemini 3.8 Flash / 3.1 Pro SOC Commander): Correlates live cloudaudit.googleapis.com entries, explains every CRITICAL/HIGH/ELEVATED alert with an exact mathematical risk formula + Actor Context Badge + Per-Method Security Impact Breakdown + Raw Audit Timeline, blocks attacker IPs via priority-100 VPC INGRESS DENY ALL rules, severs public-to-SA toxic paths, disables leaked .json SA keys, arms 3 $0.00/mo GCP canary tripwires, and seals every action in an Ed25519 (RFC 8032) cryptographic ledger.',
       'Pillars 06–10 (IAM Policy Time-Machine, Exfiltration & GCS Firewall, WIF & SA Freeze, Multi-Project SOC Federation Matrix, and 1-Click Defcon-1 Atomic Lockdown): Snapshots projects:getIamPolicy with 1-click atomic rollback and Zero-Lockout Owner Safety Guard, locks GCS buckets with publicAccessPrevention="enforced", freezes compromised Service Accounts in-place (:disable/:enable), compares Zero-Trust posture across all ACTIVE GCP projects in parallel (/api/soc/fleet-matrix), and executes a 5-stage Defcon-1 lockdown.',
@@ -397,7 +397,7 @@ const DOC_SECTIONS = [
   },
   {
     id: 'open-source-2026-sre-log-explorer-wave1-wave2-wave3',
-    wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (WAVE 1 + WAVE 2 + WAVE 3 · 12-TAB BENTO WORKBENCH)',
+    wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (WAVE 1 + WAVE 2 + WAVE 3 · 12-MODULE WORKBENCH)',
     title:
       '2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — 24-Bucket Infra Histogram, Faceted Columnar Stream, Log-to-Metrics P99 Heatmap, Live Grok Extractor, Source-Code Git Blame & Patch, Multi-Window SLO Burn Matrix, eBPF Kernel X-Ray & Canary Log Replay',
     badge: 'LOGS & SHELL TAB (WAVE 1 + WAVE 2 + WAVE 3)',
@@ -424,7 +424,7 @@ const DOC_SECTIONS = [
     id: 'borderless-apache-iceberg-50-playbook-lakehouse-matrix',
     wave: 'DATA ENGINEERING & BIGLAKE · 50-PLAYBOOK BORDERLESS APACHE ICEBERG & MULTI-ENGINE LAKEHOUSE MATRIX',
     title:
-      '50-Playbook Borderless Apache Iceberg & Multi-Engine Lakehouse Matrix — 8 Domains, Symmetrical 3x3 Bento Grid, v2 Metadata X-Ray & 4 Live TCO Simulators',
+      '50-Playbook Borderless Apache Iceberg & Multi-Engine Lakehouse Matrix — 8 Domains, Architecture Matrix, v2 Metadata X-Ray & 4 Live TCO Simulators',
     badge: 'DATA ENGINEERING + BIGLAKE TAB',
     badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
     icon: Layers,
@@ -432,8 +432,8 @@ const DOC_SECTIONS = [
     problemSolved:
       'Modern Lakehouse architects and data engineers need concrete, copy-ready blueprints and live provisioning across all 50 enterprise Apache Iceberg scenarios—spanning Open Iceberg REST Catalogs, 100+ Hive Metastore (HMS) & Delta Lake migrations, BigQuery + Spark 3.5 + Trino multi-engine concurrency, Streaming CDC (Kafka / Beam / Debezium), Multi-Petabyte GCS Prefix Hashing & Autoclass, Borderless Multi-Cloud (S3 / ADLS / CCI), Row/Column Security + WORM Vaults, Spanner/AlloyDB/Bigtable HTAP, and GenAI Semantic SQL (`AI.IF` / `VECTOR_SEARCH`).',
     howItWorks: [
-      'Symmetrical 3x3 Equal-Sized Bento Domain Grid (All 8 Domains · 50 Playbooks): Filter across D01 (REST Catalog & HMS/Delta Migrations), D02 (Multi-Engine BQ/Spark/Trino), D03 (Streaming CDC & ACID DML), D04 (GCS Prefix Hashing, Autoclass & Compaction), D05 (Multi-Cloud S3/ADLS Omni & CCI), D06 (RLS/CLS Governance & SEC 17a-4 WORM), D07 (Spanner/AlloyDB/Bigtable HTAP), and D08 (Conversational BI Agents, Semantic SQL & Vector RAG).',
-      '3 Equal-Sized Workspace View Modes (01 · Workbench, 02 · 50-Grid, 03 · v2 X-Ray): Switch between the Split Workbench (with the 4-Stage Lakehouse Architecture Pipeline Ribbon and Multi-Engine Code Synthesizer for BigQuery SQL, Serverless PySpark 3.5 REST 1.10, and gcloud 588.0.0 CLI), the 3-column 50-Playbook Bento Matrix Grid, and the Apache Iceberg Spec v2 Metadata & 16-Shard GCS Prefix Hash X-Ray.',
+      '8 Specialized Lakehouse Domains (50 Playbooks): Filter across D01 (REST Catalog & HMS/Delta Migrations), D02 (Multi-Engine BQ/Spark/Trino), D03 (Streaming CDC & ACID DML), D04 (GCS Prefix Hashing, Autoclass & Compaction), D05 (Multi-Cloud S3/ADLS Omni & CCI), D06 (RLS/CLS Governance & SEC 17a-4 WORM), D07 (Spanner/AlloyDB/Bigtable HTAP), and D08 (Conversational BI Agents, Semantic SQL & Vector RAG).',
+      '3 Workspace View Modes (01 · Workbench, 02 · 50-Grid, 03 · v2 X-Ray): Switch between the Split Workbench (with the 4-Stage Lakehouse Architecture Pipeline Ribbon and Multi-Engine Code Synthesizer for BigQuery SQL, Serverless PySpark 3.5 REST 1.10, and gcloud 588.0.0 CLI), the 50-Playbook Architecture Matrix Grid, and the Apache Iceberg Spec v2 Metadata & 16-Shard GCS Prefix Hash X-Ray.',
       '4 Interactive Lakehouse TCO & Performance Simulators (S1–S4): Model (S1) Migrate vs. Federate (AWS S3/Azure ADLS egress vs BigQuery Omni Cross-Cloud Cache), (S2) BigQuery Lakehouse vs 24/7 Trino on GKE (10TB+ TPC-DS), (S3) 100+ HMS/Delta Zero-Rewrite In-Place Registration (CALL system.add_files), and (S4) Streaming Small-File Compaction (512MB Z-Order bin-packing) + GCS Autoclass storage tiering.',
     ],
     apisUsed: [
@@ -1484,7 +1484,7 @@ const DOC_SECTIONS = [
     id: 'aws-azure-enterprise-parity-super-studio',
     wave: 'WAVE 12 AWS & AZURE PARITY SUITE',
     title:
-      '39. 20-in-1 AWS & Azure Moonshot Parity Super-Studio (Uniform 4-Column Bento Grid & 2-Mode Teardown)',
+      '39. 20-in-1 AWS & Azure Moonshot Parity Super-Studio (20 Enterprise Bridges & 2-Mode Safe Teardown)',
     badge: 'Top Header -> AWS & Azure Parity ★',
     badgeColor:
       'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
@@ -1493,7 +1493,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'Engineers migrating from AWS or Azure miss 20 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively—and need a clean, uniform navigation grid plus a safe way to tear down a single feature without accidentally disabling shared Google Cloud APIs (like run.googleapis.com or workflows.googleapis.com) used by the rest of the project.',
     howItWorks: [
-      'Uniform 4-Column Bento Grid (5 Rows × 4 Columns) & Two-Mode Safe Feature Teardown: Every feature is aligned in an equal-width/height (h-11) card with 01–20 badges and a live Cost & API Control Bar. Clicking "Disable & Teardown Feature" opens a mandatory Two-Mode Confirmation Modal: Mode 1 (FEATURE_ONLY — resets only that feature while keeping shared project APIs enabled) vs Mode 2 (PURGE_AND_DISABLE_APIS — purges feature state AND runs gcloud services disable --force on the underlying GCP APIs).',
+      '20-Bridge Navigation Grid & Two-Mode Safe Feature Teardown: Every feature is organized with 01–20 badges and a live Cost & API Control Bar. Clicking "Disable & Teardown Feature" opens a mandatory Two-Mode Confirmation Modal: Mode 1 (FEATURE_ONLY — resets only that feature while keeping shared project APIs enabled) vs Mode 2 (PURGE_AND_DISABLE_APIS — purges feature state AND runs gcloud services disable --force on the underlying GCP APIs).',
       'Modules 01-05 & 16 (Wave 1 Foundation + Azure Architect Wishlist): (01) Azure-Style Resource Groups (labels.resource_group) with live $/hr + $/mo + accrued session spend, RG-scoped RBAC role assignment (Reader/Contributor/Owner + GCP IAM CEL Condition), 1-click group hibernate & cascade teardown, (02) Hard-Spend Stop-Loss Fuse, (03) AWS IAM Policy Simulator & Switch-Role Preview, (04) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, (05) 1-Screen Global HTTPS Load Balancer + WAF Wizard, and (16) Multi-Brand OAuth Sign-In Studio (multiple distinct OAuth brandings inside 1 "prod" GCP project).',
       'Modules 06-10 (Wave 2 Enterprise Scale): (06) CloudFormation / Azure ARM Stack Snapshot, Drift Detector, Rollback & Terraform/Pulumi Exporter, (07) Cost Explorer 14-Day Burn Attribution & CUD Savings Plans, (08) AWS SSM Fleet Run Command & Zero-SSH Patch Manager, (09) EventBridge Pipes / Logic Apps Visual Event Router with automatic -dlq Pub/Sub provisioning, and (10) Key Vault 1-Click Secret Rotation & Dev/Staging/Prod Sync.',
       'Modules 11-15 & 17-20 (Wave 3 & 4 Hyper-Scale + Moonshot Parity): (11) Trusted Advisor 5-Pillar Scorer & Auto-Fixer, (12) Transit Gateway / Virtual WAN VPC Mesh, (13) ECS/ACA Multi-Container Gen2 Sidecar Compose, (14) GuardDuty / Sentinel SOAR Playbooks, (15) Step Functions / Durable Saga Studio, (17) Route 53 / Front Door DNS Routing, (18) CloudTrail / Activity Log SQL Time-Detective, (19) AWS RAM / Azure Lighthouse Cross-Project Sharing, and (20) Bedrock Guardrails / Azure AI Foundry Multi-Model Vertex AI Router.',
@@ -1518,7 +1518,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'Alibaba Cloud (Aliyun) and Huawei Cloud pioneered 8 battle-tested hyperscale architectures for 11.11 Singles’ Day flash sales, cross-region QoS bandwidth slicing, 1.6s zero-copy HTAP database cloning, fractional vGPU gang-scheduling, 2-phase transactional delay queues, sub-80ms hot config mesh, hybrid row-column sub-second OLAP, and executive NOC command walls that require complex multi-service wiring on Google Cloud.',
     howItWorks: [
-      'Uniform 4-Column Bento Grid (2 Rows × 4 Columns) & Two-Mode Safe Feature Teardown: Displays all 8 bridges in an equal-width/height 2×4 grid with 01–08 badges, Under-the-Hood GCP Architecture X-Ray, 1-Click Enable APIs, and Two-Mode Teardown (FEATURE_ONLY vs PURGE_AND_DISABLE_APIS).',
+      '8-Bridge Hyperscale Navigation Grid & Two-Mode Safe Feature Teardown: Displays all 8 bridges with 01–08 badges, Under-the-Hood GCP Architecture X-Ray, 1-Click Enable APIs, and Two-Mode Teardown (FEATURE_ONLY vs PURGE_AND_DISABLE_APIS).',
       'Bridges 01–04 (Flash-Sale Surge, Global QoS, HTAP & AI vGPU): (01) Alibaba PTS + MSE Sentinel 11.11 Flash-Sale Pre-Warm (minInstanceCount warm pool) & QPS Token-Bucket Shedder, (02) Alibaba CEN & Global Accelerator Cross-Region QoS Bandwidth Slicer (Gold/Silver/Bronze lanes), (03) PolarDB / Huawei GaussDB Serverless HTAP Read-Pool & 1.6s Zero-Copy Clone, and (04) Huawei CCE Volcano Gang-Scheduler + ModelArts / PAI Fractional vGPU Pool (0.125x/0.25x/0.50x GPU slices).',
       'Bridges 05–08 (Transactional Messaging, Wasm Mesh, Sub-s OLAP & Executive NOC): (05) Alibaba RocketMQ 5.0 2-Phase Transactional Half-Messages & Exact-Second Delay Queue (Cloud Tasks + Pub/Sub), (06) Alibaba Nacos + Higress Zero-Restart <80ms Hot Config & AI Wasm Gateway, (07) Alibaba Hologres + MaxCompute Sub-Second Hybrid Row-Column OLAP (BigQuery BI Engine + Bigtable), and (08) DataV / Huawei Astro Executive Digital-Twin NOC & War-Room Command Wall.',
     ],
@@ -1644,7 +1644,7 @@ const DOC_SECTIONS = [
       'Official Public vs. Authenticated HTTPS URI Studio & Smart PAP Guardrail: Automatically hides the anonymous Public HTTPS URL (storage.googleapis.com) when an object is private (preventing XML AccessDenied errors) while always providing the Authenticated Console URL (storage.cloud.google.com) and gs:// URI. Supports 1-click Make Object Public (AUTO / OBJECT_ACL / BUCKET_IAM) with bucket-level publicAccessPrevention ("enforced") detection.',
       '5 Enterprise Object Operations (Signed URLs, Versioning Time-Machine, Zero-Egress Rewrite, Holds & .tar Bundles): Generate time-limited V4 Signed URLs (15m, 1h, 24h, 7d for GET/PUT), inspect and restore historical object generations (rewriteTo), rename/move/duplicate/cross-bucket copy objects at zero network egress, toggle temporaryHold / eventBasedHold and per-object Storage Classes (STANDARD, NEARLINE, COLDLINE, ARCHIVE), and download multi-object POSIX .tar bundles.',
       'S3 / MinIO / Ceph RADOS Gateway (RGW) Multi-Cloud Importer (Module M03): Built-in zero-dependency Node.js AWS4-HMAC-SHA256 request signer supporting both Path-Style (MinIO :9000, Ceph RGW :7480) and Virtual-Hosted (Amazon S3, Cloudflare R2) endpoints. Browse remote S3/MinIO/Ceph objects live, stream selected objects directly into gs://:bucketName with provenance metadata, or generate Google Cloud Storage Transfer Service (awsS3DataSource / awsS3CompatibleDataSource) and rclone sync specs.',
-      'Non-Blocking <16ms Stale-While-Revalidate (SWR) Live Project Telemetry & Equal-Width Enterprise UI: Dual-layer SWR cache (backend overviewSwrCache + frontend localStorage hydration) renders KPIs immediately on load and refreshes silently in the background, paired with equal-width enterprise button grids across Cloud Storage Studio and the 2026 Beyond-Console Innovation Lab.',
+      'Non-Blocking <16ms Stale-While-Revalidate (SWR) Live Project Telemetry: Dual-layer SWR cache (backend overviewSwrCache + frontend localStorage hydration) renders KPIs immediately on load and refreshes silently in the background.',
       'Cross-Studio Deep-Link & Pipeline Glue (M02 ↔ M03 ↔ M06/X1 ↔ M07/X4 ↔ BigQuery / BigLake / Medallion / AWS-Azure SAS): Jump directly from imported S3/MinIO/Ceph objects in M03 to live editing in M02, in-memory DLP scanning in M06, or auto-generated CREATE EXTERNAL TABLE queries in BigQuery Studio; jump from any leaked secret in X1/M06 or bucket in X4/M07 straight to M02 Object Workbench & Versioning Time-Machine; or launch BigQuery SQL, BigLake Iceberg, and Medallion ELT directly from the M02 Connected Studios bar.',
     ],
     apisUsed: [

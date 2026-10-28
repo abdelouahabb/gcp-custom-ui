@@ -4412,14 +4412,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
   return (
     <div className="space-y-5">
       {/* =================================================================== */}
-      {/* 0. 100% LIVE PROJECT GEO-CONTROL PLANE (ZERO GIMMICK TELEMETRY)     */}
+      {/* 0. 100% LIVE PROJECT GEO-CONTROL PLANE                              */}
       {/* =================================================================== */}
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
           <div className="space-y-1 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
-                100% LIVE PROJECT GEO-CONTROL PLANE · ZERO GIMMICK
+                100% LIVE PROJECT GEO-CONTROL PLANE
               </span>
               <button
                 type="button"

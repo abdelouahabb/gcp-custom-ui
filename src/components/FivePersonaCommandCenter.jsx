@@ -973,7 +973,7 @@ export default function FivePersonaCommandCenter({
             <div className="space-y-3">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW THE 10-PERSONA ARCHITECTURE COUNCIL WORKS (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW THE 10-PERSONA ARCHITECTURE COUNCIL WORKS
                 </div>
                 <div>
                   1. <strong>20 Parallel Live GCP REST API Probes:</strong> Simultaneously queries `run.googleapis.com/v2`, `sqladmin.googleapis.com/v1`, `storage.googleapis.com/storage/v1`, `bigquery.googleapis.com/bigquery/v2`, `compute.googleapis.com/compute/v1` (Networks, Subnets, Firewalls, Disks, Addresses), `iam.googleapis.com/v1`, `container.googleapis.com/v1`, `logging.googleapis.com/v2`, `orgpolicy.googleapis.com/v2`, and `cloudresourcemanager.googleapis.com/v1` (`:testIamPermissions` &amp; `:getIamPolicy`).
@@ -1086,7 +1086,7 @@ export default function FivePersonaCommandCenter({
             <div className="space-y-3">
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
                 <div className="font-extrabold text-amber-600 dark:text-amber-400">
-                  UNDER THE HOOD · HOW CROSS-PERSONA BLAST-RADIUS RIPPLE CHAINS WORK (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW CROSS-PERSONA BLAST-RADIUS RIPPLE CHAINS WORK
                 </div>
                 <div>
                   Joins your live VPC networks (`compute/v1/projects/:id/global/networks`), Subnets (`aggregated/subnetworks`), Firewall rules (`global/firewalls`), IAM Service Accounts (`iam.googleapis.com/v1`), and GCS Buckets (`storage/v1/b`) by resource reference so every ripple chain is anchored to a real resource in `{projectId}`.
@@ -1156,7 +1156,7 @@ export default function FivePersonaCommandCenter({
               <div className="space-y-3">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
                   <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                    UNDER THE HOOD · HOW MULTI-PERSONA PARETO CONFLICT SYNTHESIS WORKS (ZERO GIMMICK)
+                    UNDER THE HOOD · HOW MULTI-PERSONA PARETO CONFLICT SYNTHESIS WORKS
                   </div>
                   <div>
                     Evaluates competing objective functions (`[09 FinOps] Minimize $/mo` vs. `[01/07 Architect/SRE] 99.99% Multi-Region HA` vs. `[05 DevSecOps] Zero-Trust IAP &amp; 0 Keys`) against your live Cloud Run services, SQL instances, Firewalls, and GCS Buckets in `{projectId}` to compute the Pareto-optimal configuration on each axis.
@@ -1215,7 +1215,7 @@ export default function FivePersonaCommandCenter({
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2.5 text-xs font-mono">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW MERKLE DIFF &amp; ROLLBACK CAPSULES WORK (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW MERKLE DIFF &amp; ROLLBACK CAPSULES WORK
                 </div>
                 <div>
                   1. <strong>SHA-256 Merkle State Tree:</strong> Hashes the canonical JSON vector of all 10 personas&apos; live GCP API counts (`crypto.createHash(&apos;sha256&apos;)`) at `T0` and compares it against `T_Now` on every probe.
@@ -1339,7 +1339,7 @@ export default function FivePersonaCommandCenter({
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW MULTI-PROJECT FLEET COUNCIL WORKS (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW MULTI-PROJECT FLEET COUNCIL WORKS
                 </div>
                 <div>
                   1. <strong>Live Account Discovery:</strong> Calls `GET https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE` using your live OAuth2 / ADC token.
@@ -1455,7 +1455,7 @@ export default function FivePersonaCommandCenter({
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
                 <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                   <div className="font-extrabold text-amber-600 dark:text-amber-400">
-                    UNDER THE HOOD · HOW T_+72H PRE-CRIME FORECASTING WORKS (ZERO GIMMICK)
+                    UNDER THE HOOD · HOW T_+72H PRE-CRIME FORECASTING WORKS
                   </div>
                   <div>
                     1. <strong>Live Telemetry Inputs:</strong> Reads live `logging.googleapis.com/v2/entries:list` (`severity&gt;=ERROR` count), `compute.googleapis.com` (`0.0.0.0/0` firewall count + unattached disk GB + reserved static IPs), and `storage.googleapis.com` (buckets without `publicAccessPrevention=&quot;enforced&quot;`).
@@ -1519,7 +1519,7 @@ export default function FivePersonaCommandCenter({
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                   <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                    UNDER THE HOOD · HOW ZERO-KNOWLEDGE / ED25519 BLINDED ATTESTATION WORKS (ZERO GIMMICK)
+                    UNDER THE HOOD · HOW ZERO-KNOWLEDGE / ED25519 BLINDED ATTESTATION WORKS
                   </div>
                   <div>
                     1. <strong>Salted SHA-256 Pedersen-Style Commitments:</strong> For every live firewall rule, GCS bucket, and IAM Service Account, the server generates a cryptographic salt and computes `C_i = SHA256(salt || resourceType || resourceName || complianceState)`—replacing the plaintext resource name with `blindedIdentifier` (`fw_commit_01`, `bkt_commit_01`) so external auditors never see internal infrastructure names.
@@ -1628,7 +1628,7 @@ export default function FivePersonaCommandCenter({
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW INTENT-TO-CONTROL-PLANE COMPILATION WORKS (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW INTENT-TO-CONTROL-PLANE COMPILATION WORKS
                 </div>
                 <div>
                   1. <strong>Live Inventory Grounding:</strong> Queries `compute.googleapis.com/compute/v1/projects/:id/global/firewalls`, `storage.googleapis.com/storage/v1/b`, and `run.googleapis.com/v2/projects/:id/locations/-/services` first so the compiler operates on your actual live GCP resource names.

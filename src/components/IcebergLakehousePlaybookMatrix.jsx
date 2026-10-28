@@ -1377,17 +1377,17 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
       </div>
 
       {/* =================================================================== */}
-      {/* VIEW MODE 2: 50-PLAYBOOK SYMMETRICAL BENTO MATRIX GRID               */}
+      {/* VIEW MODE 2: 50-PLAYBOOK ARCHITECTURE MATRIX GRID                    */}
       {/* =================================================================== */}
       {viewMode === 'BENTO_MATRIX_GRID' && (
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">
             <span className="text-xs font-mono font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
-              Symmetrical 3-Column Bento Matrix ({filteredPlaybooks.length} of{' '}
+              50-Playbook Architecture Matrix ({filteredPlaybooks.length} of{' '}
               {ICEBERG_PLAYBOOKS.length} Playbooks Visible)
             </span>
             <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
-              Click any equal-sized card to open its Multi-Engine Code
+              Click any playbook card to open its Multi-Engine Code
               Synthesizer
             </span>
           </div>
@@ -1580,7 +1580,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 onClick={() => setViewMode('BENTO_MATRIX_GRID')}
                 className="w-full h-10 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <span>View All 50 Bento Cards</span>
+                <span>View All 50 Playbooks</span>
               </button>
             </div>
           </div>

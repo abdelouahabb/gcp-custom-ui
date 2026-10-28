@@ -1184,11 +1184,11 @@ export default function CloudStorageStudio({
           </div>
         </div>
 
-        {/* 6 Equal-Width Studio Sub-Tabs + Active Bucket Selector */}
+        {/* Studio Sub-Tabs + Active Bucket Selector */}
         <div className="space-y-2.5 pt-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
-              Studio Workspace Mode (7 Equal-Width Modules):
+              Cloud Storage Workspace Modules:
             </span>
             {buckets.length > 0 && (
               <div className="flex items-center gap-2 font-mono text-xs">
@@ -1645,10 +1645,10 @@ export default function CloudStorageStudio({
             </div>
           </div>
 
-          {/* 4 Equal-Width Provider Presets */}
+          {/* Provider Presets */}
           <div className="space-y-2">
             <div className="text-[10px] font-bold uppercase text-zinc-500">
-              1. Select S3-Compatible Storage Engine Preset (4 Equal-Width Profiles):
+              1. Select S3-Compatible Storage Engine Preset:
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {[

@@ -4871,7 +4871,7 @@ function CloudPulseCockpit() {
                     onSelectTab={(tabId) => setActiveTab(tabId)}
                   />
 
-                  {/* 5-Domain Organized Studio Hub (Zero Duplication Across Standard GCP Services) */}
+                  {/* 5-Domain Organized Studio Hub */}
                   <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                       <div>
@@ -4882,11 +4882,11 @@ function CloudPulseCockpit() {
                           </span>
                         </h3>
                         <p className="text-xs text-zinc-500">
-                          Every Google Cloud technology is organized into 5 dedicated, non-overlapping engineering domains — click any studio below to open its full control plane.
+                          Every Google Cloud technology is organized into 5 dedicated engineering domains — click any studio below to open its full control plane.
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 20 DEDICATED STUDIOS · ZERO DUPLICATES
+                        5 DOMAINS · 20 DEDICATED STUDIOS
                       </span>
                     </div>
 

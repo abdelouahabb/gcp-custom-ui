@@ -883,14 +883,14 @@ export default function SovereignTimeMachineIamStudio({
           </div>
         </div>
 
-        {/* In-Studio Sovereign IAM & Time-Machine Modules (4 Equal-Width Columns) */}
+        {/* In-Studio Sovereign IAM & Time-Machine Modules */}
         <div className="pt-3 mt-4 border-t border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Sovereign IAM, Time-Machine &amp; Zero-Trust Vault Modules (01–04)
             </span>
             <span className="text-[10px] font-mono text-zinc-500">
-              In-studio module navigation (stays inside Sovereign IAM Studio)
+              Zero-Trust IAM, Drift &amp; Encryption Modules
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">

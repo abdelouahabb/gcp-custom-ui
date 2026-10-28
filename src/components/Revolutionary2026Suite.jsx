@@ -1184,7 +1184,7 @@ export default function Revolutionary2026Suite({
               }}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">All Domains (16 Specialized Studios · 4×4 Grid · Zero Duplicates)</option>
+              <option value="ALL">All Domains (16 Specialized Studios)</option>
               <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 590.0.1 (8)</option>
               <option value="QUANTUM">2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews (1)</option>
               <option value="FINOPS">FinOps Sleep &amp; Zombie Hunter, Cross-Region Teleporter &amp; Egress Tollbooth (3)</option>
@@ -1202,11 +1202,11 @@ export default function Revolutionary2026Suite({
             )}
           </div>
           <span className="text-[11px] font-mono text-zinc-500">
-            16 Non-Overlapping Studios (4×4 Bento Grid) — hover any button for architecture &amp; API guide:
+            16 Specialized Studios — hover any studio for architecture &amp; live GCP API guide:
           </span>
         </div>
 
-        {/* 16-Studio Sub-Navigation Pills (Exact 4x4 Equal-Width Bento Grid · Zero Duplicates) */}
+        {/* 16-Studio Sub-Navigation Pills */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {[
             {
@@ -1396,11 +1396,11 @@ export default function Revolutionary2026Suite({
             })}
         </div>
 
-        {/* Cross-Studio Canonical Deep-Link Bar (Zero Duplication Across Dedicated Studios) */}
+        {/* Cross-Studio Canonical Deep-Link Bar */}
         {onSelectStudioTab && (
           <div className="px-3.5 py-2.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
             <span className="text-[10.5px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
-              Dedicated Domain Bridges (Canonical Homes — Zero Duplication):
+              Related Google Cloud Control Planes:
             </span>
             <div className="flex flex-wrap items-center gap-1.5">
               <button
