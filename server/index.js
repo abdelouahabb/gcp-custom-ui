@@ -73141,12 +73141,22 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
           `https://bigqueryconnection.googleapis.com/v1beta1/projects/${encodeURIComponent(projectId)}/locations/us/connections`,
           { headers, timeout: 3800 }
         ),
-        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+        Array.isArray(cachedOverview?.enabledApis) && cachedOverview.enabledApis.length > 0
+          ? Promise.resolve({
+              data: {
+                services: cachedOverview.enabledApis.map((s) => ({
+                  name: s.name || s.serviceName,
+                })),
+              },
+            })
+          : baseResources.some((r) => r.type === 'Enabled GCP Service API')
           ? Promise.resolve({
               data: {
                 services: baseResources
                   .filter((r) => r.type === 'Enabled GCP Service API')
-                  .map((s) => ({ name: s.name })),
+                  .map((s) => ({
+                    name: s.details?.serviceName || s.storageClass || s.name,
+                  })),
               },
             })
           : axios.get(
@@ -74700,12 +74710,22 @@ app.get('/api/project/:projectId/oltp-database-pipeline/blueprint', async (req, 
               `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
               { headers, timeout: 4000 }
             ),
-        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+        Array.isArray(cachedOverview?.enabledApis) && cachedOverview.enabledApis.length > 0
+          ? Promise.resolve({
+              data: {
+                services: cachedOverview.enabledApis.map((s) => ({
+                  name: s.name || s.serviceName,
+                })),
+              },
+            })
+          : baseResources.some((r) => r.type === 'Enabled GCP Service API')
           ? Promise.resolve({
               data: {
                 services: baseResources
                   .filter((r) => r.type === 'Enabled GCP Service API')
-                  .map((s) => ({ name: s.name })),
+                  .map((s) => ({
+                    name: s.details?.serviceName || s.storageClass || s.name,
+                  })),
               },
             })
           : axios.get(
@@ -75441,12 +75461,22 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
               `https://run.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/services`,
               { headers, timeout: 4000 }
             ),
-        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+        Array.isArray(cachedOverview?.enabledApis) && cachedOverview.enabledApis.length > 0
+          ? Promise.resolve({
+              data: {
+                services: cachedOverview.enabledApis.map((s) => ({
+                  name: s.name || s.serviceName,
+                })),
+              },
+            })
+          : baseResources.some((r) => r.type === 'Enabled GCP Service API')
           ? Promise.resolve({
               data: {
                 services: baseResources
                   .filter((r) => r.type === 'Enabled GCP Service API')
-                  .map((s) => ({ name: s.name })),
+                  .map((s) => ({
+                    name: s.details?.serviceName || s.storageClass || s.name,
+                  })),
               },
             })
           : axios.get(
@@ -75500,12 +75530,18 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
       let vms = [];
       if (vmsRes.status === 'fulfilled') {
         if (Array.isArray(vmsRes.value.data?.fromOverview)) {
-          vms = vmsRes.value.data.fromOverview.map((v) => ({
-            name: v.name,
-            zone: v.region || 'us-central1-a',
-            status: v.status || 'RUNNING',
-            machineType: v.machineType || 'e2-micro',
-          }));
+          vms = vmsRes.value.data.fromOverview.map((v) => {
+            const rawStatus =
+              v.details?.status ||
+              (v.status === 'HEALTHY' ? 'RUNNING' : v.status) ||
+              'RUNNING';
+            return {
+              name: v.name,
+              zone: v.zone || v.details?.zone || v.region || 'us-central1-a',
+              status: rawStatus,
+              machineType: v.machineType || v.details?.machineType || 'e2-micro',
+            };
+          });
         } else {
           const itemsObj = vmsRes.value.data?.items || {};
           Object.values(itemsObj).forEach((z) => {
@@ -75514,7 +75550,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
                 vms.push({
                   name: inst.name,
                   zone: (inst.zone || '').split('/').pop() || 'us-central1-a',
-                  status: inst.status || 'RUNNING',
+                  status: inst.status === 'HEALTHY' ? 'RUNNING' : inst.status || 'RUNNING',
                   machineType: (inst.machineType || '').split('/').pop() || 'e2-micro',
                 });
               });
@@ -75567,8 +75603,12 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
     const cloudRunSvcs = extra?.cloudRunSvcs || [];
     const enabledApis = extra?.enabledApis || [];
 
-    const runningVms = vms.filter((v) => v.status === 'RUNNING');
-    const stoppedVms = vms.filter((v) => v.status !== 'RUNNING');
+    const runningVms = vms.filter(
+      (v) => v.status === 'RUNNING' || v.status === 'HEALTHY'
+    );
+    const stoppedVms = vms.filter(
+      (v) => v.status !== 'RUNNING' && v.status !== 'HEALTHY'
+    );
 
     const HIGH_BURN_API_PATTERNS = [
       'aiplatform.googleapis.com',
