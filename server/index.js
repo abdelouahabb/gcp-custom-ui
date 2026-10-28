@@ -71696,24 +71696,29 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       const { token } = await resolveRequestAuth(req);
       if (token) {
         const headers = { Authorization: `Bearer ${token}` };
-        const [bucketsRes, datasetsRes, networksRes, servicesRes] = await Promise.allSettled([
-          axios.get(
-            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
-            { headers, timeout: 4500 }
-          ),
-          axios.get(
-            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
-            { headers, timeout: 4500 }
-          ),
-          axios.get(
-            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
-            { headers, timeout: 4500 }
-          ),
-          axios.get(
-            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
-            { headers, timeout: 4500 }
-          ),
-        ]);
+        const [bucketsRes, datasetsRes, networksRes, firewallsRes, servicesRes] =
+          await Promise.allSettled([
+            axios.get(
+              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+              { headers, timeout: 4500 }
+            ),
+            axios.get(
+              `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+              { headers, timeout: 4500 }
+            ),
+            axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+              { headers, timeout: 4500 }
+            ),
+            axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
+              { headers, timeout: 4500 }
+            ),
+            axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
+              { headers, timeout: 4500 }
+            ),
+          ]);
 
         if (bucketsRes.status === 'fulfilled') {
           for (const b of bucketsRes.value.data?.items || []) {
@@ -71751,6 +71756,25 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
               category: 'network',
               region: 'global',
               storageClass: n.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
+            });
+          }
+        }
+        if (firewallsRes.status === 'fulfilled') {
+          for (const fw of firewallsRes.value.data?.items || []) {
+            const netShort = (fw.network || 'default').split('/').pop();
+            resources.push({
+              id: `fw-${fw.name}`,
+              name: fw.name,
+              type: 'VPC Firewall Rule',
+              category: 'network',
+              region: 'global',
+              storageClass: `${fw.direction || 'INGRESS'}_${fw.denied ? 'DENY' : 'ALLOW'}`,
+              details: {
+                network: netShort,
+                direction: fw.direction || 'INGRESS',
+                priority: fw.priority ?? 1000,
+                sourceRanges: (fw.sourceRanges || []).join(', '),
+              },
             });
           }
         }
@@ -71809,7 +71833,8 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         title: '1. Zero-Trust VPC & IAP Perimeter',
         shortTitle: 'VPC & IAP Perimeter',
         targetTab: 'VPC_NETWORKS',
-        secondaryTab: 'IAM_SECURITY',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondaryLabel: 'Sovereign IAM Studio',
         status: vpcs.length > 0 ? 'OPTIMAL' : 'READY',
         metricBadge: `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
         summary:
@@ -71825,6 +71850,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         shortTitle: 'Storage & Lakehouse',
         targetTab: 'CLOUD_STORAGE',
         secondaryTab: 'BIGQUERY_STUDIO',
+        secondaryLabel: 'BigQuery Studio',
         status: buckets.length + datasets.length > 0 ? 'OPTIMAL' : 'READY',
         metricBadge: `${buckets.length} GCS · ${datasets.length} BQ Datasets`,
         summary:
@@ -71840,6 +71866,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         shortTitle: 'VMs & Cloud Run',
         targetTab: 'CLOUD_RUN',
         secondaryTab: 'VM_SSH',
+        secondaryLabel: 'Compute Engine VMs',
         status:
           vms.length > 0 && cloudRunSvcs.length === 0
             ? 'ACTION_RECOMMENDED'
@@ -71859,10 +71886,12 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         title: '4. Terraform HCL & SLSA-3 CI/CD Pipeline',
         shortTitle: 'Terraform & CI/CD',
         targetTab: 'WAVE9_STUDIO',
-        secondaryTab: 'CLOUD_BUILD',
+        secondaryTab: 'INNOVATION_LAB',
+        secondarySubTab: 'REVERSE_TERRAFORM',
+        secondaryLabel: 'Reverse-Terraform Exporter',
         status: 'OPTIMAL',
         metricBadge: `${resources.length} Live Resources Codified`,
-        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
+        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
         cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
       },
       {
@@ -71872,6 +71901,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         shortTitle: 'FinOps & Quota Radar',
         targetTab: 'FINOPS',
         secondaryTab: 'STARTUP_10X',
+        secondaryLabel: 'Startup 10X Quota Drafter',
         status: totalMonthlySpendUsd > 50 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
         metricBadge: `$${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs`,
         summary: `Current monthly run-rate is $${totalMonthlySpendUsd.toFixed(2)}/mo across ${enabledApis.length} enabled GCP service APIs with live HTTP 429 Quota Saturation & Startup 10X justification drafter.`,
@@ -71884,6 +71914,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         shortTitle: 'SRE & Recycle Bin',
         targetTab: 'RECYCLE_BIN',
         secondaryTab: 'SRE_WAR_ROOM',
+        secondaryLabel: 'SRE Incident War-Room',
         status: 'OPTIMAL',
         metricBadge: `${recentDestructiveEvents.length} Vault Events (30d)`,
         summary: `Google SRE 1h/6h multi-window burn-rate gate paired with the 30-Day Cloud Recycle Bin distinguishing Native State Recovery from Empty Shell Re-Creation.`,

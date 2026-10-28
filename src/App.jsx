@@ -3435,11 +3435,11 @@ function CloudPulseCockpit() {
         ? 'VM_SSH'
         : tabId === 'STORAGE'
         ? 'CLOUD_STORAGE'
-        : tabId === 'SOVEREIGN_IAM'
+        : tabId === 'SOVEREIGN_IAM' || tabId === 'IAM_SECURITY'
         ? 'SOVEREIGN_STUDIO'
         : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS'
         ? 'FINOPS'
-        : tabId === 'VERTEX_AI'
+        : tabId === 'VERTEX_AI' || tabId === 'CLOUD_BUILD'
         ? 'WAVE9_STUDIO'
         : tabId === 'GKE_KUBERNETES'
         ? 'GKE_STUDIO'
@@ -5447,6 +5447,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE9_STUDIO' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <Wave9AiGkeSqlSupplyChainStudio
                     projectId={selectedProjectId}
                     onTriggerToast={showToast}
@@ -5592,6 +5598,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_RUN' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <CloudRunFleetManager
                     projectId={selectedProjectId}
                     initialServices={overview?.cloudRunServices || []}
@@ -5723,6 +5735,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'VM_SSH' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <VmFleetAndSsh
                     projectId={selectedProjectId}
                     account={contextData.account}
@@ -5761,6 +5779,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'VPC_NETWORKS' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <VpcNetworksAndFirewalls
                     projectId={selectedProjectId}
                     vpcs={overview?.vpcs || []}

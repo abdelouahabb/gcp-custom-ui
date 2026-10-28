@@ -448,6 +448,7 @@ export default function ResourceControlCenter({
   const [deletingIds, setDeletingIds] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedUri, setCopiedUri] = useState(false);
+  const [copiedTf, setCopiedTf] = useState(false);
   const pageSize = 6;
 
   // Compute lineage & stale analysis for every resource in the project
@@ -1351,15 +1352,26 @@ export default function ResourceControlCenter({
                 </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    handleCopy(
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
                       synthesizeResourceTerraformHcl(selectedResource, projectId)
-                    )
-                  }
+                    );
+                    setCopiedTf(true);
+                    setTimeout(() => setCopiedTf(false), 1800);
+                  }}
                   className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  <Copy className="w-3 h-3" />
-                  <span>Copy .tf HCL</span>
+                  {copiedTf ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span>Copied .tf HCL</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy .tf HCL</span>
+                    </>
+                  )}
                 </button>
               </div>
               <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-md p-2.5 text-[10px] font-mono overflow-x-auto max-h-36 leading-relaxed">
@@ -1387,7 +1399,25 @@ export default function ResourceControlCenter({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onSelectTab('RECYCLE_BIN', 'ALL')}
+                    onClick={() => {
+                      const rType = selectedResource.type || '';
+                      const vaultCat =
+                        rType === 'Cloud Storage Bucket' ||
+                        selectedResource.category === 'storage'
+                          ? 'STORAGE_BUCKET'
+                          : rType === 'Compute Engine VM'
+                          ? 'COMPUTE_VM'
+                          : rType === 'BigQuery Dataset'
+                          ? 'BIGQUERY_DATA'
+                          : rType === 'VPC Firewall Rule' || rType === 'VPC Network'
+                          ? 'VPC_FIREWALL'
+                          : rType === 'Cloud Run Service'
+                          ? 'CLOUD_RUN'
+                          : rType === 'Enabled GCP Service API'
+                          ? 'DISABLED_API'
+                          : 'ALL';
+                      onSelectTab('RECYCLE_BIN', vaultCat);
+                    }}
                     className="px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-semibold transition-colors cursor-pointer truncate"
                   >
                     30d Vault ↗

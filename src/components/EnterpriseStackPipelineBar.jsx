@@ -93,7 +93,8 @@ export default function EnterpriseStackPipelineBar({
       stepNumber: 1,
       shortTitle: 'VPC & IAP Perimeter',
       targetTab: 'VPC_NETWORKS',
-      secondaryTab: 'IAM_SECURITY',
+      secondaryTab: 'SOVEREIGN_STUDIO',
+      secondaryLabel: 'Sovereign IAM Studio',
       status: 'OPTIMAL',
       metricBadge: 'Zero-Trust VPC',
       summary: 'VPC firewall rules & IAP TCP-22 SSH bastion.',
@@ -105,6 +106,7 @@ export default function EnterpriseStackPipelineBar({
       shortTitle: 'Storage & Lakehouse',
       targetTab: 'CLOUD_STORAGE',
       secondaryTab: 'BIGQUERY_STUDIO',
+      secondaryLabel: 'BigQuery Studio',
       status: 'OPTIMAL',
       metricBadge: 'GCS + BigQuery',
       summary: 'Stateful Cloud Storage buckets & BigQuery analytical datasets.',
@@ -116,6 +118,7 @@ export default function EnterpriseStackPipelineBar({
       shortTitle: 'VMs & Cloud Run',
       targetTab: 'CLOUD_RUN',
       secondaryTab: 'VM_SSH',
+      secondaryLabel: 'Compute Engine VMs',
       status: 'OPTIMAL',
       metricBadge: 'Compute & Serverless',
       summary: 'GCE VM Fleet & Cloud Run scale-to-zero containers.',
@@ -126,7 +129,9 @@ export default function EnterpriseStackPipelineBar({
       stepNumber: 4,
       shortTitle: 'Terraform & CI/CD',
       targetTab: 'WAVE9_STUDIO',
-      secondaryTab: 'CLOUD_BUILD',
+      secondaryTab: 'INNOVATION_LAB',
+      secondarySubTab: 'REVERSE_TERRAFORM',
+      secondaryLabel: 'Reverse-Terraform Exporter',
       status: 'OPTIMAL',
       metricBadge: 'main.tf + SLSA-3',
       summary: 'Live Terraform HCL & Cloud Build canary pipeline synthesizer.',
@@ -138,6 +143,7 @@ export default function EnterpriseStackPipelineBar({
       shortTitle: 'FinOps & Quota Radar',
       targetTab: 'FINOPS',
       secondaryTab: 'STARTUP_10X',
+      secondaryLabel: 'Startup 10X Quota Drafter',
       status: 'OPTIMAL',
       metricBadge: 'Spend & HTTP 429',
       summary: 'Autonomous spend caps, API kill-switch & Startup 10X quota drafter.',
@@ -149,6 +155,7 @@ export default function EnterpriseStackPipelineBar({
       shortTitle: 'SRE & Recycle Bin',
       targetTab: 'RECYCLE_BIN',
       secondaryTab: 'SRE_WAR_ROOM',
+      secondaryLabel: 'SRE Incident War-Room',
       status: 'OPTIMAL',
       metricBadge: '30d Recovery Vault',
       summary: '14.4x SLO burn gate & 30-Day Cloud Recycle Bin recovery.',
@@ -241,6 +248,7 @@ export default function EnterpriseStackPipelineBar({
           const IconComponent = STAGE_ICONS[stage.id] || Layers;
           const isCurrentTab =
             activeTab === stage.targetTab || activeTab === stage.secondaryTab;
+          const isSelectedStage = activeStage?.id === stage.id && drawerOpen;
           const isActionRecommended = stage.status === 'ACTION_RECOMMENDED';
 
           return (
@@ -248,11 +256,7 @@ export default function EnterpriseStackPipelineBar({
               key={stage.id}
               onClick={() => {
                 setSelectedStageId(stage.id);
-                if (onSelectTab && stage.targetTab !== activeTab) {
-                  onSelectTab(stage.targetTab);
-                } else {
-                  setDrawerOpen(true);
-                }
+                setDrawerOpen(true);
               }}
               role="button"
               tabIndex={0}
@@ -260,15 +264,11 @@ export default function EnterpriseStackPipelineBar({
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   setSelectedStageId(stage.id);
-                  if (onSelectTab && stage.targetTab !== activeTab) {
-                    onSelectTab(stage.targetTab);
-                  } else {
-                    setDrawerOpen(true);
-                  }
+                  setDrawerOpen(true);
                 }
               }}
               className={`group relative rounded-xl p-2.5 border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                isCurrentTab
+                isCurrentTab || isSelectedStage
                   ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500/60 shadow-sm ring-1 ring-blue-500/30'
                   : 'bg-zinc-50/70 dark:bg-[#202124] hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70 border-zinc-200 dark:border-zinc-800'
               }`}
@@ -277,7 +277,7 @@ export default function EnterpriseStackPipelineBar({
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
                     className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-mono font-extrabold shrink-0 ${
-                      isCurrentTab
+                      isCurrentTab || isSelectedStage
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                     }`}
@@ -290,7 +290,7 @@ export default function EnterpriseStackPipelineBar({
                 </div>
                 <IconComponent
                   className={`w-3.5 h-3.5 shrink-0 ${
-                    isCurrentTab
+                    isCurrentTab || isSelectedStage
                       ? 'text-blue-600 dark:text-blue-400'
                       : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200'
                   }`}
@@ -313,7 +313,20 @@ export default function EnterpriseStackPipelineBar({
                   <span className="truncate">{stage.metricBadge}</span>
                 </span>
 
-                <ArrowRight className="w-3 h-3 text-zinc-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                {onSelectTab && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTab(stage.targetTab);
+                    }}
+                    title={`Jump directly to ${stage.shortTitle} Studio`}
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 text-[10px] font-mono font-bold transition-colors shrink-0 cursor-pointer"
+                  >
+                    <span>Go</span>
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -354,11 +367,19 @@ export default function EnterpriseStackPipelineBar({
                 {onSelectTab && activeStage.secondaryTab && (
                   <button
                     type="button"
-                    onClick={() => onSelectTab(activeStage.secondaryTab)}
+                    onClick={() =>
+                      onSelectTab(
+                        activeStage.secondaryTab,
+                        activeStage.secondarySubTab
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Companion Studio ({activeStage.secondaryTab})</span>
+                    <span>
+                      {activeStage.secondaryLabel ||
+                        `Companion Studio (${activeStage.secondaryTab})`}
+                    </span>
                   </button>
                 )}
                 {onRunInShell && activeStage.cliCmd && (
