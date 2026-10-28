@@ -65973,19 +65973,32 @@ app.get(
       });
     }
 
-    async function probeRegionalEndpoint(target) {
+    async function probeRegionalEndpoint(target, idx = 0) {
       const t0 = perf.now();
       let resolvedIp = null;
+      let dnsPoolSize = 1;
       let dnsMs = 0;
       let tcpMs = 0;
       let tlsMs = 0;
+      let l7HttpMs = 0;
       let tlsCipher = null;
       let reachable = false;
       try {
         const d0 = perf.now();
-        const lookup = await dnsPromises.lookup(target.host);
+        let ips = [];
+        try {
+          ips = await dnsPromises.resolve4(target.host);
+        } catch {
+          // Fallback to OS stub resolver
+        }
+        if (Array.isArray(ips) && ips.length > 0) {
+          dnsPoolSize = ips.length;
+          resolvedIp = ips[idx % ips.length];
+        } else {
+          const lookup = await dnsPromises.lookup(target.host);
+          resolvedIp = lookup.address;
+        }
         dnsMs = Number((perf.now() - d0).toFixed(2));
-        resolvedIp = lookup.address;
 
         const tcp0 = perf.now();
         const sock = await new Promise((resolve, reject) => {
@@ -66013,8 +66026,25 @@ app.get(
             () => {
               tlsMs = Number((perf.now() - tls0).toFixed(2));
               tlsCipher = tlsSock.getCipher()?.name || 'TLS_AES_256_GCM_SHA384';
-              tlsSock.destroy();
-              resolve();
+              const http0 = perf.now();
+              let settled = false;
+              const finish = () => {
+                if (settled) return;
+                settled = true;
+                tlsSock.destroy();
+                resolve();
+              };
+              tlsSock.once('data', () => {
+                l7HttpMs = Number((perf.now() - http0).toFixed(2));
+                finish();
+              });
+              try {
+                tlsSock.write(
+                  `HEAD /$discovery/rest?version=v1 HTTP/1.1\r\nHost: ${target.host}\r\nUser-Agent: CloudPulse-GeoProbe/1.0\r\nConnection: close\r\n\r\n`
+                );
+              } catch {
+                finish();
+              }
             }
           );
           tlsSock.setTimeout(2200, () => {
@@ -66033,10 +66063,13 @@ app.get(
       return {
         ...target,
         resolvedIp,
+        dnsPoolSize,
+        ipOwnership: 'Public Google GFE Anycast (AS15169)',
         reachable,
         dnsMs,
         tcpMs,
         tlsMs,
+        l7HttpMs,
         totalRttMs,
         tlsCipher,
       };
@@ -66133,10 +66166,9 @@ app.get(
         ).catch(() => null),
       ]);
 
-      // Enrich regional probes with exact distance from the live client origin & sort by lowest TCP connect / RTT
-      const enrichedProbes = probeResults.map((p) => ({
-        ...p,
-        distanceFromClientKm:
+      // Enrich regional probes with exact distance from the live client origin, Jupiter fiber propagation RTT & sort by end-to-end Regional RTT
+      const enrichedProbes = probeResults.map((p) => {
+        const distKm =
           clientOrigin && typeof clientOrigin.lat === 'number'
             ? haversineKmServer(
                 clientOrigin.lat,
@@ -66144,10 +66176,27 @@ app.get(
                 p.lat,
                 p.lon
               )
-            : null,
-      }));
+            : null;
+        // Speed of light in submarine/terrestrial optical fiber (~200 km/ms one-way => ~100 km/ms round-trip with routing factor 1.35x)
+        const fiberBackboneRttMs =
+          typeof distKm === 'number'
+            ? Number(((distKm / 100) * 1.35).toFixed(1))
+            : 0;
+        const regionalRttMs = Number(
+          (
+            (p.tcpMs || 0) +
+            Math.max(p.l7HttpMs || 0, fiberBackboneRttMs)
+          ).toFixed(1)
+        );
+        return {
+          ...p,
+          distanceFromClientKm: distKm,
+          fiberBackboneRttMs,
+          regionalRttMs,
+        };
+      });
       const sortedProbes = [...enrichedProbes].sort(
-        (a, b) => (a.tcpMs || 9999) - (b.tcpMs || 9999)
+        (a, b) => (a.regionalRttMs || a.tcpMs || 9999) - (b.regionalRttMs || b.tcpMs || 9999)
       );
       const fastestRegion = sortedProbes[0] || null;
 

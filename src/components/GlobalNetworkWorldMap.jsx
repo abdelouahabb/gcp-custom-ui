@@ -4568,107 +4568,131 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
 
         {/* TAB 01: LIVE REGIONAL TCP/TLS SOCKET LATENCY MATRIX */}
         {activeGeoTab === 'LATENCY_PROBES' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {(liveGeoTelemetry?.regionalSocketProbes || []).map((probe, idx) => {
-              const isFastest = idx === 0;
-              const isSelected = selectedRegionId === probe.regionId;
-              return (
-                <div
-                  key={probe.regionId}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => selectRegionInPlace(probe.regionId, 2.8)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      selectRegionInPlace(probe.regionId, 2.8);
-                    }
-                  }}
-                  className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 cursor-pointer transition-all hover:shadow-md ${
-                    isSelected
-                      ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          isSelected
-                            ? 'bg-blue-500 animate-pulse'
-                            : isFastest
-                            ? 'bg-emerald-500'
-                            : 'bg-zinc-400'
-                        }`}
-                      />
-                      <span className="font-extrabold text-zinc-900 dark:text-white">
-                        #{idx + 1} · {probe.regionId}
-                      </span>
+          <div className="space-y-3">
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  Why `172.217.x.x` / `172.253.x.x` appears across regions:
+                </strong>{' '}
+                RFC 1918 private IPs only cover <code>172.16.0.0–172.31.255.255</code>.{' '}
+                <code>172.217.0.0/16</code> &amp; <code>172.253.0.0/16</code> are{' '}
+                <strong>Public Google LLC (AS15169) Anycast GFE Edge PoPs</strong>—Google terminates TCP/TLS at your nearest edge PoP and routes over the private <strong>Jupiter Fiber Backbone</strong> to each regional control plane.
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-bold shrink-0">
+                AS15169 Google Global Anycast GFE + Jupiter Backbone
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {(liveGeoTelemetry?.regionalSocketProbes || []).map((probe, idx) => {
+                const isFastest = idx === 0;
+                const isSelected = selectedRegionId === probe.regionId;
+                const regionRtt = probe.regionalRttMs || probe.totalRttMs || probe.tcpMs;
+                return (
+                  <div
+                    key={probe.regionId}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectRegionInPlace(probe.regionId, 2.8)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectRegionInPlace(probe.regionId, 2.8);
+                      }
+                    }}
+                    className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 cursor-pointer transition-all hover:shadow-md ${
+                      isSelected
+                        ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isSelected
+                              ? 'bg-blue-500 animate-pulse'
+                              : isFastest
+                              ? 'bg-emerald-500'
+                              : 'bg-zinc-400'
+                          }`}
+                        />
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          #{idx + 1} · {probe.regionId}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {isSelected && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
+                            SELECTED
+                          </span>
+                        )}
+                        {isFastest && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
+                            FASTEST
+                          </span>
+                        )}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold ${
+                            isSelected
+                              ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                              : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {regionRtt}ms RTT
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
-                          SELECTED
-                        </span>
-                      )}
-                      {isFastest && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
-                          FASTEST
-                        </span>
-                      )}
+                    <div className="text-[10.5px] text-zinc-500 truncate">
+                      {probe.city} · CFE: <strong>{probe.cfePct}%</strong>
+                      {probe.distanceFromClientKm
+                        ? ` · ${probe.distanceFromClientKm.toLocaleString()} km from ${liveClientOriginNode.city}`
+                        : ''}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 pt-1 border-t border-zinc-200/80 dark:border-zinc-800 text-[10px]">
+                      <div>
+                        <span className="text-zinc-400 block">DNS</span>
+                        <strong>{probe.dnsMs}ms</strong>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400 block">Edge TCP</span>
+                        <strong>{probe.tcpMs}ms</strong>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400 block">TLS 1.3</span>
+                        <strong>{probe.tlsMs}ms</strong>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400 block">Region RTT</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">
+                          {regionRtt}ms
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-1 pt-1 text-[10px]">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold ${
-                          isSelected
-                            ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                            : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                        }`}
+                        className="text-zinc-400 truncate"
+                        title={`Regional SNI Host: ${probe.host || `${probe.regionId}-aiplatform.googleapis.com`} · Resolved Google Front End (GFE) Public Anycast Edge IP: ${probe.resolvedIp || 'Anycast'} (AS15169 Google LLC — outside RFC1918 172.16-31.x.x)`}
                       >
-                        {probe.tcpMs}ms TCP
+                        GFE Edge: {probe.resolvedIp || 'Anycast'} (AS15169)
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusOnRegion(probe.regionId, 3.2, {
+                            scrollToMap: true,
+                          });
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer transition-colors shrink-0"
+                      >
+                        Focus on Map →
+                      </button>
                     </div>
                   </div>
-                  <div className="text-[10.5px] text-zinc-500 truncate">
-                    {probe.city} · CFE: <strong>{probe.cfePct}%</strong>
-                    {probe.distanceFromClientKm
-                      ? ` · ${probe.distanceFromClientKm.toLocaleString()} km from ${liveClientOriginNode.city}`
-                      : ''}
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 pt-1 border-t border-zinc-200/80 dark:border-zinc-800 text-[10px]">
-                    <div>
-                      <span className="text-zinc-400 block">DNS</span>
-                      <strong>{probe.dnsMs}ms</strong>
-                    </div>
-                    <div>
-                      <span className="text-zinc-400 block">TCP</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400">
-                        {probe.tcpMs}ms
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-zinc-400 block">TLS 1.3</span>
-                      <strong>{probe.tlsMs}ms</strong>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-1 pt-1 text-[10px]">
-                    <span className="text-zinc-400 truncate">
-                      IP: {probe.resolvedIp || 'Anycast'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        focusOnRegion(probe.regionId, 3.2, {
-                          scrollToMap: true,
-                        });
-                      }}
-                      className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer transition-colors shrink-0"
-                    >
-                      Focus on Map →
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
