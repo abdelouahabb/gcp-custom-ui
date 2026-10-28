@@ -1392,10 +1392,10 @@ export default function ResourceControlCenter({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onSelectTab('WAVE9_STUDIO')}
+                    onClick={() => onSelectTab('INNOVATION_LAB', 'TERRAFORM')}
                     className="px-2 py-1.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-semibold transition-colors cursor-pointer truncate"
                   >
-                    CI/CD & IaC ↗
+                    Full main.tf & imports.tf ↗
                   </button>
                   <button
                     type="button"

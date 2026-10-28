@@ -2789,7 +2789,7 @@ export default function AwsAzureEnvySuiteStudio({
             gcpServicesInvolved: [
               { name: 'Wave 16 Cloud SOC (Ed25519 AI Model-Armor)', tab: 'CLOUD_SOC' },
               { name: '2026 Innovation (Model Armor & -80% Cache)', tab: 'INNOVATION_LAB', subTab: 'MODEL_ARMOR_FINOPS' },
-              { name: 'Vertex AI & Model Garden Studio', tab: 'WAVE9_STUDIO' },
+              { name: 'Vertex AI & Model Garden Studio', tab: 'VERTEX_AI_STUDIO' },
               { name: 'Cloud Run AI Gateway Endpoint', tab: 'CLOUD_RUN' },
             ],
             apisEnabled: [
@@ -2867,7 +2867,7 @@ export default function AwsAzureEnvySuiteStudio({
             gcpServicesInvolved: [
               { name: 'GKE Kubernetes GPU Node Pools', tab: 'GKE_STUDIO' },
               { name: 'Cloud Run Gen2 Serverless L4 GPU', tab: 'CLOUD_RUN' },
-              { name: 'Vertex AI & GKE AI Studio', tab: 'WAVE9_STUDIO' },
+              { name: 'Vertex AI & GKE AI Studio', tab: 'VERTEX_AI_STUDIO' },
             ],
             apisEnabled: [
               'container.googleapis.com',

@@ -939,12 +939,18 @@ export default function VmFleetAndSsh({
                 <button
                   type="button"
                   data-feature-id="ENTERPRISE_STACK_PIPELINE"
-                  onClick={() => onSelectTab('WAVE9_STUDIO')}
-                  title="Open Terraform HCL & Cloud Build CI/CD Synthesizer for this VM fleet"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent('cloudpulse:open-terraform-drawer', {
+                        detail: { artifactTab: 'mainTf' },
+                      })
+                    )
+                  }
+                  title="Reverse-engineer this VM fleet and project infrastructure into live HashiCorp Terraform HCL (main.tf)"
                   className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shadow-sm cursor-pointer"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Terraform & CI/CD ↗</span>
+                  <span>Reverse-Engineer to .tf (`main.tf`)</span>
                 </button>
               </>
             )}

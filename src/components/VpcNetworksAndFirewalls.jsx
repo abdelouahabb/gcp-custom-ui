@@ -1366,12 +1366,18 @@ export default function VpcNetworksAndFirewalls({
                 <button
                   type="button"
                   data-feature-id="ENTERPRISE_STACK_PIPELINE"
-                  onClick={() => onSelectTab('WAVE9_STUDIO')}
-                  title="Open Terraform HCL & Cloud Build CI/CD Synthesizer for VPC Networks & Firewalls"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent('cloudpulse:open-terraform-drawer', {
+                        detail: { artifactTab: 'mainTf' },
+                      })
+                    )
+                  }
+                  title="Reverse-engineer VPC Networks & Firewall Rules into live HashiCorp Terraform HCL (main.tf)"
                   className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Terraform & CI/CD ↗</span>
+                  <span>Reverse-Engineer to .tf (`main.tf`)</span>
                 </button>
               </>
             )}

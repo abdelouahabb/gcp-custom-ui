@@ -215,12 +215,15 @@ export default function Revolutionary2026Suite({
   onShowError,
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
+  const normalizeSubTabId = (id) =>
+    id === 'REVERSE_TERRAFORM' ? 'TERRAFORM' : id;
   const [subTab, setSubTab] = useState(
-    initialSubTab || 'WAVE11_MOONSHOT'
+    normalizeSubTabId(initialSubTab) || 'WAVE11_MOONSHOT'
   );
   useEffect(() => {
     if (initialSubTab) {
-      setSubTab(initialSubTab);
+      setSubTab(normalizeSubTabId(initialSubTab));
+      setLabCategory('ALL');
     }
   }, [initialSubTab]);
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
@@ -283,10 +286,6 @@ export default function Revolutionary2026Suite({
       setArmorBusy(false);
     }
   };
-
-  useEffect(() => {
-    if (initialSubTab) setSubTab(initialSubTab);
-  }, [initialSubTab]);
 
   const [extraIacInventory, setExtraIacInventory] = useState({
     secrets: [],

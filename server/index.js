@@ -72501,20 +72501,48 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       {
         id: 'STAGE_4_CICD_TERRAFORM',
         stepNumber: 4,
-        title: '4. Terraform HCL & SLSA-3 CI/CD Pipeline',
-        shortTitle: 'Terraform & CI/CD',
+        title: '4. Cloud Build CI/CD, GitHub Builder & Artifact Registry SBOM',
+        shortTitle: 'Cloud Build & Registry',
         targetTab: 'WAVE9_STUDIO',
         secondaryTab: 'INNOVATION_LAB',
-        secondarySubTab: 'REVERSE_TERRAFORM',
-        secondaryLabel: 'Reverse-Terraform Exporter',
+        secondarySubTab: 'TERRAFORM',
+        secondaryLabel: 'Reverse-Terraform Exporter (main.tf + imports.tf)',
         status: 'OPTIMAL',
-        metricBadge: `${resources.length + disks.length + cloudFunctions.length + artifactRepos.length} Live Resources Codified`,
-        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), ${disks.length} Disk(s), ${cloudRunSvcs.length} Cloud Run service(s), ${cloudFunctions.length} Function(s), and ${artifactRepos.length} Artifact Registry repo(s) into main.tf + cloudbuild.yaml.`,
+        metricBadge: `${artifactRepos.length} AR Repo(s) · SLSA-3 CI/CD`,
+        summary: `Build container images from GitHub via Google Cloud Build (cloudbuild.googleapis.com), enforce SLSA-3 provenance across ${artifactRepos.length} Artifact Registry repo(s), or reverse-engineer ${
+          vpcs.length +
+          firewalls.length +
+          buckets.length +
+          datasets.length +
+          vms.length +
+          disks.length +
+          cloudRunSvcs.length +
+          cloudFunctions.length +
+          artifactRepos.length
+        } live resources into Terraform (main.tf).`,
         cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
         mermaidDsl: stage4MermaidDsl,
         stageItems: [
           {
-            kind: 'Terraform HCL',
+            kind: 'Cloud Build SLSA-3',
+            name: 'GitHub -> Cloud Build -> Canary Pipeline',
+            meta: 'Build -> @sha256 Digest -> 10% Canary Traffic Gate',
+            targetTab: 'WAVE9_STUDIO',
+          },
+          {
+            kind: 'Artifact Registry SBOM',
+            name:
+              artifactRepos.length > 0
+                ? artifactRepos
+                    .slice(0, 2)
+                    .map((r) => r.shortName || r.name)
+                    .join(', ')
+                : '0 Artifact Registry Repos',
+            meta: `${artifactRepos.length} Docker / OCI Repository(s) · Immutable Tags`,
+            targetTab: 'WAVE9_STUDIO',
+          },
+          {
+            kind: 'Reverse-Terraform (.tf)',
             name: `${projectId}-enterprise-stack.tf`,
             meta: `${
               vpcs.length +
@@ -72526,14 +72554,9 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
               cloudRunSvcs.length +
               cloudFunctions.length +
               artifactRepos.length
-            } HCL resource blocks`,
-            targetTab: 'WAVE9_STUDIO',
-          },
-          {
-            kind: 'Cloud Build SLSA-3',
-            name: 'cloudbuild.yaml',
-            meta: 'Build -> @sha256 Digest -> 10% Canary Traffic Gate',
-            targetTab: 'WAVE9_STUDIO',
+            } HCL resource blocks + imports.tf`,
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'TERRAFORM',
           },
           {
             kind: 'Bash Verifier',
