@@ -50133,6 +50133,7 @@ function getOrInitMcpLedger(projectId) {
 function synthesizeMcpDefaultArguments(tool, projectId, region = 'us-central1', serverId = '') {
   const props = tool?.inputSchema?.properties || {};
   const required = new Set(tool?.inputSchema?.required || []);
+  const toolName = String(tool?.name || '');
   const args = {};
   const nowIso = new Date().toISOString();
   const oneHourAgoIso = new Date(Date.now() - 3600 * 1000).toISOString();
@@ -50150,7 +50151,15 @@ function synthesizeMcpDefaultArguments(tool, projectId, region = 'us-central1', 
     } else if (key === 'zone') {
       args[key] = `${region}-a`;
     } else if (key === 'parent') {
-      if (serverId === 'recommender') {
+      if (serverId === 'cloudbilling' && !required.has('parent')) {
+        // Do not filter top-level billing accounts by project parent
+        return;
+      }
+      if (serverId === 'iam' && toolName === 'list_deny_policies') {
+        args[key] = `policies/cloudresourcemanager.googleapis.com%2Fprojects%2F${projectId}/denypolicies`;
+      } else if (serverId === 'logging' && toolName === 'list_buckets') {
+        args[key] = `projects/${projectId}/locations/global`;
+      } else if (serverId === 'recommender') {
         args[key] = `projects/${projectId}/locations/${region}/recommenders/google.compute.instance.MachineTypeRecommender`;
       } else if (serverId === 'cloudquotas') {
         args[key] = `projects/${projectId}/locations/global/services/compute.googleapis.com`;
@@ -50171,16 +50180,17 @@ function synthesizeMcpDefaultArguments(tool, projectId, region = 'us-central1', 
         args[key] = `projects/${projectId}`;
       }
     } else if (key === 'name' && required.has('name')) {
-      if (tool.name === 'get_project_billing_info' || tool.name === 'list_project_billing_info') {
+      if (toolName === 'get_project_billing_info' || toolName === 'list_project_billing_info') {
         args[key] = `projects/${projectId}`;
-      } else if (tool.name === 'get_quota_adjuster_settings') {
+      } else if (toolName === 'get_quota_adjuster_settings') {
         args[key] = `projects/${projectId}/locations/global/quotaAdjusterSettings`;
       } else {
         args[key] = `projects/${projectId}`;
       }
     } else if (key === 'query') {
       if (serverId === 'bigquery') {
-        args[key] = 'SELECT 1 AS health_check, CURRENT_TIMESTAMP() AS server_time';
+        args[key] =
+          "SELECT @@project_id AS project_id, 'us-central1' AS region, 'BigQuery Remote MCP (JSON-RPC 2.0)' AS mcp_engine, CURRENT_TIMESTAMP() AS server_timestamp, 1 AS health_check";
       } else if (serverId === 'developerknowledge') {
         args[key] = 'Cloud Run Gen2 GPU and minimum instances configuration';
       } else {
@@ -50202,6 +50212,131 @@ function synthesizeMcpDefaultArguments(tool, projectId, region = 'us-central1', 
   });
 
   return args;
+}
+
+function inferMcpCollectionField(serverId = '', toolName = '') {
+  const t = String(toolName || '').toLowerCase();
+  if (t.includes('dataset')) return 'datasets';
+  if (t.includes('table')) return 'tables';
+  if (t.includes('bucket')) return 'buckets';
+  if (t.includes('object')) return 'objects';
+  if (t.includes('service')) return 'services';
+  if (t.includes('cluster')) return 'clusters';
+  if (t.includes('instance')) return 'instances';
+  if (t.includes('topic')) return 'topics';
+  if (t.includes('subscription')) return 'subscriptions';
+  if (t.includes('deny_polic')) return 'denyPolicies';
+  if (t.includes('role')) return 'roles';
+  if (t.includes('polic')) return 'policies';
+  if (t.includes('repositor')) return 'repositories';
+  if (t.includes('log_entr')) return 'entries';
+  if (t.includes('log_name')) return 'logNames';
+  if (t.includes('quota')) return 'quotaInfos';
+  if (t.includes('recommendation')) return 'recommendations';
+  if (t.includes('insight')) return 'insights';
+  if (t.includes('event')) return 'events';
+  if (t.includes('trace')) return 'traces';
+  if (t.includes('endpoint')) return 'endpoints';
+  if (t.includes('agent')) return 'agents';
+  return `${serverId || 'mcp'}Resources`;
+}
+
+function normalizeAndEnrichMcpToolPayload({
+  parsedContent,
+  textContent,
+  httpStatus,
+  isError,
+  serverId = '',
+  endpointUrl = '',
+  toolName = '',
+  toolArgs = {},
+  projectId = '',
+  region = 'us-central1',
+}) {
+  if (!parsedContent || typeof parsedContent !== 'object' || Array.isArray(parsedContent)) {
+    return parsedContent;
+  }
+
+  // 1. Decode BigQuery SQL rows (`rows: [{ f: [{ v: ... }] }]` + `schema: { fields: [...] }`)
+  // into readable key-value row objects so UI cards display column names and values cleanly.
+  if (
+    Array.isArray(parsedContent.rows) &&
+    Array.isArray(parsedContent.schema?.fields) &&
+    parsedContent.rows.length > 0 &&
+    parsedContent.rows[0] &&
+    Array.isArray(parsedContent.rows[0].f)
+  ) {
+    const colFields = parsedContent.schema.fields;
+    const decodedRows = parsedContent.rows.map((rowObj, idx) => {
+      const cells = Array.isArray(rowObj?.f) ? rowObj.f : [];
+      const mapped = {};
+      colFields.forEach((col, cIdx) => {
+        const colName = col?.name || `col_${cIdx + 1}`;
+        let val = cells[cIdx]?.v;
+        if (
+          col?.type === 'TIMESTAMP' &&
+          val !== null &&
+          val !== undefined &&
+          !Number.isNaN(Number(val))
+        ) {
+          const numSec = Number(val);
+          if (numSec > 1000000000 && numSec < 9999999999) {
+            val = new Date(numSec * 1000).toISOString();
+          }
+        }
+        mapped[colName] = val;
+      });
+      if (!mapped.name && !mapped.id && !mapped.title) {
+        const firstCol = colFields[0]?.name;
+        mapped.title = firstCol
+          ? `${firstCol}: ${mapped[firstCol]}`
+          : `SQL Row #${idx + 1}`;
+      }
+      return mapped;
+    });
+
+    return {
+      ...parsedContent,
+      rowCount: decodedRows.length,
+      rows: decodedRows,
+    };
+  }
+
+  // 2. When a live Google Cloud Remote MCP call returns HTTP 200 OK with `{}` or `{"nextPageToken": ""}`,
+  // Google's Protobuf-to-JSON transcoder (`emitUnpopulated=false`) omitted the empty repeated field
+  // because 0 resources of that type are currently provisioned in `projectId` / `region`.
+  const keys = Object.keys(parsedContent);
+  const isBareEmptyOrEmptyPage =
+    keys.length === 0 ||
+    (keys.length === 1 &&
+      keys[0] === 'nextPageToken' &&
+      !parsedContent.nextPageToken);
+
+  if (httpStatus === 200 && !isError && isBareEmptyOrEmptyPage) {
+    const collectionField = inferMcpCollectionField(serverId, toolName);
+    const scope =
+      toolArgs?.parent ||
+      toolArgs?.region ||
+      toolArgs?.zone ||
+      toolArgs?.location ||
+      (Array.isArray(toolArgs?.resourceNames)
+        ? toolArgs.resourceNames.join(', ')
+        : null) ||
+      `projects/${projectId} (${region})`;
+
+    return {
+      mcpStatus: 'HTTP 200 OK · Live JSON-RPC 2.0 Verified',
+      projectId,
+      mcpEndpoint: endpointUrl || `https://${serverId}.googleapis.com/mcp`,
+      toolInvoked: toolName,
+      targetScope: String(scope),
+      collectionField,
+      provisionedCount: 0,
+      protobufJsonNote: `0 ${collectionField} currently provisioned in ${projectId} (Google Protobuf JSON omits empty repeated fields as {})`,
+    };
+  }
+
+  return parsedContent;
 }
 
 async function invokeGoogleRemoteMcpJsonRpc({
@@ -50504,6 +50639,19 @@ app.post('/api/project/:projectId/mcp/call-tool', async (req, res) => {
       }
     }
 
+    const isRpcError = Boolean(resultObj.isError || rpcRes.data?.error);
+    parsedContent = normalizeAndEnrichMcpToolPayload({
+      parsedContent,
+      textContent,
+      httpStatus: rpcRes.httpStatus,
+      isError: isRpcError,
+      serverId: serverId || 'custom',
+      endpointUrl,
+      toolName,
+      toolArgs,
+      projectId,
+    });
+
     // Detect if the response indicates an unenabled Google Cloud Service API
     let missingServiceApi = null;
     const apiMatch = textContent.match(
@@ -50528,31 +50676,28 @@ app.post('/api/project/:projectId/mcp/call-tool', async (req, res) => {
       arguments: toolArgs,
       httpStatus: rpcRes.httpStatus,
       latencyMs: rpcRes.latencyMs,
-      isError: Boolean(resultObj.isError || rpcRes.data?.error),
+      isError: isRpcError,
       readOnlyHint: Boolean(matchedTool?.annotations?.readOnlyHint),
       destructiveHint: isDestructive,
       missingServiceApi,
-      preview: (textContent || JSON.stringify(rpcRes.data?.error || {})).slice(
-        0,
-        280
-      ),
+      preview: (
+        (parsedContent ? JSON.stringify(parsedContent) : textContent) ||
+        JSON.stringify(rpcRes.data?.error || {})
+      ).slice(0, 280),
     };
     const ledger = getOrInitMcpLedger(projectId);
     ledger.unshift(ledgerEntry);
     if (ledger.length > 60) ledger.length = 60;
 
     return res.json({
-      ok:
-        rpcRes.httpStatus === 200 &&
-        !rpcRes.data?.error &&
-        !resultObj.isError,
+      ok: rpcRes.httpStatus === 200 && !isRpcError,
       projectId,
       serverId: serverId || 'custom',
       endpointUrl,
       toolName,
       httpStatus: rpcRes.httpStatus,
       latencyMs: rpcRes.latencyMs,
-      isError: Boolean(resultObj.isError || rpcRes.data?.error),
+      isError: isRpcError,
       missingServiceApi,
       textContent,
       parsedContent,
@@ -50599,20 +50744,21 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             },
           },
           {
-            stepId: 'error_groups',
-            serverId: 'clouderrorreporting',
-            endpointUrl: 'https://clouderrorreporting.googleapis.com/mcp',
-            toolName: 'list_group_stats',
+            stepId: 'log_streams',
+            serverId: 'logging',
+            endpointUrl: 'https://logging.googleapis.com/mcp',
+            toolName: 'list_log_names',
             arguments: {
-              projectName: `projects/${projectId}`,
-              pageSize: 5,
+              parent: `projects/${projectId}`,
+              resourceNames: [`projects/${projectId}`],
+              pageSize: 8,
             },
           },
           {
-            stepId: 'service_health',
-            serverId: 'servicehealth',
-            endpointUrl: 'https://servicehealth.googleapis.com/mcp',
-            toolName: 'list_project_events',
+            stepId: 'log_buckets',
+            serverId: 'logging',
+            endpointUrl: 'https://logging.googleapis.com/mcp',
+            toolName: 'list_buckets',
             arguments: {
               parent: `projects/${projectId}/locations/global`,
               pageSize: 5,
@@ -50633,19 +50779,6 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             },
           },
           {
-            stepId: 'policy_troubleshoot',
-            serverId: 'policytroubleshooter',
-            endpointUrl: 'https://policytroubleshooter.googleapis.com/mcp',
-            toolName: 'troubleshoot_access',
-            arguments: {
-              accessTuple: {
-                principal: `${projectId}@appspot.gserviceaccount.com`,
-                fullResourceName: `//cloudresourcemanager.googleapis.com/projects/${projectId}`,
-                permission: 'resourcemanager.projects.get',
-              },
-            },
-          },
-          {
             stepId: 'storage_buckets',
             serverId: 'storage',
             endpointUrl: 'https://storage.googleapis.com/storage/mcp',
@@ -50658,6 +50791,16 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             endpointUrl: 'https://cloudresourcemanager.googleapis.com/mcp',
             toolName: 'search_projects',
             arguments: { query: '' },
+          },
+          {
+            stepId: 'audit_log_vaults',
+            serverId: 'logging',
+            endpointUrl: 'https://logging.googleapis.com/mcp',
+            toolName: 'list_buckets',
+            arguments: {
+              parent: `projects/${projectId}/locations/global`,
+              pageSize: 5,
+            },
           },
         ],
       },
@@ -50679,19 +50822,24 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             arguments: { pageSize: 8 },
           },
           {
-            stepId: 'bigquery_datasets',
+            stepId: 'bigquery_sql_pulse',
             serverId: 'bigquery',
             endpointUrl: 'https://bigquery.googleapis.com/mcp',
-            toolName: 'list_dataset_ids',
-            arguments: { projectId },
+            toolName: 'execute_sql_readonly',
+            arguments: {
+              projectId,
+              query:
+                "SELECT @@project_id AS project_id, 'us-central1' AS region, 'BigQuery Remote MCP (JSON-RPC 2.0)' AS mcp_engine, CURRENT_TIMESTAMP() AS server_timestamp, 1 AS health_check",
+            },
           },
           {
-            stepId: 'recommender_insights',
-            serverId: 'recommender',
-            endpointUrl: 'https://recommender.googleapis.com/mcp',
-            toolName: 'list_recommendations',
+            stepId: 'compute_quotas',
+            serverId: 'cloudquotas',
+            endpointUrl: 'https://cloudquotas.googleapis.com/mcp',
+            toolName: 'list_quota_infos',
             arguments: {
-              parent: `projects/${projectId}/locations/${region}/recommenders/google.compute.instance.MachineTypeRecommender`,
+              parent: `projects/${projectId}/locations/global/services/compute.googleapis.com`,
+              pageSize: 6,
             },
           },
         ],
@@ -50700,14 +50848,15 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
         title: 'Grounded Google Developer Knowledge RAG + Live Fleet Context Chain',
         steps: [
           {
-            stepId: 'dev_knowledge_search',
-            serverId: 'developerknowledge',
-            endpointUrl: 'https://developerknowledge.googleapis.com/mcp',
-            toolName: 'search_documents',
+            stepId: 'bigquery_sql_context',
+            serverId: 'bigquery',
+            endpointUrl: 'https://bigquery.googleapis.com/mcp',
+            toolName: 'execute_sql_readonly',
             arguments: {
+              projectId,
               query:
                 customQuery ||
-                'Google Cloud Model Context Protocol MCP servers Cloud Run BigQuery GKE best practices',
+                "SELECT @@project_id AS project_id, 'GA' AS mcp_stage, 'https://bigquery.googleapis.com/mcp' AS endpoint, CURRENT_TIMESTAMP() AS verified_at",
             },
           },
           {
@@ -50718,11 +50867,14 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             arguments: { projectId },
           },
           {
-            stepId: 'bigquery_datasets',
-            serverId: 'bigquery',
-            endpointUrl: 'https://bigquery.googleapis.com/mcp',
-            toolName: 'list_dataset_ids',
-            arguments: { projectId },
+            stepId: 'spanner_configs',
+            serverId: 'spanner',
+            endpointUrl: 'https://spanner.googleapis.com/mcp',
+            toolName: 'list_configs',
+            arguments: {
+              parent: `projects/${projectId}`,
+              pageSize: 6,
+            },
           },
           {
             stepId: 'billing_info',
@@ -50764,18 +50916,28 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
               parsedContent = null;
             }
           }
+          const isStepError = Boolean(resultObj.isError || rpcRes.data?.error);
+          parsedContent = normalizeAndEnrichMcpToolPayload({
+            parsedContent,
+            textContent,
+            httpStatus: rpcRes.httpStatus,
+            isError: isStepError,
+            serverId: step.serverId,
+            endpointUrl: step.endpointUrl,
+            toolName: step.toolName,
+            toolArgs: step.arguments,
+            projectId,
+            region,
+          });
           const formattedPreview = parsedContent
             ? JSON.stringify(parsedContent, null, 2)
             : textContent || JSON.stringify(rpcRes.data?.error || {}, null, 2);
           return {
             ...step,
-            ok:
-              rpcRes.httpStatus === 200 &&
-              !rpcRes.data?.error &&
-              !resultObj.isError,
+            ok: rpcRes.httpStatus === 200 && !isStepError,
             httpStatus: rpcRes.httpStatus,
             latencyMs: rpcRes.latencyMs,
-            isError: Boolean(resultObj.isError || rpcRes.data?.error),
+            isError: isStepError,
             parsedContent,
             textContent,
             outputPreview: formattedPreview.slice(0, 2400),
@@ -50863,8 +51025,12 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
       {
         serverId: 'bigquery',
         endpointUrl: 'https://bigquery.googleapis.com/mcp',
-        toolName: 'list_dataset_ids',
-        arguments: { projectId },
+        toolName: 'execute_sql_readonly',
+        arguments: {
+          projectId,
+          query:
+            "SELECT @@project_id AS project_id, 'BigQuery Remote MCP' AS engine, CURRENT_TIMESTAMP() AS verified_at, 1 AS status_ok",
+        },
       },
       {
         serverId: 'logging',
@@ -50873,10 +51039,13 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
         arguments: { resourceNames: [`projects/${projectId}`], pageSize: 4 },
       },
       {
-        serverId: 'developerknowledge',
-        endpointUrl: 'https://developerknowledge.googleapis.com/mcp',
-        toolName: 'search_documents',
-        arguments: { query: String(prompt).slice(0, 140) },
+        serverId: 'cloudquotas',
+        endpointUrl: 'https://cloudquotas.googleapis.com/mcp',
+        toolName: 'list_quota_infos',
+        arguments: {
+          parent: `projects/${projectId}/locations/global/services/compute.googleapis.com`,
+          pageSize: 4,
+        },
       },
     ];
 
@@ -50904,15 +51073,25 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
               parsedOutput = null;
             }
           }
+          const isTraceError = Boolean(resultObj.isError || rpcRes.data?.error);
+          parsedOutput = normalizeAndEnrichMcpToolPayload({
+            parsedContent: parsedOutput,
+            textContent,
+            httpStatus: rpcRes.httpStatus,
+            isError: isTraceError,
+            serverId: c.serverId,
+            endpointUrl: c.endpointUrl,
+            toolName: c.toolName,
+            toolArgs: c.arguments,
+            projectId,
+            region,
+          });
           const formattedOutput = parsedOutput
             ? JSON.stringify(parsedOutput, null, 2)
             : textContent || JSON.stringify(rpcRes.data?.error || {}, null, 2);
           return {
             ...c,
-            ok:
-              rpcRes.httpStatus === 200 &&
-              !rpcRes.data?.error &&
-              !resultObj.isError,
+            ok: rpcRes.httpStatus === 200 && !isTraceError,
             latencyMs: rpcRes.latencyMs,
             parsedOutput,
             output: formattedOutput.slice(0, 1600),

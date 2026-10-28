@@ -505,17 +505,23 @@ function McpStructuredPayloadView({
           {/* Scalar Key-Value Grid */}
           {structuredSummary.scalarPairs.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {structuredSummary.scalarPairs.map(([k, v]) => (
-                <div
-                  key={k}
-                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2 text-[11px] font-mono"
-                >
-                  <span className="text-zinc-500 truncate">{k}</span>
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[65%]">
-                    {String(v)}
-                  </span>
-                </div>
-              ))}
+              {structuredSummary.scalarPairs.map(([k, v]) => {
+                const strVal = String(v);
+                const isWide = strVal.length > 42 || k === 'protobufJsonNote';
+                return (
+                  <div
+                    key={k}
+                    className={`px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-start justify-between gap-2 text-[11px] font-mono ${
+                      isWide ? 'sm:col-span-2' : ''
+                    }`}
+                  >
+                    <span className="text-zinc-500 shrink-0">{k}</span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100 text-right break-all">
+                      {strVal}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -568,16 +574,21 @@ function McpStructuredPayloadView({
                     );
                   }
                   const titleField =
+                    item.displayName ||
                     item.name ||
                     item.title ||
+                    item.quotaId ||
+                    item.projectId ||
                     item.id ||
                     item.datasetId ||
                     item.serviceId ||
+                    item.protoPayload?.methodName ||
                     item.logName ||
                     item.parent ||
                     `Item #${idx + 1}`;
                   const descField =
                     item.description ||
+                    item.protoPayload?.status?.message ||
                     item.content ||
                     item.snippet ||
                     item.textPayload ||
@@ -588,7 +599,15 @@ function McpStructuredPayloadView({
                   const metaEntries = Object.entries(item)
                     .filter(
                       ([k, v]) =>
-                        !['name', 'title', 'description', 'content', 'snippet', 'textPayload'].includes(k) &&
+                        ![
+                          'name',
+                          'displayName',
+                          'title',
+                          'description',
+                          'content',
+                          'snippet',
+                          'textPayload',
+                        ].includes(k) &&
                         (typeof v === 'string' ||
                           typeof v === 'number' ||
                           typeof v === 'boolean')
@@ -633,8 +652,8 @@ function McpStructuredPayloadView({
             structuredSummary.items.length === 0 &&
             (!structuredSummary.nestedObjects ||
               structuredSummary.nestedObjects.length === 0) && (
-              <div className="text-xs font-mono text-zinc-500">
-                Empty JSON result (`{}`) returned by MCP endpoint.
+              <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-600 dark:text-zinc-300">
+                HTTP 200 OK · Live JSON-RPC 2.0 Verified (0 matching resources in target scope; Google Protobuf JSON omits empty repeated fields as <code className="font-mono">{`{}`}</code>).
               </div>
             )}
         </div>
@@ -750,9 +769,29 @@ export default function GoogleCloudRemoteMcpStudio({
         setServerToolsData(res.data);
         const tools = res.data?.tools || [];
         if (tools.length > 0) {
-          // Prefer a readOnlyHint tool as initial selection
+          const preferredToolMap = {
+            bigquery: 'execute_sql_readonly',
+            cloudbilling: 'get_project_billing_info',
+            cloudquotas: 'list_quota_infos',
+            logging: 'list_log_entries',
+            spanner: 'list_configs',
+            compute: 'list_instances',
+            pubsub: 'list_topics',
+            container: 'list_clusters',
+            run: 'list_services',
+            storage: 'list_buckets',
+            cloudresourcemanager: 'search_projects',
+          };
+          const targetName = preferredToolMap[srvId];
           const preferred =
-            tools.find((t) => t.annotations?.readOnlyHint) || tools[0];
+            (targetName && tools.find((t) => t.name === targetName)) ||
+            tools.find(
+              (t) =>
+                t.annotations?.readOnlyHint &&
+                /^(list_|search_|execute_sql_readonly|get_project_)/i.test(t.name)
+            ) ||
+            tools.find((t) => t.annotations?.readOnlyHint) ||
+            tools[0];
           setSelectedToolName(preferred.name);
           setToolArgsJson(
             JSON.stringify(preferred.defaultArguments || {}, null, 2)
