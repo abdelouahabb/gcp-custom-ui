@@ -1006,14 +1006,15 @@ export default function DataLakehouseAiPipelineBar({
             </div>
           )}
 
-          {/* Interactive Draggable Mermaid Flowchart (Exclusively for Topology Stages 1–3 when non-zero resources exist; closed by default) */}
+          {/* Interactive Draggable Mermaid Flowchart (Exclusively for Topology Stages 1–3 when >=1 edge connects real resources; closed by default) */}
           {activeStage &&
             [
               'STAGE_1_RAW_INGESTION',
               'STAGE_2_BIGLAKE_FEDERATION',
               'STAGE_3_MEDALLION_WAREHOUSE',
             ].includes(activeStage.id) &&
-            activeStage.mermaidDsl && (
+            activeStage.mermaidDsl &&
+            parseMermaidFlowchartLr(activeStage.mermaidDsl).edges.length > 0 && (
               <div className="rounded-xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.04] via-teal-500/[0.03] to-blue-500/[0.04] p-3 space-y-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div

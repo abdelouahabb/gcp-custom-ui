@@ -1044,12 +1044,13 @@ export default function EnterpriseStackPipelineBar({
             </div>
           )}
 
-          {/* Live Mermaid Architecture & Dataflow Topology (Only for Infrastructure Topology Stages 1–3 when non-zero resources exist; closed by default) */}
+          {/* Live Mermaid Architecture & Dataflow Topology (Only for Infrastructure Topology Stages 1–3 when >=1 edge connects real resources; closed by default) */}
           {activeStage &&
             ['STAGE_1_PERIMETER_IAM', 'STAGE_2_STORAGE_LAKEHOUSE', 'STAGE_3_COMPUTE_SERVERLESS'].includes(
               activeStage.id
             ) &&
-            activeStage.mermaidDsl && (
+            activeStage.mermaidDsl &&
+            parseMermaidFlowchartLr(activeStage.mermaidDsl).edges.length > 0 && (
             <div className="rounded-xl border border-indigo-500/25 bg-gradient-to-r from-indigo-500/[0.04] via-blue-500/[0.03] to-emerald-500/[0.04] p-3 space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div

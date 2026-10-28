@@ -73174,41 +73174,39 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
     const primaryDataset = datasets[0]?.name || 'lakehouse_gold';
     const primaryRegion = buckets[0]?.location || datasets[0]?.location || 'US';
 
-    // --- Stage 1 Mermaid: Raw Ingestion & Lake Storage (Only non-zero buckets & Pub/Sub topics) ---
+    // --- Stage 1 Mermaid: Raw Ingestion & Lake Storage ---
+    // Rule: No need to draw if we have nothing to connect! Strictly require BOTH >=1 GCS bucket AND >=1 Pub/Sub topic.
     let stage1MermaidDsl = null;
-    if (buckets.length + pubsubTopics.length > 0) {
+    if (buckets.length > 0 && pubsubTopics.length > 0) {
       const s1 = [`flowchart LR`];
-      if (pubsubTopics.length > 0) {
-        s1.push(`  subgraph STREAM["Pub/Sub Event Streams (${pubsubTopics.length} Active)"]`);
-        pubsubTopics.slice(0, 3).forEach((t, idx) => {
-          s1.push(`    PS${idx}["Pub/Sub Topic: ${t.name}"]`);
-        });
-        s1.push(`  end`);
-      }
-      if (buckets.length > 0) {
-        s1.push(`  subgraph GCS_RAW["Cloud Storage Raw Lake (${buckets.length} Active)"]`);
-        buckets.slice(0, 4).forEach((b, idx) => {
-          s1.push(
-            `    BKT${idx}["GCS Bucket: gs://${b.name} (${b.location} · ${b.storageClass})"]`
-          );
-        });
-        s1.push(`  end`);
-      }
-      if (pubsubTopics.length > 0 && buckets.length > 0) {
-        pubsubTopics.slice(0, 3).forEach((_, idx) => {
-          s1.push(`  PS${idx} -->|"Cloud Storage Subscription"| BKT0`);
-        });
-      } else if (buckets.length > 1) {
-        s1.push(`  BKT0 -->|"Multi-Bucket Lakehouse Zone"| BKT1`);
-      }
+      s1.push(`  subgraph STREAM["Pub/Sub Event Streams (${pubsubTopics.length} Active)"]`);
+      pubsubTopics.slice(0, 3).forEach((t, idx) => {
+        s1.push(`    PS${idx}["Pub/Sub Topic: ${t.name}"]`);
+      });
+      s1.push(`  end`);
+      s1.push(`  subgraph GCS_RAW["Cloud Storage Raw Lake (${buckets.length} Active)"]`);
+      buckets.slice(0, 4).forEach((b, idx) => {
+        s1.push(
+          `    BKT${idx}["GCS Bucket: gs://${b.name} (${b.location} · ${b.storageClass})"]`
+        );
+      });
+      s1.push(`  end`);
+      pubsubTopics.slice(0, 3).forEach((_, idx) => {
+        s1.push(`  PS${idx} -->|"Cloud Storage Subscription"| BKT0`);
+      });
       stage1MermaidDsl = s1.join('\n');
     }
 
-    // --- Stage 2 Mermaid: BigLake Iceberg & Zero-Copy Federation (Only non-zero buckets, connections, SQL, or Spanner) ---
-    const totalStage2Assets =
-      buckets.length + bqConnections.length + sqlInstances.length + spannerInstances.length;
+    // --- Stage 2 Mermaid: BigLake Iceberg & Zero-Copy Federation ---
+    // Rule: Strictly null when 0 BigLake connections, 0 Cloud SQL instances, and 0 Spanner instances exist!
+    const totalFederationEngines =
+      bqConnections.length + sqlInstances.length + spannerInstances.length;
+    const totalStage2Assets = buckets.length + totalFederationEngines;
     let stage2MermaidDsl = null;
-    if (totalStage2Assets > 0) {
+    if (
+      totalFederationEngines > 0 &&
+      (buckets.length > 0 || bqConnections.length > 0)
+    ) {
       const s2 = [`flowchart LR`];
       if (buckets.length > 0) {
         s2.push(`  subgraph OBJECT_STORE["GCS Object Storage (${buckets.length} Active)"]`);
@@ -73240,32 +73238,19 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
         buckets.slice(0, 3).forEach((_, idx) => {
           s2.push(`  BKT${idx} -->|"Zero-Copy URI"| BL0`);
         });
-      } else if (buckets.length > 0) {
-        s2.push(
-          `  subgraph FED["BigLake & External URI Engine"]`,
-          `    BL0["BigLake Iceberg / External URIs (${buckets.length} Bucket Source)"]`,
-          `  end`
-        );
-        buckets.slice(0, 3).forEach((_, idx) => {
-          s2.push(`  BKT${idx} -->|"Parquet / Iceberg / JSON"| BL0`);
-        });
-      }
-      if (sqlInstances.length > 0) {
         sqlInstances.slice(0, 2).forEach((_, idx) => {
           s2.push(`  SQL${idx} -->|"EXTERNAL_QUERY()"| BL0`);
         });
-      }
-      if (spannerInstances.length > 0) {
         spannerInstances.slice(0, 2).forEach((_, idx) => {
           s2.push(`  SPN${idx} -->|"Zero-ETL Federation"| BL0`);
         });
       }
-      stage2MermaidDsl = s2.join('\n');
+      stage2MermaidDsl = s2.some((l) => l.includes('-->')) ? s2.join('\n') : null;
     }
 
     // --- Stage 3 Mermaid: Medallion Warehouse & Capacitor SQL (Strictly null when 0 BigQuery datasets!) ---
     let stage3MermaidDsl = null;
-    if (datasets.length > 0) {
+    if (datasets.length > 0 && (buckets.length > 0 || tables.length > 0)) {
       const s3 = [`flowchart LR`];
       if (buckets.length > 0) {
         s3.push(`  subgraph RAW["GCS Raw Zone (${buckets.length} Active)"]`);
@@ -73296,7 +73281,7 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
           s3.push(`  DS0 -->|"Capacitor Columnar"| TBL${idx}`);
         });
       }
-      stage3MermaidDsl = s3.join('\n');
+      stage3MermaidDsl = s3.some((l) => l.includes('-->')) ? s3.join('\n') : null;
     }
 
     // Synthesize live SQL query for BigQuery Studio handoff
@@ -73316,12 +73301,12 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
         secondaryTab: 'DATA_ENGINEER_STUDIO',
         secondarySubTab: 'PUBSUB_STREAMING',
         secondaryLabel: 'Pub/Sub & Eventarc Studio',
-        status: buckets.length + pubsubTopics.length > 0 ? 'OPTIMAL' : 'READY',
+        status: buckets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
         metricBadge: `${buckets.length} GCS · ${pubsubTopics.length} Pub/Sub`,
         summary:
-          buckets.length + pubsubTopics.length > 0
+          buckets.length > 0
             ? `Raw Lakehouse landing zone online with ${buckets.length} Cloud Storage bucket(s) (${buckets.map((b) => `gs://${b.name}`).slice(0, 2).join(', ')}) and ${pubsubTopics.length} Pub/Sub streaming topic(s).`
-            : `0 Cloud Storage buckets or Pub/Sub topics in "${projectId}" — provision a raw lakehouse bucket or Pub/Sub + DLQ pair below.`,
+            : `0 Cloud Storage buckets in "${projectId}" ($0.00/mo storage idle${pubsubTopics.length > 0 ? `, ${pubsubTopics.length} Pub/Sub topic(s) detected` : ''}) — provision a raw lakehouse bucket below to unlock Lakehouse ingestion.`,
         cliCmd: `gcloud storage buckets list --project=${projectId}`,
         mermaidDsl: stage1MermaidDsl,
         stageItems: [
@@ -73331,6 +73316,17 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
             meta: `${b.location} · ${b.storageClass} · 7d Soft-Delete`,
             targetTab: 'CLOUD_STORAGE',
           })),
+          ...(buckets.length === 0
+            ? [
+                {
+                  kind: '0 Cloud Storage Buckets',
+                  name: '+ Create Cloud Storage Bucket (Always-Free 5 GB)',
+                  meta: 'US Standard · Uniform IAM · 7-Day Soft-Delete',
+                  targetTab: 'CLOUD_STORAGE',
+                  provisionType: 'GCS',
+                },
+              ]
+            : []),
           ...pubsubTopics.slice(0, 3).map((t) => ({
             kind: 'Pub/Sub Stream',
             name: t.name,
@@ -73359,7 +73355,7 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
         targetTab: 'BIGLAKE_STUDIO',
         secondaryTab: 'CLOUD_SQL_STUDIO',
         secondaryLabel: 'Cloud SQL & AlloyDB Studio',
-        status: totalStage2Assets > 0 ? 'OPTIMAL' : 'READY',
+        status: totalFederationEngines > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
         metricBadge: `${buckets.length} GCS Sources · ${sqlInstances.length + spannerInstances.length} OLTP DBs`,
         summary: `Zero-copy BigLake table format & federated query bridge connecting ${buckets.length} GCS bucket(s), ${sqlInstances.length} Cloud SQL instance(s), ${spannerInstances.length} Spanner instance(s), and ${bqConnections.length} BigLake connection(s).`,
         cliCmd: `gcloud alpha bq connections list --project=${projectId} --location=us`,
