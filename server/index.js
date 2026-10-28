@@ -73076,12 +73076,27 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
         });
       });
 
+      const SYSTEM_PUBSUB_PREFIXES = [
+        'container-analysis-',
+        'eventarc-',
+        'gcf-',
+        'cloud-builds',
+        'firebase-',
+      ];
       const discoveredTopics = (
         pubsubRes.status === 'fulfilled' ? pubsubRes.value.data?.topics || [] : []
-      ).map((t) => ({
-        name: (t.name || '').split('/').pop(),
-        fullName: t.name,
-      }));
+      )
+        .map((t) => ({
+          name: (t.name || '').split('/').pop(),
+          fullName: t.name,
+        }))
+        .filter(
+          (t) =>
+            t.name &&
+            !SYSTEM_PUBSUB_PREFIXES.some((prefix) =>
+              t.name.toLowerCase().startsWith(prefix)
+            )
+        );
 
       const discoveredSql = (
         sqlRes.status === 'fulfilled' ? sqlRes.value.data?.items || [] : []
@@ -73298,15 +73313,14 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
         title: '1. Raw Lake Storage & Pub/Sub Event Ingestion',
         shortTitle: 'GCS Lake & Pub/Sub',
         targetTab: 'CLOUD_STORAGE',
-        secondaryTab: 'DATA_ENGINEER_STUDIO',
-        secondarySubTab: 'PUBSUB_STREAMING',
-        secondaryLabel: 'Pub/Sub & Eventarc Studio',
+        secondaryTab: 'CLOUD_FUNCTIONS',
+        secondaryLabel: 'Functions & Eventarc / Pub/Sub Studio',
         status: buckets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
         metricBadge: `${buckets.length} GCS · ${pubsubTopics.length} Pub/Sub`,
         summary:
           buckets.length > 0
-            ? `Raw Lakehouse landing zone online with ${buckets.length} Cloud Storage bucket(s) (${buckets.map((b) => `gs://${b.name}`).slice(0, 2).join(', ')}) and ${pubsubTopics.length} Pub/Sub streaming topic(s).`
-            : `0 Cloud Storage buckets in "${projectId}" ($0.00/mo storage idle${pubsubTopics.length > 0 ? `, ${pubsubTopics.length} Pub/Sub topic(s) detected` : ''}) — provision a raw lakehouse bucket below to unlock Lakehouse ingestion.`,
+            ? `Raw Lakehouse landing zone online with ${buckets.length} Cloud Storage bucket(s) (${buckets.map((b) => `gs://${b.name}`).slice(0, 2).join(', ')}) and ${pubsubTopics.length} user Pub/Sub streaming topic(s).`
+            : `0 Cloud Storage buckets in "${projectId}" ($0.00/mo storage idle${pubsubTopics.length > 0 ? `, ${pubsubTopics.length} user Pub/Sub topic(s) detected: ${pubsubTopics.map((t) => t.name).join(', ')}` : ''}) — provision a raw lakehouse bucket below to unlock Lakehouse ingestion.`,
         cliCmd: `gcloud storage buckets list --project=${projectId}`,
         mermaidDsl: stage1MermaidDsl,
         stageItems: [
@@ -73331,17 +73345,15 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
             kind: 'Pub/Sub Stream',
             name: t.name,
             meta: 'Real-Time Ingestion Topic',
-            targetTab: 'DATA_ENGINEER_STUDIO',
-            subTab: 'PUBSUB_STREAMING',
+            targetTab: 'CLOUD_FUNCTIONS',
           })),
           ...(pubsubTopics.length === 0
             ? [
                 {
                   kind: '0 Pub/Sub Topics ($0 Idle)',
-                  name: '+ Open Pub/Sub + DLQ Architect',
+                  name: '+ Open Pub/Sub & Eventarc Studio',
                   meta: 'First 10 GiB/mo Free · Auto-Wired Dead-Letter Queue',
-                  targetTab: 'DATA_ENGINEER_STUDIO',
-                  subTab: 'PUBSUB_STREAMING',
+                  targetTab: 'CLOUD_FUNCTIONS',
                 },
               ]
             : []),
@@ -73480,14 +73492,14 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
             name: repo.name,
             meta: `${repo.region} · Git-Backed SQLX Repository`,
             targetTab: 'DATA_ENGINEER_STUDIO',
-            subTab: 'DATAFORM_DBT',
+            subTab: 'DATAFORM_SQLX',
           })),
           {
             kind: 'Dataform SQLX',
             name: 'definitions/medallion_lakehouse.sqlx',
             meta: 'Incremental Partitioned & Clustered Gold Mart',
             targetTab: 'DATA_ENGINEER_STUDIO',
-            subTab: 'DATAFORM_DBT',
+            subTab: 'DATAFORM_SQLX',
           },
           {
             kind: 'Cloud Composer DAG',
