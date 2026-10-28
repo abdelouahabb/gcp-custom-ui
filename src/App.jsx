@@ -5856,6 +5856,7 @@ function CloudPulseCockpit() {
                     telemetry={overview?.telemetry}
                     projectId={selectedProjectId}
                     onOpenCopilot={handleOpenCopilotWithPrompt}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}

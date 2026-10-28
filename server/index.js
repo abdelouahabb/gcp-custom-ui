@@ -7781,6 +7781,30 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       });
     }
 
+    if (
+      resolvedType === 'GKE Cluster' ||
+      resolvedType === 'GKE Autopilot Cluster' ||
+      resolvedType === 'GKE_CLUSTER'
+    ) {
+      const loc = region || 'us-central1';
+      const op = await gcpFetch(
+        `https://container.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(loc)}/clusters/${encodeURIComponent(
+          name
+        )}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      invalidateProjectOverviewCache();
+      return res.json({
+        ok: true,
+        operation: op,
+        message: `Dispatched deletion of GKE cluster "${name}" in ${loc}.`,
+      });
+    }
+
     res
       .status(400)
       .json({ error: `Deletion not supported for type: ${resolvedType}` });
@@ -7894,6 +7918,20 @@ app.post(
         ];
         projectEnabledApisCache.set(projectId, updated);
       }
+    }
+
+    overviewSwrCache.delete(projectId);
+    overviewInFlight.delete(projectId);
+    try {
+      recordFlightEvent(projectId, {
+        action: isDisable ? 'DISABLE_GCP_API' : 'ENABLE_GCP_API',
+        resourceType: 'GCP_API',
+        resourceName: cleanService,
+        region: 'global',
+        details: `${isDisable ? 'Disabled' : 'Enabled'} Google Cloud API: ${cleanService}`,
+      });
+    } catch {
+      // ignore
     }
 
     res.json({

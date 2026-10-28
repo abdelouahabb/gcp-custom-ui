@@ -258,6 +258,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
       isStale: false,
       badgeLabel: 'ACTIVE VM WORKLOAD',
       badgeTone: 'emerald',
+      targetTab: 'VM_SSH',
       originTitle: `Live GCE Instance (${details.machineType || row.storageClass || 'e2-medium'})`,
       howCreated: `Provisioned in zone ${details.zone || row.region} with persistent boot disk.`,
       whyStayed: `Currently ${row.status || 'RUNNING'} in Compute Engine.`,
@@ -273,6 +274,7 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
       isStale: false,
       badgeLabel: attachedVmNames.length > 0 ? 'ACTIVE PERIMETER' : 'DEFAULT VPC PERIMETER',
       badgeTone: 'blue',
+      targetTab: 'VPC_NETWORKS',
       originTitle: type === 'VPC Network' ? 'Project VPC Network Backbone' : 'VPC Firewall Security Rule',
       howCreated:
         lower.startsWith('default')
@@ -292,6 +294,11 @@ function analyzeResourceLineage(row, allResources = [], projectId = '') {
     isStale: false,
     badgeLabel: 'ACTIVE RESOURCE',
     badgeTone: 'emerald',
+    targetTab: type.includes('GKE')
+      ? 'GKE_STUDIO'
+      : type === 'Cloud Run Service'
+      ? 'CLOUD_RUN'
+      : 'OVERVIEW',
     originTitle: `${type || 'GCP Resource'}`,
     howCreated: `Provisioned in ${row.region || 'global'}.`,
     whyStayed: 'Active resource in project inventory.',
@@ -557,6 +564,8 @@ export default function ResourceControlCenter({
                         'BigQuery Dataset',
                         'Compute Engine VM',
                         'Cloud Run Service',
+                        'GKE Cluster',
+                        'GKE Autopilot Cluster',
                         'VPC Firewall Rule',
                         'Enabled GCP Service API',
                       ].includes(item.type);
@@ -1349,6 +1358,8 @@ export default function ResourceControlCenter({
                 'Cloud Storage Bucket',
                 'BigQuery Dataset',
                 'Cloud Run Service',
+                'GKE Cluster',
+                'GKE Autopilot Cluster',
                 'Enabled GCP Service API',
               ].includes(selectedResource.type) &&
                 onDeleteResource && (

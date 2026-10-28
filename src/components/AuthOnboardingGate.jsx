@@ -65,12 +65,15 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
 
   // Other auth mode inputs
   const [accessTokenInput, setAccessTokenInput] = useState('');
+  const [showToken, setShowToken] = useState(false);
   const [adcJsonInput, setAdcJsonInput] = useState('');
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   // Step 2: Project Picker after account is authenticated
   const [connectedSession, setConnectedSession] = useState(null);
   const [selectedProject, setSelectedProject] = useState('');
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [customProjectIdInput, setCustomProjectIdInput] = useState('');
 
   useEffect(() => {
     axios
@@ -311,6 +314,47 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
         {/* STEP 1: Connect Account (if not yet verified) */}
         {!connectedSession ? (
           <>
+            {/* Instant 1-Click Local ADC / Cloud Run Session Banner when host credentials exist */}
+            {discoverData.detectedAccounts?.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                  <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5 sm:mt-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 flex-wrap">
+                      <span>Detected Local GCP Session Ready:</span>
+                      <span className="font-mono truncate">
+                        {discoverData.activeAccount ||
+                          discoverData.detectedAccounts[0]?.email}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+                      Default Project:{' '}
+                      <span className="font-mono font-semibold">
+                        {discoverData.defaultProject || 'auto-detect'}
+                      </span>{' '}
+                      · Fast IPv4 OAuth2 Refresh
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() =>
+                    handleConnectLocalAccount(
+                      discoverData.activeAccount ||
+                        discoverData.detectedAccounts[0]?.email
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3.5 py-2 text-xs font-extrabold transition-colors shadow-sm shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  <span>
+                    {loading ? 'Connecting...' : '1-Click Connect Host Session'}
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Auth Method Tabs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-100 dark:bg-[#131314] p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
               <button
@@ -319,7 +363,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('GMAIL_OAUTH');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   authTab === 'GMAIL_OAUTH'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -335,7 +379,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('DETECTED');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   authTab === 'DETECTED'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -343,6 +387,11 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               >
                 <Terminal className="w-3.5 h-3.5" />
                 <span>Detected Session</span>
+                {discoverData.detectedAccounts?.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    {discoverData.detectedAccounts.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -351,7 +400,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('TOKEN');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   authTab === 'TOKEN'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -367,7 +416,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   setAuthTab('ADC_JSON');
                   setErrorMsg(null);
                 }}
-                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   authTab === 'ADC_JSON'
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -591,11 +640,20 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   </pre>
 
                   <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                      2. Paste OAuth 2.0 Bearer Token (Kept strictly in your browser session):
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-medium text-zinc-500">
+                        2. Paste OAuth 2.0 Bearer Token (Kept strictly in your browser session):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowToken((v) => !v)}
+                        className="text-[11px] font-mono text-blue-500 hover:text-blue-400 cursor-pointer"
+                      >
+                        {showToken ? 'Hide Token' : 'Show Token'}
+                      </button>
+                    </div>
                     <input
-                      type="password"
+                      type={showToken ? 'text' : 'password'}
                       required
                       value={accessTokenInput}
                       onChange={(e) => setAccessTokenInput(e.target.value)}
@@ -674,38 +732,87 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                Select Your Real Google Cloud Project ({connectedSession.projects?.length || 0} available):
-              </label>
+            <div className="space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Select Your Real Google Cloud Project ({connectedSession.projects?.length || 0} available):
+                </label>
+                {(connectedSession.projects?.length || 0) > 2 && (
+                  <input
+                    type="text"
+                    value={projectSearchQuery}
+                    onChange={(e) => setProjectSearchQuery(e.target.value)}
+                    placeholder="Filter projects by ID or name..."
+                    className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-md px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1">
-                {(connectedSession.projects || []).map((p) => {
-                  const isSel = selectedProject === p.projectId;
-                  return (
+                {(connectedSession.projects || [])
+                  .filter((p) => {
+                    if (!projectSearchQuery.trim()) return true;
+                    const q = projectSearchQuery.toLowerCase();
+                    return (
+                      String(p.projectId || '').toLowerCase().includes(q) ||
+                      String(p.name || '').toLowerCase().includes(q) ||
+                      String(p.projectNumber || '').includes(q)
+                    );
+                  })
+                  .map((p) => {
+                    const isSel = selectedProject === p.projectId;
+                    return (
+                      <button
+                        key={p.projectId}
+                        type="button"
+                        onClick={() => setSelectedProject(p.projectId)}
+                        className={`p-3.5 rounded-md border text-left transition-all flex items-start justify-between gap-2 cursor-pointer ${
+                          isSel
+                            ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/40'
+                            : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold font-mono truncate text-zinc-950 dark:text-zinc-50">
+                            {p.projectId}
+                          </div>
+                          <div className="text-[11px] text-zinc-500 truncate">
+                            {p.name} {p.projectNumber ? `· #${p.projectNumber}` : ''}
+                          </div>
+                        </div>
+                        {isSel && (
+                          <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Manual Project ID Fallback for IAM-restricted project listing */}
+              <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-[11px] text-zinc-500 shrink-0">
+                  Or enter a specific Project ID directly:
+                </span>
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={customProjectIdInput}
+                    onChange={(e) => setCustomProjectIdInput(e.target.value)}
+                    placeholder="e.g. my-production-gcp-project"
+                    className="flex-1 bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-md px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  {customProjectIdInput.trim() && (
                     <button
-                      key={p.projectId}
                       type="button"
-                      onClick={() => setSelectedProject(p.projectId)}
-                      className={`p-3.5 rounded-md border text-left transition-all flex items-start justify-between gap-2 ${
-                        isSel
-                          ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/40'
-                          : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
-                      }`}
+                      onClick={() => {
+                        const cleanId = customProjectIdInput.trim();
+                        setSelectedProject(cleanId);
+                      }}
+                      className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono font-bold cursor-pointer shrink-0"
                     >
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold font-mono truncate text-zinc-950 dark:text-zinc-50">
-                          {p.projectId}
-                        </div>
-                        <div className="text-[11px] text-zinc-500 truncate">
-                          {p.name} · #{p.projectNumber}
-                        </div>
-                      </div>
-                      {isSel && (
-                        <Check className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0 mt-0.5" />
-                      )}
+                      Use {customProjectIdInput.trim()}
                     </button>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             </div>
 
@@ -713,7 +820,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               type="button"
               disabled={!selectedProject}
               onClick={handleFinishOnboarding}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <FolderGit2 className="w-4 h-4" />
               <span>Launch Live Cockpit for {selectedProject}</span>
@@ -734,7 +841,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
             <Lock className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             Zero-Trust Mobile OAuth · Direct Google Cloud REST APIs
           </span>
-          <span className="font-mono">CloudPulse v2.6</span>
+          <span className="font-mono">CloudPulse 2026 v3.0 · SDK 591.0.0</span>
         </div>
       </div>
     </div>

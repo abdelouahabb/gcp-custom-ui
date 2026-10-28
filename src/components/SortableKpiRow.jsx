@@ -300,7 +300,10 @@ export default function SortableKpiRow({
       value: `${logsCount} events`,
       trendLabel: 'Live Tail Ready',
       subtitle: 'logging.googleapis.com',
-      badge: `${fetchLatencyMs || 240}ms`,
+      badge:
+        fetchLatencyMs === 0
+          ? 'SWR (<16ms)'
+          : `${fetchLatencyMs || 180}ms`,
       icon: Activity,
       primaryTargetLabel: 'Open Live Logs & Cloud Shell',
       clickHint:
@@ -310,6 +313,10 @@ export default function SortableKpiRow({
         {
           label: 'Live Logs & Shell',
           onClick: () => navigate('LOGS_SHELL'),
+        },
+        {
+          label: 'Recycle Bin (30d)',
+          onClick: () => navigate('RECYCLE_BIN'),
         },
         {
           label: 'Cloud SOC',
@@ -323,12 +330,27 @@ export default function SortableKpiRow({
     },
   ];
 
-  const [cardOrder, setCardOrder] = useState([
-    'kpi-storage',
-    'kpi-compute',
-    'kpi-apis',
-    'kpi-logs',
-  ]);
+  const defaultOrder = ['kpi-storage', 'kpi-compute', 'kpi-apis', 'kpi-logs'];
+  const [cardOrder, setCardOrder] = useState(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem('cloudpulse_kpi_card_order_v1') || 'null'
+      );
+      if (
+        Array.isArray(saved) &&
+        saved.length === defaultOrder.length &&
+        defaultOrder.every((id) => saved.includes(id))
+      ) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return defaultOrder;
+  });
+
+  const isCustomCardOrder =
+    cardOrder.join(',') !== defaultOrder.join(',');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -344,7 +366,16 @@ export default function SortableKpiRow({
       setCardOrder((items) => {
         const oldIndex = items.indexOf(active.id);
         const newIndex = items.indexOf(over.id);
-        return arrayMove(items, oldIndex, newIndex);
+        const nextOrder = arrayMove(items, oldIndex, newIndex);
+        try {
+          localStorage.setItem(
+            'cloudpulse_kpi_card_order_v1',
+            JSON.stringify(nextOrder)
+          );
+        } catch {
+          // ignore
+        }
+        return nextOrder;
       });
     }
   };
@@ -378,6 +409,8 @@ export default function SortableKpiRow({
             <span>
               {isSyncing
                 ? 'ASYNC STREAMING (NON-BLOCKING)'
+                : fetchLatencyMs === 0
+                ? 'LIVE SYNCED (SWR <16ms)'
                 : `LIVE SYNCED (${fetchLatencyMs || 180}ms)`}
             </span>
           </span>
@@ -391,6 +424,22 @@ export default function SortableKpiRow({
             >
               <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Sync Now</span>
+            </button>
+          )}
+          {isCustomCardOrder && (
+            <button
+              type="button"
+              onClick={() => {
+                setCardOrder(defaultOrder);
+                try {
+                  localStorage.removeItem('cloudpulse_kpi_card_order_v1');
+                } catch {
+                  // ignore
+                }
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 text-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
+            >
+              <span>Reset Card Order</span>
             </button>
           )}
         </div>
