@@ -1030,6 +1030,30 @@ export default function GoogleCloudRemoteMcpStudio({
     notify(`Copied ${label} to clipboard.`);
   };
 
+  const [agentRegistryProbe, setAgentRegistryProbe] = useState(null);
+  const [probingAgentRegistry, setProbingAgentRegistry] = useState(false);
+
+  const handleProbeGaAgentRegistry591 = async () => {
+    if (!projectId) return;
+    setProbingAgentRegistry(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/gcloud-sdk-591/agent-registry-probe`,
+        { params: { location: 'global' } }
+      );
+      setAgentRegistryProbe(res.data);
+      notify(
+        `SDK 591.0.0 GA Agent Registry probed (${res.data?.mcpServersCount || 0} MCP servers, ${res.data?.agentsCount || 0} agents, ${res.data?.skillsCount || 0} skills).`
+      );
+    } catch (err) {
+      notify(
+        `Agent Registry probe error: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setProbingAgentRegistry(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Executive Banner */}
@@ -1137,6 +1161,119 @@ export default function GoogleCloudRemoteMcpStudio({
               Protected by Human-in-the-Loop Safety Gate
             </div>
           </div>
+        </div>
+
+        {/* SDK 591.0.0 GA Agent Registry (skills, publishers, findings, agents, mcp-servers) & Agent Identity Bar */}
+        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-blue-500/30 space-y-2.5 font-mono text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+                GA 591.0.0 · 2026-10-27
+              </span>
+              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                Google Cloud Agent Registry (`mcp-servers`, `agents`, `skills`, `publishers`, `findings`) &amp; Cryptographic `AGENT_IDENTITY`
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={probingAgentRegistry}
+              onClick={handleProbeGaAgentRegistry591}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-3 h-3 ${probingAgentRegistry ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {probingAgentRegistry
+                  ? 'Probing GA Agent Registry...'
+                  : 'Probe Live GA Agent Registry (591.0.0)'}
+              </span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              {
+                label: 'GA mcp-servers list',
+                cli: `gcloud agent-registry mcp-servers list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA agents list',
+                cli: `gcloud agent-registry agents list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA skills list',
+                cli: `gcloud agent-registry skills list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA skills revisions',
+                cli: `gcloud agent-registry skills revisions list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA publishers list',
+                cli: `gcloud agent-registry publishers list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA findings list',
+                cli: `gcloud agent-registry findings list --location=global --project=${projectId}`,
+              },
+              {
+                label: 'GA VM --identity-type=AGENT_IDENTITY',
+                cli: `gcloud compute instances update agent-vm-01 --zone=us-central1-a --identity-type=AGENT_IDENTITY --project=${projectId}`,
+              },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => copyToClipboard(item.cli, item.label)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:bg-blue-500/10 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                <Copy className="w-3 h-3 text-blue-500" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {agentRegistryProbe && (
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 text-[11px]">
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">SDK Version</div>
+                <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {agentRegistryProbe.sdkVersion || '591.0.0'}
+                </div>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">GA MCP Servers</div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {agentRegistryProbe.mcpServersCount ?? 0}
+                </div>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">GA Agents</div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {agentRegistryProbe.agentsCount ?? 0}
+                </div>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">GA Skills</div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {agentRegistryProbe.skillsCount ?? 0}
+                </div>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">GA Publishers</div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {agentRegistryProbe.publishersCount ?? 0}
+                </div>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">GA Findings</div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {agentRegistryProbe.findingsCount ?? 0}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

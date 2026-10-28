@@ -84,13 +84,38 @@ export default function StudioGcpAdvantageBar({
   const [runningTimeTravel, setRunningTimeTravel] = useState(false);
   const [timeTravelResult, setTimeTravelResult] = useState(null);
 
-  // VM: 06 Live Host Migration
+  // VM: 06 Live Host Migration + SDK 591.0.0 Agent Identity & MIG In-Place Restart
   const [updatingVmName, setUpdatingVmName] = useState(null);
+  const [vmIdentityTarget, setVmIdentityTarget] = useState('agent-worker-vm-01');
+  const [vmIdentityZone, setVmIdentityZone] = useState('us-central1-a');
+  const [vmIdentityType, setVmIdentityType] = useState('AGENT_IDENTITY');
+  const [migTargetName, setMigTargetName] = useState('prod-stateless-mig');
 
-  // IAM: 07 IAM Surgeon + 10 Workload Identity OIDC
-  const [activeIamTool, setActiveIamTool] = useState('IAM_SURGEON'); // 'IAM_SURGEON' | 'OIDC_FEDERATION'
+  // VPC: SDK 591.0.0 GA Backend Service Circuit Breakers
+  const [cbBackendName, setCbBackendName] = useState('prod-http-backend-svc');
+  const [cbMaxConnections, setCbMaxConnections] = useState(1024);
+  const [cbMaxPendingRequests, setCbMaxPendingRequests] = useState(256);
+  const [cbMaxRequests, setCbMaxRequests] = useState(2048);
+  const [cbMaxRetries, setCbMaxRetries] = useState(3);
+
+  // IAM: 07 IAM Surgeon + 10 Workload Identity OIDC + SDK 591.0.0 --actor-providers & Workspace Key Access
+  const [activeIamTool, setActiveIamTool] = useState('IAM_SURGEON'); // 'IAM_SURGEON' | 'OIDC_FEDERATION' | 'WORKSPACE_KEY_ACCESS_591'
   const [wifPoolId, setWifPoolId] = useState('github-actions-oidc-pool');
   const [wifRepo, setWifRepo] = useState('org/cloud-production-repo');
+  const [wifActorProvider, setWifActorProvider] = useState('');
+  const [wifDiscoveryUri, setWifDiscoveryUri] = useState(
+    'https://token.actions.githubusercontent.com/.well-known/openid-configuration'
+  );
+
+  // STORAGE: SDK 591.0.0 GA Bucket Creation Labels
+  const [storageBucketLabels, setStorageBucketLabels] = useState(
+    'env=production,cost-center=ai-platform,sdk=591-0-0'
+  );
+
+  // GKE: SDK 591.0.0 GA Zero-Drain Live Node Config Update
+  const [gkeClusterTarget, setGkeClusterTarget] = useState('prod-autopilot-cluster');
+  const [gkeNodePoolTarget, setGkeNodePoolTarget] = useState('default-pool');
+  const [gkeUpdateLocation, setGkeUpdateLocation] = useState('us-central1');
 
   const fetchAudit = useCallback(async () => {
     if (!projectId) return;
@@ -471,7 +496,7 @@ export default function StudioGcpAdvantageBar({
           {/* =============================================================== */}
           {studioDomain === 'VPC' && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {[
                   {
                     id: 'REACHABILITY',
@@ -492,6 +517,12 @@ export default function StudioGcpAdvantageBar({
                     label: `Global Anycast IPv4 Allocator (${
                       anycastData?.globalAddressesCount || 0
                     } Reserved)`,
+                  },
+                  {
+                    id: 'LB_CIRCUIT_BREAKERS_591',
+                    icon: Lock,
+                    label:
+                      '[GA 591.0.0] Load Balancer Backend Circuit Breakers & WildFire TLS',
                   },
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -717,6 +748,128 @@ export default function StudioGcpAdvantageBar({
                   </button>
                 </form>
               )}
+
+              {activeVpcTool === 'LB_CIRCUIT_BREAKERS_591' && (
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                        GA 591.0.0
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        Compute Backend Service Circuit Breakers &amp; WildFire Inline ML TLS Policies
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Backend Service
+                      </label>
+                      <input
+                        type="text"
+                        value={cbBackendName}
+                        onChange={(e) => setCbBackendName(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Max Connections
+                      </label>
+                      <input
+                        type="number"
+                        value={cbMaxConnections}
+                        onChange={(e) => setCbMaxConnections(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Max Pending Reqs
+                      </label>
+                      <input
+                        type="number"
+                        value={cbMaxPendingRequests}
+                        onChange={(e) => setCbMaxPendingRequests(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Max Requests
+                      </label>
+                      <input
+                        type="number"
+                        value={cbMaxRequests}
+                        onChange={(e) => setCbMaxRequests(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Max Retries
+                      </label>
+                      <input
+                        type="number"
+                        value={cbMaxRetries}
+                        onChange={(e) => setCbMaxRetries(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(
+                            `gcloud compute backend-services update "${cbBackendName}" --global --circuit-breakers-max-connections=${cbMaxConnections} --circuit-breakers-max-pending-requests=${cbMaxPendingRequests} --circuit-breakers-max-requests=${cbMaxRequests} --circuit-breakers-max-retries=${cbMaxRetries} --project="${projectId}"`
+                          )
+                        }
+                        className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>Apply Circuit Breakers in Cloud Shell</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          `gcloud compute backend-services update "${cbBackendName}" --global --circuit-breakers-max-connections=${cbMaxConnections} --circuit-breakers-max-pending-requests=${cbMaxPendingRequests} --circuit-breakers-max-requests=${cbMaxRequests} --circuit-breakers-max-retries=${cbMaxRetries} --project="${projectId}"`,
+                          'vpc-cb-591'
+                        )
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedKey === 'vpc-cb-591'
+                          ? 'Copied Circuit Breaker CLI!'
+                          : 'Copy Circuit Breaker CLI'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          `gcloud network-security server-tls-policies list --location=global --project="${projectId}"`,
+                          'vpc-tls-591'
+                        )
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedKey === 'vpc-tls-591'
+                          ? 'Copied Server TLS CLI!'
+                          : 'Copy [GA 591.0.0] Server TLS Policy CLI'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -893,7 +1046,7 @@ export default function StudioGcpAdvantageBar({
           {/* DOMAIN 4: VM STUDIO (Live Host Migration + SUD FinOps)          */}
           {/* =============================================================== */}
           {studioDomain === 'VM' && (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <div>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -923,6 +1076,118 @@ export default function StudioGcpAdvantageBar({
                       : `Enforce Live Migration on ${v.name} (${v.onHostMaintenance})`}
                   </button>
                 ))}
+              </div>
+
+              {/* SDK 591.0.0 GA: VM Agent Identity & MIG In-Place Restart */}
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                      GA 591.0.0
+                    </span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      Compute VM Cryptographic Agent Identity (`--identity-type=AGENT_IDENTITY`) &amp; MIG In-Place Restart (`--allowed-actions=restart-in-place`)
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      Target VM Instance
+                    </label>
+                    <input
+                      type="text"
+                      value={vmIdentityTarget}
+                      onChange={(e) => setVmIdentityTarget(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      Zone
+                    </label>
+                    <input
+                      type="text"
+                      value={vmIdentityZone}
+                      onChange={(e) => setVmIdentityZone(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      Identity Type (591.0.0 GA)
+                    </label>
+                    <select
+                      value={vmIdentityType}
+                      onChange={(e) => setVmIdentityType(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    >
+                      <option value="AGENT_IDENTITY">AGENT_IDENTITY (Zero-SA Agent Principal)</option>
+                      <option value="SERVICE_ACCOUNT">SERVICE_ACCOUNT (Standard IAM SA)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      MIG Autohealing Group
+                    </label>
+                    <input
+                      type="text"
+                      value={migTargetName}
+                      onChange={(e) => setMigTargetName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  {onRunInShell && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRunInShell(
+                          `gcloud compute instances update "${vmIdentityTarget}" --zone="${vmIdentityZone}" --identity-type=${vmIdentityType} --project="${projectId}"`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>Bind --identity-type={vmIdentityType} in Shell</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        `gcloud compute instances update "${vmIdentityTarget}" --zone="${vmIdentityZone}" --identity-type=${vmIdentityType} --project="${projectId}"`,
+                        'vm-id-591'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>
+                      {copiedKey === 'vm-id-591'
+                        ? 'Copied Agent Identity CLI!'
+                        : `Copy --identity-type=${vmIdentityType} CLI`}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        `gcloud compute instance-groups managed set-autohealing "${migTargetName}" --zone="${vmIdentityZone}" --allowed-actions=restart-in-place --project="${projectId}"`,
+                        'mig-restart-591'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>
+                      {copiedKey === 'mig-restart-591'
+                        ? 'Copied MIG restart-in-place!'
+                        : 'Copy [GA 591.0.0] MIG --allowed-actions=restart-in-place'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -959,7 +1224,21 @@ export default function StudioGcpAdvantageBar({
                 >
                   <KeyRound className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    Zero-Key Workload Identity Federation (GitHub / AWS OIDC)
+                    [GA 591.0.0] Zero-Key OIDC &amp; Actor Delegation (`--actor-providers`)
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveIamTool('WORKSPACE_KEY_ACCESS_591')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
+                    activeIamTool === 'WORKSPACE_KEY_ACCESS_591'
+                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    [BETA 591.0.0] Workspace Client-Side Encryption (`workspace-key-access`)
                   </span>
                 </button>
               </div>
@@ -999,9 +1278,9 @@ export default function StudioGcpAdvantageBar({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : activeIamTool === 'OIDC_FEDERATION' ? (
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
                         Workload Identity Pool ID
@@ -1024,20 +1303,112 @@ export default function StudioGcpAdvantageBar({
                         className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
                       />
                     </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        [GA 591.0.0] `--discovery-uri`
+                      </label>
+                      <input
+                        type="text"
+                        value={wifDiscoveryUri}
+                        onChange={(e) => setWifDiscoveryUri(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        [GA 591.0.0] `--actor-providers` (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={wifActorProvider}
+                        onChange={(e) => setWifActorProvider(e.target.value)}
+                        placeholder="projects/.../providers/agent-oidc"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
                   </div>
-                  {onRunInShell && (
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(
+                            `gcloud iam workload-identity-pools create "${wifPoolId}" --location="global" --display-name="Zero-Key GitHub OIDC Pool" --project="${projectId}" && gcloud iam workload-identity-pools providers create-oidc "github-provider" --location="global" --workload-identity-pool="${wifPoolId}" --issuer-uri="https://token.actions.githubusercontent.com" --discovery-uri="${wifDiscoveryUri}"${
+                              wifActorProvider
+                                ? ` --actor-providers="${wifActorProvider}"`
+                                : ''
+                            } --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository=='${wifRepo}'" --project="${projectId}"`
+                          )
+                        }
+                        className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      >
+                        Provision Keyless OIDC Pool in Cloud Shell
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
-                        onRunInShell(
-                          `gcloud iam workload-identity-pools create "${wifPoolId}" --location="global" --display-name="Zero-Key GitHub OIDC Pool" --project="${projectId}" && gcloud iam workload-identity-pools providers create-oidc "github-provider" --location="global" --workload-identity-pool="${wifPoolId}" --issuer-uri="https://token.actions.githubusercontent.com" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository=='${wifRepo}'" --project="${projectId}"`
+                        handleCopy(
+                          `gcloud iam workload-identity-pools providers create-oidc "github-provider" --location="global" --workload-identity-pool="${wifPoolId}" --issuer-uri="https://token.actions.githubusercontent.com" --discovery-uri="${wifDiscoveryUri}"${
+                            wifActorProvider
+                              ? ` --actor-providers="${wifActorProvider}"`
+                              : ''
+                          } --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository=='${wifRepo}'" --project="${projectId}"`,
+                          'iam-oidc-591'
                         )
                       }
-                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold cursor-pointer inline-flex items-center gap-1"
                     >
-                      Provision Keyless OIDC Pool in Cloud Shell
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedKey === 'iam-oidc-591'
+                          ? 'Copied OIDC 591.0.0 CLI!'
+                          : 'Copy [GA 591.0.0] OIDC + Actor Delegation CLI'}
+                      </span>
                     </button>
-                  )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                  <div>
+                    <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-1.5">
+                      BETA 591.0.0
+                    </span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      Google Workspace Client-Side Encryption Key Access (`gcloud beta workspace-key-access`):
+                    </span>{' '}
+                    <span className="text-zinc-500">
+                      Manage KACLS key access endpoints &amp; sovereign encryption configurations for Google Workspace.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(`gcloud beta workspace-key-access --help`)
+                        }
+                        className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      >
+                        Inspect workspace-key-access in Shell
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          `gcloud beta workspace-key-access --help`,
+                          'iam-wka-591'
+                        )
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedKey === 'iam-wka-591' ? 'Copied!' : 'Copy CLI'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1047,66 +1418,185 @@ export default function StudioGcpAdvantageBar({
           {/* DOMAIN 6: STORAGE STUDIO (15-Min ASYNC_TURBO & Autoclass)       */}
           {/* =============================================================== */}
           {studioDomain === 'STORAGE' && (
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-              <div>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                  Live Bucket Audit ({gcsData?.totalBuckets || 0} Buckets):
-                </span>{' '}
-                <span className="text-zinc-500">
-                  {gcsData?.autoclassCount || 0} with Autoclass enabled ·{' '}
-                  {gcsData?.turboCount || 0} with 15-Minute Dual-Region{' '}
-                  <code>ASYNC_TURBO</code> Replication. Use the{' '}
-                  <strong>Autoclass</strong> &amp;{' '}
-                  <strong>Dual-Region Turbo</strong> buttons on any bucket card
-                  below to toggle live!
-                </span>
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <div>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Live Bucket Audit ({gcsData?.totalBuckets || 0} Buckets):
+                  </span>{' '}
+                  <span className="text-zinc-500">
+                    {gcsData?.autoclassCount || 0} with Autoclass enabled ·{' '}
+                    {gcsData?.turboCount || 0} with 15-Minute Dual-Region{' '}
+                    <code>ASYNC_TURBO</code> Replication. Use the{' '}
+                    <strong>Autoclass</strong> &amp;{' '}
+                    <strong>Dual-Region Turbo</strong> buttons on any bucket card
+                    below to toggle live!
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px]">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold shrink-0">
+                    GA 591.0.0
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                    Creation-Time FinOps Labels (`--labels`):
+                  </span>
+                  <input
+                    type="text"
+                    value={storageBucketLabels}
+                    onChange={(e) => setStorageBucketLabels(e.target.value)}
+                    className="flex-1 min-w-[220px] px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      `gcloud storage buckets create "gs://${projectId}-labeled-bucket" --location="us-central1" --uniform-bucket-level-access --labels="${storageBucketLabels}" --project="${projectId}"`,
+                      'gcs-labels-591'
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>
+                    {copiedKey === 'gcs-labels-591'
+                      ? 'Copied Bucket --labels CLI!'
+                      : 'Copy [GA 591.0.0] Bucket --labels CLI'}
+                  </span>
+                </button>
               </div>
             </div>
           )}
 
           {/* =============================================================== */}
-          {/* DOMAIN 7: GKE & FINOPS STUDIO (SUD + Autopilot)                 */}
+          {/* DOMAIN 7: GKE & FINOPS STUDIO (SUD + Autopilot + 591.0.0 Live)  */}
           {/* =============================================================== */}
           {studioDomain === 'GKE_FINOPS' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 font-mono text-xs">
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] font-bold uppercase text-zinc-500">
-                  Automatic Sustained-Use Discount (0 Lock-In)
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-bold uppercase text-zinc-500">
+                    Automatic Sustained-Use Discount (0 Lock-In)
+                  </div>
+                  <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    -${finopsData?.estimatedMonthlySudSavingsUsd || '0.00'}/mo
+                    Saved
+                  </div>
+                  <div className="text-[10.5px] text-zinc-500">
+                    Applied automatically by GCP Billing without 1-3yr AWS Savings
+                    Plan lock-in.
+                  </div>
                 </div>
-                <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  -${finopsData?.estimatedMonthlySudSavingsUsd || '0.00'}/mo
-                  Saved
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-bold uppercase text-zinc-500">
+                    Spot VM Conversion Potential (-60% to -91%)
+                  </div>
+                  <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                    -$
+                    {finopsData?.estimatedMonthlySpotConversionSavingsUsd ||
+                      '0.00'}
+                    /mo Available
+                  </div>
+                  <div className="text-[10.5px] text-zinc-500">
+                    Convert non-production VMs to Spot instances with 1 click.
+                  </div>
                 </div>
-                <div className="text-[10.5px] text-zinc-500">
-                  Applied automatically by GCP Billing without 1-3yr AWS Savings
-                  Plan lock-in.
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-bold uppercase text-zinc-500">
+                    GKE Autopilot Clusters ({finopsData?.gkeClustersCount || 0}{' '}
+                    Total)
+                  </div>
+                  <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                    {finopsData?.autopilotClustersCount || 0} Autopilot Active
+                  </div>
+                  <div className="text-[10.5px] text-zinc-500">
+                    Zero node-tax &amp; free control-plane tier vs. AWS EKS
+                    $73/mo/cluster fee.
+                  </div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] font-bold uppercase text-zinc-500">
-                  Spot VM Conversion Potential (-60% to -91%)
+
+              {/* SDK 591.0.0 GA: Zero-Drain In-Place Node Config Updates */}
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                      GA 591.0.0
+                    </span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      GKE Zero-Drain In-Place Node Pool Live Update (`--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN`)
+                    </span>
+                  </div>
                 </div>
-                <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
-                  -$
-                  {finopsData?.estimatedMonthlySpotConversionSavingsUsd ||
-                    '0.00'}
-                  /mo Available
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      GKE Cluster
+                    </label>
+                    <input
+                      type="text"
+                      value={gkeClusterTarget}
+                      onChange={(e) => setGkeClusterTarget(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      Node Pool
+                    </label>
+                    <input
+                      type="text"
+                      value={gkeNodePoolTarget}
+                      onChange={(e) => setGkeNodePoolTarget(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                      Location / Region
+                    </label>
+                    <input
+                      type="text"
+                      value={gkeUpdateLocation}
+                      onChange={(e) => setGkeUpdateLocation(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
                 </div>
-                <div className="text-[10.5px] text-zinc-500">
-                  Convert non-production VMs to Spot instances with 1 click.
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] font-bold uppercase text-zinc-500">
-                  GKE Autopilot Clusters ({finopsData?.gkeClustersCount || 0}{' '}
-                  Total)
-                </div>
-                <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
-                  {finopsData?.autopilotClustersCount || 0} Autopilot Active
-                </div>
-                <div className="text-[10.5px] text-zinc-500">
-                  Zero node-tax &amp; free control-plane tier vs. AWS EKS
-                  $73/mo/cluster fee.
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  {onRunInShell && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRunInShell(
+                          `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>Run Zero-Drain Live Update in Cloud Shell</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`,
+                        'gke-live-591'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>
+                      {copiedKey === 'gke-live-591'
+                        ? 'Copied LIVE_UPDATE_WITHOUT_DRAIN CLI!'
+                        : 'Copy [GA 591.0.0] LIVE_UPDATE_WITHOUT_DRAIN CLI'}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

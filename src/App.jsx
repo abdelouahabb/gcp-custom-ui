@@ -3409,6 +3409,11 @@ function CloudPulseCockpit() {
       setActiveTab('INNOVATION_LAB');
       return;
     }
+    if (tabId === 'SECRETS_KMS') {
+      setSovereignSubTab('SECRETS_KMS_WAF');
+      setActiveTab('SOVEREIGN_STUDIO');
+      return;
+    }
     const normalizedTab =
       tabId === 'DATA_ENGINEER'
         ? 'DATA_ENGINEER_STUDIO'
@@ -3428,8 +3433,12 @@ function CloudPulseCockpit() {
         ? 'CLOUD_STORAGE'
         : tabId === 'SOVEREIGN_IAM'
         ? 'SOVEREIGN_STUDIO'
-        : tabId === 'BILLING_GUARDIAN'
+        : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS'
         ? 'FINOPS'
+        : tabId === 'VERTEX_AI'
+        ? 'WAVE9_STUDIO'
+        : tabId === 'GKE_KUBERNETES'
+        ? 'GKE_STUDIO'
         : tabId;
 
     if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
