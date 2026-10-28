@@ -2323,6 +2323,7 @@ export default function AwsAzureEnvySuiteStudio({
               <div className="inline-flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold">
                 <button
                   type="button"
+                  data-feature-id="PARITY_FAMILY_AWS_AZURE"
                   onClick={() => onSwitchCloudFamily('AWS_AZURE')}
                   className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     !isChinaSuite
@@ -2334,6 +2335,7 @@ export default function AwsAzureEnvySuiteStudio({
                 </button>
                 <button
                   type="button"
+                  data-feature-id="PARITY_FAMILY_ALIBABA_HUAWEI"
                   onClick={() => onSwitchCloudFamily('ALIBABA_HUAWEI')}
                   className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     isChinaSuite
@@ -2348,6 +2350,7 @@ export default function AwsAzureEnvySuiteStudio({
 
             <button
               type="button"
+              data-feature-id="PARITY_SYNC_LIVE_PROJECT"
               onClick={fetchOverview}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
@@ -2370,6 +2373,7 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={`PARITY_TAB_${tab.id}`}
                 title={`${cleanTitle} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer ${

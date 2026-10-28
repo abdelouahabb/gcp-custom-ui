@@ -918,6 +918,7 @@ export default function LogStreamerAndShell({
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="submit"
+                data-feature-id="LOGS_COMPILE_RUN_BTN"
                 disabled={loadingChrono}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
@@ -929,6 +930,7 @@ export default function LogStreamerAndShell({
 
               <button
                 type="button"
+                data-feature-id="LOGS_VIEW_SQL_BTN"
                 onClick={() => setShowCompiledSqlModal((v) => !v)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer"
               >
@@ -938,6 +940,7 @@ export default function LogStreamerAndShell({
 
               <button
                 type="button"
+                data-feature-id="LOGS_LQL_TUTORIAL_BTN"
                 onClick={() => setShowLqlTutorialModal((v) => !v)}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold cursor-pointer border transition-colors ${
                   showLqlTutorialModal
@@ -951,6 +954,7 @@ export default function LogStreamerAndShell({
 
               <button
                 type="button"
+                data-feature-id="LOGS_LLM_TOGGLE_BTN"
                 onClick={() => {
                   const next = !allowNeuralLlmTokens;
                   setAllowNeuralLlmTokens(next);
@@ -1816,6 +1820,7 @@ export default function LogStreamerAndShell({
                 <button
                   key={tab.id}
                   type="button"
+                  data-feature-id={`LOGS_TAB_${tab.id}`}
                   onClick={() => setActiveChronoTab(tab.id)}
                   className={`w-full h-10 px-3 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center justify-between gap-2 ${
                     active

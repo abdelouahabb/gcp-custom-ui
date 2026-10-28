@@ -3636,6 +3636,718 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'spanner.googleapis.com (Change Streams · TrueTime · PGAdapter)',
     safetyMode: 'READ_ONLY',
   },
+
+  // ============================================================================
+  // DOMAIN IV: SOVEREIGN IAM, MULTI-CLOUD PARITY, SRE WAR-ROOM, LOGS & DOCS
+  // ============================================================================
+  SOVEREIGN_SYNC_LIVE_STATE: {
+    badge: 'LIVE SOVEREIGN ZERO-TRUST SYNC',
+    title: 'Sync Live Project IAM v3 Policy, Merkle State Checkpoints & Secret Vault',
+    whatItDoes:
+      'Refreshes the active Sovereign IAM module by querying live `cloudresourcemanager:getIamPolicy`, SHA-256 Merkle-tree state drift snapshots, or `secretmanager.googleapis.com/v1` secrets and KMS keys.',
+    enterpriseValue:
+      'Ensures zero-trust IAM surgery and secret lifecycle decisions operate on up-to-the-second Google Cloud state.',
+    gcpApis: 'cloudresourcemanager.googleapis.com/v1 · iam.googleapis.com/v1 · secretmanager.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  SOVEREIGN_TAB_IAM_SURGEON: {
+    badge: 'SOVEREIGN IAM MODULE 1/4',
+    title: 'Autonomous IAM Least-Privilege Surgeon, 24h JIT CEL Leases & Owner Self-Guard',
+    whatItDoes:
+      'Audits live project IAM bindings for primitive `roles/owner` and `roles/editor` grants, downgrades over-privileged bindings to least-privilege roles or 24-hour auto-expiring CEL conditions (`request.time < timestamp(...)`), and protects your active admin email from self-lockout.',
+    enterpriseValue:
+      'Eliminates standing god-mode IAM permissions while guaranteeing you never accidentally lock yourself out of your own project.',
+    gcpApis: 'POST https://cloudresourcemanager.googleapis.com/v1/projects/{project}:getIamPolicy & :setIamPolicy',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOVEREIGN_TAB_IAM_SURGEON_SA_VAULT: {
+    badge: 'SOVEREIGN IAM MODULE 2/4',
+    title: 'Service Account `.json` Key Kill-Switch Vault, 1h OAuth2 Token Minter & WIF Architect',
+    whatItDoes:
+      'Lists all user-managed Service Account `.json` keys with age and risk scoring, lets you disable/delete compromised keys or freeze an entire Service Account in 1 click, mints 1-hour keyless OAuth2 tokens, and generates GitHub/GitLab OIDC Workload Identity Federation YAML.',
+    enterpriseValue:
+      'Neutralizes leaked Service Account `.json` keys in seconds and transitions CI/CD pipelines to 100% keyless OIDC authentication.',
+    gcpApis: 'iam.googleapis.com/v1/projects/{project}/serviceAccounts/{sa}/keys · iamcredentials.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOVEREIGN_TAB_TIME_MACHINE: {
+    badge: 'SOVEREIGN IAM MODULE 3/4',
+    title: 'SHA-256 Merkle-Tree Cloud Time-Machine, Out-of-Band Drift Detector & GitOps Reconciler',
+    whatItDoes:
+      'Seals cryptographic SHA-256 Merkle-tree checkpoints across 6 Google Cloud control planes (VMs, Cloud Run, Storage, BigQuery, Firewalls, IAM), detects out-of-band console tampering, and heals configuration drift in 1 tap.',
+    enterpriseValue:
+      'Provides cryptographic proof of infrastructure immutability and instant drift rollback for regulated workloads.',
+    gcpApis: '6-Plane SHA-256 Merkle State Hasher & Compensating REST Reconciler',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOVEREIGN_TAB_SECRETS_KMS_WAF: {
+    badge: 'SOVEREIGN IAM MODULE 4/4',
+    title: 'Dedicated Secret Manager Lifecycle Studio, Cloud KMS & Cloud Armor WAF',
+    whatItDoes:
+      'Tracks the 6 Free Active Secret Versions/mo quota, scans all live Cloud Run v2 services for broken `secretKeyRef` pointers with 1-click healing, schedules `$0/mo` 30-day secret rotation, and enforces the 3-State No-Plaintext-Fallback safeguard.',
+    enterpriseValue:
+      'Prevents Cloud Run cold-start crashes from disabled/deleted secret versions while keeping secret storage inside Google’s monthly Free Tier.',
+    gcpApis: 'secretmanager.googleapis.com/v1 · run.googleapis.com/v2 · cloudkms.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+
+  // --- Multi-Cloud Parity Suite (AWS / Azure 20 + Alibaba / Huawei 8) ---
+  PARITY_FAMILY_AWS_AZURE: {
+    badge: 'MULTI-CLOUD FAMILY · AWS & AZURE (20)',
+    title: 'Switch to AWS & Microsoft Azure Enterprise Parity Suite (20 Bridges)',
+    whatItDoes:
+      'Loads the 20 iconic Amazon Web Services and Microsoft Azure enterprise workflows (Azure Resource Groups, Hard-Spend Stop-Loss Fuse, AWS IAM Simulator, S3/SAS Presigned URLs, CloudFormation/ARM Stacks, SSM Run Command, EventBridge Pipes, Bedrock/Foundry AI Gateway, etc.) mapped natively onto Google Cloud.',
+    enterpriseValue:
+      'Lets AWS and Azure architects operate Google Cloud using the mental models and workflows they already know.',
+    gcpApis: '20 Native Google Cloud REST Control-Plane Bridges',
+    safetyMode: 'READ_ONLY',
+  },
+  PARITY_FAMILY_ALIBABA_HUAWEI: {
+    badge: 'MULTI-CLOUD FAMILY · ALIBABA & HUAWEI (8)',
+    title: 'Switch to Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Suite (8 Bridges)',
+    whatItDoes:
+      'Loads the 8 hyperscale cloud architectures pioneered by Alibaba Cloud and Huawei Cloud (11.11 Singles’ Day PTS + MSE Sentinel Surge, CEN Global QoS Bandwidth Slicer, PolarDB/GaussDB 1.6s HTAP Clone, Volcano/PAI Fractional vGPU Pool, RocketMQ 5.0 2PC Delay Queue, Nacos+Higress Config Mesh, Hologres Sub-s OLAP, and DataV/Astro NOC Wall).',
+    enterpriseValue:
+      'Brings flash-sale surge shedding, fractional GPU slicing, and two-phase transactional messaging natively to Google Cloud.',
+    gcpApis: '8 Native Google Cloud Hyperscale Control-Plane Bridges',
+    safetyMode: 'READ_ONLY',
+  },
+  PARITY_SYNC_LIVE_PROJECT: {
+    badge: '12-WAY PARALLEL MULTI-CLOUD SYNC',
+    title: 'Sync Live Project Inventory Across All 28 Multi-Cloud Parity Bridges',
+    whatItDoes:
+      'Executes a 12-way parallel discovery scan across Compute, Cloud Run, Storage, BigQuery, IAM, Pub/Sub, Workflows, Secret Manager, and Cloud DNS to refresh all 28 multi-cloud parity bridges.',
+    enterpriseValue:
+      'Keeps Azure Resource Groups, Spend Fuses, and multi-cloud topology views synchronized with live GCP state.',
+    gcpApis: 'GET /api/project/{project}/aws-azure-parity/overview',
+    safetyMode: 'READ_ONLY',
+  },
+  PARITY_TAB_RESOURCE_GROUPS: {
+    badge: 'AWS/AZURE BRIDGE 01/20',
+    title: 'Azure-Style Resource Groups (`labels.resource_group`), RG Spend & 1-Click RG Teardown',
+    whatItDoes:
+      'Groups Compute VMs, Cloud Run services, GCS buckets, BigQuery datasets, and Secrets by `labels.resource_group`, calculates live $/hr and $/mo spend per group, binds RG-scoped IAM roles, and supports 1-click group hibernate or cascade teardown.',
+    enterpriseValue:
+      'Brings Microsoft Azure’s beloved Resource Group lifecycle management and cost rollups natively to Google Cloud projects.',
+    gcpApis: 'cloudasset · compute · run · storage · bigquery (labels.resource_group)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_SPEND_FUSE: {
+    badge: 'AWS/AZURE BRIDGE 02/20',
+    title: 'Hard-Spend Stop-Loss Circuit Breaker (AWS Budget Actions / Azure Auto-Shutdown)',
+    whatItDoes:
+      'Configures a 3-stage automated spend fuse: Alert at 50%, Soft Brake at 80% (`Cloud Run maxInstances=3`), and Hard Compute Park at 95% (stops running VMs via `instances.stop`).',
+    enterpriseValue:
+      'Protects dev, sandbox, and startup projects from runaway compute bills automatically.',
+    gcpApis: 'billingbudgets.googleapis.com · pubsub · run.services.patch · compute.instances.stop',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_IAM_SIMULATOR: {
+    badge: 'AWS/AZURE BRIDGE 03/20',
+    title: 'AWS IAM Policy Simulator & Console "Switch Role" Identity Impersonator',
+    whatItDoes:
+      'Evaluates `testIamPermissions` across any principal and target resource in your project, previews the console blast radius via Switch-Role impersonation, and grants least-privilege roles in 1 click.',
+    enterpriseValue:
+      'Diagnoses IAM permission denials before deploying code and verifies exact principal access rights.',
+    gcpApis: 'cloudresourcemanager:testIamPermissions · :getIamPolicy · :setIamPolicy',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_SAS_PRESIGNED: {
+    badge: 'AWS/AZURE BRIDGE 04/20',
+    title: 'Azure Storage SAS & AWS S3 1-Click Presigned URLs + Direct Browser Upload',
+    whatItDoes:
+      'Uploads files directly to Cloud Storage buckets and generates time-bounded V4 Signed URLs / Zero-SA-Key SAS tokens (`GET`/`PUT`, 15m to 7d expiry).',
+    enterpriseValue:
+      'Lets external clients upload or download specific GCS objects securely without sharing GCP credentials.',
+    gcpApis: 'storage.objects.insert · iamcredentials.serviceAccounts.signBlob (V4 Signed URL)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_GLOBAL_LB_WIZARD: {
+    badge: 'AWS/AZURE BRIDGE 05/20',
+    title: '1-Screen Global HTTPS Load Balancer, Anycast IP, Managed SSL & Cloud Armor WAF Wizard',
+    whatItDoes:
+      'Condenses Google Cloud’s 7-object Load Balancer setup (Serverless NEG, Backend Service, URL Map, Target HTTPS Proxy, Google-Managed SSL Cert, Global Forwarding Rule, and Cloud Armor WAF policy) into a single 1-screen wizard.',
+    enterpriseValue:
+      'Replaces 30 minutes of multi-page GCP Networking clicks with a single atomic global edge deployment.',
+    gcpApis: 'compute.googleapis.com (regionNetworkEndpointGroups, backendServices, urlMaps, securityPolicies)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_CFN_ARM_STACKS: {
+    badge: 'AWS/AZURE BRIDGE 06/20',
+    title: 'AWS CloudFormation / Azure ARM Stack Snapshot, Drift Detector, Rollback & IaC Exporter',
+    whatItDoes:
+      'Captures named infrastructure stacks with SHA-256 resource fingerprints, detects out-of-band configuration drift, rolls back drifted stacks, and exports Terraform HCL or Pulumi TypeScript.',
+    enterpriseValue:
+      'Gives Google Cloud engineers the atomic stack lifecycle, drift detection, and rollback experience of AWS CloudFormation.',
+    gcpApis: 'Multi-Resource Stack Snapshot, Drift Diff & Terraform/Pulumi Compiler',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_COST_EXPLORER_CUD: {
+    badge: 'AWS/AZURE BRIDGE 07/20',
+    title: 'AWS Cost Explorer 14-Day Burn Attribution & Savings Plans / CUD Arbitrage',
+    whatItDoes:
+      'Visualizes 14-day daily spend by service and Resource Group and applies 1-click FinOps arbitrage plans (Cloud Run Scale-to-Zero, Spot VM conversion, and BigQuery Physical Compression).',
+    enterpriseValue:
+      'Unlocks up to 55%–68% compute and storage savings with instant ROI verification.',
+    gcpApis: 'cloudbilling · run.googleapis.com · compute.googleapis.com · bigquery.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_SSM_FLEET_COMMAND: {
+    badge: 'AWS/AZURE BRIDGE 08/20',
+    title: 'AWS Systems Manager (SSM) Fleet Run Command & Zero-SSH Patch Manager',
+    whatItDoes:
+      'Executes audited operational runbooks (`Docker Prune`, `Security Patch`, `Collect Disk/Memory Telemetry`, or custom bash) across multiple Compute Engine VMs simultaneously without opening public SSH ports.',
+    enterpriseValue:
+      'Eliminates manual SSH loops when patching or diagnosing a fleet of Linux VMs.',
+    gcpApis: 'osconfig.googleapis.com · compute.instances · IAP SSH Command Dispatcher',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_EVENTBRIDGE_PIPES: {
+    badge: 'AWS/AZURE BRIDGE 09/20',
+    title: 'AWS EventBridge Pipes & Azure Logic Apps Visual Event Router (with Auto `-dlq`)',
+    whatItDoes:
+      'Builds `Source → JSON Filter → Transform → Target` event pipes backed by Google Cloud Eventarc and Pub/Sub, automatically provisioning a Dead-Letter Queue (`-dlq`) topic.',
+    enterpriseValue:
+      'Connects Cloud Storage, Pub/Sub, Audit Logs, and Cloud Run services with zero-loss dead-letter protection.',
+    gcpApis: 'eventarc.googleapis.com/v1 · pubsub.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_KEYVAULT_ROTATION: {
+    badge: 'AWS/AZURE BRIDGE 10/20',
+    title: 'AWS Secrets Manager / Azure Key Vault 1-Click Secret Rotation & Multi-Env Sync',
+    whatItDoes:
+      'Rotates Secret Manager secrets immediately (`versions:add` + disables stale versions) and synchronizes secret keys across `dev`, `staging`, and `prod` environments.',
+    enterpriseValue:
+      'Enforces zero-downtime credential rotation and prevents missing-secret deployment failures across environments.',
+    gcpApis: 'secretmanager.googleapis.com/v1/projects/{project}/secrets',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_TRUSTED_ADVISOR: {
+    badge: 'AWS/AZURE BRIDGE 11/20',
+    title: 'AWS Trusted Advisor / Azure Advisor 5-Pillar Scorer & 1-Click Auto-Fixer',
+    whatItDoes:
+      'Scores your live GCP project across all 5 Well-Architected pillars (Cost Optimization, Security, Fault Tolerance, Performance, and Service Quotas) and executes 1-click remediations.',
+    enterpriseValue:
+      'Consolidates fragmented Google Cloud Active Assist recommendations into a single executive scorecard with 1-tap fixes.',
+    gcpApis: 'recommender.googleapis.com/v1 · compute · run · storage · bigquery',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_TRANSIT_GATEWAY: {
+    badge: 'AWS/AZURE BRIDGE 12/20',
+    title: 'AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke VPC Mesh (NCC)',
+    whatItDoes:
+      'Designs and provisions hub-and-spoke VPC connectivity across regional subnets, HA VPNs, and partner networks using Google Cloud Network Connectivity Center (NCC).',
+    enterpriseValue:
+      'Replaces complex N×(N-1) VPC peering meshes with a centralized, transitive enterprise network hub.',
+    gcpApis: 'networkconnectivity.googleapis.com/v1 (hubs, spokes) · compute.networks',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_CONTAINER_COMPOSE: {
+    badge: 'AWS/AZURE BRIDGE 13/20',
+    title: 'AWS ECS Task Definitions / Azure Container Apps Multi-Container Gen2 Sidecar Compose',
+    whatItDoes:
+      'Compiles multi-container Pod topologies (Primary App + Envoy Proxy / OTel Collector / Cloud SQL Auth Proxy sidecars + shared In-Memory or GCS FUSE volumes) onto Cloud Run Gen2.',
+    enterpriseValue:
+      'Runs ECS-style multi-container sidecar tasks serverlessly on Cloud Run without managing a Kubernetes cluster.',
+    gcpApis: 'run.googleapis.com/v2 (containers[], volumes[], executionEnvironment=GEN2)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_GUARDDUTY_SOAR: {
+    badge: 'AWS/AZURE BRIDGE 14/20',
+    title: 'Amazon GuardDuty / Microsoft Sentinel Threat Radar & 1-Click SOAR Containment',
+    whatItDoes:
+      'Detects live cloud threats (world-open SSH/RDP firewalls, unrotated Service Account keys, public buckets, IAM escalations) and executes 1-click SOAR containment playbooks.',
+    enterpriseValue:
+      'Automates incident containment across VPC firewalls, IAM keys, and storage buckets in seconds.',
+    gcpApis: 'securitycenter.googleapis.com · compute.firewalls · iam · storage',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_STEP_FUNCTIONS: {
+    badge: 'AWS/AZURE BRIDGE 15/20',
+    title: 'AWS Step Functions / Azure Durable Functions Visual Saga Studio (Cloud Workflows)',
+    whatItDoes:
+      'Compiles visual state-machine sagas with exponential backoff retries and compensating rollback steps into native Google Cloud Workflows YAML and executes them live.',
+    enterpriseValue:
+      'Orchestrates multi-service distributed transactions across Cloud Run, BigQuery, and Pub/Sub with zero idle server cost.',
+    gcpApis: 'workflows.googleapis.com/v1 · workflowexecutions.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_MULTI_BRAND_OAUTH: {
+    badge: 'AWS/AZURE BRIDGE 16/20',
+    title: 'Azure AD B2C / AWS Cognito Multi-Brand OAuth Sign-In Studio (1 GCP Project, N Brands)',
+    whatItDoes:
+      'Configures multiple isolated customer-facing OAuth 2.0 / OIDC brand experiences (custom logos, themes, domains, and tenant pools) inside a single production GCP project via Identity Platform.',
+    enterpriseValue:
+      'Overcomes Google Cloud’s 1-OAuth-Consent-Screen-per-project limitation for multi-brand SaaS companies.',
+    gcpApis: 'identitytoolkit.googleapis.com/v2 (tenants, oauthIdpConfigs, defaultSupportedIdpConfigs)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ROUTE53_FRONTDOOR_TRAFFIC: {
+    badge: 'AWS/AZURE BRIDGE 17/20',
+    title: 'Amazon Route 53 / Azure Front Door Weighted, Latency & Geo-Fenced DNS Routing',
+    whatItDoes:
+      'Creates live Cloud DNS Managed Zones and configures Weighted Canary (`90/10`), Geo-Proximity, and Active-Passive Failover routing policies with health checks.',
+    enterpriseValue:
+      'Brings Route 53 traffic-engineering policies and global DNS failover natively to Google Cloud DNS.',
+    gcpApis: 'dns.googleapis.com/dns/v1/projects/{project}/managedZones & rrsets',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE: {
+    badge: 'AWS/AZURE BRIDGE 18/20',
+    title: 'AWS CloudTrail Lake / Azure Activity Log "Who-Did-What" SQL Time-Detective',
+    whatItDoes:
+      'Queries live `cloudaudit.googleapis.com` activity records by actor email, source IP, method name, or resource target and generates 1-click compensating rollback commands.',
+    enterpriseValue:
+      'Answers "Who changed this firewall/IAM/bucket and from what IP?" in seconds during an audit or outage.',
+    gcpApis: 'POST https://logging.googleapis.com/v2/entries:list (cloudaudit.googleapis.com)',
+    safetyMode: 'READ_ONLY',
+  },
+  PARITY_TAB_RAM_LIGHTHOUSE_ORG_SHARING: {
+    badge: 'AWS/AZURE BRIDGE 19/20',
+    title: 'AWS Resource Access Manager (RAM) & Azure Lighthouse Cross-Project Resource Sharing',
+    whatItDoes:
+      'Shares VPC subnets, BigQuery datasets, Secret Manager secrets, or Artifact Registry repos across GCP projects with time-bounded IAM CEL conditions (`request.time < timestamp(...)`) and 1-click revocation.',
+    enterpriseValue:
+      'Enables secure cross-project and MSP delegated resource access with automatic expiration.',
+    gcpApis: 'cloudresourcemanager · compute.subnetworks · bigquery.datasets (Conditional IAM)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_BEDROCK_FOUNDRY_AI_GATEWAY: {
+    badge: 'AWS/AZURE BRIDGE 20/20',
+    title: 'AWS Bedrock Guardrails & Azure AI Foundry Multi-Model Vertex AI Router',
+    whatItDoes:
+      'Configures a resilient LLM gateway route (`gemini-3.8-flash` → `gemini-3.1-pro` automatic failover) with a daily dollar spend cap, PII redaction DLP shield, and prompt-injection guardrail.',
+    enterpriseValue:
+      'Prevents single-model 429 quota outages and blocks sensitive PII or prompt-injection attacks before they reach Vertex AI.',
+    gcpApis: 'aiplatform.googleapis.com · modelarmor.googleapis.com · dlp.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ALIYUN_PTS_MSE_FLASH_SALE_SURGE: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 01/08',
+    title: 'Alibaba Cloud PTS + MSE Sentinel `11.11` Flash-Sale Pre-Warm & QPS Token-Bucket Shedder',
+    whatItDoes:
+      'Pre-warms Cloud Run `minInstanceCount` pools ahead of a traffic event, enforces QPS token-bucket load shedding at the edge, and runs a simulated `11.11` flash-sale surge drill.',
+    enterpriseValue:
+      'Eliminates container cold-starts and prevents backend database collapse during 100x viral flash sales.',
+    gcpApis: 'run.googleapis.com/v2 (scaling.minInstanceCount) · compute.securityPolicies (Cloud Armor Rate Limit)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ALIYUN_CEN_GA_BANDWIDTH_PACKAGE: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 02/08',
+    title: 'Alibaba Cloud CEN & Global Accelerator Cross-Region QoS Bandwidth Slicer',
+    whatItDoes:
+      'Allocates cross-region Premium Tier backbone bandwidth into Gold (Real-Time Checkout), Silver (Interactive API), and Bronze (Async Replication) DSCP QoS traffic lanes.',
+    enterpriseValue:
+      'Guarantees bulk backup or analytics replication never starves latency-sensitive checkout traffic across regions.',
+    gcpApis: 'networkconnectivity.googleapis.com · compute.googleapis.com (Premium Network Tier QoS)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_POLARDB_GAUSSDB_HTAP_TIME_TRAVEL: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 03/08',
+    title: 'Alibaba PolarDB / Huawei GaussDB Serverless HTAP Read-Pool & `1.6s` Zero-Copy Clone',
+    whatItDoes:
+      'Provisions disaggregated AlloyDB / Cloud SQL HTAP columnar read-pools and triggers 1.6-second zero-copy storage clones for instant staging or point-in-time recovery.',
+    enterpriseValue:
+      'Runs heavy OLAP analytical queries alongside high-TPS OLTP transactions without storage duplication.',
+    gcpApis: 'alloydb.googleapis.com/v1 · sqladmin.googleapis.com/v1 (instances.clone)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_HUAWEI_CCE_MODELARTS_AI_POOL: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 04/08',
+    title: 'Huawei CCE Turbo (Volcano) + Alibaba PAI Fractional vGPU Time-Slicing Pool',
+    whatItDoes:
+      'Partitions physical NVIDIA L4/A100/H100 GPUs into fractional vGPU slices (`0.125x`, `0.25x`, `0.50x`) with Volcano gang-scheduling so up to 8 AI inference microservices share 1 physical GPU.',
+    enterpriseValue:
+      'Slashes GPU cluster idle waste by up to 75% for lightweight LLM, OCR, and embedding microservices.',
+    gcpApis: 'container.googleapis.com/v1 (GKE GPU Time-Sharing & MPS) · aiplatform.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 05/08',
+    title: 'Alibaba RocketMQ 5.0 Two-Phase (2PC) Transactional Half-Messages & Exact-Second Delay Queue',
+    whatItDoes:
+      'Implements RocketMQ-style 2-phase commit (`Prepare Half-Message → Local DB Tx → Commit/Rollback`) and exact-second delayed delivery (`scheduleTime` up to 30 days) using Cloud Tasks and Pub/Sub.',
+    enterpriseValue:
+      'Powers atomic e-commerce order timeout cancellation (e.g., auto-cancel unpaid orders after 15m 00s) with zero polling.',
+    gcpApis: 'cloudtasks.googleapis.com/v2 · pubsub.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ALIYUN_NACOS_HIGRESS_CONFIG_MESH: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 06/08',
+    title: 'Alibaba Nacos + Higress `<80ms` Zero-Restart Hot Config Push & AI Wasm Gateway',
+    whatItDoes:
+      'Pushes dynamic feature flags, rate limits, and AI prompt templates into Secret Manager + Pub/Sub in `<80ms` without restarting containers, paired with Service Extensions Wasm plugins.',
+    enterpriseValue:
+      'Lets SREs toggle feature flags or throttle abusive tenants globally in milliseconds without redeploying Cloud Run revisions.',
+    gcpApis: 'secretmanager.googleapis.com/v1 · pubsub.googleapis.com/v1 · networkservices (Wasm)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 07/08',
+    title: 'Alibaba Hologres + MaxCompute Sub-Second Hybrid Row-Column Serving Engine',
+    whatItDoes:
+      'Combines BigQuery BI Engine in-memory vectorization with Bigtable / Spanner row-oriented key-value lookups to serve high-QPS sub-15ms real-time user personalization queries over petabyte tables.',
+    enterpriseValue:
+      'Bridges offline petabyte warehouse tables with sub-second customer-facing API serving.',
+    gcpApis: 'bigquery.googleapis.com (BI Engine Reservation) · bigtableadmin.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PARITY_TAB_HUAWEI_DATAV_NOC_COMMAND_WALL: {
+    badge: 'ALIBABA/HUAWEI BRIDGE 08/08',
+    title: 'Alibaba DataV / Huawei Astro Executive Digital-Twin NOC & War-Room Command Wall',
+    whatItDoes:
+      'Displays a real-time executive Network Operations Center (NOC) command wall tracking global QPS, APAC↔EU↔US backbone RTT latency, SLO health, and simulated surge drills.',
+    enterpriseValue:
+      'Provides a wall-mount-ready digital twin for peak launch events, holiday sales, and executive war-rooms.',
+    gcpApis: 'monitoring.googleapis.com/v3 · compute · run · bigquery Live Telemetry Aggregator',
+    safetyMode: 'READ_ONLY',
+  },
+
+  // --- SRE Incident War-Room (12 Pillars & Header Actions) ---
+  SRE_FIRE_CHAOS_DRILL_BTN: {
+    badge: 'LIVE SRE GAME-DAY CHAOS DRILL',
+    title: '1-Click Fire P1 Chaos Cascade Drill / Mitigate & Resolve P1 Incident',
+    whatItDoes:
+      'Injects a controlled P1 multi-window SLO burn cascade (`14.4x` 1h fast-burn) to test on-call alerting, MTTD/MTTR timers, and runbook automation — or resolves the drill and restores nominal state in 1 click.',
+    enterpriseValue:
+      'Validates that your Cloud Monitoring alert policies and incident response runbooks work before a real production outage hits.',
+    gcpApis: 'POST /api/project/{project}/wave8/war-room/incident-drill (logging.v2 · monitoring.v3)',
+    safetyMode: 'SIMULATION',
+  },
+  SRE_POSTMORTEM_MD_BTN: {
+    badge: 'GOOGLE SRE BOOK BLAMELESS POSTMORTEM',
+    title: 'Toggle Auto-Synthesized Blameless `postmortem.md` Report',
+    whatItDoes:
+      'Opens a copy-ready Google SRE Book blameless postmortem Markdown document populated with your live SLO burn rate, root-cause log signatures, timeline of config mutations, and action items.',
+    enterpriseValue:
+      'Saves hours of post-incident documentation toil by compiling a structured postmortem directly from live telemetry.',
+    gcpApis: 'CloudPulse Automated SRE Postmortem Compiler',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_SYNC_ALL_PILLARS_BTN: {
+    badge: '12-PILLAR PARALLEL SRE SYNC',
+    title: 'Sync All 12 SRE War-Room Pillars (SLO Burn, Uptime, VPC-SC & Pub/Sub DLQ)',
+    whatItDoes:
+      'Refreshes live Cloud Logging error clusters, Cloud Monitoring Uptime Checks & Alert Policies, VPC-SC / Subnet Private Google Access coverage, and Pub/Sub Dead-Letter Queue inventory in parallel.',
+    enterpriseValue:
+      'Gives Incident Commanders an up-to-the-second view across observability, networking, and messaging resilience.',
+    gcpApis: 'logging.googleapis.com/v2 · monitoring.googleapis.com/v3 · compute.v1 · pubsub.v1',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_SLO_BURN_AND_RCA: {
+    badge: 'SRE WAR-ROOM · PILLAR 01/12',
+    title: 'Multi-Window SLO Error-Budget Burn Radar (`14.4x` / `6.0x`) & LogRCA Autopsy',
+    whatItDoes:
+      'Implements Google SRE Book Chapter 5 multi-window burn-rate alerting (`1h/5m` 14.4x Page, `6h/30m` 6.0x Ticket) paired with automated Cloud Logging root-cause signature clustering.',
+    enterpriseValue:
+      'Eliminates noisy threshold alert fatigue by paging only when error budget is actively burning at a catastrophic rate.',
+    gcpApis: 'monitoring.googleapis.com/v3 · logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_GOLDEN_SIGNALS_FLEET: {
+    badge: 'SRE WAR-ROOM · PILLAR 02/12',
+    title: '4 Golden Signals Fleet Matrix (Latency, Traffic, Errors & Saturation)',
+    whatItDoes:
+      'Monitors P50/P95/P99 latency, request throughput (RPS), 5xx error rates, and CPU/Memory saturation across your live Cloud Run services, Compute VMs, and GKE workloads.',
+    enterpriseValue:
+      'Surfaces the four Google SRE Golden Signals side-by-side for every workload in your project.',
+    gcpApis: 'monitoring.googleapis.com/v3/projects/{project}/timeSeries · run.v2 · compute.v1',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_UPTIME_AND_ALERT_POLICIES: {
+    badge: 'SRE WAR-ROOM · PILLAR 03/12',
+    title: 'Cloud Monitoring v3 Global HTTPS Uptime Check & P1 Alert Policy Provisioner',
+    whatItDoes:
+      'Lists and provisions live 60-second global SSL/HTTPS Uptime Checks (`uptimeCheckConfigs`) and multi-window P1 SLO Alert Policies (`alertPolicies`) in Google Cloud Monitoring.',
+    enterpriseValue:
+      'Deploys real external availability probers from USA, Europe, and APAC Google points of presence in 1 click.',
+    gcpApis: 'POST https://monitoring.googleapis.com/v3/projects/{project}/uptimeCheckConfigs & alertPolicies',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SRE_PILLAR_BLACKBOX_SYNTHETIC_PROBER: {
+    badge: 'SRE WAR-ROOM · PILLAR 04/12',
+    title: 'Live Blackbox Synthetic Prober (DNS + TCP + TLS 1.3 + HTTPS TTFB Stopwatch)',
+    whatItDoes:
+      'Executes a real-time 4-phase network stopwatch probe (DNS resolution -> TCP connect -> TLS 1.3 handshake + X.509 cert expiry -> HTTP TTFB) against your live endpoints.',
+    enterpriseValue:
+      'Pinpoints whether slow response times are caused by DNS, TLS negotiation, or backend application latency.',
+    gcpApis: 'Node.js dns · net · tls · https Live Blackbox Prober',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_LOG_BASED_METRICS_SLI: {
+    badge: 'SRE WAR-ROOM · PILLAR 05/12',
+    title: 'Cloud Logging v2 Log-Based SLI Counter Metrics (`5xx`, `OOM-137`, `IAM-403`)',
+    whatItDoes:
+      'Inspects and bootstraps the 3 Golden Log-Based SLI Counter Metrics (`cloudpulse_sre_5xx_errors`, `cloudpulse_sre_oom_exit137`, `cloudpulse_sre_iam_403_denied`) directly in Cloud Logging v2.',
+    enterpriseValue:
+      'Converts raw log streams into lightweight time-series SLI counters (`$0.00` metric charge for standard log metrics).',
+    gcpApis: 'POST https://logging.googleapis.com/v2/projects/{project}/metrics',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SRE_PILLAR_CHAOS_GAME_DAY_LAB: {
+    badge: 'SRE WAR-ROOM · PILLAR 06/12',
+    title: 'Chaos Engineering Game-Day Lab & MTTD / MTTR Stopwatch',
+    whatItDoes:
+      'Runs controlled fault-injection drills (503 Dependency Timeout, OOMKill Exit 137, IAM 403 Revocation, Region Blackout) and measures Mean Time to Detect (MTTD) and Mean Time to Recover (MTTR).',
+    enterpriseValue:
+      'Builds team muscle memory for high-severity incidents without risking production customer data.',
+    gcpApis: 'POST /api/project/{project}/wave8/war-room/incident-drill',
+    safetyMode: 'SIMULATION',
+  },
+  SRE_PILLAR_GEMINI_SRE_COMMANDER: {
+    badge: 'SRE WAR-ROOM · PILLAR 07/12',
+    title: 'Gemini 3.8 Flash / 3.1 Pro AI SRE Incident Commander',
+    whatItDoes:
+      'Synthesizes a grounded incident root-cause hypothesis, blast-radius assessment, and copy-ready `gcloud` mitigation runbook from your live SLO burn radar and error clusters.',
+    enterpriseValue:
+      'Accelerates P1 triage by correlating live error signatures and recent configuration changes automatically.',
+    gcpApis: 'aiplatform.googleapis.com (gemini-3.8-flash / gemini-3.1-pro) · Live SRE Telemetry',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_CHANGE_CORRELATION_TIMELINE: {
+    badge: 'SRE WAR-ROOM · PILLAR 08/12',
+    title: 'Change & Event Correlation Timeline (50-Event Log + Audit Config Correlator)',
+    whatItDoes:
+      'Interleaves live `cloudaudit.googleapis.com/activity` configuration mutations (deployments, IAM edits, firewall changes) with application `ERROR`/`CRITICAL` log spikes on a single chronological timeline.',
+    enterpriseValue:
+      'Immediately reveals whether an error spike started right after a Cloud Run revision rollout or IAM/firewall change.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list (Cloud Audit + App Error Interleaver)',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_VPCSC_ZERO_EXFIL_ARCHITECT: {
+    badge: 'SRE WAR-ROOM · PILLAR 09/12',
+    title: 'VPC Service Controls (VPC-SC) Zero-Exfiltration Architect & Subnet PGA Enforcer',
+    whatItDoes:
+      'Audits regional VPC subnetworks for Private Google Access (`privateIpGoogleAccess`), enables PGA in 1 click, and generates `restricted.googleapis.com` (`199.36.153.4/30`) VPC-SC perimeter policies.',
+    enterpriseValue:
+      'Prevents data exfiltration from Cloud Storage, BigQuery, and Secret Manager even if credentials are stolen.',
+    gcpApis: 'compute.subnetworks.setPrivateIpGoogleAccess · accesscontextmanager.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SRE_PILLAR_PUBSUB_DLQ_AUTOPSY: {
+    badge: 'SRE WAR-ROOM · PILLAR 10/12',
+    title: 'Pub/Sub Exactly-Once Delivery & Dead-Letter Queue (`-dlq`) Autopsy Studio',
+    whatItDoes:
+      'Audits live Cloud Pub/Sub topics and subscriptions for missing Dead-Letter Queues (`deadLetterPolicy`) and provisions resilient Topic + Subscription + `-dlq` pairs with `enableExactlyOnceDelivery: true`.',
+    enterpriseValue:
+      'Prevents a single malformed "poison-pill" message from causing infinite retry loops and runaway consumer bills.',
+    gcpApis: 'pubsub.googleapis.com/v1/projects/{project}/topics & subscriptions',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SRE_PILLAR_TOIL_AUTOMATION_RUNBOOKS: {
+    badge: 'SRE WAR-ROOM · PILLAR 11/12',
+    title: '6 Autonomous SRE Readiness Invariants & 1-Click Self-Healing Runbooks',
+    whatItDoes:
+      'Continuously audits 6 SRE readiness invariants (`SRE-INV-01` Global Uptime Probe through `SRE-INV-06` Merkle Baseline) and reconciles any non-compliant invariant via 1-click live execution.',
+    enterpriseValue:
+      'Eliminates repetitive manual SRE setup toil and brings any GCP project to production-ready observability in 60 seconds.',
+    gcpApis: 'monitoring.v3 · logging.v2 · compute.v1 · pubsub.v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SRE_PILLAR_HEALTH_DRIFT_SOC_BRIDGE: {
+    badge: 'SRE WAR-ROOM · PILLAR 12/12',
+    title: 'Unified Health, Drift, Reverse-Terraform HCL & Wave 16 Cloud SOC Bridge',
+    whatItDoes:
+      'Connects the SRE Incident War-Room directly to the SHA-256 Merkle State Vault, ClickOps-to-GitOps (`main.tf`) exporter, and the 20-Pillar Autonomous Cloud SOC.',
+    enterpriseValue:
+      'Unifies reliability engineering (SRE) with security operations (SOC) and infrastructure-as-code (GitOps).',
+    gcpApis: 'Bidirectional SRE War-Room <-> Health & Drift <-> Cloud SOC Bridge',
+    safetyMode: 'READ_ONLY',
+  },
+
+  // --- Logs & Cloud Shell Studio (12 Chrono-Log Tabs & NLP/LQL Controls) ---
+  LOGS_COMPILE_RUN_BTN: {
+    badge: 'LIVE CLOUD LOGGING v2 QUERY',
+    title: 'Compile Natural Language / LQL & Query `logging.googleapis.com/v2/entries:list`',
+    whatItDoes:
+      'Compiles your natural-language prompt or LQL filter via the 3-layer Porter Stemmer + NER + BM25 engine (`$0.00`, `0` tokens by default) and queries live logs from Google Cloud Logging.',
+    enterpriseValue:
+      'Lets engineers find 5xx timeouts, 429 quota exhaustion, or IAM 403 errors using plain English without memorizing LQL syntax.',
+    gcpApis: 'POST https://logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_VIEW_SQL_BTN: {
+    badge: 'NATIVE LQL & BIGQUERY LOG ANALYTICS SQL',
+    title: 'Inspect Compiled Cloud Logging LQL Filter & `_Default._AllLogs` BigQuery SQL',
+    whatItDoes:
+      'Opens the side-by-side drawer showing the exact compiled LQL filter (`entries:list`) and the equivalent BigQuery Log Analytics SQL query over `_Default._AllLogs`.',
+    enterpriseValue:
+      'Allows you to edit raw LQL directly or copy the SQL query into BigQuery Studio for petabyte-scale log analytics.',
+    gcpApis: 'Cloud Logging LQL & BigQuery Log Analytics SQL Transpiler',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_LQL_TUTORIAL_BTN: {
+    badge: 'INTERACTIVE LQL & 3-LAYER NLP GUIDE',
+    title: 'Open Interactive Google Cloud LQL Syntax Cheat-Sheet & 3-Layer NLP Architecture Guide',
+    whatItDoes:
+      'Displays how the `$0.00` local Porter Stemmer + NER + TF-IDF/BM25 compiler works alongside 6 clickable LQL syntax patterns (`=`, `:`, `=~`, `NOT`, `IN`, `sample()`).',
+    enterpriseValue:
+      'Teaches engineers advanced Cloud Logging Query Language (LQL) and `_Default` sink sampling techniques with 1-click live execution.',
+    gcpApis: 'Official Google Cloud LQL Interactive Reference',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_LLM_TOGGLE_BTN: {
+    badge: 'TOKEN GUARDRAIL · $0.00 LOCAL NLP VS. OPT-IN GEMINI LLM',
+    title: 'Toggle `$0.00` Local NLP (0 Tokens) vs. Opt-In Vertex AI / Gemini Neural LQL Compiler',
+    whatItDoes:
+      'Keeps natural-language log compilation locked to the 100% free local Node.js Porter Stemmer + NER engine (`0 tokens`, `$0.00`) by default, or lets you explicitly authorize Gemini / Vertex AI token usage (`~130 tokens/query`).',
+    enterpriseValue:
+      'Guarantees zero surprise LLM token consumption during log searches unless explicitly enabled by the operator.',
+    gcpApis: 'Local Node.js NLP Engine ($0.00) · Optional aiplatform / generativelanguage API',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_SMART_STREAM: {
+    badge: 'CHRONO-LOG MODULE 01/12',
+    title: 'Faceted Log Stream, High-Density Columnar Table, Regex Highlighter & JSON Payload Diff',
+    whatItDoes:
+      'Displays live log entries with a VictoriaLogs/OpenObserve field-cardinality facet sidebar (`+` include / `-` exclude), Cards vs. Columnar Table toggle, Live Tail polling, and side-by-side JSON payload diffing.',
+    enterpriseValue:
+      'Eliminates tedious nested JSON tree clicking when triaging production logs.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_LOG_TO_METRICS: {
+    badge: 'CHRONO-LOG MODULE 02/12',
+    title: 'Log-to-Metrics Service Matrix & 5-Bin P50/P90/P99 Latency Heatmap',
+    whatItDoes:
+      'Aggregates live log entries by service to compute real-time P50, P90, and P99 latency, error rate %, log byte volume, and a 5-bin latency distribution heatmap.',
+    enterpriseValue:
+      'Extracts RED metrics (Rate, Errors, Duration) directly from structured logs even before custom APM instrumentation is added.',
+    gcpApis: 'logging.googleapis.com/v2 · Real-Time Log-to-Metrics Aggregator',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_GROK_EXTRACTOR: {
+    badge: 'CHRONO-LOG MODULE 03/12',
+    title: 'Live Grok / Named-Regex (`(?<field>...)`) Schema-on-Read Virtual Field Extractor',
+    whatItDoes:
+      'Applies custom named regular-expression capture groups to unstructured `textPayload` log lines on the fly, extracting virtual structured columns and top-value distributions.',
+    enterpriseValue:
+      'Parses legacy unstructured text logs into structured queryable columns without redeploying application logging code.',
+    gcpApis: 'Schema-on-Read Named-Regex / Grok Virtual Column Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_DRAIN3_CLUSTERS: {
+    badge: 'CHRONO-LOG MODULE 04/12',
+    title: 'Drain3 Semantic Log Template Clustering (`<NUM>`, `<IP>`, `<UUID>` Wildcard Signatures)',
+    whatItDoes:
+      'Collapses thousands of repetitive log lines into canonical Drain3 structural templates, showing occurrence counts, severity breakdown, and sample payloads.',
+    enterpriseValue:
+      'Compresses log noise by ~68% so new or rare error signatures stand out immediately.',
+    gcpApis: 'Drain3 Fixed-Depth Parse Tree Log Clustering Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_ANOMALY_DIFF: {
+    badge: 'CHRONO-LOG MODULE 05/12',
+    title: 'Anomaly Baseline Diff (Current Incident Window vs. Historical Baseline)',
+    whatItDoes:
+      'Compares error rates, latency percentiles, and signature frequencies in the current window against the historical baseline to highlight statistically significant spikes.',
+    enterpriseValue:
+      'Distinguishes newly introduced deployment regressions from chronic background warnings.',
+    gcpApis: 'logging.googleapis.com/v2 Windowed Baseline Comparator',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_TRACE_WATERFALL: {
+    badge: 'CHRONO-LOG MODULE 06/12',
+    title: 'Cross-Service Distributed `traceId` Waterfall & Critical-Path Span Inspector',
+    whatItDoes:
+      'Stitches log entries sharing the same W3C `logging.googleapis.com/trace` ID across Cloud Load Balancing, Cloud Run, Cloud SQL, and BigQuery into a visual span waterfall.',
+    enterpriseValue:
+      'Pinpoints the exact downstream hop responsible for end-to-end request latency.',
+    gcpApis: 'logging.googleapis.com/trace · cloudtrace.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_QUERY_TRANSPILER: {
+    badge: 'CHRONO-LOG MODULE 07/12',
+    title: '6-Format Polyglot Log Query Transpiler (LQL ↔ BigQuery SQL ↔ PipesQL ↔ LogQL ↔ Lucene ↔ SPL)',
+    whatItDoes:
+      'Transpiles your active log query across 6 industry query languages: Google Cloud LQL, BigQuery Log Analytics SQL, VictoriaLogs PipesQL, Grafana Loki LogQL, Elasticsearch Lucene/KQL, and Splunk SPL.',
+    enterpriseValue:
+      'Helps engineers migrating from Splunk, Datadog, ELK, or Grafana Loki translate queries into native Google Cloud LQL and BigQuery SQL.',
+    gcpApis: '6-Dialect AST Log Query Transpiler',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_FINOPS_DLP: {
+    badge: 'CHRONO-LOG MODULE 08/12',
+    title: 'Log FinOps (`$0.50/GiB` `_Default` Sink Exclusions) & Live DLP Secret Leak Radar',
+    whatItDoes:
+      'Identifies high-volume noisy logs (such as HTTP 200 `/healthz` and `kube-probe` checks), installs 1-click `_Default` sink exclusion filters to protect your 50 GiB/mo Free Tier, and scans log payloads for leaked `AIza...` keys or Bearer JWTs.',
+    enterpriseValue:
+      'Eliminates `$0.50/GiB` Cloud Logging ingestion waste while catching accidental credential logging.',
+    gcpApis: 'PATCH https://logging.googleapis.com/v2/projects/{project}/sinks/_Default (exclusions)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOGS_TAB_SOURCE_BLAME: {
+    badge: 'CHRONO-LOG MODULE 09/12',
+    title: 'Live Source-Code `git blame -L` Inspector, Commit History & Unified Diff Hotfix',
+    whatItDoes:
+      'Executes real `git blame -L`, `git log`, and `git show` against stack-trace file/line coordinates to display the exact author, commit SHA, surrounding source lines, and unified diff patch.',
+    enterpriseValue:
+      'Connects production error stack traces directly to the exact line of source code and commit that introduced the bug.',
+    gcpApis: 'Live Git CLI (`git blame -L`, `git log`) & Stack-Trace Correlator',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_SLO_BURN_MATRIX: {
+    badge: 'CHRONO-LOG MODULE 10/12',
+    title: 'Service SLO Error-Budget Burn Matrix & 1-Click Cloud Logging Metric Provisioner',
+    whatItDoes:
+      'Computes 1h, 6h, and 24h SLO error-budget burn rates per service from live logs and provisions native Cloud Logging v2 counter metrics (`POST /v2/projects/{project}/metrics`) in 1 click.',
+    enterpriseValue:
+      'Turns any recurring log error filter into a permanent, alertable Cloud Monitoring SLI metric.',
+    gcpApis: 'POST https://logging.googleapis.com/v2/projects/{project}/metrics',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOGS_TAB_EBPF_KERNEL_XRAY: {
+    badge: 'CHRONO-LOG MODULE 11/12',
+    title: 'Linux Kernel `/proc/net/snmp` Socket Telemetry & Live DNS / TCP / TLS 1.3 Endpoint Probe',
+    whatItDoes:
+      'Reads real Linux kernel `/proc/net/snmp`, `/proc/net/sockstat`, and `/proc/loadavg` TCP retransmit/socket counters and executes live DNS + TCP + TLS 1.3 socket probes against any target host.',
+    enterpriseValue:
+      'Exposes low-level TCP retransmissions, socket exhaustion, and TLS handshake bottlenecks.',
+    gcpApis: 'Linux `/proc/net/snmp` Kernel Telemetry & Node.js `tls.connect` Prober',
+    safetyMode: 'READ_ONLY',
+  },
+  LOGS_TAB_CANARY_REPLAY: {
+    badge: 'CHRONO-LOG MODULE 12/12',
+    title: 'Live Cloud Logging `entries:write` Canary Injector & Alert Verification Drill',
+    whatItDoes:
+      'Writes a real structured canary `LogEntry` to `logging.googleapis.com/v2/entries:write` in your project and immediately re-queries `entries:list` to verify end-to-end ingestion, DLP redaction, and alert routing.',
+    enterpriseValue:
+      'Proves your logging pipeline, sink exclusions, and log-based alert policies are working end-to-end.',
+    gcpApis: 'POST https://logging.googleapis.com/v2/entries:write',
+    safetyMode: 'LIVE_MUTATION',
+  },
+
+  // --- Interactive Architecture & API Guide (Docs) ---
+  DOCS_OPEN_CMD_PALETTE_BTN: {
+    badge: 'GLOBAL COMMAND PALETTE (⌘K)',
+    title: 'Open ⌘K Voice & Natural-Language Cloud Command Palette',
+    whatItDoes:
+      'Opens the global ⌘K / Ctrl+K command palette to search across all 20 studios, 22 Innovation Labs, 48 Official MCP Servers, and live GCP actions by voice or text.',
+    enterpriseValue:
+      'Gives instant keyboard and voice navigation to every capability documented in the Architecture Guide.',
+    gcpApis: '42-Studio Instant Router + Web Speech API',
+    safetyMode: 'READ_ONLY',
+  },
+  DOCS_WAVE_FILTER_SELECT: {
+    badge: 'DOCUMENTATION WAVE FILTER',
+    title: 'Filter Engineering Manual by Innovation Wave & Capability Domain',
+    whatItDoes:
+      'Filters the 47 interactive architecture blueprints by Wave (All Innovations, Cloud Brain & SKU, Global Map 40 Regions, Orbital HUD, FinOps & IaC, Emergency Kill-Switches).',
+    enterpriseValue:
+      'Lets engineers quickly browse specific architectural waves and their underlying Google Cloud REST APIs.',
+    gcpApis: 'Interactive Documentation Filter',
+    safetyMode: 'READ_ONLY',
+  },
+  DOCS_LAUNCH_FEATURE_BTN: {
+    badge: '1-CLICK STUDIO DEEP-LINK',
+    title: 'Launch Documented Feature Directly in Its Live Operational Studio',
+    whatItDoes:
+      'Jumps straight from this documentation blueprint into the corresponding live studio and sub-tab so you can test the capability immediately.',
+    enterpriseValue:
+      'Connects architectural documentation directly to live interactive execution in 1 click.',
+    gcpApis: 'Cross-Studio Deep-Link Router',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**

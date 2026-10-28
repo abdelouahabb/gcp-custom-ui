@@ -1759,6 +1759,7 @@ export default function InteractiveDocsGuide({
 
           <button
             type="button"
+            data-feature-id="DOCS_OPEN_CMD_PALETTE_BTN"
             onClick={onOpenCommandPalette}
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs px-4 py-3 rounded-md shadow-sm transition-colors shrink-0 cursor-pointer"
           >
@@ -1786,6 +1787,7 @@ export default function InteractiveDocsGuide({
             </span>
             <select
               aria-label="Filter Documentation by Wave"
+              data-feature-id="DOCS_WAVE_FILTER_SELECT"
               value={selectedWave}
               onChange={(e) => setSelectedWave(e.target.value)}
               className="h-9 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
@@ -1850,6 +1852,7 @@ export default function InteractiveDocsGuide({
 
                 <button
                   type="button"
+                  data-feature-id="DOCS_LAUNCH_FEATURE_BTN"
                   onClick={() =>
                     onNavigateToFeature(doc.targetTab, doc.targetSubTab)
                   }

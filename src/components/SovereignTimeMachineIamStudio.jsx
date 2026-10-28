@@ -864,13 +864,14 @@ export default function SovereignTimeMachineIamStudio({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              data-feature-id="SOVEREIGN_SYNC_LIVE_STATE"
               onClick={() => {
                 if (activeSubTab === 'IAM_SURGEON') fetchIamSurgeon();
                 if (activeSubTab === 'TIME_MACHINE') fetchTimeMachine();
                 if (activeSubTab === 'SECRETS_KMS_WAF') fetchVaultStudio();
               }}
               title="Refresh live Wave-7 Sovereign telemetry from Google Cloud REST APIs"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer transition-colors"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -947,6 +948,7 @@ export default function SovereignTimeMachineIamStudio({
                 <button
                   key={tab.id}
                   type="button"
+                  data-feature-id={`SOVEREIGN_TAB_${tab.id}`}
                   title={tab.tip}
                   onClick={() => {
                     if (tab.targetTab) {

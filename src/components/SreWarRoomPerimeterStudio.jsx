@@ -756,6 +756,7 @@ export default function SreWarRoomPerimeterStudio({
             {!warRoomData?.drillActive ? (
               <button
                 type="button"
+                data-feature-id="SRE_FIRE_CHAOS_DRILL_BTN"
                 disabled={Boolean(drillBusy)}
                 onClick={() => handleIncidentDrill('INJECT_CASCADE_DRILL')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
@@ -770,6 +771,7 @@ export default function SreWarRoomPerimeterStudio({
             ) : (
               <button
                 type="button"
+                data-feature-id="SRE_FIRE_CHAOS_DRILL_BTN"
                 disabled={Boolean(drillBusy)}
                 onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
@@ -785,6 +787,7 @@ export default function SreWarRoomPerimeterStudio({
 
             <button
               type="button"
+              data-feature-id="SRE_POSTMORTEM_MD_BTN"
               onClick={() => setShowPostmortemPreview((p) => !p)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 text-xs font-bold cursor-pointer"
             >
@@ -794,6 +797,7 @@ export default function SreWarRoomPerimeterStudio({
 
             <button
               type="button"
+              data-feature-id="SRE_SYNC_ALL_PILLARS_BTN"
               onClick={fetchAllTelemetry}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
             >
@@ -951,6 +955,7 @@ export default function SreWarRoomPerimeterStudio({
               <button
                 key={p.id}
                 type="button"
+                data-feature-id={`SRE_PILLAR_${p.id}`}
                 onClick={() => setActivePillar(p.id)}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active
