@@ -44,6 +44,8 @@ export default function FinOpsCostKillPipelineBar({
   const [blueprint, setBlueprint] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedStage, setSelectedStage] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [synthDrawerOpen, setSynthDrawerOpen] = useState(false);
   const [activeArtifactTab, setActiveArtifactTab] = useState('TERRAFORM');
   const [copiedKey, setCopiedKey] = useState(null);
@@ -244,6 +246,24 @@ export default function FinOpsCostKillPipelineBar({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            onClick={() => setDrawerOpen((v) => !v)}
+            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition border ${
+              drawerOpen
+                ? 'bg-amber-500/20 border-amber-400/50 text-amber-200'
+                : 'bg-slate-900/90 border-slate-700/80 text-slate-300 hover:border-amber-400/40 hover:text-amber-200'
+            }`}
+            title="Inspect selected FinOps stage details & Mermaid flowchart"
+          >
+            <span>{drawerOpen ? 'Close Stage' : 'Inspect Stage'}</span>
+            {drawerOpen ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSynthDrawerOpen((v) => !v)}
             className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition border ${
               synthDrawerOpen
@@ -290,13 +310,24 @@ export default function FinOpsCostKillPipelineBar({
               return (
                 <div
                   key={stage.id}
-                  onClick={() => setSelectedStage(stage.id)}
+                  onClick={() => {
+                    if (selectedStage === stage.id && drawerOpen) {
+                      setDrawerOpen(false);
+                    } else {
+                      if (selectedStage !== stage.id) {
+                        setMermaidExpanded(false);
+                      }
+                      setSelectedStage(stage.id);
+                      setDrawerOpen(true);
+                    }
+                  }}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       setSelectedStage(stage.id);
+                      setDrawerOpen(true);
                     }
                   }}
                   className={`group relative cursor-pointer rounded-xl border p-2.5 transition-all ${
@@ -365,8 +396,8 @@ export default function FinOpsCostKillPipelineBar({
             })}
           </div>
 
-          {/* Selected Stage Detail Strip */}
-          {selectedStageObj && (
+          {/* Selected Stage Detail Strip (Closed by default; opens when a stage card is clicked) */}
+          {drawerOpen && selectedStageObj && (
             <div className="mt-2.5 rounded-xl border border-slate-800/90 bg-slate-950/90 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -468,17 +499,53 @@ export default function FinOpsCostKillPipelineBar({
                   </div>
                 )}
 
-              {/* Live Stage-Specific Mermaid Diagram (Strictly rendered ONLY when live directed edges exist!) */}
+              {/* Live Stage-Specific Mermaid Diagram (Strictly rendered ONLY when live directed edges exist, and collapsed until user clicks Open Interactive Mermaid Flowchart!) */}
               {selectedStageObj.mermaidDsl &&
                 selectedStageObj.mermaidDsl.includes('-->') && (
-                  <div className="mt-3 pt-2.5 border-t border-slate-800/80">
-                    <MermaidArchitectureDiagram
-                      code={selectedStageObj.mermaidDsl}
-                      chart={selectedStageObj.mermaidDsl}
-                      defaultMode="VISUAL"
-                      title={`Live ${selectedStageObj.shortTitle} Topology (${projectId})`}
-                      subtitle={`Real-time FinOps, quota & cost-guardrail topology synthesized from live resources in ${projectId}`}
-                    />
+                  <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/25 bg-slate-900/90 px-3 py-2">
+                      <div
+                        onClick={() => setMermaidExpanded((prev) => !prev)}
+                        className="flex items-center gap-2 flex-wrap cursor-pointer select-none"
+                      >
+                        <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                          Mermaid flowchart LR
+                        </span>
+                        <span className="text-xs font-bold text-slate-100">
+                          Stage {selectedStageObj.stepNumber} Live {selectedStageObj.shortTitle} Topology ({projectId})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMermaidExpanded((prev) => !prev)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer ${
+                          mermaidExpanded
+                            ? 'bg-slate-800 text-slate-200 border border-slate-700'
+                            : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                        }`}
+                      >
+                        <span>
+                          {mermaidExpanded
+                            ? 'Hide Mermaid Flowchart'
+                            : 'Open Interactive Mermaid Flowchart'}
+                        </span>
+                        {mermaidExpanded ? (
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {mermaidExpanded && (
+                      <MermaidArchitectureDiagram
+                        code={selectedStageObj.mermaidDsl}
+                        chart={selectedStageObj.mermaidDsl}
+                        defaultMode="VISUAL"
+                        title={`Live ${selectedStageObj.shortTitle} Topology (${projectId})`}
+                        subtitle={`Real-time FinOps, quota & cost-guardrail topology synthesized from live resources in ${projectId}`}
+                      />
+                    )}
                   </div>
                 )}
             </div>
