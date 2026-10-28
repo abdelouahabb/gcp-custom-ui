@@ -71905,10 +71905,227 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
 
     const vpcNamesList = vpcs.map((v) => v.name).slice(0, 2).join(', ') || 'default';
     const fwNamesList = firewalls.map((f) => f.name).slice(0, 3).join(', ') || 'allow-iap-ssh';
-    const bucketNamesList = buckets.map((b) => b.name).slice(0, 2).join(', ') || 'none-provisioned';
-    const datasetNamesList = datasets.map((d) => d.name).slice(0, 2).join(', ') || 'none-provisioned';
-    const vmNamesList = vms.map((v) => v.name).slice(0, 2).join(', ') || '0 active VMs ($0/hr)';
-    const crNamesList = cloudRunSvcs.map((s) => s.name).slice(0, 2).join(', ') || '0 Cloud Run ($0 idle)';
+    const bucketNamesList = buckets.map((b) => b.name).slice(0, 2).join(', ');
+    const datasetNamesList = datasets.map((d) => d.name).slice(0, 2).join(', ');
+    const vmNamesList = vms.map((v) => v.name).slice(0, 2).join(', ');
+    const crNamesList = cloudRunSvcs.map((s) => s.name).slice(0, 2).join(', ');
+
+    // Dynamic Stage 1 Mermaid (Only real VPCs & Firewalls with count > 0)
+    const stage1MermaidLines = [
+      `flowchart LR`,
+      `  subgraph IAM["Zero-Trust Identity"]`,
+      `    ADC["Cloud Identity: ${projectId}"]`,
+      `    IAP["Cloud IAP Tunnel: 35.235.240.0/20"]`,
+      `  end`,
+      `  ADC -->|"actAs"| IAP`,
+    ];
+    if (firewalls.length > 0) {
+      stage1MermaidLines.push(`  subgraph FW_SG["Firewall Rules (${firewalls.length} Active)"]`);
+      firewalls.slice(0, 3).forEach((fw, idx) => {
+        stage1MermaidLines.push(`    FW${idx}["Firewall: ${fw.name}"]`);
+      });
+      stage1MermaidLines.push(`  end`);
+      firewalls.slice(0, 3).forEach((_, idx) => {
+        stage1MermaidLines.push(`  IAP -->|"TCP-22 / HTTPS"| FW${idx}`);
+      });
+    }
+    if (vpcs.length > 0) {
+      stage1MermaidLines.push(`  subgraph VPC_SG["VPC Networks (${vpcs.length} Active)"]`);
+      vpcs.slice(0, 3).forEach((v, idx) => {
+        stage1MermaidLines.push(`    VPC${idx}["VPC Network: ${v.name}"]`);
+      });
+      stage1MermaidLines.push(`  end`);
+      if (firewalls.length > 0) {
+        stage1MermaidLines.push(`  FW0 -->|"Protected Perimeter"| VPC0`);
+      } else {
+        stage1MermaidLines.push(`  IAP -->|"Protected Perimeter"| VPC0`);
+      }
+    }
+    const stage1MermaidDsl =
+      vpcs.length + firewalls.length > 0 ? stage1MermaidLines.join('\n') : null;
+
+    // Dynamic Stage 2 Mermaid (Strictly omits GCS if 0 buckets, and strictly omits BigQuery if 0 datasets!)
+    let stage2MermaidDsl = null;
+    if (buckets.length + datasets.length > 0) {
+      const s2Lines = [`flowchart LR`];
+      if (vpcs.length > 0) {
+        s2Lines.push(
+          `  subgraph PERIMETER["VPC Perimeter"]`,
+          `    VPC_IN["Private Google Access: ${vpcNamesList}"]`,
+          `  end`
+        );
+      }
+      if (buckets.length > 0) {
+        s2Lines.push(`  subgraph GCS["Cloud Storage (${buckets.length} Active)"]`);
+        buckets.slice(0, 3).forEach((b, idx) => {
+          s2Lines.push(`    BKT${idx}["GCS Bucket: gs://${b.name}"]`);
+        });
+        s2Lines.push(`  end`);
+        if (vpcs.length > 0) {
+          buckets.slice(0, 3).forEach((_, idx) => {
+            s2Lines.push(`  VPC_IN -->|"Uniform IAM"| BKT${idx}`);
+          });
+        }
+      }
+      if (datasets.length > 0) {
+        s2Lines.push(`  subgraph BQ["BigQuery Lakehouse (${datasets.length} Active)"]`);
+        datasets.slice(0, 3).forEach((d, idx) => {
+          s2Lines.push(`    DS${idx}["BQ Dataset: ${d.name}"]`);
+        });
+        s2Lines.push(`  end`);
+        if (buckets.length > 0) {
+          datasets.slice(0, 3).forEach((_, idx) => {
+            s2Lines.push(`  BKT0 -->|"Lakehouse ELT"| DS${idx}`);
+          });
+        } else if (vpcs.length > 0) {
+          datasets.slice(0, 3).forEach((_, idx) => {
+            s2Lines.push(`  VPC_IN -->|"Private SQL"| DS${idx}`);
+          });
+        }
+      }
+      stage2MermaidDsl = s2Lines.join('\n');
+    }
+
+    // Dynamic Stage 3 Mermaid (Strictly null when 0 VMs, 0 Cloud Run, and 0 GKE clusters!)
+    let stage3MermaidDsl = null;
+    if (vms.length + cloudRunSvcs.length + gkeClusters.length > 0) {
+      const s3Lines = [
+        `flowchart LR`,
+        `  subgraph INGRESS["Zero-Trust Ingress"]`,
+        `    EDGE["HTTPS & IAP SSH Bastion"]`,
+        `  end`,
+      ];
+      if (vms.length > 0) {
+        s3Lines.push(`  subgraph GCE["Compute Engine (${vms.length} Active)"]`);
+        vms.slice(0, 3).forEach((vm, idx) => {
+          s3Lines.push(`    VM${idx}["GCE VM: ${vm.name}"]`);
+        });
+        s3Lines.push(`  end`);
+        vms.slice(0, 3).forEach((_, idx) => {
+          s3Lines.push(`  EDGE -->|"SSH2 / IAP"| VM${idx}`);
+        });
+      }
+      if (cloudRunSvcs.length > 0) {
+        s3Lines.push(`  subgraph CRUN["Cloud Run (${cloudRunSvcs.length} Active)"]`);
+        cloudRunSvcs.slice(0, 3).forEach((s, idx) => {
+          s3Lines.push(`    CR${idx}["Cloud Run: ${s.name}"]`);
+        });
+        s3Lines.push(`  end`);
+        cloudRunSvcs.slice(0, 3).forEach((_, idx) => {
+          s3Lines.push(`  EDGE -->|"Scale-to-Zero HTTPS"| CR${idx}`);
+        });
+      }
+      if (gkeClusters.length > 0) {
+        s3Lines.push(`  subgraph GKE_SG["GKE (${gkeClusters.length} Active)"]`);
+        gkeClusters.slice(0, 2).forEach((c, idx) => {
+          s3Lines.push(`    GKE${idx}["GKE Cluster: ${c.name}"]`);
+        });
+        s3Lines.push(`  end`);
+        gkeClusters.slice(0, 2).forEach((_, idx) => {
+          s3Lines.push(`  EDGE -->|"Workload Identity"| GKE${idx}`);
+        });
+      }
+      stage3MermaidDsl = s3Lines.join('\n');
+    }
+
+    // Dynamic Stage 4 Mermaid (Only codifies non-zero inventory categories into main.tf -> cloudbuild.yaml)
+    const s4Lines = [
+      `flowchart LR`,
+      `  subgraph DISCOVERY["Live Non-Zero Inventory"]`,
+    ];
+    const s4InventoryIds = [];
+    if (vpcs.length > 0) {
+      s4Lines.push(`    INV_VPC["VPC Networks: ${vpcs.length} Active"]`);
+      s4InventoryIds.push('INV_VPC');
+    }
+    if (firewalls.length > 0) {
+      s4Lines.push(`    INV_FW["Firewall Rules: ${firewalls.length} Active"]`);
+      s4InventoryIds.push('INV_FW');
+    }
+    if (buckets.length > 0) {
+      s4Lines.push(`    INV_GCS["GCS Buckets: ${buckets.length} Active"]`);
+      s4InventoryIds.push('INV_GCS');
+    }
+    if (datasets.length > 0) {
+      s4Lines.push(`    INV_BQ["BigQuery Datasets: ${datasets.length} Active"]`);
+      s4InventoryIds.push('INV_BQ');
+    }
+    if (vms.length > 0) {
+      s4Lines.push(`    INV_VM["Compute VMs: ${vms.length} Active"]`);
+      s4InventoryIds.push('INV_VM');
+    }
+    if (cloudRunSvcs.length > 0) {
+      s4Lines.push(`    INV_CR["Cloud Run: ${cloudRunSvcs.length} Active"]`);
+      s4InventoryIds.push('INV_CR');
+    }
+    if (s4InventoryIds.length === 0) {
+      s4Lines.push(`    INV_PROJ["GCP Project: ${projectId}"]`);
+      s4InventoryIds.push('INV_PROJ');
+    }
+    s4Lines.push(
+      `  end`,
+      `  subgraph IAC["Terraform Synthesizer"]`,
+      `    TF["main.tf: ${projectId}-enterprise-stack.tf"]`,
+      `  end`,
+      `  subgraph CICD["SLSA-3 Cloud Build"]`,
+      `    CB["Pipeline: cloudbuild.yaml"]`,
+      `  end`
+    );
+    s4InventoryIds.forEach((invId) => {
+      s4Lines.push(`  ${invId} -->|"HCL Block"| TF`);
+    });
+    s4Lines.push(`  TF -->|"GitOps Plan & Apply"| CB`);
+    const stage4MermaidDsl = s4Lines.join('\n');
+
+    // Dynamic Stage 5 Mermaid (Only shows spend node if > $0, always shows real enabled APIs)
+    const s5Lines = [
+      `flowchart LR`,
+      `  subgraph SURFACE["Active Project Surface"]`,
+      `    APIS["Enabled GCP APIs: ${enabledApis.length} Services"]`,
+    ];
+    if (totalMonthlySpendUsd > 0) {
+      s5Lines.push(`    BURN["Monthly Spend: $${totalMonthlySpendUsd.toFixed(2)}/mo"]`);
+    }
+    s5Lines.push(
+      `  end`,
+      `  subgraph QUOTA["HTTP 429 Quota Guard"]`,
+      `    RADAR["Service Usage & Quota Radar"]`,
+      `    S10X["Startup 10X Quota Drafter"]`,
+      `  end`,
+      `  subgraph KILLSWITCH["Autonomous Circuit-Breaker"]`,
+      `    KILL["3-Tier API Kill-Switch"]`,
+      `  end`,
+      `  APIS -->|"24h Request Telemetry"| RADAR`
+    );
+    if (totalMonthlySpendUsd > 0) {
+      s5Lines.push(`  BURN -->|"SKU Cost Attribution"| RADAR`);
+    }
+    s5Lines.push(
+      `  RADAR -->|"Quota Headroom"| S10X`,
+      `  RADAR -->|"Spend Protection"| KILL`
+    );
+    const stage5MermaidDsl = s5Lines.join('\n');
+
+    // Dynamic Stage 6 Mermaid (Omits 0-event nodes when no deletions have occurred)
+    const s6Lines = [
+      `flowchart LR`,
+      `  subgraph SRE["SRE Burn-Rate Gate"]`,
+      `    SLO["Multi-Window SLO: 14.4x (1h) / 6.0x (6h)"]`,
+      `  end`,
+      `  subgraph AUDIT["Cloud Audit Stream"]`,
+      recentDestructiveEvents.length > 0
+        ? `    LOGS["Destructive Events: ${recentDestructiveEvents.length} Recorded (30d)"]`
+        : `    LOGS["Audit Activity Stream: cloudaudit.googleapis.com"]`,
+      `  end`,
+      `  subgraph VAULT["30-Day Cloud Recycle Bin"]`,
+      `    NATIVE["Native Undelete: GCS 7d / BQ 168h / Secrets / SAs"]`,
+      `    SHELL["Shell Re-Creation: VMs / Cloud Run / VPCs"]`,
+      `  end`,
+      `  SLO -->|"Alert Gate"| LOGS`,
+      `  LOGS -->|"State Intact"| NATIVE`,
+      `  LOGS -->|"Config Snapshot"| SHELL`,
+    ];
+    const stage6MermaidDsl = s6Lines.join('\n');
 
     const stages = [
       {
@@ -71926,58 +72143,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
             : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
         cliCmd: `gcloud compute firewall-rules list --project=${projectId} --format="table(name,network,direction,allowed,sourceRanges)"`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph IAM["Zero-Trust Identity"]`,
-          `    ADC["Cloud Identity / OAuth ADC (${projectId})"]`,
-          `    IAP["Cloud IAP TCP-22 Tunnel (35.235.240.0/20)"]`,
-          `  end`,
-          `  subgraph VPC["VPC Perimeter (${vpcs.length} Networks)"]`,
-          `    NET["VPC: ${vpcNamesList}"]`,
-          `    FW["Firewall Rules (${firewalls.length}): ${fwNamesList}"]`,
-          `  end`,
-          `  ADC -->|"iam.serviceAccounts.actAs"| IAP`,
-          `  IAP -->|"Encrypted TCP-22 / HTTPS"| FW`,
-          `  FW -->|"Ingress Guardrail"| NET`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'adc-identity',
-            subgraph: 'Zero-Trust Identity',
-            title: 'Cloud Identity & ADC',
-            subtitle: `Project: ${projectId}`,
-            badge: 'OAuth 2.0 + actAs',
-            status: 'OPTIMAL',
-            targetTab: 'SOVEREIGN_STUDIO',
-          },
-          {
-            id: 'iap-bastion',
-            subgraph: 'Bastion Tunnel',
-            title: 'Cloud IAP TCP-22 Proxy',
-            subtitle: '35.235.240.0/20 CIDR',
-            badge: 'Zero Public SSH IP',
-            status: 'OPTIMAL',
-            targetTab: 'VPC_NETWORKS',
-          },
-          {
-            id: 'vpc-firewalls',
-            subgraph: 'Firewall Matrix',
-            title: `${firewalls.length} VPC Firewall Rules`,
-            subtitle: fwNamesList,
-            badge: 'INGRESS / EGRESS',
-            status: firewalls.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'VPC_NETWORKS',
-          },
-          {
-            id: 'vpc-backbone',
-            subgraph: 'Global VPC Routing',
-            title: `${vpcs.length} VPC Network(s)`,
-            subtitle: vpcNamesList,
-            badge: 'Stage 1 -> Stage 2',
-            status: vpcs.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'VPC_NETWORKS',
-          },
-        ],
+        mermaidDsl: stage1MermaidDsl,
         stageItems: [
           ...vpcs.slice(0, 3).map((v) => ({
             kind: 'VPC Network',
@@ -72005,63 +72171,14 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `${buckets.length} GCS · ${datasets.length} BQ Datasets`,
         summary:
           buckets.length + datasets.length > 0
-            ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s) and ${datasets.length} BigQuery analytical dataset(s) connected for telemetry & lakehouse pipelines.`
+            ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s)${
+                datasets.length > 0
+                  ? ` and ${datasets.length} BigQuery analytical dataset(s)`
+                  : ' (0 BigQuery datasets provisioned)'
+              }.`
             : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
         cliCmd: `gcloud storage buckets list --project=${projectId} --format="table(name,location,storageClass)"`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph PERIMETER["Stage 1 Perimeter"]`,
-          `    VPC_IN["VPC Private Google Access (${vpcNamesList})"]`,
-          `  end`,
-          `  subgraph GCS["Cloud Storage (${buckets.length} Buckets)"]`,
-          `    BKT["gs://${bucketNamesList} (7d Soft-Delete)"]`,
-          `  end`,
-          `  subgraph BQ["BigQuery Lakehouse (${datasets.length} Datasets)"]`,
-          `    DS["${projectId}:${datasetNamesList} (168h Time-Travel)"]`,
-          `    AI["BigLake & Vertex AI Feature Store"]`,
-          `  end`,
-          `  VPC_IN -->|"Uniform Bucket IAM"| BKT`,
-          `  BKT -->|"Object Federation / ELT"| DS`,
-          `  DS -->|"Columnar SQL & ML"| AI`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'pga-ingress',
-            subgraph: 'Stage 1 Handoff',
-            title: 'Private Google Access',
-            subtitle: `VPC: ${vpcNamesList}`,
-            badge: 'Uniform IAM',
-            status: 'OPTIMAL',
-            targetTab: 'VPC_NETWORKS',
-          },
-          {
-            id: 'gcs-lake',
-            subgraph: 'Object Persistence',
-            title: `${buckets.length} Cloud Storage Bucket(s)`,
-            subtitle: bucketNamesList,
-            badge: '7d Soft-Delete Active',
-            status: buckets.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'CLOUD_STORAGE',
-          },
-          {
-            id: 'bq-warehouse',
-            subgraph: 'Analytical Warehouse',
-            title: `${datasets.length} BigQuery Dataset(s)`,
-            subtitle: datasetNamesList,
-            badge: '168h Time-Travel',
-            status: datasets.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'BIGQUERY_STUDIO',
-          },
-          {
-            id: 'lakehouse-consumers',
-            subgraph: 'Downstream Compute',
-            title: 'BigLake & AI Consumers',
-            subtitle: 'Feeds Stage 3 Compute & Run',
-            badge: 'Stage 2 -> Stage 3',
-            status: 'OPTIMAL',
-            targetTab: 'BIGQUERY_STUDIO',
-          },
-        ],
+        mermaidDsl: stage2MermaidDsl,
         stageItems: [
           ...buckets.slice(0, 4).map((b) => ({
             kind: 'GCS Bucket',
@@ -72097,64 +72214,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `${vms.length} live GCE VM(s)${vms.length ? ` (${vms.map((v) => v.name).join(', ')})` : ''}, ${cloudRunSvcs.length} Cloud Run service(s), and ${gkeClusters.length} GKE cluster(s) active in ${projectId}.`
             : `0 running VMs or Cloud Run services in "${projectId}" ($0.00/hr compute idle). Launch a Free-Tier e2-micro VM, deploy a Scale-to-Zero Cloud Run container, or inspect recently deleted VMs in the 30-Day Recycle Bin.`,
         cliCmd: `gcloud compute instances list --project=${projectId} && gcloud run services list --project=${projectId}`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph INGRESS["Edge & IAP Routing"]`,
-          `    EDGE["HTTPS Ingress & IAP SSH Bastion"]`,
-          `  end`,
-          `  subgraph COMPUTE["Compute & Serverless Fleet (${projectId})"]`,
-          `    VMS["GCE VM Fleet (${vms.length}): ${vmNamesList}"]`,
-          `    CRUN["Cloud Run Gen2 (${cloudRunSvcs.length}): ${crNamesList}"]`,
-          `    GKE["GKE Clusters (${gkeClusters.length})"]`,
-          `  end`,
-          `  subgraph STATE["Stage 2 Stateful Sinks"]`,
-          `    STORAGE["GCS (${buckets.length}) + BigQuery (${datasets.length})"]`,
-          `  end`,
-          `  EDGE -->|"TCP-22 / SSH2 PTY"| VMS`,
-          `  EDGE -->|"Scale-to-Zero HTTPS"| CRUN`,
-          `  VMS -->|"ADC Service Account"| STORAGE`,
-          `  CRUN -->|"Serverless VPC Access"| STORAGE`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'compute-edge',
-            subgraph: 'Ingress & Bastion',
-            title: 'HTTPS & IAP SSH2 Bridge',
-            subtitle: 'WebSocket PTY + TLS Edge',
-            badge: 'Zero-Trust Access',
-            status: 'OPTIMAL',
-            targetTab: 'VM_SSH',
-          },
-          {
-            id: 'gce-vm-fleet',
-            subgraph: 'GCE IaaS Fleet',
-            title: `${vms.length} Compute Engine VM(s)`,
-            subtitle: vmNamesList,
-            badge: vms.length > 0 ? 'Live VM Fleet' : '+ Launch e2-micro ($0/mo)',
-            status: vms.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'VM_SSH',
-            provisionType: vms.length === 0 ? 'COMPUTE_VM' : undefined,
-          },
-          {
-            id: 'cloud-run-fleet',
-            subgraph: 'Serverless Containers',
-            title: `${cloudRunSvcs.length} Cloud Run Service(s)`,
-            subtitle: crNamesList,
-            badge: cloudRunSvcs.length > 0 ? 'Scale-to-Zero Gen2' : '+ Deploy Cloud Run',
-            status: cloudRunSvcs.length > 0 ? 'OPTIMAL' : 'READY',
-            targetTab: 'CLOUD_RUN',
-            provisionType: cloudRunSvcs.length === 0 ? 'CLOUD_RUN' : undefined,
-          },
-          {
-            id: 'compute-recovery',
-            subgraph: 'State & 30d Vault',
-            title: `GCS (${buckets.length}) · BQ (${datasets.length})`,
-            subtitle: 'Connected to 30d Recycle Bin',
-            badge: 'Stage 3 -> Stage 4',
-            status: 'OPTIMAL',
-            targetTab: 'RECYCLE_BIN',
-          },
-        ],
+        mermaidDsl: stage3MermaidDsl,
         stageItems:
           vms.length + cloudRunSvcs.length + gkeClusters.length > 0
             ? [
@@ -72214,60 +72274,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `${resources.length} Live Resources Codified`,
         summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
         cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph DISCOVERY["Live GCP Inventory"]`,
-          `    INV["${resources.length} Discovered Resources (${projectId})"]`,
-          `  end`,
-          `  subgraph IAC["Reverse-Terraform Synthesizer"]`,
-          `    TF["${projectId}-enterprise-stack.tf (HCL)"]`,
-          `  end`,
-          `  subgraph CICD["SLSA-Level 3 Cloud Build"]`,
-          `    CB["cloudbuild.yaml (@sha256 Provenance)"]`,
-          `    CANARY["Canary Traffic Gate (0% -> 10% -> 100%)"]`,
-          `  end`,
-          `  INV -->|"Codify State"| TF`,
-          `  TF -->|"GitOps Trigger"| CB`,
-          `  CB -->|"Verified Rollout"| CANARY`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'live-inventory',
-            subgraph: 'State Discovery',
-            title: `${resources.length} Live GCP Resources`,
-            subtitle: `${vpcs.length} VPC · ${buckets.length} GCS · ${datasets.length} BQ · ${vms.length} VM`,
-            badge: 'Zero Drift',
-            status: 'OPTIMAL',
-            targetTab: 'OVERVIEW',
-          },
-          {
-            id: 'terraform-hcl',
-            subgraph: 'IaC Synthesizer',
-            title: 'main.tf (Terraform HCL)',
-            subtitle: `${projectId}-enterprise-stack.tf`,
-            badge: 'hashicorp/google ~> 5.20',
-            status: 'OPTIMAL',
-            targetTab: 'WAVE9_STUDIO',
-          },
-          {
-            id: 'slsa3-cloudbuild',
-            subgraph: 'SLSA-3 Provenance',
-            title: 'cloudbuild.yaml Pipeline',
-            subtitle: 'Artifact Registry @sha256 Digest',
-            badge: 'VERIFIED Build',
-            status: 'OPTIMAL',
-            targetTab: 'WAVE9_STUDIO',
-          },
-          {
-            id: 'canary-rollout',
-            subgraph: 'Progressive Delivery',
-            title: '10% Canary Traffic Gate',
-            subtitle: 'Auto-rollback on 14.4x SLO burn',
-            badge: 'Stage 4 -> Stage 5',
-            status: 'OPTIMAL',
-            targetTab: 'WAVE9_STUDIO',
-          },
-        ],
+        mermaidDsl: stage4MermaidDsl,
         stageItems: [
           {
             kind: 'Terraform HCL',
@@ -72301,62 +72308,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `$${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs`,
         summary: `Current monthly run-rate is $${totalMonthlySpendUsd.toFixed(2)}/mo across ${enabledApis.length} enabled GCP service APIs with live HTTP 429 Quota Saturation & Startup 10X justification drafter.`,
         cliCmd: `gcloud alpha services quota list --service=compute.googleapis.com --consumer=projects/${projectId} --limit=15`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph TELEMETRY["Live Billing & API Telemetry"]`,
-          `    BURN["Monthly Run-Rate: $${totalMonthlySpendUsd.toFixed(2)}/mo"]`,
-          `    APIS["${enabledApis.length} Enabled Google Cloud APIs"]`,
-          `  end`,
-          `  subgraph QUOTA["HTTP 429 Prevention"]`,
-          `    RADAR["Service Usage & Quota Radar"]`,
-          `    S10X["Startup 10X Quota & $350k Credit Drafter"]`,
-          `  end`,
-          `  subgraph KILLSWITCH["Autonomous Spend Guard"]`,
-          `    KILL["3-Tier Emergency API Kill-Switch"]`,
-          `  end`,
-          `  BURN -->|"SKU Cost Attribution"| RADAR`,
-          `  APIS -->|"24h Request & 429 Rate"| RADAR`,
-          `  RADAR -->|">=65% Saturation"| S10X`,
-          `  RADAR -->|"Runaway Spend Alert"| KILL`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'finops-burn',
-            subgraph: 'Live SKU Billing',
-            title: `$${totalMonthlySpendUsd.toFixed(2)}/mo Run-Rate`,
-            subtitle: `$${(totalMonthlySpendUsd / 730).toFixed(4)}/hr Live Burn`,
-            badge: totalMonthlySpendUsd === 0 ? 'Always-Free Tier' : 'Active Spend',
-            status: 'OPTIMAL',
-            targetTab: 'FINOPS',
-          },
-          {
-            id: 'quota-radar',
-            subgraph: 'HTTP 429 Radar',
-            title: `${enabledApis.length} Enabled Service APIs`,
-            subtitle: 'Consumer Quota & 24h Traffic',
-            badge: 'Zero HTTP 429s',
-            status: 'OPTIMAL',
-            targetTab: 'OVERVIEW',
-          },
-          {
-            id: 'startup-10x',
-            subgraph: 'Scale Readiness',
-            title: 'Startup 10X Quota Drafter',
-            subtitle: 'L4/A100 GPU, vCPU & $350k Credits',
-            badge: 'Auto-Justification',
-            status: 'OPTIMAL',
-            targetTab: 'STARTUP_10X',
-          },
-          {
-            id: 'api-killswitch',
-            subgraph: 'Spend Circuit-Breaker',
-            title: '3-Tier API Kill-Switch',
-            subtitle: 'Reversible via 30d Recycle Bin',
-            badge: 'Stage 5 -> Stage 6',
-            status: 'OPTIMAL',
-            targetTab: 'FINOPS',
-          },
-        ],
+        mermaidDsl: stage5MermaidDsl,
         stageItems: [
           {
             kind: 'Monthly Run-Rate',
@@ -72390,60 +72342,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `${recentDestructiveEvents.length} Vault Events (30d)`,
         summary: `Google SRE 1h/6h multi-window burn-rate gate paired with the 30-Day Cloud Recycle Bin distinguishing Native State Recovery from Empty Shell Re-Creation.`,
         cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=15 --format=json`,
-        mermaidDsl: [
-          `flowchart LR`,
-          `  subgraph SRE["SRE Multi-Window Alerting"]`,
-          `    SLO["14.4x (1h) / 6.0x (6h) Error Budget Gate"]`,
-          `  end`,
-          `  subgraph AUDIT["30-Day Cloud Audit Ledger"]`,
-          `    LOGS["cloudaudit.googleapis.com/activity (${recentDestructiveEvents.length} Events)"]`,
-          `  end`,
-          `  subgraph VAULT["30-Day Cloud Recycle Bin"]`,
-          `    NATIVE["Native State Undelete (GCS 7d / BQ 168h / Secret / SA)"]`,
-          `    SHELL["Empty Shell Re-Creation (VM / Cloud Run / VPC)"]`,
-          `  end`,
-          `  SLO -->|"Incident Trigger"| LOGS`,
-          `  LOGS -->|"Data Intact"| NATIVE`,
-          `  LOGS -->|"Config Forensics"| SHELL`,
-        ].join('\n'),
-        mermaidTopology: [
-          {
-            id: 'sre-burn-gate',
-            subgraph: 'Google SRE Workbook',
-            title: '14.4x / 6.0x Burn Gate',
-            subtitle: '2% Error Budget Window',
-            badge: 'Multi-Window Alert',
-            status: 'OPTIMAL',
-            targetTab: 'SRE_WAR_ROOM',
-          },
-          {
-            id: 'audit-ledger',
-            subgraph: 'Cloud Audit Forensics',
-            title: '30-Day Destructive Ledger',
-            subtitle: `${recentDestructiveEvents.length} Session Mutation(s) Tracked`,
-            badge: 'cloudaudit.googleapis.com',
-            status: 'OPTIMAL',
-            targetTab: 'RECYCLE_BIN',
-          },
-          {
-            id: 'native-undelete',
-            subgraph: '100% Data Recovery',
-            title: 'Native State Undelete',
-            subtitle: 'GCS 7d · BigQuery 168h · Secrets · SAs · APIs',
-            badge: 'Restores Data & IAM',
-            status: 'OPTIMAL',
-            targetTab: 'RECYCLE_BIN',
-          },
-          {
-            id: 'shell-recreation',
-            subgraph: 'Honest Infrastructure Recovery',
-            title: 'Empty Shell Re-Creation',
-            subtitle: 'GCE VMs · Cloud Run · VPCs · Firewalls',
-            badge: 'Zero False Promises',
-            status: 'OPTIMAL',
-            targetTab: 'RECYCLE_BIN',
-          },
-        ],
+        mermaidDsl: stage6MermaidDsl,
         stageItems: [
           {
             kind: '30-Day Recycle Bin',
@@ -72709,47 +72608,79 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project="$PROJECT_ID" --limit=5 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName,protoPayload.resourceName)"`,
     ].join('\n');
 
-    const architectureMermaid = [
-      `flowchart LR`,
-      `  subgraph S1["Stage 1: Zero-Trust VPC & IAP"]`,
-      `    IAP["IAP TCP-22 (35.235.240.0/20)"]`,
-      `    VPC["VPC (${vpcs.length}): ${vpcNamesList} · FW (${firewalls.length})"]`,
-      `  end`,
-      `  subgraph S2["Stage 2: Storage & BigQuery Lakehouse"]`,
-      `    GCS["GCS Buckets (${buckets.length}): ${bucketNamesList}"]`,
-      `    BQ["BigQuery Datasets (${datasets.length}): ${datasetNamesList}"]`,
-      `  end`,
-      `  subgraph S3["Stage 3: Compute & Serverless"]`,
-      `    VMS["GCE VMs (${vms.length}): ${vmNamesList}"]`,
-      `    CR["Cloud Run (${cloudRunSvcs.length}): ${crNamesList}"]`,
-      `  end`,
+    const archLines = [`flowchart LR`];
+    if (vpcs.length + firewalls.length > 0) {
+      archLines.push(`  subgraph S1["Stage 1: VPC & IAP Perimeter"]`);
+      if (vpcs.length > 0) {
+        archLines.push(`    VPC["VPC (${vpcs.length}): ${vpcNamesList}"]`);
+      }
+      if (firewalls.length > 0) {
+        archLines.push(`    FW["Firewall Rules (${firewalls.length} Active)"]`);
+      }
+      archLines.push(`  end`);
+      if (vpcs.length > 0 && firewalls.length > 0) {
+        archLines.push(`  FW -->|"Ingress Guardrail"| VPC`);
+      }
+    }
+    if (buckets.length + datasets.length > 0) {
+      archLines.push(`  subgraph S2["Stage 2: Storage & Lakehouse"]`);
+      if (buckets.length > 0) {
+        archLines.push(`    GCS["GCS Buckets (${buckets.length}): ${bucketNamesList}"]`);
+      }
+      if (datasets.length > 0) {
+        archLines.push(`    BQ["BigQuery Datasets (${datasets.length}): ${datasetNamesList}"]`);
+      }
+      archLines.push(`  end`);
+      if (vpcs.length > 0 && buckets.length > 0) {
+        archLines.push(`  VPC -->|"Private Google Access"| GCS`);
+      }
+      if (buckets.length > 0 && datasets.length > 0) {
+        archLines.push(`  GCS -->|"Lakehouse ELT"| BQ`);
+      }
+    }
+    if (vms.length + cloudRunSvcs.length + gkeClusters.length > 0) {
+      archLines.push(`  subgraph S3["Stage 3: Compute & Serverless"]`);
+      if (vms.length > 0) {
+        archLines.push(`    VMS["GCE VMs (${vms.length}): ${vmNamesList}"]`);
+      }
+      if (cloudRunSvcs.length > 0) {
+        archLines.push(`    CR["Cloud Run (${cloudRunSvcs.length}): ${crNamesList}"]`);
+      }
+      archLines.push(`  end`);
+      if (vpcs.length > 0 && vms.length > 0) {
+        archLines.push(`  VPC --> VMS`);
+      }
+      if (vpcs.length > 0 && cloudRunSvcs.length > 0) {
+        archLines.push(`  VPC --> CR`);
+      }
+    }
+    archLines.push(
       `  subgraph S4["Stage 4: Terraform & SLSA-3 CI/CD"]`,
-      `    TF["main.tf (${resources.length} Resources)"]`,
+      `    TF["main.tf (${resources.length} Active Resources)"]`,
       `    CB["cloudbuild.yaml (@sha256 Canary)"]`,
       `  end`,
-      `  subgraph S5["Stage 5: FinOps & Quota Radar"]`,
-      `    FIN["Run-Rate: $${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs"]`,
-      `    Q429["Startup 10X HTTP 429 Guard"]`,
+      `  subgraph S5["Stage 5: FinOps & Quota Guard"]`,
+      `    APIS["Enabled GCP APIs: ${enabledApis.length} Services"]`,
+      `    Q429["Startup 10X HTTP 429 Radar"]`,
       `  end`,
       `  subgraph S6["Stage 6: SRE & 30d Recycle Bin"]`,
       `    SLO["14.4x Multi-Window Burn Gate"]`,
-      `    VAULT["30-Day Recycle Bin (${recentDestructiveEvents.length} Events)"]`,
-      `  end`,
-      `  IAP --> VPC`,
-      `  VPC --> GCS`,
-      `  GCS --> BQ`,
-      `  VPC --> VMS`,
-      `  VPC --> CR`,
-      `  VMS --> GCS`,
-      `  CR --> BQ`,
-      `  VMS --> TF`,
-      `  CR --> TF`,
+      `    VAULT["30-Day Cloud Recycle Bin"]`,
+      `  end`
+    );
+    if (buckets.length > 0) {
+      archLines.push(`  GCS -->|"Codified in HCL"| TF`);
+    } else if (vpcs.length > 0) {
+      archLines.push(`  VPC -->|"Codified in HCL"| TF`);
+    }
+    archLines.push(
       `  TF --> CB`,
-      `  CB --> FIN`,
-      `  FIN --> Q429`,
+      `  CB --> APIS`,
+      `  APIS --> Q429`,
       `  CB --> SLO`,
-      `  SLO --> VAULT`,
-    ].join('\n');
+      `  SLO --> VAULT`
+    );
+    const architectureMermaid = archLines.join('\n');
 
     return res.json({
       projectId,

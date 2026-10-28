@@ -655,7 +655,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'GCS + BigQuery',
       summary: 'Stateful Cloud Storage buckets & BigQuery analytical datasets.',
       cliCmd: `gcloud storage buckets list --project=${projectId}`,
-      mermaidDsl: `flowchart LR\n  subgraph PERIMETER["Stage 1 Perimeter"]\n    VPC_IN["VPC Private Google Access"]\n  end\n  subgraph GCS["Cloud Storage"]\n    BKT["gs://${projectId} (7d Soft-Delete)"]\n  end\n  subgraph BQ["BigQuery Lakehouse"]\n    DS["${projectId}:analytics (168h Time-Travel)"]\n  end\n  VPC_IN -->|"Uniform Bucket IAM"| BKT\n  BKT -->|"Object Federation / ELT"| DS`,
+      mermaidDsl: null,
     },
     {
       id: 'STAGE_3_COMPUTE_SERVERLESS',
@@ -668,7 +668,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'Compute & Serverless',
       summary: 'GCE VM Fleet & Cloud Run scale-to-zero containers.',
       cliCmd: `gcloud run services list --project=${projectId}`,
-      mermaidDsl: `flowchart LR\n  subgraph INGRESS["Edge & IAP Routing"]\n    EDGE["HTTPS Ingress & IAP SSH Bastion"]\n  end\n  subgraph COMPUTE["Compute & Serverless Fleet (${projectId})"]\n    VMS["GCE VM Fleet"]\n    CRUN["Cloud Run Gen2 Scale-to-Zero"]\n  end\n  subgraph STATE["Stage 2 Stateful Sinks"]\n    STORAGE["GCS + BigQuery Lakehouse"]\n  end\n  EDGE -->|"TCP-22 / SSH2 PTY"| VMS\n  EDGE -->|"Scale-to-Zero HTTPS"| CRUN\n  VMS -->|"ADC Service Account"| STORAGE\n  CRUN -->|"Serverless VPC Access"| STORAGE`,
+      mermaidDsl: null,
     },
     {
       id: 'STAGE_4_CICD_TERRAFORM',
