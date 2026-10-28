@@ -7396,9 +7396,23 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
     const { token } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
-    const invalidateProjectOverviewCache = () => {
+      const invalidateProjectOverviewCache = () => {
       overviewSwrCache.delete(projectId);
       overviewInFlight.delete(projectId);
+      try {
+        recordFlightEvent(projectId, {
+          action:
+            resolvedType === 'Enabled GCP Service API' || resolvedType === 'GCP_API'
+              ? 'DISABLE_GCP_API'
+              : 'DELETE_RESOURCE',
+          resourceType: String(resolvedType || 'RESOURCE'),
+          resourceName: String(req.body?.serviceName || name || ''),
+          region: String(region || 'global'),
+          details: `Deleted/Disabled ${resolvedType}: ${req.body?.serviceName || name}`,
+        });
+      } catch {
+        // ignore
+      }
     };
 
     if (resolvedType === 'Compute Engine VM' || resolvedType === 'COMPUTE_VM') {
@@ -70918,6 +70932,711 @@ app.post('/api/project/:projectId/wave16/action', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         'Wave 16 action failed.',
+    });
+  }
+});
+
+// ============================================================================
+// 30-DAY CLOUD RECYCLE BIN (DELETED RESOURCES & DISABLED APIS LEDGER + RESTORE)
+// Queries live Cloud Audit Logs (cloudaudit.googleapis.com/activity) over the
+// last 30 days (1 month), live GCS Soft-Deleted Buckets, disabled GCP APIs,
+// and session Flight Recorder destruction events.
+// ============================================================================
+app.get('/api/project/:projectId/recycle-bin', async (req, res) => {
+  const { projectId } = req.params;
+  const days = Math.max(1, Math.min(90, Number(req.query.days || 30)));
+  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  const cutoffIso = new Date(cutoffMs).toISOString();
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const auditFilter = [
+      `logName:"cloudaudit.googleapis.com%2Factivity"`,
+      `timestamp >= "${cutoffIso}"`,
+      `(protoPayload.methodName:("delete" OR "Delete" OR "destroy" OR "Destroy" OR "DisableService" OR "BatchDisableServices" OR "purge" OR "Purge" OR "drop" OR "Drop" OR "DisableServiceAccountKey" OR "DisableServiceAccount"))`,
+    ].join(' AND ');
+
+    const [auditEntriesRes, softDeletedBucketsRes] = await Promise.all([
+      gcpFetch(
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            resourceNames: [`projects/${projectId}`],
+            filter: auditFilter,
+            orderBy: 'timestamp desc',
+            pageSize: 200,
+          },
+          timeout: 12000,
+        }
+      ).catch(() => ({ entries: [] })),
+      runGcloudAlphaBetaJson(
+        [
+          'storage',
+          'buckets',
+          'list',
+          '--soft-deleted',
+          `--project=${projectId}`,
+          '--format=json',
+        ],
+        7500
+      ).catch(() => ({ ok: false, data: [] })),
+    ]);
+
+    const items = [];
+    const seenKeys = new Set();
+
+    const classifyAuditEntry = (entry, idx) => {
+      const proto = entry?.protoPayload || {};
+      const serviceName = String(proto.serviceName || entry?.resource?.type || 'unknown');
+      const methodName = String(proto.methodName || 'delete');
+      const rawResourceName = String(
+        proto.resourceName ||
+          entry?.resource?.labels?.instance_id ||
+          entry?.resource?.labels?.bucket_name ||
+          entry?.resource?.labels?.dataset_id ||
+          entry?.resource?.labels?.service_name ||
+          'resource'
+      );
+      const actor =
+        proto?.authenticationInfo?.principalEmail ||
+        proto?.authenticationInfo?.principalSubject ||
+        'gcp-system';
+      const callerIp = proto?.requestMetadata?.callerIp || 'internal';
+      const ts = entry?.timestamp || new Date().toISOString();
+      const ageHours = Math.max(
+        0,
+        (Date.now() - new Date(ts).getTime()) / (1000 * 60 * 60)
+      );
+      const statusCode = Number(proto?.status?.code || 0);
+      if (statusCode !== 0 && proto?.status?.message) {
+        // Ignore failed delete attempts that didn't actually delete/disable anything
+        return null;
+      }
+
+      const location =
+        entry?.resource?.labels?.zone ||
+        entry?.resource?.labels?.location ||
+        entry?.resource?.labels?.region ||
+        'global';
+
+      let category = 'OTHER_RESOURCE';
+      let categoryLabel = 'Cloud Resource';
+      let shortName = rawResourceName.split('/').pop() || rawResourceName;
+      let recoverability = 'RECREATE_FROM_AUDIT_SPEC';
+      let recoverabilityLabel = 'Re-Create from Audit Spec';
+      let restoreActionType = 'EXECUTE_RESTORE_CLI';
+      let restoreTarget = shortName;
+      let restoreCli = `# Inspect audit payload for ${rawResourceName}`;
+
+      const methodLower = methodName.toLowerCase();
+
+      if (
+        serviceName.includes('serviceusage') ||
+        methodLower.includes('disableservice')
+      ) {
+        category = 'DISABLED_API';
+        categoryLabel = 'Disabled Google Cloud API';
+        // Extract e.g. projects/123/services/compute.googleapis.com
+        const reqServices = proto?.request?.serviceIds || [];
+        if (Array.isArray(reqServices) && reqServices.length > 0) {
+          shortName = reqServices.join(', ');
+          restoreTarget = reqServices[0];
+        } else {
+          const matchApi = rawResourceName.match(/services\/([a-z0-9-]+\.googleapis\.com)/i);
+          if (matchApi) {
+            shortName = matchApi[1];
+            restoreTarget = matchApi[1];
+          }
+        }
+        recoverability = 'INSTANT_REENABLE';
+        recoverabilityLabel = '1-Click Instant Re-Enable API';
+        restoreActionType = 'RESTORE_API';
+        restoreCli = `gcloud services enable ${restoreTarget} --project=${projectId}`;
+      } else if (serviceName.includes('storage')) {
+        const isBucket =
+          methodLower.includes('buckets.delete') ||
+          (!rawResourceName.includes('/objects/') &&
+            entry?.resource?.type === 'gcs_bucket');
+        category = isBucket ? 'STORAGE_BUCKET' : 'STORAGE_OBJECT';
+        categoryLabel = isBucket
+          ? 'Deleted Cloud Storage Bucket'
+          : 'Deleted Cloud Storage Object';
+        const bktName =
+          entry?.resource?.labels?.bucket_name ||
+          (rawResourceName.match(/buckets\/([^/]+)/) || [])[1] ||
+          shortName;
+        if (isBucket) {
+          shortName = `gs://${bktName}`;
+          restoreTarget = bktName;
+          recoverability = ageHours <= 168 ? 'SOFT_DELETE_OR_RECREATE' : 'RECREATE_FROM_AUDIT_SPEC';
+          recoverabilityLabel =
+            ageHours <= 168
+              ? 'Soft-Delete Restore / 1-Click Re-Create'
+              : '1-Click Re-Create Bucket';
+          restoreActionType = 'RESTORE_GCS_BUCKET';
+          restoreCli = `gcloud storage restore gs://${bktName} --project=${projectId} || gcloud storage buckets create gs://${bktName} --location=${
+            location !== 'global' ? location : 'us-central1'
+          } --uniform-bucket-level-access --project=${projectId}`;
+        } else {
+          const objMatch = rawResourceName.match(/objects\/(.+)$/);
+          const objName = objMatch ? objMatch[1] : shortName;
+          shortName = `gs://${bktName}/${objName}`;
+          restoreTarget = `${bktName}/${objName}`;
+          recoverability = 'SOFT_DELETE_OR_RECREATE';
+          recoverabilityLabel = 'Soft-Delete / Generation Restore';
+          restoreCli = `gcloud storage restore "gs://${bktName}/${objName}" --all-versions --project=${projectId}`;
+        }
+      } else if (serviceName.includes('bigquery')) {
+        const isDataset =
+          methodLower.includes('datasets.delete') ||
+          methodLower.includes('deletedataset');
+        const dsId =
+          entry?.resource?.labels?.dataset_id ||
+          (rawResourceName.match(/datasets\/([^/]+)/) || [])[1] ||
+          'dataset';
+        const tblMatch = rawResourceName.match(/tables\/([^/]+)/);
+        const tblId = tblMatch ? tblMatch[1] : shortName;
+        category = isDataset ? 'BIGQUERY_DATASET' : 'BIGQUERY_TABLE';
+        categoryLabel = isDataset
+          ? 'Deleted BigQuery Dataset'
+          : 'Dropped BigQuery Table';
+        shortName = isDataset ? `${projectId}.${dsId}` : `${projectId}.${dsId}.${tblId}`;
+        // Snapshot 60 seconds BEFORE the table/dataset was deleted!
+        const preDeleteEpochMs = Math.max(0, new Date(ts).getTime() - 60000);
+        if (!isDataset && ageHours <= 168) {
+          recoverability = 'CAPACITOR_7D_UNDELETE';
+          recoverabilityLabel = '7-Day Capacitor Time-Travel Undrop';
+          restoreActionType = 'RESTORE_BQ_TABLE';
+          restoreTarget = `${dsId}.${tblId}@${preDeleteEpochMs}`;
+          restoreCli = `bq --project_id=${projectId} cp -f "${dsId}.${tblId}@${preDeleteEpochMs}" "${dsId}.${tblId}"`;
+        } else {
+          recoverability = 'RECREATE_FROM_AUDIT_SPEC';
+          recoverabilityLabel = isDataset
+            ? '1-Click Re-Create Dataset'
+            : 'Expired (>7d Time-Travel Window)';
+          restoreActionType = isDataset ? 'RESTORE_BQ_DATASET' : 'EXECUTE_RESTORE_CLI';
+          restoreTarget = dsId;
+          restoreCli = isDataset
+            ? `bq --project_id=${projectId} --location=US mk -d ${dsId}`
+            : `# Table deleted >7 days ago; restore from GCS export or snapshot into ${dsId}.${tblId}`;
+        }
+      } else if (serviceName.includes('compute')) {
+        if (methodLower.includes('firewalls.delete')) {
+          category = 'VPC_FIREWALL';
+          categoryLabel = 'Deleted VPC Firewall Rule';
+          restoreCli = `gcloud compute firewall-rules create "${shortName}" --network=default --allow=tcp:443 --project=${projectId}`;
+        } else if (methodLower.includes('subnetworks.delete')) {
+          category = 'VPC_SUBNET';
+          categoryLabel = 'Deleted VPC Subnet';
+          restoreCli = `gcloud compute networks subnets create "${shortName}" --network=default --region=${
+            location !== 'global' ? location : 'us-central1'
+          } --range=10.128.0.0/20 --project=${projectId}`;
+        } else if (methodLower.includes('disks.delete')) {
+          category = 'COMPUTE_DISK';
+          categoryLabel = 'Deleted Persistent Disk';
+          restoreCli = `gcloud compute disks create "${shortName}" --zone=${
+            location !== 'global' ? location : 'us-central1-a'
+          } --size=20GB --type=pd-balanced --project=${projectId}`;
+        } else {
+          category = 'COMPUTE_VM';
+          categoryLabel = 'Deleted Compute Engine VM';
+          const vmZone = location !== 'global' ? location : 'us-central1-a';
+          restoreCli = `gcloud compute instances create "${shortName}" --zone=${vmZone} --machine-type=e2-micro --image-family=debian-12 --image-project=debian-cloud --project=${projectId}`;
+        }
+      } else if (serviceName.includes('run.googleapis.com')) {
+        category = 'CLOUD_RUN';
+        categoryLabel = 'Deleted Cloud Run Service / Job';
+        const runRegion = location !== 'global' ? location : 'us-central1';
+        restoreCli = `gcloud run deploy "${shortName}" --image=us-docker.pkg.dev/cloudrun/container/hello --region=${runRegion} --allow-unauthenticated --project=${projectId}`;
+      } else if (serviceName.includes('container.googleapis.com')) {
+        category = 'GKE_CLUSTER';
+        categoryLabel = 'Deleted GKE Cluster / NodePool';
+        const gkeLoc = location !== 'global' ? location : 'us-central1';
+        restoreCli = `gcloud container clusters create-auto "${shortName}" --location=${gkeLoc} --project=${projectId}`;
+      } else if (serviceName.includes('sqladmin')) {
+        category = 'CLOUD_SQL';
+        categoryLabel = 'Deleted Cloud SQL Instance';
+        restoreCli = `gcloud sql instances create "${shortName}" --database-version=POSTGRES_16 --tier=db-f1-micro --region=${
+          location !== 'global' ? location : 'us-central1'
+        } --project=${projectId}`;
+      } else if (serviceName.includes('iam.googleapis.com')) {
+        category = 'IAM_RESOURCE';
+        const isSa = methodLower.includes('deleteserviceaccount') && !methodLower.includes('key');
+        categoryLabel = isSa
+          ? 'Deleted IAM Service Account'
+          : methodLower.includes('key')
+          ? 'Deleted / Disabled SA Key'
+          : 'Deleted IAM Role / Binding';
+        if (isSa && ageHours <= 720) {
+          recoverability = 'IAM_30D_UNDELETE';
+          recoverabilityLabel = '30-Day Native IAM Undelete Window';
+          restoreActionType = 'UNDELETE_SERVICE_ACCOUNT';
+          restoreTarget = shortName;
+          restoreCli = `gcloud iam service-accounts undelete "${shortName}" --project=${projectId}`;
+        } else {
+          restoreCli = `gcloud iam service-accounts create "${
+            shortName.split('@')[0]
+          }" --project=${projectId}`;
+        }
+      } else if (serviceName.includes('apikeys.googleapis.com')) {
+        category = 'IAM_RESOURCE';
+        categoryLabel = 'Deleted Google Cloud API Key';
+        if (ageHours <= 720) {
+          recoverability = 'IAM_30D_UNDELETE';
+          recoverabilityLabel = '30-Day Native API Key Undelete Window';
+          restoreActionType = 'UNDELETE_API_KEY';
+          restoreTarget = shortName;
+          restoreCli = `gcloud services api-keys undelete "${shortName}" --project=${projectId}`;
+        } else {
+          restoreCli = `gcloud services api-keys create --display-name="restored-key" --project=${projectId}`;
+        }
+      } else if (serviceName.includes('artifactregistry.googleapis.com')) {
+        category = 'CLOUD_RUN';
+        categoryLabel = 'Deleted Artifact Registry Tag / Image';
+        const repoMatch = rawResourceName.match(
+          /locations\/([^/]+)\/repositories\/([^/]+)\/packages\/([^/]+)(?:\/tags\/([^/]+))?/
+        );
+        if (repoMatch) {
+          const [, arLoc, arRepo, arPkg, arTag] = repoMatch;
+          shortName = `${arLoc}-docker.pkg.dev/${projectId}/${arRepo}/${arPkg}${
+            arTag ? `:${arTag}` : ''
+          }`;
+          restoreCli = `gcloud artifacts docker images list "${arLoc}-docker.pkg.dev/${projectId}/${arRepo}/${arPkg}" --include-tags --project=${projectId}`;
+        }
+      } else if (
+        serviceName.includes('secretmanager') ||
+        serviceName.includes('cloudkms')
+      ) {
+        category = 'SECRET_KMS';
+        categoryLabel = serviceName.includes('cloudkms')
+          ? 'Destroyed KMS CryptoKeyVersion'
+          : 'Deleted Secret / SecretVersion';
+        if (serviceName.includes('cloudkms') && ageHours <= 24) {
+          recoverability = 'KMS_24H_RESTORE';
+          recoverabilityLabel = '24h KMS Scheduled-Destruction Restore';
+        }
+        restoreCli = serviceName.includes('secretmanager')
+          ? `gcloud secrets create "${shortName}" --replication-policy=automatic --project=${projectId}`
+          : `# Restore KMS key version via gcloud kms keys versions restore`;
+      }
+
+      const dedupeKey = `${category}:${shortName}:${ts.slice(0, 16)}`;
+      if (seenKeys.has(dedupeKey)) return null;
+      seenKeys.add(dedupeKey);
+
+      return {
+        id: entry.insertId || `audit-del-${idx}-${Date.now()}`,
+        source: 'CLOUD_AUDIT_LOGS',
+        timestamp: ts,
+        ageHours: Number(ageHours.toFixed(1)),
+        category,
+        categoryLabel,
+        shortName,
+        rawResourceName,
+        serviceName,
+        methodName,
+        location,
+        actor,
+        callerIp,
+        recoverability,
+        recoverabilityLabel,
+        restoreActionType,
+        restoreTarget,
+        restoreCli,
+        rawAuditPayload: {
+          logName: entry.logName,
+          timestamp: entry.timestamp,
+          severity: entry.severity || 'NOTICE',
+          resource: entry.resource,
+          protoPayload: {
+            serviceName: proto.serviceName,
+            methodName: proto.methodName,
+            resourceName: proto.resourceName,
+            authenticationInfo: proto.authenticationInfo,
+            requestMetadata: proto.requestMetadata,
+            request: proto.request,
+            status: proto.status,
+          },
+        },
+      };
+    };
+
+    for (let i = 0; i < (auditEntriesRes?.entries || []).length; i += 1) {
+      const parsed = classifyAuditEntry(auditEntriesRes.entries[i], i);
+      if (parsed) items.push(parsed);
+    }
+
+    // Merge any live Soft-Deleted GCS Buckets from `gcloud storage buckets list --soft-deleted`
+    if (Array.isArray(softDeletedBucketsRes?.data)) {
+      for (const sb of softDeletedBucketsRes.data) {
+        const bName = sb?.name || sb?.id || String(sb?.storage_url || '').replace(/^gs:\/\//, '').replace(/\/$/, '');
+        if (!bName) continue;
+        const gen = sb?.generation || sb?.metageneration || '';
+        const softDelTime = sb?.soft_delete_time || sb?.softDeleteTime || new Date().toISOString();
+        const hardDelTime = sb?.hard_delete_time || sb?.hardDeleteTime || null;
+        const key = `STORAGE_BUCKET_SOFT:${bName}`;
+        if (seenKeys.has(key)) continue;
+        seenKeys.add(key);
+        items.unshift({
+          id: `soft-bkt-${bName}-${gen || 'latest'}`,
+          source: 'GCS_SOFT_DELETE_VAULT',
+          timestamp: softDelTime,
+          ageHours: Number(
+            Math.max(0, (Date.now() - new Date(softDelTime).getTime()) / 3600000).toFixed(1)
+          ),
+          category: 'STORAGE_BUCKET',
+          categoryLabel: 'Soft-Deleted Cloud Storage Bucket',
+          shortName: `gs://${bName}`,
+          rawResourceName: `projects/_/buckets/${bName}`,
+          serviceName: 'storage.googleapis.com',
+          methodName: 'storage.buckets.delete (Soft-Deleted Retention)',
+          location: sb?.location || 'US',
+          actor: 'Cloud Storage Soft-Delete Retention Policy',
+          callerIp: 'storage.googleapis.com',
+          recoverability: 'SOFT_DELETE_OR_RECREATE',
+          recoverabilityLabel: hardDelTime
+            ? `Soft-Deleted (Restorable until ${String(hardDelTime).slice(0, 10)})`
+            : 'Soft-Deleted · 1-Click Native Restore',
+          restoreActionType: 'RESTORE_GCS_BUCKET',
+          restoreTarget: bName,
+          generation: gen,
+          restoreCli: gen
+            ? `gcloud storage restore "gs://${bName}" --generation=${gen} --project=${projectId}`
+            : `gcloud storage restore "gs://${bName}" --project=${projectId}`,
+          rawAuditPayload: sb,
+        });
+      }
+    }
+
+    // Merge any disabled APIs from projectDisabledOverrideMap
+    const disabledSet = projectDisabledOverrideMap.get(projectId);
+    if (disabledSet && disabledSet.size > 0) {
+      for (const apiName of disabledSet) {
+        const alreadyListed = items.some(
+          (it) => it.category === 'DISABLED_API' && it.restoreTarget === apiName
+        );
+        if (!alreadyListed) {
+          items.unshift({
+            id: `disabled-api-${apiName}`,
+            source: 'SESSION_KILL_SWITCH',
+            timestamp: new Date().toISOString(),
+            ageHours: 0,
+            category: 'DISABLED_API',
+            categoryLabel: 'Disabled Google Cloud API',
+            shortName: apiName,
+            rawResourceName: `projects/${projectId}/services/${apiName}`,
+            serviceName: 'serviceusage.googleapis.com',
+            methodName: 'google.api.serviceusage.v1.ServiceUsage.DisableService',
+            location: 'global',
+            actor: 'Active CloudPulse Session',
+            callerIp: '127.0.0.1',
+            recoverability: 'INSTANT_REENABLE',
+            recoverabilityLabel: '1-Click Instant Re-Enable API',
+            restoreActionType: 'RESTORE_API',
+            restoreTarget: apiName,
+            restoreCli: `gcloud services enable ${apiName} --project=${projectId}`,
+            rawAuditPayload: {
+              serviceName: 'serviceusage.googleapis.com',
+              disabledApi: apiName,
+              projectId,
+            },
+          });
+        }
+      }
+    }
+
+    // Merge session Flight Recorder destruction events
+    const sessionEvents = flightRecorderByProject.get(projectId) || [];
+    for (const ev of sessionEvents) {
+      const actUpper = String(ev.action || '').toUpperCase();
+      if (
+        actUpper.includes('DELETE') ||
+        actUpper.includes('DISABLE') ||
+        actUpper.includes('PURGE') ||
+        actUpper.includes('DROP')
+      ) {
+        const isApi = actUpper.includes('API');
+        const shortName = ev.resourceName || 'resource';
+        const alreadyIn = items.some(
+          (it) =>
+            it.shortName.includes(shortName) &&
+            Math.abs(new Date(it.timestamp).getTime() - new Date(ev.timestamp).getTime()) < 120000
+        );
+        if (!alreadyIn) {
+          items.unshift({
+            id: ev.id,
+            source: 'FLIGHT_RECORDER',
+            timestamp: ev.timestamp,
+            ageHours: Number(
+              Math.max(0, (Date.now() - new Date(ev.timestamp).getTime()) / 3600000).toFixed(1)
+            ),
+            category: isApi ? 'DISABLED_API' : 'OTHER_RESOURCE',
+            categoryLabel: isApi
+              ? 'Disabled Google Cloud API'
+              : `Deleted ${ev.resourceType || 'Resource'}`,
+            shortName,
+            rawResourceName: shortName,
+            serviceName: isApi ? 'serviceusage.googleapis.com' : 'cloudpulse.flight.recorder',
+            methodName: ev.action,
+            location: ev.region || 'global',
+            actor: 'Active CloudPulse Session',
+            callerIp: '127.0.0.1',
+            recoverability: isApi ? 'INSTANT_REENABLE' : 'RECREATE_FROM_AUDIT_SPEC',
+            recoverabilityLabel: isApi
+              ? '1-Click Instant Re-Enable API'
+              : 'Re-Create from Flight Spec',
+            restoreActionType: isApi ? 'RESTORE_API' : 'EXECUTE_RESTORE_CLI',
+            restoreTarget: shortName,
+            restoreCli: isApi
+              ? `gcloud services enable ${shortName} --project=${projectId}`
+              : `# Restore ${shortName} (${ev.details || ''})`,
+            rawAuditPayload: ev,
+          });
+        }
+      }
+    }
+
+    items.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    const summary = {
+      totalItems: items.length,
+      disabledApisCount: items.filter((i) => i.category === 'DISABLED_API').length,
+      storageCount: items.filter(
+        (i) => i.category === 'STORAGE_BUCKET' || i.category === 'STORAGE_OBJECT'
+      ).length,
+      bigqueryCount: items.filter(
+        (i) => i.category === 'BIGQUERY_TABLE' || i.category === 'BIGQUERY_DATASET'
+      ).length,
+      computeVpcCount: items.filter((i) =>
+        ['COMPUTE_VM', 'COMPUTE_DISK', 'VPC_FIREWALL', 'VPC_SUBNET'].includes(
+          i.category
+        )
+      ).length,
+      serverlessGkeSqlCount: items.filter((i) =>
+        ['CLOUD_RUN', 'GKE_CLUSTER', 'CLOUD_SQL'].includes(i.category)
+      ).length,
+      iamSecretsCount: items.filter((i) =>
+        ['IAM_RESOURCE', 'SECRET_KMS'].includes(i.category)
+      ).length,
+      instantRestorableCount: items.filter((i) =>
+        [
+          'INSTANT_REENABLE',
+          'SOFT_DELETE_OR_RECREATE',
+          'CAPACITOR_7D_UNDELETE',
+          'IAM_30D_UNDELETE',
+          'KMS_24H_RESTORE',
+        ].includes(i.recoverability)
+      ).length,
+      uniqueActorsCount: new Set(items.map((i) => i.actor)).size,
+    };
+
+    return res.json({
+      projectId,
+      windowDays: days,
+      cutoffIso,
+      scannedAt: new Date().toISOString(),
+      auditFilterUsed: auditFilter,
+      summary,
+      items,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to query 30-Day Cloud Recycle Bin.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/recycle-bin/restore', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    restoreActionType,
+    restoreTarget,
+    location = 'us-central1',
+    generation = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    if (restoreActionType === 'RESTORE_API') {
+      const apiName = String(restoreTarget || '')
+        .trim()
+        .toLowerCase();
+      if (!apiName.endsWith('.googleapis.com')) {
+        return res
+          .status(400)
+          .json({ error: `Invalid Google Cloud API name: ${apiName}` });
+      }
+      await gcpFetch(
+        `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services/${encodeURIComponent(apiName)}:enable`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+          timeout: 15000,
+        }
+      );
+      if (projectDisabledOverrideMap.has(projectId)) {
+        projectDisabledOverrideMap.get(projectId).delete(apiName);
+      }
+      overviewSwrCache.delete(projectId);
+      recordFlightEvent(projectId, {
+        action: 'RECYCLE_BIN_RESTORE_API',
+        resourceType: 'GCP_API',
+        resourceName: apiName,
+        region: 'global',
+        details: `Re-enabled Google Cloud API ${apiName} from 30-Day Recycle Bin`,
+      });
+      return res.json({
+        ok: true,
+        message: `Restored & re-enabled Google Cloud API "${apiName}" on project ${projectId}!`,
+      });
+    }
+
+    if (restoreActionType === 'RESTORE_GCS_BUCKET') {
+      const cleanBucket = String(restoreTarget || '')
+        .replace(/^gs:\/\//, '')
+        .replace(/[^a-z0-9._-]/gi, '');
+      const softRes = await runGcloudAlphaBetaJson(
+        [
+          'storage',
+          'restore',
+          `gs://${cleanBucket}`,
+          ...(generation ? [`--generation=${generation}`] : []),
+          `--project=${projectId}`,
+        ],
+        12000
+      );
+      if (!softRes.ok) {
+        // Fallback: re-create bucket if soft-delete retention had already expired
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              name: cleanBucket,
+              location:
+                location && location !== 'global' ? location : 'us-central1',
+              storageClass: 'STANDARD',
+              iamConfiguration: {
+                uniformBucketLevelAccess: { enabled: true },
+              },
+            },
+            timeout: 12000,
+          }
+        );
+      }
+      overviewSwrCache.delete(projectId);
+      return res.json({
+        ok: true,
+        message: softRes.ok
+          ? `Restored soft-deleted bucket gs://${cleanBucket} on ${projectId}!`
+          : `Re-created Cloud Storage bucket gs://${cleanBucket} on ${projectId}!`,
+      });
+    }
+
+    if (restoreActionType === 'RESTORE_BQ_DATASET') {
+      const dsId = String(restoreTarget || '').replace(/[^a-zA-Z0-9_]/g, '');
+      await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            datasetReference: { projectId, datasetId: dsId },
+            location: 'US',
+          },
+          timeout: 10000,
+        }
+      );
+      overviewSwrCache.delete(projectId);
+      return res.json({
+        ok: true,
+        message: `Re-created BigQuery dataset ${projectId}.${dsId}!`,
+      });
+    }
+
+    if (restoreActionType === 'UNDELETE_SERVICE_ACCOUNT') {
+      const saId = String(restoreTarget || '').trim();
+      await gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/serviceAccounts/${encodeURIComponent(saId)}:undelete`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+          timeout: 10000,
+        }
+      );
+      return res.json({
+        ok: true,
+        message: `Undeleted IAM Service Account "${saId}" from Google Cloud's 30-Day Undelete Vault!`,
+      });
+    }
+
+    if (restoreActionType === 'UNDELETE_API_KEY') {
+      const keyUid = String(restoreTarget || '').trim();
+      await gcpFetch(
+        `https://apikeys.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/global/keys/${encodeURIComponent(keyUid)}:undelete`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+          timeout: 10000,
+        }
+      );
+      return res.json({
+        ok: true,
+        message: `Undeleted Google Cloud API Key "${keyUid}" from Google Cloud's 30-Day Undelete Vault!`,
+      });
+    }
+
+    return res.status(400).json({
+      error:
+        'Use "Run Restore CLI in Cloud Shell" for this resource type so you can review its creation parameters first.',
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Recycle Bin restore operation failed.',
     });
   }
 });

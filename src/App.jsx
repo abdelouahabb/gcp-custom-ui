@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   History,
   Wand2,
+  Trash2,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -92,6 +93,7 @@ import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
 import Startup10xMentorStudio from './components/Startup10xMentorStudio';
+import CloudRecycleBinStudio from './components/CloudRecycleBinStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -4252,6 +4254,13 @@ function CloudPulseCockpit() {
       tip: '2026 Neural Chrono-Log & Trace Studio (Drain3 Clustering, Trace Waterfall, NL-to-LQL, Log FinOps, DLP Shield & Cloud Shell)',
       icon: Terminal,
     },
+    {
+      id: 'RECYCLE_BIN',
+      group: 'OPS_DOCS',
+      label: 'Recycle Bin',
+      tip: '30-Day Cloud Recycle Bin: Inspect what resources were deleted and which Google Cloud APIs were disabled over the last 30 days (cloudaudit.googleapis.com/activity + Soft-Delete Vaults) with 1-Click Restore / Re-Enable',
+      icon: Trash2,
+    },
   ];
 
   return (
@@ -4384,6 +4393,22 @@ function CloudPulseCockpit() {
               >
                 <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 <span>SDK 591.0.0 Lab</span>
+              </button>
+
+              {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
+              <button
+                type="button"
+                data-feature-id="RECYCLE_BIN"
+                onClick={() => setActiveTab('RECYCLE_BIN')}
+                title="Open 30-Day Cloud Recycle Bin: Find what resources were deleted and which Google Cloud APIs were disabled in the last 30 days, with 1-Click Restore & Re-Enable"
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'RECYCLE_BIN'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Recycle Bin</span>
               </button>
 
               {/* Live GCP Project Dropdown */}
@@ -4985,6 +5010,7 @@ function CloudPulseCockpit() {
                           items: [
                             { id: 'FINOPS', label: 'Finops', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
                             { id: 'LOGS_SHELL', label: 'Logs', meta: 'Neural Chrono-Logs, Trace Waterfall & Shell' },
+                            { id: 'RECYCLE_BIN', label: 'Recycle Bin (30d)', meta: 'Deleted Resources & Disabled APIs + Restore' },
                             { id: 'DOCS_GUIDE', label: 'Docs', meta: 'Interactive Architecture & API Guide' },
                           ],
                         },
@@ -5877,6 +5903,7 @@ function CloudPulseCockpit() {
                     initialLogExplorerSpec={logExplorerSeedSpec}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
+                    onOpenRecycleBin={() => setActiveTab('RECYCLE_BIN')}
                   />
                   <PersonaContextualHelper
                     persona="SRE_ONCALL"
@@ -5891,6 +5918,18 @@ function CloudPulseCockpit() {
                     onShowError={setErrorBanner}
                   />
                 </div>
+              )}
+
+              {activeTab === 'RECYCLE_BIN' && (
+                <CloudRecycleBinStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                  onRefreshParent={() =>
+                    fetchProjectOverview(selectedProjectId, { force: true })
+                  }
+                />
               )}
 
               {activeTab === 'AWS_AZURE_PARITY' && (

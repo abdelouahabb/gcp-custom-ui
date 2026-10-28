@@ -73,6 +73,7 @@ export default function LogStreamerAndShell({
   initialLogExplorerSpec = null,
   onRefreshLogs,
   onAskCopilot,
+  onOpenRecycleBin,
 }) {
   const { activeTimeZone, utcOffsetLabel, formatDateTime } = useTimezone();
   const [severityFilter, setSeverityFilter] = useState('ALL');
@@ -739,6 +740,27 @@ export default function LogStreamerAndShell({
 
   return (
     <div className="space-y-6">
+      {/* 1-Click 30-Day Cloud Recycle Bin Banner in Logs Explorer */}
+      {onOpenRecycleBin && (
+        <div className="p-3.5 rounded-2xl border border-blue-500/30 bg-white dark:bg-[#202124] flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-extrabold uppercase">
+              30-DAY DESTRUCTION &amp; API LEDGER
+            </span>
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">
+              Looking for what was deleted or which Google Cloud API was disabled in the last 1 month?
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenRecycleBin}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer shadow-sm"
+          >
+            <span>Open 30-Day Cloud Recycle Bin →</span>
+          </button>
+        </div>
+      )}
+
       {/* Pinned Forensic Event Deep-Dive Card when navigated from Global Network World Map */}
       {activeMapForensicSpec && (
         <div className="bg-sky-500/[0.08] dark:bg-sky-950/35 border-2 border-sky-500/50 rounded-2xl p-4 shadow-sm space-y-3 text-xs font-mono">
