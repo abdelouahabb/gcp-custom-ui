@@ -43,8 +43,9 @@ export default function EnterpriseStackPipelineBar({
   const [blueprint, setBlueprint] = useState(null);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedArtifactTab, setSelectedArtifactTab] = useState('mainTf'); // 'mainTf' | 'cloudBuildYaml' | 'pipelineDeploySh'
+  const [selectedArtifactTab, setSelectedArtifactTab] = useState('mainTf'); // 'mainTf' | 'cloudBuildYaml' | 'pipelineDeploySh' | 'architectureMermaid'
   const [selectedStageId, setSelectedStageId] = useState(null);
+  const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL'); // 'VISUAL' | 'CODE'
   const [copiedKey, setCopiedKey] = useState(null);
 
   const fetchBlueprint = useCallback(async () => {
@@ -175,6 +176,8 @@ export default function EnterpriseStackPipelineBar({
       ? blueprint?.artifacts?.mainTf
       : selectedArtifactTab === 'cloudBuildYaml'
       ? blueprint?.artifacts?.cloudBuildYaml
+      : selectedArtifactTab === 'architectureMermaid'
+      ? blueprint?.artifacts?.architectureMermaid
       : blueprint?.artifacts?.pipelineDeploySh;
 
   const activeArtifactFilename =
@@ -182,6 +185,8 @@ export default function EnterpriseStackPipelineBar({
       ? `${projectId}-enterprise-stack.tf`
       : selectedArtifactTab === 'cloudBuildYaml'
       ? `cloudbuild.yaml`
+      : selectedArtifactTab === 'architectureMermaid'
+      ? `${projectId}-6stage-architecture.mmd`
       : `pipeline-deploy-${projectId}.sh`;
 
   return (
@@ -417,6 +422,140 @@ export default function EnterpriseStackPipelineBar({
             </div>
           )}
 
+          {/* Live Mermaid Architecture & Dataflow Topology (Active across all 6 Stages) */}
+          {activeStage && (activeStage.mermaidTopology || activeStage.mermaidDsl) && (
+            <div className="rounded-xl border border-indigo-500/25 bg-gradient-to-r from-indigo-500/[0.04] via-blue-500/[0.03] to-emerald-500/[0.04] p-3 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                    Mermaid flowchart LR
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Stage {activeStage.stepNumber} Live Architecture & Dataflow Topology
+                  </span>
+                  <span className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                    (Click any subgraph node to inspect or provision)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setMermaidViewMode('VISUAL')}
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
+                      mermaidViewMode === 'VISUAL'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    Visual Flowchart DAG
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMermaidViewMode('CODE')}
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold transition-colors cursor-pointer ${
+                      mermaidViewMode === 'CODE'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    Mermaid .mmd Code
+                  </button>
+                  {activeStage.mermaidDsl && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            `\`\`\`mermaid\n${activeStage.mermaidDsl}\n\`\`\``,
+                            `mmd-stage-${activeStage.id}`
+                          )
+                        }
+                        title="Copy Stage Mermaid diagram wrapped in ```mermaid markdown block for GitHub / Notion / Docs"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                      >
+                        {copiedKey === `mmd-stage-${activeStage.id}` ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500" />
+                            <span>Copied ```mermaid</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy ```mermaid</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDownloadArtifact(
+                            `${projectId}-stage-${activeStage.stepNumber}-${activeStage.id.toLowerCase()}.mmd`,
+                            activeStage.mermaidDsl
+                          )
+                        }
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-mono font-semibold bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>.mmd</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {mermaidViewMode === 'CODE' ? (
+                <pre className="bg-zinc-950 text-indigo-200 border border-zinc-800 rounded-xl p-3 text-[11px] font-mono overflow-x-auto leading-relaxed">
+                  {activeStage.mermaidDsl}
+                </pre>
+              ) : (
+                Array.isArray(activeStage.mermaidTopology) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-stretch">
+                    {activeStage.mermaidTopology.map((node, nIdx) => (
+                      <div
+                        key={node.id}
+                        onClick={() => {
+                          if (node.provisionType && onOpenProvision) {
+                            onOpenProvision(node.provisionType);
+                          } else if (node.targetTab && onSelectTab) {
+                            onSelectTab(node.targetTab);
+                          }
+                        }}
+                        className="relative group/node rounded-xl border border-indigo-500/30 bg-white dark:bg-[#141518] hover:border-indigo-500 p-2.5 transition-all cursor-pointer flex flex-col justify-between shadow-sm"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5 mb-1">
+                            <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 truncate">
+                              subgraph: {node.subgraph}
+                            </span>
+                            <span className="text-[9.5px] font-mono text-zinc-400 shrink-0">
+                              N{nIdx + 1}
+                            </span>
+                          </div>
+                          <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                            {node.title}
+                          </div>
+                          <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                            {node.subtitle}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                            {node.badge}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 group-hover/node:translate-x-0.5 transition-transform">
+                            <span>{ nIdx < activeStage.mermaidTopology.length - 1 ? '──▶' : 'Inspect ↗' }</span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
           {/* Stage-Specific Content: Steps 1, 2, 3, 5, 6 show Live Stage Inventory & CLI; ONLY Step 4 shows the Terraform/CI-CD Editor */}
           {activeStage?.id === 'STAGE_4_CICD_TERRAFORM' ? (
             <div className="space-y-3">
@@ -455,6 +594,17 @@ export default function EnterpriseStackPipelineBar({
                     }`}
                   >
                     pipeline-deploy.sh (6-Stage Verifier)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArtifactTab('architectureMermaid')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      selectedArtifactTab === 'architectureMermaid'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                  >
+                    architecture.mmd (Full 6-Stage Mermaid Graph)
                   </button>
                 </div>
 
