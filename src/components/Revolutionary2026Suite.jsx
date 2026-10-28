@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   DollarSign,
   Share2,
   FileCode2,
+  Download,
   ShieldAlert,
   ShieldCheck,
   Moon,
@@ -215,18 +216,32 @@ export default function Revolutionary2026Suite({
   onShowError,
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
+  const terraformSectionRef = useRef(null);
   const normalizeSubTabId = (id) =>
     id === 'REVERSE_TERRAFORM' ? 'TERRAFORM' : id;
   const [subTab, setSubTab] = useState(
     normalizeSubTabId(initialSubTab) || 'WAVE11_MOONSHOT'
   );
+  const [labCategory, setLabCategory] = useState(() =>
+    normalizeSubTabId(initialSubTab) === 'TERRAFORM' ? 'AI_IAC' : 'ALL'
+  ); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   useEffect(() => {
     if (initialSubTab) {
-      setSubTab(normalizeSubTabId(initialSubTab));
-      setLabCategory('ALL');
+      const normalized = normalizeSubTabId(initialSubTab);
+      setSubTab(normalized);
+      if (normalized === 'TERRAFORM') {
+        setLabCategory('AI_IAC');
+        setTimeout(() => {
+          terraformSectionRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }, 120);
+      } else {
+        setLabCategory('ALL');
+      }
     }
   }, [initialSubTab]);
-  const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState(() =>
     (overview?.resources || []).filter((r) => r.type === 'Compute Engine VM')
   );
@@ -2098,7 +2113,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
 
       {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT, GCLOUD, GITOPS & C4 MERMAID EXPORTER */}
       {subTab === 'TERRAFORM' && (
-        <div className="space-y-3">
+        <div ref={terraformSectionRef} className="space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 flex-1">
               <button
@@ -2168,55 +2183,103 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const sessionDeltaText =
-                  sreBridgeData?.healthAndSocBridge?.gitOpsBridge
-                    ?.terraformPatchHcl ||
-                  socBridgeData?.healthAndDriftBridge?.gitOpsBridge
-                    ?.terraformPatchHcl ||
-                  '# 0 session mutations recorded yet in Flight Recorder.';
-                const text =
-                  iacFormat === 'TERRAFORM'
-                    ? generatedTerraform
-                    : iacFormat === 'TERRAFORM_IMPORT'
-                    ? generatedTerraformImports
-                    : iacFormat === 'SESSION_GITOPS_DELTA'
-                    ? sessionDeltaText
-                    : iacFormat === 'MERMAID_C4'
-                    ? generatedMermaidC4
-                    : generatedGcloudScript;
-                navigator.clipboard?.writeText(text);
-                setCopiedType(iacFormat);
-                setTimeout(() => setCopiedType(null), 1800);
-              }}
-              title="Copy the complete generated Infrastructure-as-Code blueprint to your clipboard"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-md cursor-pointer shrink-0"
-            >
-              {copiedType === iacFormat ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Copied Blueprint!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>
-                    Copy{' '}
-                    {iacFormat === 'TERRAFORM'
-                      ? 'main.tf'
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  const sessionDeltaText =
+                    sreBridgeData?.healthAndSocBridge?.gitOpsBridge
+                      ?.terraformPatchHcl ||
+                    socBridgeData?.healthAndDriftBridge?.gitOpsBridge
+                      ?.terraformPatchHcl ||
+                    '# 0 session mutations recorded yet in Flight Recorder.';
+                  const text =
+                    iacFormat === 'TERRAFORM'
+                      ? generatedTerraform
                       : iacFormat === 'TERRAFORM_IMPORT'
-                      ? 'imports.tf'
+                      ? generatedTerraformImports
                       : iacFormat === 'SESSION_GITOPS_DELTA'
-                      ? 'session_delta.tf'
+                      ? sessionDeltaText
                       : iacFormat === 'MERMAID_C4'
-                      ? 'architecture.mmd'
-                      : 'deploy-stack.sh'}
-                  </span>
-                </>
-              )}
-            </button>
+                      ? generatedMermaidC4
+                      : generatedGcloudScript;
+                  navigator.clipboard?.writeText(text);
+                  setCopiedType(iacFormat);
+                  setTimeout(() => setCopiedType(null), 1800);
+                }}
+                title="Copy the complete generated Infrastructure-as-Code blueprint to your clipboard"
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-md cursor-pointer shrink-0"
+              >
+                {copiedType === iacFormat ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied Blueprint!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>
+                      Copy{' '}
+                      {iacFormat === 'TERRAFORM'
+                        ? 'main.tf'
+                        : iacFormat === 'TERRAFORM_IMPORT'
+                        ? 'imports.tf'
+                        : iacFormat === 'SESSION_GITOPS_DELTA'
+                        ? 'session_delta.tf'
+                        : iacFormat === 'MERMAID_C4'
+                        ? 'architecture.mmd'
+                        : 'deploy-stack.sh'}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const sessionDeltaText =
+                    sreBridgeData?.healthAndSocBridge?.gitOpsBridge
+                      ?.terraformPatchHcl ||
+                    socBridgeData?.healthAndDriftBridge?.gitOpsBridge
+                      ?.terraformPatchHcl ||
+                    '# 0 session mutations recorded yet in Flight Recorder.';
+                  const text =
+                    iacFormat === 'TERRAFORM'
+                      ? generatedTerraform
+                      : iacFormat === 'TERRAFORM_IMPORT'
+                      ? generatedTerraformImports
+                      : iacFormat === 'SESSION_GITOPS_DELTA'
+                      ? sessionDeltaText
+                      : iacFormat === 'MERMAID_C4'
+                      ? generatedMermaidC4
+                      : generatedGcloudScript;
+                  const filename =
+                    iacFormat === 'TERRAFORM'
+                      ? `${projectId}-main.tf`
+                      : iacFormat === 'TERRAFORM_IMPORT'
+                      ? `${projectId}-imports.tf`
+                      : iacFormat === 'SESSION_GITOPS_DELTA'
+                      ? `${projectId}-session-delta.tf`
+                      : iacFormat === 'MERMAID_C4'
+                      ? `${projectId}-architecture.mmd`
+                      : `deploy-${projectId}.sh`;
+                  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                title="Download the generated file to disk"
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold px-3 py-1.5 rounded-md cursor-pointer shrink-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download</span>
+              </button>
+            </div>
           </div>
 
           {iacFormat === 'MERMAID_C4' ? (

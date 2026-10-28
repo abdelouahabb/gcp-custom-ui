@@ -835,6 +835,8 @@ export default function EnterpriseStackPipelineBar({
   const activeArtifactContent =
     selectedArtifactTab === 'mainTf'
       ? blueprint?.artifacts?.mainTf
+      : selectedArtifactTab === 'importsTf'
+      ? blueprint?.artifacts?.importsTf
       : selectedArtifactTab === 'cloudBuildYaml'
       ? blueprint?.artifacts?.cloudBuildYaml
       : blueprint?.artifacts?.pipelineDeploySh;
@@ -842,6 +844,8 @@ export default function EnterpriseStackPipelineBar({
   const activeArtifactFilename =
     selectedArtifactTab === 'mainTf'
       ? `${projectId}-enterprise-stack.tf`
+      : selectedArtifactTab === 'importsTf'
+      ? `${projectId}-imports.tf`
       : selectedArtifactTab === 'cloudBuildYaml'
       ? `cloudbuild.yaml`
       : `pipeline-deploy-${projectId}.sh`;
@@ -968,6 +972,17 @@ export default function EnterpriseStackPipelineBar({
                 }`}
               >
                 main.tf (Live Terraform HCL)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedArtifactTab('importsTf')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                  selectedArtifactTab === 'importsTf'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}
+              >
+                imports.tf (Terraform 1.5+ State Imports)
               </button>
               <button
                 type="button"
@@ -1342,7 +1357,10 @@ export default function EnterpriseStackPipelineBar({
                     <div
                       key={`${item.name}-${idx}`}
                       onClick={() => {
-                        if (item.provisionType && onOpenProvision) {
+                        if (item.openArtifactTab) {
+                          setSelectedArtifactTab(item.openArtifactTab);
+                          setIacDrawerOpen(true);
+                        } else if (item.provisionType && onOpenProvision) {
                           onOpenProvision(item.provisionType);
                         } else if (onSelectTab && item.targetTab) {
                           onSelectTab(item.targetTab, item.subTab);

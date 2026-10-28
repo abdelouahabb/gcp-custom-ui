@@ -72555,6 +72555,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
               cloudFunctions.length +
               artifactRepos.length
             } HCL resource blocks + imports.tf`,
+            openArtifactTab: 'mainTf',
             targetTab: 'INNOVATION_LAB',
             subTab: 'TERRAFORM',
           },
@@ -72562,6 +72563,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             kind: 'Bash Verifier',
             name: `pipeline-deploy-${projectId}.sh`,
             meta: '6-Stage Idempotent CLI Verifier',
+            openArtifactTab: 'pipelineDeploySh',
             targetTab: 'LOGS_SHELL',
           },
         ],
@@ -72688,12 +72690,18 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
     for (const fw of firewalls.slice(0, 6)) {
       const tfId = sanitizeTfId(fw.name);
       const netName = fw.details?.network || 'default';
+      const rawSrc = String(fw.details?.sourceRanges || '0.0.0.0/0')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const srcHcl = rawSrc.map((s) => `"${s}"`).join(', ');
       tfBlocks.push(
         `resource "google_compute_firewall" "${tfId}" {`,
-        `  name      = "${fw.name}"`,
-        `  project   = "${projectId}"`,
-        `  network   = "${netName}"`,
-        `  direction = "${fw.details?.direction || 'INGRESS'}"`,
+        `  name          = "${fw.name}"`,
+        `  project       = "${projectId}"`,
+        `  network       = "${netName}"`,
+        `  direction     = "${fw.details?.direction || 'INGRESS'}"`,
+        ...(rawSrc.length > 0 ? [`  source_ranges = [${srcHcl}]`] : []),
         `  allow {`,
         `    protocol = "tcp"`,
         `  }`,
@@ -72825,6 +72833,110 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
 
     const mainTf = tfBlocks.join('\n');
 
+    // Synthesize Terraform 1.5+ Declarative `import {}` blocks (imports.tf) for zero-downtime state adoption
+    const importBlocks = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 — Terraform 1.5+ Declarative State Import Blueprint (imports.tf)`,
+      `# Target GCP Project : ${projectId}`,
+      `# Usage              : Run \`terraform plan\` or \`terraform apply\` alongside main.tf`,
+      `#                      to adopt live GCP resources into Terraform state (0 downtime)`,
+      `# ==============================================================================`,
+      ``,
+    ];
+    for (const vpc of vpcs.slice(0, 5)) {
+      const tfId = sanitizeTfId(vpc.name);
+      importBlocks.push(
+        `import {`,
+        `  to = google_compute_network.${tfId}`,
+        `  id = "projects/${projectId}/global/networks/${vpc.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const fw of firewalls.slice(0, 6)) {
+      const tfId = sanitizeTfId(fw.name);
+      importBlocks.push(
+        `import {`,
+        `  to = google_compute_firewall.${tfId}`,
+        `  id = "projects/${projectId}/global/firewalls/${fw.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const b of buckets.slice(0, 8)) {
+      const tfId = sanitizeTfId(b.name);
+      importBlocks.push(
+        `import {`,
+        `  to = google_storage_bucket.${tfId}`,
+        `  id = "${b.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const ds of datasets.slice(0, 8)) {
+      const tfId = sanitizeTfId(ds.name);
+      importBlocks.push(
+        `import {`,
+        `  to = google_bigquery_dataset.${tfId}`,
+        `  id = "projects/${projectId}/datasets/${ds.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const vm of vms.slice(0, 6)) {
+      const tfId = sanitizeTfId(vm.name);
+      const zone = vm.zone || vm.details?.zone || vm.region || 'us-east1-b';
+      importBlocks.push(
+        `import {`,
+        `  to = google_compute_instance.${tfId}`,
+        `  id = "projects/${projectId}/zones/${zone}/instances/${vm.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const d of disks.slice(0, 6)) {
+      const tfId = sanitizeTfId(`disk_${d.name}`);
+      importBlocks.push(
+        `import {`,
+        `  to = google_compute_disk.${tfId}`,
+        `  id = "projects/${projectId}/zones/${d.zone || 'us-central1-a'}/disks/${d.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const svc of cloudRunSvcs.slice(0, 6)) {
+      const tfId = sanitizeTfId(svc.name);
+      const region = svc.region || 'us-central1';
+      importBlocks.push(
+        `import {`,
+        `  to = google_cloud_run_v2_service.${tfId}`,
+        `  id = "projects/${projectId}/locations/${region}/services/${svc.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const fn of cloudFunctions.slice(0, 6)) {
+      const tfId = sanitizeTfId(`fn_${fn.name}`);
+      importBlocks.push(
+        `import {`,
+        `  to = google_cloudfunctions2_function.${tfId}`,
+        `  id = "projects/${projectId}/locations/${fn.region || 'us-central1'}/functions/${fn.name}"`,
+        `}`,
+        ``
+      );
+    }
+    for (const ar of artifactRepos.slice(0, 6)) {
+      const tfId = sanitizeTfId(`ar_${ar.name}`);
+      importBlocks.push(
+        `import {`,
+        `  to = google_artifact_registry_repository.${tfId}`,
+        `  id = "projects/${projectId}/locations/${ar.region || 'us-central1'}/repositories/${ar.name}"`,
+        `}`,
+        ``
+      );
+    }
+    const importsTf = importBlocks.join('\n');
+
     const primaryCloudRunName = cloudRunSvcs[0]?.name || 'cloudpulse-control-plane';
     const primaryRegion = cloudRunSvcs[0]?.region || 'us-central1';
 
@@ -72945,6 +73057,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       stages,
       artifacts: {
         mainTf,
+        importsTf,
         cloudBuildYaml,
         pipelineDeploySh,
       },
