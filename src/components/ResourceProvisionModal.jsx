@@ -1364,7 +1364,18 @@ export default function ResourceProvisionModal({
     }
 
     if (serviceType === 'COMPUTE_VM') {
-      const baseMachine = baseRates[machineType] || 0.067;
+      const isFreeTierRegion = ['us-west1', 'us-central1', 'us-east1'].includes(
+        vmRegion
+      );
+      const isFreeTierVmCompute =
+        machineType === 'e2-micro' &&
+        !spotInstance &&
+        vmGpuType === 'NONE' &&
+        isFreeTierRegion;
+
+      const baseMachine = isFreeTierVmCompute
+        ? 0
+        : baseRates[machineType] || 0.067;
       const extraGpuRate =
         vmGpuType !== 'NONE' &&
         !machineType.startsWith('g2-') &&
@@ -1382,13 +1393,39 @@ export default function ResourceProvisionModal({
           : diskType === 'pd-balanced'
           ? 0.1
           : 0.04;
-      const diskHourly = (Number(diskSizeGb || 20) * diskRatePerGbMonth) / 730;
+      const totalDiskGb = Number(diskSizeGb || 20);
+      const billableDiskGb =
+        isFreeTierVmCompute && diskType === 'pd-standard'
+          ? Math.max(0, totalDiskGb - 30)
+          : totalDiskGb;
+      const diskHourly = (billableDiskGb * diskRatePerGbMonth) / 730;
       const hourly = computeEffective + diskHourly;
+
+      if (isFreeTierVmCompute && diskType === 'pd-standard' && totalDiskGb <= 30) {
+        return {
+          hourly: 0,
+          monthly: 0,
+          badge: 'ALWAYS FREE TIER ($0.00/MO · 1st e2-micro + ≤30GB pd-standard)',
+          detail: `$0.00/mo under Google Cloud Always Free Tier (1st non-preemptible e2-micro in ${vmRegion} + ${totalDiskGb}GB pd-standard · $7.33/mo standard list price waived)`,
+        };
+      }
+
+      if (isFreeTierVmCompute) {
+        return {
+          hourly,
+          monthly: hourly * 730,
+          badge: `FREE e2-micro COMPUTE + PAID DISK (${diskType})`,
+          detail: `e2-micro compute in ${vmRegion} is $0.00/mo, but ${totalDiskGb}GB ${diskType} bills $${(
+            diskHourly * 730
+          ).toFixed(2)}/mo — switch to ≤30GB pd-standard for $0.00/mo`,
+        };
+      }
+
       return {
         hourly,
         monthly: hourly * 730,
         badge: spotInstance ? 'SPOT VM (-68% SAVED)' : 'ON-DEMAND VM',
-        detail: `${machineType} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}`,
+        detail: `${machineType} in ${vmRegion} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}`,
       };
     }
 
@@ -1413,8 +1450,8 @@ export default function ResourceProvisionModal({
           hourly: 0,
           monthly: 0,
           activeInstanceHourly: singleInstHr,
-          badge: '$0.00 IDLE (SCALE-TO-ZERO)',
-          detail: `Billed only per active request (~$${singleInstHr.toFixed(3)}/active-instance-hr)`,
+          badge: 'ALWAYS FREE TIER · $0.00 IDLE (SCALE-TO-ZERO)',
+          detail: `2M requests + 180k vCPU-sec + 360k GiB-sec FREE/mo · Billed only per active request beyond free tier (~$${singleInstHr.toFixed(3)}/active-instance-hr)`,
         };
       }
       const effectiveInst = Math.max(minInst, hasGpu ? 1 : minInst);
@@ -1431,6 +1468,22 @@ export default function ResourceProvisionModal({
     }
 
     if (serviceType === 'GCS_BUCKET') {
+      const isAlwaysFreeBucket =
+        gcsLocationType === 'REGIONAL' &&
+        storageClass === 'STANDARD' &&
+        !gcsAutoclass &&
+        Number(gcsRetentionDays || 0) === 0 &&
+        ['us-west1', 'us-central1', 'us-east1'].includes(region);
+
+      if (isAlwaysFreeBucket) {
+        return {
+          hourly: 0,
+          monthly: 0,
+          badge: `ALWAYS FREE TIER ($0.00/MO UP TO 5 GB · ${region} STANDARD)`,
+          detail: `$0.00/mo for first 5 GB-months Regional STANDARD in ${region} + 5,000 Class A & 50,000 Class B ops/mo ($0.0200/GB-mo beyond 5 GB)`,
+        };
+      }
+
       const basePerGb = gcsAutoclass
         ? 0.02
         : storageClass === 'STANDARD'
@@ -1479,6 +1532,20 @@ export default function ResourceProvisionModal({
         0.04 *
         timeTravelFactor
       ).toFixed(2); // 5:1 Capacitor compression -> 20 GB physical * $0.04 = ~$0.83/mo
+
+      if (bqComplianceRegime === 'standard') {
+        return {
+          hourly: 0,
+          monthly: 0,
+          badge: `ALWAYS FREE TIER ($0.00/MO · 10 GiB STORAGE + 1 TiB QUERIES/MO)`,
+          detail: `$0.00/mo for first 10 GiB storage + 1 TiB SQL querying every month (${
+            isPhysical
+              ? `est. $${physicalMonthly100Gb}/mo at 100 GB with 5:1 Capacitor physical compression`
+              : `est. $${logicalMonthly100Gb.toFixed(2)}/mo at 100 GB logical`
+          })`,
+        };
+      }
+
       const monthly = isPhysical ? physicalMonthly100Gb : logicalMonthly100Gb;
       return {
         hourly: 0,
@@ -1514,6 +1581,8 @@ export default function ResourceProvisionModal({
     gkeSpotNodes,
     gkeGpuAcceleratorType,
     gkeGpuAcceleratorCount,
+    vmRegion,
+    region,
     machineType,
     spotInstance,
     vmGpuType,
@@ -1531,6 +1600,7 @@ export default function ResourceProvisionModal({
     gcsAutoclass,
     gcsAutoclassTerminal,
     gcsRetentionDays,
+    bqComplianceRegime,
     bqStorageBillingModel,
     bqMaxTimeTravelHours,
   ]);
@@ -1895,6 +1965,7 @@ export default function ResourceProvisionModal({
                     setRegion('us-central1');
                     setStorageClass('STANDARD');
                     setGcsAutoclass(false);
+                    setGcsRetentionDays(0);
                     setGcsHierarchicalNamespace(false);
                   } else if (serviceType === 'BIGQUERY_DATASET') {
                     applyBqCompliancePreset('standard');
@@ -1907,7 +1978,9 @@ export default function ResourceProvisionModal({
                 }}
                 className="shrink-0 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
               >
-                {serviceType === 'COMPUTE_VM'
+                {liveCostEstimate.monthly === 0 && liveCostEstimate.hourly === 0
+                  ? '✓ Always Free Tier Active ($0.00/mo)'
+                  : serviceType === 'COMPUTE_VM'
                   ? 'Lock Always Free VM (e2-micro + 30GB pd-standard)'
                   : serviceType === 'CLOUD_RUN'
                   ? 'Lock Always Free Cloud Run ($0 Idle · 2M req/mo)'
