@@ -750,6 +750,44 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - Removed the `max-w-[1600px] mx-auto` bottleneck across the header, navigation bar, and `<main>` container in `src/App.jsx` so all 20+ studios utilize 100% of widescreen viewports while preserving the horizontal scrollbar on the main `<nav>` menu.
      - Reincarnated the retired `FuturisticOrbitalHud.jsx` top banner into the **Zero-Mock Orbital Control-Plane Drawer (`OrbitalControlPlaneDrawer.jsx`)** triggered from 4 compact secondary header pills (`CFE X% · Grade A+`, `1-Tap Stack`, `Flight Recorder`, `Auto-Pilot Guard`) and embedded **Pillar `05 · 1-Tap 3-Tier Stack Synthesizer & CFE`** directly inside `GlobalNetworkWorldMap.jsx`.
 
+### 65. Startup 10X Mentor Studio — 6-Pillar Scale Readiness Scorecard, Credit Runway Forecaster, Live 6-Stage Load Probe & 1-Click Bottleneck Remediations (`src/components/Startup10xMentorStudio.jsx` & `server/index.js`)
+- **Where to find it**: Click **`Startup 10X ★`** in the primary navigation bar (or launch it from the `Overview` 5-Domain Navigator under **Domain I: Innovation, Startups & Global Edge**).
+- **Why We Built This**:
+  - Startup founders and lean engineering teams building on Google Cloud often hit 6 preventable scaling and billing walls on launch day: Cloud Run cold-start spikes & legacy `$15/mo` Serverless VPC Connectors, Cloud SQL 200-connection storms from serverless autoscaling, HTTP 429 quota walls, silent `$2k–$350k` Google for Startups credit vampires, enterprise SOC2 deal-blockers (`0.0.0.0/0` SSH/RDP, public buckets), and uncached GenAI token spend.
+- **How It Works (`GET /api/project/:id/startup-10x/audit`, `POST /api/project/:id/startup-10x/load-probe` & `POST /api/project/:id/startup-10x/remediate`)**:
+  1. **Live 6-Pillar Startup Audit & Credit Runway Calculator**: Probes live Cloud Run v2 services, Compute Engine VMs, Cloud SQL instances, VPC Firewalls, GCS Buckets, Enabled APIs, and Billing Credits in parallel to compute a **Startup Scale Readiness Score (`0–100`)**, current vs. optimized monthly burn (`$/mo`), and exact **Credit Runway Extension (`+months gained`)**.
+  2. **Live 6-Stage Production Load-Test & Concurrency Probe**: Fires a real 6-stage network and HTTP burst against your live Cloud Run / web endpoints measuring **DNS Lookup (`ms`)**, **TCP Handshake (`ms`)**, **TLS 1.3 Negotiation (`ms`)**, **Cold-Start TTFB (`ms`)**, **P50 / P95 / P99 Concurrency Latency**, and **HTTP 429 / 5xx Resiliency**.
+  3. **1-Click Live Startup Remediations**: Executes real Google Cloud REST remediations directly from each pillar card (`ENABLE_CLOUD_RUN_CPU_BOOST`, `LOCK_OPEN_FIREWALLS_TO_IAP`, `ENFORCE_BUCKET_PAP`, and `TRIM_IDLE_CLOUD_RUN_MIN_INSTANCES`).
+
+### 66. Google Cloud SDK `591.0.0` (`2026.10.26`) Frontier Lab & Direct Domain Studio Wiring (`src/components/GcloudAlphaBetaStudio.jsx`, `VpcNetworksAndFirewalls.jsx`, `VmFleetAndSsh.jsx`, `SovereignTimeMachineIamStudio.jsx`, `CloudStorageStudio.jsx`, `GkeEnterpriseStudio.jsx`, `GoogleCloudRemoteMcpStudio.jsx` & `server/index.js`)
+- **Where to find it**: Click **`SDK 591.0.0 Lab`** in the top-right header, or use the embedded **SDK `591.0.0` Capabilities Bar** at the top of **`VPC`**, **`VM`**, **`IAM`**, **`Cloud Storage`**, **`GKE`**, and **`MCP Servers`**.
+- **Why We Built This**:
+  - Google Cloud SDK `591.0.0` (`2026.10.26`) promoted 14 major command groups to General Availability (`agent-registry`, `agent-identity`, `pam`, `policy-troubleshoot`, `service-health`, `cloudlocationfinder`, `model-armor`, `developer-knowledge`, `app-topology`, `design-center`, `quotas`, `cluster-director`, `observability`, `compliance-manager`) while expanding `gcloud beta orchestration-pipelines` and `gcloud alpha database-center`. Engineers need these capabilities both in a centralized Frontier Lab and wired directly into the daily studios where they manage VPCs, VMs, IAM, Storage, GKE, and MCP Agents.
+- **How It Works**:
+  1. **Wave 1 + Wave 2 + Wave 3 (`8-Pillar Live Frontier Scan`) & SDK `588.0 -> 590.0.0 -> 591.0.0` Track Promotion Ledger**: Probes all 18 capabilities and 8 Wave-3 pillars concurrently via `GET /api/project/:id/alpha-beta/overview` and `POST /api/project/:id/alpha-beta/action`.
+  2. **Direct Wiring Across 6 Core Studios**:
+     - **`VPC & Firewalls`**: Cloud Network Insights, NGFW Enterprise w/ Intrusion Prevention, and Effective Firewalls Inspector.
+     - **`VM Fleet & SSH`**: `<1s` Instant Snapshots, C4/N4/X4 + Hyperdisk Extreme/ML, and Future Reservations.
+     - **`IAM & Sovereign Studio`**: GA Privileged Access Manager (`gcloud pam`) JIT Entitlements, IAM Policy Troubleshooter, and Agent Identity (`gcloud alpha iam workload-identity-pools`).
+     - **`Cloud Storage Studio`**: Anywhere Cache SSD Read-Cache, HNS Atomic Folder Rename (`gcloud storage folders rename`), and NetApp Storage Pool QoS.
+     - **`GKE Studio`**: GKE `1.32–1.34` Rapid/Regular Channel Upgrade, Autopilot Custom `ComputeClass` GPU Fallback, and Fleet Multi-Cluster RBAC.
+     - **`MCP Servers Hub`**: Live `GA 591.0.0` Agent Registry & MCP Server Discovery Probe (`SCAN_ALPHA_AGENT_REGISTRY`).
+
+### 67. 30-Day Cloud Recycle Bin — Deleted Resources, Disabled GCP APIs & Honest Native Recovery vs. Empty Resource Shell Re-Creation (`src/components/CloudRecycleBinStudio.jsx` & `server/index.js`)
+- **Where to find it**: Click **`Recycle Bin`** in the top header or main navigation bar, **`Recycle Bin (30d)`** in the Overview **Resource Control Center**, **`Disabled APIs Recycle Bin (30d)`** in the **Granular Service API Kill-Switch**, **`30-Day Recycle Bin`** in **Logs & Cloud Shell**, or search `"recycle bin"` in `⌘K`.
+- **Why We Built This**:
+  - Google Cloud has no unified Windows-style "Recycle Bin" where engineers can immediately see what resources were deleted and which APIs were disabled over the last 30 days. Furthermore, cloud operators must be told with 100% honesty whether clicking "Restore" recovers their actual internal data or only re-creates an empty resource shell with the same name.
+- **How It Works (`GET /api/project/:id/recycle-bin?days=30` & `POST /api/project/:id/recycle-bin/restore`)**:
+  1. **30-Day Destructive Audit & Soft-Delete Vault Scanner**: Queries `cloudaudit.googleapis.com/activity` for all destructive Admin Activity methods (`Delete*`, `Destroy*`, `Purge*`, `Drop*`, `Remove*`, `DisableService`, `BatchDisableServices`, `DisableServiceAccountKey`) in parallel with live Cloud Storage Soft-Delete buckets (`?softDeleted=true`) and active `serviceusage.googleapis.com` APIs, deduplicating by resource and hiding APIs that have already been re-enabled.
+  2. **Explicit 2-Tier Honest Recovery Guarantee Classification (`recoveryGuarantee`)**:
+     - **Tier A — True Native Recovery (`DATA_GUARANTEED` / `CONTROL_PLANE_RESTORE`)**:
+       - **Disabled GCP APIs**: Re-enables the service control plane in 1 click (`serviceusage.services.enable`).
+       - **Cloud Storage Soft-Deleted Buckets**: Restores the original bucket generation and soft-deleted objects within the 7–90 day `softDeletePolicy` window (`gcloud storage buckets restore --generation=...`).
+       - **BigQuery Tables Dropped `< 7 Days` Ago (Parent Dataset Intact)**: Restores historical table rows and schema via BigQuery's 7-day Time-Travel window (`FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(...)` / `bq cp table@-ms`).
+       - **Deleted IAM Service Accounts & API Keys (`< 30 Days`)**: Restores the original identity/key UID via `gcloud iam service-accounts undelete` and `gcloud services api-keys undelete`.
+     - **Tier B — Empty Resource Shell Re-Creation Only (`NO_DATA_GUARANTEE`)**:
+       - **Compute Engine VMs, Persistent Disks, Cloud SQL Instances, Deleted BigQuery Datasets, Cloud Run Services, GKE Clusters, Secret Manager Secrets, and Non-Soft-Deleted GCS Buckets**: Displays a prominent **`EMPTY SHELL RE-CREATE (NO DATA GUARANTEE)`** badge and red warning box explaining that Google Cloud permanently destroys the underlying disk blocks, database storage, or dataset tables upon deletion—so clicking **`Re-Create Empty Resource (No Data Guarantee)`** provisions a brand-new empty resource with the same name/region/type unless restored from a prior snapshot or backup.
+
 
 
 

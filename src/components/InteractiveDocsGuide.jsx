@@ -27,9 +27,61 @@ import {
   Layers,
   Database,
   HardDrive,
+  Trash2,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
+  {
+    id: 'cloud-recycle-bin-30d-and-honest-recovery-guarantees',
+    wave: '2026 SRE & GOVERNANCE · 30-DAY CLOUD RECYCLE BIN, DISABLED API RESTORER & HONEST RECOVERY VS. EMPTY SHELL RE-CREATION',
+    title:
+      '30-Day Cloud Recycle Bin — Deleted Resources, Disabled GCP APIs & Honest Native Data Recovery vs. Empty Resource Shell Re-Creation',
+    badge: 'RECYCLE BIN TAB + OVERVIEW + API KILL-SWITCH + LOGS',
+    badgeColor:
+      'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/40',
+    icon: Trash2,
+    targetTab: 'RECYCLE_BIN',
+    problemSolved:
+      'Unlike Windows or macOS, Google Cloud has no unified "Recycle Bin" showing what resources were deleted or which APIs were disabled over the last 30 days—forcing engineers to write complex Cloud Audit Log queries across dozens of methodName patterns. Worse, engineers often do not know whether "restoring" a deleted cloud resource recovers its actual data or merely creates a brand-new empty resource shell with the same name.',
+    howItWorks: [
+      '30-Day Destructive Event & Disabled API Scanner (GET /api/project/:id/recycle-bin?days=30): Queries cloudaudit.googleapis.com/activity for all destructive Admin Activity mutations (Delete*, Destroy*, Purge*, Drop*, Remove*, DisableService, BatchDisableServices, DisableServiceAccountKey) in parallel with live Cloud Storage Soft-Delete vaults (?softDeleted=true) and live enabled APIs (serviceusage.googleapis.com), deduplicating by resource + type and filtering out APIs that were already re-enabled.',
+      'Explicit 2-Tier Honest Recovery Guarantee Classification (recoveryGuarantee): Clearly separates every deleted item into either (A) True Native Recovery (DATA_GUARANTEED / CONTROL_PLANE_RESTORE) or (B) Empty Resource Shell Re-Creation Only (NO_DATA_GUARANTEE) so operators are never misled about internal data restoration:',
+      'Tier A — True Native Recovery (Data or Control-Plane State Preserved): (1) Disabled GCP APIs (re-enables serviceusage.googleapis.com/v1 in 1 click), (2) Soft-Deleted Cloud Storage Buckets within their 7–90d softDeletePolicy window (restores the original bucket generation + objects via gcloud storage buckets restore), (3) Dropped BigQuery Tables < 7 days old when the parent dataset still exists (recovers rows + schema via FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(...) snapshot copy), and (4) Deleted IAM Service Accounts & API Keys < 30 days old (native undelete).',
+      'Tier B — Empty Resource Shell Re-Creation Only (No Data Guarantee): Compute Engine VMs, Persistent Disks, Cloud SQL instances, deleted BigQuery Datasets, Cloud Run services, GKE clusters, Secret Manager secrets, and GCS Buckets without Soft-Delete display a prominent red/amber "EMPTY SHELL RE-CREATE (NO DATA GUARANTEE)" badge and warning box explaining that clicking "Re-Create Empty Resource (No Data Guarantee)" provisions a brand-new empty resource with the same name/region/type unless restored from a prior snapshot or backup.',
+      'Wired Across the Entire Cockpit: Accessible from the top header "Recycle Bin" pill, the main studio navigation bar, the Overview Resource Control Center ("Recycle Bin (30d)"), the Granular Service API Kill-Switch ("Disabled APIs Recycle Bin (30d)"), the Logs & Cloud Shell header, and Cmd+K search.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/recycle-bin?days=30 (logging.googleapis.com/v2/entries:list + storage.googleapis.com/storage/v1/b?softDeleted=true + serviceusage.googleapis.com/v1)',
+      'POST /api/project/:id/recycle-bin/restore (REENABLE_API | RESTORE_SOFT_DELETED_BUCKET | UNDELETE_SERVICE_ACCOUNT | UNDELETE_API_KEY | RECREATE_EMPTY_BUCKET | RECREATE_EMPTY_BQ_DATASET | RUN_GCLOUD_RESTORE)',
+    ],
+    billingImpact:
+      'Scanning 30 days of Cloud Audit Admin Activity logs and Soft-Delete metadata is 100% $0.00/mo; every restore or re-creation action is protected by the Pre-Execution Gatekeeper with explicit data-guarantee and billing disclosures.',
+  },
+  {
+    id: 'startup-10x-mentor-scale-readiness-and-credit-runway-radar',
+    wave: 'GOOGLE FOR STARTUPS MENTOR EDITION · STARTUP 10X SCALE READINESS, CREDIT RUNWAY, LIVE 6-STAGE LOAD PROBE & 1-CLICK REMEDIATIONS',
+    title:
+      'Startup 10X Mentor Studio — 6-Pillar Scale Readiness Scorecard, Credit Runway Forecaster, Live 6-Stage Production Load-Test Probe & 1-Click Bottleneck Remediations',
+    badge: 'STARTUP 10X TAB (PRIMARY STARRED)',
+    badgeColor:
+      'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+    icon: Rocket,
+    targetTab: 'STARTUP_10X',
+    problemSolved:
+      'Startup founders and lean engineering teams launching on Google Cloud frequently hit 6 preventable scaling walls: (1) Cloud Run cold-start & legacy Serverless VPC Connector ($15/mo + 300Mbps cap) bottlenecks, (2) Cloud SQL 200-instance connection storms, (3) Launch-day HTTP 429 quota walls, (4) $2k–$350k Google for Startups credit vampires (idle NAT gateways, unattached disks, multi-region log bloat), (5) Enterprise SOC2 deal-blockers (world-open 0.0.0.0/0 SSH/RDP, public buckets), and (6) uncached GenAI token burn.',
+    howItWorks: [
+      'Live 6-Pillar Startup 10X Audit & Readiness Scorecard (GET /api/project/:id/startup-10x/audit): Inspects live Cloud Run services, Compute VMs, Cloud SQL instances, VPC Firewalls, GCS Buckets, Enabled APIs, and Billing Credits in parallel to compute a 0–100 Startup Scale Score, monthly burn vs. optimized burn, and exact credit runway extension (+months gained).',
+      'Live 6-Stage Production Load-Test & Concurrency Probe (POST /api/project/:id/startup-10x/load-probe): Fires a real 6-stage network & HTTP load burst against your live Cloud Run / web endpoints measuring DNS Lookup (ms), TCP Handshake (ms), TLS 1.3 Negotiation (ms), Cold-Start TTFB (ms), P50 / P95 / P99 Concurrency Latency, and HTTP 429 / 5xx resiliency.',
+      '1-Click Live Startup Remediations (POST /api/project/:id/startup-10x/remediate): Executes live REST fixes directly from each bottleneck card: ENABLE_CLOUD_RUN_CPU_BOOST (patches startupCpuBoost: true + cpuIdle: true), LOCK_OPEN_FIREWALLS_TO_IAP (locks 0.0.0.0/0 SSH/RDP rules to 35.235.240.0/20), ENFORCE_BUCKET_PAP (enforces publicAccessPrevention="enforced" + Uniform IAM), and TRIM_IDLE_CLOUD_RUN_MIN_INSTANCES (scales idle minInstanceCount > 0 down to 0).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/startup-10x/audit (run.googleapis.com/v2 + compute + sqladmin + storage + serviceusage + cloudbilling)',
+      'POST /api/project/:id/startup-10x/load-probe (Live DNS + TCP + TLS 1.3 + Concurrent Burst Probe)',
+      'POST /api/project/:id/startup-10x/remediate (ENABLE_CLOUD_RUN_CPU_BOOST | LOCK_OPEN_FIREWALLS_TO_IAP | ENFORCE_BUCKET_PAP | TRIM_IDLE_CLOUD_RUN_MIN_INSTANCES)',
+    ],
+    billingImpact:
+      '100% $0.00/mo audit and load probing; 1-click remediations actively cut idle monthly burn and extend Google for Startups promotional credit runway.',
+  },
   {
     id: 'google-cloud-console-hover-explainer-and-enterprise-palette',
     wave: '2026 ENTERPRISE UX · 4-SECTION GOOGLE CLOUD CONSOLE HOVER EXPLAINER CARD, HYBRID SIGNATURE NAMING & AUTHENTIC GCP PALETTE',
@@ -460,6 +512,7 @@ const DOC_SECTIONS = [
       'Wave 1 (01–05): (01) [BETA] Cloud Run Worker Pools & Multi-Region Services, (02) [GA] Autonomous Agent Registry & MCP Servers, (03) [GA] Privileged Access Manager (PAM) JIT & IAM 403 Policy Troubleshooter, (04) [GA/ALPHA] Personalized Service Health & Cloud Run Fault-Injection, and (05) [GA/BETA] App Hub, Cloud Location Finder & Application Optimize.',
       'Wave 2 (06–10): (06) [GA] Vertex AI Model Armor Prompt-Injection & SDP/PII Firewall, (07) [GA] Developer Knowledge MCP, App-Topology & Design Center, (08) [GA/BETA] Cloud Quotas Preferences & Live Adjuster, (09) [GA/ALPHA] Sovereign Audit Manager & Software Delivery Trust, and (10) [GA] AI Hypercomputer Cluster Director & Managed Lustre.',
       'Wave 3 (11 · SDK 591.0.0 8-Pillar Live Frontier Scan): Runs parallel live discovery across (1) AI Hypercomputer Cluster Director & Lustre [GA], (2) Google Cloud NetApp Volumes & Storage Pools QoS [GA/BETA], (3) Database Center Fleet Health [ALPHA], (4) Cloud Quotas Adjuster & Preferences [GA/BETA], (5) Sovereign Audit Manager [GA], (6) Cloud Observability Scopes & Trace Scopes [GA], (7) Declarative Orchestration Pipelines [BETA], and (8) Cloud Compliance Manager Frameworks & Controls [GA] alongside the SDK 588.0 -> 590.0.0 -> 591.0.0 Track Promotion Ledger.',
+      'Direct Domain Studio Wiring (SDK 591.0.0): Every SDK 591.0.0 capability is also wired natively into its matching domain studio: VPC Studio (Cloud Network Insights, NGFW Enterprise & Effective Firewalls), VM Studio (591.0.0 Instant Snapshots, C4/N4/X4 Hyperdisk & Future Reservations), IAM Studio (GA PAM JIT Entitlements & Agent Identity), Storage Studio (Anywhere Cache SSD, HNS Folder Rename & NetApp QoS), GKE Studio (K8s 1.32–1.34, Autopilot ComputeClasses & Fleet Multi-Cluster RBAC), and MCP Hub (GA gcloud agent-registry).',
     ],
     apisUsed: [
       'GET /api/project/:id/alpha-beta/overview & POST /api/project/:id/alpha-beta/action (SCAN_WAVE3_GCLOUD_590_FRONTIER)',

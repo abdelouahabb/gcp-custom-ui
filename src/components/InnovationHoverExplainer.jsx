@@ -34,6 +34,16 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'billingbudgets · bigquery · storage · secretmanager · cloudbuild · modelarmor',
     safetyMode: 'READ_ONLY',
   },
+  ALIBABA_HUAWEI_PARITY: {
+    badge: 'HYPERSCALE PARITY BRIDGE',
+    title: '8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Suite',
+    whatItDoes:
+      'Maps 8 hyperscale cloud patterns (11.11 Singles-Day PTS + MSE Sentinel Surge, CEN + GA QoS Slicer, PolarDB/GaussDB HTAP & 1.6s Clone, Volcano/PAI Fractional vGPU, RocketMQ 5.0 2PC, Nacos/Higress Config Mesh, Hologres/MaxCompute OLAP, and DataV/Astro NOC Wall) onto native Google Cloud services.',
+    enterpriseValue:
+      'Accelerates architecture translation and migration for engineering teams operating across Asia-Pacific, MENA, and Europe.',
+    gcpApis: 'run · spanner · alloydb · pubsub · bigquery · container · compute',
+    safetyMode: 'READ_ONLY',
+  },
   MCP_HUB: {
     badge: '48 OFFICIAL GCP MCP SERVERS',
     title: 'Google-Managed Remote Model Context Protocol (MCP) Hub',
