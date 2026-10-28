@@ -5458,18 +5458,6 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
                   <CloudSqlAndAlloyDbStudio
                     projectId={selectedProjectId}
                     onOpenProvisionCloudSql={() =>
@@ -5568,18 +5556,6 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE10_FRONTIER' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
