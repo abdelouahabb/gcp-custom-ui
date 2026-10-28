@@ -2912,11 +2912,41 @@ export const INNOVATION_FEATURE_GUIDE = {
     badge: 'EMERGENCY PROJECT BILLING KILL-SWITCH',
     title: 'Sever Project Billing Account (`PUT /v1/projects/{id}/billingInfo`)',
     whatItDoes:
-      'Opens the 2-step safety confirmation to detach the active Cloud Billing account from this project (`billingAccountName: ""`) and optionally stop all running Compute Engine VMs.',
+      'Opens the 2-step safety confirmation to detach the active Cloud Billing account from this project (`billingAccountName: ""`), optionally stop all running Compute Engine VMs, scale Cloud Run services to minInstances=0, and stop Cloud SQL instances (`activationPolicy=NEVER`), producing a SHA-256 incident receipt.',
     enterpriseValue:
       'Provides an ultimate hard-stop emergency brake if a credential leak or runaway loop threatens catastrophic cloud spend.',
-    gcpApis: 'cloudbilling.googleapis.com/v1/projects/{id}/billingInfo',
+    gcpApis: 'cloudbilling.googleapis.com/v1/projects/{id}/billingInfo · compute · run v2 · sqladmin',
     safetyMode: 'LIVE_MUTATION',
+  },
+  KILL_SWITCH_SOFT_FREEZE: {
+    badge: 'NON-NUCLEAR $0 IDLE HIBERNATION',
+    title: 'Soft Freeze ($0 Idle Hibernation — Keep Cloud Billing Account Linked)',
+    whatItDoes:
+      'Keeps your Cloud Billing Account linked (preserving GCS buckets, DNS, and scale-to-zero Cloud Run traffic) while halting all running Compute Engine VMs, scaling Cloud Run minInstances→0, and setting Cloud SQL activationPolicy=NEVER with a SHA-256 receipt.',
+    enterpriseValue:
+      'Immediately drops active hourly compute, serverless, and database burn to $0.00/hr without breaking your project billing link or shared storage.',
+    gcpApis: 'compute.googleapis.com/v1 · run.googleapis.com/v2 · sqladmin.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  KILL_SWITCH_REMOTE_MCP_VERIFY: {
+    badge: 'OFFICIAL GOOGLE CLOUD REMOTE MCP',
+    title: 'Verify Billing & Quota State via `cloudbilling.googleapis.com/mcp` & `cloudquotas.googleapis.com/mcp`',
+    whatItDoes:
+      'Executes live JSON-RPC 2.0 `tools/call` invocations (`get_project_billing_info` and `list_quota_infos`) directly against Google Cloud’s official remote MCP endpoints.',
+    enterpriseValue:
+      'Confirms live billing account linkage and quota ceilings directly through Google’s official Model Context Protocol endpoints.',
+    gcpApis: 'https://cloudbilling.googleapis.com/mcp · https://cloudquotas.googleapis.com/mcp',
+    safetyMode: 'READ_ONLY',
+  },
+  KILL_SWITCH_GEMINI_ADVISOR: {
+    badge: 'LIVE GEMINI DEFCON-1 CO-ARCHITECT',
+    title: 'Analyze Live Blast-Radius, Cost-Bleed & Quota Risks with Gemini',
+    whatItDoes:
+      'Sends your live running VM inventory, Always-On Cloud Run services, active Cloud SQL instances, enabled APIs, Spend Cap budgets, and 24h HTTP 429 telemetry to your selected Gemini model via Keyless Vertex AI OAuth2 or Sealed AI Studio Vault.',
+    enterpriseValue:
+      'Recommends the safest surgical cost-containment tier (Per-Service Spend Cap vs Soft Freeze vs Granular API Disable vs DEFCON-1 Unlink) with exact gcloud runbook commands.',
+    gcpApis: 'aiplatform.googleapis.com/v1 (Vertex AI) · generativelanguage.googleapis.com/v1beta',
+    safetyMode: 'READ_ONLY',
   },
   KILL_SWITCH_RESTORE_BILLING: {
     badge: '1-TAP BILLING RE-LINK',

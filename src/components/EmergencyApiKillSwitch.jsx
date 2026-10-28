@@ -22,7 +22,12 @@ import {
   Database,
   Server,
 } from 'lucide-react';
-import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
+import ZeroSniffingWebCryptoEnclaveBar, {
+  useSharedGeminiModels,
+  getSharedActiveModel,
+  getSharedPreferredProvider,
+  decryptKeyFromSharedBrowserWebCrypto,
+} from './ZeroSniffingWebCryptoEnclaveBar';
 
 const CORE_WATCHED_APIS = [
   {
@@ -100,18 +105,10 @@ export default function EmergencyApiKillSwitch({
     useState('');
 
   // 1.2) Zero-Sniffing WebCrypto Enclave + Live Gemini DEFCON-1 Cost-Bleed Advisor + Remote MCP Verification
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState(
-    () =>
-      (typeof window !== 'undefined' &&
-        window.localStorage.getItem('cp_enclave_selected_model_v1')) ||
-      'gemini-2.5-flash'
-  );
-  const [geminiPreferredProvider, setGeminiPreferredProvider] = useState(
-    () =>
-      (typeof window !== 'undefined' &&
-        window.localStorage.getItem('cp_enclave_preferred_provider_v1')) ||
-      'AUTO'
+  const { activeModel: geminiModel, selectModel: setGeminiModel } =
+    useSharedGeminiModels();
+  const [geminiPreferredProvider, setGeminiPreferredProvider] = useState(() =>
+    getSharedPreferredProvider()
   );
   const [geminiAdvice, setGeminiAdvice] = useState(null);
   const [loadingGeminiAdvice, setLoadingGeminiAdvice] = useState(false);
@@ -383,20 +380,23 @@ export default function EmergencyApiKillSwitch({
     try {
       const [billingMcpRes, quotasMcpRes] = await Promise.allSettled([
         axios.post(
-          `/api/project/${encodeURIComponent(projectId)}/remote-mcp/execute`,
+          `/api/project/${encodeURIComponent(projectId)}/mcp/call-tool`,
           {
             serverId: 'cloudbilling',
+            endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
             toolName: 'get_project_billing_info',
             arguments: { name: `projects/${projectId}` },
           }
         ),
         axios.post(
-          `/api/project/${encodeURIComponent(projectId)}/remote-mcp/execute`,
+          `/api/project/${encodeURIComponent(projectId)}/mcp/call-tool`,
           {
             serverId: 'cloudquotas',
+            endpointUrl: 'https://cloudquotas.googleapis.com/mcp',
             toolName: 'list_quota_infos',
             arguments: {
               parent: `projects/${projectId}/locations/global/services/compute.googleapis.com`,
+              pageSize: 6,
             },
           }
         ),
@@ -411,14 +411,22 @@ export default function EmergencyApiKillSwitch({
         verifiedAt: new Date().toISOString(),
         billingOk: Boolean(billingData?.ok),
         billingLatencyMs: billingData?.latencyMs || 0,
-        billingTransport: billingData?.transport || 'HTTPS JSON-RPC 2.0',
+        billingPreview:
+          billingData?.parsedContent ||
+          billingData?.textContent ||
+          null,
         quotasOk: Boolean(quotasData?.ok),
         quotasLatencyMs: quotasData?.latencyMs || 0,
+        quotasCount: Array.isArray(quotasData?.parsedContent?.quotaInfos)
+          ? quotasData.parsedContent.quotaInfos.length
+          : 0,
       });
 
       if (onShowToast) {
         onShowToast(
-          `Verified live Billing & Quota state via official cloudbilling.googleapis.com/mcp & cloudquotas.googleapis.com/mcp!`
+          `Verified live Billing & Quota state via official cloudbilling.googleapis.com/mcp (${
+            billingData?.latencyMs || 0
+          }ms) & cloudquotas.googleapis.com/mcp (${quotasData?.latencyMs || 0}ms)!`
         );
       }
     } catch (err) {
@@ -442,14 +450,19 @@ export default function EmergencyApiKillSwitch({
         (q) =>
           q.status === 'CRITICAL_429_RISK' || q.status === 'ELEVATED_WARNING'
       );
+      const browserKey = await decryptKeyFromSharedBrowserWebCrypto().catch(
+        () => ''
+      );
+      const resolvedModel = geminiModel || getSharedActiveModel();
+      const resolvedProvider = getSharedPreferredProvider();
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
         )}/billing/gemini-advisor`,
         {
-          geminiApiKey,
-          model: geminiModel,
-          preferredProvider: geminiPreferredProvider,
+          geminiApiKey: browserKey || '',
+          model: resolvedModel,
+          preferredProvider: resolvedProvider,
           activeApisCount: activeApis.length,
           topEnabledApis: activeApis.slice(0, 12).map((a) => a.name),
           criticalQuotas: critQuotas.slice(0, 6),
@@ -795,6 +808,7 @@ export default function EmergencyApiKillSwitch({
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     type="button"
+                    data-feature-id="KILL_SWITCH_SOFT_FREEZE"
                     onClick={() => handleBillingKillSwitch('SOFT_FREEZE')}
                     title="Keep Cloud Billing linked (preserving GCS buckets & scale-to-zero Cloud Run traffic) while halting all running VMs, scaling Cloud Run minInstances→0, and stopping Cloud SQL"
                     className="inline-flex items-center justify-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold text-xs px-3.5 py-2.5 rounded-md transition-all cursor-pointer"
@@ -1002,6 +1016,7 @@ export default function EmergencyApiKillSwitch({
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
+              data-feature-id="KILL_SWITCH_REMOTE_MCP_VERIFY"
               disabled={verifyingMcp}
               onClick={handleVerifyOfficialRemoteMcp}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
@@ -1019,6 +1034,7 @@ export default function EmergencyApiKillSwitch({
 
             <button
               type="button"
+              data-feature-id="KILL_SWITCH_GEMINI_ADVISOR"
               disabled={loadingGeminiAdvice}
               onClick={handleRunGeminiAdvisor}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
@@ -1035,11 +1051,21 @@ export default function EmergencyApiKillSwitch({
               </span>
             </button>
 
+            {onOpenFinOps && (
+              <button
+                type="button"
+                onClick={onOpenFinOps}
+                className="px-2 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-mono font-bold cursor-pointer"
+              >
+                FinOps Guardian ↗
+              </button>
+            )}
+
             {onNavigateTab && (
               <>
                 <button
                   type="button"
-                  onClick={() => onNavigateTab('REMOTE_MCP')}
+                  onClick={() => onNavigateTab('MCP_HUB')}
                   className="px-2 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-mono font-bold cursor-pointer"
                 >
                   MCP Servers ↗
@@ -1060,13 +1086,10 @@ export default function EmergencyApiKillSwitch({
         <ZeroSniffingWebCryptoEnclaveBar
           projectId={projectId}
           compact
-          onApiKeyResolved={(key) => setGeminiApiKey(key || '')}
-          onModelChange={(m) => {
-            if (m) setGeminiModel(m);
-          }}
-          onProviderChange={(p) => {
-            if (p) setGeminiPreferredProvider(p);
-          }}
+          selectedModel={geminiModel}
+          onChangeModel={setGeminiModel}
+          preferredProvider={geminiPreferredProvider}
+          onChangePreferredProvider={setGeminiPreferredProvider}
           onShowToast={onShowToast}
         />
 

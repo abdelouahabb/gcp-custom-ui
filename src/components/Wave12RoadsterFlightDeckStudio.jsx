@@ -1186,7 +1186,6 @@ export default function Wave12RoadsterFlightDeckStudio({
 
           <ZeroSniffingWebCryptoEnclaveBar
             projectId={projectId}
-            selectedModel="gemini-3.8-flash"
             onShowToast={notify}
             compact
           />
