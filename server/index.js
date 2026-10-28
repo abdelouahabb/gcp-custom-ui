@@ -75359,6 +75359,700 @@ app.get('/api/project/:projectId/oltp-database-pipeline/blueprint', async (req, 
   }
 });
 
+// ============================================================================
+// WAVE 6: 6-STAGE FINOPS, QUOTA GUARD & STARTUP 10X COST-KILL PIPELINE GLUE
+// Purpose-built for FinOps & Credit Guardian (FINOPS) and Startup 10X Scale
+// & Credit Radar (STARTUP_10X).
+// Connects: (1) Billing Account, Credits & Startup 10X Tier -> (2) Always-Free
+// Tier & Idle Zombie Reaper -> (3) BigQuery Billing Export & FOCUS SQL ->
+// (4) Paid API & GPU Quota Guardrails -> (5) Pub/Sub Budget Alert & Autonomous
+// Cost-Kill -> (6) 98% Carbon-Free GreenOps & 3-Cloud Arbitrage.
+// ============================================================================
+const wave6FinOpsCostKillProbeCache = new Map();
+
+app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+
+    const baseResources = Array.isArray(cachedOverview?.resources)
+      ? [...cachedOverview.resources]
+      : [];
+
+    let extra = wave6FinOpsCostKillProbeCache.get(projectId);
+    if ((!extra || Date.now() - extra.ts > 25000) && headers) {
+      const [
+        billingRes,
+        bucketsRes,
+        datasetsRes,
+        pubsubRes,
+        vmsRes,
+        runRes,
+        svcRes,
+      ] = await Promise.allSettled([
+        axios.get(
+          `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/billingInfo`,
+          { headers, timeout: 4000 }
+        ),
+        baseResources.some((r) => r.type === 'Cloud Storage Bucket')
+          ? Promise.resolve({
+              data: {
+                items: baseResources
+                  .filter((r) => r.type === 'Cloud Storage Bucket')
+                  .map((b) => ({
+                    name: b.name,
+                    location: b.region || 'US',
+                    storageClass: b.storageClass || 'STANDARD',
+                  })),
+              },
+            })
+          : axios.get(
+              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+              { headers, timeout: 4000 }
+            ),
+        axios.get(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://pubsub.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/topics?pageSize=30`,
+          { headers, timeout: 4000 }
+        ),
+        baseResources.some((r) => r.type === 'Compute Engine VM')
+          ? Promise.resolve({
+              data: {
+                fromOverview: baseResources.filter((r) => r.type === 'Compute Engine VM'),
+              },
+            })
+          : axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=40`,
+              { headers, timeout: 4500 }
+            ),
+        baseResources.some((r) => r.type === 'Cloud Run Service')
+          ? Promise.resolve({
+              data: {
+                fromOverview: baseResources.filter((r) => r.type === 'Cloud Run Service'),
+              },
+            })
+          : axios.get(
+              `https://run.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+              { headers, timeout: 4000 }
+            ),
+        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+          ? Promise.resolve({
+              data: {
+                services: baseResources
+                  .filter((r) => r.type === 'Enabled GCP Service API')
+                  .map((s) => ({ name: s.name })),
+              },
+            })
+          : axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=150`,
+              { headers, timeout: 4500 }
+            ),
+      ]);
+
+      const billingInfo =
+        billingRes.status === 'fulfilled' ? billingRes.value.data || {} : {};
+      const billingEnabled = Boolean(billingInfo.billingEnabled);
+      const billingAccountId = (billingInfo.billingAccountName || '').split('/').pop() || '';
+
+      const buckets = (
+        bucketsRes.status === 'fulfilled' ? bucketsRes.value.data?.items || [] : []
+      ).map((b) => ({
+        name: b.name,
+        location: b.location || 'US',
+        storageClass: b.storageClass || 'STANDARD',
+      }));
+
+      const datasets = (
+        datasetsRes.status === 'fulfilled' ? datasetsRes.value.data?.datasets || [] : []
+      ).map((d) => ({
+        name: d.datasetReference?.datasetId || d.id || 'dataset',
+        location: d.location || 'US',
+      }));
+
+      const SYSTEM_PUBSUB_PREFIXES = [
+        'container-analysis-',
+        'eventarc-',
+        'gcf-',
+        'cloud-builds',
+        'firebase-',
+      ];
+      const pubsubTopics = (
+        pubsubRes.status === 'fulfilled' ? pubsubRes.value.data?.topics || [] : []
+      )
+        .map((t) => ({
+          name: (t.name || '').split('/').pop(),
+          fullName: t.name,
+        }))
+        .filter(
+          (t) =>
+            t.name &&
+            !SYSTEM_PUBSUB_PREFIXES.some((prefix) =>
+              t.name.toLowerCase().startsWith(prefix)
+            )
+        );
+
+      let vms = [];
+      if (vmsRes.status === 'fulfilled') {
+        if (Array.isArray(vmsRes.value.data?.fromOverview)) {
+          vms = vmsRes.value.data.fromOverview.map((v) => ({
+            name: v.name,
+            zone: v.region || 'us-central1-a',
+            status: v.status || 'RUNNING',
+            machineType: v.machineType || 'e2-micro',
+          }));
+        } else {
+          const itemsObj = vmsRes.value.data?.items || {};
+          Object.values(itemsObj).forEach((z) => {
+            if (Array.isArray(z?.instances)) {
+              z.instances.forEach((inst) => {
+                vms.push({
+                  name: inst.name,
+                  zone: (inst.zone || '').split('/').pop() || 'us-central1-a',
+                  status: inst.status || 'RUNNING',
+                  machineType: (inst.machineType || '').split('/').pop() || 'e2-micro',
+                });
+              });
+            }
+          });
+        }
+      }
+
+      let cloudRunSvcs = [];
+      if (runRes.status === 'fulfilled') {
+        if (Array.isArray(runRes.value.data?.fromOverview)) {
+          cloudRunSvcs = runRes.value.data.fromOverview.map((r) => ({
+            name: r.name,
+            region: r.region || 'us-central1',
+          }));
+        } else if (Array.isArray(runRes.value.data?.items)) {
+          cloudRunSvcs = runRes.value.data.items.map((item) => ({
+            name: item.metadata?.name || 'service',
+            region: item.metadata?.labels?.['cloud.googleapis.com/location'] || 'us-central1',
+          }));
+        }
+      }
+
+      const rawServices =
+        svcRes.status === 'fulfilled' ? svcRes.value.data?.services || [] : [];
+      const enabledApis = rawServices
+        .map((s) => (s.config?.name || s.name || '').split('/').pop())
+        .filter(Boolean);
+
+      extra = {
+        ts: Date.now(),
+        billingEnabled,
+        billingAccountId,
+        buckets,
+        datasets,
+        pubsubTopics,
+        vms,
+        cloudRunSvcs,
+        enabledApis,
+      };
+      wave6FinOpsCostKillProbeCache.set(projectId, extra);
+    }
+
+    const billingEnabled = Boolean(extra?.billingEnabled);
+    const billingAccountId = extra?.billingAccountId || '';
+    const buckets = extra?.buckets || [];
+    const datasets = extra?.datasets || [];
+    const pubsubTopics = extra?.pubsubTopics || [];
+    const vms = extra?.vms || [];
+    const cloudRunSvcs = extra?.cloudRunSvcs || [];
+    const enabledApis = extra?.enabledApis || [];
+
+    const runningVms = vms.filter((v) => v.status === 'RUNNING');
+    const stoppedVms = vms.filter((v) => v.status !== 'RUNNING');
+
+    const HIGH_BURN_API_PATTERNS = [
+      'aiplatform.googleapis.com',
+      'compute.googleapis.com',
+      'container.googleapis.com',
+      'run.googleapis.com',
+      'sqladmin.googleapis.com',
+      'spanner.googleapis.com',
+      'dataflow.googleapis.com',
+      'dataproc.googleapis.com',
+      'bigquery.googleapis.com',
+      'cloudfunctions.googleapis.com',
+      'notebooks.googleapis.com',
+    ];
+    const highBurnApis = enabledApis.filter((api) =>
+      HIGH_BURN_API_PATTERNS.includes(api.toLowerCase())
+    );
+
+    const totalWorkloads =
+      vms.length + cloudRunSvcs.length + buckets.length + datasets.length;
+    const primaryDataset = datasets[0]?.name || 'billing_export_finops';
+    const primaryTopic = pubsubTopics[0]?.name || `${projectId}-budget-killswitch-alerts`;
+
+    // --- Stage 1 Mermaid: Billing Account -> Project -> Active Resource Categories ---
+    let stage1MermaidDsl = null;
+    if (billingEnabled || totalWorkloads > 0 || highBurnApis.length > 0) {
+      const s1Lines = [`flowchart LR`];
+      const s1Edges = [];
+      s1Lines.push(`  subgraph BILLING["Cloud Billing & Credit Ledger"]`);
+      s1Lines.push(
+        `    BA["${
+          billingAccountId
+            ? `Billing Account: ${billingAccountId}`
+            : `Project Billing (${billingEnabled ? 'ACTIVE' : 'UNLINKED'})`
+        }"]`
+      );
+      s1Lines.push(`    PROJ["GCP Project: ${projectId}"]`);
+      s1Lines.push(`  end`);
+      s1Edges.push(`  BA -->|"Funds & Credits"| PROJ`);
+
+      s1Lines.push(`  subgraph INVENTORY["Live Billable Footprint"]`);
+      if (vms.length > 0) {
+        s1Lines.push(
+          `    INV_VM["Compute Engine: ${vms.length} VM(s) (${runningVms.length} Running)"]`
+        );
+        s1Edges.push(`  PROJ -->|"GCE SKU"| INV_VM`);
+      }
+      if (buckets.length > 0) {
+        s1Lines.push(`    INV_GCS["Cloud Storage: ${buckets.length} Bucket(s)"]`);
+        s1Edges.push(`  PROJ -->|"GCS SKU"| INV_GCS`);
+      }
+      if (datasets.length > 0) {
+        s1Lines.push(`    INV_BQ["BigQuery: ${datasets.length} Dataset(s)"]`);
+        s1Edges.push(`  PROJ -->|"BQ SKU"| INV_BQ`);
+      }
+      if (highBurnApis.length > 0) {
+        s1Lines.push(`    INV_API["Paid/Compute APIs: ${highBurnApis.length} Enabled"]`);
+        s1Edges.push(`  PROJ -->|"API Meter"| INV_API`);
+      }
+      s1Lines.push(`  end`);
+      if (s1Edges.length > 1) {
+        stage1MermaidDsl = [...s1Lines, ...s1Edges].join('\n');
+      }
+    }
+
+    // --- Stage 2 Mermaid: Always-Free Eligibility & Idle Zombie Reaper ---
+    let stage2MermaidDsl = null;
+    if (vms.length + buckets.length + cloudRunSvcs.length + datasets.length > 0) {
+      const s2Lines = [`flowchart LR`];
+      const s2Edges = [];
+      s2Lines.push(`  subgraph FREE_TIER["GCP Always-Free & Zombie Guard"]`);
+      s2Lines.push(`    GUARD["Always-Free & Right-Sizing Auditor"]`);
+      s2Lines.push(`  end`);
+      s2Lines.push(`  subgraph LIVE_ASSETS["Audited Resources in ${projectId}"]`);
+      vms.slice(0, 3).forEach((vm, idx) => {
+        s2Lines.push(`    VM${idx}["VM: ${vm.name} (${vm.machineType} · ${vm.status})"]`);
+        s2Edges.push(
+          `  GUARD -->|"${
+            vm.machineType === 'e2-micro' ? 'Always-Free Eligible' : 'Right-Size / CUD Audit'
+          }"| VM${idx}`
+        );
+      });
+      buckets.slice(0, 3).forEach((b, idx) => {
+        s2Lines.push(`    BKT${idx}["GCS: gs://${b.name} (${b.location})"]`);
+        s2Edges.push(`  GUARD -->|"5 GB US Standard Free Tier"| BKT${idx}`);
+      });
+      datasets.slice(0, 2).forEach((d, idx) => {
+        s2Lines.push(`    DS${idx}["BigQuery: ${d.name}"]`);
+        s2Edges.push(`  GUARD -->|"10 GiB + 1 TiB/mo Free"| DS${idx}`);
+      });
+      s2Lines.push(`  end`);
+      if (s2Edges.length > 0) {
+        stage2MermaidDsl = [...s2Lines, ...s2Edges].join('\n');
+      }
+    }
+
+    // --- Stage 3 Mermaid: BigQuery Billing Export (Strictly requires datasets.length > 0) ---
+    let stage3MermaidDsl = null;
+    if (datasets.length > 0) {
+      const s3Lines = [`flowchart LR`];
+      const s3Edges = [];
+      s3Lines.push(`  subgraph EXPORT_SRC["Cloud Billing SKU Ledger"]`);
+      s3Lines.push(`    LEDGER["GCP Hourly Usage & Credit Grants (${projectId})"]`);
+      s3Lines.push(`  end`);
+      s3Lines.push(`  subgraph BQ_FINOPS["BigQuery Datasets (${datasets.length} Active)"]`);
+      datasets.slice(0, 3).forEach((ds, idx) => {
+        s3Lines.push(`    DS${idx}["Dataset: ${ds.name} (${ds.location})"]`);
+        s3Edges.push(`  LEDGER -->|"Detailed Billing Export"| DS${idx}`);
+      });
+      s3Lines.push(`  end`);
+      if (s3Edges.length > 0) {
+        stage3MermaidDsl = [...s3Lines, ...s3Edges].join('\n');
+      }
+    }
+
+    // --- Stage 4 Mermaid: Paid API & GPU Quota Guardrails ---
+    let stage4MermaidDsl = null;
+    if (highBurnApis.length > 0) {
+      const s4Lines = [`flowchart LR`];
+      const s4Edges = [];
+      s4Lines.push(`  subgraph QUOTA_GATE["Emergency API & Quota Gate"]`);
+      s4Lines.push(`    KILL["Consumer Quota Cap & API Kill-Switch"]`);
+      s4Lines.push(`  end`);
+      s4Lines.push(`  subgraph HIGH_BURN["Active Billable APIs (${highBurnApis.length} of ${enabledApis.length} Total)"]`);
+      highBurnApis.slice(0, 5).forEach((api, idx) => {
+        s4Lines.push(`    API${idx}["API: ${api}"]`);
+        s4Edges.push(`  KILL -->|"Monitors & Caps"| API${idx}`);
+      });
+      s4Lines.push(`  end`);
+      if (s4Edges.length > 0) {
+        stage4MermaidDsl = [...s4Lines, ...s4Edges].join('\n');
+      }
+    }
+
+    // --- Stage 5 Mermaid: Pub/Sub Budget Alert & Autonomous Cost-Kill ---
+    let stage5MermaidDsl = null;
+    if (pubsubTopics.length > 0 || highBurnApis.length > 0) {
+      const s5Lines = [`flowchart LR`];
+      const s5Edges = [];
+      s5Lines.push(`  subgraph BUDGET["Cloud Billing Thresholds"]`);
+      s5Lines.push(`    B50["50% / 80% / 100% Spend Alert"]`);
+      s5Lines.push(`  end`);
+      s5Lines.push(`  subgraph PUBSUB_BUS["Pub/Sub Alert Bus"]`);
+      if (pubsubTopics.length > 0) {
+        pubsubTopics.slice(0, 2).forEach((t, idx) => {
+          s5Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
+          s5Edges.push(`  B50 -->|"JSON Budget Notification"| TOP${idx}`);
+        });
+      } else {
+        s5Lines.push(`    TOP0["Topic: ${primaryTopic}"]`);
+        s5Edges.push(`  B50 -->|"JSON Budget Notification"| TOP0`);
+      }
+      s5Lines.push(`  end`);
+      s5Lines.push(`  subgraph ACTION["Autonomous Cost-Kill Target"]`);
+      s5Lines.push(`    STOP["Stop Idle VMs & Cap Paid API Quotas"]`);
+      s5Lines.push(`  end`);
+      s5Edges.push(`  TOP0 -->|"Triggers Cost-Freeze"| STOP`);
+      stage5MermaidDsl = [...s5Lines, ...s5Edges].join('\n');
+    }
+
+    const finopsSkuBurnSql = `-- CloudPulse 2026 Wave 6: FinOps SKU & Credit Burn Anomaly SQL (${projectId})\n-- Analyzes gross cost, Startup/Trial credit offsets, and net spend by service:\nSELECT\n  "${projectId}" AS project_id,\n  "${billingAccountId || 'UNLINKED'}" AS billing_account_id,\n  ${enabledApis.length} AS enabled_apis_count,\n  ${highBurnApis.length} AS high_burn_apis_count,\n  ${vms.length} AS total_vms,\n  ${buckets.length} AS total_gcs_buckets,\n  CURRENT_TIMESTAMP() AS audited_at;`;
+
+    const billingBudgetGuardTf = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 6 — FinOps Budget Alert, Pub/Sub & Quota Guard Terraform`,
+      `# Target Project  : ${projectId}`,
+      `# Billing Account : ${billingAccountId || 'REPLACE_WITH_BILLING_ACCOUNT_ID'}`,
+      `# Alert Topic     : ${primaryTopic}`,
+      `# ==============================================================================`,
+      `terraform {`,
+      `  required_version = ">= 1.5.0"`,
+      `  required_providers {`,
+      `    google = {`,
+      `      source  = "hashicorp/google"`,
+      `      version = "~> 6.0"`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `# 1. Pub/Sub Topic for Real-Time Programmatic Cloud Billing Budget Notifications`,
+      `resource "google_pubsub_topic" "finops_budget_killswitch" {`,
+      `  project = "${projectId}"`,
+      `  name    = "${primaryTopic}"`,
+      `}`,
+      ``,
+      `# 2. Multi-Threshold Cloud Billing Budget (50%, 80%, 100% Actual & Forecasted)`,
+      `resource "google_billing_budget" "project_cost_guardrail" {`,
+      `  billing_account = "${billingAccountId || '000000-000000-000000'}"`,
+      `  display_name    = "CloudPulse-${projectId}-Zero-Surprise-Budget"`,
+      ``,
+      `  budget_filter {`,
+      `    projects               = ["projects/${projectId}"]`,
+      `    credit_types_treatment = "INCLUDE_ALL_CREDITS"`,
+      `  }`,
+      ``,
+      `  amount {`,
+      `    specified_amount {`,
+      `      currency_code = "USD"`,
+      `      units         = "50"`,
+      `    }`,
+      `  }`,
+      ``,
+      `  threshold_rules {`,
+      `    threshold_percent = 0.5`,
+      `    spend_basis       = "CURRENT_SPEND"`,
+      `  }`,
+      `  threshold_rules {`,
+      `    threshold_percent = 0.8`,
+      `    spend_basis       = "CURRENT_SPEND"`,
+      `  }`,
+      `  threshold_rules {`,
+      `    threshold_percent = 1.0`,
+      `    spend_basis       = "FORECASTED_SPEND"`,
+      `  }`,
+      ``,
+      `  all_updates_rule {`,
+      `    pubsub_topic   = google_pubsub_topic.finops_budget_killswitch.id`,
+      `    schema_version = "1.0"`,
+      `  }`,
+      `}`,
+    ].join('\n');
+
+    const emergencyCostKillSh = [
+      `#!/usr/bin/env bash`,
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 6 — Non-Destructive Emergency Cost-Freeze Runbook`,
+      `# Project: ${projectId} | Running VMs: ${runningVms.length} | Paid APIs: ${highBurnApis.length}`,
+      `# ==============================================================================`,
+      `set -euo pipefail`,
+      `PROJECT_ID="${projectId}"`,
+      ``,
+      `echo "[1/3] Auditing active billing linkage for \${PROJECT_ID}..."`,
+      `gcloud billing projects describe "\${PROJECT_ID}"`,
+      ``,
+      runningVms.length > 0
+        ? `echo "[2/3] Stopping running GCE VMs to halt compute billing (preserves boot disks)..."\n` +
+          runningVms
+            .map(
+              (vm) =>
+                `gcloud compute instances stop "${vm.name}" --zone="${vm.zone}" --project="\${PROJECT_ID}"`
+            )
+            .join('\n')
+        : `echo "[2/3] 0 running GCE VMs in \${PROJECT_ID} ($0.00/hr VM compute burn)."`,
+      ``,
+      `echo "[3/3] Listing high-burn enabled APIs (${highBurnApis.slice(0, 4).join(', ') || 'none'})..."`,
+      `gcloud services list --enabled --project="\${PROJECT_ID}" --filter="config.name:(${highBurnApis.slice(0, 5).join(' OR ') || 'compute.googleapis.com'})"`,
+    ].join('\n');
+
+    const stages = [
+      {
+        id: 'STAGE_1_BILLING_CREDITS_STARTUP',
+        stepNumber: 1,
+        title: '1. Billing Account, Credits & Startup 10X Tier',
+        shortTitle: 'Billing & Credits',
+        targetTab: 'FINOPS',
+        secondaryTab: 'STARTUP_10X',
+        secondaryLabel: 'Startup 10X Credit Radar',
+        status: billingEnabled ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: billingEnabled
+          ? `Billing Linked · ${billingAccountId.slice(0, 10) || 'Active'}`
+          : `Billing Unlinked · $0 Burn`,
+        summary: billingEnabled
+          ? `Project "${projectId}" is linked to Cloud Billing account (${billingAccountId || 'active'}) with ${vms.length} VM(s), ${buckets.length} GCS bucket(s), ${datasets.length} BigQuery dataset(s), and ${enabledApis.length} enabled API(s).`
+          : `Project "${projectId}" currently has billing disabled or unlinked ($0.00/mo risk). Inspect trial/GDE/Startup credits in FinOps Studio or Startup 10X Mentor.`,
+        cliCmd: `gcloud billing projects describe ${projectId}`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          {
+            kind: 'Cloud Billing Status',
+            name: billingEnabled
+              ? `Account ${billingAccountId || 'Active'}`
+              : 'Billing Unlinked ($0 Spend)',
+            meta: billingEnabled
+              ? 'Active billing linkage verified via Cloud Billing API'
+              : 'Zero surprise billing exposure',
+            targetTab: 'FINOPS',
+          },
+          {
+            kind: 'Startup 10X Credits',
+            name: 'Google for Startups $2k -> $100k -> $350k AI Tier',
+            meta: 'Audit Startup eligibility & runway multiplier',
+            targetTab: 'STARTUP_10X',
+          },
+          {
+            kind: 'GDE & Trial Credit Ledger',
+            name: 'Inspect Multi-Grant Burn & Expiration Runway',
+            meta: 'Track GenAI, Trial & Partner credit burn rate',
+            targetTab: 'FINOPS',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_2_FREE_TIER_ZOMBIE_REAPER',
+        stepNumber: 2,
+        title: '2. Always-Free Tier & Idle Zombie Reaper',
+        shortTitle: 'Free Tier & Zombie Reaper',
+        targetTab: 'FINOPS',
+        secondaryTab: 'VM_SSH',
+        secondaryLabel: 'Inspect VM Fleet',
+        status: 'OPTIMAL',
+        metricBadge: `${runningVms.length} Running · ${stoppedVms.length} Stopped VMs`,
+        summary: `Audits ${vms.length} VM(s) (${runningVms.length} running, ${stoppedVms.length} stopped), ${buckets.length} GCS bucket(s), and ${cloudRunSvcs.length} Cloud Run service(s) against GCP Always-Free Tier quotas (1 e2-micro, 5 GB GCS, 2M Cloud Run reqs, 1 TiB BQ).`,
+        cliCmd: `gcloud compute instances list --project=${projectId}`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          ...vms.slice(0, 2).map((vm) => ({
+            kind: `GCE VM (${vm.status})`,
+            name: vm.name,
+            meta: `${vm.machineType} · ${vm.zone}`,
+            targetTab: 'VM_SSH',
+          })),
+          ...buckets.slice(0, 2).map((b) => ({
+            kind: 'GCS Bucket Free Tier Check',
+            name: `gs://${b.name}`,
+            meta: `${b.location} · ${b.storageClass} (5 GB US Standard Free)`,
+            targetTab: 'CLOUD_STORAGE',
+          })),
+          {
+            kind: 'Idle Zombie Reaper',
+            name: 'Scan Unattached Disks, Static IPs & Idle VMs',
+            meta: 'Reclaim wasted spend in FinOps Studio',
+            targetTab: 'FINOPS',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_BQ_BILLING_EXPORT_SQL',
+        stepNumber: 3,
+        title: '3. BigQuery Billing Export & FOCUS FinOps SQL',
+        shortTitle: 'BQ Billing Export SQL',
+        targetTab: 'BIGQUERY_STUDIO',
+        secondaryTab: 'FINOPS',
+        secondaryLabel: 'FinOps Credit Ledger',
+        status: datasets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: `${datasets.length} BQ Datasets · FinOps SQL`,
+        summary:
+          datasets.length > 0
+            ? `${datasets.length} BigQuery dataset(s) (${datasets.map((d) => d.name).join(', ')}) available for Cloud Billing Detailed Export and SKU anomaly SQL analysis.`
+            : `0 BigQuery datasets in ${projectId}. Load our synthesized FinOps SKU & Credit Burn SQL in BigQuery Studio or provision an Always-Free dataset for Billing Export.`,
+        cliCmd: `bq ls --project_id=${projectId}`,
+        mermaidDsl: stage3MermaidDsl,
+        sampleSql: finopsSkuBurnSql,
+        stageItems: [
+          {
+            kind: 'FinOps SQL Handoff',
+            name: 'Load FinOps SKU & Credit Burn SQL in BigQuery',
+            meta: `1-click query for ${projectId} billing & API footprint`,
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: finopsSkuBurnSql,
+          },
+          ...datasets.slice(0, 2).map((ds) => ({
+            kind: 'BigQuery Dataset',
+            name: `${projectId}:${ds.name}`,
+            meta: `${ds.location} · Billing Export Target`,
+            targetTab: 'BIGQUERY_STUDIO',
+          })),
+        ],
+      },
+      {
+        id: 'STAGE_4_PAID_API_QUOTA_GUARD',
+        stepNumber: 4,
+        title: '4. Paid API & GPU Quota Guardrails',
+        shortTitle: 'API & Quota Guardrails',
+        targetTab: 'OVERVIEW',
+        secondaryTab: 'FINOPS',
+        secondaryLabel: 'FinOps Quota Cap',
+        status: 'OPTIMAL',
+        metricBadge: `${highBurnApis.length} High-Burn · ${enabledApis.length} Total APIs`,
+        summary: `Discovered ${highBurnApis.length} billable compute/AI/database service API(s) (${highBurnApis.slice(0, 4).join(', ') || 'none'}) out of ${enabledApis.length} total enabled APIs in ${projectId}.`,
+        cliCmd: `gcloud services list --enabled --project=${projectId}`,
+        mermaidDsl: stage4MermaidDsl,
+        stageItems: [
+          ...highBurnApis.slice(0, 3).map((api) => ({
+            kind: 'Billable Service API',
+            name: api,
+            meta: 'Monitored by Emergency API Kill-Switch',
+            targetTab: 'OVERVIEW',
+          })),
+          {
+            kind: 'Emergency API Kill-Switch',
+            name: `Manage All ${enabledApis.length} Enabled APIs`,
+            meta: 'Disable unused paid APIs with 30-day restore safety',
+            targetTab: 'OVERVIEW',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_5_PUBSUB_BUDGET_COST_KILL',
+        stepNumber: 5,
+        title: '5. Pub/Sub Budget Alert & Autonomous Cost-Kill',
+        shortTitle: 'Budget Alert & Cost-Kill',
+        targetTab: 'FINOPS',
+        secondaryTab: 'CLOUD_FUNCTIONS',
+        secondaryLabel: 'Pub/Sub & Functions Studio',
+        status: 'OPTIMAL',
+        metricBadge: `${pubsubTopics.length} Pub/Sub Topics · 50/80/100% Gate`,
+        summary: `Wires Cloud Billing 50% / 80% / 100% spend alerts to Pub/Sub (${pubsubTopics.length} live user topic(s) in ${projectId}) to trigger non-destructive VM stops and quota caps before credit exhaustion.`,
+        cliCmd: `gcloud pubsub topics list --project=${projectId}`,
+        mermaidDsl: stage5MermaidDsl,
+        stageItems: [
+          ...pubsubTopics.slice(0, 2).map((t) => ({
+            kind: 'Live Pub/Sub Alert Topic',
+            name: t.name,
+            meta: 'Ready for Cloud Billing JSON budget webhook',
+            targetTab: 'CLOUD_FUNCTIONS',
+          })),
+          {
+            kind: 'Budget Threshold Guard',
+            name: '50% Actual · 80% Actual · 100% Forecasted',
+            meta: 'Includes credit_types_treatment = INCLUDE_ALL_CREDITS',
+            targetTab: 'FINOPS',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_6_GREENOPS_CLOUD_ARBITRAGE',
+        stepNumber: 6,
+        title: '6. 98% Carbon-Free GreenOps & 3-Cloud Arbitrage',
+        shortTitle: 'GreenOps & 3-Cloud Arbitrage',
+        targetTab: 'GLOBAL_MAP',
+        secondaryTab: 'AWS_AZURE_PARITY',
+        secondaryLabel: 'AWS / Azure Cost Parity',
+        status: 'OPTIMAL',
+        metricBadge: `98% CFE Regions · CUD Arbitrage`,
+        summary: `Compares ${projectId} workload regions for 24/7 Carbon-Free Energy (CFE%) and benchmarks GCP Sustained/Committed Use Discounts + Spot VMs against AWS & Azure equivalents.`,
+        cliCmd: `gcloud compute regions list --project=${projectId} --limit=10`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: 'GreenOps Region Picker',
+            name: 'Inspect 40 Global Regions & Subsea Carbon Grid',
+            meta: 'Shift batch & AI jobs to 95%+ Carbon-Free regions',
+            targetTab: 'GLOBAL_MAP',
+          },
+          {
+            kind: 'Cross-Cloud FinOps Arbitrage',
+            name: 'Compare GCP vs AWS vs Azure vs Alibaba SKUs',
+            meta: 'Per-second billing & automatic Sustained Use Discounts',
+            targetTab: 'AWS_AZURE_PARITY',
+          },
+          {
+            kind: 'Startup 10X Architecture Mentor',
+            name: 'Scale from $0 MVP to 10M Users Without Burnout',
+            meta: 'Open Startup 10X Playbooks & Credit Optimizer',
+            targetTab: 'STARTUP_10X',
+          },
+        ],
+      },
+    ];
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        billingEnabled,
+        billingAccountId,
+        vms: vms.length,
+        runningVms: runningVms.length,
+        stoppedVms: stoppedVms.length,
+        buckets: buckets.length,
+        datasets: datasets.length,
+        pubsubTopics: pubsubTopics.length,
+        cloudRunSvcs: cloudRunSvcs.length,
+        enabledApis: enabledApis.length,
+        highBurnApis: highBurnApis.length,
+      },
+      stages,
+      artifacts: {
+        billingBudgetGuardTf,
+        finopsSkuBurnSql,
+        emergencyCostKillSh,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 6 FinOps, Quota Guard & Startup 10X Cost-Kill blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {

@@ -98,6 +98,7 @@ import EnterpriseStackPipelineBar from './components/EnterpriseStackPipelineBar'
 import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar';
 import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
+import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -5174,6 +5175,16 @@ function CloudPulseCockpit() {
 
               {activeTab === 'STARTUP_10X' && (
                 <div className="space-y-4">
+                  <FinOpsCostKillPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                  />
                   <Startup10xMentorStudio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
@@ -5940,6 +5951,16 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
+                  <FinOpsCostKillPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                  />
                   <BillingAccountCreditGuardian
                     projectId={selectedProjectId}
                     liveBurn={liveBurn}
