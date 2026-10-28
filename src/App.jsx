@@ -97,6 +97,7 @@ import CloudRecycleBinStudio from './components/CloudRecycleBinStudio';
 import EnterpriseStackPipelineBar from './components/EnterpriseStackPipelineBar';
 import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar';
 import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
+import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -5461,6 +5462,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
                 <div className="space-y-4">
+                  <OltpDatabaseContinuityBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenProvision={handleOpenProvision}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                  />
                   <CloudSqlAndAlloyDbStudio
                     projectId={selectedProjectId}
                     onOpenProvisionCloudSql={() =>
@@ -5559,6 +5571,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE10_FRONTIER' && (
                 <div className="space-y-4">
+                  <OltpDatabaseContinuityBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenProvision={handleOpenProvision}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                  />
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}

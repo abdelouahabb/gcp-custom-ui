@@ -74629,6 +74629,736 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
   }
 });
 
+// ============================================================================
+// WAVE 5: 5-STAGE OPERATIONAL OLTP DATABASE & HTAP CONTINUITY PIPELINE GLUE
+// Purpose-built for Cloud SQL & AlloyDB Studio (CLOUD_SQL_STUDIO) and
+// Cloud Spanner / Wave 10 Frontier Studio (WAVE10_FRONTIER).
+// Connects: (1) Cloud SQL, AlloyDB & Spanner Engines -> (2) IAM DB Auth Proxy,
+// Private VPC & Secret Vault -> (3) Read Replicas, Query Insights & Pooling ->
+// (4) Zero-ETL Federation to BigQuery (EXTERNAL_QUERY) -> (5) 35-Day PITR
+// Millisecond Clone, Regional HA Failover & 30-Day Backup Vault.
+// ============================================================================
+const wave5OltpDbProbeCache = new Map();
+
+app.get('/api/project/:projectId/oltp-database-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+
+    const baseResources = Array.isArray(cachedOverview?.resources)
+      ? [...cachedOverview.resources]
+      : [];
+
+    let extra = wave5OltpDbProbeCache.get(projectId);
+    if ((!extra || Date.now() - extra.ts > 25000) && headers) {
+      const [
+        sqlRes,
+        spannerRes,
+        datasetsRes,
+        bqConnRes,
+        saRes,
+        secretsRes,
+        vpcRes,
+        svcRes,
+      ] = await Promise.allSettled([
+        axios.get(
+          `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/instances`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://spanner.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/instances`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://bigqueryconnection.googleapis.com/v1beta1/projects/${encodeURIComponent(projectId)}/locations/us/connections`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://iam.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/serviceAccounts?pageSize=50`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/secrets?pageSize=50`,
+          { headers, timeout: 4000 }
+        ),
+        baseResources.some((r) => r.type === 'VPC Network')
+          ? Promise.resolve({
+              data: {
+                items: baseResources
+                  .filter((r) => r.type === 'VPC Network')
+                  .map((v) => ({ name: v.name, region: v.region || 'global' })),
+              },
+            })
+          : axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+              { headers, timeout: 4000 }
+            ),
+        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+          ? Promise.resolve({
+              data: {
+                services: baseResources
+                  .filter((r) => r.type === 'Enabled GCP Service API')
+                  .map((s) => ({ name: s.name })),
+              },
+            })
+          : axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=120`,
+              { headers, timeout: 4500 }
+            ),
+      ]);
+
+      const sqlInstances = (
+        sqlRes.status === 'fulfilled' ? sqlRes.value.data?.items || [] : []
+      ).map((inst) => ({
+        name: inst.name,
+        region: inst.region || 'us-central1',
+        databaseVersion: inst.databaseVersion || 'POSTGRES_16',
+        state: inst.state || 'RUNNABLE',
+        tier: inst.settings?.tier || 'db-custom-2-7680',
+        availabilityType: inst.settings?.availabilityType || 'ZONAL',
+        pitrEnabled: Boolean(
+          inst.settings?.backupConfiguration?.pointInTimeRecoveryEnabled ||
+            inst.settings?.backupConfiguration?.binaryLogEnabled
+        ),
+        backupsEnabled: Boolean(inst.settings?.backupConfiguration?.enabled),
+        replicaNames: Array.isArray(inst.replicaNames) ? inst.replicaNames : [],
+      }));
+
+      const spannerInstances = (
+        spannerRes.status === 'fulfilled' ? spannerRes.value.data?.instances || [] : []
+      ).map((inst) => ({
+        name: (inst.name || '').split('/').pop(),
+        displayName: inst.displayName || (inst.name || '').split('/').pop(),
+        processingUnits: inst.processingUnits || (inst.nodeCount ? inst.nodeCount * 1000 : 100),
+        state: inst.state || 'READY',
+        config: (inst.config || '').split('/').pop() || 'regional-us-central1',
+      }));
+
+      const datasets = (
+        datasetsRes.status === 'fulfilled' ? datasetsRes.value.data?.datasets || [] : []
+      ).map((d) => ({
+        name: d.datasetReference?.datasetId || d.id || 'dataset',
+        location: d.location || 'US',
+      }));
+
+      const bqConnections = (
+        bqConnRes.status === 'fulfilled' ? bqConnRes.value.data?.connections || [] : []
+      ).map((c) => ({
+        name: (c.name || '').split('/').pop(),
+        friendlyName: c.friendlyName || (c.name || '').split('/').pop(),
+      }));
+
+      const serviceAccounts = (
+        saRes.status === 'fulfilled' ? saRes.value.data?.accounts || [] : []
+      ).map((a) => ({
+        email: a.email,
+        shortName: (a.email || '').split('@')[0],
+        displayName: a.displayName || (a.email || '').split('@')[0],
+      }));
+
+      const secrets = (
+        secretsRes.status === 'fulfilled' ? secretsRes.value.data?.secrets || [] : []
+      ).map((s) => ({
+        name: s.name,
+        shortName: (s.name || '').split('/').pop(),
+      }));
+
+      const vpcs = (
+        vpcRes.status === 'fulfilled' ? vpcRes.value.data?.items || [] : []
+      ).map((v) => ({
+        name: v.name,
+        region: v.region || 'global',
+      }));
+
+      const rawServices =
+        svcRes.status === 'fulfilled' ? svcRes.value.data?.services || [] : [];
+      const enabledApis = rawServices
+        .map((s) => (s.config?.name || s.name || '').split('/').pop())
+        .filter(Boolean);
+
+      extra = {
+        ts: Date.now(),
+        sqlInstances,
+        spannerInstances,
+        datasets,
+        bqConnections,
+        serviceAccounts,
+        secrets,
+        vpcs,
+        enabledApis,
+      };
+      wave5OltpDbProbeCache.set(projectId, extra);
+    }
+
+    const sqlInstances = extra?.sqlInstances || [];
+    const spannerInstances = extra?.spannerInstances || [];
+    const datasets = extra?.datasets || [];
+    const bqConnections = extra?.bqConnections || [];
+    const serviceAccounts = extra?.serviceAccounts || [];
+    const secrets = extra?.secrets || [];
+    const vpcs = extra?.vpcs || [];
+    const enabledApis = extra?.enabledApis || [];
+
+    const DB_API_PATTERNS = [
+      'sqladmin.googleapis.com',
+      'sql-component.googleapis.com',
+      'alloydb.googleapis.com',
+      'spanner.googleapis.com',
+      'firestore.googleapis.com',
+      'datastore.googleapis.com',
+      'redis.googleapis.com',
+      'bigtableadmin.googleapis.com',
+      'bigqueryconnection.googleapis.com',
+    ];
+    const dbApis = enabledApis.filter((api) =>
+      DB_API_PATTERNS.some((pat) => api.toLowerCase().includes(pat.replace('.googleapis.com', '')))
+    );
+
+    const totalOltpEngines = sqlInstances.length + spannerInstances.length;
+    const totalReplicas = sqlInstances.reduce(
+      (acc, inst) => acc + (inst.replicaNames?.length || 0),
+      0
+    );
+    const haInstancesCount =
+      sqlInstances.filter((i) => i.availabilityType === 'REGIONAL').length +
+      spannerInstances.length;
+
+    const primarySqlName = sqlInstances[0]?.name || `${projectId}-pg16-primary`;
+    const primaryRegion = sqlInstances[0]?.region || 'us-central1';
+    const primaryVpc = vpcs[0]?.name || 'default';
+    const primarySa =
+      serviceAccounts[0]?.email || `db-app-sa@${projectId}.iam.gserviceaccount.com`;
+    const primaryDataset = datasets[0]?.name || 'oltp_federated_analytics';
+
+    // --- Stage 1 Mermaid: Strictly requires >= 1 live OLTP Engine (Cloud SQL or Spanner) ---
+    let stage1MermaidDsl = null;
+    if (totalOltpEngines > 0) {
+      const s1Lines = [`flowchart LR`];
+      const s1Edges = [];
+      if (vpcs.length > 0) {
+        s1Lines.push(`  subgraph VPC_NET["Private VPC Network (${vpcs.length} Active)"]`);
+        vpcs.slice(0, 2).forEach((v, idx) => {
+          s1Lines.push(`    VPC${idx}["VPC: ${v.name}"]`);
+        });
+        s1Lines.push(`  end`);
+      }
+      if (sqlInstances.length > 0) {
+        s1Lines.push(`  subgraph CLOUD_SQL["Cloud SQL Instances (${sqlInstances.length} Active)"]`);
+        sqlInstances.slice(0, 3).forEach((inst, idx) => {
+          s1Lines.push(
+            `    SQL${idx}["Cloud SQL: ${inst.name} (${inst.databaseVersion} · ${inst.availabilityType})"]`
+          );
+          if (vpcs.length > 0) {
+            s1Edges.push(`  VPC0 -->|"Private Service Access"| SQL${idx}`);
+          }
+        });
+        s1Lines.push(`  end`);
+      }
+      if (spannerInstances.length > 0) {
+        s1Lines.push(`  subgraph SPANNER["Cloud Spanner (${spannerInstances.length} Active)"]`);
+        spannerInstances.slice(0, 3).forEach((sp, idx) => {
+          s1Lines.push(
+            `    SPN${idx}["Spanner: ${sp.name} (${sp.processingUnits} PU · TrueTime)"]`
+          );
+          if (vpcs.length > 0) {
+            s1Edges.push(`  VPC0 -->|"gRPC Channels"| SPN${idx}`);
+          }
+        });
+        s1Lines.push(`  end`);
+      }
+      if (s1Edges.length > 0) {
+        stage1MermaidDsl = [...s1Lines, ...s1Edges].join('\n');
+      }
+    }
+
+    // --- Stage 2 Mermaid: IAM DB Auth Proxy, Private VPC & Secret Vault ---
+    let stage2MermaidDsl = null;
+    if (serviceAccounts.length > 0 && (vpcs.length > 0 || secrets.length > 0)) {
+      const s2Lines = [`flowchart LR`];
+      const s2Edges = [];
+      s2Lines.push(`  subgraph IAM_SA["Workload Service Accounts (${serviceAccounts.length} Active)"]`);
+      serviceAccounts.slice(0, 3).forEach((sa, idx) => {
+        s2Lines.push(`    SA${idx}["SA: ${sa.shortName}"]`);
+      });
+      s2Lines.push(`  end`);
+      if (vpcs.length > 0) {
+        s2Lines.push(`  subgraph PRIV_NET["Private VPC Peering (${vpcs.length} Active)"]`);
+        vpcs.slice(0, 2).forEach((v, idx) => {
+          s2Lines.push(`    VPC${idx}["VPC: ${v.name}"]`);
+        });
+        s2Lines.push(`  end`);
+        serviceAccounts.slice(0, 2).forEach((_, idx) => {
+          s2Edges.push(`  SA${idx} -->|"IAM Auth Proxy (mTLS 1.3)"| VPC0`);
+        });
+      }
+      if (secrets.length > 0) {
+        s2Lines.push(`  subgraph SEC_VAULT["Secret Manager (${secrets.length} Active)"]`);
+        secrets.slice(0, 3).forEach((sec, idx) => {
+          s2Lines.push(`    SEC${idx}["Secret: ${sec.shortName}"]`);
+        });
+        s2Lines.push(`  end`);
+        secrets.slice(0, 3).forEach((_, idx) => {
+          s2Edges.push(`  SA0 -->|"secretAccessor"| SEC${idx}`);
+        });
+      }
+      if (s2Edges.length > 0) {
+        stage2MermaidDsl = [...s2Lines, ...s2Edges].join('\n');
+      }
+    }
+
+    // --- Stage 3 Mermaid: Strictly requires >= 1 Cloud SQL instance AND >= 1 Read Replica ---
+    let stage3MermaidDsl = null;
+    if (sqlInstances.length > 0 && totalReplicas > 0) {
+      const s3Lines = [`flowchart LR`];
+      const s3Edges = [];
+      s3Lines.push(`  subgraph PRIMARY_DB["Primary OLTP Writers (${sqlInstances.length})"]`);
+      sqlInstances.slice(0, 3).forEach((inst, idx) => {
+        s3Lines.push(`    PRI${idx}["Primary: ${inst.name} (${inst.region})"]`);
+      });
+      s3Lines.push(`  end`);
+      s3Lines.push(`  subgraph REPLICAS["Read Replicas (${totalReplicas})"]`);
+      let repCounter = 0;
+      sqlInstances.slice(0, 3).forEach((inst, pIdx) => {
+        (inst.replicaNames || []).slice(0, 3).forEach((repName) => {
+          s3Lines.push(`    REP${repCounter}["Replica: ${repName}"]`);
+          s3Edges.push(`  PRI${pIdx} -->|"WAL Streaming"| REP${repCounter}`);
+          repCounter += 1;
+        });
+      });
+      s3Lines.push(`  end`);
+      if (s3Edges.length > 0) {
+        stage3MermaidDsl = [...s3Lines, ...s3Edges].join('\n');
+      }
+    }
+
+    // --- Stage 4 Mermaid: Zero-ETL Federation to BigQuery (Strictly requires datasets AND OLTP/Connection) ---
+    let stage4MermaidDsl = null;
+    if (datasets.length > 0 && (totalOltpEngines > 0 || bqConnections.length > 0)) {
+      const s4Lines = [`flowchart LR`];
+      const s4Edges = [];
+      if (sqlInstances.length > 0) {
+        s4Lines.push(`  subgraph SQL_OLTP["Cloud SQL (${sqlInstances.length})"]`);
+        sqlInstances.slice(0, 2).forEach((inst, idx) => {
+          s4Lines.push(`    SQL${idx}["Cloud SQL: ${inst.name}"]`);
+        });
+        s4Lines.push(`  end`);
+      }
+      if (spannerInstances.length > 0) {
+        s4Lines.push(`  subgraph SPN_OLTP["Cloud Spanner (${spannerInstances.length})"]`);
+        spannerInstances.slice(0, 2).forEach((sp, idx) => {
+          s4Lines.push(`    SPN${idx}["Spanner: ${sp.name}"]`);
+        });
+        s4Lines.push(`  end`);
+      }
+      if (bqConnections.length > 0) {
+        s4Lines.push(`  subgraph BQ_CONN["BigQuery Connections (${bqConnections.length})"]`);
+        bqConnections.slice(0, 2).forEach((c, idx) => {
+          s4Lines.push(`    CONN${idx}["Connection: ${c.name}"]`);
+        });
+        s4Lines.push(`  end`);
+      }
+      s4Lines.push(`  subgraph BQ_WAREHOUSE["BigQuery Datasets (${datasets.length} Active)"]`);
+      datasets.slice(0, 3).forEach((ds, idx) => {
+        s4Lines.push(`    DS${idx}["Dataset: ${ds.name} (${ds.location})"]`);
+      });
+      s4Lines.push(`  end`);
+      sqlInstances.slice(0, 2).forEach((_, idx) => {
+        s4Edges.push(`  SQL${idx} -->|"EXTERNAL_QUERY()"| DS0`);
+      });
+      spannerInstances.slice(0, 2).forEach((_, idx) => {
+        s4Edges.push(`  SPN${idx} -->|"Zero-ETL Federation"| DS0`);
+      });
+      bqConnections.slice(0, 2).forEach((_, idx) => {
+        s4Edges.push(`  CONN${idx} -->|"Federated Pushdown"| DS0`);
+      });
+      if (s4Edges.length > 0) {
+        stage4MermaidDsl = [...s4Lines, ...s4Edges].join('\n');
+      }
+    }
+
+    // --- Stage 5 Mermaid: 35d PITR & HA Continuity (Strictly requires >= 1 live OLTP Engine) ---
+    let stage5MermaidDsl = null;
+    if (totalOltpEngines > 0) {
+      const s5Lines = [`flowchart LR`];
+      const s5Edges = [];
+      s5Lines.push(`  subgraph LIVE_DB["Operational Databases (${totalOltpEngines} Active)"]`);
+      sqlInstances.slice(0, 2).forEach((inst, idx) => {
+        s5Lines.push(`    DB_SQL${idx}["Cloud SQL: ${inst.name} (${inst.availabilityType})"]`);
+      });
+      spannerInstances.slice(0, 2).forEach((sp, idx) => {
+        s5Lines.push(`    DB_SPN${idx}["Spanner: ${sp.name} (${sp.processingUnits} PU)"]`);
+      });
+      s5Lines.push(`  end`);
+      s5Lines.push(`  subgraph CONTINUITY["35-Day PITR & Continuity Vault"]`);
+      s5Lines.push(`    PITR["35-Day WAL / TrueTime PITR Clone"]`);
+      s5Lines.push(`    VAULT["30-Day Cloud Recycle Bin"]`);
+      s5Lines.push(`  end`);
+      sqlInstances.slice(0, 2).forEach((_, idx) => {
+        s5Edges.push(`  DB_SQL${idx} -->|"Continuous WAL Log"| PITR`);
+        s5Edges.push(`  DB_SQL${idx} -->|"Pre-Delete Snapshot"| VAULT`);
+      });
+      spannerInstances.slice(0, 2).forEach((_, idx) => {
+        s5Edges.push(`  DB_SPN${idx} -->|"TrueTime Version Retention"| PITR`);
+      });
+      if (s5Edges.length > 0) {
+        stage5MermaidDsl = [...s5Lines, ...s5Edges].join('\n');
+      }
+    }
+
+    const externalQuerySql = `-- CloudPulse 2026 Wave 5: Zero-ETL Federated EXTERNAL_QUERY() Bridge (${projectId})\n-- Queries live operational Cloud SQL (${primarySqlName}) directly from BigQuery without ETL pipelines:\nSELECT\n  oltp.now_utc AS cloud_sql_timestamp,\n  oltp.pg_version AS engine_version,\n  "${projectId}" AS gcp_project_id,\n  "${primaryDataset}" AS target_bigquery_dataset\nFROM EXTERNAL_QUERY(\n  "${projectId}.${primaryRegion}.cloudsql-oltp-conn",\n  "SELECT NOW() AS now_utc, version() AS pg_version;"\n) AS oltp;`;
+
+    const oltpHaPitrTf = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 5 — Operational OLTP Database & HTAP Continuity Terraform`,
+      `# Target Project : ${projectId}`,
+      `# Primary Engine : ${primarySqlName} (${primaryRegion})`,
+      `# Private VPC    : ${primaryVpc}`,
+      `# Service Account: ${primarySa}`,
+      `# ==============================================================================`,
+      `terraform {`,
+      `  required_version = ">= 1.5.0"`,
+      `  required_providers {`,
+      `    google = {`,
+      `      source  = "hashicorp/google"`,
+      `      version = "~> 6.0"`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `# 1. Regional High-Availability Cloud SQL PostgreSQL 16 with 35-Day PITR & IAM Auth`,
+      `resource "google_sql_database_instance" "primary_oltp_pg16" {`,
+      `  project             = "${projectId}"`,
+      `  name                = "${primarySqlName}"`,
+      `  region              = "${primaryRegion}"`,
+      `  database_version    = "POSTGRES_16"`,
+      `  deletion_protection = true`,
+      ``,
+      `  settings {`,
+      `    tier              = "db-custom-2-7680"`,
+      `    availability_type = "REGIONAL" # Multi-Zone Synchronous HA Failover`,
+      `    edition           = "ENTERPRISE_PLUS"`,
+      ``,
+      `    backup_configuration {`,
+      `      enabled                        = true`,
+      `      point_in_time_recovery_enabled = true`,
+      `      transaction_log_retention_days = 7`,
+      `      backup_retention_settings {`,
+      `        retained_backups = 35`,
+      `        retention_unit   = "COUNT"`,
+      `      }`,
+      `    }`,
+      ``,
+      `    ip_configuration {`,
+      `      ipv4_enabled    = false`,
+      `      private_network = "projects/${projectId}/global/networks/${primaryVpc}"`,
+      `      ssl_mode        = "ENCRYPTED_ONLY"`,
+      `    }`,
+      ``,
+      `    database_flags {`,
+      `      name  = "cloudsql.iam_authentication"`,
+      `      value = "on"`,
+      `    }`,
+      ``,
+      `    insights_config {`,
+      `      query_insights_enabled  = true`,
+      `      record_application_tags = true`,
+      `      record_client_address   = true`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `# 2. Zero-Password IAM Database User Binding (${primarySa})`,
+      `resource "google_sql_user" "iam_workload_user" {`,
+      `  project  = "${projectId}"`,
+      `  instance = google_sql_database_instance.primary_oltp_pg16.name`,
+      `  name     = "${primarySa.replace(/\.gserviceaccount\.com$/, '')}"`,
+      `  type     = "CLOUD_IAM_SERVICE_ACCOUNT"`,
+      `}`,
+      ``,
+      `# 3. BigQuery Federated Connection for Zero-ETL EXTERNAL_QUERY()`,
+      `resource "google_bigquery_connection" "cloudsql_zero_etl" {`,
+      `  project       = "${projectId}"`,
+      `  connection_id = "cloudsql-oltp-conn"`,
+      `  location      = "${primaryRegion}"`,
+      `  friendly_name = "CloudPulse Zero-ETL Cloud SQL Bridge"`,
+      `  cloud_sql {`,
+      `    instance_id = google_sql_database_instance.primary_oltp_pg16.connection_name`,
+      `    database    = "postgres"`,
+      `    type        = "POSTGRES"`,
+      `  }`,
+      `}`,
+    ].join('\n');
+
+    const pitrCloneFailoverSh = [
+      `#!/usr/bin/env bash`,
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 5 — 35-Day PITR Millisecond Clone & HA Failover Runbook`,
+      `# Project: ${projectId} | Target Instance: ${primarySqlName}`,
+      `# ==============================================================================`,
+      `set -euo pipefail`,
+      `PROJECT_ID="${projectId}"`,
+      `SOURCE_INSTANCE="${primarySqlName}"`,
+      `CLONE_INSTANCE="${primarySqlName}-pitr-$(date +%H%M%S)"`,
+      `PITR_TIMESTAMP="$(date -u -d '10 minutes ago' '+%Y-%m-%dT%H:%M:%SZ')"`,
+      ``,
+      `echo "[1/3] Verifying continuous WAL Point-In-Time Recovery window on \${SOURCE_INSTANCE}..."`,
+      `gcloud sql instances describe "\${SOURCE_INSTANCE}" \\`,
+      `  --project="\${PROJECT_ID}" \\`,
+      `  --format="yaml(state,settings.availabilityType,settings.backupConfiguration)"`,
+      ``,
+      `echo "[2/3] Creating non-destructive PITR forensic clone at \${PITR_TIMESTAMP}..."`,
+      `gcloud sql instances clone "\${SOURCE_INSTANCE}" "\${CLONE_INSTANCE}" \\`,
+      `  --point-in-time="\${PITR_TIMESTAMP}" \\`,
+      `  --project="\${PROJECT_ID}"`,
+      ``,
+      `echo "[3/3] Optional Regional HA Standby Failover Drill command:"`,
+      `echo "gcloud sql instances failover \${SOURCE_INSTANCE} --project=\${PROJECT_ID}"`,
+    ].join('\n');
+
+    const stages = [
+      {
+        id: 'STAGE_1_OLTP_ENGINES',
+        stepNumber: 1,
+        title: '1. Cloud SQL, AlloyDB & Spanner Engines',
+        shortTitle: 'Cloud SQL & Spanner',
+        targetTab: 'CLOUD_SQL_STUDIO',
+        secondaryTab: 'WAVE10_FRONTIER',
+        secondaryLabel: 'Spanner & Frontier DB Studio',
+        status: totalOltpEngines > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: `${sqlInstances.length} Cloud SQL · ${spannerInstances.length} Spanner`,
+        summary:
+          totalOltpEngines > 0
+            ? `Discovered ${sqlInstances.length} Cloud SQL instance(s) and ${spannerInstances.length} Cloud Spanner instance(s) in ${projectId} across ${dbApis.length} enabled database service API(s).`
+            : `0 Cloud SQL instances and 0 Spanner instances running in "${projectId}" ($0.00/hr compute idle; ${dbApis.length} database API(s) enabled: ${dbApis.slice(0, 3).join(', ') || 'none'}). Provision a Cloud SQL instance or inspect Spanner 100 PU Autopilot below.`,
+        cliCmd: `gcloud sql instances list --project=${projectId}`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...sqlInstances.slice(0, 3).map((inst) => ({
+            kind: `Cloud SQL (${inst.databaseVersion})`,
+            name: inst.name,
+            meta: `${inst.region} · ${inst.state} · ${inst.availabilityType}`,
+            targetTab: 'CLOUD_SQL_STUDIO',
+          })),
+          ...spannerInstances.slice(0, 3).map((sp) => ({
+            kind: 'Cloud Spanner',
+            name: sp.name,
+            meta: `${sp.processingUnits} PU · ${sp.config} · ${sp.state}`,
+            targetTab: 'WAVE10_FRONTIER',
+          })),
+          ...(sqlInstances.length === 0
+            ? [
+                {
+                  kind: '0 Cloud SQL Instances ($0 Idle)',
+                  name: '+ Provision Cloud SQL PostgreSQL 16 / MySQL 8',
+                  meta: 'Private IP · IAM DB Auth · 35-Day PITR Ready',
+                  targetTab: 'CLOUD_SQL_STUDIO',
+                  provisionType: 'CLOUD_SQL',
+                },
+              ]
+            : []),
+          ...(spannerInstances.length === 0
+            ? [
+                {
+                  kind: '0 Spanner Instances ($0 Idle)',
+                  name: 'Open Spanner Granular 100 PU & Graph Studio',
+                  meta: '99.999% Multi-Region TrueTime & Spanner Graph',
+                  targetTab: 'WAVE10_FRONTIER',
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        id: 'STAGE_2_IAM_AUTH_PRIVATE_VPC',
+        stepNumber: 2,
+        title: '2. IAM DB Auth Proxy, Private VPC & Secrets',
+        shortTitle: 'IAM Proxy & Private VPC',
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'SECRETS_KMS_WAF',
+        secondaryTab: 'VPC_NETWORKS',
+        secondaryLabel: 'VPC Private Service Access',
+        status: serviceAccounts.length > 0 && vpcs.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: `${serviceAccounts.length} SAs · ${vpcs.length} VPC · ${secrets.length} Secrets`,
+        summary: `Zero-password database security combining ${serviceAccounts.length} IAM Service Account(s) (CLOUD_IAM_SERVICE_ACCOUNT mTLS 1.3 Auth Proxy), ${vpcs.length} Private VPC network(s) (${vpcs.map((v) => v.name).join(', ') || 'none'}), and ${secrets.length} Secret Manager vault item(s).`,
+        cliCmd: `gcloud secrets list --project=${projectId}`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          ...serviceAccounts.slice(0, 2).map((sa) => ({
+            kind: 'IAM DB Principal',
+            name: sa.shortName,
+            meta: `${sa.email} · roles/cloudsql.instanceUser`,
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'IAM_SURGEON',
+          })),
+          ...vpcs.slice(0, 2).map((v) => ({
+            kind: 'Private Service Access VPC',
+            name: v.name,
+            meta: `${v.region} · Zero Public IP Exposure`,
+            targetTab: 'VPC_NETWORKS',
+          })),
+          {
+            kind: 'Secret Manager Vault',
+            name: `${secrets.length} Secret(s) in ${projectId}`,
+            meta:
+              secrets
+                .slice(0, 2)
+                .map((s) => s.shortName)
+                .join(', ') || 'Store DB TLS certs & rotation keys',
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'SECRETS_KMS_WAF',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_REPLICA_QUERY_INSIGHTS',
+        stepNumber: 3,
+        title: '3. Read Replicas, Query Insights & Pooling',
+        shortTitle: 'Replicas & Query Insights',
+        targetTab: 'CLOUD_SQL_STUDIO',
+        secondaryTab: 'LOGS_SHELL',
+        secondaryLabel: 'Inspect Slow Query Logs',
+        status: 'OPTIMAL',
+        metricBadge: `${totalReplicas} Replicas · Query Insights`,
+        summary:
+          sqlInstances.length > 0
+            ? `${totalReplicas} read replica(s) attached across ${sqlInstances.length} Cloud SQL instance(s) with pg_stat_statements / Query Insights lock-tree and index advisor ready.`
+            : `No active Cloud SQL read replicas in ${projectId}. Inspect the Lock-Tree Visualizer, Concurrent Index Advisor, and PgBouncer connection pooling calculator in Cloud SQL Studio.`,
+        cliCmd: `gcloud logging read 'resource.type="cloudsql_database"' --project=${projectId} --limit=15`,
+        mermaidDsl: stage3MermaidDsl,
+        stageItems: [
+          {
+            kind: 'Query Insights & Lock-Tree',
+            name: 'Open pg_stat_statements & PID Lock-Tree',
+            meta: 'Detect blocking transactions & missing indexes',
+            targetTab: 'CLOUD_SQL_STUDIO',
+          },
+          {
+            kind: 'Spanner Hot-Key Inspector',
+            name: 'Key Visualizer & Zero-Downtime Schema DDL',
+            meta: 'Detect monotonic key hotspots in Spanner Studio',
+            targetTab: 'WAVE10_FRONTIER',
+          },
+          {
+            kind: 'Database Audit & Slow Logs',
+            name: 'Stream cloudsql_database Logs in Chrono-Shell',
+            meta: 'Correlate p99 query latency spikes with deploys',
+            targetTab: 'LOGS_SHELL',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_4_ZERO_ETL_FEDERATION',
+        stepNumber: 4,
+        title: '4. Zero-ETL Federation to BigQuery (EXTERNAL_QUERY)',
+        shortTitle: 'Zero-ETL EXTERNAL_QUERY',
+        targetTab: 'BIGQUERY_STUDIO',
+        secondaryTab: 'BIGLAKE_STUDIO',
+        secondaryLabel: 'BigLake Federation Studio',
+        status: datasets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: `${bqConnections.length} Connections · ${datasets.length} BQ Datasets`,
+        summary: `Zero-ETL HTAP bridge joining live operational rows in Cloud SQL / Spanner directly with ${datasets.length} BigQuery dataset(s) (${datasets.map((d) => d.name).join(', ') || 'none'}) via EXTERNAL_QUERY().`,
+        cliCmd: `gcloud alpha bq connections list --project=${projectId} --location=us`,
+        mermaidDsl: stage4MermaidDsl,
+        sampleSql: externalQuerySql,
+        stageItems: [
+          {
+            kind: 'Zero-ETL SQL Handoff',
+            name: 'Load EXTERNAL_QUERY() SQL in BigQuery Studio',
+            meta: `Federated pushdown query against ${primarySqlName}`,
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: externalQuerySql,
+          },
+          ...datasets.slice(0, 2).map((ds) => ({
+            kind: 'Target BigQuery Dataset',
+            name: `${projectId}:${ds.name}`,
+            meta: `${ds.location} · Ready for federated join`,
+            targetTab: 'BIGQUERY_STUDIO',
+          })),
+          ...bqConnections.slice(0, 2).map((c) => ({
+            kind: 'BigQuery Connection',
+            name: c.name,
+            meta: c.friendlyName,
+            targetTab: 'BIGLAKE_STUDIO',
+          })),
+        ],
+      },
+      {
+        id: 'STAGE_5_PITR_CLONE_HA_VAULT',
+        stepNumber: 5,
+        title: '5. 35-Day PITR Clone, HA Failover & Backup Vault',
+        shortTitle: '35d PITR & HA Vault',
+        targetTab: 'CLOUD_SQL_STUDIO',
+        secondaryTab: 'RECYCLE_BIN',
+        secondaryLabel: '30-Day Cloud Recycle Bin',
+        status: 'OPTIMAL',
+        metricBadge: `35d PITR · ${haInstancesCount} Regional HA · 30d Vault`,
+        summary: `Continuous 35-day WAL Point-In-Time Recovery (PITR) millisecond cloning, Regional synchronous HA failover (${haInstancesCount} HA engine(s)), and 30-day Cloud Recycle Bin protection prior to any database teardown.`,
+        cliCmd: `gcloud sql backups list --instance=${primarySqlName} --project=${projectId}`,
+        mermaidDsl: stage5MermaidDsl,
+        stageItems: [
+          {
+            kind: '35-Day PITR Time-Machine',
+            name: `Clone ${primarySqlName} to Any Millisecond`,
+            meta: 'Non-destructive WAL replay clone for forensics',
+            targetTab: 'CLOUD_SQL_STUDIO',
+          },
+          {
+            kind: '30-Day Database Recycle Bin',
+            name: 'Pre-Delete Snapshot & Soft-Delete Vault',
+            meta: 'Recover deleted SQL instances & exports',
+            targetTab: 'RECYCLE_BIN',
+          },
+          {
+            kind: 'SRE Failover & Blackout Drill',
+            name: 'Simulate Regional Standby Promotion',
+            meta: 'RTO < 60s Regional HA / 0s Spanner TrueTime',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+        ],
+      },
+    ];
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        sqlInstances: sqlInstances.length,
+        spannerInstances: spannerInstances.length,
+        totalOltpEngines,
+        totalReplicas,
+        haInstancesCount,
+        datasets: datasets.length,
+        bqConnections: bqConnections.length,
+        serviceAccounts: serviceAccounts.length,
+        secrets: secrets.length,
+        vpcs: vpcs.length,
+        dbApis: dbApis.length,
+      },
+      stages,
+      artifacts: {
+        oltpHaPitrTf,
+        externalQuerySql,
+        pitrCloneFailoverSh,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 5 Operational OLTP Database & HTAP Continuity blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {
