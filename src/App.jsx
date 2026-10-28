@@ -95,6 +95,7 @@ import GlobalInnovationHoverExplainer from './components/InnovationHoverExplaine
 import Startup10xMentorStudio from './components/Startup10xMentorStudio';
 import CloudRecycleBinStudio from './components/CloudRecycleBinStudio';
 import EnterpriseStackPipelineBar from './components/EnterpriseStackPipelineBar';
+import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -5193,6 +5194,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'MCP_HUB' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <GoogleCloudRemoteMcpStudio
                     projectId={selectedProjectId}
                     onShowToast={showToast}
@@ -5214,6 +5227,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_STORAGE' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     initialSubTab={storageSubTab}
@@ -5259,6 +5284,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'BIGQUERY_STUDIO' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <BigQueryStudio
                     projectId={selectedProjectId}
                     initialSql={bigQueryInitialSql}
@@ -5315,6 +5352,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'BIGLAKE_STUDIO' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <BigLakeIcebergStudio
                     projectId={selectedProjectId}
                     initialSubTab={bigLakeSubTab}
@@ -5356,6 +5405,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'DATA_ENGINEER_STUDIO' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <DataEngineeringStudio
                     projectId={selectedProjectId}
                     initialSubTab={dataEngineerSubTab}
@@ -5397,6 +5458,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
                   <CloudSqlAndAlloyDbStudio
                     projectId={selectedProjectId}
                     onOpenProvisionCloudSql={() =>
@@ -5495,6 +5568,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE10_FRONTIER' && (
                 <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeStudioTab={activeTab}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onShowToast={showToast}
+                  />
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}

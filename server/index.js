@@ -72936,6 +72936,789 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
   }
 });
 
+// ============================================================================
+// WAVE 3 DATA, LAKEHOUSE & AI PIPELINE GLUE: LIVE 6-STAGE BLUEPRINT & SQLX/DAG SYNTHESIZER
+// ============================================================================
+const wave3LakehouseProbeCache = new Map();
+
+app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const baseResources = Array.isArray(cachedOverview?.resources)
+      ? [...cachedOverview.resources]
+      : [];
+
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+
+    let extra = wave3LakehouseProbeCache.get(projectId);
+    if ((!extra || Date.now() - extra.ts > 25000) && headers) {
+      const [
+        bucketsRes,
+        datasetsRes,
+        pubsubRes,
+        sqlRes,
+        spannerRes,
+        dataformRes,
+        bqConnRes,
+        servicesRes,
+      ] = await Promise.allSettled([
+        baseResources.some((r) => r.type === 'Cloud Storage Bucket')
+          ? Promise.resolve({
+              data: {
+                items: baseResources
+                  .filter((r) => r.type === 'Cloud Storage Bucket')
+                  .map((b) => ({
+                    name: b.name,
+                    location: b.region || 'US',
+                    storageClass: b.storageClass || 'STANDARD',
+                  })),
+              },
+            })
+          : axios.get(
+              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+              { headers, timeout: 4500 }
+            ),
+        axios.get(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://pubsub.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/topics?pageSize=30`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/instances`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://spanner.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/instances`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://dataform.googleapis.com/v1beta1/projects/${encodeURIComponent(projectId)}/locations/-/repositories`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://bigqueryconnection.googleapis.com/v1beta1/projects/${encodeURIComponent(projectId)}/locations/us/connections`,
+          { headers, timeout: 3800 }
+        ),
+        baseResources.some((r) => r.type === 'Enabled GCP Service API')
+          ? Promise.resolve({
+              data: {
+                services: baseResources
+                  .filter((r) => r.type === 'Enabled GCP Service API')
+                  .map((s) => ({ name: s.name })),
+              },
+            })
+          : axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=80`,
+              { headers, timeout: 4500 }
+            ),
+      ]);
+
+      const discoveredBuckets = (
+        bucketsRes.status === 'fulfilled' ? bucketsRes.value.data?.items || [] : []
+      ).map((b) => ({
+        name: b.name,
+        location: b.location || 'US',
+        storageClass: b.storageClass || 'STANDARD',
+      }));
+
+      const rawDatasets =
+        datasetsRes.status === 'fulfilled' ? datasetsRes.value.data?.datasets || [] : [];
+      const discoveredDatasets = [];
+      const discoveredTables = [];
+
+      // Probe tables inside up to 4 datasets in parallel
+      const dsSlice = rawDatasets.slice(0, 4);
+      const tableProbes = await Promise.allSettled(
+        dsSlice.map((d) => {
+          const dsId = d.datasetReference?.datasetId || d.name;
+          return axios.get(
+            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets/${encodeURIComponent(dsId)}/tables?maxResults=20`,
+            { headers, timeout: 3500 }
+          );
+        })
+      );
+
+      rawDatasets.forEach((d, idx) => {
+        const dsId = d.datasetReference?.datasetId || d.name;
+        if (!dsId) return;
+        const lower = dsId.toLowerCase();
+        const tier = lower.includes('bronze')
+          ? 'BRONZE'
+          : lower.includes('silver')
+          ? 'SILVER'
+          : lower.includes('gold')
+          ? 'GOLD'
+          : 'LAKEHOUSE';
+        const tblRes = tableProbes[idx];
+        const tables =
+          tblRes && tblRes.status === 'fulfilled' ? tblRes.value.data?.tables || [] : [];
+        tables.forEach((t) => {
+          const tblId = t.tableReference?.tableId;
+          if (tblId) {
+            discoveredTables.push({
+              datasetId: dsId,
+              tableId: tblId,
+              type: t.type || 'TABLE',
+            });
+          }
+        });
+        discoveredDatasets.push({
+          name: dsId,
+          location: d.location || 'US',
+          tier,
+          tableCount: tables.length,
+        });
+      });
+
+      const discoveredTopics = (
+        pubsubRes.status === 'fulfilled' ? pubsubRes.value.data?.topics || [] : []
+      ).map((t) => ({
+        name: (t.name || '').split('/').pop(),
+        fullName: t.name,
+      }));
+
+      const discoveredSql = (
+        sqlRes.status === 'fulfilled' ? sqlRes.value.data?.items || [] : []
+      ).map((inst) => ({
+        name: inst.name,
+        region: inst.region || 'us-central1',
+        databaseVersion: inst.databaseVersion || 'POSTGRES_16',
+        state: inst.state || 'RUNNABLE',
+      }));
+
+      const discoveredSpanner = (
+        spannerRes.status === 'fulfilled' ? spannerRes.value.data?.instances || [] : []
+      ).map((inst) => ({
+        name: (inst.name || '').split('/').pop(),
+        displayName: inst.displayName || '',
+        processingUnits: inst.processingUnits || inst.nodeCount * 1000 || 100,
+      }));
+
+      const discoveredDataform = (
+        dataformRes.status === 'fulfilled' ? dataformRes.value.data?.repositories || [] : []
+      ).map((repo) => ({
+        name: (repo.name || '').split('/').pop(),
+        region: (repo.name || '').split('/')[3] || 'us-central1',
+      }));
+
+      const discoveredConnections = (
+        bqConnRes.status === 'fulfilled' ? bqConnRes.value.data?.connections || [] : []
+      ).map((c) => ({
+        name: (c.name || '').split('/').pop(),
+        friendlyName: c.friendlyName || (c.name || '').split('/').pop(),
+      }));
+
+      const rawServices =
+        servicesRes.status === 'fulfilled' ? servicesRes.value.data?.services || [] : [];
+      const enabledApiNames = rawServices
+        .map((s) => (s.config?.name || s.name || '').split('/').pop())
+        .filter(Boolean);
+
+      extra = {
+        ts: Date.now(),
+        buckets: discoveredBuckets,
+        datasets: discoveredDatasets,
+        tables: discoveredTables,
+        pubsubTopics: discoveredTopics,
+        sqlInstances: discoveredSql,
+        spannerInstances: discoveredSpanner,
+        dataformRepos: discoveredDataform,
+        bqConnections: discoveredConnections,
+        enabledApiNames,
+      };
+      wave3LakehouseProbeCache.set(projectId, extra);
+    }
+
+    const buckets = extra?.buckets || [];
+    const datasets = extra?.datasets || [];
+    const tables = extra?.tables || [];
+    const pubsubTopics = extra?.pubsubTopics || [];
+    const sqlInstances = extra?.sqlInstances || [];
+    const spannerInstances = extra?.spannerInstances || [];
+    const dataformRepos = extra?.dataformRepos || [];
+    const bqConnections = extra?.bqConnections || [];
+    const enabledApiNames = extra?.enabledApiNames || [];
+
+    const DATA_AI_API_PATTERNS = [
+      'bigquery',
+      'storage',
+      'pubsub',
+      'aiplatform',
+      'generativelanguage',
+      'ml.googleapis.com',
+      'dataform',
+      'dataproc',
+      'dataflow',
+      'composer',
+      'sqladmin',
+      'spanner',
+      'bigtable',
+      'firestore',
+      'datastore',
+      'analyticshub',
+      'datacatalog',
+      'dataplex',
+      'notebooks',
+    ];
+    const dataAiApis = enabledApiNames.filter((api) =>
+      DATA_AI_API_PATTERNS.some((pat) => api.toLowerCase().includes(pat))
+    );
+
+    const primaryBucket = buckets[0]?.name || `${projectId}-lakehouse-raw`;
+    const primaryDataset = datasets[0]?.name || 'lakehouse_gold';
+    const primaryRegion = buckets[0]?.location || datasets[0]?.location || 'US';
+
+    // --- Stage 1 Mermaid: Raw Ingestion & Lake Storage (Only non-zero buckets & Pub/Sub topics) ---
+    let stage1MermaidDsl = null;
+    if (buckets.length + pubsubTopics.length > 0) {
+      const s1 = [`flowchart LR`];
+      if (pubsubTopics.length > 0) {
+        s1.push(`  subgraph STREAM["Pub/Sub Event Streams (${pubsubTopics.length} Active)"]`);
+        pubsubTopics.slice(0, 3).forEach((t, idx) => {
+          s1.push(`    PS${idx}["Pub/Sub Topic: ${t.name}"]`);
+        });
+        s1.push(`  end`);
+      }
+      if (buckets.length > 0) {
+        s1.push(`  subgraph GCS_RAW["Cloud Storage Raw Lake (${buckets.length} Active)"]`);
+        buckets.slice(0, 4).forEach((b, idx) => {
+          s1.push(
+            `    BKT${idx}["GCS Bucket: gs://${b.name} (${b.location} · ${b.storageClass})"]`
+          );
+        });
+        s1.push(`  end`);
+      }
+      if (pubsubTopics.length > 0 && buckets.length > 0) {
+        pubsubTopics.slice(0, 3).forEach((_, idx) => {
+          s1.push(`  PS${idx} -->|"Cloud Storage Subscription"| BKT0`);
+        });
+      } else if (buckets.length > 1) {
+        s1.push(`  BKT0 -->|"Multi-Bucket Lakehouse Zone"| BKT1`);
+      }
+      stage1MermaidDsl = s1.join('\n');
+    }
+
+    // --- Stage 2 Mermaid: BigLake Iceberg & Zero-Copy Federation (Only non-zero buckets, connections, SQL, or Spanner) ---
+    const totalStage2Assets =
+      buckets.length + bqConnections.length + sqlInstances.length + spannerInstances.length;
+    let stage2MermaidDsl = null;
+    if (totalStage2Assets > 0) {
+      const s2 = [`flowchart LR`];
+      if (buckets.length > 0) {
+        s2.push(`  subgraph OBJECT_STORE["GCS Object Storage (${buckets.length} Active)"]`);
+        buckets.slice(0, 3).forEach((b, idx) => {
+          s2.push(`    BKT${idx}["GCS: gs://${b.name} (${b.location})"]`);
+        });
+        s2.push(`  end`);
+      }
+      if (sqlInstances.length > 0) {
+        s2.push(`  subgraph OLTP_SQL["Cloud SQL (${sqlInstances.length} Active)"]`);
+        sqlInstances.slice(0, 2).forEach((inst, idx) => {
+          s2.push(`    SQL${idx}["Cloud SQL: ${inst.name} (${inst.databaseVersion})"]`);
+        });
+        s2.push(`  end`);
+      }
+      if (spannerInstances.length > 0) {
+        s2.push(`  subgraph SPANNER_SG["Cloud Spanner (${spannerInstances.length} Active)"]`);
+        spannerInstances.slice(0, 2).forEach((sp, idx) => {
+          s2.push(`    SPN${idx}["Spanner: ${sp.name} (${sp.processingUnits} PU)"]`);
+        });
+        s2.push(`  end`);
+      }
+      if (bqConnections.length > 0) {
+        s2.push(`  subgraph CONN["BigLake Connections (${bqConnections.length} Active)"]`);
+        bqConnections.slice(0, 3).forEach((c, idx) => {
+          s2.push(`    BL${idx}["Connection: ${c.name}"]`);
+        });
+        s2.push(`  end`);
+        buckets.slice(0, 3).forEach((_, idx) => {
+          s2.push(`  BKT${idx} -->|"Zero-Copy URI"| BL0`);
+        });
+      } else if (buckets.length > 0) {
+        s2.push(
+          `  subgraph FED["BigLake & External URI Engine"]`,
+          `    BL0["BigLake Iceberg / External URIs (${buckets.length} Bucket Source)"]`,
+          `  end`
+        );
+        buckets.slice(0, 3).forEach((_, idx) => {
+          s2.push(`  BKT${idx} -->|"Parquet / Iceberg / JSON"| BL0`);
+        });
+      }
+      if (sqlInstances.length > 0) {
+        sqlInstances.slice(0, 2).forEach((_, idx) => {
+          s2.push(`  SQL${idx} -->|"EXTERNAL_QUERY()"| BL0`);
+        });
+      }
+      if (spannerInstances.length > 0) {
+        spannerInstances.slice(0, 2).forEach((_, idx) => {
+          s2.push(`  SPN${idx} -->|"Zero-ETL Federation"| BL0`);
+        });
+      }
+      stage2MermaidDsl = s2.join('\n');
+    }
+
+    // --- Stage 3 Mermaid: Medallion Warehouse & Capacitor SQL (Strictly null when 0 BigQuery datasets!) ---
+    let stage3MermaidDsl = null;
+    if (datasets.length > 0) {
+      const s3 = [`flowchart LR`];
+      if (buckets.length > 0) {
+        s3.push(`  subgraph RAW["GCS Raw Zone (${buckets.length} Active)"]`);
+        buckets.slice(0, 2).forEach((b, idx) => {
+          s3.push(`    BKT${idx}["gs://${b.name}"]`);
+        });
+        s3.push(`  end`);
+      }
+      s3.push(`  subgraph BQ_DS["BigQuery Datasets (${datasets.length} Active)"]`);
+      datasets.slice(0, 4).forEach((d, idx) => {
+        s3.push(
+          `    DS${idx}["Dataset: ${d.name} (${d.location} · ${d.tableCount} Tables)"]`
+        );
+      });
+      s3.push(`  end`);
+      if (buckets.length > 0) {
+        datasets.slice(0, 4).forEach((_, idx) => {
+          s3.push(`  BKT0 -->|"ELT Load"| DS${idx}`);
+        });
+      }
+      if (tables.length > 0) {
+        s3.push(`  subgraph BQ_TBL["BigQuery Tables (${tables.length} Active)"]`);
+        tables.slice(0, 4).forEach((t, idx) => {
+          s3.push(`    TBL${idx}["Table: ${t.datasetId}.${t.tableId}"]`);
+        });
+        s3.push(`  end`);
+        tables.slice(0, 4).forEach((_, idx) => {
+          s3.push(`  DS0 -->|"Capacitor Columnar"| TBL${idx}`);
+        });
+      }
+      stage3MermaidDsl = s3.join('\n');
+    }
+
+    // Synthesize live SQL query for BigQuery Studio handoff
+    const liveExternalTableSql = `-- CloudPulse 2026 Wave 3: Zero-Copy External Table & Gemini AI Insights over gs://${primaryBucket}\nCREATE SCHEMA IF NOT EXISTS \`${projectId}.${primaryDataset}\`\nOPTIONS(location="${primaryRegion}", max_time_travel_hours=168);\n\n-- Query live Cloud Storage object metadata directly from BigQuery:\nSELECT\n  "${projectId}" AS project_id,\n  "gs://${primaryBucket}" AS lakehouse_bucket,\n  CURRENT_TIMESTAMP() AS audited_at;`;
+
+    const liveBqmlGeminiSql = `-- CloudPulse 2026 Wave 3: BigQuery ML + Vertex AI Gemini 2.5 Flash Remote Inference\n-- 1. Register Vertex AI Gemini 2.5 Flash Model in BigQuery (${projectId})\nCREATE MODEL IF NOT EXISTS \`${projectId}.${primaryDataset}.gemini_flash_advisor\`\nREMOTE WITH CONNECTION \`${projectId}.us.vertex-ai-conn\`\nOPTIONS (endpoint = 'gemini-2.5-flash');\n\n-- 2. Run Generative AI Anomaly & FinOps Classification in Standard SQL\nSELECT *\nFROM ML.GENERATE_TEXT(\n  MODEL \`${projectId}.${primaryDataset}.gemini_flash_advisor\`,\n  (SELECT 'Summarize lakehouse health for bucket gs://${primaryBucket} in project ${projectId}' AS prompt),\n  STRUCT(0.2 AS temperature, 512 AS max_output_tokens, TRUE AS flatten_json_output)\n);`;
+
+    const liveTimeTravelSql = `-- CloudPulse 2026 Wave 3: BigQuery 168-Hour (7-Day) Time-Travel Recovery Query\n-- Recover table state from 1 hour ago using FOR SYSTEM_TIME AS OF:\nSELECT *\nFROM \`${projectId}.${primaryDataset}.events_gold\`\nFOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)\nLIMIT 100;`;
+
+    const stages = [
+      {
+        id: 'STAGE_1_RAW_INGESTION',
+        stepNumber: 1,
+        title: '1. Raw Lake Storage & Pub/Sub Event Ingestion',
+        shortTitle: 'GCS Lake & Pub/Sub',
+        targetTab: 'CLOUD_STORAGE',
+        secondaryTab: 'DATA_ENGINEER_STUDIO',
+        secondarySubTab: 'PUBSUB_STREAMING',
+        secondaryLabel: 'Pub/Sub & Eventarc Studio',
+        status: buckets.length + pubsubTopics.length > 0 ? 'OPTIMAL' : 'READY',
+        metricBadge: `${buckets.length} GCS · ${pubsubTopics.length} Pub/Sub`,
+        summary:
+          buckets.length + pubsubTopics.length > 0
+            ? `Raw Lakehouse landing zone online with ${buckets.length} Cloud Storage bucket(s) (${buckets.map((b) => `gs://${b.name}`).slice(0, 2).join(', ')}) and ${pubsubTopics.length} Pub/Sub streaming topic(s).`
+            : `0 Cloud Storage buckets or Pub/Sub topics in "${projectId}" — provision a raw lakehouse bucket or Pub/Sub + DLQ pair below.`,
+        cliCmd: `gcloud storage buckets list --project=${projectId}`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...buckets.slice(0, 4).map((b) => ({
+            kind: 'Raw Lake Bucket',
+            name: `gs://${b.name}`,
+            meta: `${b.location} · ${b.storageClass} · 7d Soft-Delete`,
+            targetTab: 'CLOUD_STORAGE',
+          })),
+          ...pubsubTopics.slice(0, 3).map((t) => ({
+            kind: 'Pub/Sub Stream',
+            name: t.name,
+            meta: 'Real-Time Ingestion Topic',
+            targetTab: 'DATA_ENGINEER_STUDIO',
+            subTab: 'PUBSUB_STREAMING',
+          })),
+          ...(pubsubTopics.length === 0
+            ? [
+                {
+                  kind: '0 Pub/Sub Topics ($0 Idle)',
+                  name: '+ Open Pub/Sub + DLQ Architect',
+                  meta: 'First 10 GiB/mo Free · Auto-Wired Dead-Letter Queue',
+                  targetTab: 'DATA_ENGINEER_STUDIO',
+                  subTab: 'PUBSUB_STREAMING',
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        id: 'STAGE_2_BIGLAKE_FEDERATION',
+        stepNumber: 2,
+        title: '2. BigLake Iceberg & Zero-Copy OLTP Federation',
+        shortTitle: 'BigLake & Federation',
+        targetTab: 'BIGLAKE_STUDIO',
+        secondaryTab: 'CLOUD_SQL_STUDIO',
+        secondaryLabel: 'Cloud SQL & AlloyDB Studio',
+        status: totalStage2Assets > 0 ? 'OPTIMAL' : 'READY',
+        metricBadge: `${buckets.length} GCS Sources · ${sqlInstances.length + spannerInstances.length} OLTP DBs`,
+        summary: `Zero-copy BigLake table format & federated query bridge connecting ${buckets.length} GCS bucket(s), ${sqlInstances.length} Cloud SQL instance(s), ${spannerInstances.length} Spanner instance(s), and ${bqConnections.length} BigLake connection(s).`,
+        cliCmd: `gcloud alpha bq connections list --project=${projectId} --location=us`,
+        mermaidDsl: stage2MermaidDsl,
+        sampleSql: liveExternalTableSql,
+        stageItems: [
+          ...buckets.slice(0, 2).map((b) => ({
+            kind: 'BigLake Object Source',
+            name: `gs://${b.name}/*`,
+            meta: `${b.location} · Parquet / Iceberg / JSON`,
+            targetTab: 'BIGLAKE_STUDIO',
+          })),
+          ...sqlInstances.slice(0, 2).map((inst) => ({
+            kind: 'Cloud SQL OLTP',
+            name: inst.name,
+            meta: `${inst.region} · ${inst.databaseVersion}`,
+            targetTab: 'CLOUD_SQL_STUDIO',
+          })),
+          ...spannerInstances.slice(0, 2).map((sp) => ({
+            kind: 'Cloud Spanner',
+            name: sp.name,
+            meta: `${sp.processingUnits} PU · Zero-ETL`,
+            targetTab: 'WAVE10_FRONTIER',
+          })),
+          {
+            kind: 'BigLake Iceberg Studio',
+            name: 'Open BigLake Metastore & Compaction',
+            meta: 'Apache Iceberg REST Catalog & Fine-Grained RLS',
+            targetTab: 'BIGLAKE_STUDIO',
+          },
+          {
+            kind: 'Zero-Copy SQL Handoff',
+            name: 'Load External Table DDL in BigQuery Studio',
+            meta: `CREATE SCHEMA & query gs://${primaryBucket}`,
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: liveExternalTableSql,
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_MEDALLION_WAREHOUSE',
+        stepNumber: 3,
+        title: '3. BigQuery Medallion Warehouse (Bronze -> Silver -> Gold)',
+        shortTitle: 'BigQuery Medallion',
+        targetTab: 'BIGQUERY_STUDIO',
+        secondaryTab: 'DATA_ENGINEER_STUDIO',
+        secondarySubTab: 'MEDALLION_ELT',
+        secondaryLabel: '3-Tier Medallion Architect',
+        status: datasets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
+        metricBadge: `${datasets.length} BQ Datasets · ${tables.length} Tables`,
+        summary:
+          datasets.length > 0
+            ? `${datasets.length} live BigQuery dataset(s) (${datasets.map((d) => d.name).join(', ')}) containing ${tables.length} table(s)/view(s) with 168-hour Time-Travel enabled.`
+            : `0 BigQuery datasets in "${projectId}" ($0.00/mo storage idle). Provision a single dataset (10 GiB Storage + 1 TiB/mo Queries Always-Free) or deploy a 3-Tier Bronze/Silver/Gold Medallion pipeline in 1 click.`,
+        cliCmd: `bq ls --project_id=${projectId}`,
+        mermaidDsl: stage3MermaidDsl,
+        sampleSql: liveExternalTableSql,
+        stageItems:
+          datasets.length > 0
+            ? [
+                ...datasets.slice(0, 4).map((d) => ({
+                  kind: `BigQuery (${d.tier})`,
+                  name: `${projectId}:${d.name}`,
+                  meta: `${d.location} · ${d.tableCount} Tables · 168h Time-Travel`,
+                  targetTab: 'BIGQUERY_STUDIO',
+                })),
+                ...tables.slice(0, 4).map((t) => ({
+                  kind: `Table (${t.type})`,
+                  name: `${t.datasetId}.${t.tableId}`,
+                  meta: 'Click to query in BigQuery Studio',
+                  targetTab: 'BIGQUERY_STUDIO',
+                  sqlPayload: `SELECT * FROM \`${projectId}.${t.datasetId}.${t.tableId}\` LIMIT 100;`,
+                })),
+              ]
+            : [
+                {
+                  kind: '0 BigQuery Datasets',
+                  name: '+ Create BigQuery Dataset (Always-Free)',
+                  meta: '10 GiB Active Storage + 1 TiB/mo Queries Free',
+                  targetTab: 'BIGQUERY_STUDIO',
+                  provisionType: 'BIGQUERY_DATASET',
+                },
+                {
+                  kind: '3-Tier Medallion ELT',
+                  name: '+ Launch Bronze / Silver / Gold Architect',
+                  meta: 'Auto-creates _bronze_raw, _silver_cleaned, _gold_marts',
+                  targetTab: 'DATA_ENGINEER_STUDIO',
+                  subTab: 'MEDALLION_ELT',
+                },
+                {
+                  kind: 'SQL X-Ray Workbench',
+                  name: 'Open BigQuery SQL Studio & Dry-Run Estimator',
+                  meta: 'Pre-flight byte scanner & slot profiler',
+                  targetTab: 'BIGQUERY_STUDIO',
+                  sqlPayload: liveExternalTableSql,
+                },
+              ],
+      },
+      {
+        id: 'STAGE_4_DATAFORM_AIRFLOW',
+        stepNumber: 4,
+        title: '4. Dataform SQLX, dbt & Cloud Composer Airflow DAG Synthesizer',
+        shortTitle: 'Dataform & Airflow DAG',
+        targetTab: 'DATA_ENGINEER_STUDIO',
+        secondaryTab: 'BIGQUERY_STUDIO',
+        secondaryLabel: 'Open SQL in BigQuery Studio',
+        status: 'OPTIMAL',
+        metricBadge:
+          dataformRepos.length > 0
+            ? `${dataformRepos.length} Dataform Repo${dataformRepos.length === 1 ? '' : 's'} · SQLX + DAG`
+            : `SQLX + Airflow DAG + BQML`,
+        summary:
+          dataformRepos.length > 0
+            ? `Discovered ${dataformRepos.length} live Dataform repositor${dataformRepos.length === 1 ? 'y' : 'ies'} (${dataformRepos.map((r) => `${r.name} [${r.region}]`).join(', ')}) alongside synthesized incremental SQLX (medallion_lakehouse.sqlx), Airflow 2.10+ DAG, and BigQuery ML Gemini SQL.`
+            : `Synthesizes live Dataform incremental SQLX (medallion_lakehouse.sqlx), Cloud Composer Airflow 2.10+ DAG (cloudpulse_lakehouse_ai_dag.py), and BigQuery ML Gemini SQL tailored to ${projectId} and gs://${primaryBucket}.`,
+        cliCmd: `gcloud artifacts repositories list --project=${projectId}`,
+        mermaidDsl: null,
+        sampleSql: liveBqmlGeminiSql,
+        stageItems: [
+          ...dataformRepos.slice(0, 3).map((repo) => ({
+            kind: 'Live Dataform Repo',
+            name: repo.name,
+            meta: `${repo.region} · Git-Backed SQLX Repository`,
+            targetTab: 'DATA_ENGINEER_STUDIO',
+            subTab: 'DATAFORM_DBT',
+          })),
+          {
+            kind: 'Dataform SQLX',
+            name: 'definitions/medallion_lakehouse.sqlx',
+            meta: 'Incremental Partitioned & Clustered Gold Mart',
+            targetTab: 'DATA_ENGINEER_STUDIO',
+            subTab: 'DATAFORM_DBT',
+          },
+          {
+            kind: 'Cloud Composer DAG',
+            name: 'dags/cloudpulse_lakehouse_ai_dag.py',
+            meta: 'GCS Sensor -> Dataform -> BQML Gemini Pipeline',
+            targetTab: 'DATA_ENGINEER_STUDIO',
+          },
+          {
+            kind: 'BigQuery ML SQL',
+            name: 'sql/bqml_gemini_lakehouse.sql',
+            meta: 'Click to load directly in BigQuery Studio',
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: liveBqmlGeminiSql,
+          },
+        ],
+      },
+      {
+        id: 'STAGE_5_BQML_VERTEX_AI',
+        stepNumber: 5,
+        title: '5. BigQuery AI / ML, Vector Search & Vertex AI Gemini RAG',
+        shortTitle: 'BQML & Vertex AI',
+        targetTab: 'MCP_HUB',
+        secondaryTab: 'BIGQUERY_STUDIO',
+        secondaryLabel: 'Run ML.GENERATE_TEXT in BigQuery',
+        status: 'OPTIMAL',
+        metricBadge: `${dataAiApis.length} Data/AI APIs Enabled`,
+        summary: `${dataAiApis.length} live Data, Lakehouse & AI service APIs enabled in ${projectId} (${dataAiApis.slice(0, 4).join(', ')}). Supports in-warehouse ML.GENERATE_TEXT, ML.GENERATE_EMBEDDING, and VECTOR_SEARCH.`,
+        cliCmd: `gcloud services list --enabled --project=${projectId}`,
+        mermaidDsl: null,
+        sampleSql: liveBqmlGeminiSql,
+        stageItems: [
+          {
+            kind: 'In-Warehouse GenAI',
+            name: 'Load ML.GENERATE_TEXT (Gemini 2.5 Flash) SQL',
+            meta: 'Zero data movement out of BigQuery',
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: liveBqmlGeminiSql,
+          },
+          {
+            kind: 'Enabled Data & AI APIs',
+            name: `${dataAiApis.length} Active Data/AI Services`,
+            meta: dataAiApis.slice(0, 3).join(', ') || 'bigquery, storage',
+            targetTab: 'OVERVIEW',
+          },
+          {
+            kind: 'MCP & Agent Hub',
+            name: '48 Official Google Cloud MCP Servers',
+            meta: 'BigQuery, Storage, Spanner & Vertex AI MCP tools',
+            targetTab: 'MCP_HUB',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_6_TIMETRAVEL_LINEAGE',
+        stepNumber: 6,
+        title: '6. 168h BigQuery Time-Travel, 7d GCS Soft-Delete & Lineage Vault',
+        shortTitle: '168h Time-Travel & Vault',
+        targetTab: 'RECYCLE_BIN',
+        secondaryTab: 'BIGQUERY_STUDIO',
+        secondaryLabel: 'Run FOR SYSTEM_TIME AS OF in BigQuery',
+        status: 'OPTIMAL',
+        metricBadge: `168h BQ · 7d GCS Soft-Delete`,
+        summary: `Zero-data-loss lakehouse safety net combining BigQuery 168-hour (7-day) FOR SYSTEM_TIME AS OF snapshot recovery, Cloud Storage 7-day generation soft-delete, and the 30-Day Cloud Recycle Bin.`,
+        cliCmd: `gcloud storage buckets list --project=${projectId}`,
+        mermaidDsl: null,
+        sampleSql: liveTimeTravelSql,
+        stageItems: [
+          {
+            kind: 'BigQuery 168h Time-Travel',
+            name: 'Load FOR SYSTEM_TIME AS OF Recovery SQL',
+            meta: 'Instant point-in-time table & row restoration',
+            targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: liveTimeTravelSql,
+          },
+          {
+            kind: 'GCS 7-Day Soft-Delete',
+            name: `gs://${primaryBucket} Object Vault`,
+            meta: 'Restore deleted objects by generation ID',
+            targetTab: 'RECYCLE_BIN',
+          },
+          {
+            kind: 'Column-Level Lineage Guard',
+            name: 'Inspect Downstream BI & ML Blast Radius',
+            meta: 'Prevents breaking schema drops before deploy',
+            targetTab: 'DATA_ENGINEER_STUDIO',
+          },
+        ],
+      },
+    ];
+
+    const dataformSqlx = [
+      `-- ==============================================================================`,
+      `-- CloudPulse 2026 Wave 3 — Live Synthesized Dataform SQLX Medallion Pipeline`,
+      `-- Target Project : ${projectId}`,
+      `-- Source Lake    : gs://${primaryBucket} (${primaryRegion})`,
+      `-- Target Dataset : ${projectId}.${primaryDataset}`,
+      `-- ==============================================================================`,
+      `config {`,
+      `  type: "incremental",`,
+      `  schema: "${primaryDataset}",`,
+      `  name: "lakehouse_events_gold",`,
+      `  description: "Partitioned & clustered Gold Medallion table synthesized from live project ${projectId}",`,
+      `  bigquery: {`,
+      `    partitionBy: "DATE(event_timestamp)",`,
+      `    clusterBy: ["source_bucket", "event_type"],`,
+      `    updatePartitionFilter: "event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 DAY)"`,
+      `  },`,
+      `  assertions: {`,
+      `    nonNull: ["event_id", "event_timestamp"],`,
+      `    uniqueKey: ["event_id"]`,
+      `  }`,
+      `}`,
+      ``,
+      `SELECT`,
+      `  GENERATE_UUID() AS event_id,`,
+      `  CURRENT_TIMESTAMP() AS event_timestamp,`,
+      `  "${projectId}" AS gcp_project_id,`,
+      `  "gs://${primaryBucket}" AS source_bucket,`,
+      `  "LAKEHOUSE_INGEST" AS event_type`,
+      `\${when(incremental(), \`WHERE CURRENT_TIMESTAMP() > (SELECT COALESCE(MAX(event_timestamp), TIMESTAMP("1970-01-01")) FROM \${self()})\`)}`,
+    ].join('\n');
+
+    const composerAirflowDagPy = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 3 — Managed Airflow / Cloud Composer 2.10+ Lakehouse DAG`,
+      `# Target Project : ${projectId}`,
+      `# Raw Lake Bucket: gs://${primaryBucket}`,
+      `# Warehouse      : ${projectId}.${primaryDataset}`,
+      `# ==============================================================================`,
+      `from datetime import datetime, timedelta`,
+      `from airflow import DAG`,
+      `from airflow.providers.google.cloud.sensors.gcs import GCSObjectsWithPrefixExistenceSensor`,
+      `from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator`,
+      ``,
+      `PROJECT_ID = "${projectId}"`,
+      `BUCKET_NAME = "${primaryBucket}"`,
+      `DATASET_ID = "${primaryDataset}"`,
+      `LOCATION = "${primaryRegion}"`,
+      ``,
+      `default_args = {`,
+      `    "owner": "cloudpulse-data-eng",`,
+      `    "depends_on_past": False,`,
+      `    "retries": 2,`,
+      `    "retry_delay": timedelta(minutes=3),`,
+      `}`,
+      ``,
+      `with DAG(`,
+      `    dag_id="cloudpulse_${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse_ai",`,
+      `    default_args=default_args,`,
+      `    schedule="@hourly",`,
+      `    start_date=datetime(2026, 1, 1),`,
+      `    catchup=False,`,
+      `    max_active_runs=1,`,
+      `    tags=["cloudpulse", "wave3", "lakehouse", "bigquery", "vertex-ai"],`,
+      `) as dag:`,
+      ``,
+      `    sense_raw_gcs_landing = GCSObjectsWithPrefixExistenceSensor(`,
+      `        task_id="sense_raw_gcs_landing",`,
+      `        bucket=BUCKET_NAME,`,
+      `        prefix="",`,
+      `        mode="reschedule",`,
+      `        poke_interval=60,`,
+      `        timeout=600,`,
+      `    )`,
+      ``,
+      `    curate_medallion_gold = BigQueryInsertJobOperator(`,
+      `        task_id="curate_medallion_gold",`,
+      `        project_id=PROJECT_ID,`,
+      `        location=LOCATION,`,
+      `        configuration={`,
+      `            "query": {`,
+      `                "query": f"""`,
+      `                    CREATE SCHEMA IF NOT EXISTS \`{PROJECT_ID}.{DATASET_ID}\` OPTIONS(location='{LOCATION}');`,
+      `                    CREATE TABLE IF NOT EXISTS \`{PROJECT_ID}.{DATASET_ID}.events_gold\``,
+      `                    PARTITION BY DATE(ingested_at)`,
+      `                    CLUSTER BY source_bucket AS`,
+      `                    SELECT CURRENT_TIMESTAMP() AS ingested_at, 'gs://{BUCKET_NAME}' AS source_bucket;`,
+      `                """,`,
+      `                "useLegacySql": False,`,
+      `            }`,
+      `        },`,
+      `    )`,
+      ``,
+      `    sense_raw_gcs_landing >> curate_medallion_gold`,
+    ].join('\n');
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        buckets: buckets.length,
+        datasets: datasets.length,
+        tables: tables.length,
+        pubsubTopics: pubsubTopics.length,
+        sqlInstances: sqlInstances.length,
+        spannerInstances: spannerInstances.length,
+        dataformRepos: dataformRepos.length,
+        bqConnections: bqConnections.length,
+        dataAiApis: dataAiApis.length,
+        totalLakehouseAssets:
+          buckets.length +
+          datasets.length +
+          tables.length +
+          pubsubTopics.length +
+          sqlInstances.length +
+          spannerInstances.length +
+          dataformRepos.length +
+          bqConnections.length,
+      },
+      stages,
+      artifacts: {
+        dataformSqlx,
+        composerAirflowDagPy,
+        bqmlGeminiSql: liveBqmlGeminiSql,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 3 Data, Lakehouse & AI Pipeline blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {
