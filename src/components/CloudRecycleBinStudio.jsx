@@ -247,7 +247,6 @@ export default function CloudRecycleBinStudio({
   const getRecoverabilityBadgeStyle = (rec) => {
     if (
       rec === 'INSTANT_REENABLE' ||
-      rec === 'SOFT_DELETE_OR_RECREATE' ||
       rec === 'CAPACITOR_7D_UNDELETE' ||
       rec === 'IAM_30D_UNDELETE' ||
       rec === 'KMS_24H_RESTORE'
@@ -255,6 +254,68 @@ export default function CloudRecycleBinStudio({
       return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
     }
     return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
+  };
+
+  const getDataRecoveryReality = (item) => {
+    if (item.category === 'DISABLED_API') {
+      return {
+        tone: 'emerald',
+        pill: 'Control-Plane API Re-Enable',
+        note: 'Re-enables the Google Cloud API endpoint on this project. Does not recover resources that were manually deleted before disabling the API.',
+        buttonLabel: 'Re-Enable API Now',
+      };
+    }
+    if (item.source === 'GCS_SOFT_DELETE_VAULT') {
+      return {
+        tone: 'emerald',
+        pill: 'Soft-Delete Vault (Data Restorable Before Hard-Delete)',
+        note: 'This bucket is currently in Google Cloud Storage Soft-Delete retention. Restoring it before hardDeleteTime recovers its soft-deleted objects.',
+        buttonLabel: 'Restore Soft-Deleted Bucket',
+      };
+    }
+    if (item.recoverability === 'CAPACITOR_7D_UNDELETE') {
+      return {
+        tone: 'emerald',
+        pill: '7-Day Capacitor Time-Travel (Data Restorable if Dataset Exists)',
+        note: 'Uses BigQuery FOR SYSTEM_TIME AS OF / bq cp @-timestamp to recover table rows ONLY if the parent dataset was not deleted and <7 days have elapsed.',
+        buttonLabel: 'Run 7d Time-Travel Undrop in Shell',
+      };
+    }
+    if (item.recoverability === 'IAM_30D_UNDELETE') {
+      return {
+        tone: 'emerald',
+        pill: '30-Day Native GCP Undelete (Identity Restorable)',
+        note: 'Google Cloud retains deleted Service Accounts and API Keys in a 30-day undelete vault and restores the exact UID/principal.',
+        buttonLabel: 'Undelete Principal / Key Now',
+      };
+    }
+    if (
+      item.category === 'STORAGE_BUCKET' ||
+      item.category === 'STORAGE_OBJECT'
+    ) {
+      return {
+        tone: 'amber',
+        pill: 'No Data Guarantee (Empty Bucket Unless Soft-Delete Was Active)',
+        note: 'Attempts gcloud storage restore first (which only recovers data if Soft-Delete retention was enabled and unexpired); otherwise re-creates a brand-new EMPTY bucket with 0 objects.',
+        buttonLabel: 'Attempt Soft-Restore / Re-Create Empty Bucket',
+      };
+    }
+    if (item.category === 'BIGQUERY_DATASET') {
+      return {
+        tone: 'amber',
+        pill: 'Re-Creates Empty Dataset Only (0 Tables / No Data)',
+        note: 'Deleting a BigQuery Dataset with deleteContents=true permanently destroys its tables. This action only re-creates an EMPTY dataset shell with the same name.',
+        buttonLabel: 'Re-Create Empty Dataset Shell',
+      };
+    }
+    return {
+      tone: 'amber',
+      pill: 'Re-Creates Empty Resource Only (No Data Guarantee)',
+      note: 'Google Cloud permanently wipes underlying disk blocks, database rows, and container state upon deletion (unless you took a prior Snapshot/Backup). This command only provisions a new, EMPTY resource with the same name and location.',
+      buttonLabel: onRunInShell
+        ? 'Re-Create Empty Resource in Shell'
+        : 'Copy Re-Creation CLI',
+    };
   };
 
   return (
@@ -283,8 +344,7 @@ export default function CloudRecycleBinStudio({
               </code>{' '}
               over the past <strong>{windowDays} days</strong> strictly for{' '}
               <strong>deleted resources</strong> and{' '}
-              <strong>disabled Google Cloud APIs</strong> — with 1-click{' '}
-              <strong>Restore / Undelete / Re-Enable API</strong> actions.
+              <strong>disabled Google Cloud APIs</strong>.
             </p>
           </div>
 
@@ -360,6 +420,25 @@ export default function CloudRecycleBinStudio({
             </pre>
           </div>
         )}
+
+        {/* Honest Engineering Notice: Data Recovery vs. Empty Resource Re-Creation */}
+        <div className="p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/35 text-xs space-y-1.5">
+          <div className="font-mono font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              IMPORTANT: Resource Re-Creation vs. Actual Data Recovery (No Guarantee of Data Inside)
+            </span>
+          </div>
+          <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+            In Google Cloud, once a resource (Compute VM, Persistent Disk, Cloud SQL instance, BigQuery Dataset, or Bucket without Soft-Delete) is deleted, its underlying storage blocks are{' '}
+            <strong>permanently destroyed by Google Cloud</strong> unless you had a prior Snapshot, Backup, or Soft-Delete policy. For those items, the action below{' '}
+            <strong>only re-creates a new, empty resource with the same name and location — with NO guarantee of restoring the data that was inside</strong>. Native state/data recovery is only possible for{' '}
+            <strong>Disabled APIs</strong>,{' '}
+            <strong>IAM Service Accounts / API Keys (&lt;30 days)</strong>,{' '}
+            <strong>Dropped BigQuery Tables (&lt;7 days if parent dataset still exists)</strong>, and{' '}
+            <strong>Cloud Storage Buckets/Objects with an active Soft-Delete retention policy</strong>.
+          </p>
+        </div>
 
         {/* 4 Summary Telemetry Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
@@ -502,13 +581,7 @@ export default function CloudRecycleBinStudio({
             {filteredItems.map((item) => {
               const Icon = getCategoryIcon(item.category);
               const isExpanded = expandedItemId === item.id;
-              const isDirectRestore = [
-                'RESTORE_API',
-                'RESTORE_GCS_BUCKET',
-                'RESTORE_BQ_DATASET',
-                'UNDELETE_SERVICE_ACCOUNT',
-                'UNDELETE_API_KEY',
-              ].includes(item.restoreActionType);
+              const reality = getDataRecoveryReality(item);
 
               return (
                 <div
@@ -536,12 +609,18 @@ export default function CloudRecycleBinStudio({
                             {item.categoryLabel}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getRecoverabilityBadgeStyle(
-                              item.recoverability
-                            )}`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                              reality.tone === 'emerald'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                            }`}
                           >
-                            {item.recoverabilityLabel}
+                            {reality.pill}
                           </span>
+                        </div>
+
+                        <div className="text-[11px] text-amber-700 dark:text-amber-300/90 font-sans">
+                          {reality.note}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
@@ -593,7 +672,11 @@ export default function CloudRecycleBinStudio({
                         type="button"
                         disabled={restoringId === item.id}
                         onClick={() => handleRestoreItem(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50 shadow-sm ${
+                          reality.tone === 'emerald'
+                            ? 'bg-emerald-600 hover:bg-emerald-500'
+                            : 'bg-amber-600 hover:bg-amber-500'
+                        }`}
                       >
                         <RotateCcw
                           className={`w-3.5 h-3.5 ${
@@ -602,14 +685,8 @@ export default function CloudRecycleBinStudio({
                         />
                         <span>
                           {restoringId === item.id
-                            ? 'Restoring...'
-                            : item.category === 'DISABLED_API'
-                            ? 'Re-Enable API Now'
-                            : isDirectRestore
-                            ? 'Restore Now'
-                            : onRunInShell
-                            ? 'Restore in Cloud Shell'
-                            : 'Copy Restore CLI'}
+                            ? 'Working...'
+                            : reality.buttonLabel}
                         </span>
                       </button>
 
