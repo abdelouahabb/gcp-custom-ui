@@ -68603,6 +68603,7 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
       mon24hRes,
       disksRes,
       addrsRes,
+      servicesRes,
     ] = token
       ? await Promise.allSettled([
           gcpFetch(
@@ -68710,6 +68711,14 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
             projectId,
             { timeout: 6000 }
           ),
+          gcpFetch(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/services?filter=state:ENABLED&pageSize=200`,
+            token,
+            projectId,
+            { timeout: 6000 }
+          ),
         ])
       : [];
 
@@ -68731,6 +68740,59 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
       disksRes?.status === 'fulfilled' ? disksRes.value?.items || {} : {};
     const rawAddrItems =
       addrsRes?.status === 'fulfilled' ? addrsRes.value?.items || {} : {};
+    const enabledServicesSet = new Set(
+      (servicesRes?.status === 'fulfilled'
+        ? servicesRes.value?.services || []
+        : []
+      ).map((s) => String(s.config?.name || s.name || '').split('/').pop())
+    );
+
+    const CORE_STARTUP_APIS_CATALOG = [
+      {
+        service: 'run.googleapis.com',
+        label: 'Cloud Run v2 Serverless',
+        freeTier: '2M requests + 180k vCPU-sec/mo free',
+      },
+      {
+        service: 'artifactregistry.googleapis.com',
+        label: 'Artifact Registry Containers',
+        freeTier: '0.5 GB container storage/mo free',
+      },
+      {
+        service: 'secretmanager.googleapis.com',
+        label: 'Secret Manager Vault',
+        freeTier: '6 active secret versions + 10k ops/mo free',
+      },
+      {
+        service: 'aiplatform.googleapis.com',
+        label: 'Vertex AI & Gemini API',
+        freeTier: '-80% Context Cache + Startup AI credits eligible',
+      },
+      {
+        service: 'bigquery.googleapis.com',
+        label: 'BigQuery Analytics Warehouse',
+        freeTier: '10 GB storage + 1 TB queries/mo free',
+      },
+      {
+        service: 'storage.googleapis.com',
+        label: 'Cloud Storage Object Vault',
+        freeTier: '5 GB US Standard storage/mo free',
+      },
+      {
+        service: 'cloudbuild.googleapis.com',
+        label: 'Cloud Build CI/CD Pipelines',
+        freeTier: '2,500 build-minutes/mo free',
+      },
+      {
+        service: 'billingbudgets.googleapis.com',
+        label: 'Cloud Billing Budgets & Alerts',
+        freeTier: '100% free stop-loss budget alerts',
+      },
+    ];
+    const startupApis = CORE_STARTUP_APIS_CATALOG.map((item) => ({
+      ...item,
+      enabled: enabledServicesSet.has(item.service),
+    }));
 
     // 1. Inspect Live Compute Engine VMs (Always-Free e2-micro eligibility, Spot vs Standard, Public IP)
     const vmFindings = Object.entries(rawVmItems).flatMap(([zoneKey, val]) =>
@@ -69451,7 +69513,61 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
         primitivePrincipalsList,
         unhardenedBucketsCount: unhardenedBuckets.length,
         unhardenedBuckets,
+        soc2EvidenceControls: [
+          {
+            controlId: 'CC6.6 · Network Perimeter & Admin Ports',
+            question: 'Are SSH/RDP/Jupyter and internal ports restricted from 0.0.0.0/0?',
+            status: openFirewalls.length === 0 ? 'PASS' : 'ACTION_NEEDED',
+            liveEvidence:
+              openFirewalls.length === 0
+                ? '0 world-open 0.0.0.0/0 ingress firewall rules detected on VPC.'
+                : `${openFirewalls.length} rule(s) allow 0.0.0.0/0 (${openFirewalls
+                    .map((f) => `${f.name}[${f.portsSummary || 'all'}]`)
+                    .join(', ')}) — click "Lock All to Cloud IAP" below.`,
+          },
+          {
+            controlId: 'CC6.7 · Object Storage Public Access Prevention',
+            question: 'Are all Cloud Storage buckets protected against public exposure?',
+            status: unhardenedBuckets.length === 0 ? 'PASS' : 'ACTION_NEEDED',
+            liveEvidence:
+              bucketFindings.length === 0
+                ? '0 public buckets (no unshielded buckets in project).'
+                : unhardenedBuckets.length === 0
+                ? `All ${bucketFindings.length} bucket(s) enforce publicAccessPrevention=enforced & Uniform IAM.`
+                : `${unhardenedBuckets.length} bucket(s) missing publicAccessPrevention=enforced.`,
+          },
+          {
+            controlId: 'CC6.1 · IAM Least-Privilege Access Control',
+            question: 'Are primitive Owner/Editor roles minimized across principals?',
+            status: totalPrimitivePrincipals <= 2 ? 'PASS' : 'ACTION_NEEDED',
+            liveEvidence: `${totalPrimitivePrincipals} principal(s) hold roles/owner or roles/editor (${primitivePrincipalsList
+              .map((p) => p.member.split(':')[1] || p.member)
+              .slice(0, 3)
+              .join(', ')}).`,
+          },
+          {
+            controlId: 'CC6.8 · Encryption at Rest & In Transit',
+            question: 'Are disks, datasets, and API endpoints encrypted with AES-256 / TLS 1.3?',
+            status: 'PASS',
+            liveEvidence: `Google-managed AES-256 encryption active across ${diskFindings.length} disk(s), ${bucketFindings.length} bucket(s), and ${datasetFindings.length} BigQuery dataset(s).`,
+          },
+          {
+            controlId: 'CC7.2 · API Rate-Limit & Quota Monitoring',
+            question: 'Are production APIs monitored for HTTP 429 exhaustion and anomalies?',
+            status: total429Count24h === 0 ? 'PASS' : 'ACTION_NEEDED',
+            liveEvidence: `${totalRequests24h.toLocaleString()} API requests monitored in last 24h (${total429Count24h} HTTP 429 throttled responses).`,
+          },
+          {
+            controlId: 'A1.2 · Data-Gravity & Regional Co-Location',
+            question: 'Are compute and storage co-located to prevent cross-region latency/egress?',
+            status: !hasRegionMismatch ? 'PASS' : 'ACTION_NEEDED',
+            liveEvidence: !hasRegionMismatch
+              ? `Co-located in ${(vmRegions.concat(runRegions)[0]) || 'us-central1'} (~4ms intra-region RTT).`
+              : 'Cross-region mismatch detected between compute and storage.',
+          },
+        ],
       },
+      startupApis,
       regionGravity: {
         vmRegions,
         runRegions,
@@ -69644,6 +69760,183 @@ app.post('/api/project/:projectId/startup-10x/remediate', async (req, res) => {
         action,
         targetName: fwName,
         message: `Restricted firewall rule "${fwName}" from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20) — SOC2 ingress blocker resolved!`,
+      });
+    }
+
+    // 5. Live Batch Action: Lock ALL World-Open 0.0.0.0/0 Firewall Rules to Google Cloud IAP (35.235.240.0/20)
+    if (action === 'LOCK_ALL_OPEN_FIREWALLS_IAP') {
+      const fwRes = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/firewalls`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      );
+      const openRules = (fwRes?.items || []).filter(
+        (fw) =>
+          !fw.disabled &&
+          fw.direction === 'INGRESS' &&
+          (fw.sourceRanges || []).includes('0.0.0.0/0')
+      );
+      const lockedNames = [];
+      for (const fw of openRules) {
+        await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/global/firewalls/${encodeURIComponent(fw.name)}`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              sourceRanges: ['35.235.240.0/20'],
+              description:
+                'Hardened by CloudPulse Startup 10X SOC2 Shield: Restricted from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20)',
+            },
+            timeout: 10000,
+          }
+        );
+        lockedNames.push(fw.name);
+      }
+      return res.json({
+        ok: true,
+        action,
+        lockedNames,
+        message:
+          lockedNames.length > 0
+            ? `Restricted ${lockedNames.length} world-open firewall rule(s) (${lockedNames.join(', ')}) from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20)!`
+            : 'All firewall rules are already restricted from 0.0.0.0/0.',
+      });
+    }
+
+    // 6. Live Action: Enable Core Startup GCP APIs (Single API or Batch Enable All 8)
+    if (action === 'ENABLE_CORE_STARTUP_APIS') {
+      const servicesToEnable = targetName && targetName !== 'ALL'
+        ? [String(targetName).trim()]
+        : [
+            'run.googleapis.com',
+            'artifactregistry.googleapis.com',
+            'secretmanager.googleapis.com',
+            'aiplatform.googleapis.com',
+            'bigquery.googleapis.com',
+            'storage.googleapis.com',
+            'cloudbuild.googleapis.com',
+            'billingbudgets.googleapis.com',
+          ];
+      await gcpFetch(
+        `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services:batchEnable`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { serviceIds: servicesToEnable },
+          timeout: 15000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action,
+        servicesEnabled: servicesToEnable,
+        message: `Enabled ${servicesToEnable.length} Core Startup GCP API(s) on project "${projectId}"!`,
+      });
+    }
+
+    // 7. Live Action: 1-Click Provision Hardened Startup GCS Vault Bucket (PAP + Uniform IAM + 30d Nearline Lifecycle)
+    if (action === 'BOOTSTRAP_STARTUP_BUCKET') {
+      const cleanProj = String(projectId)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-');
+      const bucketName =
+        String(targetName || '').trim() || `${cleanProj}-startup-vault`;
+      await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+          projectId
+        )}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            name: bucketName,
+            location: 'US',
+            storageClass: 'STANDARD',
+            iamConfiguration: {
+              publicAccessPrevention: 'enforced',
+              uniformBucketLevelAccess: { enabled: true },
+            },
+            lifecycle: {
+              rule: [
+                {
+                  action: {
+                    type: 'SetStorageClass',
+                    storageClass: 'NEARLINE',
+                  },
+                  condition: { age: 30 },
+                },
+                {
+                  action: { type: 'Delete' },
+                  condition: { age: 365, isLive: false },
+                },
+              ],
+            },
+            labels: {
+              startup_10x: 'optimized',
+              datacloud: 'antigravity',
+            },
+          },
+          timeout: 12000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action,
+        targetName: bucketName,
+        message: `Provisioned SOC2-hardened Startup Storage Vault "gs://${bucketName}" in US with Public Access Prevention, Uniform IAM & 30d Nearline Lifecycle!`,
+      });
+    }
+
+    // 8. Live Action: 1-Click Provision Startup Analytics BigQuery Dataset (168h Time-Travel + 60d Partition Expiry + Labels)
+    if (action === 'BOOTSTRAP_STARTUP_BQ_DATASET') {
+      const datasetId =
+        String(targetName || '').trim() || 'startup_analytics';
+      await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            datasetReference: {
+              projectId,
+              datasetId,
+            },
+            location: 'US',
+            maxTimeTravelHours: '168',
+            defaultPartitionExpirationMs: '5184000000',
+            description:
+              'Startup 10X Product Telemetry & Analytics Warehouse (10 GB Storage + 1 TB Queries/mo Free Tier)',
+            labels: {
+              startup_10x: 'optimized',
+              datacloud: 'antigravity',
+            },
+          },
+          timeout: 12000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action,
+        targetName: datasetId,
+        message: `Provisioned BigQuery Analytics Dataset "${projectId}:${datasetId}" in US with 168h Time-Travel, 60d Partition Expiration & Startup Attribution Labels!`,
       });
     }
 

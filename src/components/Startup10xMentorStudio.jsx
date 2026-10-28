@@ -100,6 +100,12 @@ export default function Startup10xMentorStudio({
   const [systemPromptTokens, setSystemPromptTokens] = useState(28000);
   const [dailyConversations, setDailyConversations] = useState(15000);
 
+  // Interactive Founder Unit Economics, SaaS/AI Gross Margin & 10X Scale Modeler state
+  const [simMau, setSimMau] = useState(15000);
+  const [simArpuUsd, setSimArpuUsd] = useState(29);
+  const [simApiReqPerUserDay, setSimApiReqPerUserDay] = useState(40);
+  const [simAiPromptsPerUserDay, setSimAiPromptsPerUserDay] = useState(8);
+
   const fetchStartupAudit = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -248,6 +254,7 @@ export default function Startup10xMentorStudio({
   const sqlFindings = auditData?.sqlFindings || [];
   const bucketFindings = auditData?.bucketFindings || [];
   const datasetFindings = auditData?.datasetFindings || [];
+  const startupApis = auditData?.startupApis || [];
   const quotaWall = auditData?.quotaWallFindings || {
     liveQuotas: [],
     zeroGpuTrapCount: 0,
@@ -263,6 +270,7 @@ export default function Startup10xMentorStudio({
     primitivePrincipalsList: [],
     unhardenedBucketsCount: 0,
     unhardenedBuckets: [],
+    soc2EvidenceControls: [],
   };
   const regionGravity = auditData?.regionGravity || {
     vmRegions: [],
@@ -272,6 +280,101 @@ export default function Startup10xMentorStudio({
     bqLocations: [],
     hasRegionMismatch: false,
     estimatedCrossRegionRttPenaltyMs: 4,
+  };
+
+  // Founder Unit Economics & Gross Margin Modeler Math (with GCP Free Tier + Context Cache applied)
+  const computeScaleScenario = (mauMultiplier = 1) => {
+    const mau = Math.max(100, Math.round(simMau * mauMultiplier));
+    const monthlyMrrUsd = mau * simArpuUsd;
+    const totalMonthlyApiReqs = mau * simApiReqPerUserDay * 30;
+    // First 2M Cloud Run requests/mo are free; ~$0.40 per 1M requests + compute vCPU-sec
+    const billableApiReqsM = Math.max(0, (totalMonthlyApiReqs - 2_000_000) / 1_000_000);
+    const cloudRunMonthlyUsd = billableApiReqsM * 1.45;
+    // AI Token usage: ~3,500 tokens/prompt turn with -80% Vertex AI Context Cache ($0.06 / 1M cached tokens)
+    const totalMonthlyAiTurns = mau * simAiPromptsPerUserDay * 30;
+    const totalAiTokensM = (totalMonthlyAiTurns * 3500) / 1_000_000;
+    const vertexAiMonthlyUsd = totalAiTokensM * 0.075;
+    // Storage + BigQuery + Egress (after 5 GB GCS + 10 GB BQ free tier)
+    const dataAndEgressUsd = Math.max(0, (mau / 1000) * 1.85 - 5);
+    const totalCloudBillUsd = Number(
+      (
+        Number(runway.liveResourceMonthlyBurnUsd || 0) +
+        cloudRunMonthlyUsd +
+        vertexAiMonthlyUsd +
+        dataAndEgressUsd
+      ).toFixed(2)
+    );
+    const costPerMauUsd = Number((totalCloudBillUsd / Math.max(1, mau)).toFixed(4));
+    const grossMarginPct =
+      monthlyMrrUsd > 0
+        ? Number(
+            Math.max(
+              0,
+              Math.min(99.9, ((monthlyMrrUsd - totalCloudBillUsd) / monthlyMrrUsd) * 100)
+            ).toFixed(1)
+          )
+        : 0;
+    const creditRunwayMonths = Math.min(
+      24,
+      Number((creditTierUsd / Math.max(15, totalCloudBillUsd)).toFixed(1))
+    );
+    return {
+      mau,
+      monthlyMrrUsd,
+      cloudRunMonthlyUsd: Number(cloudRunMonthlyUsd.toFixed(2)),
+      vertexAiMonthlyUsd: Number(vertexAiMonthlyUsd.toFixed(2)),
+      dataAndEgressUsd: Number(dataAndEgressUsd.toFixed(2)),
+      totalCloudBillUsd,
+      costPerMauUsd,
+      grossMarginPct,
+      creditRunwayMonths,
+    };
+  };
+
+  const unitEcon1x = computeScaleScenario(1);
+  const unitEcon10x = computeScaleScenario(10);
+
+  const handleExportFounderPacket = () => {
+    const md = [
+      `# Startup 10X — Investor Due-Diligence, Unit Economics & SOC2 Readiness Packet`,
+      `- **GCP Project**: \`${projectId}\``,
+      `- **Generated At**: ${new Date().toISOString()}`,
+      `- **10X Scale Readiness Score**: **${score}/100**`,
+      `- **Selected Google for Startups Credit Tier**: **$${creditTierUsd.toLocaleString()}**`,
+      `- **Live Resource Burn**: **$${Number(runway.liveResourceMonthlyBurnUsd || 0).toFixed(2)}/mo**`,
+      ``,
+      `## 1. Score Deductions & Bottlenecks`,
+      ...(scoreDeductions.length > 0
+        ? scoreDeductions.map((d) => `- ${d}`)
+        : [`- ✓ Zero scaling or SOC2 bottlenecks detected`]),
+      ``,
+      `## 2. Founder Unit Economics & Gross Margin (${unitEcon1x.mau.toLocaleString()} MAU @ $${simArpuUsd}/mo ARPU)`,
+      `- **Monthly Recurring Revenue (MRR)**: $${unitEcon1x.monthlyMrrUsd.toLocaleString()}/mo`,
+      `- **Projected GCP Cloud Bill (1X)**: $${unitEcon1x.totalCloudBillUsd.toLocaleString()}/mo ($${unitEcon1x.costPerMauUsd}/MAU)`,
+      `- **Cloud Gross Margin (1X)**: **${unitEcon1x.grossMarginPct}%** (VC Tier-1 Benchmark: >= 80%)`,
+      `- **10X Breakout Scale (${unitEcon10x.mau.toLocaleString()} MAU)**: Cloud Bill $${unitEcon10x.totalCloudBillUsd.toLocaleString()}/mo · Gross Margin **${unitEcon10x.grossMarginPct}%** · Credit Runway **${unitEcon10x.creditRunwayMonths} mo**`,
+      ``,
+      `## 3. 6-Vector Live GCP Cost & Always-Free Audit`,
+      ...(runway.costAuditChecks || []).map(
+        (c) => `- **${c.category}** ($${Number(c.monthlyBurnUsd || 0).toFixed(2)}/mo): ${c.summary}`
+      ),
+      ``,
+      `## 4. Enterprise SOC2 & B2B Security Controls Evidence`,
+      ...(soc2Blockers.soc2EvidenceControls || []).map(
+        (ctrl) => `- **[${ctrl.status}] ${ctrl.controlId}**: ${ctrl.liveEvidence}`
+      ),
+    ].join('\n');
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `startup-10x-investor-soc2-packet-${projectId}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (onShowToast) {
+      onShowToast(`Exported Investor & SOC2 Due-Diligence Packet for ${projectId}!`);
+    }
   };
 
   // GenAI Context Cache Math
@@ -327,6 +430,15 @@ export default function Startup10xMentorStudio({
                 </option>
               ))}
             </select>
+
+            <button
+              type="button"
+              onClick={handleExportFounderPacket}
+              title="Download Investor Due-Diligence, Unit Economics & SOC2 Evidence Report (.md)"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
+            >
+              <span>Export VC &amp; SOC2 Packet (.md)</span>
+            </button>
 
             <button
               type="button"
@@ -852,6 +964,82 @@ export default function Startup10xMentorStudio({
               {`gcloud run services update api-gateway --project="${projectId}" --region="us-central1" --cpu-boost --network="default" --subnet="default" --vpc-egress="private-ranges-only" --clear-vpc-connector`}
             </pre>
           </div>
+
+          {/* 8 Core Startup GCP APIs Live Readiness & 1-Click Batch Enabler */}
+          {startupApis.length > 0 && (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
+                    8 Core Startup GCP APIs Live Readiness ({startupApis.filter((a) => a.enabled).length}/{startupApis.length} Enabled)
+                  </div>
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Live check against <code className="font-mono">serviceusage.googleapis.com</code> for essential serverless, AI, container, secret, and budget APIs.
+                  </div>
+                </div>
+                {startupApis.some((a) => !a.enabled) && (
+                  <button
+                    type="button"
+                    disabled={busyTarget === 'ENABLE_CORE_STARTUP_APIS:ALL'}
+                    onClick={() =>
+                      handleLiveRemediate('ENABLE_CORE_STARTUP_APIS', 'ALL')
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyTarget === 'ENABLE_CORE_STARTUP_APIS:ALL'
+                      ? 'Enabling Core APIs...'
+                      : '1-Click Enable All Missing Startup APIs'}
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs font-mono">
+                {startupApis.map((api) => (
+                  <div
+                    key={api.service}
+                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-1.5"
+                  >
+                    <div className="flex items-start justify-between gap-1.5">
+                      <span className="font-extrabold text-zinc-950 dark:text-zinc-50 text-[11px]">
+                        {api.label}
+                      </span>
+                      {api.enabled ? (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-extrabold shrink-0">
+                          ✓ ON
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={
+                            busyTarget ===
+                            `ENABLE_CORE_STARTUP_APIS:${api.service}`
+                          }
+                          onClick={() =>
+                            handleLiveRemediate(
+                              'ENABLE_CORE_STARTUP_APIS',
+                              api.service
+                            )
+                          }
+                          className="px-2 py-0.5 rounded bg-blue-600 text-white text-[9.5px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                        >
+                          {busyTarget ===
+                          `ENABLE_CORE_STARTUP_APIS:${api.service}`
+                            ? '...'
+                            : 'Enable'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate">
+                      {api.service}
+                    </div>
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      {api.freeTier}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1059,6 +1247,181 @@ export default function Startup10xMentorStudio({
             </div>
           </div>
 
+          {/* 1b. Founder Unit Economics, SaaS/AI Gross Margin & 1X -> 10X Scale Simulator */}
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <span>Founder Unit Economics, SaaS/AI Gross Margin &amp; 10X Launch Modeler</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      unitEcon1x.grossMarginPct >= 80
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        : unitEcon1x.grossMarginPct >= 65
+                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {unitEcon1x.grossMarginPct}% Cloud Gross Margin (VC Target: 80%+)
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
+                  Model your cloud cost per Monthly Active User (<code className="font-mono">$/MAU</code>), SaaS/AI gross margin, and Google for Startups credit runway from Pre-Seed to a 10X Product Hunt / Series A surge.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+                {[
+                  { label: 'Pre-Seed (1k MAU)', mau: 1000, arpu: 19, req: 25, ai: 5 },
+                  { label: 'Seed Launch (15k MAU)', mau: 15000, arpu: 29, req: 40, ai: 8 },
+                  { label: 'Series A (75k MAU)', mau: 75000, arpu: 49, req: 60, ai: 12 },
+                  { label: '10X Viral (250k MAU)', mau: 250000, arpu: 49, req: 80, ai: 15 },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      setSimMau(preset.mau);
+                      setSimArpuUsd(preset.arpu);
+                      setSimApiReqPerUserDay(preset.req);
+                      setSimAiPromptsPerUserDay(preset.ai);
+                    }}
+                    className={`px-2.5 py-1 rounded-md border font-bold cursor-pointer ${
+                      simMau === preset.mau
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                <div className="flex justify-between font-bold text-zinc-900 dark:text-zinc-100">
+                  <span>Active Users (MAU):</span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    {simMau.toLocaleString()}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={500}
+                  max={500000}
+                  step={500}
+                  value={simMau}
+                  onChange={(e) => setSimMau(Number(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                <div className="flex justify-between font-bold text-zinc-900 dark:text-zinc-100">
+                  <span>Subscription ARPU:</span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    ${simArpuUsd}/user/mo
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={5}
+                  max={199}
+                  step={1}
+                  value={simArpuUsd}
+                  onChange={(e) => setSimArpuUsd(Number(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                <div className="flex justify-between font-bold text-zinc-900 dark:text-zinc-100">
+                  <span>API Calls / User / Day:</span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    {simApiReqPerUserDay}/day
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={5}
+                  max={250}
+                  step={5}
+                  value={simApiReqPerUserDay}
+                  onChange={(e) =>
+                    setSimApiReqPerUserDay(Number(e.target.value))
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                <div className="flex justify-between font-bold text-zinc-900 dark:text-zinc-100">
+                  <span>AI Turns / User / Day:</span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    {simAiPromptsPerUserDay}/day
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={60}
+                  step={1}
+                  value={simAiPromptsPerUserDay}
+                  onChange={(e) =>
+                    setSimAiPromptsPerUserDay(Number(e.target.value))
+                  }
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+              <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                    1X Current Target ({unitEcon1x.mau.toLocaleString()} MAU)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold">
+                    MRR: ${unitEcon1x.monthlyMrrUsd.toLocaleString()}/mo
+                  </span>
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Projected GCP Cloud Bill:{' '}
+                  <strong className="text-zinc-950 dark:text-zinc-50">
+                    ${unitEcon1x.totalCloudBillUsd.toLocaleString()}/mo
+                  </strong>{' '}
+                  (${unitEcon1x.costPerMauUsd}/MAU) · Runway:{' '}
+                  <strong>{unitEcon1x.creditRunwayMonths} mo</strong>
+                </div>
+                <div className="text-[10.5px] text-zinc-500">
+                  Breakdown: Cloud Run ${unitEcon1x.cloudRunMonthlyUsd} · Vertex AI (Cached) ${unitEcon1x.vertexAiMonthlyUsd} · Data/Egress ${unitEcon1x.dataAndEgressUsd}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                    10X Viral Breakout ({unitEcon10x.mau.toLocaleString()} MAU)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-extrabold">
+                    MRR: ${unitEcon10x.monthlyMrrUsd.toLocaleString()}/mo
+                  </span>
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  10X GCP Cloud Bill:{' '}
+                  <strong className="text-zinc-950 dark:text-zinc-50">
+                    ${unitEcon10x.totalCloudBillUsd.toLocaleString()}/mo
+                  </strong>{' '}
+                  · Gross Margin: <strong>{unitEcon10x.grossMarginPct}%</strong> · Runway:{' '}
+                  <strong>{unitEcon10x.creditRunwayMonths} mo</strong>
+                </div>
+                <div className="text-[10.5px] text-zinc-500">
+                  Breakdown: Cloud Run ${unitEcon10x.cloudRunMonthlyUsd} · Vertex AI (Cached) ${unitEcon10x.vertexAiMonthlyUsd} · Data/Egress ${unitEcon10x.dataAndEgressUsd}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* 2. Actionable Cost Optimization Findings (if any detected on live resources) */}
           {(runway.vampireItems || []).length > 0 && (
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
@@ -1152,8 +1515,35 @@ export default function Startup10xMentorStudio({
                 )}
               </div>
               {bucketFindings.length === 0 ? (
-                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
-                  ✓ 0 Cloud Storage buckets in <code className="font-bold">{projectId}</code> ($0.00/mo storage burn · 5 GB US Standard free tier available).
+                <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs font-mono">
+                  <div className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    ✓ 0 Cloud Storage buckets in <code className="font-bold">{projectId}</code> ($0.00/mo storage burn · 5 GB US Standard free tier ready).
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                    <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                      Need a pre-hardened bucket with Public Access Prevention + 30d Nearline Lifecycle?
+                    </span>
+                    <button
+                      type="button"
+                      disabled={
+                        busyTarget ===
+                        `BOOTSTRAP_STARTUP_BUCKET:${projectId}-startup-vault`
+                      }
+                      onClick={() =>
+                        handleLiveRemediate(
+                          'BOOTSTRAP_STARTUP_BUCKET',
+                          `${projectId}-startup-vault`,
+                          'US'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      {busyTarget ===
+                      `BOOTSTRAP_STARTUP_BUCKET:${projectId}-startup-vault`
+                        ? 'Provisioning Vault...'
+                        : `1-Click Provision gs://${projectId}-startup-vault`}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 bucketFindings.map((b) => (
@@ -1225,8 +1615,35 @@ export default function Startup10xMentorStudio({
                 )}
               </div>
               {datasetFindings.length === 0 ? (
-                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
-                  ✓ 0 BigQuery datasets in <code className="font-bold">{projectId}</code> ($0.00/mo warehouse burn · 10 GB storage + 1 TB queries/mo free tier available).
+                <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs font-mono">
+                  <div className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    ✓ 0 BigQuery datasets in <code className="font-bold">{projectId}</code> ($0.00/mo warehouse burn · 10 GB storage + 1 TB queries/mo free tier ready).
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                    <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                      Need a product analytics warehouse with 168h Time-Travel &amp; 60d partition expiry?
+                    </span>
+                    <button
+                      type="button"
+                      disabled={
+                        busyTarget ===
+                        'BOOTSTRAP_STARTUP_BQ_DATASET:startup_analytics'
+                      }
+                      onClick={() =>
+                        handleLiveRemediate(
+                          'BOOTSTRAP_STARTUP_BQ_DATASET',
+                          'startup_analytics',
+                          'US'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      {busyTarget ===
+                      'BOOTSTRAP_STARTUP_BQ_DATASET:startup_analytics'
+                        ? 'Provisioning Warehouse...'
+                        : `1-Click Provision ${projectId}:startup_analytics`}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 datasetFindings.map((d) => (
@@ -1324,21 +1741,39 @@ export default function Startup10xMentorStudio({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Live Open 0.0.0.0/0 Firewall Rules */}
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
                   World-Open 0.0.0.0/0 Ingress Firewalls ({soc2Blockers.openFirewalls.length})
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                    soc2Blockers.openFirewalls.length === 0
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  }`}
-                >
-                  {soc2Blockers.openFirewalls.length === 0
-                    ? '✓ SOC2 PASS'
-                    : 'ACTION RECOMMENDED'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {soc2Blockers.openFirewalls.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={
+                        busyTarget === 'LOCK_ALL_OPEN_FIREWALLS_IAP:ALL'
+                      }
+                      onClick={() =>
+                        handleLiveRemediate('LOCK_ALL_OPEN_FIREWALLS_IAP', 'ALL')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      {busyTarget === 'LOCK_ALL_OPEN_FIREWALLS_IAP:ALL'
+                        ? 'Locking All...'
+                        : `1-Click Lock All (${soc2Blockers.openFirewalls.length}) to Cloud IAP`}
+                    </button>
+                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                      soc2Blockers.openFirewalls.length === 0
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
+                    {soc2Blockers.openFirewalls.length === 0
+                      ? '✓ SOC2 PASS'
+                      : 'ACTION RECOMMENDED'}
+                  </span>
+                </div>
               </div>
               {soc2Blockers.openFirewalls.length === 0 ? (
                 <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
@@ -1407,6 +1842,60 @@ export default function Startup10xMentorStudio({
               </div>
             </div>
           </div>
+
+          {/* 6-Control Live B2B Enterprise Security & SOC2 Questionnaire Auto-Responder */}
+          {Array.isArray(soc2Blockers.soc2EvidenceControls) &&
+            soc2Blockers.soc2EvidenceControls.length > 0 && (
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
+                      B2B Enterprise Security Questionnaire &amp; SOC2 Live Evidence Matrix (6 Controls)
+                    </div>
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Auto-generated from live GCP control-plane state on <code className="font-mono font-bold">{projectId}</code> — copy any row into customer security questionnaires.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportFounderPacket}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                  >
+                    Export Full SOC2 Evidence (.md)
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs font-mono">
+                  {soc2Blockers.soc2EvidenceControls.map((ctrl) => (
+                    <div
+                      key={ctrl.controlId}
+                      className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                          {ctrl.controlId}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            ctrl.status === 'PASS'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                          }`}
+                        >
+                          {ctrl.status === 'PASS' ? '✓ PASS' : 'ACTION NEEDED'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-700 dark:text-zinc-300 font-bold">
+                        {ctrl.question}
+                      </div>
+                      <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                        Live Proof: {ctrl.liveEvidence}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       )}
 
