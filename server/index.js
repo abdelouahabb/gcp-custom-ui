@@ -14208,10 +14208,10 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
   if (accessToken && rawQuery.trim().split(/\s+/).length >= 2) {
     try {
       const selectedModelId = encryptedAiStudioVault?.model || 'gemini-3.8-flash';
-      const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+      const vertexUrl = `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
         projectId
-      )}/locations/us-central1/publishers/google/models/${encodeURIComponent(
-        selectedModelId
+      )}/locations/global/publishers/google/models/${encodeURIComponent(
+        selectedModelId === 'gemini-3.1-pro' ? 'gemini-3.1-pro-preview' : selectedModelId
       )}:generateContent`;
       const resp = await gcpHttp.post(
         vertexUrl,
@@ -43606,10 +43606,14 @@ app.post(
           try {
             const vertexRes = await gcpApiRequest({
               method: 'POST',
-              url: `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+              url: `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
                 projectId
-              )}/locations/us-central1/publishers/google/models/${encodeURIComponent(
-                selectedModel.startsWith('gemini') ? selectedModel : 'gemini-3.8-flash'
+              )}/locations/global/publishers/google/models/${encodeURIComponent(
+                selectedModel === 'gemini-3.1-pro'
+                  ? 'gemini-3.1-pro-preview'
+                  : selectedModel.startsWith('gemini')
+                  ? selectedModel
+                  : 'gemini-3.8-flash'
               )}:generateContent`,
               token,
               quotaProject: projectId,
@@ -52126,7 +52130,7 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
 
     try {
       const vertexRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
+        `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [
             {
@@ -53319,7 +53323,7 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
 
     try {
       const vertexRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [
             {
@@ -54238,7 +54242,7 @@ Do NOT use any emojis.`;
     let engineUsed = 'vertex-ai-gemini-3.8-flash';
     try {
       const vRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [{ role: 'user', parts: [{ text: promptText }] }],
           generationConfig: {
@@ -55208,9 +55212,9 @@ app.post('/api/project/:projectId/wave15/logging-ai-surgeon', async (req, res) =
     let modelUsed = 'vertex-ai-gemini-3.8-flash';
     try {
       const vRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
           projectId
-        )}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
+        )}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
@@ -60807,10 +60811,10 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
   const t0 = Date.now();
   const isProRequested = String(model || '').includes('pro');
   const selectedModel = isProRequested ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
-  // Map 2026 UI aliases directly to real live Vertex AI / AI Studio production model IDs first so zero time is wasted on 404s
+  // Strictly Gemini 3.x models only (served on Vertex AI locations/global & Google AI Studio)
   const candidateModels = isProRequested
-    ? ['gemini-2.5-pro', 'gemini-2.5-flash']
-    : ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
+    : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
 
   try {
     const { token, account } = await resolveRequestAuth(req);
@@ -60933,13 +60937,13 @@ Format your response with clear Markdown headings:${
     }
 
     // ========================================================================
-    // ENGINE 2: KEYLESS GOOGLE CLOUD VERTEX AI (`aiplatform.googleapis.com`) VIA USER'S GCP OAUTH2 TOKEN
+    // ENGINE 2: KEYLESS GOOGLE CLOUD VERTEX AI (`aiplatform.googleapis.com` locations/global) VIA USER'S GCP OAUTH2 TOKEN
     // ========================================================================
     if (!briefingMarkdown && preferredProvider !== 'AI_STUDIO_KEY') {
       const encProj = encodeURIComponent(projectId);
       for (const cand of candidateModels) {
         try {
-          const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encProj}/locations/us-central1/publishers/google/models/${encodeURIComponent(
+          const vertexUrl = `https://aiplatform.googleapis.com/v1/projects/${encProj}/locations/global/publishers/google/models/${encodeURIComponent(
             cand
           )}:generateContent`;
           const vRes = await gcpFetch(vertexUrl, token, projectId, {
@@ -60949,9 +60953,9 @@ Format your response with clear Markdown headings:${
               generationConfig: {
                 temperature: 0.2,
                 maxOutputTokens: 2048,
-                ...(cand.includes('2.5-flash')
-                  ? { thinkingConfig: { thinkingBudget: 0 } }
-                  : {}),
+                thinkingConfig: {
+                  thinkingBudget: isProRequested ? 512 : 128,
+                },
               },
             },
             timeout: 45000,
@@ -60977,9 +60981,9 @@ Format your response with clear Markdown headings:${
               thoughtTokens: usage.thoughtsTokenCount || 0,
               totalTokens: usage.totalTokenCount || 0,
             };
-            engineUsed = `Live Google Cloud Vertex AI (us-central1-aiplatform.googleapis.com · ${cand} · Keyless GCP OAuth2)`;
+            engineUsed = `Live Google Cloud Vertex AI (aiplatform.googleapis.com/locations/global · ${cand} · Keyless GCP OAuth2)`;
             diagnostics.push(
-              `[VERTEX_AI_SUCCESS] Generated live keyless response via us-central1-aiplatform.googleapis.com (${cand}, ${
+              `[VERTEX_AI_SUCCESS] Generated live keyless response via aiplatform.googleapis.com/locations/global (${cand}, ${
                 tokenUsage.totalTokens
               } tokens).`
             );

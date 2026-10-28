@@ -2104,8 +2104,8 @@ export default function AutonomousCloudSocStudio({
                   onChange={(e) => setSelectedAiModel(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
                 >
-                  <option value="gemini-3.8-flash">gemini-3.8-flash / 2.5-flash (Fast SOC Triage)</option>
-                  <option value="gemini-3.1-pro">gemini-3.1-pro / 2.5-pro (Deep Forensic Reasoning)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Fast SOC Triage)</option>
+                  <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Forensic Reasoning)</option>
                 </select>
                 <button
                   type="button"
@@ -2160,7 +2160,7 @@ export default function AutonomousCloudSocStudio({
                   )}
                 </div>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  Uses your active Google Cloud login token against <code className="font-mono">us-central1-aiplatform.googleapis.com</code> and <code className="font-mono">generativelanguage.googleapis.com</code>. Zero API keys required.
+                  Uses your active Google Cloud login token against <code className="font-mono">aiplatform.googleapis.com (locations/global)</code> for <code className="font-mono">gemini-3.8-flash</code> &amp; <code className="font-mono">gemini-3.1-pro</code>. Zero API keys required.
                 </p>
               </div>
 
