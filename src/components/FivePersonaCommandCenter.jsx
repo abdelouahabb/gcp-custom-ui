@@ -22,6 +22,7 @@ import {
   Activity,
 } from 'lucide-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const PERSONA_TABS = [
   {
@@ -1666,6 +1667,12 @@ export default function FivePersonaCommandCenter({
                   </button>
                 </div>
               </div>
+
+              <ZeroSniffingWebCryptoEnclaveBar
+                projectId={projectId}
+                selectedModel={intentModel}
+                compact
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
                 {[

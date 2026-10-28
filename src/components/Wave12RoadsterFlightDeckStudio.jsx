@@ -17,6 +17,7 @@ import {
   Database,
   Activity,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const FLIGHT_DECK_TABS = [
   {
@@ -1175,6 +1176,13 @@ export default function Wave12RoadsterFlightDeckStudio({
               documentation into an actionable mission plan.
             </p>
           </div>
+
+          <ZeroSniffingWebCryptoEnclaveBar
+            projectId={projectId}
+            selectedModel="gemini-3.8-flash"
+            onShowToast={notify}
+            compact
+          />
 
           <div className="flex flex-wrap gap-1.5">
             {MISSION_PRESETS.map((pr) => (

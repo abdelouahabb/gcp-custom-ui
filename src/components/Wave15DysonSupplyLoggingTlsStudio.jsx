@@ -15,6 +15,7 @@ import {
   Terminal,
   Globe,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const WAVE15_TABS = [
   {
@@ -1099,6 +1100,12 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 </button>
               </div>
             </div>
+
+            <ZeroSniffingWebCryptoEnclaveBar
+              projectId={projectId}
+              selectedModel="gemini-3.8-flash"
+              compact
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>

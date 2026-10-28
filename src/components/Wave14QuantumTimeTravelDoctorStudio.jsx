@@ -16,6 +16,7 @@ import {
   Wrench,
   Users,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const WAVE14_TABS = [
   {
@@ -1068,6 +1069,12 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 </button>
               </div>
             </div>
+
+            <ZeroSniffingWebCryptoEnclaveBar
+              projectId={projectId}
+              selectedModel="gemini-3.8-flash"
+              compact
+            />
 
             {iamData && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

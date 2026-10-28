@@ -20,6 +20,7 @@ import {
   Search,
   ExternalLink,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const CATEGORY_LABELS = {
   ALL: 'All 48 Official MCP Servers',
@@ -1672,6 +1673,13 @@ export default function GoogleCloudRemoteMcpStudio({
               </select>
             </div>
           </div>
+
+          <ZeroSniffingWebCryptoEnclaveBar
+            projectId={projectId}
+            selectedModel={agentModel}
+            onShowToast={notify}
+            compact
+          />
 
           <div className="flex flex-wrap items-center gap-1.5">
             {REVIEW_PRESET_PROMPTS.map((preset) => (

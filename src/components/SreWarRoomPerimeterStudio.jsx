@@ -32,6 +32,7 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const SRE_PILLARS = [
   {
@@ -2166,6 +2167,12 @@ export default function SreWarRoomPerimeterStudio({
               ))}
             </div>
           </div>
+
+          <ZeroSniffingWebCryptoEnclaveBar
+            projectId={projectId}
+            selectedModel={aiModel}
+            compact
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             {[
