@@ -2382,167 +2382,196 @@ Format your response with clear Markdown headings:${
               </div>
             </div>
 
-            {/* Dual-Path Live Credential & Engine Readiness Bar (Keyless Vertex AI OAuth2 + Optional AI Studio Key Vault) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800">
+            {/* Dual-Path Live Credential & Engine Readiness Bar (Dynamically adapts to selected Engine) */}
+            <div
+              className={`grid grid-cols-1 ${
+                aiPreferredProvider === 'AUTO' ? 'lg:grid-cols-2' : ''
+              } gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800`}
+            >
               {/* Path A: Keyless Google Cloud Vertex AI (OAuth2 Token) */}
-              <div
-                data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
-                className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
-                      Path A · Keyless Vertex AI (GCP OAuth2 Token)
-                    </span>
-                    <span
-                      data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                        socData?.aiCommanderStatus?.vertexAiApiEnabled
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
-                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
-                      }`}
-                    >
-                      {socData?.aiCommanderStatus?.vertexAiApiEnabled
-                        ? '🟢 VERTEX AI API ENABLED'
-                        : '🟡 VERTEX AI API NOT ENABLED'}
-                    </span>
+              {(aiPreferredProvider === 'VERTEX_AI_OAUTH' ||
+                aiPreferredProvider === 'AUTO') && (
+                <div
+                  data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
+                  className={`p-3 rounded-lg bg-white dark:bg-zinc-950 border flex flex-col justify-between gap-2 ${
+                    aiPreferredProvider === 'VERTEX_AI_OAUTH'
+                      ? 'border-emerald-500/60 ring-1 ring-emerald-500/20'
+                      : 'border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                        Path A · Keyless Vertex AI (GCP OAuth2 Token)
+                      </span>
+                      <span
+                        data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                          socData?.aiCommanderStatus?.vertexAiApiEnabled
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                            : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                        }`}
+                      >
+                        {socData?.aiCommanderStatus?.vertexAiApiEnabled
+                          ? aiPreferredProvider === 'VERTEX_AI_OAUTH'
+                            ? '🟢 ACTIVE ENGINE · NO API KEY NEEDED'
+                            : '🟢 VERTEX AI API ENABLED'
+                          : '🟡 VERTEX AI API NOT ENABLED'}
+                      </span>
+                    </div>
+                    {!socData?.aiCommanderStatus?.vertexAiApiEnabled && (
+                      <button
+                        type="button"
+                        data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
+                        onClick={() =>
+                          handleExecuteSocAction('ENABLE_VERTEX_AI_FOR_SOC', {
+                            action: 'ENABLE_VERTEX_AI_FOR_SOC',
+                          })
+                        }
+                        disabled={Boolean(actionBusy)}
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC'
+                          ? 'Enabling Vertex AI...'
+                          : '⚡ 1-Click Enable Vertex AI (No API Key Needed)'}
+                      </button>
+                    )}
                   </div>
-                  {!socData?.aiCommanderStatus?.vertexAiApiEnabled && (
-                    <button
-                      type="button"
-                      data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
-                      onClick={() =>
-                        handleExecuteSocAction('ENABLE_VERTEX_AI_FOR_SOC', {
-                          action: 'ENABLE_VERTEX_AI_FOR_SOC',
-                        })
-                      }
-                      disabled={Boolean(actionBusy)}
-                      className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                    >
-                      {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC'
-                        ? 'Enabling Vertex AI...'
-                        : '⚡ 1-Click Enable Vertex AI (No API Key Needed)'}
-                    </button>
-                  )}
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Uses your active Google Cloud login token against{' '}
+                    <code className="font-mono">aiplatform.googleapis.com (locations/global)</code>{' '}
+                    for <code className="font-mono">gemini-3.8-flash</code> &amp;{' '}
+                    <code className="font-mono">gemini-3.1-pro</code>. Zero API keys required.
+                  </p>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  Uses your active Google Cloud login token against <code className="font-mono">aiplatform.googleapis.com (locations/global)</code> for <code className="font-mono">gemini-3.8-flash</code> &amp; <code className="font-mono">gemini-3.1-pro</code>. Zero API keys required.
-                </p>
-              </div>
+              )}
 
               {/* Path B: Google AI Studio API Key (WebCrypto Enclave + RSA-OAEP-256 / AES-256-GCM RAM Vault) */}
-              <div
-                data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
-                className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
-                      Path B · Zero-Sniffing AI Studio Enclave (<code className="font-mono">AIzaSy...</code>)
-                    </span>
-                    <span
-                      data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                        browserSocVaultMeta.configured ||
+              {(aiPreferredProvider === 'AI_STUDIO_KEY' ||
+                aiPreferredProvider === 'AUTO') && (
+                <div
+                  data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
+                  className={`p-3 rounded-lg bg-white dark:bg-zinc-950 border flex flex-col justify-between gap-2 ${
+                    aiPreferredProvider === 'AI_STUDIO_KEY'
+                      ? 'border-blue-500/60 ring-1 ring-blue-500/20'
+                      : 'border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                        Path B · Zero-Sniffing AI Studio Enclave (
+                        <code className="font-mono">AIzaSy...</code>)
+                      </span>
+                      <span
+                        data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                          browserSocVaultMeta.configured ||
+                          socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
+                          aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {browserSocVaultMeta.configured ||
                         socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
                         aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                      }`}
-                    >
-                      {browserSocVaultMeta.configured ||
+                          ? `🔒 SEALED (${
+                              browserSocVaultMeta.maskedKey ||
+                              aiBriefing?.aiCommanderStatus?.aiStudioMaskedKey ||
+                              socData?.aiCommanderStatus?.aiStudioMaskedKey ||
+                              'AIza••••'
+                            } · ${
+                              browserSocVaultMeta.keyFingerprint ||
+                              socData?.aiCommanderStatus?.aiStudioKeyFingerprint ||
+                              'AES-256-GCM'
+                            })`
+                          : aiPreferredProvider === 'AI_STUDIO_KEY'
+                          ? '⚠️ PASTE & SEAL AIzaSy... KEY BELOW'
+                          : 'OPTIONAL · NOT CONFIGURED'}
+                      </span>
+                    </div>
+                    {(browserSocVaultMeta.configured ||
                       socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
-                      aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
-                        ? `🔒 SEALED (${
-                            browserSocVaultMeta.maskedKey ||
-                            aiBriefing?.aiCommanderStatus?.aiStudioMaskedKey ||
-                            socData?.aiCommanderStatus?.aiStudioMaskedKey ||
-                            'AIza••••'
-                          } · ${
-                            browserSocVaultMeta.keyFingerprint ||
-                            socData?.aiCommanderStatus?.aiStudioKeyFingerprint ||
-                            'AES-256-GCM'
-                          })`
-                        : 'OPTIONAL · NOT CONFIGURED'}
-                    </span>
+                      aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured) && (
+                      <button
+                        type="button"
+                        data-feature-id="SOC_AI_CLEAR_KEY_BTN"
+                        onClick={handleClearAiStudioKey}
+                        disabled={aiKeySaving}
+                        className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Clear Key
+                      </button>
+                    )}
                   </div>
-                  {(browserSocVaultMeta.configured ||
-                    socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
-                    aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured) && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="password"
+                      data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
+                      value={inlineApiKeyInput}
+                      onChange={(e) => setInlineApiKeyInput(e.target.value)}
+                      placeholder="Paste AIzaSy... key (protected by WebCrypto / RSA-OAEP-256)..."
+                      className="flex-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                    />
                     <button
                       type="button"
-                      data-feature-id="SOC_AI_CLEAR_KEY_BTN"
-                      onClick={handleClearAiStudioKey}
-                      disabled={aiKeySaving}
-                      className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                      data-feature-id="SOC_AI_SEAL_KEY_BTN"
+                      onClick={handleSealAiStudioKey}
+                      disabled={aiKeySaving || !inlineApiKeyInput.trim()}
+                      className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
                     >
-                      Clear Key
+                      {aiKeySaving ? 'Sealing...' : '🔒 Seal Key'}
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="password"
-                    data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
-                    value={inlineApiKeyInput}
-                    onChange={(e) => setInlineApiKeyInput(e.target.value)}
-                    placeholder="Paste AIzaSy... key (protected by WebCrypto / RSA-OAEP-256)..."
-                    className="flex-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
-                  />
+              )}
+            </div>
+
+            {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — only shown when Path B (AI Studio Key) is visible */}
+            {(aiPreferredProvider === 'AI_STUDIO_KEY' ||
+              aiPreferredProvider === 'AUTO') && (
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <div
+                  data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
+                  className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+                >
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span className="font-bold">
+                    Anti-Sniffing Wire Protection (Safe on <code>http://localhost</code>):
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    data-feature-id="SOC_AI_SEAL_KEY_BTN"
-                    onClick={handleSealAiStudioKey}
-                    disabled={aiKeySaving || !inlineApiKeyInput.trim()}
-                    className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                    data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
+                    onClick={() => setAiTransportMode('BROWSER_DIRECT_TLS13')}
+                    title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key ever traverse local HTTP!"
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
+                      aiTransportMode === 'BROWSER_DIRECT_TLS13'
+                        ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/50'
+                    }`}
                   >
-                    {aiKeySaving ? 'Sealing...' : '🔒 Seal Key'}
+                    Mode 1: Direct Browser → Google HTTPS TLS 1.3 (0 Local HTTP Packets)
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
+                    onClick={() => setAiTransportMode('RSA_OAEP_SERVER_VAULT')}
+                    title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
+                      aiTransportMode === 'RSA_OAEP_SERVER_VAULT'
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
+                    }`}
+                  >
+                    Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM RAM (
+                    {socData?.aiCommanderStatus?.rsaKeyFingerprint || 'RSA2048-OAEP-SHA256'})
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector (Safe on http://localhost) */}
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-              <div
-                data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
-                className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
-              >
-                <Lock className="w-4 h-4 shrink-0" />
-                <span className="font-bold">
-                  Anti-Sniffing Wire Protection (Safe on <code>http://localhost</code>):
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  data-feature-id="ANTI_SNIFFING_MODE1_DIRECT_TLS13"
-                  onClick={() => setAiTransportMode('BROWSER_DIRECT_TLS13')}
-                  title="Mode 1 (Recommended on http://localhost): Seals your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave and calls https://generativelanguage.googleapis.com directly over HTTPS TLS 1.3. Zero bytes of your API key ever traverse local HTTP!"
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
-                    aiTransportMode === 'BROWSER_DIRECT_TLS13'
-                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/50'
-                  }`}
-                >
-                  Mode 1: Direct Browser → Google HTTPS TLS 1.3 (0 Local HTTP Packets)
-                </button>
-                <button
-                  type="button"
-                  data-feature-id="ANTI_SNIFFING_MODE2_RSA_OAEP_VAULT"
-                  onClick={() => setAiTransportMode('RSA_OAEP_SERVER_VAULT')}
-                  title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer ${
-                    aiTransportMode === 'RSA_OAEP_SERVER_VAULT'
-                      ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
-                  }`}
-                >
-                  Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM RAM (
-                  {socData?.aiCommanderStatus?.rsaKeyFingerprint || 'RSA2048-OAEP-SHA256'})
-                </button>
-              </div>
-            </div>
+            )}
 
             {/* Interactive Custom Forensic Question Bar & Quick Investigation Presets */}
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2">

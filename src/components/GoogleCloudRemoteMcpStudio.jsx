@@ -1677,6 +1677,8 @@ export default function GoogleCloudRemoteMcpStudio({
           <ZeroSniffingWebCryptoEnclaveBar
             projectId={projectId}
             selectedModel={agentModel}
+            preferredProvider={agentPreferredProvider}
+            onChangePreferredProvider={setAgentPreferredProvider}
             onShowToast={notify}
             compact
           />
@@ -1706,13 +1708,27 @@ export default function GoogleCloudRemoteMcpStudio({
               type="submit"
               data-feature-id="MCP_EXECUTE_GROUNDED_REVIEW"
               disabled={runningAgent}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className={`inline-flex items-center gap-2 rounded-md text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 ${
+                agentPreferredProvider === 'VERTEX_AI_OAUTH'
+                  ? 'bg-emerald-600 hover:bg-emerald-500'
+                  : 'bg-blue-600 hover:bg-blue-500'
+              }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
                 {runningAgent
-                  ? `Calling 5 Official *.googleapis.com/mcp Servers + Live ${agentModel}...`
-                  : `Execute Grounded Multi-MCP Review (${agentModel})`}
+                  ? `Calling 5 Official *.googleapis.com/mcp Servers + Live ${agentModel} (${
+                      agentPreferredProvider === 'VERTEX_AI_OAUTH'
+                        ? 'Keyless Vertex AI OAuth2'
+                        : agentPreferredProvider === 'AI_STUDIO_KEY'
+                        ? 'Sealed AI Studio Key'
+                        : 'Auto Dual-Engine'
+                    })...`
+                  : agentPreferredProvider === 'VERTEX_AI_OAUTH'
+                  ? `Execute Grounded Multi-MCP Review via Keyless Vertex AI (${agentModel} · No API Key)`
+                  : agentPreferredProvider === 'AI_STUDIO_KEY'
+                  ? `Execute Grounded Multi-MCP Review via Sealed AI Studio Key (${agentModel})`
+                  : `Execute Grounded Multi-MCP Review (${agentModel} · Auto Dual-Engine)`}
               </span>
             </button>
           </form>

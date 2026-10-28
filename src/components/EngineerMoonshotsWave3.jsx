@@ -688,6 +688,7 @@ US_TAXPAYER_SSN=123-45-6789
   const [browserVaultConfigured, setBrowserVaultConfigured] = useState(false);
 
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [aiPreferredProvider, setAiPreferredProvider] = useState('AUTO');
   const [selectedGeminiModel, setSelectedGeminiModel] =
     useState('gemini-3.8-flash');
   const [customModelId, setCustomModelId] = useState('');
@@ -1041,13 +1042,18 @@ US_TAXPAYER_SSN=123-45-6789
         }
         return;
       }
-    } else if (!isAnyVaultConfigured && !browserVaultRef.current) {
+    } else if (
+      aiPreferredProvider === 'AI_STUDIO_KEY' &&
+      !isAnyVaultConfigured &&
+      !browserVaultRef.current
+    ) {
       focusAndHighlightKeyInput();
       if (onShowToast) {
         onShowToast(
-          `No API Key in Vault yet — showing Offline Deterministic Preview. Paste an AIzaSy... key above to unlock live ${activeModel}!`
+          `Path B (AI Studio Key Only) is selected — please paste an AIzaSy... key above or switch to Path A (Keyless Vertex AI)!`
         );
       }
+      return;
     }
 
     setAskingAi(true);
@@ -1087,7 +1093,11 @@ US_TAXPAYER_SSN=123-45-6789
       const browserDecryptedKey = await decryptKeyFromBrowserWebCrypto().catch(
         () => null
       );
-      if (browserDecryptedKey && transportMode === 'BROWSER_DIRECT_TLS13') {
+      if (
+        aiPreferredProvider !== 'VERTEX_AI_OAUTH' &&
+        browserDecryptedKey &&
+        transportMode === 'BROWSER_DIRECT_TLS13'
+      ) {
         const systemContext = `You are the CloudPulse 2026 Principal Google Cloud SRE, Security & FinOps Architect (powered by ${activeModel}) for GCP project "${projectId}".
 Live Project Telemetry Snapshot:
 ${JSON.stringify(telemetrySummary, null, 2)}
@@ -1167,12 +1177,13 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
         );
       }
 
-      // PATH B: Server Vault (RSA-OAEP-256 Wire Envelope -> Server AES-256-GCM RAM -> Outbound HTTPS TLS 1.3) or Zero-Key Deterministic Preview
+      // PATH B: Server Vault (RSA-OAEP-256 Wire Envelope -> Server AES-256-GCM RAM -> Outbound HTTPS TLS 1.3) or Keyless Vertex AI OAuth2
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/ai-vault/ask`,
         {
           prompt: customPrompt,
           model: activeModel,
+          preferredProvider: aiPreferredProvider,
           telemetrySummary,
         }
       );
@@ -1999,25 +2010,60 @@ CMD ["server/index.js"]`;
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleDiscoverLiveModels}
-            disabled={discoveringModels}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
-            title="Query Google AI Studio /v1beta/models over HTTPS TLS 1.3 to auto-discover newly released Gemini models"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${discoveringModels ? 'animate-spin' : ''}`}
-            />
-            <span>
-              {discoveringModels
-                ? 'Syncing Models...'
-                : 'Sync Live AI Studio Models'}
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={aiPreferredProvider}
+              onChange={(e) => setAiPreferredProvider(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+              title="Choose which engine executes live Gemini inference"
+            >
+              <option value="AUTO">Engine: Auto (Vertex AI OAuth2 + AI Studio Key)</option>
+              <option value="VERTEX_AI_OAUTH">Engine: Path A · Keyless Vertex AI Only (No Key)</option>
+              <option value="AI_STUDIO_KEY">Engine: Path B · AI Studio Key Only (AIzaSy...)</option>
+            </select>
+            <button
+              type="button"
+              onClick={handleDiscoverLiveModels}
+              disabled={discoveringModels}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+              title="Query Google AI Studio /v1beta/models over HTTPS TLS 1.3 to auto-discover newly released Gemini models"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${discoveringModels ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {discoveringModels
+                  ? 'Syncing Models...'
+                  : 'Sync Live AI Studio Models'}
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector */}
+        {/* When Keyless Vertex AI Only is selected, show Path A Card and hide Path B API Key Vault */}
+        {aiPreferredProvider === 'VERTEX_AI_OAUTH' && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div className="space-y-1">
+              <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                <span>🟢 Path A Active · Keyless Google Cloud Vertex AI OAuth2 (No API Key Needed)</span>
+              </div>
+              <div className="text-zinc-600 dark:text-zinc-300 text-[11px]">
+                Authenticates directly with your active Google Cloud login token against{' '}
+                <code>aiplatform.googleapis.com/v1/projects/{projectId}/locations/global</code>. API Key Vault inputs are hidden.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiPreferredProvider('AI_STUDIO_KEY')}
+              className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold cursor-pointer"
+            >
+              Switch to Path B (AIzaSy... Key) →
+            </button>
+          </div>
+        )}
+
+        {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — only shown when Path B (AI Studio Key) is active */}
+        {aiPreferredProvider !== 'VERTEX_AI_OAUTH' && (
         <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
           <div className="flex items-center gap-2 text-emerald-400">
             <Lock className="w-4 h-4 shrink-0" />
@@ -2057,9 +2103,10 @@ CMD ["server/index.js"]`;
             </button>
           </div>
         </div>
+        )}
 
-        {/* 3-Step Interactive Onboarding Guide when no API key is sealed yet */}
-        {!vaultStatus.configured && (
+        {/* 3-Step Interactive Onboarding Guide when no API key is sealed yet and Path B is visible */}
+        {aiPreferredProvider !== 'VERTEX_AI_OAUTH' && !vaultStatus.configured && (
           <div
             className={`p-3.5 rounded-xl border transition-all ${
               missingKeyBanner
@@ -2147,29 +2194,37 @@ CMD ["server/index.js"]`;
           } space-y-2.5`}
         >
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-            <div className="sm:col-span-5">
-              <input
-                ref={apiKeyInputRef}
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => {
-                  setApiKeyInput(e.target.value);
-                  if (e.target.value.trim()) setMissingKeyBanner(false);
-                }}
-                title="Paste your Google AI Studio API key (starts with AIzaSy...). Never written to disk, localStorage, or git."
-                placeholder={
-                  vaultStatus.configured
-                    ? `Sealed: ${vaultStatus.maskedKey} (Enter new key to rotate)`
-                    : 'Paste Google AI Studio Key here (AIzaSy...) to unlock live Gemini 3.8 / 3.1'
-                }
-                className={`w-full bg-zinc-50 dark:bg-zinc-950 border rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 transition-all ${
-                  missingKeyBanner && !vaultStatus.configured
-                    ? 'border-amber-500 ring-2 ring-amber-500/50 placeholder:text-amber-500'
-                    : 'border-zinc-300 dark:border-zinc-700'
-                }`}
-              />
-            </div>
-            <div className="sm:col-span-4">
+            {aiPreferredProvider !== 'VERTEX_AI_OAUTH' && (
+              <div className="sm:col-span-5">
+                <input
+                  ref={apiKeyInputRef}
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => {
+                    setApiKeyInput(e.target.value);
+                    if (e.target.value.trim()) setMissingKeyBanner(false);
+                  }}
+                  title="Paste your Google AI Studio API key (starts with AIzaSy...). Never written to disk, localStorage, or git."
+                  placeholder={
+                    vaultStatus.configured
+                      ? `Sealed: ${vaultStatus.maskedKey} (Enter new key to rotate)`
+                      : 'Paste Google AI Studio Key here (AIzaSy...) to unlock live Gemini 3.8 / 3.1'
+                  }
+                  className={`w-full bg-zinc-50 dark:bg-zinc-950 border rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 transition-all ${
+                    missingKeyBanner && !vaultStatus.configured
+                      ? 'border-amber-500 ring-2 ring-amber-500/50 placeholder:text-amber-500'
+                      : 'border-zinc-300 dark:border-zinc-700'
+                  }`}
+                />
+              </div>
+            )}
+            <div
+              className={
+                aiPreferredProvider === 'VERTEX_AI_OAUTH'
+                  ? 'sm:col-span-12'
+                  : 'sm:col-span-4'
+              }
+            >
               <select
                 value={selectedGeminiModel}
                 onChange={(e) => setSelectedGeminiModel(e.target.value)}
@@ -2186,36 +2241,38 @@ CMD ["server/index.js"]`;
                 </option>
               </select>
             </div>
-            <div className="sm:col-span-3 flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={busyKey === 'seal-key'}
-                title={
-                  transportMode === 'BROWSER_DIRECT_TLS13'
-                    ? 'Encrypt and seal your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave (0 bytes sent over local HTTP)'
-                    : 'Encrypt your API key in the browser with RSA-OAEP-256 and seal it inside the Node.js server AES-256-GCM RAM Vault'
-                }
-                className={`flex-1 px-3 py-2 rounded-md text-white text-xs font-mono font-bold cursor-pointer transition-all ${
-                  apiKeyInput.trim()
-                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
-                    : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-600'
-                }`}
-              >
-                {transportMode === 'BROWSER_DIRECT_TLS13'
-                  ? 'Seal in Browser WebCrypto'
-                  : 'Seal via RSA-OAEP-256'}
-              </button>
-              {vaultStatus.configured && (
+            {aiPreferredProvider !== 'VERTEX_AI_OAUTH' && (
+              <div className="sm:col-span-3 flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={handleClearVault}
-                  className="px-2.5 py-2 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
-                  title="Zero-fill and wipe the encrypted API key from Browser WebCrypto memory and Server RAM Vault"
+                  type="submit"
+                  disabled={busyKey === 'seal-key'}
+                  title={
+                    transportMode === 'BROWSER_DIRECT_TLS13'
+                      ? 'Encrypt and seal your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave (0 bytes sent over local HTTP)'
+                      : 'Encrypt your API key in the browser with RSA-OAEP-256 and seal it inside the Node.js server AES-256-GCM RAM Vault'
+                  }
+                  className={`flex-1 px-3 py-2 rounded-md text-white text-xs font-mono font-bold cursor-pointer transition-all ${
+                    apiKeyInput.trim()
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
+                      : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-600'
+                  }`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {transportMode === 'BROWSER_DIRECT_TLS13'
+                    ? 'Seal in Browser WebCrypto'
+                    : 'Seal via RSA-OAEP-256'}
                 </button>
-              )}
-            </div>
+                {vaultStatus.configured && (
+                  <button
+                    type="button"
+                    onClick={handleClearVault}
+                    className="px-2.5 py-2 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
+                    title="Zero-fill and wipe the encrypted API key from Browser WebCrypto memory and Server RAM Vault"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quick-Switch Pill Bar for 3.8-flash & 3.1-pro + Custom Model Input */}
