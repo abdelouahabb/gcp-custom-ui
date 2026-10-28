@@ -15,7 +15,14 @@ import {
   Unlock,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  Terminal,
+  Activity,
+  Cpu,
+  Database,
+  Server,
 } from 'lucide-react';
+import ZeroSniffingWebCryptoEnclaveBar from './ZeroSniffingWebCryptoEnclaveBar';
 
 const CORE_WATCHED_APIS = [
   {
@@ -75,17 +82,41 @@ export default function EmergencyApiKillSwitch({
   enabledApis = [],
   onRefresh,
   onOpenFinOps,
+  onNavigateTab,
+  onRunInShell,
   onShowToast,
   onShowError,
 }) {
-  // 1) Project-Wide Billing Kill-Switch State
+  // 1) Project-Wide Billing Kill-Switch & Soft-Freeze State
   const [billingStatus, setBillingStatus] = useState(null);
   const [loadingBilling, setLoadingBilling] = useState(false);
   const [confirmKillBilling, setConfirmKillBilling] = useState(false);
   const [stopAllVmsOnKill, setStopAllVmsOnKill] = useState(true);
+  const [scaleDownCloudRunOnKill, setScaleDownCloudRunOnKill] = useState(true);
+  const [stopCloudSqlOnKill, setStopCloudSqlOnKill] = useState(true);
   const [togglingBilling, setTogglingBilling] = useState(false);
+  const [lastIncidentReceipt, setLastIncidentReceipt] = useState(null);
   const [selectedRestoreBillingAccount, setSelectedRestoreBillingAccount] =
     useState('');
+
+  // 1.2) Zero-Sniffing WebCrypto Enclave + Live Gemini DEFCON-1 Cost-Bleed Advisor + Remote MCP Verification
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState(
+    () =>
+      (typeof window !== 'undefined' &&
+        window.localStorage.getItem('cp_enclave_selected_model_v1')) ||
+      'gemini-2.5-flash'
+  );
+  const [geminiPreferredProvider, setGeminiPreferredProvider] = useState(
+    () =>
+      (typeof window !== 'undefined' &&
+        window.localStorage.getItem('cp_enclave_preferred_provider_v1')) ||
+      'AUTO'
+  );
+  const [geminiAdvice, setGeminiAdvice] = useState(null);
+  const [loadingGeminiAdvice, setLoadingGeminiAdvice] = useState(false);
+  const [mcpVerification, setMcpVerification] = useState(null);
+  const [verifyingMcp, setVerifyingMcp] = useState(false);
 
   // 1.5) Native Cloud Billing Spend Cap Circuit-Breaker State (`billingbudgets.googleapis.com/v1`)
   const [spendCapCatalog, setSpendCapCatalog] = useState(null);
@@ -138,6 +169,9 @@ export default function EmergencyApiKillSwitch({
         `/api/project/${encodeURIComponent(projectId)}/billing`
       );
       setBillingStatus(res.data);
+      if (res.data?.lastIncidentReceipt) {
+        setLastIncidentReceipt(res.data.lastIncidentReceipt);
+      }
       if (res.data?.previousBillingAccountName) {
         setSelectedRestoreBillingAccount(res.data.previousBillingAccountName);
       } else if (res.data?.openBillingAccounts?.[0]?.name) {
@@ -287,6 +321,7 @@ export default function EmergencyApiKillSwitch({
 
   const handleBillingKillSwitch = async (action) => {
     setConfirmKillBilling(false);
+    const isFreezeOrDisable = action === 'DISABLE' || action === 'SOFT_FREEZE';
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/billing/kill-switch`,
@@ -294,7 +329,9 @@ export default function EmergencyApiKillSwitch({
           action,
           billingAccountName:
             action === 'ENABLE' ? selectedRestoreBillingAccount : '',
-          stopAllVms: action === 'DISABLE' ? stopAllVmsOnKill : false,
+          stopAllVms: isFreezeOrDisable ? stopAllVmsOnKill : false,
+          scaleDownCloudRun: isFreezeOrDisable ? scaleDownCloudRunOnKill : false,
+          stopCloudSql: isFreezeOrDisable ? stopCloudSqlOnKill : false,
         },
         {
           __onGatekeeperConfirmed: () => {
@@ -302,6 +339,9 @@ export default function EmergencyApiKillSwitch({
           },
         }
       );
+      if (res.data?.incidentReceipt) {
+        setLastIncidentReceipt(res.data.incidentReceipt);
+      }
       if (res.data?.billing) {
         setBillingStatus(res.data.billing);
         if (res.data.billing.previousBillingAccountName) {
@@ -315,7 +355,9 @@ export default function EmergencyApiKillSwitch({
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            (action === 'DISABLE'
+            (action === 'SOFT_FREEZE'
+              ? `Executed $0 Idle Soft-Freeze Hibernation on ${projectId}!`
+              : action === 'DISABLE'
               ? `Unlinked Billing Account from ${projectId}!`
               : `Re-linked Billing Account to ${projectId}!`)
         );
@@ -332,6 +374,106 @@ export default function EmergencyApiKillSwitch({
       }
     } finally {
       setTogglingBilling(false);
+    }
+  };
+
+  const handleVerifyOfficialRemoteMcp = async () => {
+    if (!projectId) return;
+    setVerifyingMcp(true);
+    try {
+      const [billingMcpRes, quotasMcpRes] = await Promise.allSettled([
+        axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/remote-mcp/execute`,
+          {
+            serverId: 'cloudbilling',
+            toolName: 'get_project_billing_info',
+            arguments: { name: `projects/${projectId}` },
+          }
+        ),
+        axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/remote-mcp/execute`,
+          {
+            serverId: 'cloudquotas',
+            toolName: 'list_quota_infos',
+            arguments: {
+              parent: `projects/${projectId}/locations/global/services/compute.googleapis.com`,
+            },
+          }
+        ),
+      ]);
+
+      const billingData =
+        billingMcpRes.status === 'fulfilled' ? billingMcpRes.value.data : null;
+      const quotasData =
+        quotasMcpRes.status === 'fulfilled' ? quotasMcpRes.value.data : null;
+
+      setMcpVerification({
+        verifiedAt: new Date().toISOString(),
+        billingOk: Boolean(billingData?.ok),
+        billingLatencyMs: billingData?.latencyMs || 0,
+        billingTransport: billingData?.transport || 'HTTPS JSON-RPC 2.0',
+        quotasOk: Boolean(quotasData?.ok),
+        quotasLatencyMs: quotasData?.latencyMs || 0,
+      });
+
+      if (onShowToast) {
+        onShowToast(
+          `Verified live Billing & Quota state via official cloudbilling.googleapis.com/mcp & cloudquotas.googleapis.com/mcp!`
+        );
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to verify via Remote MCP endpoints.'
+        );
+      }
+    } finally {
+      setVerifyingMcp(false);
+    }
+  };
+
+  const handleRunGeminiAdvisor = async () => {
+    if (!projectId) return;
+    setLoadingGeminiAdvice(true);
+    try {
+      const critQuotas = (quotaRadar?.quotas || []).filter(
+        (q) =>
+          q.status === 'CRITICAL_429_RISK' || q.status === 'ELEVATED_WARNING'
+      );
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing/gemini-advisor`,
+        {
+          geminiApiKey,
+          model: geminiModel,
+          preferredProvider: geminiPreferredProvider,
+          activeApisCount: activeApis.length,
+          topEnabledApis: activeApis.slice(0, 12).map((a) => a.name),
+          criticalQuotas: critQuotas.slice(0, 6),
+          spendCapBudgetsCount: (spendCapCatalog?.budgets || []).length,
+        }
+      );
+      if (res.data?.ok) {
+        setGeminiAdvice(res.data);
+        if (onShowToast) {
+          onShowToast(
+            `Live Gemini (${res.data.modelUsed}) generated DEFCON-1 Cost-Bleed & Quota Triage plan!`
+          );
+        }
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Live Gemini DEFCON-1 Cost-Bleed Advisor failed.'
+        );
+      }
+    } finally {
+      setLoadingGeminiAdvice(false);
     }
   };
 
@@ -563,9 +705,9 @@ export default function EmergencyApiKillSwitch({
               )}
             </p>
 
-            {/* Current Active Billing Account Badge */}
+            {/* Current Active Billing Account & Live Blast-Radius Inventory Badges */}
             {billingStatus && (
-              <div className="pt-1 flex flex-wrap items-center gap-3 text-xs">
+              <div className="pt-1 flex flex-wrap items-center gap-2 text-xs">
                 <div className="inline-flex items-center gap-1.5 font-mono bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-md">
                   <CreditCard className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                   <span className="text-zinc-500">Active Billing Account:</span>
@@ -581,32 +723,95 @@ export default function EmergencyApiKillSwitch({
                     </span>
                   )}
                 </div>
+
+                {/* Live Blast-Radius Resource Counters */}
+                {billingStatus.blastRadiusInventory && (
+                  <>
+                    <span
+                      className={`inline-flex items-center gap-1 font-mono text-[11px] px-2 py-1 rounded-md border ${
+                        billingStatus.blastRadiusInventory.runningVmsCount > 0
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold'
+                          : 'bg-white/70 dark:bg-zinc-900/80 text-zinc-500 border-zinc-200 dark:border-zinc-800'
+                      }`}
+                      title="Live RUNNING Compute Engine instances in this project"
+                    >
+                      <Server className="w-3 h-3" />
+                      <span>
+                        Running VMs:{' '}
+                        {billingStatus.blastRadiusInventory.runningVmsCount || 0}
+                      </span>
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 font-mono text-[11px] px-2 py-1 rounded-md border ${
+                        billingStatus.blastRadiusInventory
+                          .minInstanceCloudRunCount > 0
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold'
+                          : 'bg-white/70 dark:bg-zinc-900/80 text-zinc-500 border-zinc-200 dark:border-zinc-800'
+                      }`}
+                      title="Cloud Run services with minInstanceCount > 0 (billing 24/7 idle CPU/RAM)"
+                    >
+                      <Cpu className="w-3 h-3" />
+                      <span>
+                        Cloud Run minInstances&gt;0:{' '}
+                        {billingStatus.blastRadiusInventory
+                          .minInstanceCloudRunCount || 0}{' '}
+                        / {billingStatus.blastRadiusInventory.totalCloudRunCount || 0}
+                      </span>
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 font-mono text-[11px] px-2 py-1 rounded-md border ${
+                        billingStatus.blastRadiusInventory
+                          .runningCloudSqlCount > 0
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold'
+                          : 'bg-white/70 dark:bg-zinc-900/80 text-zinc-500 border-zinc-200 dark:border-zinc-800'
+                      }`}
+                      title="Running Cloud SQL instances (activationPolicy=ALWAYS)"
+                    >
+                      <Database className="w-3 h-3" />
+                      <span>
+                        Active Cloud SQL:{' '}
+                        {billingStatus.blastRadiusInventory.runningCloudSqlCount || 0}
+                      </span>
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>
 
-          {/* Right Action Area: Kill Billing or Restore Billing */}
+          {/* Right Action Area: Soft-Freeze ($0 Idle) + Kill Billing or Restore Billing */}
           <div className="shrink-0">
             {togglingBilling ? (
               <div className="inline-flex items-center gap-2 bg-red-500/15 text-red-500 border border-red-500/30 px-4 py-2.5 rounded-xl text-xs font-mono font-bold">
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>
                   {isBillingEnabled
-                    ? 'SEVERING BILLING ACCOUNT...'
+                    ? 'EXECUTING EMERGENCY FREEZE...'
                     : 'RE-LINKING BILLING ACCOUNT...'}
                 </span>
               </div>
             ) : isBillingEnabled ? (
               !confirmKillBilling ? (
-                <button
-                  type="button"
-                  data-feature-id="KILL_SWITCH_DETACH_BILLING"
-                  onClick={() => setConfirmKillBilling(true)}
-                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
-                >
-                  <Power className="w-4 h-4" />
-                  <span>KILL PROJECT BILLING (STOP SPENDING)</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleBillingKillSwitch('SOFT_FREEZE')}
+                    title="Keep Cloud Billing linked (preserving GCS buckets & scale-to-zero Cloud Run traffic) while halting all running VMs, scaling Cloud Run minInstances→0, and stopping Cloud SQL"
+                    className="inline-flex items-center justify-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold text-xs px-3.5 py-2.5 rounded-md transition-all cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Soft Freeze ($0 Idle · Keep Billing Linked)</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="KILL_SWITCH_DETACH_BILLING"
+                    onClick={() => setConfirmKillBilling(true)}
+                    className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
+                  >
+                    <Power className="w-4 h-4" />
+                    <span>KILL PROJECT BILLING (STOP SPENDING)</span>
+                  </button>
+                </div>
               ) : null
             ) : (
               /* Re-Link Billing Controls when project is in $0 lockdown */
@@ -666,17 +871,48 @@ export default function EmergencyApiKillSwitch({
                 spending money. You can re-link the billing account here in 1
                 tap anytime.
               </p>
-              <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 pt-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stopAllVmsOnKill}
-                  onChange={(e) => setStopAllVmsOnKill(e.target.checked)}
-                  className="rounded border-zinc-400 text-red-600 focus:ring-red-500"
-                />
-                <span>
-                  Also stop all running Compute Engine VMs in {projectId}
-                </span>
-              </label>
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stopAllVmsOnKill}
+                    onChange={(e) => setStopAllVmsOnKill(e.target.checked)}
+                    className="rounded border-zinc-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span>
+                    Stop running Compute Engine VMs (
+                    {billingStatus?.blastRadiusInventory?.runningVmsCount || 0})
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scaleDownCloudRunOnKill}
+                    onChange={(e) => setScaleDownCloudRunOnKill(e.target.checked)}
+                    className="rounded border-zinc-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span>
+                    Scale Cloud Run to minInstances=0 (
+                    {billingStatus?.blastRadiusInventory
+                      ?.minInstanceCloudRunCount || 0}{' '}
+                    always-on)
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stopCloudSqlOnKill}
+                    onChange={(e) => setStopCloudSqlOnKill(e.target.checked)}
+                    className="rounded border-zinc-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span>
+                    Stop running Cloud SQL instances (
+                    {billingStatus?.blastRadiusInventory?.runningCloudSqlCount ||
+                      0}
+                    )
+                  </span>
+                </label>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -695,6 +931,204 @@ export default function EmergencyApiKillSwitch({
                 Cancel
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Cryptographic SHA-256 DEFCON-1 / Soft-Freeze Incident Receipt */}
+        {lastIncidentReceipt && (
+          <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-extrabold">
+                SHA-256 RECEIPT: {lastIncidentReceipt.receiptId}
+              </span>
+              <span className="text-zinc-600 dark:text-zinc-300 font-bold">
+                {lastIncidentReceipt.action}
+              </span>
+              <span className="text-zinc-400 truncate max-w-xs">
+                digest: {String(lastIncidentReceipt.sha256Digest || '').slice(0, 20)}...
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    JSON.stringify(lastIncidentReceipt, null, 2)
+                  );
+                  if (onShowToast) {
+                    onShowToast(
+                      `Copied Cryptographic Incident Receipt ${lastIncidentReceipt.receiptId}`
+                    );
+                  }
+                }}
+                className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 cursor-pointer"
+              >
+                Copy JSON Receipt
+              </button>
+              {onRunInShell && lastIncidentReceipt.recoveryCli && (
+                <button
+                  type="button"
+                  onClick={() => onRunInShell(lastIncidentReceipt.recoveryCli)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-600/25 cursor-pointer"
+                >
+                  <Terminal className="w-3 h-3" />
+                  <span>Run Recovery CLI</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===================================================================== */}
+      {/* LEVEL 1.2: REMOTE MCP VERIFICATION + ZERO-SNIFFING GEMINI CO-ARCHITECT*/}
+      {/* ===================================================================== */}
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[10.5px] font-mono font-extrabold">
+              <Sparkles className="w-3 h-3" />
+              <span>
+                LIVE GEMINI DEFCON-1 COST-BLEED & QUOTA TRIAGE CO-ARCHITECT + REMOTE MCP
+              </span>
+            </span>
+            {mcpVerification && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                ✓ MCP Verified: cloudbilling ({mcpVerification.billingLatencyMs}ms) · cloudquotas ({mcpVerification.quotasLatencyMs}ms)
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              disabled={verifyingMcp}
+              onClick={handleVerifyOfficialRemoteMcp}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+              title="Verify live project billing & quota state directly via official Google Cloud Remote MCP endpoints (cloudbilling.googleapis.com/mcp & cloudquotas.googleapis.com/mcp)"
+            >
+              <RefreshCw
+                className={`w-3 h-3 ${verifyingMcp ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {verifyingMcp
+                  ? 'Calling *.googleapis.com/mcp...'
+                  : 'Verify via Official Remote MCP'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              disabled={loadingGeminiAdvice}
+              onClick={handleRunGeminiAdvisor}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles
+                className={`w-3.5 h-3.5 ${
+                  loadingGeminiAdvice ? 'animate-spin' : ''
+                }`}
+              />
+              <span>
+                {loadingGeminiAdvice
+                  ? `Analyzing with ${geminiModel}...`
+                  : `Analyze Cost-Bleed & Quota Risks (${geminiModel})`}
+              </span>
+            </button>
+
+            {onNavigateTab && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('REMOTE_MCP')}
+                  className="px-2 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-mono font-bold cursor-pointer"
+                >
+                  MCP Servers ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('CLOUD_SOC')}
+                  className="px-2 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-mono font-bold cursor-pointer"
+                >
+                  Cloud SOC ↗
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Shared Zero-Sniffing WebCrypto Enclave & Dual-Engine Selector */}
+        <ZeroSniffingWebCryptoEnclaveBar
+          projectId={projectId}
+          compact
+          onApiKeyResolved={(key) => setGeminiApiKey(key || '')}
+          onModelChange={(m) => {
+            if (m) setGeminiModel(m);
+          }}
+          onProviderChange={(p) => {
+            if (p) setGeminiPreferredProvider(p);
+          }}
+          onShowToast={onShowToast}
+        />
+
+        {/* Live Gemini DEFCON-1 Cost-Bleed & Quota Triage Output Card */}
+        {geminiAdvice?.advice && (
+          <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900/90 border border-indigo-500/30 space-y-2.5 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap font-mono">
+                <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[10px] font-extrabold">
+                  RECOMMENDED TIER: {geminiAdvice.advice.recommendedTierLabel || geminiAdvice.advice.recommendedTier}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  {geminiAdvice.provider} · {geminiAdvice.modelUsed}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGeminiAdvice(null)}
+                className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {geminiAdvice.advice.executiveSummary}
+            </p>
+
+            {Array.isArray(geminiAdvice.advice.surgicalActions) &&
+              geminiAdvice.advice.surgicalActions.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                  {geminiAdvice.advice.surgicalActions.slice(0, 4).map((act, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 space-y-1 font-mono text-[11px]"
+                    >
+                      <div className="font-bold text-indigo-600 dark:text-indigo-400">
+                        {act.tier}: {act.action}
+                      </div>
+                      <div className="text-zinc-500 text-[10px]">
+                        Impact: {act.blastRadius}
+                      </div>
+                      {act.cliCmd && (
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <code className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate">
+                            {act.cliCmd}
+                          </code>
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(act.cliCmd)}
+                              className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[10px] font-bold shrink-0 cursor-pointer"
+                            >
+                              Run CLI
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         )}
       </div>
@@ -1177,6 +1611,49 @@ export default function EmergencyApiKillSwitch({
             <span>{loadingQuotas ? 'Scanning Quotas...' : 'Scan Live Quotas'}</span>
           </button>
         </div>
+
+        {/* Live 24h Cloud Monitoring serviceruntime.googleapis.com/api/request_count & HTTP 429 Telemetry Bar */}
+        {quotaRadar?.liveTraffic24h && (
+          <div className="p-3 rounded-lg bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 font-extrabold text-zinc-800 dark:text-zinc-200">
+                <Activity className="w-3.5 h-3.5 text-blue-500" />
+                <span>24h Cloud Monitoring API Runtime Telemetry:</span>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 font-bold">
+                {(quotaRadar.liveTraffic24h.totalRequests24h || 0).toLocaleString()} API Calls (24h)
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded font-extrabold ${
+                  quotaRadar.liveTraffic24h.total429Count24h > 0
+                    ? 'bg-red-600 text-white'
+                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                }`}
+              >
+                {quotaRadar.liveTraffic24h.total429Count24h || 0} HTTP 429 Throttled (24h)
+              </span>
+              <span className="text-zinc-500">
+                4xx/5xx Errors: {quotaRadar.liveTraffic24h.totalError4xx5xx24h || 0}
+              </span>
+            </div>
+            {Array.isArray(quotaRadar.liveTraffic24h.topServices) &&
+              quotaRadar.liveTraffic24h.topServices.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-500">
+                  <span>Top Active:</span>
+                  {quotaRadar.liveTraffic24h.topServices.slice(0, 3).map((st) => (
+                    <span
+                      key={st.service}
+                      className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                    >
+                      {st.service.replace('.googleapis.com', '')}:{' '}
+                      {st.totalRequests24h.toLocaleString()}
+                      {st.http429Count24h > 0 ? ` (${st.http429Count24h} 429s)` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+          </div>
+        )}
 
         {Array.isArray(quotaRadar?.quotas) && quotaRadar.quotas.length > 0 && (
           <>

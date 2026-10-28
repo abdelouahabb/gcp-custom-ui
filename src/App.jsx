@@ -686,17 +686,44 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
-    // Emergency Billing Kill-Switch (Unlink Cloud Billing Account)
+    // Emergency Billing Kill-Switch (Unlink Cloud Billing Account or Soft-Freeze $0 Idle Hibernation)
     if (
       rawUrl.includes('/billing/kill-switch') &&
-      String(body.action || '').toUpperCase() === 'DISABLE'
+      (String(body.action || '').toUpperCase() === 'DISABLE' ||
+        String(body.action || '').toUpperCase() === 'SOFT_FREEZE')
     ) {
+      const isSoftFreeze = String(body.action || '').toUpperCase() === 'SOFT_FREEZE';
+      const extraFlags = [
+        body.stopAllVms ? 'Stop Running VMs' : null,
+        body.scaleDownCloudRun ? 'Scale Cloud Run to minInstances=0' : null,
+        body.stopCloudSql ? 'Stop Cloud SQL (activationPolicy=NEVER)' : null,
+      ].filter(Boolean);
+
+      if (isSoftFreeze) {
+        return {
+          title: `Execute $0 Idle Soft-Freeze Hibernation on "${projectId}"?`,
+          headerBadge: 'CloudPulse 2026 Soft-Freeze ($0 Idle Hibernation) Gatekeeper',
+          targetLabel: 'Target GCP Project & Active Compute Resources',
+          resourceKind: 'Compute Engine · Cloud Run v2 · Cloud SQL (Billing Kept Linked)',
+          targetName: `${projectId} (${extraFlags.join(' + ') || 'Verify $0 Idle Burn'})`,
+          location: 'Multi-Region Fleet',
+          projectId,
+          method: 'SOFT FREEZE ($0 IDLE)',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Execute Soft-Freeze Hibernation',
+          cancelToast: 'Soft-Freeze cancelled — active resources remain unchanged.',
+          impactWarning: `NON-NUCLEAR HIBERNATION: Keeps your Cloud Billing Account linked (preserving GCS buckets, DNS, and scale-to-zero Cloud Run traffic) while halting active hourly burn via: ${
+            extraFlags.join(', ') || 'Compute/Serverless/SQL idle freeze'
+          }.`,
+        };
+      }
+
       return {
         title: `Unlink Cloud Billing Account from "${projectId}"?`,
         headerBadge: 'CloudPulse 2026 Emergency Billing Kill-Switch Gatekeeper',
         targetLabel: 'Target GCP Project to Detach from Billing',
         resourceKind: 'Cloud Billing Account Link (cloudbilling.googleapis.com)',
-        targetName: `${projectId}${body.stopAllVms ? ' (+ Stop All Running VMs)' : ''}`,
+        targetName: `${projectId}${extraFlags.length > 0 ? ` (+ ${extraFlags.join(', ')})` : ''}`,
         location: 'Global Billing',
         projectId,
         method: 'UNLINK BILLING',
@@ -5022,6 +5049,8 @@ function CloudPulseCockpit() {
                       enabledApis={overview?.enabledApis || []}
                       onRefresh={() => fetchProjectOverview(selectedProjectId)}
                       onOpenFinOps={() => setActiveTab('FINOPS')}
+                      onNavigateTab={(tabId) => setActiveTab(tabId)}
+                      onRunInShell={handleRunInShell}
                       onShowToast={showToast}
                       onShowError={setErrorBanner}
                     />

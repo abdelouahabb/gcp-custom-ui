@@ -8016,6 +8016,77 @@ async function fetchProjectBillingStatus(projectId, token) {
     (a) => a.name === previousBillingAccountName
   );
 
+  // Also inspect live Billable Blast-Radius Inventory in parallel (Running VMs, Always-On Cloud Run minInstances>0, Running Cloud SQL)
+  const [vmsProbe, crProbe, sqlProbe] = await Promise.allSettled([
+    gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+      token,
+      projectId,
+      { timeout: 4500 }
+    ),
+    gcpFetch(
+      `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/-/services`,
+      token,
+      projectId,
+      { timeout: 4500 }
+    ),
+    gcpFetch(
+      `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/instances`,
+      token,
+      projectId,
+      { timeout: 4500 }
+    ),
+  ]);
+
+  const runningVms =
+    vmsProbe.status === 'fulfilled'
+      ? Object.entries(vmsProbe.value?.items || {}).flatMap(([zoneKey, val]) =>
+          (val.instances || [])
+            .filter((inst) => inst.status === 'RUNNING')
+            .map((inst) => ({
+              name: inst.name,
+              zone: zoneKey.replace('zones/', ''),
+              machineType: String(inst.machineType || '').split('/').pop() || 'e2-medium',
+            }))
+        )
+      : [];
+
+  const allCloudRunServices =
+    crProbe.status === 'fulfilled' && Array.isArray(crProbe.value?.services)
+      ? crProbe.value.services
+      : [];
+  const minInstanceCloudRunServices = allCloudRunServices
+    .filter((s) => Number(s.template?.scaling?.minInstanceCount || 0) > 0)
+    .map((s) => ({
+      fullName: s.name,
+      name: String(s.name || '').split('/').pop(),
+      region: String(s.name || '').split('/')[3] || 'us-central1',
+      minInstanceCount: Number(s.template?.scaling?.minInstanceCount || 0),
+      maxInstanceCount: Number(s.template?.scaling?.maxInstanceCount || 10),
+    }));
+
+  const runningCloudSqlInstances =
+    sqlProbe.status === 'fulfilled' && Array.isArray(sqlProbe.value?.items)
+      ? sqlProbe.value.items
+          .filter(
+            (inst) =>
+              inst.state === 'RUNNABLE' &&
+              inst.settings?.activationPolicy !== 'NEVER'
+          )
+          .map((inst) => ({
+            name: inst.name,
+            region: inst.region || 'us-central1',
+            tier: inst.settings?.tier || 'db-f1-micro',
+            activationPolicy: inst.settings?.activationPolicy || 'ALWAYS',
+          }))
+      : [];
+
   return {
     projectId,
     billingEnabled,
@@ -8031,8 +8102,20 @@ async function fetchProjectBillingStatus(projectId, token) {
       previousMatched?.displayName || previousBillingAccountName,
     openBillingAccounts,
     totalBillingAccountsCount: billingAccounts.length,
+    blastRadiusInventory: {
+      runningVmsCount: runningVms.length,
+      runningVms,
+      totalCloudRunCount: allCloudRunServices.length,
+      minInstanceCloudRunCount: minInstanceCloudRunServices.length,
+      minInstanceCloudRunServices,
+      runningCloudSqlCount: runningCloudSqlInstances.length,
+      runningCloudSqlInstances,
+    },
+    lastIncidentReceipt: projectKillSwitchReceiptsMap.get(projectId) || null,
   };
 }
+
+const projectKillSwitchReceiptsMap = new Map();
 
 // 10c. GET /api/project/:projectId/billing -> Live Cloud Billing Account status & linked account details
 app.get('/api/project/:projectId/billing', async (req, res) => {
@@ -8053,64 +8136,76 @@ app.get('/api/project/:projectId/billing', async (req, res) => {
   }
 });
 
-// 10d. POST /api/project/:projectId/billing/kill-switch -> Ultimate Project Emergency Kill-Switch (Unlink or Re-Link Billing Account)
+// 10d. POST /api/project/:projectId/billing/kill-switch -> Ultimate Project Emergency Kill-Switch (Unlink Billing, Re-Link Billing, or Soft-Freeze $0 Idle Hibernation)
 app.post('/api/project/:projectId/billing/kill-switch', async (req, res) => {
   const { projectId } = req.params;
   const {
     action = 'DISABLE',
     billingAccountName = '',
     stopAllVms = false,
+    scaleDownCloudRun = false,
+    stopCloudSql = false,
   } = req.body || {};
 
   try {
     const { token } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
-    const isDisable = action.toUpperCase() === 'DISABLE';
+    const upperAction = String(action || 'DISABLE').toUpperCase();
+    const isDisable = upperAction === 'DISABLE';
+    const isSoftFreeze = upperAction === 'SOFT_FREEZE';
     const infoUrl = `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(
       projectId
     )}/billingInfo`;
 
-    // Record current billing account before unlinking so user can re-link later
-    if (isDisable) {
-      try {
-        const current = await gcpFetch(infoUrl, token, projectId, {
-          timeout: 6000,
-        });
-        if (current?.billingAccountName) {
+    let priorBillingAccount = '';
+    try {
+      const current = await gcpFetch(infoUrl, token, projectId, {
+        timeout: 6000,
+      });
+      if (current?.billingAccountName) {
+        priorBillingAccount = current.billingAccountName;
+        if (isDisable) {
           projectPreviousBillingMap.set(projectId, current.billingAccountName);
         }
-      } catch {
-        // ignore
       }
+    } catch {
+      // ignore
     }
 
-    const targetAccountToLink = isDisable
-      ? ''
-      : (
-          billingAccountName ||
-          projectPreviousBillingMap.get(projectId) ||
-          ''
-        ).trim();
+    let updatedInfo = null;
+    if (!isSoftFreeze) {
+      const targetAccountToLink = isDisable
+        ? ''
+        : (
+            billingAccountName ||
+            projectPreviousBillingMap.get(projectId) ||
+            ''
+          ).trim();
 
-    if (!isDisable && !targetAccountToLink) {
-      return res.status(400).json({
-        error:
-          'Please select a valid Billing Account (e.g. billingAccounts/01XXXX-XXXXXX-XXXXXX) to re-link.',
+      if (!isDisable && !targetAccountToLink) {
+        return res.status(400).json({
+          error:
+            'Please select a valid Billing Account (e.g. billingAccounts/01XXXX-XXXXXX-XXXXXX) to re-link.',
+        });
+      }
+
+      updatedInfo = await gcpFetch(infoUrl, token, projectId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          billingAccountName: targetAccountToLink,
+        },
+        timeout: 12000,
       });
     }
 
-    const updatedInfo = await gcpFetch(infoUrl, token, projectId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: {
-        billingAccountName: targetAccountToLink,
-      },
-      timeout: 12000,
-    });
-
     const stoppedVms = [];
-    if (isDisable && stopAllVms) {
+    const scaledToZeroCloudRun = [];
+    const stoppedCloudSql = [];
+
+    // 1. Optional / Soft-Freeze Compute Engine VM Halt
+    if ((isDisable || isSoftFreeze) && stopAllVms) {
       try {
         const vmsData = await gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -8149,18 +8244,170 @@ app.post('/api/project/:projectId/billing/kill-switch', async (req, res) => {
       }
     }
 
+    // 2. Optional / Soft-Freeze Cloud Run Scale-to-Zero (minInstanceCount = 0)
+    if ((isDisable || isSoftFreeze) && scaleDownCloudRun) {
+      try {
+        const crData = await gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/-/services`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        );
+        const minInstServices = (crData?.services || []).filter(
+          (s) => Number(s.template?.scaling?.minInstanceCount || 0) > 0
+        );
+        await Promise.allSettled(
+          minInstServices.map(async (srv) => {
+            const shortName = String(srv.name || '').split('/').pop();
+            const region = String(srv.name || '').split('/')[3] || 'us-central1';
+            const prevMin = Number(srv.template?.scaling?.minInstanceCount || 0);
+            const updatedTemplate = {
+              ...(srv.template || {}),
+              scaling: {
+                ...(srv.template?.scaling || {}),
+                minInstanceCount: 0,
+              },
+            };
+            await gcpFetch(
+              `https://run.googleapis.com/v2/${srv.name}?updateMask=template.scaling.minInstanceCount`,
+              token,
+              projectId,
+              {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: { template: updatedTemplate },
+                timeout: 10000,
+              }
+            );
+            scaledToZeroCloudRun.push(
+              `${shortName} (${region}: minInstances ${prevMin}→0)`
+            );
+          })
+        );
+      } catch {
+        // ignore Cloud Run scaling errors
+      }
+    }
+
+    // 3. Optional / Soft-Freeze Cloud SQL Instance Stop (activationPolicy = NEVER)
+    if ((isDisable || isSoftFreeze) && stopCloudSql) {
+      try {
+        const sqlData = await gcpFetch(
+          `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/instances`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        );
+        const runnableSql = (sqlData?.items || []).filter(
+          (inst) =>
+            inst.state === 'RUNNABLE' &&
+            inst.settings?.activationPolicy !== 'NEVER'
+        );
+        await Promise.allSettled(
+          runnableSql.map(async (inst) => {
+            await gcpFetch(
+              `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/instances/${encodeURIComponent(inst.name)}`,
+              token,
+              projectId,
+              {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                  settings: {
+                    activationPolicy: 'NEVER',
+                  },
+                },
+                timeout: 10000,
+              }
+            );
+            stoppedCloudSql.push(
+              `${inst.name} (${inst.region || 'regional'}: activationPolicy→NEVER)`
+            );
+          })
+        );
+      } catch {
+        // ignore Cloud SQL stop errors
+      }
+    }
+
+    const timestamp = new Date().toISOString();
+    const receiptPayload = {
+      receiptId: `DEFCON1-${Date.now().toString(36).toUpperCase()}`,
+      timestamp,
+      projectId,
+      action: isSoftFreeze
+        ? 'SOFT_FREEZE_HIBERNATION'
+        : isDisable
+        ? 'BILLING_DISABLED'
+        : 'BILLING_ENABLED',
+      previousBillingAccount: priorBillingAccount || 'none',
+      newBillingAccount: isSoftFreeze
+        ? priorBillingAccount || 'retained'
+        : isDisable
+        ? 'UNLINKED ($0.00 LOCKDOWN)'
+        : updatedInfo?.billingAccountName || billingAccountName,
+      stoppedVms,
+      scaledToZeroCloudRun,
+      stoppedCloudSql,
+      recoveryCli:
+        isDisable && priorBillingAccount
+          ? `gcloud billing projects link ${projectId} --billing-account=${priorBillingAccount.replace(
+              'billingAccounts/',
+              ''
+            )}`
+          : `gcloud billing projects describe ${projectId}`,
+    };
+    receiptPayload.sha256Digest = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(receiptPayload))
+      .digest('hex');
+
+    projectKillSwitchReceiptsMap.set(projectId, receiptPayload);
+
     const freshStatus = await fetchProjectBillingStatus(projectId, token);
+
+    const actionSummaryParts = [];
+    if (stoppedVms.length > 0) {
+      actionSummaryParts.push(
+        `halted ${stoppedVms.length} VM(s) [${stoppedVms.join(', ')}]`
+      );
+    }
+    if (scaledToZeroCloudRun.length > 0) {
+      actionSummaryParts.push(
+        `scaled ${scaledToZeroCloudRun.length} Cloud Run service(s) to minInstances=0 [${scaledToZeroCloudRun.join(', ')}]`
+      );
+    }
+    if (stoppedCloudSql.length > 0) {
+      actionSummaryParts.push(
+        `stopped ${stoppedCloudSql.length} Cloud SQL instance(s) [${stoppedCloudSql.join(', ')}]`
+      );
+    }
 
     res.json({
       ok: true,
-      action: isDisable ? 'BILLING_DISABLED' : 'BILLING_ENABLED',
+      action: receiptPayload.action,
       updatedInfo,
       stoppedVms,
+      scaledToZeroCloudRun,
+      stoppedCloudSql,
+      incidentReceipt: receiptPayload,
       billing: freshStatus,
-      message: isDisable
+      message: isSoftFreeze
+        ? `SOFT-FREEZE HIBERNATION EXECUTED on "${projectId}" (Billing Account remains linked): ${
+            actionSummaryParts.length > 0
+              ? `Immediately ${actionSummaryParts.join('; ')}.`
+              : 'Verified 0 running VMs, 0 minInstance>0 Cloud Run services, and 0 running Cloud SQL instances — idle compute burn is already $0.00/hr!'
+          }`
+        : isDisable
         ? `EMERGENCY PROJECT KILL-SWITCH ACTIVATED: Unlinked Billing Account from "${projectId}". Project spending is now $0.00!${
-            stoppedVms.length
-              ? ` Also halted ${stoppedVms.length} running VM(s): ${stoppedVms.join(', ')}.`
+            actionSummaryParts.length > 0
+              ? ` Also ${actionSummaryParts.join('; ')}.`
               : ''
           }`
         : `Restored & re-linked Billing Account (${freshStatus.billingAccountDisplayName} — ${freshStatus.billingAccountName}) on project "${projectId}".`,
@@ -8171,6 +8418,143 @@ app.post('/api/project/:projectId/billing/kill-switch', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         `Failed to update Cloud Billing on ${projectId}`,
+    });
+  }
+});
+
+// 10e. POST /api/project/:projectId/billing/gemini-advisor -> Live Gemini DEFCON-1 Cost-Bleed & Quota Triage Co-Architect
+app.post('/api/project/:projectId/billing/gemini-advisor', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    geminiApiKey = '',
+    model = '',
+    preferredProvider = 'AUTO',
+    activeApisCount = 0,
+    topEnabledApis = [],
+    criticalQuotas = [],
+    spendCapBudgetsCount = 0,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const billingStatus = await fetchProjectBillingStatus(projectId, token);
+    const inv = billingStatus.blastRadiusInventory || {};
+
+    const prompt = `You are a Principal Google Cloud FinOps & DEFCON-1 Incident Response Architect analyzing live GCP project "${projectId}".
+
+Live Telemetry Snapshot:
+- Cloud Billing Status: ${
+      billingStatus.billingEnabled
+        ? `ACTIVE (${billingStatus.billingAccountDisplayName} / ${billingStatus.billingAccountName})`
+        : 'UNLINKED ($0 Spend Lockdown)'
+    }
+- Running Compute Engine VMs: ${inv.runningVmsCount || 0} (${
+      (inv.runningVms || []).map((v) => `${v.name} [${v.machineType} in ${v.zone}]`).join(', ') || 'none'
+    })
+- Cloud Run Services: ${inv.totalCloudRunCount || 0} total, ${
+      inv.minInstanceCloudRunCount || 0
+    } with minInstanceCount > 0 (${
+      (inv.minInstanceCloudRunServices || [])
+        .map((s) => `${s.name} [min=${s.minInstanceCount}]`)
+        .join(', ') || 'all scale-to-zero $0 idle'
+    })
+- Running Cloud SQL Instances: ${inv.runningCloudSqlCount || 0} (${
+      (inv.runningCloudSqlInstances || [])
+        .map((db) => `${db.name} [${db.tier}]`)
+        .join(', ') || 'none'
+    })
+- Enabled GCP Service APIs: ${activeApisCount} (Top billable: ${(topEnabledApis || []).slice(0, 10).join(', ')})
+- Active Native Spend Cap Budgets (GoogleCloudBillingBudgetsV1SpendCap): ${spendCapBudgetsCount}
+- Critical/Elevated Quota Saturation Alerts: ${
+      (criticalQuotas || []).map((q) => `${q.metric}: ${q.usage}/${q.limit} (${q.utilizationPct}%)`).join('; ') ||
+      '0 critical quota bottlenecks'
+    }
+
+Compare the 4 emergency cost-containment tiers available in this studio:
+1. Tier 1.5 Surgical Per-Service Native Spend Cap (GoogleCloudBillingBudgetsV1SpendCap)
+2. Soft Freeze ($0 Idle Hibernation: Stop VMs + Scale Cloud Run to minInstances=0 + Stop Cloud SQL while keeping Billing linked)
+3. Tier 2 Granular Service API Disable (serviceusage.googleapis.com)
+4. Tier 1 DEFCON-1 Nuclear Billing Account Unlink (cloudbilling.googleapis.com)
+
+Return ONLY a valid JSON object with this exact schema:
+{
+  "recommendedTier": "SPEND_CAP_1_5" | "SOFT_FREEZE" | "GRANULAR_API_2" | "DEFCON_1_UNLINK",
+  "recommendedTierLabel": "Short human-readable title of recommended tier",
+  "riskLevel": "LOW_IDLE_BURN" | "MODERATE_ACTIVE_SPEND" | "HIGH_BLEED_OR_429_RISK",
+  "executiveSummary": "2-3 sentence grounded assessment of live hourly burn drivers and why the recommended tier is safest for ${projectId}.",
+  "hourlyBurnDrivers": ["Specific live resource or API cost driver 1", "Driver 2"],
+  "surgicalActions": [
+    {
+      "tier": "Tier name",
+      "action": "Specific action to take",
+      "blastRadius": "Exact impact on live workloads",
+      "cliCmd": "Exact gcloud command"
+    }
+  ],
+  "quotaRiskSummary": "1-2 sentence assessment of HTTP 429 quota headroom and recommended gcloud quota command."
+}`;
+
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: model || 'gemini-3.8-flash',
+      preferredProvider,
+      inlineApiKey: geminiApiKey,
+      promptText: prompt,
+      temperature: 0.15,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
+
+    if (!llmRes.isLiveLlm || !llmRes.text) {
+      return res.status(422).json({
+        error:
+          (llmRes.diagnostics && llmRes.diagnostics[llmRes.diagnostics.length - 1]) ||
+          'Live Gemini API call did not complete (Zero Synthetic Fallback). Ensure Vertex AI API is enabled or seal a Google AI Studio key.',
+      });
+    }
+
+    const cleanedJson = String(llmRes.text || '')
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    const firstBrace = cleanedJson.indexOf('{');
+    const lastBrace = cleanedJson.lastIndexOf('}');
+    const jsonSlice =
+      firstBrace >= 0 && lastBrace > firstBrace
+        ? cleanedJson.slice(firstBrace, lastBrace + 1)
+        : cleanedJson;
+    let parsedAdvice = null;
+    try {
+      parsedAdvice = JSON.parse(jsonSlice);
+    } catch {
+      parsedAdvice = {
+        recommendedTier: 'SOFT_FREEZE',
+        recommendedTierLabel: 'Soft Freeze ($0 Idle Hibernation)',
+        riskLevel: 'MODERATE_ACTIVE_SPEND',
+        executiveSummary: cleanedJson,
+        hourlyBurnDrivers: [],
+        surgicalActions: [],
+      };
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      provider: llmRes.executionMode,
+      modelUsed: llmRes.resolvedModelId,
+      analyzedAt: new Date().toISOString(),
+      billingStatus,
+      advice: parsedAdvice,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Live Gemini DEFCON-1 Advisor failed',
     });
   }
 });
@@ -16293,41 +16677,73 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
   }
 
   try {
-    const [computeProjRes, computeRegionsRes, cloudRunRes, secretsRes] =
-      await Promise.allSettled([
-        gcpFetch(
-          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
-            projectId
-          )}`,
-          token,
-          projectId,
-          { timeout: 6500 }
-        ),
-        gcpFetch(
-          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
-            projectId
-          )}/regions?maxResults=12`,
-          token,
-          projectId,
-          { timeout: 6500 }
-        ),
-        gcpFetch(
-          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
-            projectId
-          )}/locations/-/services`,
-          token,
-          projectId,
-          { timeout: 6500 }
-        ),
-        gcpFetch(
-          `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
-            projectId
-          )}/secrets`,
-          token,
-          projectId,
-          { timeout: 5500 }
-        ),
-      ]);
+    const nowIso = new Date().toISOString();
+    const start24hIso = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const monFilter = encodeURIComponent(
+      'metric.type="serviceruntime.googleapis.com/api/request_count"'
+    );
+
+    const [
+      computeProjRes,
+      computeRegionsRes,
+      cloudRunRes,
+      secretsRes,
+      bqJobsRes,
+      mon24hRes,
+    ] = await Promise.allSettled([
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}`,
+        token,
+        projectId,
+        { timeout: 6500 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/regions?maxResults=12`,
+        token,
+        projectId,
+        { timeout: 6500 }
+      ),
+      gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/services`,
+        token,
+        projectId,
+        { timeout: 6500 }
+      ),
+      gcpFetch(
+        `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/secrets`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ),
+      gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/jobs?stateFilter=RUNNING&maxResults=50`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpFetch(
+        `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(
+          projectId
+        )}/timeSeries?filter=${monFilter}&interval.startTime=${encodeURIComponent(
+          start24hIso
+        )}&interval.endTime=${encodeURIComponent(
+          nowIso
+        )}&aggregation.alignmentPeriod=86400s&aggregation.perSeriesAligner=ALIGN_SUM&aggregation.crossSeriesReducer=REDUCE_SUM&aggregation.groupByFields=resource.label.service&aggregation.groupByFields=metric.label.response_code`,
+        token,
+        projectId,
+        { timeout: 6500 }
+      ),
+    ]);
 
     const quotaItems = [];
 
@@ -16508,24 +16924,110 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
           : secretPct >= 66
           ? 'ELEVATED_WARNING'
           : 'HEALTHY_HEADROOM',
-      unit: 'free versions ($0.06/ver after 6)',
+      unit: 'free secrets ($0.06/ver after 6)',
       cliIncreaseCmd: `gcloud secrets list --project=${projectId}`,
     });
 
-    // 5. BigQuery Concurrent Interactive Query Rate Quota (300 concurrent queries default)
+    // 5. BigQuery Live Concurrent Running Jobs vs 300 Concurrent Interactive Query Limit (Zero Hardcoding)
+    const runningBqJobs =
+      bqJobsRes.status === 'fulfilled' && Array.isArray(bqJobsRes.value?.jobs)
+        ? bqJobsRes.value.jobs.length
+        : 0;
+    const bqLimit = 300;
+    const bqPct = Math.min(100, Math.round((runningBqJobs / bqLimit) * 1000) / 10);
     quotaItems.push({
       id: 'bigquery-concurrent-queries',
       service: 'bigquery.googleapis.com',
-      serviceLabel: 'BigQuery API',
+      serviceLabel: 'BigQuery API (Live Running Jobs)',
       metric: 'CONCURRENT_INTERACTIVE_QUERIES',
       region: 'US / EU',
-      usage: 1,
-      limit: 300,
-      utilizationPct: 0.3,
-      status: 'HEALTHY_HEADROOM',
-      unit: 'concurrent jobs',
+      usage: runningBqJobs,
+      limit: bqLimit,
+      utilizationPct: bqPct,
+      status:
+        bqPct >= 85
+          ? 'CRITICAL_429_RISK'
+          : bqPct >= 65
+          ? 'ELEVATED_WARNING'
+          : 'HEALTHY_HEADROOM',
+      unit: 'running jobs',
       cliIncreaseCmd: `bq ls --jobs=true --max_results=10 --project_id=${projectId}`,
     });
+
+    // 6. Live 24h Cloud Monitoring serviceruntime.googleapis.com/api/request_count & HTTP 429 Telemetry
+    let totalRequests24h = 0;
+    let total429Count24h = 0;
+    let totalError4xx5xx24h = 0;
+    const serviceTrafficMap = new Map();
+
+    if (
+      mon24hRes.status === 'fulfilled' &&
+      Array.isArray(mon24hRes.value?.timeSeries)
+    ) {
+      for (const ts of mon24hRes.value.timeSeries) {
+        const svc =
+          ts.resource?.labels?.service ||
+          ts.metric?.labels?.consumed_service ||
+          'unknown.googleapis.com';
+        const respCode = String(ts.metric?.labels?.response_code || '200');
+        const val = (ts.points || []).reduce(
+          (sum, pt) =>
+            sum +
+            Number(
+              pt.value?.int64Value ??
+                pt.value?.doubleValue ??
+                0
+            ),
+          0
+        );
+        if (val <= 0) continue;
+        totalRequests24h += val;
+        const is429 = respCode === '429';
+        const isErr = respCode.startsWith('4') || respCode.startsWith('5');
+        if (is429) total429Count24h += val;
+        if (isErr) totalError4xx5xx24h += val;
+
+        const prev = serviceTrafficMap.get(svc) || {
+          service: svc,
+          totalRequests24h: 0,
+          http429Count24h: 0,
+          errorCount24h: 0,
+        };
+        prev.totalRequests24h += val;
+        if (is429) prev.http429Count24h += val;
+        if (isErr) prev.errorCount24h += val;
+        serviceTrafficMap.set(svc, prev);
+      }
+    }
+
+    const topActiveServiceTraffic = Array.from(serviceTrafficMap.values()).sort(
+      (a, b) =>
+        b.http429Count24h - a.http429Count24h ||
+        b.totalRequests24h - a.totalRequests24h
+    );
+
+    // If any service experienced real HTTP 429 throttling in the last 24h, surface it as a quota card!
+    for (const st of topActiveServiceTraffic.slice(0, 6)) {
+      if (st.http429Count24h > 0) {
+        const errRatePct = Math.min(
+          100,
+          Math.round((st.http429Count24h / Math.max(1, st.totalRequests24h)) * 1000) / 10
+        );
+        quotaItems.push({
+          id: `mon-429-${st.service}`,
+          service: st.service,
+          serviceLabel: `Cloud Monitoring 24h HTTP 429 (${st.service})`,
+          metric: `HTTP_429_RESOURCE_EXHAUSTED_24H`,
+          region: 'global',
+          usage: st.http429Count24h,
+          limit: st.totalRequests24h,
+          utilizationPct: Math.max(85, errRatePct),
+          status: 'CRITICAL_429_RISK',
+          unit: '429s / 24h reqs',
+          cliIncreaseCmd: `gcloud alpha services quota list --service=${st.service} --consumer=projects/${projectId}`,
+        });
+      }
+    }
 
     // Sort by highest utilization percentage first, then by usage > 0
     quotaItems.sort((a, b) => {
@@ -16549,6 +17051,12 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
       criticalCount,
       warningCount,
       healthyCount: quotaItems.length - criticalCount - warningCount,
+      liveTraffic24h: {
+        totalRequests24h,
+        total429Count24h,
+        totalError4xx5xx24h,
+        topServices: topActiveServiceTraffic.slice(0, 8),
+      },
       quotas: quotaItems,
     });
   } catch (err) {
