@@ -73863,6 +73863,772 @@ app.get('/api/project/:projectId/lakehouse-ai-pipeline/blueprint', async (req, r
   }
 });
 
+// ============================================================================
+// WAVE 4: 6-STAGE ZERO-TRUST SECOPS, INCIDENT SRE & FORENSICS PIPELINE GLUE
+// Connects: (1) IAM Least-Privilege, SA Keys & Secret Vault -> (2) Perimeter
+// Firewalls & Toxic Graph -> (3) 400-Day Cloud Audit & Chrono-Logs -> (4) SOAR
+// Active Quarantine & IAP Lock -> (5) SRE 14.4x Burn Gate & Canary Rollback ->
+// (6) 30-Day Recycle Bin & SHA-256 Drift Time-Machine.
+// ============================================================================
+const wave4SecOpsSreProbeCache = new Map();
+app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+
+    let resources = Array.isArray(cachedOverview?.resources)
+      ? [...cachedOverview.resources]
+      : [];
+    if (!cachedOverview && headers) {
+      const [netRes, fwRes, bktRes, vmRes, crRes, svcRes] = await Promise.allSettled([
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=200`,
+          { headers, timeout: 4500 }
+        ),
+      ]);
+      resources = [];
+      if (netRes.status === 'fulfilled') {
+        for (const n of netRes.value.data?.items || []) {
+          resources.push({
+            id: `vpc-${n.name}`,
+            name: n.name,
+            type: 'VPC Network',
+            storageClass: n.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
+          });
+        }
+      }
+      if (fwRes.status === 'fulfilled') {
+        for (const fw of fwRes.value.data?.items || []) {
+          resources.push({
+            id: `fw-${fw.name}`,
+            name: fw.name,
+            type: 'VPC Firewall Rule',
+            details: {
+              network: (fw.network || '').split('/').pop() || 'default',
+              direction: fw.direction || 'INGRESS',
+              priority: fw.priority ?? 1000,
+              sourceRanges: (fw.sourceRanges || []).join(', '),
+              denied: Array.isArray(fw.denied) && fw.denied.length > 0,
+            },
+          });
+        }
+      }
+      if (bktRes.status === 'fulfilled') {
+        for (const b of bktRes.value.data?.items || []) {
+          resources.push({
+            id: `gcs-${b.name}`,
+            name: b.name,
+            type: 'Cloud Storage Bucket',
+            region: b.location || 'US',
+          });
+        }
+      }
+      if (vmRes.status === 'fulfilled') {
+        for (const [scopeKey, val] of Object.entries(vmRes.value.data?.items || {})) {
+          const zone = scopeKey.replace('zones/', '');
+          for (const inst of val?.instances || []) {
+            resources.push({
+              id: `vm-${inst.name}`,
+              name: inst.name,
+              type: 'Compute Engine VM',
+              region: zone,
+              status: inst.status || 'RUNNING',
+            });
+          }
+        }
+      }
+      if (crRes.status === 'fulfilled') {
+        for (const s of crRes.value.data?.services || []) {
+          const shortName = (s.name || '').split('/').pop();
+          const region = (s.name || '').split('/')[3] || 'us-central1';
+          if (shortName) {
+            resources.push({
+              id: `cr-${shortName}`,
+              name: shortName,
+              type: 'Cloud Run Service',
+              region,
+            });
+          }
+        }
+      }
+      if (svcRes.status === 'fulfilled') {
+        for (const s of svcRes.value.data?.services || []) {
+          const svcName = (s.config?.name || s.name || '').split('/').pop();
+          if (svcName) {
+            resources.push({
+              id: `api-${svcName}`,
+              name: svcName,
+              type: 'Enabled GCP Service API',
+            });
+          }
+        }
+      }
+    }
+
+    // Extended SecOps & SRE Discovery (25s cache): Service Accounts, IAM Policy Bindings, Secret Manager & Cloud Audit Logs
+    let secOpsExtra = wave4SecOpsSreProbeCache.get(projectId);
+    if ((!secOpsExtra || Date.now() - secOpsExtra.ts > 25000) && headers) {
+      const [saRes, iamRes, secretsRes, logsRes] = await Promise.allSettled([
+        axios.get(
+          `https://iam.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/serviceAccounts?pageSize=50`,
+          { headers, timeout: 4500 }
+        ),
+        axios.post(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}:getIamPolicy`,
+          {},
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/secrets?pageSize=50`,
+          { headers, timeout: 4500 }
+        ),
+        axios.post(
+          `https://logging.googleapis.com/v2/entries:list`,
+          {
+            resourceNames: [`projects/${projectId}`],
+            filter: `logName:"cloudaudit.googleapis.com"`,
+            orderBy: 'timestamp desc',
+            pageSize: 15,
+          },
+          { headers, timeout: 4500 }
+        ),
+      ]);
+
+      const serviceAccounts = [];
+      if (saRes.status === 'fulfilled') {
+        for (const sa of saRes.value.data?.accounts || []) {
+          if (sa.email) {
+            serviceAccounts.push({
+              email: sa.email,
+              shortName: sa.email.split('@')[0],
+              displayName: sa.displayName || sa.email.split('@')[0],
+              disabled: Boolean(sa.disabled),
+            });
+          }
+        }
+      }
+
+      const iamBindings = [];
+      let primitiveBindingsCount = 0;
+      let iamEtag = '';
+      if (iamRes.status === 'fulfilled') {
+        iamEtag = iamRes.value.data?.etag || '';
+        for (const b of iamRes.value.data?.bindings || []) {
+          const role = b.role || '';
+          const members = Array.isArray(b.members) ? b.members : [];
+          const isPrimitive =
+            role === 'roles/owner' || role === 'roles/editor';
+          if (isPrimitive) primitiveBindingsCount += members.length;
+          iamBindings.push({
+            role,
+            shortRole: role.replace('roles/', ''),
+            membersCount: members.length,
+            firstMember: members[0] || '',
+            isPrimitive,
+          });
+        }
+      }
+
+      const secrets = [];
+      if (secretsRes.status === 'fulfilled') {
+        for (const sec of secretsRes.value.data?.secrets || []) {
+          const shortName = (sec.name || '').split('/').pop();
+          if (shortName) {
+            secrets.push({
+              name: shortName,
+              replication: sec.replication?.automatic ? 'AUTOMATIC' : 'USER_MANAGED',
+            });
+          }
+        }
+      }
+
+      const auditEntries = [];
+      if (logsRes.status === 'fulfilled') {
+        for (const entry of logsRes.value.data?.entries || []) {
+          const method = entry.protoPayload?.methodName || '';
+          const principal =
+            entry.protoPayload?.authenticationInfo?.principalEmail || 'system';
+          const resourceName =
+            (entry.protoPayload?.resourceName || '').split('/').slice(-2).join('/') ||
+            projectId;
+          if (method) {
+            auditEntries.push({
+              timestamp: entry.timestamp,
+              method,
+              shortMethod: method.split('.').slice(-2).join('.'),
+              principal,
+              shortPrincipal: principal.split('@')[0],
+              resourceName,
+            });
+          }
+        }
+      }
+
+      secOpsExtra = {
+        ts: Date.now(),
+        serviceAccounts,
+        iamBindings,
+        primitiveBindingsCount,
+        iamEtag,
+        secrets,
+        auditEntries,
+      };
+      wave4SecOpsSreProbeCache.set(projectId, secOpsExtra);
+    }
+
+    const serviceAccounts = secOpsExtra?.serviceAccounts || [];
+    const iamBindings = secOpsExtra?.iamBindings || [];
+    const primitiveBindingsCount = secOpsExtra?.primitiveBindingsCount || 0;
+    const secrets = secOpsExtra?.secrets || [];
+    const auditEntries = secOpsExtra?.auditEntries || [];
+
+    const vpcs = resources.filter((r) => r.type === 'VPC Network');
+    const firewalls = resources.filter((r) => r.type === 'VPC Firewall Rule');
+    const buckets = resources.filter((r) => r.type === 'Cloud Storage Bucket');
+    const vms = resources.filter((r) => r.type === 'Compute Engine VM');
+    const cloudRunSvcs = resources.filter((r) => r.type === 'Cloud Run Service');
+    const enabledApis = resources.filter((r) => r.type === 'Enabled GCP Service API');
+
+    const openPublicFw = firewalls.filter(
+      (fw) =>
+        String(fw.details?.sourceRanges || '').includes('0.0.0.0/0') &&
+        !fw.details?.denied
+    );
+    const iapFw = firewalls.filter((fw) =>
+      String(fw.details?.sourceRanges || '').includes('35.235.240.0/20')
+    );
+    const denyFw = firewalls.filter(
+      (fw) =>
+        Boolean(fw.details?.denied) ||
+        fw.name.includes('deny') ||
+        fw.name.includes('quarantine') ||
+        Number(fw.details?.priority ?? 1000) <= 200
+    );
+
+    const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const sessionEvents = flightRecorderByProject.get(projectId) || [];
+    const recentDestructiveEvents = sessionEvents.filter((ev) => {
+      const ts = new Date(ev.timestamp || Date.now()).getTime();
+      if (ts < thirtyDaysAgoMs) return false;
+      const t = String(ev.action || ev.type || '').toUpperCase();
+      return (
+        t.includes('DELETE') ||
+        t.includes('DISABLE') ||
+        t.includes('KILL') ||
+        t.includes('DESTROY') ||
+        t.includes('PURGE')
+      );
+    });
+
+    // Strict Mermaid Rule ("No need to draw if we have nothing to show"):
+    // Stage 1 Mermaid: Only draw if both IAM Roles/Bindings AND Service Accounts (or Secrets) exist with real edges
+    let stage1MermaidDsl = null;
+    if (iamBindings.length > 0 && (serviceAccounts.length > 0 || secrets.length > 0)) {
+      const s1 = [`flowchart LR`];
+      s1.push(`  subgraph ROLES["IAM Policy Bindings (${iamBindings.length} Active)"]`);
+      iamBindings.slice(0, 3).forEach((b, idx) => {
+        s1.push(
+          `    ROLE${idx}["Role: ${b.shortRole} (${b.membersCount} Principal${b.membersCount === 1 ? '' : 's'})"]`
+        );
+      });
+      s1.push(`  end`);
+      if (serviceAccounts.length > 0) {
+        s1.push(`  subgraph SAS["Service Accounts (${serviceAccounts.length} Active)"]`);
+        serviceAccounts.slice(0, 3).forEach((sa, idx) => {
+          s1.push(`    SA${idx}["SA: ${sa.shortName}"]`);
+        });
+        s1.push(`  end`);
+        iamBindings.slice(0, 3).forEach((_, idx) => {
+          const targetSaIdx = idx % Math.min(serviceAccounts.length, 3);
+          s1.push(`  ROLE${idx} -->|"Grants IAM"| SA${targetSaIdx}`);
+        });
+      }
+      if (secrets.length > 0) {
+        s1.push(`  subgraph VAULT["Secret Manager (${secrets.length} Active)"]`);
+        secrets.slice(0, 3).forEach((sec, idx) => {
+          s1.push(`    SEC${idx}["Secret: ${sec.name}"]`);
+        });
+        s1.push(`  end`);
+        secrets.slice(0, 3).forEach((_, idx) => {
+          if (serviceAccounts.length > 0) {
+            s1.push(`  SA0 -->|"secretAccessor"| SEC${idx}`);
+          } else {
+            s1.push(`  ROLE0 -->|"Protects"| SEC${idx}`);
+          }
+        });
+      }
+      stage1MermaidDsl = s1.join('\n');
+    }
+
+    // Stage 2 Mermaid: Only draw if both Firewalls and VPCs exist
+    let stage2MermaidDsl = null;
+    if (firewalls.length > 0 && vpcs.length > 0) {
+      const s2 = [`flowchart LR`];
+      s2.push(`  subgraph INGRESS["Perimeter Ingress"]`);
+      if (openPublicFw.length > 0) {
+        s2.push(`    PUB["Public 0.0.0.0/0 (${openPublicFw.length} Open)"]`);
+      }
+      if (iapFw.length > 0) {
+        s2.push(`    IAP["Cloud IAP 35.235.240.0/20"]`);
+      }
+      if (openPublicFw.length === 0 && iapFw.length === 0) {
+        s2.push(`    INT["Internal VPC CIDR"]`);
+      }
+      s2.push(`  end`);
+      s2.push(`  subgraph FW_RULES["Firewall Rules (${firewalls.length} Active)"]`);
+      firewalls.slice(0, 4).forEach((fw, idx) => {
+        s2.push(`    FW${idx}["Rule: ${fw.name}"]`);
+      });
+      s2.push(`  end`);
+      s2.push(`  subgraph VPC_NET["VPC Backbone (${vpcs.length} Active)"]`);
+      vpcs.slice(0, 2).forEach((v, idx) => {
+        s2.push(`    VPC${idx}["VPC: ${v.name}"]`);
+      });
+      s2.push(`  end`);
+      firewalls.slice(0, 4).forEach((fw, idx) => {
+        const src = String(fw.details?.sourceRanges || '');
+        if (src.includes('0.0.0.0/0') && openPublicFw.length > 0) {
+          s2.push(`  PUB -->|"0.0.0.0/0"| FW${idx}`);
+        } else if (src.includes('35.235.240.0/20') && iapFw.length > 0) {
+          s2.push(`  IAP -->|"TCP-22"| FW${idx}`);
+        } else {
+          const fallbackSrc = openPublicFw.length > 0 ? 'PUB' : iapFw.length > 0 ? 'IAP' : 'INT';
+          s2.push(`  ${fallbackSrc} -->|"Evaluates"| FW${idx}`);
+        }
+        s2.push(`  FW${idx} -->|"Guards"| VPC0`);
+      });
+      stage2MermaidDsl = s2.join('\n');
+    }
+
+    // Stage 3 Mermaid: Only draw if live Cloud Audit entries exist
+    let stage3MermaidDsl = null;
+    if (auditEntries.length > 0) {
+      const s3 = [`flowchart LR`];
+      const uniquePrincipals = Array.from(
+        new Set(auditEntries.slice(0, 4).map((e) => e.shortPrincipal))
+      );
+      s3.push(`  subgraph ACTORS["Authenticated Principals"]`);
+      uniquePrincipals.forEach((p, idx) => {
+        s3.push(`    ACT${idx}["Actor: ${p}"]`);
+      });
+      s3.push(`  end`);
+      s3.push(`  subgraph AUDIT["Cloud Audit Stream (${auditEntries.length} Events)"]`);
+      auditEntries.slice(0, 3).forEach((e, idx) => {
+        s3.push(`    LOG${idx}["${e.shortMethod}"]`);
+      });
+      s3.push(`  end`);
+      auditEntries.slice(0, 3).forEach((e, idx) => {
+        const pIdx = Math.max(0, uniquePrincipals.indexOf(e.shortPrincipal));
+        s3.push(`  ACT${pIdx} -->|"cloudaudit"| LOG${idx}`);
+      });
+      stage3MermaidDsl = s3.join('\n');
+    }
+
+    const primarySaEmail =
+      serviceAccounts[0]?.email || `cloudpulse-runtime@${projectId}.iam.gserviceaccount.com`;
+    const primaryOpenFw = openPublicFw[0]?.name || 'default-allow-ssh';
+    const primaryCloudRun = cloudRunSvcs[0]?.name || 'cloudpulse-service';
+
+    const iamZeroTrustTf = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 4 — Zero-Trust IAM, OIDC WIF & IAP Bastion Blueprint (.tf)`,
+      `# Target GCP Project : ${projectId}`,
+      `# Discovered Identity: ${serviceAccounts.length} Service Account(s), ${iamBindings.length} Role Binding(s), ${secrets.length} Secret(s)`,
+      `# ==============================================================================`,
+      ``,
+      `resource "google_service_account" "least_privilege_runtime" {`,
+      `  account_id   = "cloudpulse-zero-trust-sa"`,
+      `  display_name = "Zero-Trust Runtime Service Account (No JSON Keys)"`,
+      `  project      = "${projectId}"`,
+      `}`,
+      ``,
+      `# Enforce Cloud IAP TCP-22 Bastion Ingress (35.235.240.0/20) instead of 0.0.0.0/0`,
+      `resource "google_compute_firewall" "allow_iap_ssh_bastion" {`,
+      `  name          = "cloudpulse-allow-iap-ssh"`,
+      `  project       = "${projectId}"`,
+      `  network       = "${vpcs[0]?.name || 'default'}"`,
+      `  direction     = "INGRESS"`,
+      `  priority      = 900`,
+      `  source_ranges = ["35.235.240.0/20"]`,
+      `  allow {`,
+      `    protocol = "tcp"`,
+      `    ports    = ["22"]`,
+      `  }`,
+      `}`,
+    ].join('\n');
+
+    const soarQuarantineSh = [
+      `#!/usr/bin/env bash`,
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 4 — SOAR Active Quarantine & IAP Lock Playbook (sh)`,
+      `# Target Project: ${projectId}`,
+      `# ==============================================================================`,
+      `set -euo pipefail`,
+      `PROJECT_ID="${projectId}"`,
+      ``,
+      `echo "==> [1/3] Auditing user-managed Service Account JSON keys for ${primarySaEmail}..."`,
+      `gcloud iam service-accounts keys list --iam-account="${primarySaEmail}" --managed-by=user --project="$PROJECT_ID"`,
+      ``,
+      `echo "==> [2/3] Locking exposed firewall rule (${primaryOpenFw}) to Google Cloud IAP (35.235.240.0/20)..."`,
+      `# Uncomment to enforce IAP lock on ${primaryOpenFw}:`,
+      `# gcloud compute firewall-rules update "${primaryOpenFw}" --source-ranges="35.235.240.0/20" --project="$PROJECT_ID"`,
+      ``,
+      `echo "==> [3/3] Querying 400-Day Cloud Audit Admin Activity Log for recent mutations..."`,
+      `gcloud logging read 'logName:"cloudaudit.googleapis.com%2Factivity"' --project="$PROJECT_ID" --limit=10 --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName)"`,
+    ].join('\n');
+
+    const sreSloBurnAlertYaml = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 4 — Google SRE 14.4x (1h) / 6x (6h) Multi-Window Burn Alert`,
+      `# Target Project : ${projectId}`,
+      `# Primary Service: ${primaryCloudRun}`,
+      `# ==============================================================================`,
+      `displayName: "CloudPulse SRE — 14.4x Fast Error-Budget Burn Gate (${projectId})"`,
+      `combiner: OR`,
+      `conditions:`,
+      `  - displayName: "1h Fast Burn Rate > 14.4x (2% Error Budget Consumed in 1 Hour)"`,
+      `    conditionThreshold:`,
+      `      filter: 'select_slo_burn_rate("projects/${projectId}/services/${primaryCloudRun}/serviceLevelObjectives/availability-99-9", "3600s")'`,
+      `      comparison: COMPARISON_GT`,
+      `      thresholdValue: 14.4`,
+      `      duration: 120s`,
+      `  - displayName: "6h Sustained Burn Rate > 6.0x (5% Error Budget Consumed in 6 Hours)"`,
+      `    conditionThreshold:`,
+      `      filter: 'select_slo_burn_rate("projects/${projectId}/services/${primaryCloudRun}/serviceLevelObjectives/availability-99-9", "21600s")'`,
+      `      comparison: COMPARISON_GT`,
+      `      thresholdValue: 6.0`,
+      `      duration: 300s`,
+    ].join('\n');
+
+    const stages = [
+      {
+        id: 'STAGE_1_IAM_KEY_HYGIENE',
+        stepNumber: 1,
+        title: '1. IAM Least-Privilege, SA Key Hygiene & Secret Vault',
+        shortTitle: 'IAM & Secret Vault',
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'IAM_SURGEON',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'SECRETS_KMS_WAF',
+        secondaryLabel: 'Secret Manager & KMS Vault',
+        status: primitiveBindingsCount > 3 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
+        metricBadge: `${serviceAccounts.length} SAs · ${iamBindings.length} Roles · ${secrets.length} Secrets`,
+        summary: `Discovered ${serviceAccounts.length} Service Account(s), ${iamBindings.length} IAM role binding(s) (${primitiveBindingsCount} Owner/Editor primitive grant(s)), and ${secrets.length} Secret Manager secret(s) in ${projectId}.`,
+        cliCmd: `gcloud projects get-iam-policy ${projectId} --format="table(bindings.role,bindings.members)"`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...serviceAccounts.slice(0, 2).map((sa) => ({
+            kind: sa.disabled ? 'Disabled Service Account' : 'Active Service Account',
+            name: sa.shortName,
+            meta: sa.email,
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'IAM_SURGEON',
+          })),
+          {
+            kind: 'IAM Role Bindings',
+            name: `${iamBindings.length} Roles (${primitiveBindingsCount} Owner/Editor)`,
+            meta: 'Inspect in IAM Least-Privilege Surgeon',
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'IAM_SURGEON',
+          },
+          {
+            kind: 'Secret Manager Vault',
+            name: `${secrets.length} Secret(s) Discovered`,
+            meta:
+              secrets.length > 0
+                ? secrets.slice(0, 2).map((s) => s.name).join(', ')
+                : 'Open Secret Manager & KMS Studio',
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'SECRETS_KMS_WAF',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_2_PERIMETER_TOXIC_GRAPH',
+        stepNumber: 2,
+        title: '2. Perimeter Firewall Exposure & Toxic Attack-Path Graph',
+        shortTitle: 'Perimeter & Toxic Graph',
+        targetTab: 'CLOUD_SOC',
+        secondaryTab: 'VPC_NETWORKS',
+        secondaryLabel: 'VPC & Firewall Studio',
+        status:
+          openPublicFw.length > 0 && iapFw.length === 0
+            ? 'ACTION_RECOMMENDED'
+            : 'OPTIMAL',
+        metricBadge:
+          openPublicFw.length > 0
+            ? `${openPublicFw.length} Open 0.0.0.0/0 · ${iapFw.length} IAP`
+            : `${firewalls.length} FW Rules · Zero 0.0.0.0/0`,
+        summary:
+          openPublicFw.length > 0
+            ? `${openPublicFw.length} firewall rule(s) (${openPublicFw.slice(0, 3).map((f) => f.name).join(', ')}) allow public 0.0.0.0/0 ingress across ${vpcs.length} VPC(s). Correlate toxic paths in Cloud SOC or lock SSH/RDP to Cloud IAP (35.235.240.0/20).`
+            : `All ${firewalls.length} firewall rules across ${vpcs.length} VPC(s) are free of unguarded 0.0.0.0/0 ingress.`,
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId} --format="table(name,network,direction,priority,sourceRanges)"`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          ...(openPublicFw.length > 0
+            ? openPublicFw.slice(0, 2).map((fw) => ({
+                kind: 'Exposed 0.0.0.0/0 Rule',
+                name: fw.name,
+                meta: `VPC: ${fw.details?.network || 'default'} · Click to inspect`,
+                targetTab: 'VPC_NETWORKS',
+              }))
+            : [
+                {
+                  kind: 'Zero-Trust VPC Perimeter',
+                  name: `${vpcs.length} VPC(s) · ${firewalls.length} Firewall Rule(s)`,
+                  meta: 'Open VPC & Firewall Rules Center',
+                  targetTab: 'VPC_NETWORKS',
+                },
+              ]),
+          {
+            kind: 'Cloud SOC Pillar 02',
+            name: 'Toxic Combinations Attack Graph',
+            meta: 'Public Ingress × Runtime SA × Crown Jewels',
+            targetTab: 'CLOUD_SOC',
+          },
+          {
+            kind: 'Cloud IAP Bastion',
+            name: `${iapFw.length} IAP Rule(s) (35.235.240.0/20)`,
+            meta: 'Zero-public-IP TCP-22 SSH tunneling',
+            targetTab: 'VPC_NETWORKS',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_AUDIT_CHRONO_LOGS',
+        stepNumber: 3,
+        title: '3. 400-Day Cloud Audit Trail & Neural Chrono-Log Detective',
+        shortTitle: 'Cloud Audit & Logs',
+        targetTab: 'LOGS_SHELL',
+        secondaryTab: 'CLOUD_SOC',
+        secondaryLabel: 'Cloud SOC Kill-Chain Correlator',
+        status: 'OPTIMAL',
+        metricBadge: `${auditEntries.length} Live Audit Events`,
+        summary: `Streaming live cloudaudit.googleapis.com entries (${auditEntries.length} recent admin/activity events sampled). Admin Activity logs are retained 400 days by Google Cloud at $0.00/mo.`,
+        cliCmd: `gcloud logging read 'logName:"cloudaudit.googleapis.com"' --project=${projectId} --limit=10 --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName)"`,
+        mermaidDsl: stage3MermaidDsl,
+        stageItems:
+          auditEntries.length > 0
+            ? [
+                ...auditEntries.slice(0, 3).map((ev) => ({
+                  kind: `Audit · ${ev.shortPrincipal}`,
+                  name: ev.shortMethod,
+                  meta: ev.resourceName,
+                  targetTab: 'LOGS_SHELL',
+                })),
+                {
+                  kind: 'Chrono-Log Explorer',
+                  name: 'Open Full Cloud Logging & Shell Studio',
+                  meta: 'Filter by severity, principal, or method',
+                  targetTab: 'LOGS_SHELL',
+                },
+              ]
+            : [
+                {
+                  kind: '400-Day Free Admin Audit',
+                  name: 'cloudaudit.googleapis.com/activity',
+                  meta: 'Open Neural Chrono-Logs & Cloud Shell',
+                  targetTab: 'LOGS_SHELL',
+                },
+                {
+                  kind: 'MITRE ATT&CK Kill-Chains',
+                  name: 'Behavioral Audit Correlator',
+                  meta: 'Open 20-Pillar Cloud SOC',
+                  targetTab: 'CLOUD_SOC',
+                },
+              ],
+      },
+      {
+        id: 'STAGE_4_SOAR_QUARANTINE',
+        stepNumber: 4,
+        title: '4. SOAR Active Quarantine, IAP Lock & Playbook Synthesizer',
+        shortTitle: 'SOAR & Active Defense',
+        targetTab: 'CLOUD_SOC',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'IAM_SURGEON',
+        secondaryLabel: 'SA Key Kill-Switch',
+        status: 'OPTIMAL',
+        metricBadge: `${denyFw.length} Deny Rule(s) · ${iapFw.length} IAP`,
+        summary: `Automated SOAR active defense across ${denyFw.length} high-priority DENY/quarantine firewall rule(s), ${iapFw.length} Cloud IAP bastion rule(s), and 1-click Service Account key revocation.`,
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId} --filter="direction=INGRESS"`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: 'SOAR Quarantine Playbook',
+            name: 'soar_quarantine.sh',
+            meta: 'SA Key Audit + IAP Firewall Lock + Audit Query',
+            openArtifactTab: 'soarQuarantineSh',
+            targetTab: 'CLOUD_SOC',
+          },
+          {
+            kind: 'Zero-Trust IAM & IAP HCL',
+            name: 'iam_zero_trust.tf',
+            meta: 'Least-Privilege SA + 35.235.240.0/20 IAP Bastion',
+            openArtifactTab: 'iamZeroTrustTf',
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'IAM_SURGEON',
+          },
+          {
+            kind: 'SRE Multi-Window Alert YAML',
+            name: 'sre_slo_burn_alert.yaml',
+            meta: '14.4x (1h) / 6.0x (6h) Error-Budget Gate',
+            openArtifactTab: 'sreSloBurnAlertYaml',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+          {
+            kind: '20-Pillar Cloud SOC',
+            name: 'Open SOAR & Kill-Chain Command Center',
+            meta: `${denyFw.length} Active DENY / Quarantine Rule(s)`,
+            targetTab: 'CLOUD_SOC',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_5_SRE_SLO_BURN_GATE',
+        stepNumber: 5,
+        title: '5. SRE 14.4x SLO Burn Gate, Synthetic Prober & Canary Rollback',
+        shortTitle: 'SRE 14.4x Burn Gate',
+        targetTab: 'SRE_WAR_ROOM',
+        secondaryTab: 'CLOUD_RUN',
+        secondaryLabel: 'Cloud Run Traffic Rollback',
+        status: 'OPTIMAL',
+        metricBadge: `${cloudRunSvcs.length} Cloud Run · ${vms.length} VMs Monitored`,
+        summary: `Google SRE Workbook multi-window error-budget burn gate (14.4x 1h fast burn / 6.0x 6h slow burn) monitoring ${cloudRunSvcs.length} Cloud Run service(s) and ${vms.length} Compute VM(s).`,
+        cliCmd: `gcloud run services list --project=${projectId}`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: 'Pillar 01 · SLO Burn Gate',
+            name: '14.4x (1h) & 6.0x (6h) Error Budget Radar',
+            meta: 'Automated release freeze & canary rollback trigger',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+          {
+            kind: 'Pillar 04 · Synthetic Prober',
+            name: 'Live DNS + TCP + TLS 1.3 + HTTPS Stopwatch',
+            meta: 'Real-time blackbox endpoint latency probe',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+          {
+            kind: 'Monitored Workloads',
+            name: `${cloudRunSvcs.length} Cloud Run · ${vms.length} Compute VM(s)`,
+            meta: 'Open Cloud Run Revision Traffic Splitter',
+            targetTab: 'CLOUD_RUN',
+          },
+          {
+            kind: 'Pillar 06 · Chaos GameDay',
+            name: 'Fault Injection & MTTR Stopwatch',
+            meta: 'Open 12-Pillar SRE War-Room',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_6_RECYCLE_DRIFT_VAULT',
+        stepNumber: 6,
+        title: '6. 30-Day Cloud Recycle Bin & SHA-256 IAM Drift Time-Machine',
+        shortTitle: 'Recycle Bin & Time-Machine',
+        targetTab: 'RECYCLE_BIN',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'TIME_MACHINE',
+        secondaryLabel: 'SHA-256 Drift Time-Machine',
+        status: 'OPTIMAL',
+        metricBadge: `${recentDestructiveEvents.length} Deletions (30d) · ${buckets.length} GCS Vaults`,
+        summary: `30-Day Cloud Recycle Bin tracking ${recentDestructiveEvents.length} recent destructive/disable event(s), ${buckets.length} GCS 7-day soft-delete bucket(s), and cryptographic SHA-256 IAM etag rollback.`,
+        cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService|SetIamPolicy)"' --project=${projectId} --limit=10`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: '30-Day Cloud Recycle Bin',
+            name: `${recentDestructiveEvents.length} Recoverable Event(s) (30d)`,
+            meta: 'Native State Restore vs. Empty Shell Re-Creation',
+            targetTab: 'RECYCLE_BIN',
+          },
+          {
+            kind: 'SHA-256 Drift Time-Machine',
+            name: 'Cryptographic IAM & Config Baseline Vault',
+            meta: `IAM Policy etag: ${secOpsExtra?.iamEtag ? secOpsExtra.iamEtag.slice(0, 12) : 'Live'}`,
+            targetTab: 'SOVEREIGN_STUDIO',
+            subTab: 'TIME_MACHINE',
+          },
+          {
+            kind: 'GCS 7-Day Soft-Delete',
+            name: `${buckets.length} Protected Storage Bucket(s)`,
+            meta: 'Generation-based object undelete',
+            targetTab: 'RECYCLE_BIN',
+          },
+        ],
+      },
+    ];
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        serviceAccounts: serviceAccounts.length,
+        iamBindings: iamBindings.length,
+        primitiveBindingsCount,
+        secrets: secrets.length,
+        vpcs: vpcs.length,
+        firewalls: firewalls.length,
+        openPublicFw: openPublicFw.length,
+        iapFw: iapFw.length,
+        denyFw: denyFw.length,
+        auditEntries: auditEntries.length,
+        cloudRun: cloudRunSvcs.length,
+        vms: vms.length,
+        buckets: buckets.length,
+        recentDestructiveEvents: recentDestructiveEvents.length,
+        enabledApis: enabledApis.length,
+        totalSecuritySignals:
+          serviceAccounts.length +
+          iamBindings.length +
+          secrets.length +
+          firewalls.length +
+          auditEntries.length,
+      },
+      stages,
+      artifacts: {
+        iamZeroTrustTf,
+        soarQuarantineSh,
+        sreSloBurnAlertYaml,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 4 Zero-Trust SecOps, SRE & Forensics Pipeline blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {

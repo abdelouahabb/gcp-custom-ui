@@ -96,6 +96,7 @@ import Startup10xMentorStudio from './components/Startup10xMentorStudio';
 import CloudRecycleBinStudio from './components/CloudRecycleBinStudio';
 import EnterpriseStackPipelineBar from './components/EnterpriseStackPipelineBar';
 import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar';
+import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -5587,6 +5588,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'SOVEREIGN_STUDIO' && (
                 <div className="space-y-4">
+                  <SecOpsSreForensicsPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <SovereignTimeMachineIamStudio
                     projectId={selectedProjectId}
                     initialSubTab={sovereignSubTab}
@@ -5624,6 +5631,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'SRE_WAR_ROOM' && (
                 <div className="space-y-4">
+                  <SecOpsSreForensicsPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}
                     onTriggerToast={showToast}
@@ -6004,6 +6017,12 @@ function CloudPulseCockpit() {
 
               {activeTab === 'LOGS_SHELL' && (
                 <div className="space-y-4">
+                  <SecOpsSreForensicsPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <LogStreamerAndShell
                     logs={overview?.logs || []}
                     projectId={selectedProjectId}
@@ -6095,19 +6114,27 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'CLOUD_SOC' && (
-                <AutonomousCloudSocStudio
-                  projectId={selectedProjectId}
-                  initialSocSeed={cloudSocSeed}
-                  onClearSocSeed={() => setCloudSocSeed(null)}
-                  onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
-                  onRunInShell={handleRunInShell}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={handleNavigateStudioTab}
-                  onRefreshGlobal={() => {
-                    fetchProjectOverview(selectedProjectId, { force: true });
-                    setVmRefreshTrigger((c) => c + 1);
-                  }}
-                />
+                <div className="space-y-4">
+                  <SecOpsSreForensicsPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <AutonomousCloudSocStudio
+                    projectId={selectedProjectId}
+                    initialSocSeed={cloudSocSeed}
+                    onClearSocSeed={() => setCloudSocSeed(null)}
+                    onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
+                    onRunInShell={handleRunInShell}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRefreshGlobal={() => {
+                      fetchProjectOverview(selectedProjectId, { force: true });
+                      setVmRefreshTrigger((c) => c + 1);
+                    }}
+                  />
+                </div>
               )}
 
               {activeTab === 'DOCS_GUIDE' && (
