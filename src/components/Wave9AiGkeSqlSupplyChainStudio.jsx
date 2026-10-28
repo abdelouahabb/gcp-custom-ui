@@ -271,15 +271,9 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
 
   const handleDeleteDigest = async (img) => {
     if (!projectId || !img) return;
-    setDeletingDigestName(img.name);
     setConfirmDigestName(null);
     const keyName = img.name ? `img:${img.name}` : null;
     const keyUri = img.uri ? `img:${img.uri}` : null;
-    setDeletingArtifactsMap((prev) => ({
-      ...prev,
-      ...(keyName ? { [keyName]: true } : {}),
-      ...(keyUri ? { [keyUri]: true } : {}),
-    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -288,6 +282,16 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         {
           name: img.name,
           uri: img.uri,
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setDeletingDigestName(img.name);
+            setDeletingArtifactsMap((prev) => ({
+              ...prev,
+              ...(keyName ? { [keyName]: true } : {}),
+              ...(keyUri ? { [keyUri]: true } : {}),
+            }));
+          },
         }
       );
       if (onTriggerToast) {
@@ -306,7 +310,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         if (keyUri) delete next[keyUri];
         return next;
       });
-      if (!err?.__cancelledByUser && onTriggerToast) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || 'Failed to delete container image digest'
         );
@@ -325,14 +329,12 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         !deletingArtifactsMap[`img:${i.uri}`]
     );
     if (!projectId || orphans.length === 0) return;
-    setSweepingOrphans(true);
     setConfirmSweepAll(false);
     const batchMap = {};
     orphans.forEach((o) => {
       if (o.name) batchMap[`img:${o.name}`] = true;
       if (o.uri) batchMap[`img:${o.uri}`] = true;
     });
-    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -340,6 +342,12 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         )}/wave9/supply-chain/sweep-orphans`,
         {
           orphans: orphans.map((o) => ({ name: o.name, uri: o.uri })),
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setSweepingOrphans(true);
+            setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
+          },
         }
       );
       if (onTriggerToast) {
@@ -356,7 +364,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         Object.keys(batchMap).forEach((k) => delete next[k]);
         return next;
       });
-      if (!err?.__cancelledByUser && onTriggerToast) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || 'Failed to sweep untagged orphan digests'
         );
@@ -368,17 +376,21 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
 
   const handleDeleteRepository = async (repo) => {
     if (!projectId || !repo) return;
-    setDeletingRepoName(repo.name);
     setConfirmRepoName(null);
     const repoKey = `repo:${repo.name}`;
-    setDeletingArtifactsMap((prev) => ({ ...prev, [repoKey]: true }));
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
           projectId
         )}/wave9/supply-chain/repositories/${encodeURIComponent(
           repo.location
-        )}/${encodeURIComponent(repo.shortName)}`
+        )}/${encodeURIComponent(repo.shortName)}`,
+        {
+          __onGatekeeperConfirmed: () => {
+            setDeletingRepoName(repo.name);
+            setDeletingArtifactsMap((prev) => ({ ...prev, [repoKey]: true }));
+          },
+        }
       );
       if (onTriggerToast) {
         onTriggerToast(
@@ -395,7 +407,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
         delete next[repoKey];
         return next;
       });
-      if (!err?.__cancelledByUser && onTriggerToast) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
             `Failed to delete repository ${repo.shortName}`
@@ -1296,36 +1308,20 @@ options:
                               <span className="px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                                 Deleting in GCP...
                               </span>
-                            ) : confirmRepoName === repo.name ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={deletingRepoName === repo.name}
-                                  onClick={() => handleDeleteRepository(repo)}
-                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
-                                >
-                                  {deletingRepoName === repo.name
-                                    ? 'Deleting...'
-                                    : 'Confirm Delete'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmRepoName(null)}
-                                  className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                              </>
                             ) : (
                               <button
                                 type="button"
                                 disabled={deletingRepoName === repo.name}
-                                onClick={() => setConfirmRepoName(repo.name)}
+                                onClick={() => handleDeleteRepository(repo)}
                                 title={`Delete repository ${repo.shortName} (${repo.location})`}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-50"
                               >
                                 <Trash2 className="w-3 h-3" />
-                                <span>Delete Repo</span>
+                                <span>
+                                  {deletingRepoName === repo.name
+                                    ? 'Deleting...'
+                                    : 'Delete Repo'}
+                                </span>
                               </button>
                             )}
                           </div>
@@ -1358,40 +1354,20 @@ options:
                 {/* 1-Click Batch Orphan Sweeper Button */}
                 {orphanImages.length > 0 && (
                   <div className="flex items-center gap-1.5">
-                    {confirmSweepAll ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={sweepingOrphans}
-                          onClick={handleSweepAllOrphans}
-                          className="px-2.5 py-1.5 rounded-[8px] bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
-                        >
-                          {sweepingOrphans
-                            ? 'Sweeping Orphans...'
-                            : `Confirm Sweep (${orphanImages.length})`}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmSweepAll(false)}
-                          className="px-2 py-1.5 rounded-[8px] bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={sweepingOrphans}
-                        onClick={() => setConfirmSweepAll(true)}
-                        title="Delete all untagged orphan container digests directly from Artifact Registry"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] font-extrabold cursor-pointer shadow-sm"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>
-                          Sweep All {orphanImages.length} Orphans Now
-                        </span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={sweepingOrphans}
+                      onClick={handleSweepAllOrphans}
+                      title="Delete all untagged orphan container digests directly from Artifact Registry"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] font-extrabold cursor-pointer shadow-sm disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>
+                        {sweepingOrphans
+                          ? 'Sweeping Orphans...'
+                          : `Sweep All ${orphanImages.length} Orphans Now`}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1486,52 +1462,30 @@ options:
                               Copy URI
                             </button>
 
-                            {isConfirmingThis ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={isDeletingThis}
-                                  onClick={() => handleDeleteDigest(img)}
-                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
-                                >
-                                  {isDeletingThis
-                                    ? 'Deleting...'
-                                    : 'Confirm Delete'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDigestName(null)}
-                                  className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={isDeletingThis}
-                                onClick={() => setConfirmDigestName(img.name)}
-                                title={
-                                  img.isOrphan
-                                    ? 'Delete this untagged orphan container digest directly from Artifact Registry'
-                                    : 'Delete this container image digest (and its tags) directly from Artifact Registry'
-                                }
-                                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
-                                  img.isOrphan
-                                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500/40'
-                                    : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
-                                }`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>
-                                  {isDeletingThis
-                                    ? 'Deleting...'
-                                    : img.isOrphan
-                                    ? 'Sweep Now'
-                                    : 'Delete'}
-                                </span>
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              disabled={isDeletingThis}
+                              onClick={() => handleDeleteDigest(img)}
+                              title={
+                                img.isOrphan
+                                  ? 'Delete this untagged orphan container digest directly from Artifact Registry'
+                                  : 'Delete this container image digest (and its tags) directly from Artifact Registry'
+                              }
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold cursor-pointer border disabled:opacity-50 ${
+                                img.isOrphan
+                                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                  : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
+                              }`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>
+                                {isDeletingThis
+                                  ? 'Deleting...'
+                                  : img.isOrphan
+                                  ? 'Sweep Now'
+                                  : 'Delete'}
+                              </span>
+                            </button>
                           </>
                         )}
                       </div>

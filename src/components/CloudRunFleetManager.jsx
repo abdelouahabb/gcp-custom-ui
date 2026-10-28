@@ -1429,12 +1429,6 @@ spec:
     if (!img || !img.isDead) return;
     const keyUri = img.uri ? `img:${img.uri}` : null;
     const keyName = img.name ? `img:${img.name}` : null;
-    setArtifactActionBusy(`img:${img.uri || img.name}`);
-    setDeletingArtifactsMap((prev) => ({
-      ...prev,
-      ...(keyUri ? { [keyUri]: true } : {}),
-      ...(keyName ? { [keyName]: true } : {}),
-    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1444,6 +1438,16 @@ spec:
           name: img.name,
           uri: img.uri,
           tags: img.tags || [],
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setArtifactActionBusy(`img:${img.uri || img.name}`);
+            setDeletingArtifactsMap((prev) => ({
+              ...prev,
+              ...(keyUri ? { [keyUri]: true } : {}),
+              ...(keyName ? { [keyName]: true } : {}),
+            }));
+          },
         }
       );
       if (onShowToast) {
@@ -1461,7 +1465,7 @@ spec:
         if (keyName) delete next[keyName];
         return next;
       });
-      if (!err?.__cancelledByUser && onShowError) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1475,13 +1479,11 @@ spec:
 
   const handleSweepAllDeadContainers = async (deadImagesList = []) => {
     if (!Array.isArray(deadImagesList) || deadImagesList.length === 0) return;
-    setArtifactActionBusy('SWEEP_ALL_CONTAINERS');
     const batchMap = {};
     deadImagesList.forEach((img) => {
       if (img.uri) batchMap[`img:${img.uri}`] = true;
       if (img.name) batchMap[`img:${img.name}`] = true;
     });
-    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1493,6 +1495,12 @@ spec:
             uri: img.uri,
             tags: img.tags || [],
           })),
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setArtifactActionBusy('SWEEP_ALL_CONTAINERS');
+            setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
+          },
         }
       );
       if (onShowToast) {
@@ -1509,7 +1517,7 @@ spec:
         Object.keys(batchMap).forEach((k) => delete next[k]);
         return next;
       });
-      if (!err?.__cancelledByUser && onShowError) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1524,8 +1532,6 @@ spec:
   const handleDeleteSingleGcsArtifact = async (obj) => {
     if (!obj?.bucket || !obj?.name) return;
     const objKey = `gcs:${obj.id}`;
-    setArtifactActionBusy(objKey);
-    setDeletingArtifactsMap((prev) => ({ ...prev, [objKey]: true }));
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
@@ -1534,6 +1540,10 @@ spec:
           obj.bucket
         )}/objects?objectName=${encodeURIComponent(obj.name)}`,
         {
+          __onGatekeeperConfirmed: () => {
+            setArtifactActionBusy(objKey);
+            setDeletingArtifactsMap((prev) => ({ ...prev, [objKey]: true }));
+          },
           data: {
             objectName: obj.name,
           },
@@ -1553,7 +1563,7 @@ spec:
         delete next[objKey];
         return next;
       });
-      if (!err?.__cancelledByUser && onShowError) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1567,12 +1577,10 @@ spec:
 
   const handlePurgeGcsArtifacts = async (objectsToPurge = []) => {
     if (!Array.isArray(objectsToPurge) || objectsToPurge.length === 0) return;
-    setArtifactActionBusy('PURGE_ALL_GCS');
     const batchMap = {};
     objectsToPurge.forEach((o) => {
       if (o.id) batchMap[`gcs:${o.id}`] = true;
     });
-    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1583,6 +1591,12 @@ spec:
             bucket: o.bucket,
             name: o.name,
           })),
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setArtifactActionBusy('PURGE_ALL_GCS');
+            setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
+          },
         }
       );
       if (onShowToast) {
@@ -1599,7 +1613,7 @@ spec:
         Object.keys(batchMap).forEach((k) => delete next[k]);
         return next;
       });
-      if (!err?.__cancelledByUser && onShowError) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499 && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1614,14 +1628,18 @@ spec:
   const handleEmptyAndDeleteStagingBucket = async (bucketName) => {
     if (!bucketName) return;
     const bKey = `bucket:${bucketName}`;
-    setArtifactActionBusy(bKey);
-    setDeletingArtifactsMap((prev) => ({ ...prev, [bKey]: true }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
         )}/storage/buckets/${encodeURIComponent(bucketName)}/empty-and-delete`,
-        {}
+        {},
+        {
+          __onGatekeeperConfirmed: () => {
+            setArtifactActionBusy(bKey);
+            setDeletingArtifactsMap((prev) => ({ ...prev, [bKey]: true }));
+          },
+        }
       );
       if (onShowToast) {
         onShowToast(

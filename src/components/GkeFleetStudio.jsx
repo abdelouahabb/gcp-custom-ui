@@ -323,12 +323,16 @@ export default function GkeFleetStudio({
 
   const handleDeleteGkeCluster = async (loc, cName) => {
     if (!loc || !cName || deletingGkeName) return;
-    setDeletingGkeName(cName);
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
           projectId
-        )}/gke/clusters/${encodeURIComponent(loc)}/${encodeURIComponent(cName)}`
+        )}/gke/clusters/${encodeURIComponent(loc)}/${encodeURIComponent(cName)}`,
+        {
+          __onGatekeeperConfirmed: () => {
+            setDeletingGkeName(cName);
+          },
+        }
       );
       if (onShowToast) {
         onShowToast(
@@ -338,6 +342,7 @@ export default function GkeFleetStudio({
       await fetchGkeFleet();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       if (onShowToast) {
         onShowToast(
           err.response?.data?.error || `Failed to delete GKE cluster ${cName}`

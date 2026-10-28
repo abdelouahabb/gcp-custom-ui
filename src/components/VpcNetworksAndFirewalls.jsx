@@ -1047,23 +1047,25 @@ export default function VpcNetworksAndFirewalls({
     const isFw = resourceType === 'VPC Firewall Rule';
     const trackerKey = isFw ? `fw:${name}` : `vpc:${name}`;
     setConfirmDeleteKey(null);
-    setOperationTrackers((prev) => ({
-      ...prev,
-      [trackerKey]: {
-        status: 'DISPATCHING',
-        progress: 20,
-        operationName: isFw
-          ? 'compute.firewalls.delete'
-          : 'compute.networks.delete',
-        stepLabel: `Dispatching DELETE ${name} to Google Cloud...`,
-      },
-    }));
-
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(projectId)}/resource`,
         {
+          __onGatekeeperConfirmed: () => {
+            setOperationTrackers((prev) => ({
+              ...prev,
+              [trackerKey]: {
+                status: 'DISPATCHING',
+                progress: 20,
+                operationName: isFw
+                  ? 'compute.firewalls.delete'
+                  : 'compute.networks.delete',
+                stepLabel: `Dispatching DELETE ${name} to Google Cloud...`,
+              },
+            }));
+          },
           data: {
+            resourceType,
             type: resourceType,
             name,
             region: 'global',
@@ -1085,17 +1087,17 @@ export default function VpcNetworksAndFirewalls({
       if (onShowToast) onShowToast(res.data?.message || `Deleted ${name}.`);
       if (onRefresh) onRefresh();
     } catch (err) {
-      // Fallback to parent handler if needed
-      if (onDeleteResource) {
-        await onDeleteResource({ type: resourceType, name, region: 'global' });
-      } else if (onShowError) {
-        onShowError(err.response?.data?.error || `Failed to delete ${name}.`);
-      }
       setOperationTrackers((prev) => {
         const next = { ...prev };
         delete next[trackerKey];
         return next;
       });
+      if (err?.__cancelledByUser || err?.response?.status === 499) {
+        return;
+      }
+      if (onShowError) {
+        onShowError(err.response?.data?.error || `Failed to delete ${name}.`);
+      }
     }
   };
 
@@ -2465,37 +2467,18 @@ export default function VpcNetworksAndFirewalls({
                     </div>
 
                     <div>
-                      {confirmDeleteKey === delKey ? (
-                        <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-1">
-                          <button
-                            type="button"
-                            data-feature-id="VPC_NET_DELETE"
-                            onClick={() =>
-                              handleConfirmDelete('VPC Network', vpc.name)
-                            }
-                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteKey(null)}
-                            className="text-[11px] text-zinc-500 px-1 cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          data-feature-id="VPC_NET_DELETE"
-                          onClick={() => setConfirmDeleteKey(delKey)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2 py-1 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        data-feature-id="VPC_NET_DELETE"
+                        disabled={Boolean(tracker)}
+                        onClick={() =>
+                          handleConfirmDelete('VPC Network', vpc.name)
+                        }
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>{tracker ? 'Deleting...' : 'Delete'}</span>
+                      </button>
                     </div>
                   </div>
 
@@ -2980,38 +2963,18 @@ export default function VpcNetworksAndFirewalls({
                           <span>Edit</span>
                         </button>
 
-                        {confirmDeleteKey === delKey ? (
-                          <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-0.5">
-                            <button
-                              type="button"
-                              data-feature-id="VPC_FW_DELETE_RULE"
-                              onClick={() =>
-                                handleConfirmDelete('VPC Firewall Rule', fw.name)
-                              }
-                              className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer"
-                            >
-                              Confirm Delete
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteKey(null)}
-                              className="text-[10px] font-mono text-zinc-500 px-1 cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            data-feature-id="VPC_FW_DELETE_RULE"
-                            disabled={Boolean(tracker)}
-                            onClick={() => setConfirmDeleteKey(delKey)}
-                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Delete</span>
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          data-feature-id="VPC_FW_DELETE_RULE"
+                          disabled={Boolean(tracker)}
+                          onClick={() =>
+                            handleConfirmDelete('VPC Firewall Rule', fw.name)
+                          }
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>{tracker ? 'Deleting...' : 'Delete'}</span>
+                        </button>
                       </div>
                     </div>
 

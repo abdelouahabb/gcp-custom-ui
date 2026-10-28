@@ -340,12 +340,16 @@ export default function GeminiCopilotModal({
   };
 
   const handleExterminateZombie = async (zombie) => {
-    setBusyActionId(`z-${zombie.id}`);
     setActionBanner('');
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/zombies/exterminate`,
-        { zombie }
+        { zombie },
+        {
+          __onGatekeeperConfirmed: () => {
+            setBusyActionId(`z-${zombie.id}`);
+          },
+        }
       );
       const msg =
         res.data?.message ||
@@ -357,6 +361,7 @@ export default function GeminiCopilotModal({
       await runLiveProjectAudit();
       if (onRefresh) await onRefresh();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       setActionBanner(
         `Remediation error: ${err.response?.data?.error || err.message}`
       );
@@ -367,17 +372,25 @@ export default function GeminiCopilotModal({
 
   const handleCleanStaleResource = async (item) => {
     if (!onDeleteResource) return;
-    setBusyActionId(`stale-${item.id}`);
     setConfirmCleanupId(null);
     setActionBanner('');
     try {
-      await onDeleteResource({
-        ...item,
-        name: item.isServiceApi
-          ? item.details?.serviceName || item.storageClass
-          : item.name,
-      });
-      await runLiveProjectAudit();
+      const deleted = await onDeleteResource(
+        {
+          ...item,
+          name: item.isServiceApi
+            ? item.details?.serviceName || item.storageClass
+            : item.name,
+        },
+        {
+          onConfirmed: () => {
+            setBusyActionId(`stale-${item.id}`);
+          },
+        }
+      );
+      if (deleted) {
+        await runLiveProjectAudit();
+      }
     } finally {
       setBusyActionId(null);
     }
@@ -398,6 +411,7 @@ export default function GeminiCopilotModal({
       await runLiveProjectAudit();
       if (onRefresh) await onRefresh();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       setActionBanner(
         `Runbook execution error: ${err.response?.data?.error || err.message}`
       );
@@ -427,12 +441,16 @@ export default function GeminiCopilotModal({
   };
 
   const handleExecuteSocBridgeAction = async (action, payload = {}) => {
-    setBusyActionId(`soc-${action}`);
     setActionBanner('');
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/soc/action`,
-        { action, ...payload }
+        { action, ...payload },
+        {
+          __onGatekeeperConfirmed: () => {
+            setBusyActionId(`soc-${action}`);
+          },
+        }
       );
       const msg = res.data?.message || `Executed Cloud SOC action ${action}`;
       setActionBanner(msg);
@@ -440,6 +458,7 @@ export default function GeminiCopilotModal({
       await runLiveProjectAudit();
       if (onRefresh) await onRefresh();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       setActionBanner(
         `Cloud SOC action error: ${err.response?.data?.error || err.message}`
       );
@@ -890,35 +909,15 @@ export default function GeminiCopilotModal({
 
                           {onDeleteResource && (
                             <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800">
-                              {confirmCleanupId === item.id ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    disabled={isBusy}
-                                    onClick={() => handleCleanStaleResource(item)}
-                                    className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-                                  >
-                                    {isBusy ? 'Working...' : `Confirm ${item.actionLabel}`}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmCleanupId(null)}
-                                    className="px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={isBusy}
-                                  onClick={() => setConfirmCleanupId(item.id)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>{item.actionLabel}</span>
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleCleanStaleResource(item)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold cursor-pointer disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{isBusy ? 'Working...' : item.actionLabel}</span>
+                              </button>
                             </div>
                           )}
                         </div>

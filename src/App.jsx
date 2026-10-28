@@ -3345,9 +3345,8 @@ function CloudPulseCockpit() {
   const setErrorBanner = useCallback((msg) => {
     if (
       typeof msg === 'string' &&
-      (msg.includes('Deletion cancelled') ||
-        msg.includes('Access change cancelled') ||
-        msg.includes('Action cancelled') ||
+      (msg.toLowerCase().includes('cancelled') ||
+        msg.includes('remains enabled') ||
         msg.includes('__cancelledByUser'))
     ) {
       return;

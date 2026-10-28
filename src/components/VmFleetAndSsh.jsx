@@ -328,8 +328,8 @@ export default function VmFleetAndSsh({
   };
 
   const handlePowerAction = async (vm, action, extraPayload = {}) => {
-    setPowerBusyVm(vm.name);
     setPowerError(null);
+    setConfirmDeleteVm(null);
     const opLabelMap = {
       DELETE: 'DELETING',
       STOP: 'STOPPING',
@@ -340,15 +340,6 @@ export default function VmFleetAndSsh({
       SET_MACHINE_TYPE: 'RESIZING',
       SET_DELETION_PROTECTION: 'UPDATING',
     };
-    setPendingOps((prev) => ({
-      ...prev,
-      [vm.name]: {
-        type: opLabelMap[action] || 'UPDATING',
-        startedAt: Date.now(),
-        zone: vm.zone,
-      },
-    }));
-    setConfirmDeleteVm(null);
 
     try {
       await axios.post(
@@ -359,6 +350,19 @@ export default function VmFleetAndSsh({
           action,
           zone: vm.zone,
           ...extraPayload,
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setPowerBusyVm(vm.name);
+            setPendingOps((prev) => ({
+              ...prev,
+              [vm.name]: {
+                type: opLabelMap[action] || 'UPDATING',
+                startedAt: Date.now(),
+                zone: vm.zone,
+              },
+            }));
+          },
         }
       );
       if (action === 'SET_MACHINE_TYPE') {
@@ -374,7 +378,7 @@ export default function VmFleetAndSsh({
         delete next[vm.name];
         return next;
       });
-      if (!err?.__cancelledByUser) {
+      if (!err?.__cancelledByUser && err?.response?.status !== 499) {
         setPowerError(err.response?.data?.error || err.message);
       }
     } finally {
@@ -2874,38 +2878,15 @@ export default function VmFleetAndSsh({
                             </>
                           )}
 
-                          {confirmDeleteVm === vm.name ? (
-                            <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/40 rounded-md px-2 py-0.5">
-                              <span className="text-[11px] font-bold text-red-500">
-                                Confirm Delete?
-                              </span>
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => handlePowerAction(vm, 'DELETE')}
-                                className="bg-[#d93025] hover:bg-[#b31412] text-white px-2 py-0.5 rounded text-[11px] font-bold transition-colors disabled:opacity-50"
-                              >
-                                Yes, Delete
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteVm(null)}
-                                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-1.5 py-0.5 text-[11px]"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => setConfirmDeleteVm(vm.name)}
-                              className="inline-flex items-center gap-1 bg-[#d93025] hover:bg-[#b31412] text-white px-2.5 py-1 rounded-md text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete VM</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handlePowerAction(vm, 'DELETE')}
+                            className="inline-flex items-center gap-1 bg-[#d93025] hover:bg-[#b31412] text-white px-2.5 py-1 rounded-md text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete VM</span>
+                          </button>
                         </>
                       )}
                     </div>

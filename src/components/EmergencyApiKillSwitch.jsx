@@ -286,7 +286,6 @@ export default function EmergencyApiKillSwitch({
   ]);
 
   const handleBillingKillSwitch = async (action) => {
-    setTogglingBilling(true);
     setConfirmKillBilling(false);
     try {
       const res = await axios.post(
@@ -296,6 +295,11 @@ export default function EmergencyApiKillSwitch({
           billingAccountName:
             action === 'ENABLE' ? selectedRestoreBillingAccount : '',
           stopAllVms: action === 'DISABLE' ? stopAllVmsOnKill : false,
+        },
+        {
+          __onGatekeeperConfirmed: () => {
+            setTogglingBilling(true);
+          },
         }
       );
       if (res.data?.billing) {
@@ -318,6 +322,7 @@ export default function EmergencyApiKillSwitch({
       }
       if (onRefresh) await onRefresh();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       if (onShowError) {
         onShowError(
           err.response?.data?.error ||

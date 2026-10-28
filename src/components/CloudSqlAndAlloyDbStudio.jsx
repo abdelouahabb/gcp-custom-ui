@@ -318,12 +318,16 @@ export default function CloudSqlAndAlloyDbStudio({
 
   const handleDeleteCloudSql = async (instName) => {
     if (!instName || deletingDbName) return;
-    setDeletingDbName(instName);
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
           projectId
-        )}/cloud-sql/instances/${encodeURIComponent(instName)}`
+        )}/cloud-sql/instances/${encodeURIComponent(instName)}`,
+        {
+          __onGatekeeperConfirmed: () => {
+            setDeletingDbName(instName);
+          },
+        }
       );
       if (onShowToast) {
         onShowToast(
@@ -333,6 +337,7 @@ export default function CloudSqlAndAlloyDbStudio({
       await fetchCloudSqlFleet();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       if (onShowToast) {
         onShowToast(
           err.response?.data?.error ||
@@ -346,14 +351,18 @@ export default function CloudSqlAndAlloyDbStudio({
 
   const handleDeleteAlloyDb = async (loc, cName) => {
     if (!loc || !cName || deletingDbName) return;
-    setDeletingDbName(cName);
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
           projectId
         )}/alloydb/clusters/${encodeURIComponent(loc)}/${encodeURIComponent(
           cName
-        )}`
+        )}`,
+        {
+          __onGatekeeperConfirmed: () => {
+            setDeletingDbName(cName);
+          },
+        }
       );
       if (onShowToast) {
         onShowToast(
@@ -363,6 +372,7 @@ export default function CloudSqlAndAlloyDbStudio({
       await fetchCloudSqlFleet();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
       if (onShowToast) {
         onShowToast(
           err.response?.data?.error ||
