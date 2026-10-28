@@ -71842,6 +71842,20 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
             : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
         cliCmd: `gcloud compute firewall-rules list --project=${projectId} --format="table(name,network,direction,allowed,sourceRanges)"`,
+        stageItems: [
+          ...vpcs.slice(0, 3).map((v) => ({
+            kind: 'VPC Network',
+            name: v.name,
+            meta: v.storageClass || 'AUTO_SUBNETS',
+            targetTab: 'VPC_NETWORKS',
+          })),
+          ...firewalls.slice(0, 5).map((fw) => ({
+            kind: 'Firewall Rule',
+            name: fw.name,
+            meta: `${fw.details?.direction || 'INGRESS'} · ${fw.details?.sourceRanges || '0.0.0.0/0'}`,
+            targetTab: 'VPC_NETWORKS',
+          })),
+        ],
       },
       {
         id: 'STAGE_2_STORAGE_LAKEHOUSE',
@@ -71858,6 +71872,20 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s) and ${datasets.length} BigQuery analytical dataset(s) connected for telemetry & lakehouse pipelines.`
             : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
         cliCmd: `gcloud storage buckets list --project=${projectId} --format="table(name,location,storageClass)"`,
+        stageItems: [
+          ...buckets.slice(0, 4).map((b) => ({
+            kind: 'GCS Bucket',
+            name: `gs://${b.name}`,
+            meta: `${b.region || 'US'} · ${b.storageClass || 'STANDARD'}`,
+            targetTab: 'CLOUD_STORAGE',
+          })),
+          ...datasets.slice(0, 4).map((d) => ({
+            kind: 'BigQuery Dataset',
+            name: `${projectId}:${d.name}`,
+            meta: `${d.region || 'US'} · 168h Time-Travel`,
+            targetTab: 'BIGQUERY_STUDIO',
+          })),
+        ],
       },
       {
         id: 'STAGE_3_COMPUTE_SERVERLESS',
@@ -71879,6 +71907,26 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `${vms.length} live GCE VM(s) (${vms.map((v) => v.name).join(', ')}) & ${cloudRunSvcs.length} Cloud Run service(s). Eligible for 1-click VM → Cloud Run scale-to-$0.00 containerization.`
             : `${cloudRunSvcs.length} Cloud Run scale-to-zero service(s) and ${vms.length} Always-Free / Spot VM(s) active.`,
         cliCmd: `gcloud run services list --project=${projectId} --format="table(metadata.name,status.url,status.latestReadyRevisionName)"`,
+        stageItems: [
+          ...vms.slice(0, 4).map((vm) => ({
+            kind: 'Compute VM',
+            name: vm.name,
+            meta: `${vm.region || 'us-east1-b'} · ${vm.storageClass || 'e2-micro'}`,
+            targetTab: 'VM_SSH',
+          })),
+          ...cloudRunSvcs.slice(0, 4).map((s) => ({
+            kind: 'Cloud Run Gen2',
+            name: s.name,
+            meta: `${s.region || 'us-central1'} · Scale-to-Zero`,
+            targetTab: 'CLOUD_RUN',
+          })),
+          ...gkeClusters.slice(0, 2).map((c) => ({
+            kind: 'GKE Cluster',
+            name: c.name,
+            meta: c.region || 'us-central1',
+            targetTab: 'GKE_STUDIO',
+          })),
+        ],
       },
       {
         id: 'STAGE_4_CICD_TERRAFORM',
@@ -71893,6 +71941,26 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `${resources.length} Live Resources Codified`,
         summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
         cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
+        stageItems: [
+          {
+            kind: 'Terraform HCL',
+            name: `${projectId}-enterprise-stack.tf`,
+            meta: `${vpcs.length + firewalls.length + buckets.length + datasets.length + vms.length + cloudRunSvcs.length} HCL resource blocks`,
+            targetTab: 'WAVE9_STUDIO',
+          },
+          {
+            kind: 'Cloud Build SLSA-3',
+            name: 'cloudbuild.yaml',
+            meta: 'Build -> @sha256 Digest -> 10% Canary Traffic Gate',
+            targetTab: 'WAVE9_STUDIO',
+          },
+          {
+            kind: 'Bash Verifier',
+            name: `pipeline-deploy-${projectId}.sh`,
+            meta: '6-Stage Idempotent CLI Verifier',
+            targetTab: 'LOGS_SHELL',
+          },
+        ],
       },
       {
         id: 'STAGE_5_FINOPS_QUOTA_GUARD',
@@ -71906,6 +71974,26 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `$${totalMonthlySpendUsd.toFixed(2)}/mo · ${enabledApis.length} APIs`,
         summary: `Current monthly run-rate is $${totalMonthlySpendUsd.toFixed(2)}/mo across ${enabledApis.length} enabled GCP service APIs with live HTTP 429 Quota Saturation & Startup 10X justification drafter.`,
         cliCmd: `gcloud alpha services quota list --service=compute.googleapis.com --consumer=projects/${projectId} --limit=15`,
+        stageItems: [
+          {
+            kind: 'Monthly Run-Rate',
+            name: `$${totalMonthlySpendUsd.toFixed(2)}/mo`,
+            meta: 'Live SKU Billing & Always-Free Offset',
+            targetTab: 'FINOPS',
+          },
+          {
+            kind: 'Enabled GCP APIs',
+            name: `${enabledApis.length} Active Services`,
+            meta: 'Protected by 3-Tier Emergency Kill-Switch',
+            targetTab: 'OVERVIEW',
+          },
+          {
+            kind: 'Startup 10X Radar',
+            name: 'Quota & $350k Credit Drafter',
+            meta: 'Pre-empts HTTP 429 RESOURCE_EXHAUSTED',
+            targetTab: 'STARTUP_10X',
+          },
+        ],
       },
       {
         id: 'STAGE_6_SRE_RECYCLE_RECOVERY',
@@ -71919,6 +72007,26 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         metricBadge: `${recentDestructiveEvents.length} Vault Events (30d)`,
         summary: `Google SRE 1h/6h multi-window burn-rate gate paired with the 30-Day Cloud Recycle Bin distinguishing Native State Recovery from Empty Shell Re-Creation.`,
         cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=15 --format=json`,
+        stageItems: [
+          {
+            kind: '30-Day Recycle Bin',
+            name: 'cloudaudit.googleapis.com/activity',
+            meta: 'Native Recovery vs. Empty Shell Re-Creation',
+            targetTab: 'RECYCLE_BIN',
+          },
+          {
+            kind: 'GCS Soft-Delete Vault',
+            name: '7-Day Object & Bucket Retention',
+            meta: 'Generation-based native undelete',
+            targetTab: 'RECYCLE_BIN',
+          },
+          {
+            kind: 'SRE Multi-Window Gate',
+            name: '14.4x (1h) / 6x (6h) Burn Radar',
+            meta: 'Automated Canary Rollback Guard',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+        ],
       },
     ];
 

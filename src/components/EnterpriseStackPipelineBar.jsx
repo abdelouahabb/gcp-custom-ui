@@ -212,22 +212,37 @@ export default function EnterpriseStackPipelineBar({
           <button
             type="button"
             onClick={() => {
-              setDrawerOpen((prev) => !prev);
+              if (drawerOpen && activeStage?.id === 'STAGE_4_CICD_TERRAFORM') {
+                setDrawerOpen(false);
+              } else {
+                setSelectedStageId('STAGE_4_CICD_TERRAFORM');
+                setDrawerOpen(true);
+              }
             }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-              drawerOpen
+              drawerOpen && activeStage?.id === 'STAGE_4_CICD_TERRAFORM'
                 ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                 : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30'
             }`}
           >
             <FileCode2 className="w-3.5 h-3.5" />
-            <span>Synthesize Stack IaC (`main.tf` + `cloudbuild.yaml`)</span>
-            {drawerOpen ? (
+            <span>Step 4: Synthesize Stack IaC (`main.tf` + `cloudbuild.yaml`)</span>
+            {drawerOpen && activeStage?.id === 'STAGE_4_CICD_TERRAFORM' ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
               <ChevronDown className="w-3.5 h-3.5" />
             )}
           </button>
+
+          {drawerOpen && (
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+            >
+              <span>Close Stage Drawer</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -255,8 +270,12 @@ export default function EnterpriseStackPipelineBar({
             <div
               key={stage.id}
               onClick={() => {
-                setSelectedStageId(stage.id);
-                setDrawerOpen(true);
+                if (drawerOpen && selectedStageId === stage.id) {
+                  setDrawerOpen(false);
+                } else {
+                  setSelectedStageId(stage.id);
+                  setDrawerOpen(true);
+                }
               }}
               role="button"
               tabIndex={0}
@@ -396,84 +415,161 @@ export default function EnterpriseStackPipelineBar({
             </div>
           )}
 
-          {/* Artifact Tabs + Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setSelectedArtifactTab('mainTf')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
-                  selectedArtifactTab === 'mainTf'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
-              >
-                main.tf (Live Terraform HCL)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedArtifactTab('cloudBuildYaml')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
-                  selectedArtifactTab === 'cloudBuildYaml'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
-              >
-                cloudbuild.yaml (SLSA-3 Canary CI/CD)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedArtifactTab('pipelineDeploySh')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
-                  selectedArtifactTab === 'pipelineDeploySh'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
-              >
-                pipeline-deploy.sh (6-Stage Verifier)
-              </button>
-            </div>
+          {/* Stage-Specific Content: Steps 1, 2, 3, 5, 6 show Live Stage Inventory & CLI; ONLY Step 4 shows the Terraform/CI-CD Editor */}
+          {activeStage?.id === 'STAGE_4_CICD_TERRAFORM' ? (
+            <div className="space-y-3">
+              {/* Artifact Tabs + Actions (Exclusively in Step 4: Terraform & CI/CD) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArtifactTab('mainTf')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      selectedArtifactTab === 'mainTf'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                  >
+                    main.tf (Live Terraform HCL)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArtifactTab('cloudBuildYaml')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      selectedArtifactTab === 'cloudBuildYaml'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                  >
+                    cloudbuild.yaml (SLSA-3 Canary CI/CD)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedArtifactTab('pipelineDeploySh')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      selectedArtifactTab === 'pipelineDeploySh'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                  >
+                    pipeline-deploy.sh (6-Stage Verifier)
+                  </button>
+                </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  handleCopy(activeArtifactContent, selectedArtifactTab)
-                }
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
-              >
-                {copiedKey === selectedArtifactTab ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Code</span>
-                  </>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(activeArtifactContent, selectedArtifactTab)
+                    }
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+                  >
+                    {copiedKey === selectedArtifactTab ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleDownloadArtifact(
+                        activeArtifactFilename,
+                        activeArtifactContent
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download {activeArtifactFilename}</span>
+                  </button>
+                </div>
+              </div>
+
+              <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-3.5 text-[11px] font-mono overflow-x-auto max-h-72 leading-relaxed">
+                {activeArtifactContent || '# Synthesizing live project infrastructure...'}
+              </pre>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Stage-Specific Live Inventory Cards for Steps 1, 2, 3, 5, 6 */}
+              {Array.isArray(activeStage?.stageItems) &&
+                activeStage.stageItems.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    {activeStage.stageItems.map((item, idx) => (
+                      <div
+                        key={`${item.name}-${idx}`}
+                        onClick={() =>
+                          onSelectTab && item.targetTab && onSelectTab(item.targetTab)
+                        }
+                        className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400 font-bold">
+                            {item.kind}
+                          </div>
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {item.name}
+                          </div>
+                          <div className="text-[10px] font-mono text-zinc-500 truncate">
+                            {item.meta}
+                          </div>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  handleDownloadArtifact(
-                    activeArtifactFilename,
-                    activeArtifactContent
-                  )
-                }
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download {activeArtifactFilename}</span>
-              </button>
+              {/* Stage-Specific CLI Verification Bar + Step Progression */}
+              {activeStage?.cliCmd && (
+                <div className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Terminal className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <code className="text-emerald-300 truncate">
+                      {activeStage.cliCmd}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(activeStage.cliCmd, `cli-${activeStage.id}`)
+                      }
+                      className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold cursor-pointer"
+                    >
+                      {copiedKey === `cli-${activeStage.id}`
+                        ? '✓ Copied CLI'
+                        : 'Copy CLI'}
+                    </button>
+                    {activeStage.stepNumber < 6 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextStage = stages.find(
+                            (s) => s.stepNumber === activeStage.stepNumber + 1
+                          );
+                          if (nextStage) {
+                            setSelectedStageId(nextStage.id);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        Next: Step {activeStage.stepNumber + 1} →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-3.5 text-[11px] font-mono overflow-x-auto max-h-72 leading-relaxed">
-            {activeArtifactContent || '# Synthesizing live project infrastructure...'}
-          </pre>
+          )}
         </div>
       )}
     </div>
