@@ -32,6 +32,447 @@ const STAGE_ICONS = {
   STAGE_6_SRE_RECYCLE_RECOVERY: Trash2,
 };
 
+/**
+ * Deterministic Mermaid `flowchart LR` Parser & Interactive SVG Vector Renderer.
+ * Parses `subgraph ID["Title"] ... end`, `NODE["Label"]`, and `A -->|"Label"| B`
+ * into a crisp, zero-dependency interactive SVG diagram with Subgraph clusters,
+ * cubic-Bezier arrows, arrowheads, animated dataflow pulses, and edge label pills.
+ */
+function parseMermaidFlowchartLr(dsl = '') {
+  const lines = String(dsl || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('%%') && !l.startsWith('flowchart'));
+
+  const subgraphs = [];
+  const nodeMap = new Map();
+  const edges = [];
+  let currentSg = null;
+
+  for (const line of lines) {
+    const sgMatch = line.match(/^subgraph\s+([A-Za-z0-9_]+)(?:\["([^"]+)"\])?/);
+    if (sgMatch) {
+      currentSg = {
+        id: sgMatch[1],
+        label: sgMatch[2] || sgMatch[1],
+        nodes: [],
+      };
+      subgraphs.push(currentSg);
+      continue;
+    }
+    if (line === 'end') {
+      currentSg = null;
+      continue;
+    }
+
+    // Check for edge first: A -->|"label"| B or A --> B
+    const edgeMatch = line.match(
+      /^([A-Za-z0-9_]+)\s*-->(?:\|"([^"]+)"\|)?\s*([A-Za-z0-9_]+)$/
+    );
+    if (edgeMatch) {
+      edges.push({
+        from: edgeMatch[1],
+        to: edgeMatch[3],
+        label: edgeMatch[2] || '',
+      });
+      continue;
+    }
+
+    // Node definition: ID["Label"]
+    const nodeMatch = line.match(/^([A-Za-z0-9_]+)\["([^"]+)"\]$/);
+    if (nodeMatch) {
+      const nodeObj = {
+        id: nodeMatch[1],
+        label: nodeMatch[2],
+      };
+      nodeMap.set(nodeObj.id, nodeObj);
+      if (currentSg) {
+        currentSg.nodes.push(nodeObj);
+      } else {
+        let defaultSg = subgraphs.find((s) => s.id === '__DEFAULT__');
+        if (!defaultSg) {
+          defaultSg = { id: '__DEFAULT__', label: 'Pipeline Nodes', nodes: [] };
+          subgraphs.push(defaultSg);
+        }
+        defaultSg.nodes.push(nodeObj);
+      }
+    }
+  }
+
+  return { subgraphs, edges, nodeMap };
+}
+
+function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
+  const { subgraphs, edges } = parseMermaidFlowchartLr(dsl);
+
+  if (!subgraphs.length) {
+    return null;
+  }
+
+  const colW = 276;
+  const colGap = 112;
+  const padX = 24;
+  const padY = 22;
+  const sgHeaderH = 32;
+  const sgPad = 14;
+  const nodeH = 60;
+  const nodeGapY = 48;
+
+  const maxNodes = Math.max(1, ...subgraphs.map((sg) => sg.nodes.length));
+  const maxSgH =
+    sgHeaderH +
+    sgPad * 2 +
+    maxNodes * nodeH +
+    Math.max(0, maxNodes - 1) * nodeGapY;
+
+  const svgW =
+    padX * 2 +
+    subgraphs.length * colW +
+    Math.max(0, subgraphs.length - 1) * colGap;
+  const svgH = Math.max(220, padY * 2 + maxSgH + 8);
+
+  const positionedNodes = new Map();
+  let globalNodeIdx = 0;
+
+  const positionedSubgraphs = subgraphs.map((sg, gIdx) => {
+    const sgX = padX + gIdx * (colW + colGap);
+    const sgH =
+      sgHeaderH +
+      sgPad * 2 +
+      sg.nodes.length * nodeH +
+      Math.max(0, sg.nodes.length - 1) * nodeGapY;
+    const sgY = Math.round((svgH - sgH) / 2);
+
+    const nodes = sg.nodes.map((n, nIdx) => {
+      const x = sgX + sgPad;
+      const w = colW - sgPad * 2;
+      const y = sgY + sgHeaderH + sgPad + nIdx * (nodeH + nodeGapY);
+      const h = nodeH;
+      const topoHint = topology[globalNodeIdx] || topology[gIdx] || null;
+      globalNodeIdx += 1;
+
+      const parts = String(n.label || '').split(':');
+      const primaryTitle =
+        parts.length > 1 ? parts[0].trim() : n.label.slice(0, 34);
+      const secondarySub =
+        parts.length > 1
+          ? parts.slice(1).join(':').trim()
+          : topoHint?.subtitle || 'Live GCP Telemetry';
+
+      const posNode = {
+        ...n,
+        gIdx,
+        nIdx,
+        x,
+        y,
+        w,
+        h,
+        cx: x + w / 2,
+        cy: y + h / 2,
+        leftX: x,
+        rightX: x + w,
+        topY: y,
+        bottomY: y + h,
+        primaryTitle,
+        secondarySub,
+        topoHint,
+      };
+      positionedNodes.set(n.id, posNode);
+      return posNode;
+    });
+
+    return {
+      ...sg,
+      gIdx,
+      x: sgX,
+      y: sgY,
+      w: colW,
+      h: sgH,
+      nodes,
+    };
+  });
+
+  const PALETTES = [
+    {
+      sgFill: 'rgba(59, 130, 246, 0.06)',
+      sgStroke: 'rgba(59, 130, 246, 0.38)',
+      badgeBg: '#1d4ed8',
+      nodeStroke: '#3b82f6',
+    },
+    {
+      sgFill: 'rgba(99, 102, 241, 0.06)',
+      sgStroke: 'rgba(99, 102, 241, 0.38)',
+      badgeBg: '#4338ca',
+      nodeStroke: '#6366f1',
+    },
+    {
+      sgFill: 'rgba(16, 185, 129, 0.06)',
+      sgStroke: 'rgba(16, 185, 129, 0.38)',
+      badgeBg: '#047857',
+      nodeStroke: '#10b981',
+    },
+    {
+      sgFill: 'rgba(245, 158, 11, 0.06)',
+      sgStroke: 'rgba(245, 158, 11, 0.38)',
+      badgeBg: '#b45309',
+      nodeStroke: '#f59e0b',
+    },
+  ];
+
+  const truncate = (str, max = 32) =>
+    String(str || '').length > max
+      ? `${String(str).slice(0, max - 1)}…`
+      : String(str || '');
+
+  return (
+    <div className="w-full overflow-x-auto rounded-xl bg-[#0d1117] border border-zinc-800 p-2.5 shadow-inner">
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        className="w-full h-auto min-w-[780px] select-none"
+        role="img"
+        aria-label="Live Mermaid Architecture Flowchart"
+      >
+        <defs>
+          <marker
+            id="mmd-arrow"
+            viewBox="0 0 10 10"
+            refX="8.5"
+            refY="5"
+            markerWidth="6.5"
+            markerHeight="6.5"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#818cf8" />
+          </marker>
+          <pattern
+            id="mmd-grid"
+            width="24"
+            height="24"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle cx="2" cy="2" r="1" fill="rgba(148, 163, 184, 0.12)" />
+          </pattern>
+        </defs>
+
+        {/* Subtle Engineering Grid Background */}
+        <rect width={svgW} height={svgH} rx="10" fill="url(#mmd-grid)" />
+
+        {/* 1. Render Mermaid Subgraph Cluster Containers */}
+        {positionedSubgraphs.map((sg, idx) => {
+          const pal = PALETTES[idx % PALETTES.length];
+          return (
+            <g key={sg.id}>
+              <rect
+                x={sg.x}
+                y={sg.y}
+                width={sg.w}
+                height={sg.h}
+                rx="12"
+                fill={pal.sgFill}
+                stroke={pal.sgStroke}
+                strokeWidth="1.5"
+                strokeDasharray="5 4"
+              />
+              <rect
+                x={sg.x + 10}
+                y={sg.y + 7}
+                width={sg.w - 20}
+                height={20}
+                rx="6"
+                fill={pal.badgeBg}
+                fillOpacity="0.85"
+              />
+              <text
+                x={sg.x + sg.w / 2}
+                y={sg.y + 20.5}
+                textAnchor="middle"
+                fill="#f8fafc"
+                fontSize="10.5"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fontWeight="700"
+              >
+                {truncate(`subgraph: ${sg.label}`, 35)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* 2. Render Mermaid Directed Edges (Cubic Bezier + Animated Flow + Label Pills) */}
+        {edges.map((edge, eIdx) => {
+          const nA = positionedNodes.get(edge.from);
+          const nB = positionedNodes.get(edge.to);
+          if (!nA || !nB) return null;
+
+          let pathD = '';
+          let labelX = 0;
+          let labelY = 0;
+
+          if (nA.gIdx === nB.gIdx) {
+            // Intra-subgraph vertical connector
+            const goingDown = nA.nIdx < nB.nIdx;
+            const x1 = nA.cx;
+            const y1 = goingDown ? nA.bottomY : nA.topY;
+            const x2 = nB.cx;
+            const y2 = goingDown ? nB.topY - 3 : nB.bottomY + 3;
+            pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
+            labelX = (x1 + x2) / 2;
+            labelY = (y1 + y2) / 2;
+          } else {
+            // Inter-subgraph horizontal cubic Bezier connector
+            const x1 = nA.rightX;
+            const y1 = nA.cy;
+            const x2 = nB.leftX - 3;
+            const y2 = nB.cy;
+            const dx = Math.max(42, Math.abs(x2 - x1) * 0.46);
+            pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+            labelX = (x1 + x2) / 2;
+            labelY = (y1 + y2) / 2;
+          }
+
+          const cleanLabel = truncate(edge.label, 24);
+          const pillW = cleanLabel ? Math.max(68, cleanLabel.length * 5.9 + 14) : 0;
+
+          return (
+            <g key={`${edge.from}-${edge.to}-${eIdx}`}>
+              {/* Base solid Mermaid connector */}
+              <path
+                d={pathD}
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth="2"
+                strokeOpacity="0.75"
+                markerEnd="url(#mmd-arrow)"
+              />
+              {/* Animated telemetry pulse overlay */}
+              <path
+                d={pathD}
+                fill="none"
+                stroke="#34d399"
+                strokeWidth="2"
+                strokeDasharray="5 9"
+                strokeOpacity="0.85"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="28"
+                  to="0"
+                  dur="1.8s"
+                  repeatCount="indefinite"
+                />
+              </path>
+
+              {cleanLabel && (
+                <g transform={`translate(${labelX}, ${labelY})`}>
+                  <rect
+                    x={-pillW / 2}
+                    y={-9.5}
+                    width={pillW}
+                    height={19}
+                    rx="9.5"
+                    fill="#1e1b4b"
+                    stroke="#6366f1"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x="0"
+                    y="3.5"
+                    textAnchor="middle"
+                    fill="#e0e7ff"
+                    fontSize="9.5"
+                    fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                    fontWeight="600"
+                  >
+                    {cleanLabel}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* 3. Render Interactive Mermaid Nodes */}
+        {positionedSubgraphs.flatMap((sg, idx) => {
+          const pal = PALETTES[idx % PALETTES.length];
+          return sg.nodes.map((node) => (
+            <g
+              key={node.id}
+              onClick={() => {
+                if (onNodeClick && node.topoHint) {
+                  onNodeClick(node.topoHint);
+                }
+              }}
+              className="cursor-pointer"
+            >
+              <rect
+                x={node.x}
+                y={node.y}
+                width={node.w}
+                height={node.h}
+                rx="9"
+                fill="#161b22"
+                stroke={pal.nodeStroke}
+                strokeWidth="1.6"
+              />
+              {/* Left accent bar */}
+              <rect
+                x={node.x + 1}
+                y={node.y + 6}
+                width="4"
+                height={node.h - 12}
+                rx="2"
+                fill={pal.nodeStroke}
+              />
+              {/* Node ID badge */}
+              <rect
+                x={node.x + node.w - 46}
+                y={node.y + 6}
+                width="38"
+                height="15"
+                rx="4"
+                fill="rgba(99, 102, 241, 0.16)"
+              />
+              <text
+                x={node.x + node.w - 27}
+                y={node.y + 16.5}
+                textAnchor="middle"
+                fill="#a5b4fc"
+                fontSize="8.5"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fontWeight="700"
+              >
+                {truncate(node.id, 6)}
+              </text>
+
+              {/* Primary Node Title */}
+              <text
+                x={node.x + 12}
+                y={node.y + 23}
+                fill="#f8fafc"
+                fontSize="11"
+                fontFamily="ui-sans-serif, system-ui, sans-serif"
+                fontWeight="700"
+              >
+                {truncate(node.primaryTitle, 27)}
+              </text>
+
+              {/* Secondary Node Subtitle / Live Inventory Value */}
+              <text
+                x={node.x + 12}
+                y={node.y + 42}
+                fill="#94a3b8"
+                fontSize="9.8"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+              >
+                {truncate(node.secondarySub, 34)}
+              </text>
+            </g>
+          ));
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function EnterpriseStackPipelineBar({
   projectId,
   activeTab,
@@ -102,6 +543,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'Zero-Trust VPC',
       summary: 'VPC firewall rules & IAP TCP-22 SSH bastion.',
       cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
+      mermaidDsl: `flowchart LR\n  subgraph IAM["Zero-Trust Identity"]\n    ADC["Cloud Identity / OAuth ADC (${projectId})"]\n    IAP["Cloud IAP TCP-22 Tunnel (35.235.240.0/20)"]\n  end\n  subgraph VPC["VPC Perimeter"]\n    NET["VPC: default"]\n    FW["Firewall Rules: allow-iap-ssh"]\n  end\n  ADC -->|"iam.serviceAccounts.actAs"| IAP\n  IAP -->|"Encrypted TCP-22 / HTTPS"| FW\n  FW -->|"Ingress Guardrail"| NET`,
     },
     {
       id: 'STAGE_2_STORAGE_LAKEHOUSE',
@@ -114,18 +556,20 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'GCS + BigQuery',
       summary: 'Stateful Cloud Storage buckets & BigQuery analytical datasets.',
       cliCmd: `gcloud storage buckets list --project=${projectId}`,
+      mermaidDsl: `flowchart LR\n  subgraph PERIMETER["Stage 1 Perimeter"]\n    VPC_IN["VPC Private Google Access"]\n  end\n  subgraph GCS["Cloud Storage"]\n    BKT["gs://${projectId} (7d Soft-Delete)"]\n  end\n  subgraph BQ["BigQuery Lakehouse"]\n    DS["${projectId}:analytics (168h Time-Travel)"]\n  end\n  VPC_IN -->|"Uniform Bucket IAM"| BKT\n  BKT -->|"Object Federation / ELT"| DS`,
     },
     {
       id: 'STAGE_3_COMPUTE_SERVERLESS',
       stepNumber: 3,
       shortTitle: 'VMs & Cloud Run',
-      targetTab: 'CLOUD_RUN',
-      secondaryTab: 'VM_SSH',
-      secondaryLabel: 'Compute Engine VMs',
+      targetTab: 'VM_SSH',
+      secondaryTab: 'CLOUD_RUN',
+      secondaryLabel: 'Cloud Run Serverless Studio',
       status: 'OPTIMAL',
       metricBadge: 'Compute & Serverless',
       summary: 'GCE VM Fleet & Cloud Run scale-to-zero containers.',
       cliCmd: `gcloud run services list --project=${projectId}`,
+      mermaidDsl: `flowchart LR\n  subgraph INGRESS["Edge & IAP Routing"]\n    EDGE["HTTPS Ingress & IAP SSH Bastion"]\n  end\n  subgraph COMPUTE["Compute & Serverless Fleet (${projectId})"]\n    VMS["GCE VM Fleet"]\n    CRUN["Cloud Run Gen2 Scale-to-Zero"]\n  end\n  subgraph STATE["Stage 2 Stateful Sinks"]\n    STORAGE["GCS + BigQuery Lakehouse"]\n  end\n  EDGE -->|"TCP-22 / SSH2 PTY"| VMS\n  EDGE -->|"Scale-to-Zero HTTPS"| CRUN\n  VMS -->|"ADC Service Account"| STORAGE\n  CRUN -->|"Serverless VPC Access"| STORAGE`,
     },
     {
       id: 'STAGE_4_CICD_TERRAFORM',
@@ -139,6 +583,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'main.tf + SLSA-3',
       summary: 'Live Terraform HCL & Cloud Build canary pipeline synthesizer.',
       cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
+      mermaidDsl: `flowchart LR\n  subgraph DISCOVERY["Live GCP Inventory"]\n    INV["Discovered Resources (${projectId})"]\n  end\n  subgraph IAC["Reverse-Terraform Synthesizer"]\n    TF["${projectId}-enterprise-stack.tf (HCL)"]\n  end\n  subgraph CICD["SLSA-Level 3 Cloud Build"]\n    CB["cloudbuild.yaml (@sha256 Provenance)"]\n    CANARY["Canary Traffic Gate (0% -> 10% -> 100%)"]\n  end\n  INV -->|"Codify State"| TF\n  TF -->|"GitOps Trigger"| CB\n  CB -->|"Verified Rollout"| CANARY`,
     },
     {
       id: 'STAGE_5_FINOPS_QUOTA_GUARD',
@@ -151,6 +596,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'Spend & HTTP 429',
       summary: 'Autonomous spend caps, API kill-switch & Startup 10X quota drafter.',
       cliCmd: `gcloud services list --enabled --project=${projectId}`,
+      mermaidDsl: `flowchart LR\n  subgraph TELEMETRY["Live Billing & API Telemetry"]\n    BURN["Monthly Run-Rate Telemetry"]\n    APIS["Enabled Google Cloud APIs"]\n  end\n  subgraph QUOTA["HTTP 429 Prevention"]\n    RADAR["Service Usage & Quota Radar"]\n    S10X["Startup 10X Quota & $350k Credit Drafter"]\n  end\n  subgraph KILLSWITCH["Autonomous Spend Guard"]\n    KILL["3-Tier Emergency API Kill-Switch"]\n  end\n  BURN -->|"SKU Cost Attribution"| RADAR\n  APIS -->|"24h Request & 429 Rate"| RADAR\n  RADAR -->|">=65% Saturation"| S10X\n  RADAR -->|"Runaway Spend Alert"| KILL`,
     },
     {
       id: 'STAGE_6_SRE_RECYCLE_RECOVERY',
@@ -163,6 +609,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: '30d Recovery Vault',
       summary: '14.4x SLO burn gate & 30-Day Cloud Recycle Bin recovery.',
       cliCmd: `gcloud logging read 'protoPayload.methodName=~"(delete|Destroy|DisableService)"' --project=${projectId} --limit=10`,
+      mermaidDsl: `flowchart LR\n  subgraph SRE["SRE Multi-Window Alerting"]\n    SLO["14.4x (1h) / 6.0x (6h) Error Budget Gate"]\n  end\n  subgraph AUDIT["30-Day Cloud Audit Ledger"]\n    LOGS["cloudaudit.googleapis.com/activity"]\n  end\n  subgraph VAULT["30-Day Cloud Recycle Bin"]\n    NATIVE["Native State Undelete (GCS 7d / BQ 168h / Secret / SA)"]\n    SHELL["Empty Shell Re-Creation (VM / Cloud Run / VPC)"]\n  end\n  SLO -->|"Incident Trigger"| LOGS\n  LOGS -->|"Data Intact"| NATIVE\n  LOGS -->|"Config Forensics"| SHELL`,
     },
   ];
 
@@ -509,49 +956,17 @@ export default function EnterpriseStackPipelineBar({
                   {activeStage.mermaidDsl}
                 </pre>
               ) : (
-                Array.isArray(activeStage.mermaidTopology) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-stretch">
-                    {activeStage.mermaidTopology.map((node, nIdx) => (
-                      <div
-                        key={node.id}
-                        onClick={() => {
-                          if (node.provisionType && onOpenProvision) {
-                            onOpenProvision(node.provisionType);
-                          } else if (node.targetTab && onSelectTab) {
-                            onSelectTab(node.targetTab);
-                          }
-                        }}
-                        className="relative group/node rounded-xl border border-indigo-500/30 bg-white dark:bg-[#141518] hover:border-indigo-500 p-2.5 transition-all cursor-pointer flex flex-col justify-between shadow-sm"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between gap-1.5 mb-1">
-                            <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 truncate">
-                              subgraph: {node.subgraph}
-                            </span>
-                            <span className="text-[9.5px] font-mono text-zinc-400 shrink-0">
-                              N{nIdx + 1}
-                            </span>
-                          </div>
-                          <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
-                            {node.title}
-                          </div>
-                          <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                            {node.subtitle}
-                          </div>
-                        </div>
-
-                        <div className="mt-2 pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 truncate">
-                            {node.badge}
-                          </span>
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 group-hover/node:translate-x-0.5 transition-transform">
-                            <span>{ nIdx < activeStage.mermaidTopology.length - 1 ? '──▶' : 'Inspect ↗' }</span>
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
+                <MermaidFlowchartSvg
+                  dsl={activeStage.mermaidDsl}
+                  topology={activeStage.mermaidTopology}
+                  onNodeClick={(node) => {
+                    if (node.provisionType && onOpenProvision) {
+                      onOpenProvision(node.provisionType);
+                    } else if (node.targetTab && onSelectTab) {
+                      onSelectTab(node.targetTab);
+                    }
+                  }}
+                />
               )}
             </div>
           )}
@@ -644,6 +1059,11 @@ export default function EnterpriseStackPipelineBar({
                   </button>
                 </div>
               </div>
+
+              {selectedArtifactTab === 'architectureMermaid' &&
+                activeArtifactContent && (
+                  <MermaidFlowchartSvg dsl={activeArtifactContent} />
+                )}
 
               <pre className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-3.5 text-[11px] font-mono overflow-x-auto max-h-72 leading-relaxed">
                 {activeArtifactContent || '# Synthesizing live project infrastructure...'}
