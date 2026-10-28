@@ -72153,6 +72153,12 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           `    EDGE["HTTPS & IAP SSH Bastion"]`,
           `  end`
         );
+      } else if (vpcs.length > 0) {
+        s3Lines.push(
+          `  subgraph PERIMETER["VPC Perimeter"]`,
+          `    VPC_IN["VPC Network: ${vpcNamesList}"]`,
+          `  end`
+        );
       }
 
       if (artifactRepos.length > 0) {
@@ -72161,6 +72167,11 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           s3Lines.push(`    AR${idx}["AR Repo: ${ar.name} (${ar.format} · ${ar.region})"]`);
         });
         s3Lines.push(`  end`);
+        if (!hasIngressWorkloads && vpcs.length > 0) {
+          artifactRepos.slice(0, 3).forEach((_, idx) => {
+            s3Lines.push(`  VPC_IN -->|"Container Registry"| AR${idx}`);
+          });
+        }
       }
 
       if (vms.length > 0) {
@@ -72390,6 +72401,8 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
             ? `gcloud run services list --project=${projectId}`
             : cloudFunctions.length > 0
             ? `gcloud functions list --project=${projectId}`
+            : artifactRepos.length > 0
+            ? `gcloud artifacts repositories list --project=${projectId}`
             : `gcloud compute instances list --project=${projectId}`,
         mermaidDsl: stage3MermaidDsl,
         stageItems:
@@ -72433,6 +72446,28 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
                   meta: c.region || 'us-central1',
                   targetTab: 'GKE_STUDIO',
                 })),
+                ...(vms.length === 0
+                  ? [
+                      {
+                        kind: '0 Active VMs ($0/hr)',
+                        name: '+ Launch Compute Engine VM',
+                        meta: 'Always-Free e2-micro (us-east1 / us-central1 / us-west1)',
+                        targetTab: 'VM_SSH',
+                        provisionType: 'COMPUTE_VM',
+                      },
+                    ]
+                  : []),
+                ...(cloudRunSvcs.length === 0
+                  ? [
+                      {
+                        kind: '0 Cloud Run ($0 Idle)',
+                        name: '+ Deploy Cloud Run Gen2 Service',
+                        meta: 'minInstances=0 · Scale-to-Zero Container',
+                        targetTab: 'CLOUD_RUN',
+                        provisionType: 'CLOUD_RUN',
+                      },
+                    ]
+                  : []),
               ]
             : [
                 {
