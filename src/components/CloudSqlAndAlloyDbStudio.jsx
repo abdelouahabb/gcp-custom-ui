@@ -527,9 +527,10 @@ WITH (m = 16, ef_construction = 64);`;
             {(onOpenProvisionSql || onOpenProvisionCloudSql) && (
               <button
                 type="button"
+                data-feature-id="CLOUDSQL_CREATE_WIZARD_BTN"
                 onClick={onOpenProvisionSql || onOpenProvisionCloudSql}
                 title="Open the full 5-Step Cloud SQL & AlloyDB Compliance Wizard in the Provisioning Modal"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>+ Create Database (5-Step Wizard)</span>
@@ -538,9 +539,10 @@ WITH (m = 16, ef_construction = 64);`;
 
             <button
               type="button"
+              data-feature-id="CLOUDSQL_REFRESH_FLEET_BTN"
               onClick={fetchCloudSqlFleet}
               title="Refresh live Cloud SQL instances and AlloyDB clusters"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -653,6 +655,7 @@ WITH (m = 16, ef_construction = 64);`;
                 <button
                   key={t.id}
                   type="button"
+                  data-feature-id={`CLOUDSQL_TAB_${t.id}`}
                   onClick={() => setActiveSubTab(t.id)}
                   title={`${t.label} (${t.badge})`}
                   className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${

@@ -540,6 +540,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
 
           <button
             type="button"
+            data-feature-id="SPANNER_SYNC_FLEET_BTN"
             disabled={loading}
             onClick={fetchSpannerFleet}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
@@ -646,6 +647,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 title={tab.label}
                 className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${

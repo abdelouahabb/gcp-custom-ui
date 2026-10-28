@@ -1025,6 +1025,7 @@ OPTIONS (
 
           <button
             type="button"
+            data-feature-id="BIGLAKE_SYNC_BTN"
             disabled={loadingCatalogs}
             onClick={() => {
               fetchBigLakeCatalogs();
@@ -1108,6 +1109,7 @@ OPTIONS (
               <button
                 key={tab.id}
                 type="button"
+                data-feature-id={`BIGLAKE_TAB_${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 title={`${tab.label} (${tab.badge})`}
                 className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
@@ -1168,6 +1170,7 @@ OPTIONS (
               </div>
               <button
                 type="button"
+                data-feature-id="BIGLAKE_CREDENTIAL_VENDING_BTN"
                 onClick={() =>
                   setCredentialVendingEnabled((v) => !v)
                 }

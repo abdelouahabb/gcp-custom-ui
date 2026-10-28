@@ -912,6 +912,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
+              data-feature-id="DATA_ENG_SYNC_MESH_BTN"
               onClick={fetchOverview}
               disabled={loading}
               className="px-3.5 py-2 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"

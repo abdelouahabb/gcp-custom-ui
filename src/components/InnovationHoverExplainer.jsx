@@ -3362,6 +3362,280 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'workflows.googleapis.com/v1 · pubsub.googleapis.com/v1 · cloudtasks.googleapis.com/v2',
     safetyMode: 'READ_ONLY',
   },
+
+  // ============================================================================
+  // DOMAIN III: CLOUD SQL & ALLOYDB, DATA ENGINEER, BIGQUERY, BIGLAKE, SPANNER
+  // ============================================================================
+  CLOUDSQL_CREATE_WIZARD_BTN: {
+    badge: '5-STEP COMPLIANCE DATABASE WIZARD',
+    title: 'Provision Cloud SQL (MySQL 8.4 / PostgreSQL 16) or AlloyDB Cluster',
+    whatItDoes:
+      'Opens the 5-step relational database wizard with strict PCI-DSS, GDPR, HIPAA, and AI Vector compliance locks (`--no-assign-ip`, TLS 1.3 / mTLS, 35-day PITR, and IAM database authentication).',
+    enterpriseValue:
+      'Prevents public-IP database exposures and enforces enterprise backup and encryption standards at creation time.',
+    gcpApis: 'sqladmin.googleapis.com/v1 · alloydb.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDSQL_REFRESH_FLEET_BTN: {
+    badge: 'LIVE RELATIONAL & ALLOYDB SYNC',
+    title: 'Refresh Live Cloud SQL Instances & AlloyDB Clusters',
+    whatItDoes:
+      'Queries `sqladmin.googleapis.com` and `alloydb.googleapis.com` in parallel to list all MySQL, PostgreSQL, SQL Server, and AlloyDB clusters, editions, HA topologies, and PITR settings.',
+    enterpriseValue:
+      'Provides a unified real-time view of both classic Cloud SQL instances and disaggregated AlloyDB AI clusters.',
+    gcpApis: 'GET sqladmin.googleapis.com/v1/projects/{project}/instances · alloydb.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDSQL_TAB_FLEET_PROVISION: {
+    badge: 'CLOUD SQL & ALLOYDB MODULE 1/4',
+    title: 'Cloud SQL (MySQL / PostgreSQL) & AlloyDB Compliance Provisioner + Live Fleet',
+    whatItDoes:
+      'Interactive 5-blueprint database provisioner (PCI-DSS, GDPR EU, HIPAA, AlloyDB ScaNN AI, Custom) paired with live Cloud SQL & AlloyDB fleet management.',
+    enterpriseValue:
+      'Enforces `--no-assign-ip` private VPC networking, TLS 1.3/mTLS, and continuous WAL/Binlog Point-in-Time Recovery.',
+    gcpApis: 'sqladmin.googleapis.com/v1 · alloydb.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  CLOUDSQL_TAB_ARCH_COMPARATOR: {
+    badge: 'CLOUD SQL & ALLOYDB MODULE 2/4',
+    title: 'Classic Cloud SQL vs. Enterprise Plus vs. AlloyDB Disaggregated Comparator',
+    whatItDoes:
+      'Compares monthly TCO, failover RTO (<60s vs <10s vs <2s), OLTP throughput (4x), and OLAP analytics speed (100x Columnar Engine) across Cloud SQL Enterprise, Enterprise Plus, and AlloyDB.',
+    enterpriseValue:
+      'Helps database architects choose the exact PostgreSQL or MySQL tier for their SLA and budget.',
+    gcpApis: 'Cloud SQL & AlloyDB TCO & Architecture Benchmarking Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDSQL_TAB_VECTOR_INDEX_SURGEON: {
+    badge: 'CLOUD SQL & ALLOYDB MODULE 3/4',
+    title: 'AI Vector Index Surgeon (`alloydb_scann` / `pgvector` HNSW / MySQL 8.4 `VECTOR`) & Slow-Query Doctor',
+    whatItDoes:
+      'Generates 768-dim Google Research `scann` vector indexes (10x faster QPS, 4x smaller memory than HNSW), inline Vertex AI `embedding()` columns, and `pg_stat_statements` / `performance_schema` slow-query diagnostics.',
+    enterpriseValue:
+      'Turns your existing transactional PostgreSQL or MySQL database into a sub-millisecond enterprise RAG vector store.',
+    gcpApis: 'alloydb_scann · google_ml_integration · pgvector · MySQL 8.4 VECTOR',
+    safetyMode: 'READ_ONLY',
+  },
+  CLOUDSQL_TAB_IAM_PROXY_VAULT: {
+    badge: 'CLOUD SQL & ALLOYDB MODULE 4/4',
+    title: 'Zero-Trust Cloud SQL Auth Proxy, IAM DB Authentication & ORM Connection Vault',
+    whatItDoes:
+      'Generates passwordless IAM database authentication (`cloudsql.iam_authentication=on`) and Managed Connection Pooling snippets for Node.js Prisma/Drizzle, Python SQLAlchemy, Go pgx, and Java HikariCP.',
+    enterpriseValue:
+      'Eliminates static database passwords and prevents serverless connection storms from Cloud Run.',
+    gcpApis: 'sqladmin.googleapis.com · Cloud SQL Auth Proxy (IAM Token Exchange)',
+    safetyMode: 'READ_ONLY',
+  },
+  DATA_ENG_SYNC_MESH_BTN: {
+    badge: 'LIVE 7-SERVICE DATA MESH SYNC',
+    title: 'Sync Live BigQuery Datasets, Dataform Repos, Dataplex Scans & Medallion Pipelines',
+    whatItDoes:
+      'Refreshes your project’s live BigQuery datasets, Dataform repositories, Dataplex Data Quality/Profiling scans, and active Bronze→Silver→Gold medallion pipelines.',
+    enterpriseValue:
+      'Synchronizes all 7 Google Cloud data engineering control planes into a single unified cockpit.',
+    gcpApis: 'bigquery.googleapis.com · dataform.googleapis.com · dataplex.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_OPEN_BIGLAKE_BTN: {
+    badge: 'OPEN LAKEHOUSE BRIDGE · APACHE ICEBERG',
+    title: 'Jump to Dedicated Google Cloud BigLake & Apache Iceberg Studio',
+    whatItDoes:
+      'Switches to the BigLake & Apache Iceberg Open Lakehouse Studio to manage `gs://` Parquet/Iceberg tables, BigLake Metastore REST catalogs, Z-Order compaction, and AWS S3 / Azure ADLS Omni federation.',
+    enterpriseValue:
+      'Bridges native BigQuery Capacitor tables with open multi-engine Apache Iceberg tables.',
+    gcpApis: 'biglake.googleapis.com/v1 · bigquery.googleapis.com/v2',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_CREATE_DATASET_BTN: {
+    badge: '5-STEP BIGQUERY COMPLIANCE WIZARD',
+    title: 'Create Compliant BigQuery Dataset (`PHYSICAL` Billing + Partition Filter + CMEK)',
+    whatItDoes:
+      'Opens the 5-step BigQuery dataset provisioning wizard pre-configured with Physical Compressed Billing (`-54%` storage cost), mandatory partition filter guardrails, and 168-hour Time-Travel.',
+    enterpriseValue:
+      'Ensures new analytics datasets start with optimal Capacitor compression billing and runaway-scan protection.',
+    gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_SYNC_DATASETS_BTN: {
+    badge: 'LIVE BIGQUERY WAREHOUSE SYNC',
+    title: 'Sync Live BigQuery Datasets, Storage Billing Models & Posture Scores',
+    whatItDoes:
+      'Fetches all live BigQuery datasets in your project, inspecting `storageBillingModel` (`LOGICAL` vs `PHYSICAL`), `maxTimeTravelHours`, partition expiration TTLs, and table counts.',
+    enterpriseValue:
+      'Identifies datasets still overpaying on uncompressed Logical billing so you can switch them to Physical billing in 1 click.',
+    gcpApis: 'GET https://bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_TAB_DATASETS: {
+    badge: 'BIGQUERY STUDIO MODULE 1/4',
+    title: 'Dataset Fleet, Zero-Trust Governance & 1-Tap FinOps Hardener',
+    whatItDoes:
+      'Displays every BigQuery dataset’s Zero-Trust & FinOps Posture Score (`0–100`) and executes 1-click live PATCH upgrades to `PHYSICAL` compressed billing, `168h` Time-Travel, `ROUND_HALF_EVEN`, and Partition TTL.',
+    enterpriseValue:
+      'Cuts BigQuery storage bills by ~54% via Capacitor 5:1 compression without rewriting any tables or queries.',
+    gcpApis: 'PATCH https://bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets/{dataset}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BQ_TAB_TABLES_SQL: {
+    badge: 'BIGQUERY STUDIO MODULE 2/4',
+    title: 'SQL Pre-Crime X-Ray — `$0.00` Dry-Run Cost Estimator (`$6.25/TB`) & Auto-Optimizer',
+    whatItDoes:
+      'Runs a real `$0.00` BigQuery Dry-Run (`dryRun: true`) to calculate exact bytes scanned and on-demand dollar cost before executing a query, and automatically rewrites `SELECT *` and `WHERE IN` anti-patterns.',
+    enterpriseValue:
+      'Prevents accidental multi-terabyte full-table scans that can cost hundreds of dollars in seconds.',
+    gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{project}/jobs (dryRun=true)',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_TAB_FINOPS_CRYSTAL: {
+    badge: 'BIGQUERY STUDIO MODULE 3/4',
+    title: 'Slot FinOps Crystal — Logical vs. Physical Storage & Autoscaling Edition Simulator',
+    whatItDoes:
+      'Interactive simulator comparing Logical (`$0.02/GB`) vs. Physical Compressed (`$0.04/GB` at `5:1` Capacitor compression) storage billing alongside On-Demand (`$6.25/TB`) vs. Enterprise Autoscaling Slots.',
+    enterpriseValue:
+      'Proves exact monthly storage and compute savings before altering dataset billing models or slot reservations.',
+    gcpApis: 'BigQuery Capacitor Compression & Slot Edition FinOps Engine',
+    safetyMode: 'SIMULATION',
+  },
+  BQ_TAB_TIME_MACHINE: {
+    badge: 'BIGQUERY STUDIO MODULE 4/4',
+    title: '168-Hour `FOR SYSTEM_TIME AS OF` Time-Machine & `$0` Zero-Copy Clone Restorer',
+    whatItDoes:
+      'Generates point-in-time snapshot queries, `$0`-storage Zero-Copy `CLONE` statements, and deleted-row forensic diffs across any millisecond in the last 7 days (`168 hours`).',
+    enterpriseValue:
+      'Recovers accidentally deleted or corrupted rows in seconds without restoring slow offline backups.',
+    gcpApis: 'BigQuery Time-Travel (FOR SYSTEM_TIME AS OF) & Zero-Copy Table Clones',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_SYNC_BTN: {
+    badge: 'LIVE BIGLAKE & ICEBERG SYNC',
+    title: 'Sync Live BigLake Metastore Catalogs, `gs://` Buckets & BigQuery Datasets',
+    whatItDoes:
+      'Refreshes all live BigLake Metastore Iceberg REST catalogs (`biglake.googleapis.com/v1`), Cloud Storage lakehouse buckets, and BigQuery datasets.',
+    enterpriseValue:
+      'Keeps your open Apache Iceberg catalog inventory synchronized with live GCP storage and query engines.',
+    gcpApis: 'GET https://biglake.googleapis.com/v1/projects/{project}/locations/-/catalogs',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_CREDENTIAL_VENDING_BTN: {
+    badge: 'ZERO-KEY ICEBERG CREDENTIAL VENDING',
+    title: 'Toggle BigLake Iceberg REST Catalog Credential Vending (Short-Lived Downscoped Tokens)',
+    whatItDoes:
+      'Configures whether external Apache Spark, Trino, Flink, or DuckDB engines receive short-lived, table-scoped `gs://` access tokens directly from the BigLake Iceberg REST Catalog.',
+    enterpriseValue:
+      'Eliminates distributing broad, static GCS Service Account JSON keys to external analytics clusters.',
+    gcpApis: 'biglake.googleapis.com/iceberg/v1beta/restcatalog (X-Iceberg-Access-Delegation)',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_TAB_METASTORE_CATALOGS: {
+    badge: 'BIGLAKE STUDIO MODULE 1/6',
+    title: 'BigLake Metastore & Apache Iceberg REST Catalog Explorer (`biglake.googleapis.com/v1`)',
+    whatItDoes:
+      'Creates, inspects, and deletes live Google Cloud BigLake Metastore Catalogs and Databases with Iceberg REST Catalog endpoint configuration and Credential Vending.',
+    enterpriseValue:
+      'Provides a single unified open Iceberg catalog shared across BigQuery, Serverless Spark, Trino, and Vertex AI.',
+    gcpApis: 'biglake.googleapis.com/v1/projects/{project}/locations/{loc}/catalogs',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BIGLAKE_TAB_PROVISION_WIZARD: {
+    badge: 'BIGLAKE STUDIO MODULE 2/6',
+    title: '1-Click BigLake Cloud Resource Connection, Delegated IAM & Iceberg Table Wizard',
+    whatItDoes:
+      'Walks through the 3-step BigLake Zero-Trust setup: (1) create a Cloud Resource Connection, (2) bind `roles/storage.objectAdmin` to its delegated service account, and (3) run `CREATE TABLE ... WITH CONNECTION ... OPTIONS(table_format="ICEBERG")`.',
+    enterpriseValue:
+      'Lets SQL analysts query open Parquet/Iceberg files in `gs://` with row/column security without ever granting them raw bucket permissions.',
+    gcpApis: 'bigqueryconnection.googleapis.com/v1 · storage.buckets.setIamPolicy · bigquery.jobs.insert',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BIGLAKE_TAB_COMPACTION_DOCTOR: {
+    badge: 'BIGLAKE STUDIO MODULE 3/6',
+    title: 'Apache Iceberg Small-File Compaction (`rewrite_data_files`), Z-Order & Snapshot Doctor',
+    whatItDoes:
+      'Models how compacting thousands of small streaming Parquet files (`4 MB`) into optimal `512 MB` Z-Ordered Iceberg files accelerates scan speed (`up to 6.4x`), and generates `rewrite_data_files` and `expire_snapshots` procedures.',
+    enterpriseValue:
+      'Fixes the #1 performance and GCS API cost bottleneck in streaming Apache Iceberg lakehouses.',
+    gcpApis: 'biglake.system.rewrite_data_files · expire_snapshots · remove_orphan_files',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_TAB_RLS_CLS_OMNI: {
+    badge: 'BIGLAKE STUDIO MODULE 4/6',
+    title: 'Row/Column Governance over `gs://` & Cross-Cloud BigLake Omni (AWS S3 / Azure ADLS)',
+    whatItDoes:
+      'Generates `CREATE ROW ACCESS POLICY` and SHA-256 column masking over open GCS Parquet files, plus cross-cloud BigLake Omni connections to query AWS S3 and Azure ADLS Gen2 Iceberg tables in-place.',
+    enterpriseValue:
+      'Queries multi-cloud AWS S3 and Azure data lakes from BigQuery with `$0.00` cross-cloud data egress.',
+    gcpApis: 'bigquery.rowAccessPolicies · bigqueryconnection (AWS S3 & Azure Federated Omni)',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_TAB_ICEBERG_50_MATRIX: {
+    badge: 'BIGLAKE STUDIO MODULE 5/6',
+    title: '50-Playbook Borderless Apache Iceberg & Multi-Engine Lakehouse Matrix',
+    whatItDoes:
+      'Interactive library of 50 production Apache Iceberg playbooks spanning Schema Evolution, Hidden Partitioning, Time-Travel Rollback, Change-Data-Capture MERGE, and Zero-Copy Spark/Ray/Vertex AI reads.',
+    enterpriseValue:
+      'Accelerates enterprise migration from proprietary warehouses or legacy Hive metastores to open Apache Iceberg v2.',
+    gcpApis: 'biglake.googleapis.com · bigquery.googleapis.com · dataproc.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  BIGLAKE_TAB_DATABRICKS_UNITY_BRIDGE: {
+    badge: 'BIGLAKE STUDIO MODULE 6/6',
+    title: 'Databricks Unity & AWS Glue Catalog Federation + `$0 DBU` Native GCP Spark Transpiler',
+    whatItDoes:
+      'Generates official `gcloud alpha biglake iceberg catalogs create --catalog-type=federated` runbooks for Databricks Unity Catalog and AWS Glue, calculates DBU tax savings, and transpiles Databricks PySpark/Delta code to `$0 DBU` Dataproc Serverless + BigLake Iceberg.',
+    enterpriseValue:
+      'Eliminates the 35%–55% Databricks DBU markup while allowing zero-copy federated queries during migration.',
+    gcpApis: 'biglake.googleapis.com (federated unity/glue) · secretmanager · dataproc serverless',
+    safetyMode: 'READ_ONLY',
+  },
+  SPANNER_SYNC_FLEET_BTN: {
+    badge: 'LIVE CLOUD SPANNER FLEET SYNC',
+    title: 'Sync Live Cloud Spanner Instances, Processing Units (PUs) & Databases',
+    whatItDoes:
+      'Queries `spanner.googleapis.com/v1` to list all live Cloud Spanner instances, regional/multi-region configurations, Processing Unit (`PU`) allocations, and editions.',
+    enterpriseValue:
+      'Provides real-time visibility into your globally consistent TrueTime database footprint and monthly PU run-rate.',
+    gcpApis: 'GET https://spanner.googleapis.com/v1/projects/{project}/instances',
+    safetyMode: 'READ_ONLY',
+  },
+  SPANNER_FLEET_PU: {
+    badge: 'CLOUD SPANNER MODULE 1/4',
+    title: 'Live Spanner Fleet & Granular 100-PU (`$65.70/mo`) Sizer + Provisioner',
+    whatItDoes:
+      'Sizes and provisions Cloud Spanner instances starting at `100 Processing Units` (`1/10th` of a node = `$65.70/mo`), comparing Regional (`99.99%`) vs. Multi-Region (`99.999%`) SLAs and Managed Autoscaler bounds.',
+    enterpriseValue:
+      'Makes Google’s flagship TrueTime distributed SQL database affordable for startups and microservices at `$65.70/mo` instead of `$730+/mo`.',
+    gcpApis: 'POST https://spanner.googleapis.com/v1/projects/{project}/instances',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SPANNER_GRAPH_GQL: {
+    badge: 'CLOUD SPANNER MODULE 2/4',
+    title: 'Spanner Graph (`ISO GQL` Property Graphs) & Zero-Join Interleaved Tables',
+    whatItDoes:
+      'Designs `CREATE PROPERTY GRAPH` schemas and multi-hop ISO GQL (`MATCH (a)-[e]->{1,3}(b)`) queries co-located with `INTERLEAVE IN PARENT` physical table hierarchies.',
+    enterpriseValue:
+      'Replaces standalone graph databases (like Neo4j) by running ACID relational and ISO GQL graph traversals in a single database.',
+    gcpApis: 'Cloud Spanner Graph (ISO/IEC 39075 GQL) & Interleaved Storage Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  SPANNER_VECTOR_RAG: {
+    badge: 'CLOUD SPANNER MODULE 3/4',
+    title: 'Spanner AI Vector Search (`ScaNN` `CREATE VECTOR INDEX`) & Hybrid GraphRAG',
+    whatItDoes:
+      'Combines Vertex AI remote embedding models (`text-embedding-005`), Tree-AH / ScaNN vector indexes (`APPROX_COSINE_DISTANCE`), and multi-hop `GRAPH_TABLE` traversal in a single SQL query.',
+    enterpriseValue:
+      'Consolidates Relational SQL + Property Graph + Vector Search into 1 engine with zero cross-database ETL drift.',
+    gcpApis: 'spanner.googleapis.com · aiplatform.googleapis.com (Hybrid GraphRAG)',
+    safetyMode: 'READ_ONLY',
+  },
+  SPANNER_TRUETIME_CDC: {
+    badge: 'CLOUD SPANNER MODULE 4/4',
+    title: '`99.999%` Atomic TrueTime, Zero-Impact Change Streams CDC & PostgreSQL PGAdapter',
+    whatItDoes:
+      'Generates `CREATE CHANGE STREAM` DDL and Dataflow Flex Template commands to stream real-time Spanner mutations into BigQuery or Pub/Sub, alongside PostgreSQL dialect (`PGAdapter`) compatibility.',
+    enterpriseValue:
+      'Delivers zero-downtime global transactions (`RPO = 0`) and real-time analytical replication into BigQuery.',
+    gcpApis: 'spanner.googleapis.com (Change Streams · TrueTime · PGAdapter)',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**

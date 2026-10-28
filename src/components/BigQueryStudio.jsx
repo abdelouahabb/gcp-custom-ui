@@ -497,6 +497,7 @@ export default function BigQueryStudio({
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               type="button"
+              data-feature-id="BQ_OPEN_BIGLAKE_BTN"
               onClick={() => onOpenBigLakeStudio?.()}
               title="Open the dedicated BigLake & Apache Iceberg Open Lakehouse Studio tab"
               className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
@@ -507,6 +508,7 @@ export default function BigQueryStudio({
 
             <button
               type="button"
+              data-feature-id="BQ_CREATE_DATASET_BTN"
               onClick={() => onOpenProvision?.('BIGQUERY_DATASET')}
               title="Open the 5-Step BigQuery Enterprise Compliance & Lakehouse Dataset Provisioning Modal"
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
@@ -517,6 +519,7 @@ export default function BigQueryStudio({
 
             <button
               type="button"
+              data-feature-id="BQ_SYNC_DATASETS_BTN"
               onClick={fetchDatasets}
               disabled={loadingDatasets}
               title="Sync live BigQuery datasets, storage billing models, time-travel windows & table counts from Google Cloud"
@@ -599,6 +602,7 @@ export default function BigQueryStudio({
                 <button
                   key={t.id}
                   type="button"
+                  data-feature-id={`BQ_TAB_${t.id}`}
                   onClick={() => setActiveSubTab(t.id)}
                   title={t.tip}
                   className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
