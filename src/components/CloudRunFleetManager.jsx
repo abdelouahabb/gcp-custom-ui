@@ -2008,41 +2008,99 @@ spec:
 
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
-              <Rocket className="w-4 h-4" />
+      {/* Header: Top Title & Primary Actions + Structured 6-Module Workbench Bar */}
+      <div className="space-y-3.5 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
+                <Rocket className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
+                Cloud Run Serverless Command Center ({services.length} Services)
+              </h3>
+              <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+                run.googleapis.com/v2 · GEN2
+              </span>
             </div>
-            <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
-              Cloud Run Serverless Command Center ({services.length} Services)
-            </h3>
-            <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
-              run.googleapis.com/v2 · GEN2
-            </span>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Deploy containers, tune live autoscaling (Min/Max instances, CPU,
+              Memory, Concurrency), toggle Public/IAM access, and split traffic
+              across revisions on{' '}
+              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                {projectId}
+              </span>
+              .
+            </p>
           </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Deploy containers, tune live autoscaling (Min/Max instances, CPU,
-            Memory, Concurrency), toggle Public/IAM access, and split traffic
-            across revisions on{' '}
-            <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
-              {projectId}
-            </span>
-            .
-          </p>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              data-feature-id="CLOUDRUN_SYNC_FLEET"
+              onClick={() => fetchCloudRunFleet(false)}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${
+                  loading || hasActiveOps
+                    ? 'animate-spin text-zinc-500 dark:text-zinc-400'
+                    : ''
+                }`}
+              />
+              <span>Sync Cloud Run</span>
+            </button>
+
+            <button
+              type="button"
+              data-feature-id="CLOUDRUN_CREATE_JOB_BTN"
+              onClick={() => {
+                setShowSchedulerToJobsStudio(true);
+                if (!schedulerJobsState.data && !schedulerJobsState.loading) {
+                  handleFetchSchedulerAndJobs(false);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-blue-500" />
+              <span>+ Create Cloud Run Job</span>
+            </button>
+
+            <button
+              type="button"
+              data-feature-id="CLOUDRUN_DEPLOY_SERVICE_BTN"
+              onClick={onOpenProvisionCloudRun}
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>+ Deploy Cloud Run Service</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* 6-Module Serverless Workbench & Migration Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 pt-1">
           {onSelectTab && (
             <button
               type="button"
+              data-feature-id="VM_MIGRATE_TO_CLOUD_RUN"
               onClick={() => onSelectTab('VM_SSH')}
               title="Open GCE VM -> Cloud Run Gen2 Modernization Engine (mfit 6-Dimension Readiness Scorecard + m2c Runtime Analyzer + Persistent volumes[].gcs FUSE Disk Mount)"
-              className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/35 transition-colors cursor-pointer"
+              className="w-full p-2.5 rounded-md border bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-left transition-colors cursor-pointer flex flex-col justify-between gap-1"
             >
-              <HardDrive className="w-3.5 h-3.5" />
-              <span>Migrate GCE VM + Disk → Cloud Run (mfit + m2c)</span>
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  <HardDrive className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="truncate">VM → Cloud Run</span>
+                </span>
+                <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                  mfit + m2c
+                </span>
+              </div>
+              <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                Migrate GCE VM + Disk
+              </div>
             </button>
           )}
 
@@ -2051,20 +2109,26 @@ spec:
             data-feature-id="CLOUDRUN_SCHEDULER_TO_JOBS"
             onClick={handleToggleSchedulerToJobsStudio}
             title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showSchedulerToJobsStudio
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/35'
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
             }`}
           >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)</span>
-            {schedulerJobsState.data && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-blue-600 dark:text-blue-300 text-[10px] font-mono">
-                {schedulerJobsState.data.schedulerJobsCount || 0} Cron ·{' '}
-                {schedulerJobsState.data.cloudRunJobsCount || 0} Jobs
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Zap className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="truncate">Scheduler → Jobs</span>
               </span>
-            )}
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                {schedulerJobsState.data
+                  ? `${schedulerJobsState.data.cloudRunJobsCount || 0} Jobs`
+                  : '24h Batch'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              24h Timeout &amp; Task Shards
+            </div>
           </button>
 
           <button
@@ -2072,14 +2136,24 @@ spec:
             data-feature-id="CLOUDRUN_DOCKER_COMPOSE_GA"
             onClick={() => setShowComposeStudio((v) => !v)}
             title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showComposeStudio
-                ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/35'
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Docker Compose (gcloud run compose up GA)</span>
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Layers className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">Docker Compose</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                SDK GA
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              gcloud run compose up
+            </div>
           </button>
 
           <button
@@ -2087,32 +2161,28 @@ spec:
             data-feature-id="CLOUDRUN_APP_ENGINE_EXTERMINATOR"
             onClick={handleToggleAppEngineExterminator}
             title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showAppEngineExterminator
-                ? 'bg-zinc-700 text-white border-zinc-600 shadow-sm'
-                : appEngineState.data?.summary?.activeServicesCount === 0
-                ? 'bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border-zinc-400/30 dark:border-zinc-700'
-                : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/35'
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
             }`}
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>App Engine Exterminator & $0/mo Neutralizer</span>
-            {appEngineState.data?.summary && (
-              <span
-                className={`px-1.5 py-0.2 rounded-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
-                  appEngineState.data.summary.activeServicesCount === 0
-                    ? 'text-zinc-500 dark:text-zinc-400'
-                    : 'text-red-700 dark:text-red-300'
-                }`}
-              >
-                {appEngineState.data.summary.activeServicesCount === 0
-                  ? 'DISABLED · 0 Active Svc ($0/mo)'
-                  : `${
-                      appEngineState.data.summary.activeServicesCount ??
-                      appEngineState.data.summary.totalServicesCount
-                    } Active Svc · ${appEngineState.data.summary.totalVersionsCount} Ver`}
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="truncate">App Engine $0/mo</span>
               </span>
-            )}
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                {appEngineState.data?.summary
+                  ? appEngineState.data.summary.activeServicesCount === 0
+                    ? '0 Active'
+                    : `${appEngineState.data.summary.activeServicesCount} Active`
+                  : 'Neutralize'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              Service Exterminator &amp; Vault
+            </div>
           </button>
 
           <button
@@ -2120,20 +2190,26 @@ spec:
             data-feature-id="CLOUDRUN_DEAD_ARTIFACT_HUNTER"
             onClick={handleToggleArtifactHunter}
             title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showArtifactHunter
-                ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-sm'
-                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/35'
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
             }`}
           >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>Search Dead Containers & GCS Artifacts</span>
-            {artifactScanState.data?.summary && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
-                {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
-                {artifactScanState.data.summary.totalStorageObjectsCount} GCS
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <HardDrive className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span className="truncate">Dead Artifacts</span>
               </span>
-            )}
+              <span className="text-[9.5px] font-mono font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                {artifactScanState.data?.summary
+                  ? `${artifactScanState.data.summary.deadContainerImagesCount} Dead`
+                  : 'AR + GCS'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              Orphan Containers &amp; Staging
+            </div>
           </button>
 
           <button
@@ -2141,54 +2217,24 @@ spec:
             data-feature-id="CLOUDRUN_TO_GKE_TRANSPILER"
             onClick={() => setShowGlobalGkeTranspiler((v) => !v)}
             title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showGlobalGkeTranspiler
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30'
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Cloud Run → GKE Kubernetes Transpiler</span>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_SYNC_FLEET"
-            onClick={() => fetchCloudRunFleet(false)}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${
-                loading || hasActiveOps ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
-              }`}
-            />
-            <span>Sync Cloud Run</span>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_CREATE_JOB_BTN"
-            onClick={() => {
-              setShowSchedulerToJobsStudio(true);
-              if (!schedulerJobsState.data && !schedulerJobsState.loading) {
-                handleFetchSchedulerAndJobs(false);
-              }
-            }}
-            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>+ Create Cloud Run Job</span>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_DEPLOY_SERVICE_BTN"
-            onClick={onOpenProvisionCloudRun}
-            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>+ Deploy Cloud Run Service</span>
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Layers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="truncate">Cloud Run → GKE</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                K8s YAML
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              6-Resource K8s Transpiler
+            </div>
           </button>
         </div>
       </div>
@@ -4831,37 +4877,14 @@ services:
 
       {/* Quick 1-Tap Cloud Run Templates & Self-Deploy Banner */}
       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-              <span>1-Tap Instant Deploy:</span>
-            </span>
-            {QUICK_TEMPLATES.map((tpl) => {
-              const isDeployingThis = quickDeploying === tpl.label;
-              return (
-                <button
-                  key={tpl.label}
-                  type="button"
-                  disabled={Boolean(quickDeploying)}
-                  onClick={() => handleQuickDeployTemplate(tpl)}
-                  className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {isDeployingThis ? (
-                    <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
-                  ) : (
-                    <Rocket className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-                  )}
-                  <span>
-                    {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-blue-500" />
+            <span>1-Tap Instant Deploy Blueprints:</span>
+          </span>
 
           {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
-          <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900/95 text-zinc-800 dark:text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
+          <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 px-3 py-1 rounded-md border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
             <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
             <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
               {selfDeployCmd}
@@ -4869,7 +4892,7 @@ services:
             <button
               type="button"
               onClick={() => handleCopy(selfDeployCmd, 'self-deploy')}
-              className="text-blue-400 hover:text-blue-300 shrink-0 inline-flex items-center gap-1 ml-1"
+              className="text-blue-500 hover:text-blue-400 shrink-0 inline-flex items-center gap-1 ml-1 cursor-pointer font-bold"
             >
               {copiedId === 'self-deploy' ? (
                 <>
@@ -4884,6 +4907,30 @@ services:
               )}
             </button>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {QUICK_TEMPLATES.map((tpl) => {
+            const isDeployingThis = quickDeploying === tpl.label;
+            return (
+              <button
+                key={tpl.label}
+                type="button"
+                disabled={Boolean(quickDeploying)}
+                onClick={() => handleQuickDeployTemplate(tpl)}
+                className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 px-3 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isDeployingThis ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
+                ) : (
+                  <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                )}
+                <span className="truncate">
+                  {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Runtime Service Account Selector for 1-Tap Instant Deploy */}

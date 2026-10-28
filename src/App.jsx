@@ -4207,13 +4207,6 @@ function CloudPulseCockpit() {
       tip: '2026 Neural Chrono-Log & Trace Studio (Drain3 Clustering, Trace Waterfall, NL-to-LQL, Log FinOps, DLP Shield & Cloud Shell)',
       icon: Terminal,
     },
-    {
-      id: 'DOCS_GUIDE',
-      group: 'OPS_DOCS',
-      label: 'Docs',
-      tip: 'Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide',
-      icon: BookOpen,
-    },
   ];
 
   return (
@@ -4286,11 +4279,28 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: [Overview] + [10-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
+            {/* Top-Right Cluster: [Docs] + [Overview] + [10-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
+              {/* 1-Click Docs & Architecture Guide Button */}
+              <button
+                type="button"
+                data-feature-id="DOCS_GUIDE"
+                onClick={() => setActiveTab('DOCS_GUIDE')}
+                title="Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide"
+                className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'DOCS_GUIDE'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 shrink-0" />
+                <span>Docs</span>
+              </button>
+
               {/* Big 1-Click Overview & Resource Lineage Button */}
               <button
                 type="button"
+                data-feature-id="OVERVIEW"
                 onClick={() => setActiveTab('OVERVIEW')}
                 title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
                 className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
