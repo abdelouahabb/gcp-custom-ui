@@ -114,11 +114,17 @@ function inferTargetTabFromNodeId(nodeId = '', label = '') {
   if (id.startsWith('DS') || text.includes('DATASET')) {
     return { targetTab: 'BIGQUERY_STUDIO', subtitle: 'Click to open BigQuery Studio' };
   }
-  if (id.startsWith('VM')) {
-    return { targetTab: 'VM_SSH', subtitle: 'Click to open Compute VM & SSH Studio' };
+  if (id.startsWith('VM') || id.startsWith('DISK')) {
+    return { targetTab: 'VM_SSH', subtitle: 'Click to open Compute VM & Disk Studio' };
   }
   if (id.startsWith('CR')) {
     return { targetTab: 'CLOUD_RUN', subtitle: 'Click to open Cloud Run Studio' };
+  }
+  if (id.startsWith('FN')) {
+    return { targetTab: 'FUNCTIONS_STUDIO', subtitle: 'Click to open Cloud Functions & Eventarc Studio' };
+  }
+  if (id.startsWith('AR')) {
+    return { targetTab: 'WAVE9_STUDIO', subtitle: 'Click to open Artifact Registry & Supply Chain Studio' };
   }
   if (id.startsWith('GKE')) {
     return { targetTab: 'GKE_STUDIO', subtitle: 'Click to open GKE Cluster Studio' };
@@ -244,7 +250,9 @@ function MermaidFlowchartSvg({ dsl, topology = [], onNodeClick }) {
           ? parts.slice(1).join(':').trim()
           : topoHint?.subtitle || 'Live GCP Telemetry';
       const isPublicExposure =
-        n.id === 'PUB' || String(n.label || '').includes('0.0.0.0/0');
+        n.id === 'PUB' ||
+        String(n.label || '').includes('0.0.0.0/0') ||
+        String(n.label || '').includes('Unattached Zombie');
 
       const posNode = {
         ...n,

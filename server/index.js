@@ -71682,197 +71682,304 @@ app.post('/api/project/:projectId/recycle-bin/restore', async (req, res) => {
 // ============================================================================
 // WAVE 2 ENTERPRISE STACK & PIPELINE GLUE: LIVE 6-STAGE BLUEPRINT & IaC SYNTHESIZER
 // ============================================================================
+const step3ExtendedProbeCache = new Map();
+
 app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res) => {
   const { projectId } = req.params;
   const startMs = Date.now();
   try {
     let cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
     let resources = Array.isArray(cachedOverview?.resources)
-      ? cachedOverview.resources
+      ? [...cachedOverview.resources]
       : [];
 
-    // If overview SWR cache is cold, perform a fast live parallel probe so we never return fake/empty state
-    if (resources.length === 0) {
-      const { token } = await resolveRequestAuth(req);
-      if (token) {
-        const headers = { Authorization: `Bearer ${token}` };
-        const [
-          bucketsRes,
-          datasetsRes,
-          networksRes,
-          firewallsRes,
-          vmsRes,
-          runRes,
-          gkeRes,
-          servicesRes,
-        ] = await Promise.allSettled([
-          axios.get(
-            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
-            { headers, timeout: 5000 }
-          ),
-          axios.get(
-            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
-            { headers, timeout: 5000 }
-          ),
-        ]);
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
 
-        if (bucketsRes.status === 'fulfilled') {
-          for (const b of bucketsRes.value.data?.items || []) {
+    // If overview SWR cache is cold, perform a fast live parallel probe so we never return fake/empty state
+    if (resources.length === 0 && headers) {
+      const [
+        bucketsRes,
+        datasetsRes,
+        networksRes,
+        firewallsRes,
+        vmsRes,
+        runRes,
+        gkeRes,
+        servicesRes,
+      ] = await Promise.allSettled([
+        axios.get(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
+          { headers, timeout: 5000 }
+        ),
+        axios.get(
+          `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=50`,
+          { headers, timeout: 5000 }
+        ),
+      ]);
+
+      if (bucketsRes.status === 'fulfilled') {
+        for (const b of bucketsRes.value.data?.items || []) {
+          resources.push({
+            id: `gcs-${b.name}`,
+            name: b.name,
+            type: 'Cloud Storage Bucket',
+            category: 'storage',
+            region: b.location || 'US',
+            storageClass: b.storageClass || 'STANDARD',
+          });
+        }
+      }
+      if (datasetsRes.status === 'fulfilled') {
+        for (const d of datasetsRes.value.data?.datasets || []) {
+          const dsId = d.datasetReference?.datasetId;
+          if (dsId) {
             resources.push({
-              id: `gcs-${b.name}`,
-              name: b.name,
-              type: 'Cloud Storage Bucket',
-              category: 'storage',
-              region: b.location || 'US',
-              storageClass: b.storageClass || 'STANDARD',
+              id: `bq-${dsId}`,
+              name: dsId,
+              type: 'BigQuery Dataset',
+              category: 'data',
+              region: d.location || 'US',
+              storageClass: 'BIGQUERY_DATASET',
             });
           }
         }
-        if (datasetsRes.status === 'fulfilled') {
-          for (const d of datasetsRes.value.data?.datasets || []) {
-            const dsId = d.datasetReference?.datasetId;
-            if (dsId) {
-              resources.push({
-                id: `bq-${dsId}`,
-                name: dsId,
-                type: 'BigQuery Dataset',
-                category: 'data',
-                region: d.location || 'US',
-                storageClass: 'BIGQUERY_DATASET',
-              });
-            }
-          }
+      }
+      if (networksRes.status === 'fulfilled') {
+        for (const n of networksRes.value.data?.items || []) {
+          resources.push({
+            id: `vpc-${n.name}`,
+            name: n.name,
+            type: 'VPC Network',
+            category: 'network',
+            region: 'global',
+            storageClass: n.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
+          });
         }
-        if (networksRes.status === 'fulfilled') {
-          for (const n of networksRes.value.data?.items || []) {
-            resources.push({
-              id: `vpc-${n.name}`,
-              name: n.name,
-              type: 'VPC Network',
-              category: 'network',
-              region: 'global',
-              storageClass: n.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
-            });
-          }
+      }
+      if (firewallsRes.status === 'fulfilled') {
+        for (const fw of firewallsRes.value.data?.items || []) {
+          const netShort = (fw.network || 'default').split('/').pop();
+          resources.push({
+            id: `fw-${fw.name}`,
+            name: fw.name,
+            type: 'VPC Firewall Rule',
+            category: 'network',
+            region: 'global',
+            storageClass: `${fw.direction || 'INGRESS'}_${fw.denied ? 'DENY' : 'ALLOW'}`,
+            details: {
+              network: netShort,
+              direction: fw.direction || 'INGRESS',
+              priority: fw.priority ?? 1000,
+              sourceRanges: (fw.sourceRanges || []).join(', '),
+            },
+          });
         }
-        if (firewallsRes.status === 'fulfilled') {
-          for (const fw of firewallsRes.value.data?.items || []) {
-            const netShort = (fw.network || 'default').split('/').pop();
+      }
+      if (vmsRes.status === 'fulfilled') {
+        for (const [zoneKey, val] of Object.entries(vmsRes.value.data?.items || {})) {
+          const zone = zoneKey.replace('zones/', '');
+          for (const inst of val?.instances || []) {
+            const machineShort = (inst.machineType || '').split('/').pop() || 'e2-micro';
             resources.push({
-              id: `fw-${fw.name}`,
-              name: fw.name,
-              type: 'VPC Firewall Rule',
-              category: 'network',
-              region: 'global',
-              storageClass: `${fw.direction || 'INGRESS'}_${fw.denied ? 'DENY' : 'ALLOW'}`,
+              id: `gce-${inst.name}`,
+              name: inst.name,
+              type: 'Compute Engine VM',
+              category: 'compute',
+              region: zone,
+              zone,
+              storageClass: machineShort,
               details: {
-                network: netShort,
-                direction: fw.direction || 'INGRESS',
-                priority: fw.priority ?? 1000,
-                sourceRanges: (fw.sourceRanges || []).join(', '),
+                zone,
+                machineType: machineShort,
+                status: inst.status || 'RUNNING',
+                network:
+                  inst.networkInterfaces?.[0]?.network?.split('/').pop() || 'default',
               },
             });
           }
         }
-        if (vmsRes.status === 'fulfilled') {
-          for (const [zoneKey, val] of Object.entries(vmsRes.value.data?.items || {})) {
-            const zone = zoneKey.replace('zones/', '');
-            for (const inst of val?.instances || []) {
-              const machineShort = (inst.machineType || '').split('/').pop() || 'e2-micro';
-              resources.push({
-                id: `gce-${inst.name}`,
-                name: inst.name,
-                type: 'Compute Engine VM',
-                category: 'compute',
-                region: zone,
-                zone,
-                storageClass: machineShort,
-                details: {
-                  zone,
-                  machineType: machineShort,
-                  status: inst.status || 'RUNNING',
-                  network:
-                    inst.networkInterfaces?.[0]?.network?.split('/').pop() || 'default',
-                },
-              });
-            }
-          }
-        }
-        if (runRes.status === 'fulfilled') {
-          for (const s of runRes.value.data?.services || []) {
-            if (isCloudRunServiceDeletedOrTombstoned(projectId, s)) continue;
-            const shortName = (s.name || '').split('/').pop();
-            const region = (s.name || '').split('/')[3] || 'us-central1';
-            if (shortName) {
-              resources.push({
-                id: `run-${shortName}`,
-                name: shortName,
-                type: 'Cloud Run Service',
-                category: 'compute',
-                region,
-                storageClass: 'GEN2_SCALE_TO_ZERO',
-                details: {
-                  region,
-                  uri: s.uri || '',
-                },
-              });
-            }
-          }
-        }
-        if (gkeRes.status === 'fulfilled') {
-          for (const c of gkeRes.value.data?.clusters || []) {
+      }
+      if (runRes.status === 'fulfilled') {
+        for (const s of runRes.value.data?.services || []) {
+          if (isCloudRunServiceDeletedOrTombstoned(projectId, s)) continue;
+          const shortName = (s.name || '').split('/').pop();
+          const region = (s.name || '').split('/')[3] || 'us-central1';
+          if (shortName) {
             resources.push({
-              id: `gke-${c.name}`,
-              name: c.name,
-              type: c.autopilot?.enabled ? 'GKE Autopilot Cluster' : 'GKE Cluster',
+              id: `run-${shortName}`,
+              name: shortName,
+              type: 'Cloud Run Service',
               category: 'compute',
-              region: c.location || 'us-central1',
-              storageClass: `k8s v${c.currentMasterVersion || '1.31'}`,
+              region,
+              storageClass: 'GEN2_SCALE_TO_ZERO',
+              details: {
+                region,
+                uri: s.uri || '',
+              },
             });
           }
         }
-        if (servicesRes.status === 'fulfilled') {
-          for (const s of servicesRes.value.data?.services || []) {
-            const svcName = (s.config?.name || s.name || '').split('/').pop();
-            if (svcName) {
-              resources.push({
-                id: `api-${svcName}`,
-                name: svcName,
-                type: 'Enabled GCP Service API',
-                category: 'compute',
-                region: 'global',
-                storageClass: svcName,
-                details: { serviceName: svcName },
-              });
-            }
+      }
+      if (gkeRes.status === 'fulfilled') {
+        for (const c of gkeRes.value.data?.clusters || []) {
+          resources.push({
+            id: `gke-${c.name}`,
+            name: c.name,
+            type: c.autopilot?.enabled ? 'GKE Autopilot Cluster' : 'GKE Cluster',
+            category: 'compute',
+            region: c.location || 'us-central1',
+            storageClass: `k8s v${c.currentMasterVersion || '1.31'}`,
+          });
+        }
+      }
+      if (servicesRes.status === 'fulfilled') {
+        for (const s of servicesRes.value.data?.services || []) {
+          const svcName = (s.config?.name || s.name || '').split('/').pop();
+          if (svcName) {
+            resources.push({
+              id: `api-${svcName}`,
+              name: svcName,
+              type: 'Enabled GCP Service API',
+              category: 'compute',
+              region: 'global',
+              storageClass: svcName,
+              details: { serviceName: svcName },
+            });
           }
         }
       }
     }
+
+    // Step 3 Extended Compute & Serverless Discovery: Persistent Disks, Cloud Functions (Gen1/Gen2) & Artifact Registry Repositories
+    let step3Extra = step3ExtendedProbeCache.get(projectId);
+    if ((!step3Extra || Date.now() - step3Extra.ts > 25000) && headers) {
+      const arLocations = ['us-central1', 'us', 'us-east1', 'europe-west1'];
+      const [disksRes, fnRes, ...arResList] = await Promise.allSettled([
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/disks?maxResults=50&returnPartialSuccess=true`,
+          { headers, timeout: 4500 }
+        ),
+        axios.get(
+          `https://cloudfunctions.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/functions`,
+          { headers, timeout: 4500 }
+        ),
+        ...arLocations.map((loc) =>
+          axios.get(
+            `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${loc}/repositories`,
+            { headers, timeout: 3800 }
+          )
+        ),
+      ]);
+
+      const discoveredDisks = [];
+      if (disksRes.status === 'fulfilled') {
+        for (const [scopeKey, val] of Object.entries(disksRes.value.data?.items || {})) {
+          const zone = scopeKey.replace('zones/', '').replace('regions/', '');
+          for (const d of val?.disks || []) {
+            const diskTypeShort = (d.type || '').split('/').pop() || 'pd-balanced';
+            const attachedUsers = Array.isArray(d.users) ? d.users : [];
+            const attachedVm = attachedUsers[0] ? attachedUsers[0].split('/').pop() : null;
+            discoveredDisks.push({
+              id: `disk-${d.name}`,
+              name: d.name,
+              type: 'Persistent Disk',
+              category: 'compute',
+              region: zone,
+              zone,
+              sizeGb: Number(d.sizeGb || 10),
+              diskType: diskTypeShort,
+              attached: attachedUsers.length > 0,
+              attachedVm,
+              storageClass: `${d.sizeGb || 10} GB ${diskTypeShort}`,
+            });
+          }
+        }
+      }
+
+      const discoveredFunctions = [];
+      if (fnRes.status === 'fulfilled') {
+        for (const fn of fnRes.value.data?.functions || []) {
+          const shortName = (fn.name || '').split('/').pop();
+          const region = (fn.name || '').split('/')[3] || 'us-central1';
+          const runtime = fn.buildConfig?.runtime || 'nodejs20';
+          const envGen = fn.environment === 'GEN_1' ? 'Gen1' : 'Gen2';
+          if (shortName) {
+            discoveredFunctions.push({
+              id: `fn-${shortName}`,
+              name: shortName,
+              type: 'Cloud Function',
+              category: 'compute',
+              region,
+              runtime,
+              envGen,
+              state: fn.state || 'ACTIVE',
+              storageClass: `${envGen} · ${runtime}`,
+            });
+          }
+        }
+      }
+
+      const discoveredArRepos = [];
+      arResList.forEach((arRes, idx) => {
+        if (arRes.status === 'fulfilled') {
+          const loc = arLocations[idx];
+          for (const repo of arRes.value.data?.repositories || []) {
+            const shortName = (repo.name || '').split('/').pop();
+            const format = repo.format || 'DOCKER';
+            if (shortName && !discoveredArRepos.some((r) => r.name === shortName && r.region === loc)) {
+              discoveredArRepos.push({
+                id: `ar-${loc}-${shortName}`,
+                name: shortName,
+                type: 'Artifact Registry Repo',
+                category: 'compute',
+                region: loc,
+                format,
+                sizeBytes: Number(repo.sizeBytes || 0),
+                storageClass: `${format} · ${loc}`,
+              });
+            }
+          }
+        }
+      });
+
+      step3Extra = {
+        ts: Date.now(),
+        disks: discoveredDisks,
+        cloudFunctions: discoveredFunctions,
+        artifactRepos: discoveredArRepos,
+      };
+      step3ExtendedProbeCache.set(projectId, step3Extra);
+    }
+
+    const disks = step3Extra?.disks || [];
+    const unattachedDisks = disks.filter((d) => !d.attached);
+    const cloudFunctions = step3Extra?.cloudFunctions || [];
+    const artifactRepos = step3Extra?.artifactRepos || [];
 
     const vpcs = resources.filter((r) => r.type === 'VPC Network');
     const firewalls = resources.filter((r) => r.type === 'VPC Firewall Rule');
@@ -72025,15 +72132,37 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       stage2MermaidDsl = s2Lines.join('\n');
     }
 
-    // Dynamic Stage 3 Mermaid (Strictly null when 0 VMs, 0 Cloud Run, and 0 GKE clusters!)
+    // Dynamic Stage 3 Mermaid (Strictly null when 0 VMs, 0 Cloud Run, 0 GKE, 0 Functions, 0 Disks, and 0 Artifact Registry repos!)
+    const totalStage3Count =
+      vms.length +
+      cloudRunSvcs.length +
+      gkeClusters.length +
+      cloudFunctions.length +
+      disks.length +
+      artifactRepos.length;
+
     let stage3MermaidDsl = null;
-    if (vms.length + cloudRunSvcs.length + gkeClusters.length > 0) {
-      const s3Lines = [
-        `flowchart LR`,
-        `  subgraph INGRESS["Zero-Trust Ingress"]`,
-        `    EDGE["HTTPS & IAP SSH Bastion"]`,
-        `  end`,
-      ];
+    if (totalStage3Count > 0) {
+      const s3Lines = [`flowchart LR`];
+      const hasIngressWorkloads =
+        vms.length + cloudRunSvcs.length + gkeClusters.length + cloudFunctions.length > 0;
+
+      if (hasIngressWorkloads) {
+        s3Lines.push(
+          `  subgraph INGRESS["Zero-Trust Ingress"]`,
+          `    EDGE["HTTPS & IAP SSH Bastion"]`,
+          `  end`
+        );
+      }
+
+      if (artifactRepos.length > 0) {
+        s3Lines.push(`  subgraph AR["Artifact Registry (${artifactRepos.length} Active)"]`);
+        artifactRepos.slice(0, 3).forEach((ar, idx) => {
+          s3Lines.push(`    AR${idx}["AR Repo: ${ar.name} (${ar.format} · ${ar.region})"]`);
+        });
+        s3Lines.push(`  end`);
+      }
+
       if (vms.length > 0) {
         s3Lines.push(`  subgraph GCE["Compute Engine (${vms.length} Active)"]`);
         vms.slice(0, 3).forEach((vm, idx) => {
@@ -72044,6 +72173,26 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           s3Lines.push(`  EDGE -->|"SSH2 / IAP"| VM${idx}`);
         });
       }
+
+      if (disks.length > 0) {
+        s3Lines.push(
+          `  subgraph DISKS["Persistent Disks (${disks.length} Total · ${unattachedDisks.length} Unattached)"]`
+        );
+        disks.slice(0, 4).forEach((d, idx) => {
+          s3Lines.push(
+            `    DISK${idx}["Disk: ${d.name} (${d.sizeGb}GB ${d.attached ? 'Attached' : 'Unattached Zombie'})"]`
+          );
+        });
+        s3Lines.push(`  end`);
+        if (vms.length > 0) {
+          disks.slice(0, 4).forEach((d, idx) => {
+            if (d.attached) {
+              s3Lines.push(`  VM0 -->|"Block Volume"| DISK${idx}`);
+            }
+          });
+        }
+      }
+
       if (cloudRunSvcs.length > 0) {
         s3Lines.push(`  subgraph CRUN["Cloud Run (${cloudRunSvcs.length} Active)"]`);
         cloudRunSvcs.slice(0, 3).forEach((s, idx) => {
@@ -72052,8 +72201,23 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         s3Lines.push(`  end`);
         cloudRunSvcs.slice(0, 3).forEach((_, idx) => {
           s3Lines.push(`  EDGE -->|"Scale-to-Zero HTTPS"| CR${idx}`);
+          if (artifactRepos.length > 0) {
+            s3Lines.push(`  AR0 -->|"Container Digest"| CR${idx}`);
+          }
         });
       }
+
+      if (cloudFunctions.length > 0) {
+        s3Lines.push(`  subgraph FUNCS["Cloud Functions (${cloudFunctions.length} Active)"]`);
+        cloudFunctions.slice(0, 3).forEach((fn, idx) => {
+          s3Lines.push(`    FN${idx}["Function (${fn.envGen}): ${fn.name}"]`);
+        });
+        s3Lines.push(`  end`);
+        cloudFunctions.slice(0, 3).forEach((_, idx) => {
+          s3Lines.push(`  EDGE -->|"Eventarc / HTTPS"| FN${idx}`);
+        });
+      }
+
       if (gkeClusters.length > 0) {
         s3Lines.push(`  subgraph GKE_SG["GKE (${gkeClusters.length} Active)"]`);
         gkeClusters.slice(0, 2).forEach((c, idx) => {
@@ -72064,8 +72228,29 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           s3Lines.push(`  EDGE -->|"Workload Identity"| GKE${idx}`);
         });
       }
+
       stage3MermaidDsl = s3Lines.join('\n');
     }
+
+    // Build dynamic Stage 3 badge & summary reflecting VMs, Cloud Run, GKE, Disks, Functions, and Artifact Registry
+    const stage3BadgeParts = [`${vms.length} VMs`, `${cloudRunSvcs.length} Run`];
+    if (disks.length > 0) {
+      stage3BadgeParts.push(
+        unattachedDisks.length > 0
+          ? `${disks.length} Disks (${unattachedDisks.length} Zombie)`
+          : `${disks.length} Disks`
+      );
+    }
+    if (cloudFunctions.length > 0) {
+      stage3BadgeParts.push(`${cloudFunctions.length} Fn`);
+    }
+    if (artifactRepos.length > 0) {
+      stage3BadgeParts.push(`${artifactRepos.length} AR`);
+    }
+    if (gkeClusters.length > 0 || stage3BadgeParts.length < 3) {
+      stage3BadgeParts.push(`${gkeClusters.length} GKE`);
+    }
+    const stage3MetricBadge = stage3BadgeParts.join(' · ');
 
     // Stages 4, 5, and 6 are IaC / FinOps / SRE operational stages — Mermaid topology is reserved strictly for Stages 1–3 when non-zero resources exist
     const stage4MermaidDsl = null;
@@ -72176,41 +72361,71 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       {
         id: 'STAGE_3_COMPUTE_SERVERLESS',
         stepNumber: 3,
-        title: '3. Compute Fleet & Scale-to-Zero Serverless',
+        title: '3. Compute Fleet, Persistent Disks, Serverless & Artifact Registry',
         shortTitle: 'VMs & Cloud Run',
         targetTab: 'VM_SSH',
         secondaryTab: 'CLOUD_RUN',
         secondaryLabel: 'Cloud Run Serverless Studio',
         status:
-          vms.length > 0 && cloudRunSvcs.length === 0
+          unattachedDisks.length > 0 || (vms.length > 0 && cloudRunSvcs.length === 0)
             ? 'ACTION_RECOMMENDED'
-            : vms.length + cloudRunSvcs.length + gkeClusters.length > 0
+            : totalStage3Count > 0
             ? 'OPTIMAL'
             : 'READY',
-        metricBadge: `${vms.length} VMs · ${cloudRunSvcs.length} Cloud Run · ${gkeClusters.length} GKE`,
+        metricBadge: stage3MetricBadge,
         summary:
-          vms.length + cloudRunSvcs.length + gkeClusters.length > 0
-            ? `${vms.length} live GCE VM(s)${vms.length ? ` (${vms.map((v) => v.name).join(', ')})` : ''}, ${cloudRunSvcs.length} Cloud Run service(s), and ${gkeClusters.length} GKE cluster(s) active in ${projectId}.`
-            : `0 running VMs or Cloud Run services in "${projectId}" ($0.00/hr compute idle). Launch a Free-Tier e2-micro VM, deploy a Scale-to-Zero Cloud Run container, or inspect recently deleted VMs in the 30-Day Recycle Bin.`,
+          totalStage3Count > 0
+            ? `${vms.length} GCE VM(s), ${disks.length} Persistent Disk(s)${
+                unattachedDisks.length > 0
+                  ? ` (${unattachedDisks.length} unattached zombie disk(s) incurring storage charges!)`
+                  : ''
+              }, ${cloudRunSvcs.length} Cloud Run service(s), ${cloudFunctions.length} Cloud Function(s), ${artifactRepos.length} Artifact Registry repo(s), and ${gkeClusters.length} GKE cluster(s) in ${projectId}.`
+            : `0 running VMs, 0 Persistent Disks, 0 Cloud Run services, 0 Cloud Functions, and 0 Artifact Registry repositories in "${projectId}" ($0.00/hr compute & disk idle). Launch an Always-Free e2-micro VM, deploy a Scale-to-Zero Cloud Run container, or open Functions / Artifact Registry Studio below.`,
         cliCmd:
-          vms.length > 0 || cloudRunSvcs.length === 0
+          vms.length > 0
             ? `gcloud compute instances list --project=${projectId}`
-            : `gcloud run services list --project=${projectId}`,
+            : disks.length > 0
+            ? `gcloud compute disks list --project=${projectId}`
+            : cloudRunSvcs.length > 0
+            ? `gcloud run services list --project=${projectId}`
+            : cloudFunctions.length > 0
+            ? `gcloud functions list --project=${projectId}`
+            : `gcloud compute instances list --project=${projectId}`,
         mermaidDsl: stage3MermaidDsl,
         stageItems:
-          vms.length + cloudRunSvcs.length + gkeClusters.length > 0
+          totalStage3Count > 0
             ? [
-                ...vms.slice(0, 4).map((vm) => ({
+                ...vms.slice(0, 3).map((vm) => ({
                   kind: 'Compute VM',
                   name: vm.name,
                   meta: `${vm.region || 'us-east1-b'} · ${vm.storageClass || 'e2-micro'}`,
                   targetTab: 'VM_SSH',
                 })),
-                ...cloudRunSvcs.slice(0, 4).map((s) => ({
+                ...disks.slice(0, 3).map((d) => ({
+                  kind: d.attached ? 'Persistent Disk (Attached)' : 'Zombie Disk (Unattached!)',
+                  name: d.name,
+                  meta: `${d.sizeGb} GB ${d.diskType} · ${d.zone}${
+                    d.attachedVm ? ` -> ${d.attachedVm}` : ' · $ Orphaned'
+                  }`,
+                  targetTab: 'VM_SSH',
+                })),
+                ...cloudRunSvcs.slice(0, 3).map((s) => ({
                   kind: 'Cloud Run Gen2',
                   name: s.name,
                   meta: `${s.region || 'us-central1'} · Scale-to-Zero`,
                   targetTab: 'CLOUD_RUN',
+                })),
+                ...cloudFunctions.slice(0, 3).map((fn) => ({
+                  kind: `Cloud Function (${fn.envGen})`,
+                  name: fn.name,
+                  meta: `${fn.region} · ${fn.runtime}`,
+                  targetTab: 'FUNCTIONS_STUDIO',
+                })),
+                ...artifactRepos.slice(0, 3).map((ar) => ({
+                  kind: 'Artifact Registry',
+                  name: ar.name,
+                  meta: `${ar.format} · ${ar.region}`,
+                  targetTab: 'WAVE9_STUDIO',
                 })),
                 ...gkeClusters.slice(0, 2).map((c) => ({
                   kind: 'GKE Cluster',
@@ -72235,11 +72450,16 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
                   provisionType: 'CLOUD_RUN',
                 },
                 {
-                  kind: '30-Day Recovery Vault',
-                  name: 'View Deleted VMs & Cloud Run (30d)',
-                  meta: 'Re-create deleted VM shell or restore container revision',
-                  targetTab: 'RECYCLE_BIN',
-                  subTab: 'COMPUTE_VM',
+                  kind: '0 Cloud Functions & Disks',
+                  name: 'Open Cloud Functions & Eventarc Studio',
+                  meta: 'Gen2 Eventarc Functions · 0 Orphaned Persistent Disks',
+                  targetTab: 'FUNCTIONS_STUDIO',
+                },
+                {
+                  kind: '0 Artifact Registry Repos',
+                  name: 'Open Supply Chain & Artifact Registry',
+                  meta: 'Docker / OCI Images & SLSA-3 Provenance',
+                  targetTab: 'WAVE9_STUDIO',
                 },
               ],
       },
@@ -72253,15 +72473,25 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
         secondarySubTab: 'REVERSE_TERRAFORM',
         secondaryLabel: 'Reverse-Terraform Exporter',
         status: 'OPTIMAL',
-        metricBadge: `${resources.length} Live Resources Codified`,
-        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), and ${cloudRunSvcs.length} Cloud Run service(s) into main.tf + cloudbuild.yaml.`,
+        metricBadge: `${resources.length + disks.length + cloudFunctions.length + artifactRepos.length} Live Resources Codified`,
+        summary: `Live infrastructure-as-code synthesizer codifies ${vpcs.length} VPC(s), ${firewalls.length} Firewall(s), ${buckets.length} bucket(s), ${datasets.length} dataset(s), ${vms.length} VM(s), ${disks.length} Disk(s), ${cloudRunSvcs.length} Cloud Run service(s), ${cloudFunctions.length} Function(s), and ${artifactRepos.length} Artifact Registry repo(s) into main.tf + cloudbuild.yaml.`,
         cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
         mermaidDsl: stage4MermaidDsl,
         stageItems: [
           {
             kind: 'Terraform HCL',
             name: `${projectId}-enterprise-stack.tf`,
-            meta: `${vpcs.length + firewalls.length + buckets.length + datasets.length + vms.length + cloudRunSvcs.length} HCL resource blocks`,
+            meta: `${
+              vpcs.length +
+              firewalls.length +
+              buckets.length +
+              datasets.length +
+              vms.length +
+              disks.length +
+              cloudRunSvcs.length +
+              cloudFunctions.length +
+              artifactRepos.length
+            } HCL resource blocks`,
             targetTab: 'WAVE9_STUDIO',
           },
           {
@@ -72360,7 +72590,7 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       `# CloudPulse 2026 Enterprise Stack Blueprint — Live Synthesized Terraform (HCL)`,
       `# Target GCP Project : ${projectId}`,
       `# Generated At       : ${new Date().toISOString()}`,
-      `# Codified Inventory : ${vpcs.length} VPCs, ${firewalls.length} Firewalls, ${buckets.length} GCS Buckets, ${datasets.length} BQ Datasets, ${vms.length} VMs, ${cloudRunSvcs.length} Cloud Run`,
+      `# Codified Inventory : ${vpcs.length} VPCs, ${firewalls.length} Firewalls, ${buckets.length} GCS Buckets, ${datasets.length} BQ Datasets, ${vms.length} VMs, ${disks.length} Disks, ${cloudRunSvcs.length} Cloud Run, ${cloudFunctions.length} Functions, ${artifactRepos.length} Artifact Registry`,
       `# ==============================================================================`,
       ``,
       `terraform {`,
@@ -72448,9 +72678,9 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       }
     }
 
-    // Stage 3: Compute Engine VMs & Cloud Run Services
-    if (vms.length > 0 || cloudRunSvcs.length > 0) {
-      tfBlocks.push(`# --- STAGE 3: COMPUTE FLEET & CLOUD RUN SCALE-TO-ZERO ---`);
+    // Stage 3: Compute Engine VMs, Persistent Disks, Cloud Run, Cloud Functions & Artifact Registry
+    if (totalStage3Count > 0) {
+      tfBlocks.push(`# --- STAGE 3: COMPUTE FLEET, DISKS, SERVERLESS & ARTIFACT REGISTRY ---`);
       for (const vm of vms.slice(0, 6)) {
         const tfId = sanitizeTfId(vm.name);
         const zone = vm.zone || vm.details?.zone || vm.region || 'us-east1-b';
@@ -72473,6 +72703,19 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           ``
         );
       }
+      for (const d of disks.slice(0, 6)) {
+        const tfId = sanitizeTfId(`disk_${d.name}`);
+        tfBlocks.push(
+          `resource "google_compute_disk" "${tfId}" {`,
+          `  name    = "${d.name}"`,
+          `  project = "${projectId}"`,
+          `  zone    = "${d.zone || 'us-central1-a'}"`,
+          `  type    = "${d.diskType || 'pd-balanced'}"`,
+          `  size    = ${d.sizeGb || 10}`,
+          `}`,
+          ``
+        );
+      }
       for (const svc of cloudRunSvcs.slice(0, 6)) {
         const tfId = sanitizeTfId(svc.name);
         const region = svc.region || 'us-central1';
@@ -72490,6 +72733,32 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
           `      image = "${svc.details?.image || `us-docker.pkg.dev/cloudrun/container/hello`}"`,
           `    }`,
           `  }`,
+          `}`,
+          ``
+        );
+      }
+      for (const fn of cloudFunctions.slice(0, 6)) {
+        const tfId = sanitizeTfId(`fn_${fn.name}`);
+        tfBlocks.push(
+          `resource "google_cloudfunctions2_function" "${tfId}" {`,
+          `  name     = "${fn.name}"`,
+          `  project  = "${projectId}"`,
+          `  location = "${fn.region || 'us-central1'}"`,
+          `  build_config {`,
+          `    runtime = "${fn.runtime || 'nodejs20'}"`,
+          `  }`,
+          `}`,
+          ``
+        );
+      }
+      for (const ar of artifactRepos.slice(0, 6)) {
+        const tfId = sanitizeTfId(`ar_${ar.name}`);
+        tfBlocks.push(
+          `resource "google_artifact_registry_repository" "${tfId}" {`,
+          `  repository_id = "${ar.name}"`,
+          `  project       = "${projectId}"`,
+          `  location      = "${ar.region || 'us-central1'}"`,
+          `  format        = "${ar.format || 'DOCKER'}"`,
           `}`,
           ``
         );
@@ -72576,9 +72845,12 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       `gcloud storage buckets list --project="$PROJECT_ID" --format="table(name,location,storageClass)"`,
       `bq ls --project_id="$PROJECT_ID"`,
       ``,
-      `echo "==> [Stage 3/6] Inspecting Compute Engine VMs & Cloud Run Scale-to-Zero Fleet..."`,
+      `echo "==> [Stage 3/6] Inspecting VMs, Persistent Disks, Cloud Run, Functions & Artifact Registry..."`,
       `gcloud compute instances list --project="$PROJECT_ID"`,
+      `gcloud compute disks list --project="$PROJECT_ID"`,
       `gcloud run services list --project="$PROJECT_ID" --region="$REGION"`,
+      `gcloud functions list --project="$PROJECT_ID"`,
+      `gcloud artifacts repositories list --project="$PROJECT_ID"`,
       ``,
       `echo "==> [Stage 4/6] Validating Terraform & Cloud Build Pipeline History..."`,
       `gcloud builds list --project="$PROJECT_ID" --limit=5`,
@@ -72595,13 +72867,18 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
       generatedAt: new Date().toISOString(),
       latencyMs: Date.now() - startMs,
       counts: {
-        totalResources: resources.length,
+        totalResources:
+          resources.length + disks.length + cloudFunctions.length + artifactRepos.length,
         vpcs: vpcs.length,
         firewalls: firewalls.length,
         buckets: buckets.length,
         datasets: datasets.length,
         vms: vms.length,
+        disks: disks.length,
+        unattachedDisks: unattachedDisks.length,
         cloudRun: cloudRunSvcs.length,
+        cloudFunctions: cloudFunctions.length,
+        artifactRepos: artifactRepos.length,
         gke: gkeClusters.length,
         enabledApis: enabledApis.length,
         recentDestructiveEvents: recentDestructiveEvents.length,
