@@ -1007,7 +1007,7 @@ export default function PersonaContextualHelper({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                      Model Armor Prompt/PII Firewall (GA 590.0.1)
+                      Model Armor Prompt/PII Firewall (GA 591.0.0)
                     </span>
                     <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">
                       Grounding: {aiMlOps.modelArmorFirewall?.groundingScorePct || 98.4}%

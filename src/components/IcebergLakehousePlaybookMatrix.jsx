@@ -1085,14 +1085,14 @@ df.printSchema()
 print(f"Verified Open Iceberg REST Table ${catalogId}.${datasetId}.${tbl} across Spark & BigQuery!")`
 }`;
 
-    // 3. gcloud 590.0.1 CLI (Promoted GA + [BETA] + [ALPHA] commands)
+    // 3. gcloud 591.0.0 CLI (Promoted GA + [BETA] + [ALPHA] commands)
     const cliCode = `# Playbook #${p.num}: ${p.title}
 # Release Track: [${p.track}] | Active Project: ${projectId} | Region: ${region}
 
-# 1. [GA 590.0.1] Inspect BigLake Iceberg REST Catalogs & Namespaces
+# 1. [GA 591.0.0] Inspect BigLake Iceberg REST Catalogs & Namespaces
 gcloud biglake iceberg catalogs list --project=${projectId}
 
-# 2. [GA 590.0.1] Submit Zero-Cluster Serverless Spark Batch against Iceberg REST Catalog
+# 2. [GA 591.0.0] Submit Zero-Cluster Serverless Spark Batch against Iceberg REST Catalog
 gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase()}.py \\
   --project=${projectId} \\
   --region=${region} \\
@@ -1211,7 +1211,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               Every scenario across all <strong>8 Lakehouse Domains (50 Playbooks)</strong> synthesizes live{' '}
               <code className="font-mono">BigQuery Lakehouse SQL</code>,{' '}
               <code className="font-mono">Serverless PySpark 3.5 (Iceberg REST Catalog 1.10)</code>, and{' '}
-              <code className="font-mono">gcloud 590.0.1 CLI</code> commands with explicit{' '}
+              <code className="font-mono">gcloud 591.0.0 CLI</code> commands with explicit{' '}
               <strong className="font-mono text-amber-600 dark:text-amber-400">[BETA]</strong> and{' '}
               <strong className="font-mono text-red-600 dark:text-red-400">[ALPHA]</strong> flags and 1-Tap Cost Gatekeeper protection.
             </p>
@@ -1252,19 +1252,19 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Iceberg REST Catalogs</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Iceberg REST Catalogs</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.icebergRestCatalogs?.length || 0} Discovered
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Managed Kafka</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Managed Kafka</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.managedKafkaClusters?.length || 0} Clusters
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Dataplex Lakes</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Dataplex Lakes</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.dataplexLakes?.length || 0} Lakes
               </div>
@@ -1876,7 +1876,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                     {
                       id: 'GCLOUD_CLI',
                       code: '03',
-                      label: 'gcloud 590.0.1 CLI',
+                      label: 'gcloud 591.0.0 CLI',
                       badge: `[${activePlaybook.track}]`,
                     },
                   ].map((ct) => {

@@ -50,7 +50,7 @@ export default function DataEngineeringStudio({
   const [busyAction, setBusyAction] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
   const [data, setData] = useState({
-    gcloudSdkVersion: '590.0.1 (2026.10.22)',
+    gcloudSdkVersion: '591.0.0 (2026.10.22)',
     datasets: [],
     buckets: [],
     medallionPipelines: [],
@@ -1001,7 +1001,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 id: 'DATAPLEX_MESH',
                 icon: ShieldCheck,
                 label: 'Dataplex Profiling & Data Products',
-                badge: 'SDK 590.0.1',
+                badge: 'SDK 591.0.0',
               },
               {
                 id: 'SCHEMA_CONTRACTS',
@@ -1765,12 +1765,12 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             </div>
           </div>
 
-          {/* Right 6 Cols: Dataplex Data Mesh Products & dbt Metadata Sync (SDK 590.0.1) */}
+          {/* Right 6 Cols: Dataplex Data Mesh Products & dbt Metadata Sync (SDK 591.0.0) */}
           <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Dataplex Data Mesh Products &amp; `dbt` Metadata Sync (`gcloud 590.0.1`)</span>
+                <span>Dataplex Data Mesh Products &amp; `dbt` Metadata Sync (`gcloud 591.0.0`)</span>
               </h3>
               <p className="text-xs text-zinc-500">
                 Publish Gold tables as governed Dataplex Data Products (`gcloud dataplex data-products`) and ingest `dbt-core` manifests (`gcloud dataplex dbt metadata-jobs`).

@@ -1598,7 +1598,7 @@ function classifyDestructiveAxiosConfig(config) {
       return null;
     }
 
-    // 3D. [GA / BETA / ALPHA] gcloud 590.0.1 Frontier Lab Mutations (/alpha-beta/action)
+    // 3D. [GA / BETA / ALPHA] gcloud 591.0.0 Frontier Lab Mutations (/alpha-beta/action)
     if (rawUrl.includes('/alpha-beta/action')) {
       const act = String(body.action || '').toUpperCase();
       // Exempt read-only CLI inspection, troubleshooting, and discovery scans
@@ -1631,7 +1631,7 @@ function classifyDestructiveAxiosConfig(config) {
         targetLabel: `Target [${track}] Resource / Operation`,
         resourceKind: isBeta
           ? 'gcloud beta (Public Preview API)'
-          : 'gcloud 590.0.1 GA / alpha API',
+          : 'gcloud 591.0.0 GA / alpha API',
         targetName: `${target} [${track}]`,
         location: body.region || 'global',
         projectId,
@@ -1652,17 +1652,17 @@ function classifyDestructiveAxiosConfig(config) {
             ? `1. Invokes GA "gcloud audit-manager audit-reports generate --compliance-framework=${String(body.complianceStandard || 'fedramp_moderate').toLowerCase()} --report-format=odf" in ${body.region || 'us-central1'}.\n2. Synthesizes the CEL-enforced Software Delivery Trust policy (${body.deliveryTrustPolicyId || 'cp-slsa-l3-enforcer'}).`
             : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
             ? `1. Invokes GA "gcloud cluster-director clusters create ${body.clusterDirectorId || 'cp-ai-hypercomputer-01'} --quickstart-cluster" in ${body.region || 'us-central1'}.\n2. Orchestrates topology-aware AI Hypercomputer compute, Slurm scheduling, and VPC networking.`
-            : `1. Executes the [${track}] gcloud 590.0.1 CLI / REST operation (${act}) against project "${projectId}".`,
+            : `1. Executes the [${track}] gcloud 591.0.0 CLI / REST operation (${act}) against project "${projectId}".`,
         costWarning:
           act === 'DEPLOY_BETA_WORKER_POOL'
             ? `CONTINUOUS WORKER BILLING WARNING ([BETA]): Cloud Run Worker Pools run non-HTTP background instances continuously (${body.instances || 1} instance(s) active 24/7) and do NOT scale to zero when idle. You will be billed hourly for vCPU and Memory until the worker pool is deleted or scaled down.`
             : act === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE'
-            ? `MODEL ARMOR & SDP BILLING NOTICE ([GA 590.0.1]): Creating a Model Armor template is free of fixed hourly compute cost, but invoking sanitize-user-prompt / sanitize-model-response and Sensitive Data Protection (SDP) inspection incurs per-token / per-MB API inspection charges.`
+            ? `MODEL ARMOR & SDP BILLING NOTICE ([GA 591.0.0]): Creating a Model Armor template is free of fixed hourly compute cost, but invoking sanitize-user-prompt / sanitize-model-response and Sensitive Data Protection (SDP) inspection incurs per-token / per-MB API inspection charges.`
             : act === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER'
             ? `QUOTA CEILING & FINOPS WARNING ([GA/BETA]): Enabling the Autonomous Quota Adjuster allows Google Cloud to automatically request higher quota limits when utilization nears 80%. Raising quota ceilings does not charge by itself, but permits higher maximum resource consumption.`
             : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
-            ? `HIGH-COST AI HYPERCOMPUTER WARNING ([GA 590.0.1]): Cluster Director provisions multi-node HPC / GPU / TPU Slurm clusters (${body.acceleratorProfile || 'A3 Mega / H100'}). If fulfilled in your project, GPU/TPU nodes and Managed Lustre storage incur high hourly compute charges ($/hr).`
-            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke Google Cloud SDK 590.0.1 APIs. Any provisioned compute, multi-region replicas, compliance reports, or entitlements follow Google Cloud pricing and SLA terms.`,
+            ? `HIGH-COST AI HYPERCOMPUTER WARNING ([GA 591.0.0]): Cluster Director provisions multi-node HPC / GPU / TPU Slurm clusters (${body.acceleratorProfile || 'A3 Mega / H100'}). If fulfilled in your project, GPU/TPU nodes and Managed Lustre storage incur high hourly compute charges ($/hr).`
+            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke Google Cloud SDK 591.0.0 APIs. Any provisioned compute, multi-region replicas, compliance reports, or entitlements follow Google Cloud pricing and SLA terms.`,
         impactWarning: `You are executing a [${track}] operation on live project "${projectId}".`,
       };
     }
@@ -4165,7 +4165,7 @@ function CloudPulseCockpit() {
       id: 'DATA_ENGINEER_STUDIO',
       group: 'DATA_AI',
       label: 'Data Engineer',
-      tip: '2026 Data Engineering Studio (GCloud SDK 590.0.1 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
+      tip: '2026 Data Engineering Studio (GCloud SDK 591.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
       icon: Layers,
     },
     {
@@ -4315,7 +4315,7 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: [Docs] + [Overview] + [10-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
+            {/* Top-Right Cluster: [Docs] + [Overview] + [10-Persona Board] + [SDK 591.0.0] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
               {/* 1-Click Docs & Architecture Guide Button */}
               <button
@@ -4363,18 +4363,18 @@ function CloudPulseCockpit() {
                 <span>10-Persona Board</span>
               </button>
 
-              {/* 1-Click [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab Launcher */}
+              {/* 1-Click [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab Launcher */}
               <button
                 type="button"
                 onClick={() => {
                   setInnovationSubTab('GCLOUD_ALPHA_BETA');
                   setActiveTab('INNOVATION_LAB');
                 }}
-                title="Open [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
+                title="Open [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
                 className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                <span>SDK 590.0.1 Lab</span>
+                <span>SDK 591.0.0 Lab</span>
               </button>
 
               {/* Live GCP Project Dropdown */}

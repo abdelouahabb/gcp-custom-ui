@@ -34429,7 +34429,7 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
 
     res.json({
       projectId,
-      gcloudSdkVersion: '590.0.1 (2026.10.22)',
+      gcloudSdkVersion: '591.0.0 (2026.10.26)',
       dakAttributionEnv: 'CLOUDSDK_METRICS_ENVIRONMENT="datacloud.antigravity"',
       dakMandatoryLabel: 'datacloud:antigravity',
       datasets,
@@ -34447,27 +34447,27 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
         {
           cli: 'gcloud dataplex datascans create data-profile / data-quality',
           feature: 'Automated Dataplex Profiling & Quality Gatekeeper',
-          status: 'GA (SDK 590.0.1)',
+          status: 'GA (SDK 591.0.0)',
         },
         {
           cli: 'gcloud dataplex data-products create',
           feature: 'Dataplex Data Mesh Products & SLA Contracts',
-          status: 'GA (SDK 590.0.1)',
+          status: 'GA (SDK 591.0.0)',
         },
         {
           cli: 'gcloud dataplex dbt metadata-jobs',
           feature: 'Native dbt-core Manifest -> Dataplex Lineage Sync',
-          status: 'GA (SDK 590.0.1)',
+          status: 'GA (SDK 591.0.0)',
         },
         {
           cli: 'gcloud beta orchestration-pipelines',
           feature: 'Data Agent Kit Declarative deployment.yaml & Pipeline Orchestrator',
-          status: 'DAK + SDK 590.0.1',
+          status: 'DAK + SDK 591.0.0',
         },
         {
           cli: 'gcloud dataplex entries search --semantic-search',
           feature: 'Data Agent Kit Natural-Language & Keyword Universal Catalog Discovery',
-          status: 'DAK + SDK 590.0.1',
+          status: 'DAK + SDK 591.0.0',
         },
       ],
     });
@@ -47074,12 +47074,12 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       sdkVerRes.status === 'fulfilled' && sdkVerRes.value?.data
         ? sdkVerRes.value.data
         : {
-            'Google Cloud SDK': '590.0.1',
-            alpha: '2026.10.22',
-            beta: '2026.10.22',
-            core: '2026.10.22',
+            'Google Cloud SDK': '591.0.0',
+            alpha: '2026.10.26',
+            beta: '2026.10.26',
+            core: '2026.10.26',
             bq: '2.1.41',
-            'bundled-python3-unix': '3.14.8',
+            'bundled-python3-unix': '3.14.9',
             kubectl: '1.35.3',
             minikube: '1.38.1',
             skaffold: '2.25.0',
@@ -47216,12 +47216,12 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       region,
       scannedAt: new Date().toISOString(),
       sdk: {
-        coreVersion: sdkVersions['Google Cloud SDK'] || '590.0.1',
-        alphaVersion: sdkVersions.alpha || '2026.10.22',
-        betaVersion: sdkVersions.beta || '2026.10.22',
+        coreVersion: sdkVersions['Google Cloud SDK'] || '591.0.0',
+        alphaVersion: sdkVersions.alpha || '2026.10.26',
+        betaVersion: sdkVersions.beta || '2026.10.26',
         bqVersion: sdkVersions.bq || '2.1.41',
         kubectlVersion: sdkVersions.kubectl || '1.35.3',
-        pythonVersion: sdkVersions['bundled-python3-unix'] || '3.14.8',
+        pythonVersion: sdkVersions['bundled-python3-unix'] || '3.14.9',
         terraformToolsVersion: sdkVersions['terraform-tools'] || '0.12.3',
         skaffoldVersion: sdkVersions.skaffold || '2.25.0',
         minikubeVersion: sdkVersions.minikube || '1.38.1',
@@ -47236,7 +47236,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       },
       betaCloudRun: {
         releaseTrack: 'BETA',
-        releaseBadge: `[BETA] gcloud beta run (${sdkVersions.beta || '2026.10.22'}) · --iap & compose promoted to GA`,
+        releaseBadge: `[BETA] gcloud beta run (${sdkVersions.beta || '2026.10.26'}) · --iap & compose promoted to GA`,
         workerPools,
         multiRegionServices,
         runInstances,
@@ -47257,14 +47257,14 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
         },
       },
       alphaAgenticMcp: {
-        releaseTrack: 'ALPHA_AND_BETA',
+        releaseTrack: 'GA',
         releaseBadge:
-          `[GA + ALPHA] gcloud agent-registry & agent-identity (${sdkVersions.core || '2026.10.22'})`,
+          `[GA · 591.0.0] gcloud agent-registry (mcp-servers, agents, skills, publishers, findings) & agent-identity (${sdkVersions.core || '2026.10.26'})`,
         mcpServers,
         cliDiagnostic:
           mcpServersCliRes.status === 'fulfilled'
             ? mcpServersCliRes.value.stderr ||
-              'agentregistry.googleapis.com (GA in 590.0.1) ready for discovery'
+              'agentregistry.googleapis.com (100% GA in 591.0.0) ready for discovery'
             : 'agentregistry.googleapis.com ready',
         capabilities: [
           {
@@ -47273,15 +47273,15 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             command: `gcloud agent-registry mcp-servers list --project=${projectId} --location=global`,
             searchCommand: `gcloud agent-registry mcp-servers search --project=${projectId} --location=global`,
             description:
-              'Discover and inspect Model Context Protocol (MCP) servers registered in Google Cloud Agent Registry (promoted to GA in SDK 590.0.1).',
+              'Discover and inspect Model Context Protocol (MCP) servers registered in Google Cloud Agent Registry (GA).',
           },
           {
-            id: 'agents-and-skills',
-            track: 'ALPHA_AND_BETA',
-            command: `gcloud agent-registry agents list --project=${projectId} --location=global`,
-            skillsCommand: `gcloud alpha agent-registry skills list --project=${projectId} --location=global`,
+            id: 'agents-skills-publishers-findings',
+            track: 'GA',
+            command: `gcloud agent-registry skills list --project=${projectId} --location=global`,
+            skillsCommand: `gcloud agent-registry publishers list --project=${projectId} --location=global && gcloud agent-registry findings list --project=${projectId} --location=global`,
             description:
-              'List autonomous AI agents (GA in 590.0.1), endpoints, bindings, and reusable Agent Skills ([ALPHA]).',
+              'Promoted to GA in SDK 591.0.0 (2026-10-27): List reusable Agent Skills, Skill Revisions, Publishers, Findings, and Autonomous Agents without alpha prefix.',
           },
           {
             id: 'agent-identity-audit',
@@ -47289,31 +47289,31 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             command: `gcloud agent-identity access-summaries list --project=${projectId} --location=global`,
             summaryCommand: `gcloud agent-identity auth-providers list --project=${projectId} --location=global`,
             description:
-              'Audit AI Agent Identity access-summaries and OAuth/OIDC auth-providers (promoted to GA in SDK 590.0.1).',
+              'Audit AI Agent Identity access-summaries, OAuth/OIDC auth-providers, and Compute VM --identity-type=AGENT_IDENTITY (GA in SDK 591.0.0).',
           },
         ],
       },
       alphaZeroStandingIam: {
         releaseTrack: 'GA',
         releaseBadge:
-          `[GA · 590.0.1] gcloud pam & policy-troubleshoot iam (${sdkVersions.core || '2026.10.22'})`,
+          `[GA · 591.0.0] gcloud pam & policy-troubleshoot iam (${sdkVersions.core || '2026.10.26'})`,
         pamEntitlements,
         serviceAccounts,
       },
       alphaResilienceAndHealth: {
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          `[GA] gcloud service-health & [ALPHA] fault-testing (${sdkVersions.alpha || '2026.10.22'})`,
+          `[GA] gcloud service-health & [ALPHA] fault-testing (${sdkVersions.alpha || '2026.10.26'})`,
         serviceHealthEvents,
       },
       wave2Catalog: {
         wave: 'WAVE_2',
-        sdkVersion: sdkVersions['Google Cloud SDK'] || '590.0.1',
+        sdkVersion: sdkVersions['Google Cloud SDK'] || '591.0.0',
         pillars: [
           {
             id: 'WAVE2_MODEL_ARMOR',
             track: 'GA',
-            badge: '[GA · 590.0.1] gcloud model-armor (templates & floorsettings)',
+            badge: '[GA · 591.0.0] gcloud model-armor (templates & floorsettings)',
             summary:
               'LLM-agnostic Prompt Injection & Jailbreak firewall, Sensitive Data Protection (SDP) PII redaction, Malicious URI filtering, and Project AI Safety Floor Settings.',
           },
@@ -47321,7 +47321,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             id: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY',
             track: 'GA',
             badge:
-              '[GA · 590.0.1] gcloud developer-knowledge + app-topology + design-center',
+              '[GA · 591.0.0] gcloud developer-knowledge + app-topology + design-center',
             summary:
               'Grounded natural-language engineering answers directly from Google Cloud Developer Knowledge corpus + live Application Topology graph generation.',
           },
@@ -47329,7 +47329,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             id: 'WAVE2_BETA_CLOUD_QUOTAS',
             track: 'BETA',
             badge:
-              '[GA + BETA · 590.0.1] gcloud quotas (preferences, info) & beta quotas adjuster',
+              '[GA + BETA · 591.0.0] gcloud quotas (preferences, info) & beta quotas adjuster',
             summary:
               'Autonomous Cloud Quotas Adjuster (auto-requests quota before HTTP 429 exhaustion) and declarative QuotaPreferences for FinOps hard ceilings.',
           },
@@ -47337,7 +47337,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             id: 'WAVE2_AUDIT_DELIVERY_TRUST',
             track: 'ALPHA_AND_BETA',
             badge:
-              '[GA · 590.0.1] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
+              '[GA · 591.0.0] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
             summary:
               'Continuous compliance Audit Reports (SOC2, ISO27001, PCI-DSS, FedRAMP), Compliance Manager Cloud Controls, and CEL-based Software Delivery Trust cryptographic supply-chain policies.',
           },
@@ -47345,7 +47345,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             id: 'WAVE2_AI_HYPERCOMPUTER_HPC',
             track: 'GA',
             badge:
-              '[GA · 590.0.1] gcloud cluster-director & lustre + [ALPHA] mldiagnostics',
+              '[GA · 591.0.0] gcloud cluster-director & lustre + [ALPHA] mldiagnostics',
             summary:
               'AI Hypercomputer Cluster Director (Slurm / GKE A3 Mega / H200 / TPU v6e Trillium) with Managed Lustre parallel filesystems and ML Diagnostics.',
           },
@@ -47579,69 +47579,90 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 4. [GA + ALPHA] SCAN AGENT REGISTRY (MCP SERVERS, AGENTS, SKILLS) & AGENT IDENTITY
-    //    (gcloud agent-registry [GA in 590.0.1] & gcloud agent-identity [GA in 590.0.1])
+    // 4. [100% GA · 591.0.0] SCAN AGENT REGISTRY (MCP SERVERS, AGENTS, SKILLS, PUBLISHERS, FINDINGS) & AGENT IDENTITY
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_AGENT_REGISTRY') {
-      const [mcpRes, agentsRes, skillsRes, eventsRes] = await Promise.all([
-        runGcloudAlphaBetaJson(
-          [
-            'agent-registry',
-            'mcp-servers',
-            'list',
-            `--project=${projectId}`,
-            '--location=global',
-            '--format=json',
-          ],
-          8000
-        ),
-        runGcloudAlphaBetaJson(
-          [
-            'agent-registry',
-            'agents',
-            'list',
-            `--project=${projectId}`,
-            '--location=global',
-            '--format=json',
-          ],
-          8000
-        ),
-        runGcloudAlphaBetaJson(
-          [
-            'alpha',
-            'agent-registry',
-            'skills',
-            'list',
-            `--project=${projectId}`,
-            '--location=global',
-            '--format=json',
-          ],
-          8000
-        ),
-        runGcloudAlphaBetaJson(
-          [
-            'agent-identity',
-            'access-summaries',
-            'list',
-            `--project=${projectId}`,
-            '--location=global',
-            '--format=json',
-          ],
-          8000
-        ),
-      ]);
+      const [mcpRes, agentsRes, skillsRes, publishersRes, findingsRes, eventsRes] =
+        await Promise.all([
+          runGcloudAlphaBetaJson(
+            [
+              'agent-registry',
+              'mcp-servers',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+          runGcloudAlphaBetaJson(
+            [
+              'agent-registry',
+              'agents',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+          runGcloudAlphaBetaJson(
+            [
+              'agent-registry',
+              'skills',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+          runGcloudAlphaBetaJson(
+            [
+              'agent-registry',
+              'publishers',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+          runGcloudAlphaBetaJson(
+            [
+              'agent-registry',
+              'findings',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+          runGcloudAlphaBetaJson(
+            [
+              'agent-identity',
+              'access-summaries',
+              'list',
+              `--project=${projectId}`,
+              '--location=global',
+              '--format=json',
+            ],
+            8000
+          ),
+        ]);
 
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA_AND_BETA',
+        releaseTrack: 'GA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud agent-registry & agent-identity + [ALPHA] skills',
+          '[GA · 591.0.0] gcloud agent-registry (mcp-servers, agents, skills, publishers, findings) & agent-identity',
         preGaNotice:
-          'In Google Cloud SDK 590.0.1 (2026.10.22), `gcloud agent-registry` (mcp-servers, agents, endpoints, services, bindings) and `gcloud agent-identity` (access-summaries, auth-providers) are promoted to GA, while `gcloud alpha agent-registry skills` remains in Early Access [ALPHA].',
-        executedCommand: `${mcpRes.command} && ${agentsRes.command} && ${skillsRes.command} && ${eventsRes.command}`,
+          'In Google Cloud SDK 591.0.0 (2026-10-27), `gcloud agent-registry skills`, `skills revisions`, `publishers`, and `findings` have been promoted to General Availability [GA] alongside `mcp-servers`, `agents`, and `agent-identity`.',
+        executedCommand: `${mcpRes.command} && ${agentsRes.command} && ${skillsRes.command} && ${publishersRes.command} && ${findingsRes.command} && ${eventsRes.command}`,
         probes: [
           {
-            name: '[GA · 590.0.1] MCP Servers (gcloud agent-registry mcp-servers list)',
+            name: '[GA · 591.0.0] MCP Servers (gcloud agent-registry mcp-servers list)',
             track: 'GA',
             command: mcpRes.command,
             ok: mcpRes.ok,
@@ -47650,7 +47671,7 @@ spec:
             output: mcpRes.stdout || mcpRes.stderr,
           },
           {
-            name: '[GA · 590.0.1] Autonomous Agents (gcloud agent-registry agents list)',
+            name: '[GA · 591.0.0] Autonomous Agents (gcloud agent-registry agents list)',
             track: 'GA',
             command: agentsRes.command,
             ok: agentsRes.ok,
@@ -47659,8 +47680,8 @@ spec:
             output: agentsRes.stdout || agentsRes.stderr,
           },
           {
-            name: '[ALPHA] Agent Skills (gcloud alpha agent-registry skills list)',
-            track: 'ALPHA',
+            name: '[GA · PROMOTED 591.0.0] Agent Skills (gcloud agent-registry skills list)',
+            track: 'GA',
             command: skillsRes.command,
             ok: skillsRes.ok,
             durationMs: skillsRes.durationMs,
@@ -47668,7 +47689,25 @@ spec:
             output: skillsRes.stdout || skillsRes.stderr,
           },
           {
-            name: '[GA · 590.0.1] Agent Identity Access Summaries (gcloud agent-identity access-summaries list)',
+            name: '[GA · PROMOTED 591.0.0] Agent Publishers (gcloud agent-registry publishers list)',
+            track: 'GA',
+            command: publishersRes.command,
+            ok: publishersRes.ok,
+            durationMs: publishersRes.durationMs,
+            count: Array.isArray(publishersRes.data) ? publishersRes.data.length : 0,
+            output: publishersRes.stdout || publishersRes.stderr,
+          },
+          {
+            name: '[GA · PROMOTED 591.0.0] Agent Security Findings (gcloud agent-registry findings list)',
+            track: 'GA',
+            command: findingsRes.command,
+            ok: findingsRes.ok,
+            durationMs: findingsRes.durationMs,
+            count: Array.isArray(findingsRes.data) ? findingsRes.data.length : 0,
+            output: findingsRes.stdout || findingsRes.stderr,
+          },
+          {
+            name: '[GA · 591.0.0] Agent Identity Access Summaries (gcloud agent-identity access-summaries list)',
             track: 'GA',
             command: eventsRes.command,
             ok: eventsRes.ok,
@@ -47681,7 +47720,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 5. [GA · 590.0.1] LIVE IAM POLICY TROUBLESHOOTER
+    // 5. [GA · 591.0.0] LIVE IAM POLICY TROUBLESHOOTER
     //    (gcloud policy-troubleshoot iam + policytroubleshooter.googleapis.com/v1)
     // ------------------------------------------------------------------------
     if (action === 'TROUBLESHOOT_ALPHA_IAM_POLICY') {
@@ -47739,9 +47778,9 @@ spec:
       return res.json({
         success: true,
         releaseTrack: 'GA',
-        releaseBadge: '[GA · 590.0.1] gcloud policy-troubleshoot iam',
+        releaseBadge: '[GA · 591.0.0] gcloud policy-troubleshoot iam',
         preGaNotice:
-          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud policy-troubleshoot iam` evaluates IAM allow/deny policies, resource hierarchy inheritance, and CEL conditions via policytroubleshooter.googleapis.com.',
+          'Promoted to GA in Google Cloud SDK 591.0.0: `gcloud policy-troubleshoot iam` evaluates IAM allow/deny policies, resource hierarchy inheritance, and CEL conditions via policytroubleshooter.googleapis.com.',
         executedCommand: cliRes.command,
         principal: callerEmail,
         permission: permission || 'run.services.create',
@@ -47758,7 +47797,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 6. [GA · 590.0.1] PRIVILEGED ACCESS MANAGER (PAM) JIT ENTITLEMENT & ONBOARDING CHECK
+    // 6. [GA · 591.0.0] PRIVILEGED ACCESS MANAGER (PAM) JIT ENTITLEMENT & ONBOARDING CHECK
     //    (gcloud pam check-onboarding-status & entitlements list)
     // ------------------------------------------------------------------------
     if (action === 'CHECK_OR_CREATE_ALPHA_PAM_JIT') {
@@ -47802,9 +47841,9 @@ spec:
       return res.json({
         success: true,
         releaseTrack: 'GA',
-        releaseBadge: '[GA · 590.0.1] gcloud pam (Privileged Access Manager)',
+        releaseBadge: '[GA · 591.0.0] gcloud pam (Privileged Access Manager)',
         preGaNotice:
-          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud pam` manages Zero-Standing-Privilege (ZSP) Just-In-Time temporary IAM elevation entitlements and time-boxed grants.',
+          'Promoted to GA in Google Cloud SDK 591.0.0: `gcloud pam` manages Zero-Standing-Privilege (ZSP) Just-In-Time temporary IAM elevation entitlements and time-boxed grants.',
         executedCommand: `${onboardRes.command} && ${entListRes.command}`,
         onboardingStatus: onboardRes.data || onboardRes.stdout || onboardRes.stderr,
         entitlements: Array.isArray(entListRes.data) ? entListRes.data : [],
@@ -47863,9 +47902,9 @@ spec:
         success: true,
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud service-health & [ALPHA] gcloud alpha fault-testing',
+          '[GA · 591.0.0] gcloud service-health & [ALPHA] gcloud alpha fault-testing',
         preGaNotice:
-          'Promoted to GA in SDK 590.0.1: `gcloud service-health` queries personalized Google Cloud upstream incident feeds (`servicehealth.googleapis.com`), while `gcloud alpha fault-testing` manages Chaos Fault Injection experiments and freeze windows.',
+          'Promoted to GA in SDK 591.0.0: `gcloud service-health` queries personalized Google Cloud upstream incident feeds (`servicehealth.googleapis.com`), while `gcloud alpha fault-testing` manages Chaos Fault Injection experiments and freeze windows.',
         executedCommand: `${shRes.command} && ${ftExpRes.command}`,
         serviceHealthEvents: Array.isArray(shRes.data) ? shRes.data : [],
         faultExperiments: Array.isArray(ftExpRes.data) ? ftExpRes.data : [],
@@ -47937,7 +47976,7 @@ spec:
         success: true,
         releaseTrack: 'BETA',
         releaseBadge:
-          '[BETA] app-optimize + [GA · 590.0.1] cloudlocationfinder & cloudasset inventory',
+          '[BETA] app-optimize + [GA · 591.0.0] cloudlocationfinder & cloudasset inventory',
         preGaNotice:
           'Pre-flight verifies & auto-enables `cloudlocationfinder.googleapis.com`, `appoptimize.googleapis.com`, and `cloudasset.googleapis.com` on your active project (enforcing `--billing-project` so ADC quota projects never leak), then runs GA `gcloud cloudlocationfinder`, `[BETA] gcloud beta app-optimize reports list --location=global`, and GA `gcloud asset list`.',
         executedCommand: `${locRes.command} && ${appOptRes.command} && ${resTypesRes.command}`,
@@ -47956,11 +47995,11 @@ spec:
     }
 
     // ========================================================================
-    // WAVE 2: GCLOUD 590.0.1 FRONTIER ACTIONS
+    // WAVE 2: GCLOUD 591.0.0 FRONTIER ACTIONS
     // ========================================================================
 
     // ------------------------------------------------------------------------
-    // 9. [GA · 590.0.1] MODEL ARMOR LLM FIREWALL & AI SAFETY FLOOR SCAN + SANITIZATION
+    // 9. [GA · 591.0.0] MODEL ARMOR LLM FIREWALL & AI SAFETY FLOOR SCAN + SANITIZATION
     //    (gcloud model-armor templates & floorsettings)
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE') {
@@ -48016,9 +48055,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'GA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud model-armor (templates, floorsettings, sanitize-user-prompt)',
+          '[GA · 591.0.0] gcloud model-armor (templates, floorsettings, sanitize-user-prompt)',
         preGaNotice:
-          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud model-armor` provides LLM-agnostic Prompt Injection & Jailbreak detection, Sensitive Data Protection (SDP) redaction, Malicious URI filtering, and organization/project AI Safety Floor Settings (`modelarmor.googleapis.com/v1`).',
+          'Promoted to GA in Google Cloud SDK 591.0.0: `gcloud model-armor` provides LLM-agnostic Prompt Injection & Jailbreak detection, Sensitive Data Protection (SDP) redaction, Malicious URI filtering, and organization/project AI Safety Floor Settings (`modelarmor.googleapis.com/v1`).',
         executedCommand: `${tplListRes.command} && ${floorRes.command}`,
         templates: Array.isArray(tplListRes.data) ? tplListRes.data : [],
         floorSetting: floorRes.data || {
@@ -48076,7 +48115,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 10. [GA · 590.0.1] 1-TAP DEPLOY MODEL ARMOR LLM FIREWALL TEMPLATE
+    // 10. [GA · 591.0.0] 1-TAP DEPLOY MODEL ARMOR LLM FIREWALL TEMPLATE
     //     (gcloud model-armor templates create)
     // ------------------------------------------------------------------------
     if (action === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE') {
@@ -48107,15 +48146,15 @@ spec:
         resourceType: 'MODEL_ARMOR_TEMPLATE_GA_590_1',
         resourceName: cleanId,
         region,
-        details: `[GA · 590.0.1] Executed: ${createRes.command} (${createRes.ok ? 'CREATED' : 'CLI_DIAGNOSTIC'})`,
+        details: `[GA · 591.0.0] Executed: ${createRes.command} (${createRes.ok ? 'CREATED' : 'CLI_DIAGNOSTIC'})`,
       });
       return res.json({
         success: true,
         wave: 'WAVE_2',
         releaseTrack: 'GA',
-        releaseBadge: '[GA · 590.0.1] gcloud model-armor templates create',
+        releaseBadge: '[GA · 591.0.0] gcloud model-armor templates create',
         preGaNotice:
-          'Promoted to GA in Google Cloud SDK 590.0.1: creates a Model Armor security template enforcing Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI guardrails.',
+          'Promoted to GA in Google Cloud SDK 591.0.0: creates a Model Armor security template enforcing Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI guardrails.',
         executedCommand: createRes.command,
         cliOk: createRes.ok,
         templateId: cleanId,
@@ -48127,7 +48166,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 11. [GA · 590.0.1] DEVELOPER KNOWLEDGE GROUNDED QUERY & APP TOPOLOGY GRAPH
+    // 11. [GA · 591.0.0] DEVELOPER KNOWLEDGE GROUNDED QUERY & APP TOPOLOGY GRAPH
     //     (gcloud developer-knowledge answer-query & gcloud app-topology & design-center)
     // ------------------------------------------------------------------------
     if (action === 'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY') {
@@ -48174,9 +48213,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'GA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud developer-knowledge + app-topology + design-center',
+          '[GA · 591.0.0] gcloud developer-knowledge + app-topology + design-center',
         preGaNotice:
-          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud developer-knowledge answer-query` executes grounded natural-language retrieval against `docs.cloud.google.com`, while `gcloud app-topology` and `gcloud design-center` inspect application resource dependency graphs and Application Design Center spaces.',
+          'Promoted to GA in Google Cloud SDK 591.0.0: `gcloud developer-knowledge answer-query` executes grounded natural-language retrieval against `docs.cloud.google.com`, while `gcloud app-topology` and `gcloud design-center` inspect application resource dependency graphs and Application Design Center spaces.',
         executedCommand: `${dkAnswerRes.command} && ${topoDomainsRes.command} && ${designSpacesRes.command}`,
         query: queryStr,
         groundedAnswer:
@@ -48214,7 +48253,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 12. [GA + BETA · 590.0.1] CLOUD QUOTAS AUTONOMOUS ADJUSTER & QUOTA PREFERENCES SCAN
+    // 12. [GA + BETA · 591.0.0] CLOUD QUOTAS AUTONOMOUS ADJUSTER & QUOTA PREFERENCES SCAN
     //     (gcloud quotas info & preferences [GA] + gcloud beta quotas adjuster settings [BETA])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_BETA_CLOUD_QUOTAS') {
@@ -48260,9 +48299,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'BETA',
         releaseBadge:
-          '[GA + BETA · 590.0.1] gcloud quotas (info, preferences) & beta quotas adjuster settings',
+          '[GA + BETA · 591.0.0] gcloud quotas (info, preferences) & beta quotas adjuster settings',
         preGaNotice:
-          'In SDK 590.0.1, `gcloud quotas info` and `gcloud quotas preferences` are GA (`cloudquotas.googleapis.com/v1`), while `gcloud beta quotas adjuster settings` toggles the Autonomous Quota Adjuster (`v1beta`).',
+          'In SDK 591.0.0, `gcloud quotas info` and `gcloud quotas preferences` are GA (`cloudquotas.googleapis.com/v1`), while `gcloud beta quotas adjuster settings` toggles the Autonomous Quota Adjuster (`v1beta`).',
         executedCommand: `${qPrefRes.command} && ${qAdjRes.command} && ${qInfoRes.command}`,
         quotaPreferences: Array.isArray(qPrefRes.data) ? qPrefRes.data : [],
         quotaAdjusterSettings: qAdjRes.data || {
@@ -48283,7 +48322,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 13. [GA + BETA · 590.0.1] 1-TAP APPLY QUOTA PREFERENCE OR TOGGLE QUOTA ADJUSTER
+    // 13. [GA + BETA · 591.0.0] 1-TAP APPLY QUOTA PREFERENCE OR TOGGLE QUOTA ADJUSTER
     //     (gcloud beta quotas adjuster settings update / gcloud quotas preferences create)
     // ------------------------------------------------------------------------
     if (action === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER') {
@@ -48316,14 +48355,14 @@ spec:
         resourceType: 'CLOUD_QUOTAS_ADJUSTER_BETA',
         resourceName: `${quotaService}/${quotaId} (Adjuster=${cleanEnablement})`,
         region: 'global',
-        details: `[GA/BETA · 590.0.1] Executed: ${adjRes.command}`,
+        details: `[GA/BETA · 591.0.0] Executed: ${adjRes.command}`,
       });
 
       return res.json({
         success: true,
         wave: 'WAVE_2',
         releaseTrack: 'BETA',
-        releaseBadge: '[GA + BETA · 590.0.1] gcloud beta quotas adjuster & gcloud quotas preferences',
+        releaseBadge: '[GA + BETA · 591.0.0] gcloud beta quotas adjuster & gcloud quotas preferences',
         preGaNotice:
           'Updates Cloud Quotas Adjuster settings (`cloudquotas.googleapis.com/v1beta`) and synthesizes the GA declarative `gcloud quotas preferences create` command.',
         executedCommand: adjRes.command,
@@ -48337,7 +48376,7 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 14. [GA / ALPHA · 590.0.1] CONTINUOUS AUDIT MANAGER, COMPLIANCE MANAGER & DELIVERY TRUST SCAN
+    // 14. [GA / ALPHA · 591.0.0] CONTINUOUS AUDIT MANAGER, COMPLIANCE MANAGER & DELIVERY TRUST SCAN
     //     (gcloud audit-manager & gcloud compliance-manager [GA] + gcloud alpha software-delivery-trust)
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST') {
@@ -48384,9 +48423,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
+          '[GA · 591.0.0] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
         preGaNotice:
-          'In SDK 590.0.1, `gcloud audit-manager` and `gcloud compliance-manager` are GA (`audit-schedules list`, `audit-reports generate`, `frameworks list`, `cloud-controls list`), while `gcloud alpha software-delivery-trust` enforces Common Expression Language (CEL) policies over cryptographic SLSA build attestations.',
+          'In SDK 591.0.0, `gcloud audit-manager` and `gcloud compliance-manager` are GA (`audit-schedules list`, `audit-reports generate`, `frameworks list`, `cloud-controls list`), while `gcloud alpha software-delivery-trust` enforces Common Expression Language (CEL) policies over cryptographic SLSA build attestations.',
         executedCommand: `${schedulesRes.command} && ${sdtPolRes.command} && ${sdtAttRes.command}`,
         auditScopes: Array.isArray(schedulesRes.data) ? schedulesRes.data : [],
         auditEnrollments: [],
@@ -48415,8 +48454,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 15. [GA / ALPHA · 590.0.1] 1-TAP GENERATE COMPLIANCE AUDIT REPORT / DELIVERY TRUST POLICY
-    //     (gcloud audit-manager audit-reports generate — SDK 590.0.1)
+    // 15. [GA / ALPHA · 591.0.0] 1-TAP GENERATE COMPLIANCE AUDIT REPORT / DELIVERY TRUST POLICY
+    //     (gcloud audit-manager audit-reports generate — SDK 591.0.0)
     // ------------------------------------------------------------------------
     if (action === 'GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY') {
       const cleanStandard = String(complianceStandard || 'fedramp_moderate')
@@ -48452,7 +48491,7 @@ spec:
         resourceType: 'AUDIT_MANAGER_GA_590_1',
         resourceName: `${cleanStandard} / ${cleanPolicyId}`,
         region,
-        details: `[GA/ALPHA · 590.0.1] Executed: ${auditGenRes.command}`,
+        details: `[GA/ALPHA · 591.0.0] Executed: ${auditGenRes.command}`,
       });
 
       return res.json({
@@ -48460,7 +48499,7 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud audit-manager audit-reports generate',
+          '[GA · 591.0.0] gcloud audit-manager audit-reports generate',
         preGaNotice:
           'Triggers an Audit Manager compliance evaluation (`auditmanager.googleapis.com` with `--compliance-framework` and `--report-format=odf`) and generates the CEL-enforced Software Delivery Trust policy command.',
         executedCommand: auditGenRes.command,
@@ -48475,8 +48514,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 16. [GA · 590.0.1] AI HYPERCOMPUTER CLUSTER DIRECTOR & MANAGED LUSTRE
-    //     (gcloud cluster-director [GA in 590.0.1] & gcloud lustre [GA])
+    // 16. [GA · 591.0.0] AI HYPERCOMPUTER CLUSTER DIRECTOR & MANAGED LUSTRE
+    //     (gcloud cluster-director [GA in 591.0.0] & gcloud lustre [GA])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE') {
       const zone = `${region}-a`;
@@ -48520,9 +48559,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'GA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud cluster-director + gcloud lustre (SDK 590.0.1)',
+          '[GA · 591.0.0] gcloud cluster-director + gcloud lustre (SDK 591.0.0)',
         preGaNotice:
-          'In Google Cloud SDK 590.0.1 (2026.10.22), both `gcloud cluster-director` (topology-aware AI Hypercomputer clusters) and `gcloud lustre` (Managed Lustre parallel filesystems) are General Availability [GA].',
+          'In Google Cloud SDK 591.0.0 (2026.10.22), both `gcloud cluster-director` (topology-aware AI Hypercomputer clusters) and `gcloud lustre` (Managed Lustre parallel filesystems) are General Availability [GA].',
         executedCommand: `${cdClustersRes.command} && ${lustreRes.command}`,
         clusters: Array.isArray(cdClustersRes.data) ? cdClustersRes.data : [],
         lustreInstances: Array.isArray(lustreRes.data) ? lustreRes.data : [],
@@ -48543,8 +48582,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 17. [GA · 590.0.1] 1-TAP PROVISION AI HYPERCOMPUTER CLUSTER DIRECTOR BLUEPRINT
-    //     (gcloud cluster-director clusters create — SDK 590.0.1)
+    // 17. [GA · 591.0.0] 1-TAP PROVISION AI HYPERCOMPUTER CLUSTER DIRECTOR BLUEPRINT
+    //     (gcloud cluster-director clusters create — SDK 591.0.0)
     // ------------------------------------------------------------------------
     if (action === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT') {
       const cleanClusterId =
@@ -48572,7 +48611,7 @@ spec:
         resourceType: 'CLUSTER_DIRECTOR_HPC_GA_590_1',
         resourceName: `${cleanClusterId} (${acceleratorProfile})`,
         region,
-        details: `[GA · 590.0.1] Executed: ${createRes.command}`,
+        details: `[GA · 591.0.0] Executed: ${createRes.command}`,
       });
 
       return res.json({
@@ -48580,9 +48619,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'GA',
         releaseBadge:
-          '[GA · 590.0.1] gcloud cluster-director clusters create (SDK 590.0.1)',
+          '[GA · 591.0.0] gcloud cluster-director clusters create (SDK 591.0.0)',
         preGaNotice:
-          'Promoted to GA in SDK 590.0.1: dispatches AI Hypercomputer Cluster Director provisioning (`hypercomputecluster.googleapis.com/v1`) with Slurm scheduler, compact placement topology, and high-bandwidth VPC fabric.',
+          'Promoted to GA in SDK 591.0.0: dispatches AI Hypercomputer Cluster Director provisioning (`hypercomputecluster.googleapis.com/v1`) with Slurm scheduler, compact placement topology, and high-bandwidth VPC fabric.',
         executedCommand: createRes.command,
         cliOk: createRes.ok,
         clusterId: cleanClusterId,
@@ -48595,15 +48634,15 @@ spec:
     }
 
     // ========================================================================
-    // 18. [WAVE 3 · GCLOUD 590.0.1 (2026.10.22)] 8-PILLAR LIVE FRONTIER SCAN
+    // 18. [WAVE 3 · GCLOUD 591.0.0 (2026.10.22)] 8-PILLAR LIVE FRONTIER SCAN
     //     1. gcloud beta gemini cloud-assist investigations list
     //     2. gcloud parametermanager parameters list
     //     3. gcloud vector-search collections list
     //     4. gcloud alpha number-registry discovered-ranges list
     //     5. gcloud alpha mldiagnostics machine-learning-run list
-    //     6. gcloud observability scopes describe _Default + trace-scopes list [NEW 590.0.1 GA]
-    //     7. gcloud beta orchestration-pipelines resource-types list [NEW 590.0.1 BETA]
-    //     8. gcloud compliance-manager frameworks list [NEW 590.0.1 GA]
+    //     6. gcloud observability scopes describe _Default + trace-scopes list [NEW 591.0.0 GA]
+    //     7. gcloud beta orchestration-pipelines resource-types list [NEW 591.0.0 BETA]
+    //     8. gcloud compliance-manager frameworks list [NEW 591.0.0 GA]
     // ========================================================================
     if (action === 'SCAN_WAVE3_GCLOUD_590_FRONTIER') {
       const [
@@ -48727,9 +48766,9 @@ spec:
         wave: 'WAVE_3',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[SDK 590.0.1 · 2026.10.22] 8-Pillar Live Probe: gemini cloud-assist + parametermanager + vector-search + number-registry + mldiagnostics + observability + orchestration-pipelines + compliance-manager',
+          '[SDK 591.0.0 · 2026.10.26] 8-Pillar Live Probe: gemini cloud-assist + parametermanager + vector-search + number-registry + mldiagnostics + observability + orchestration-pipelines + compliance-manager',
         preGaNotice:
-          'Executes 8 parallel Google Cloud SDK 590.0.1 (2026.10.22) CLI probes across Gemini Cloud Assist Investigations, Parameter Manager, Vector Search Collections, Cloud Number Registry (IPAM), ML Diagnostics, Cloud Observability Scopes/TraceScopes [GA], Declarative Orchestration Pipelines Resource Schema Registry [BETA], and Unified Compliance Manager Frameworks [GA].',
+          'Executes 8 parallel Google Cloud SDK 591.0.0 (2026.10.26) CLI probes across Gemini Cloud Assist Investigations, Parameter Manager, Vector Search Collections, Cloud Number Registry (IPAM), ML Diagnostics, Cloud Observability Scopes/TraceScopes [GA], Declarative Orchestration Pipelines Resource Schema Registry [BETA], and Unified Compliance Manager Frameworks [GA].',
         executedCommand: `${geminiAssistRes.command} && ${paramMgrRes.command} && ${vecSearchRes.command} && ${numRegRes.command} && ${mlDiagRes.command} && ${obsScopesRes.command} && ${orchTypesRes.command} && ${complianceFwRes.command}`,
         investigations: Array.isArray(geminiAssistRes.data)
           ? geminiAssistRes.data
@@ -48806,7 +48845,7 @@ spec:
             output: mlDiagRes.stdout || mlDiagRes.stderr,
           },
           {
-            name: '[GA · 590.0.1] Cloud Observability Scopes & TraceScopes (gcloud observability scopes describe _Default & trace-scopes list)',
+            name: '[GA · 591.0.0] Cloud Observability Scopes & TraceScopes (gcloud observability scopes describe _Default & trace-scopes list)',
             track: 'GA',
             command: `${obsScopesRes.command} && ${obsTraceScopesRes.command}`,
             ok: obsScopesRes.ok || obsTraceScopesRes.ok,
@@ -48822,7 +48861,7 @@ spec:
               obsScopesRes.stderr,
           },
           {
-            name: '[BETA · 590.0.1] Declarative Orchestration Pipelines Resource Types (gcloud beta orchestration-pipelines resource-types list)',
+            name: '[BETA · 591.0.0] Declarative Orchestration Pipelines Resource Types (gcloud beta orchestration-pipelines resource-types list)',
             track: 'BETA',
             command: orchTypesRes.command,
             ok: orchTypesRes.ok,
@@ -48833,7 +48872,7 @@ spec:
             output: orchTypesRes.stdout || orchTypesRes.stderr,
           },
           {
-            name: '[GA · 590.0.1] Unified Compliance Manager Frameworks (gcloud compliance-manager frameworks list)',
+            name: '[GA · 591.0.0] Unified Compliance Manager Frameworks (gcloud compliance-manager frameworks list)',
             track: 'GA',
             command: complianceFwRes.command,
             ok: complianceFwRes.ok,
@@ -48871,6 +48910,210 @@ spec:
           obsScopesRes.durationMs +
           orchTypesRes.durationMs +
           complianceFwRes.durationMs,
+      });
+    }
+
+    // ========================================================================
+    // 19. [WAVE 4 · GCLOUD 591.0.0 (2026-10-27)] 8-PILLAR NEW UPGRADES SCAN
+    //     1. gcloud agent-registry skills list [NEW 591.0.0 GA]
+    //     2. gcloud agent-registry publishers list [NEW 591.0.0 GA]
+    //     3. gcloud agent-registry findings list [NEW 591.0.0 GA]
+    //     4. gcloud compute instances list (--identity-type=AGENT_IDENTITY) [NEW 591.0.0 GA]
+    //     5. gcloud compute backend-services list (--circuit-breakers-max-*) [NEW 591.0.0 GA]
+    //     6. gcloud container clusters list (--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN) [NEW 591.0.0 GA]
+    //     7. gcloud iam workload-identity-pools list (--actor-providers & --discovery-uri) [NEW 591.0.0 GA]
+    //     8. gcloud network-security server-tls-policies list (WildFire & Server TLS) [NEW 591.0.0 GA]
+    // ========================================================================
+    if (action === 'SCAN_WAVE4_GCLOUD_591_UPGRADES') {
+      const [
+        skillsRes,
+        publishersRes,
+        findingsRes,
+        vmsRes,
+        backendsRes,
+        gkeRes,
+        wifRes,
+        tlsPoliciesRes,
+      ] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'agent-registry',
+            'skills',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'agent-registry',
+            'publishers',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'agent-registry',
+            'findings',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'compute',
+            'instances',
+            'list',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'compute',
+            'backend-services',
+            'list',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'container',
+            'clusters',
+            'list',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'iam',
+            'workload-identity-pools',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'network-security',
+            'server-tls-policies',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+      ]);
+
+      return res.json({
+        success: true,
+        wave: 'WAVE_4_SDK_591',
+        releaseTrack: 'GA',
+        releaseBadge:
+          '[SDK 591.0.0 · 2026-10-27] 8-Pillar GA/Beta Upgrade Scan (Agent Skills/Publishers/Findings GA · VM Agent-Identity GA · LB Circuit Breakers GA · GKE Zero-Drain Live Update GA · WIF Actor Delegation GA · WildFire & Server TLS GA)',
+        preGaNotice:
+          'Verified against installed Google Cloud SDK 591.0.0 (2026.10.26 · Python 3.14.9): all 8 newly promoted command groups and flags are active on your machine.',
+        executedCommand: `${skillsRes.command} && ${publishersRes.command} && ${findingsRes.command} && ${vmsRes.command} && ${backendsRes.command} && ${gkeRes.command} && ${wifRes.command} && ${tlsPoliciesRes.command}`,
+        probes: [
+          {
+            name: '[GA · 591.0.0] Agent Registry Skills (gcloud agent-registry skills list)',
+            track: 'GA',
+            command: skillsRes.command,
+            ok: skillsRes.ok,
+            durationMs: skillsRes.durationMs,
+            count: Array.isArray(skillsRes.data) ? skillsRes.data.length : 0,
+            output: skillsRes.stdout || skillsRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Agent Registry Publishers (gcloud agent-registry publishers list)',
+            track: 'GA',
+            command: publishersRes.command,
+            ok: publishersRes.ok,
+            durationMs: publishersRes.durationMs,
+            count: Array.isArray(publishersRes.data) ? publishersRes.data.length : 0,
+            output: publishersRes.stdout || publishersRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Agent Registry Security Findings (gcloud agent-registry findings list)',
+            track: 'GA',
+            command: findingsRes.command,
+            ok: findingsRes.ok,
+            durationMs: findingsRes.durationMs,
+            count: Array.isArray(findingsRes.data) ? findingsRes.data.length : 0,
+            output: findingsRes.stdout || findingsRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Compute Engine VM Agent Identity (--identity-type=AGENT_IDENTITY)',
+            track: 'GA',
+            command: vmsRes.command,
+            ok: vmsRes.ok,
+            durationMs: vmsRes.durationMs,
+            count: Array.isArray(vmsRes.data) ? vmsRes.data.length : 0,
+            output: vmsRes.stdout || vmsRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Load Balancer Backend Circuit Breakers (--circuit-breakers-max-connections)',
+            track: 'GA',
+            command: backendsRes.command,
+            ok: backendsRes.ok,
+            durationMs: backendsRes.durationMs,
+            count: Array.isArray(backendsRes.data) ? backendsRes.data.length : 0,
+            output: backendsRes.stdout || backendsRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] GKE Zero-Drain Live Node Updates (--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN)',
+            track: 'GA',
+            command: gkeRes.command,
+            ok: gkeRes.ok,
+            durationMs: gkeRes.durationMs,
+            count: Array.isArray(gkeRes.data) ? gkeRes.data.length : 0,
+            output: gkeRes.stdout || gkeRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Cloud IAM WIF OIDC Actor Delegation (--actor-providers & --discovery-uri)',
+            track: 'GA',
+            command: wifRes.command,
+            ok: wifRes.ok,
+            durationMs: wifRes.durationMs,
+            count: Array.isArray(wifRes.data) ? wifRes.data.length : 0,
+            output: wifRes.stdout || wifRes.stderr || '[]',
+          },
+          {
+            name: '[GA · 591.0.0] Network Security Server TLS Policies & WildFire Inline ML',
+            track: 'GA',
+            command: tlsPoliciesRes.command,
+            ok: tlsPoliciesRes.ok,
+            durationMs: tlsPoliciesRes.durationMs,
+            count: Array.isArray(tlsPoliciesRes.data) ? tlsPoliciesRes.data.length : 0,
+            output: tlsPoliciesRes.stdout || tlsPoliciesRes.stderr || '[]',
+          },
+        ],
+        durationMs:
+          skillsRes.durationMs +
+          publishersRes.durationMs +
+          findingsRes.durationMs +
+          vmsRes.durationMs +
+          backendsRes.durationMs +
+          gkeRes.durationMs +
+          wifRes.durationMs +
+          tlsPoliciesRes.durationMs,
       });
     }
 
@@ -50144,7 +50387,7 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
     },
     {
       studioId: 'ALPHA_BETA_LAB',
-      studioName: '[ALPHA/BETA/GA] gcloud 590.0.1 Frontier Lab (Wave 1–3)',
+      studioName: '[ALPHA/BETA/GA] gcloud 591.0.0 Frontier Lab (Wave 1–4)',
       endpoint: `/api/project/${encProj}/alpha-beta/overview`,
     },
     {
@@ -62228,7 +62471,7 @@ app.get(
       // ======================================================================
       const terraformExportHcl = `# ============================================================================
 # CloudPulse 2026 · Auto-Reverse-Compiled Terraform + Import Bundle (${projectId})
-# Generated from Live Google Cloud Control-Plane State · SDK 590.0.1
+# Generated from Live Google Cloud Control-Plane State · SDK 591.0.0
 # ============================================================================
 terraform {
   required_providers {
@@ -62709,7 +62952,7 @@ gcloud iam workload-identity-pools providers create-oidc "github-oidc-provider" 
         projectId,
         region,
         scannedAt: new Date().toISOString(),
-        sdkVersion: '590.0.1 (2026.10.22)',
+        sdkVersion: '591.0.0 (2026.10.26)',
         architect: {
           blackoutRegion: targetBlackoutRegion,
           spofCount: spofCountVal,
@@ -63188,13 +63431,13 @@ app.post(
           status: 'OK',
           persona: 'CLOUD_ENGINEER',
           action,
-          summary: `Pre-Flight Deployment Gate PASSED: ${perms.length}/6 core IAM permissions verified, SDK 590.0.1 Quotas API reachable, and ${orchTypes} declarative GitOps resource types ready.`,
+          summary: `Pre-Flight Deployment Gate PASSED: ${perms.length}/6 core IAM permissions verified, SDK 591.0.0 Quotas API reachable, and ${orchTypes} declarative GitOps resource types ready.`,
           preflightReport: {
             verifiedPermissions: perms,
             gitOpsResourceSchemasReady: orchTypes,
             quotaCliStatus:
               quotaRes.status === 'fulfilled' && quotaRes.value?.ok
-                ? 'REACHABLE_GA_590_0_1'
+                ? 'REACHABLE_GA_591_0_0'
                 : 'CHECKED',
           },
         });

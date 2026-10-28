@@ -1185,7 +1185,7 @@ export default function Revolutionary2026Suite({
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
               <option value="ALL">All Domains (16 Specialized Studios)</option>
-              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 590.0.1 (8)</option>
+              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 591.0.0 (8)</option>
               <option value="QUANTUM">2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews (1)</option>
               <option value="FINOPS">FinOps Sleep &amp; Zombie Hunter, Cross-Region Teleporter &amp; Egress Tollbooth (3)</option>
               <option value="PERF_TOPOLOGY">4-Layer Topology &amp; Latency/Cold-Start/12-City RTT Suite (2)</option>
@@ -1275,10 +1275,10 @@ export default function Revolutionary2026Suite({
             {
               id: 'GCLOUD_ALPHA_BETA',
               category: 'ALPHA_BETA',
-              badge: 'SDK 590.0.1',
+              badge: 'SDK 591.0.0',
               label:
-                '[SDK 590.0.1] Google Cloud CLI Lab (Worker Pools, Cluster Director, Model Armor, Quotas)',
-              tip: 'Google Cloud SDK 590.0.1 (2026.10.22) [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Vertex AI Model Armor [GA], Cluster Director & Lustre [GA], Cloud Observability [GA], Orchestration Pipelines [BETA], Compliance Manager [GA] & Audit Manager [GA]',
+                '[SDK 591.0.0] Google Cloud CLI Lab (Worker Pools, Cluster Director, Model Armor, Quotas)',
+              tip: 'Google Cloud SDK 591.0.0 (2026.10.26) [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Vertex AI Model Armor [GA], Cluster Director & Lustre [GA], Cloud Observability [GA], Orchestration Pipelines [BETA], Compliance Manager [GA] & Audit Manager [GA]',
               icon: Rocket,
             },
             {
@@ -1544,7 +1544,7 @@ export default function Revolutionary2026Suite({
         />
       )}
 
-      {/* FLAGSHIP WAVE 1–3: [GA / BETA / ALPHA] GCLOUD 590.0.1 FRONTIER STUDIO */}
+      {/* FLAGSHIP WAVE 1–3: [GA / BETA / ALPHA] GCLOUD 591.0.0 FRONTIER STUDIO */}
       {subTab === 'GCLOUD_ALPHA_BETA' && (
         <GcloudAlphaBetaStudio
           projectId={projectId}

@@ -319,10 +319,10 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   GCLOUD_ALPHA_BETA: {
-    badge: 'GOOGLE CLOUD SDK 590.0.1 LAB',
-    title: '[SDK 590.0.1] Google Cloud CLI Lab — Worker Pools, Cluster Director, Model Armor & PAM JIT',
+    badge: 'GOOGLE CLOUD SDK 591.0.0 LAB',
+    title: '[SDK 591.0.0] Google Cloud CLI Lab — Worker Pools, Cluster Director, Model Armor & PAM JIT',
     whatItDoes:
-      'Interactive workbench for the newest Google Cloud SDK 590.0.1 [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services, Agent Registry & Identity, Privileged Access Manager (PAM) JIT IAM, Model Armor, Cluster Director, and Cloud Quotas Adjuster.',
+      'Interactive workbench for the newest Google Cloud SDK 591.0.0 [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services, Agent Registry & Identity, Privileged Access Manager (PAM) JIT IAM, Model Armor, Cluster Director, and Cloud Quotas Adjuster.',
     enterpriseValue:
       'Lets engineers test and generate exact production CLI commands and REST payloads for newly released 2026 Google Cloud capabilities without memorizing complex flags.',
     gcpApis: 'run v2beta · privilegedaccessmanager · modelarmor · quotalimits · observability',
@@ -490,7 +490,7 @@ export const INNOVATION_FEATURE_GUIDE = {
   },
 
   // ============================================================================
-  // 3. SUB-TABS IN WAVES 11–15, QUANTUM NEXUS, 10-PERSONA & SDK 590.0.1
+  // 3. SUB-TABS IN WAVES 11–15, QUANTUM NEXUS, 10-PERSONA & SDK 591.0.0
   // ============================================================================
   BQ_VECTOR_ANOMALY: {
     badge: 'WAVE 15 · STEP 01',
@@ -853,7 +853,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   OFFICIAL_REMOTE_MCP_HUB: {
-    badge: 'SDK 590.0.1 · REMOTE MCP',
+    badge: 'SDK 591.0.0 · REMOTE MCP',
     title: '48 Official *.googleapis.com/mcp Remote Control Plane',
     whatItDoes:
       'Connects directly to Google Cloud’s 48 official Remote MCP endpoints over JSON-RPC 2.0 to inspect live tools/list schemas, invoke tools/call, and run 4-server triage chains.',
@@ -863,17 +863,27 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE3_GCLOUD_590_SUITE: {
-    badge: 'SDK 590.0.1 · 8-PILLAR SUITE',
-    title: 'SDK 590.0.1 8-Pillar Observability, Orchestration & AI Suite',
+    badge: 'SDK 591.0.0 · 8-PILLAR SUITE',
+    title: 'SDK 591.0.0 8-Pillar Observability, Orchestration & AI Suite',
     whatItDoes:
       'Interactive CLI & REST workbench for Cloud Observability [GA], Orchestration Pipelines [BETA], Compliance Manager [GA], Gemini Cloud Assist, Vector Search, and IPAM.',
     enterpriseValue:
-      'Unifies the newest Google Cloud SDK 590.0.1 command groups into copy-ready enterprise automation.',
+      'Unifies the newest Google Cloud SDK 591.0.0 command groups into copy-ready enterprise automation.',
     gcpApis: 'observability · orchestration-pipelines · compliance-manager · vector-search',
     safetyMode: 'READ_ONLY',
   },
+  WAVE4_GCLOUD_591_UPGRADES: {
+    badge: 'NEW SDK 591.0.0 · 8 GA/BETA UPGRADES',
+    title: 'SDK 591.0.0 (2026-10-27) — Agent Skills GA, VM Agent-Identity GA, GKE Zero-Drain Live Update & LB Circuit Breakers',
+    whatItDoes:
+      'Executes 8 live probes across the newest SDK 591.0.0 promotions: `gcloud agent-registry skills/publishers/findings` [GA], Compute VM `--identity-type=AGENT_IDENTITY` [GA], GKE `--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN` [GA], Load Balancer `--circuit-breakers-max-*` [GA], IAM WIF `--actor-providers` [GA], WildFire/Server TLS [GA], and `gcloud beta workspace-key-access` [BETA].',
+    enterpriseValue:
+      'Keeps your operational console 100% synchronized with the latest Google Cloud SDK 591.0.0 release and Python 3.14.9 runtime.',
+    gcpApis: 'agentregistry · compute · container · iam · networksecurity · workspace-key-access',
+    safetyMode: 'READ_ONLY',
+  },
   BETA_CLOUD_RUN: {
-    badge: 'SDK 590.0.1 · CLOUD RUN 4-PRIMITIVE',
+    badge: 'SDK 591.0.0 · CLOUD RUN 4-PRIMITIVE',
     title: 'Cloud Run Worker Pools, Multi-Region Services & Compose Lab',
     whatItDoes:
       'Configures and tests Cloud Run Worker Pools (non-HTTP background queue consumers), Multi-Region Services, Docker Compose deployments [GA], and direct instance inspection.',
@@ -883,7 +893,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   ALPHA_AGENT_MCP: {
-    badge: 'SDK 590.0.1 · AGENT REGISTRY',
+    badge: 'SDK 591.0.0 · AGENT REGISTRY',
     title: 'Google Cloud Agent Registry & Agent Identity Control Plane [GA]',
     whatItDoes:
       'Inspects and registers MCP servers, autonomous agents, and cryptographic Agent Identities using the new gcloud agent-registry command group.',
@@ -893,7 +903,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   ALPHA_PAM_TROUBLESHOOT: {
-    badge: 'SDK 590.0.1 · PAM JIT IAM',
+    badge: 'SDK 591.0.0 · PAM JIT IAM',
     title: 'Privileged Access Manager (PAM) JIT IAM & 403 Policy Troubleshooter [GA]',
     whatItDoes:
       'Creates time-bound Just-In-Time (JIT) PAM entitlements/grants with audit justification and diagnoses 403 Permission Denied errors via Policy Troubleshooter.',
@@ -903,7 +913,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   ALPHA_HEALTH_FAULT: {
-    badge: 'SDK 590.0.1 · CHAOS & HEALTH',
+    badge: 'SDK 591.0.0 · CHAOS & HEALTH',
     title: 'Personalized Service Health [GA] & Chaos Fault-Testing [ALPHA]',
     whatItDoes:
       'Correlates official Google Cloud Service Health incidents affecting your regions with controlled fault-injection experiments.',
@@ -913,7 +923,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   ALPHA_BETA_PLATFORM: {
-    badge: 'SDK 590.0.1 · LOCATION FINDER',
+    badge: 'SDK 591.0.0 · LOCATION FINDER',
     title: 'App Optimize, Cloud Location Finder [GA] & Asset Vet',
     whatItDoes:
       'Uses gcloud cloudlocationfinder to rank regions by latency, carbon, and SKU availability, and validates Terraform policies before apply via gcloud asset vet.',
@@ -923,7 +933,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE2_MODEL_ARMOR: {
-    badge: 'SDK 590.0.1 · MODEL ARMOR GA',
+    badge: 'SDK 591.0.0 · MODEL ARMOR GA',
     title: 'Vertex AI Model Armor Templates, Floor Settings & Prompt Sanitizer [GA]',
     whatItDoes:
       'Configures project-wide Model Armor safety floors and tests live prompt sanitization against prompt injection, jailbreak, and sensitive data leaks.',
@@ -933,7 +943,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE2_DEV_KNOWLEDGE_TOPOLOGY: {
-    badge: 'SDK 590.0.1 · DEV KNOWLEDGE GA',
+    badge: 'SDK 591.0.0 · DEV KNOWLEDGE GA',
     title: 'Grounded Google Developer Knowledge RAG & App Topology [GA]',
     whatItDoes:
       'Queries official Google Cloud documentation via developerknowledge.googleapis.com and maps live application service topology.',
@@ -943,7 +953,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE2_BETA_CLOUD_QUOTAS: {
-    badge: 'SDK 590.0.1 · CLOUD QUOTAS',
+    badge: 'SDK 591.0.0 · CLOUD QUOTAS',
     title: 'Cloud Quotas Preferences [GA] & Autonomous Quota Adjuster [BETA]',
     whatItDoes:
       'Inspects regional quota limits and configures the autonomous Cloud Quotas Adjuster to request quota increases before capacity ceilings are hit.',
@@ -953,7 +963,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE2_AUDIT_DELIVERY_TRUST: {
-    badge: 'SDK 590.0.1 · COMPLIANCE GA',
+    badge: 'SDK 591.0.0 · COMPLIANCE GA',
     title: 'Audit Manager [GA], Compliance Manager [GA] & Software Delivery Trust',
     whatItDoes:
       'Automates SOC2, ISO-27001, PCI-DSS, and FedRAMP evidence collection across your live GCP project using Audit Manager and Compliance Manager.',
@@ -963,7 +973,7 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   WAVE2_AI_HYPERCOMPUTER_HPC: {
-    badge: 'SDK 590.0.1 · AI HYPERCOMPUTER',
+    badge: 'SDK 591.0.0 · AI HYPERCOMPUTER',
     title: 'AI Hypercomputer Cluster Director [GA] & Managed Lustre Parallel File System',
     whatItDoes:
       'Designs and inspects GPU/TPU AI Hypercomputer clusters with high-throughput Managed Lustre storage and ML Diagnostics.',
@@ -4499,7 +4509,7 @@ function resolveFeatureExplanation(buttonEl) {
   if (combined.includes('wave 11') || combined.includes('canary pipelines')) {
     return INNOVATION_FEATURE_GUIDE.WAVE11_MOONSHOT;
   }
-  if (combined.includes('590.0.1')) {
+  if (combined.includes('591.0.0')) {
     return INNOVATION_FEATURE_GUIDE.GCLOUD_ALPHA_BETA;
   }
   if (combined.includes('quantum nexus')) {

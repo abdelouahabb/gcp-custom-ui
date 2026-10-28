@@ -179,10 +179,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-gcloud-590-wave3-frontier',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open [GA/BETA/ALPHA] Google Cloud SDK 590.0.1 Frontier Lab (Wave 1–3: 8-Pillar Probe, Agent Registry, Model Armor, Cluster Director & Compliance Manager)',
-        subtitle: 'Execute 8-Pillar SDK 590.0.1 Live Probe across Cluster Director, NetApp QoS, Database Center, Quotas, Audit Manager, Observability, Orchestration Pipelines & Compliance Manager + SDK 588→590.0.0→590.0.1 Promotion Ledger',
-        keywords: 'gcloud 590 590.0.1 ga alpha beta wave 3 cluster director lustre netapp storage qos database center cloud quotas adjuster preferences audit manager observability orchestration pipelines compliance manager worker pools',
-        badge: 'GCLOUD 590.0.1',
+        title: 'Open [GA/BETA/ALPHA] Google Cloud SDK 591.0.0 Frontier Lab (Wave 1–3: 8-Pillar Probe, Agent Registry, Model Armor, Cluster Director & Compliance Manager)',
+        subtitle: 'Execute 8-Pillar SDK 591.0.0 Live Probe across Cluster Director, NetApp QoS, Database Center, Quotas, Audit Manager, Observability, Orchestration Pipelines & Compliance Manager + SDK 588→590.0.0→591.0.0 Promotion Ledger',
+        keywords: 'gcloud 590 591.0.0 ga alpha beta wave 3 cluster director lustre netapp storage qos database center cloud quotas adjuster preferences audit manager observability orchestration pipelines compliance manager worker pools',
+        badge: 'GCLOUD 591.0.0',
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
         icon: Cpu,
         run: () => {
@@ -319,9 +319,9 @@ export default function CommandPaletteModal({
       {
         id: 'open-data-engineer-studio',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 590.0.1)',
+        title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 591.0.0)',
         subtitle: '1-Canvas Bronze→Silver→Gold Pipeline Builder, Auto-Clean QUALIFY Dedup, Dataplex Profiling/Products & -$348/mo Serverless DAGs',
-        keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot 590.0.1',
+        keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot 591.0.0',
         badge: 'DATA ENGINEER',
         badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,

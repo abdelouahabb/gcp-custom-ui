@@ -46,7 +46,7 @@ const PERSONA_TABS = [
     badge: 'GITOPS & SRE',
     ownerStudioTab: 'INNOVATION_LAB',
     ownerSubTab: 'GCLOUD_ALPHA_BETA',
-    ownerLabel: 'SDK 590.0.1 & GitOps Lab',
+    ownerLabel: 'SDK 591.0.0 & GitOps Lab',
   },
   {
     id: 'DATA_ENGINEER',
@@ -666,7 +666,7 @@ export default function FivePersonaCommandCenter({
                 10-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; AUTONOMOUS LAUNCH COUNCIL
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '590.0.1 (2026.10.22)'}
+                100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '591.0.0 (2026.10.26)'}
               </span>
               {tribunalData?.merkleSealSha256 && (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
@@ -3421,7 +3421,7 @@ export default function FivePersonaCommandCenter({
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                    Model Armor Prompt/PII Firewall (GA 590.0.1)
+                    Model Armor Prompt/PII Firewall (GA 591.0.0)
                   </h3>
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px] font-mono font-bold">
                     {overview?.aiMlOpsEngineer?.modelArmorFirewall?.status || 'ENFORCED_GA'}

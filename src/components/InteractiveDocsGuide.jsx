@@ -43,7 +43,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'Traditional single-line tooltips merely expand a truncated button label without explaining what a cloud innovation actually does, why enterprise engineering/FinOps/security teams rely on it, whether clicking it is Read-Only or executes a Live GCP Mutation, or which official Google Cloud REST APIs and MCP servers run under the hood.',
     howItWorks: [
-      '4-Section Structured Hover Explainer Card (src/components/InnovationHoverExplainer.jsx): Hovering over any of the 20 main studio tabs, 22 Innovation Lab studios, Waves 11–15 Moonshot sub-tabs, 10 Persona War-Rooms, 12 SDK 590.0.1 workbenches, 9 Data Engineering modules, or operational action buttons displays a structured Google Cloud Console card with: (1) Domain Badge + Safety Mode Pill (Read-Only Telemetry vs. Live GCP Action), (2) Full Un-Truncated Feature Title, (3) What It Does (Plain English), and (4) Enterprise Value & Use Case + Under the Hood GCP APIs & CLI.',
+      '4-Section Structured Hover Explainer Card (src/components/InnovationHoverExplainer.jsx): Hovering over any of the 20 main studio tabs, 22 Innovation Lab studios, Waves 11–15 Moonshot sub-tabs, 10 Persona War-Rooms, 12 SDK 591.0.0 workbenches, 9 Data Engineering modules, or operational action buttons displays a structured Google Cloud Console card with: (1) Domain Badge + Safety Mode Pill (Read-Only Telemetry vs. Live GCP Action), (2) Full Un-Truncated Feature Title, (3) What It Does (Plain English), and (4) Enterprise Value & Use Case + Under the Hood GCP APIs & CLI.',
       'Hybrid Signature Name — Plain-English Enterprise Subtitle Convention: Preserves every signature CloudPulse innovation title (Pre-Crime Bill & Dream Stack, Wave 15 Dyson Moonshot, Wave 14 Quantum Doctor, Wave 13 Starlink & Neuralink, Wave 12 Roadster Flight Deck, 10-Persona War-Room) paired with a crystal-clear enterprise subtitle.',
       'Authentic Google Cloud Console Color Palette: Standardized across all 42 studios and the 48-Server Remote MCP Hub onto official Google Cloud Console surfaces (#f8f9fa / #ffffff in Light Mode, #171717 / #202124 in Dark Mode), crisp neutral borders (#dadce0 / #3c4043), and Google Blue (#1a73e8 / #8ab4f8) active indicators.',
     ],
@@ -445,25 +445,25 @@ const DOC_SECTIONS = [
   },
   {
     id: 'gcloud-590-alpha-beta-frontier-wave1-wave2-wave3',
-    wave: '[GA / BETA / ALPHA] GCLOUD 590.0.1 FRONTIER LAB · WAVE 1 + WAVE 2 + WAVE 3 (18 CAPABILITIES + 8-PILLAR PROBE + SDK 588→590.0.1 PROMOTION LEDGER)',
+    wave: '[GA / BETA / ALPHA] GCLOUD 591.0.0 FRONTIER LAB · WAVE 1 + WAVE 2 + WAVE 3 (18 CAPABILITIES + 8-PILLAR PROBE + SDK 588→591.0.0 PROMOTION LEDGER)',
     title:
-      '[GA / BETA / ALPHA] gcloud 590.0.1 Frontier Lab — Worker Pools, Multi-Region Run, Agent Registry & MCP, PAM JIT, Model Armor, Cluster Director & Lustre, NetApp Storage QoS, Database Center, Cloud Quotas, Audit Manager, Observability, Orchestration Pipelines & Compliance Manager',
-    badge: '2026 INNOVATION LAB (WAVE 1–3 · SDK 590.0.1)',
+      '[GA / BETA / ALPHA] gcloud 591.0.0 Frontier Lab — Worker Pools, Multi-Region Run, Agent Registry & MCP, PAM JIT, Model Armor, Cluster Director & Lustre, NetApp Storage QoS, Database Center, Cloud Quotas, Audit Manager, Observability, Orchestration Pipelines & Compliance Manager',
+    badge: '2026 INNOVATION LAB (WAVE 1–3 · SDK 591.0.0)',
     badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'GCLOUD_ALPHA_BETA',
     problemSolved:
-      'Google Cloud SDK 590.0.1 (2026.10.22) promotes 14 command groups to General Availability (`agent-registry`, `agent-identity`, `pam`, `policy-troubleshoot`, `service-health`, `cloudlocationfinder`, `model-armor`, `developer-knowledge`, `app-topology`, `design-center`, `quotas`, `cluster-director`, `observability`, `compliance-manager`) while expanding `gcloud beta orchestration-pipelines` and `gcloud alpha database-center`.',
+      'Google Cloud SDK 591.0.0 (2026.10.26) promotes 14 command groups to General Availability (`agent-registry`, `agent-identity`, `pam`, `policy-troubleshoot`, `service-health`, `cloudlocationfinder`, `model-armor`, `developer-knowledge`, `app-topology`, `design-center`, `quotas`, `cluster-director`, `observability`, `compliance-manager`) while expanding `gcloud beta orchestration-pipelines` and `gcloud alpha database-center`.',
     howItWorks: [
-      'Explicit [GA · PROMOTED 590.0.1], [BETA · PUBLIC PREVIEW] & [ALPHA · EARLY ACCESS] Badging + Wave 1 / Wave 2 / Wave 3 (590.0.1) Filter Bar + Cross-Studio Bridges to Cloud SOC, SRE War-Room, Multi-Cloud Parity, Sovereign IAM, Data Engineer, Time-Machine, and 1-Tap Health & Drift Hub.',
+      'Explicit [GA · PROMOTED 591.0.0], [BETA · PUBLIC PREVIEW] & [ALPHA · EARLY ACCESS] Badging + Wave 1 / Wave 2 / Wave 3 (591.0.0) Filter Bar + Cross-Studio Bridges to Cloud SOC, SRE War-Room, Multi-Cloud Parity, Sovereign IAM, Data Engineer, Time-Machine, and 1-Tap Health & Drift Hub.',
       'Wave 1 (01–05): (01) [BETA] Cloud Run Worker Pools & Multi-Region Services, (02) [GA] Autonomous Agent Registry & MCP Servers, (03) [GA] Privileged Access Manager (PAM) JIT & IAM 403 Policy Troubleshooter, (04) [GA/ALPHA] Personalized Service Health & Cloud Run Fault-Injection, and (05) [GA/BETA] App Hub, Cloud Location Finder & Application Optimize.',
       'Wave 2 (06–10): (06) [GA] Vertex AI Model Armor Prompt-Injection & SDP/PII Firewall, (07) [GA] Developer Knowledge MCP, App-Topology & Design Center, (08) [GA/BETA] Cloud Quotas Preferences & Live Adjuster, (09) [GA/ALPHA] Sovereign Audit Manager & Software Delivery Trust, and (10) [GA] AI Hypercomputer Cluster Director & Managed Lustre.',
-      'Wave 3 (11 · SDK 590.0.1 8-Pillar Live Frontier Scan): Runs parallel live discovery across (1) AI Hypercomputer Cluster Director & Lustre [GA], (2) Google Cloud NetApp Volumes & Storage Pools QoS [GA/BETA], (3) Database Center Fleet Health [ALPHA], (4) Cloud Quotas Adjuster & Preferences [GA/BETA], (5) Sovereign Audit Manager [GA], (6) Cloud Observability Scopes & Trace Scopes [GA], (7) Declarative Orchestration Pipelines [BETA], and (8) Cloud Compliance Manager Frameworks & Controls [GA] alongside the SDK 588.0 -> 590.0.0 -> 590.0.1 Track Promotion Ledger.',
+      'Wave 3 (11 · SDK 591.0.0 8-Pillar Live Frontier Scan): Runs parallel live discovery across (1) AI Hypercomputer Cluster Director & Lustre [GA], (2) Google Cloud NetApp Volumes & Storage Pools QoS [GA/BETA], (3) Database Center Fleet Health [ALPHA], (4) Cloud Quotas Adjuster & Preferences [GA/BETA], (5) Sovereign Audit Manager [GA], (6) Cloud Observability Scopes & Trace Scopes [GA], (7) Declarative Orchestration Pipelines [BETA], and (8) Cloud Compliance Manager Frameworks & Controls [GA] alongside the SDK 588.0 -> 590.0.0 -> 591.0.0 Track Promotion Ledger.',
     ],
     apisUsed: [
       'GET /api/project/:id/alpha-beta/overview & POST /api/project/:id/alpha-beta/action (SCAN_WAVE3_GCLOUD_590_FRONTIER)',
-      'gcloud 590.0.1 GA / beta / alpha CLI + v1 / v1beta / v1alpha REST bridges',
+      'gcloud 591.0.0 GA / beta / alpha CLI + v1 / v1beta / v1alpha REST bridges',
     ],
     billingImpact:
       'Discovery, 8-pillar Wave 3 scanning, and policy troubleshooting run at $0.00; every mutating action is intercepted by the Universal 1-Tap Cost Gatekeeper.',
