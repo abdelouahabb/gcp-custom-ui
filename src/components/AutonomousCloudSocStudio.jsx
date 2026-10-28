@@ -2343,7 +2343,7 @@ Format your response with clear Markdown headings:${
                   <span>Gemini 3.8 Flash &amp; 3.1 Pro Autonomous SOC Incident Commander</span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Runs real LLM inference via either <strong className="text-zinc-700 dark:text-zinc-200">Keyless Google Cloud Vertex AI (using your active GCP OAuth2 token — no API key needed)</strong> or <strong className="text-zinc-700 dark:text-zinc-200">Google AI Studio (<code className="font-mono">AIzaSy...</code> AES-256-GCM RAM Vault)</strong>, with transparent fallback to the local Deterministic Telemetry Compiler.
+                  Runs real LLM inference via either <strong className="text-zinc-700 dark:text-zinc-200">Keyless Google Cloud Vertex AI (using your active GCP OAuth2 token — no API key needed)</strong> or <strong className="text-zinc-700 dark:text-zinc-200">Google AI Studio (<code className="font-mono">AIzaSy...</code> AES-256-GCM RAM Vault)</strong>, with Zero Synthetic Fallback (100% live Gemini inference).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

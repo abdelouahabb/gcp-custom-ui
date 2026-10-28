@@ -2209,27 +2209,63 @@ export default function SreWarRoomPerimeterStudio({
 
           {aiCommanderResult ? (
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-blue-500/30 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-blue-500">
-                  Model: {aiCommanderResult.modelUsed} · Latency:{' '}
-                  {aiCommanderResult.latencyMs}ms
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopy(
-                      aiCommanderResult.synthesisMarkdown,
-                      'AI SRE Briefing'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
-                >
-                  Copy Briefing
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                      aiCommanderResult.isLiveLlm
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                    }`}
+                  >
+                    {aiCommanderResult.isLiveLlm
+                      ? `LIVE GEMINI LLM (${aiCommanderResult.executionMode})`
+                      : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-blue-500">
+                    Model: {aiCommanderResult.modelUsed} · Latency:{' '}
+                    {aiCommanderResult.latencyMs}ms
+                  </span>
+                  {aiCommanderResult.tokenUsage?.totalTokens > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                      Tokens: {aiCommanderResult.tokenUsage.promptTokens} in +{' '}
+                      {aiCommanderResult.tokenUsage.outputTokens} out ={' '}
+                      {aiCommanderResult.tokenUsage.totalTokens} total
+                    </span>
+                  )}
+                </div>
+                {aiCommanderResult.synthesisMarkdown && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        aiCommanderResult.synthesisMarkdown,
+                        'AI SRE Briefing'
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                  >
+                    Copy Briefing
+                  </button>
+                )}
               </div>
-              <pre className="text-xs font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
-                {aiCommanderResult.synthesisMarkdown}
-              </pre>
+              {aiCommanderResult.isLiveLlm &&
+              aiCommanderResult.synthesisMarkdown ? (
+                <pre className="text-xs font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                  {aiCommanderResult.synthesisMarkdown}
+                </pre>
+              ) : (
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs font-mono">
+                  <div className="font-extrabold text-rose-600 dark:text-rose-300">
+                    Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
+                  </div>
+                  {(aiCommanderResult.diagnostics || []).map((d, i) => (
+                    <div key={i} className="text-zinc-700 dark:text-zinc-300">
+                      • {d}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">

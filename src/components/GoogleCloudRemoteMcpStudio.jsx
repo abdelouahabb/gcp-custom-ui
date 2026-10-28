@@ -700,6 +700,8 @@ export default function GoogleCloudRemoteMcpStudio({
   const [agentPrompt, setAgentPrompt] = useState(
     'Inspect my live Cloud Billing status, Cloud Storage buckets, BigQuery datasets, and recent Cloud Audit logs via official Google Cloud Remote MCP servers, and search Google Developer Knowledge for 2026 MCP security best practices.'
   );
+  const [agentModel, setAgentModel] = useState('gemini-3.8-flash');
+  const [agentPreferredProvider, setAgentPreferredProvider] = useState('AUTO');
   const [runningAgent, setRunningAgent] = useState(false);
   const [agentResult, setAgentResult] = useState(null);
 
@@ -920,11 +922,18 @@ export default function GoogleCloudRemoteMcpStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/mcp/agent-chat`,
-        { prompt: agentPrompt, region }
+        {
+          prompt: agentPrompt,
+          region,
+          model: agentModel,
+          preferredProvider: agentPreferredProvider,
+        }
       );
       setAgentResult(res.data);
       notify(
-        `Gemini + 5 Official Google Cloud MCP servers completed in ${res.data?.totalWallTimeMs}ms.`
+        res.data?.isLiveLlm
+          ? `Live ${res.data?.resolvedModelId || agentModel} + 5 Official Google Cloud MCP servers completed in ${res.data?.totalWallTimeMs}ms (${res.data?.tokenUsage?.totalTokens || 0} tokens).`
+          : `5 Official MCP servers responded in ${res.data?.totalWallTimeMs}ms (Live Gemini LLM not reached — zero synthetic output).`
       );
     } catch (err) {
       notify(
@@ -1624,21 +1633,44 @@ export default function GoogleCloudRemoteMcpStudio({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left 7 Cols: Gemini Agentic MCP Tool-Calling Console */}
         <div className="lg:col-span-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 space-y-3">
-          <div>
-            <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
-              ZERO-HALLUCINATION AGENTIC SRE · VERTEX AI GEMINI + 5 REMOTE MCP SERVERS
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                ZERO-HALLUCINATION AGENTIC SRE · VERTEX AI GEMINI + 5 REMOTE MCP SERVERS
+              </div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                Gemini 3.8 Flash &amp; 3.1 Pro Live MCP Review &amp; Tool-Calling Architect
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Autonomously invokes <code className="font-mono">cloudbilling</code>,{' '}
+                <code className="font-mono">storage</code>,{' '}
+                <code className="font-mono">bigquery</code>,{' '}
+                <code className="font-mono">logging</code>, and{' '}
+                <code className="font-mono">developerknowledge</code> Remote MCP servers via
+                JSON-RPC 2.0 and grounds live Gemini inference (Keyless Vertex AI OAuth2 or Sealed AI Studio Key — zero synthetic fallback).
+              </p>
             </div>
-            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              Gemini 3.8 Flash Live MCP Review &amp; Tool-Calling Architect
-            </h3>
-            <p className="text-xs text-zinc-500">
-              Autonomously invokes <code className="font-mono">cloudbilling</code>,{' '}
-              <code className="font-mono">storage</code>,{' '}
-              <code className="font-mono">bigquery</code>,{' '}
-              <code className="font-mono">logging</code>, and{' '}
-              <code className="font-mono">developerknowledge</code> Remote MCP servers via
-              JSON-RPC 2.0 and grounds Gemini on the live outputs.
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <select
+                value={agentPreferredProvider}
+                onChange={(e) => setAgentPreferredProvider(e.target.value)}
+                className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200"
+                title="Choose how Gemini executes live MCP-grounded inference"
+              >
+                <option value="AUTO">Engine: Auto (Vertex AI OAuth2 / AI Studio Key)</option>
+                <option value="VERTEX_AI_OAUTH">Engine: Keyless Vertex AI OAuth2 Only</option>
+                <option value="AI_STUDIO_KEY">Engine: Sealed Google AI Studio Key Only</option>
+              </select>
+              <select
+                value={agentModel}
+                onChange={(e) => setAgentModel(e.target.value)}
+                className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200"
+                title="Choose Gemini model for live MCP synthesis"
+              >
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Fast MCP Grounding)</option>
+                <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Architecture Reasoning)</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1671,8 +1703,8 @@ export default function GoogleCloudRemoteMcpStudio({
               <Sparkles className="w-3.5 h-3.5" />
               <span>
                 {runningAgent
-                  ? 'Calling 5 Official *.googleapis.com/mcp Servers + Gemini...'
-                  : 'Execute Grounded Multi-MCP Review'}
+                  ? `Calling 5 Official *.googleapis.com/mcp Servers + Live ${agentModel}...`
+                  : `Execute Grounded Multi-MCP Review (${agentModel})`}
               </span>
             </button>
           </form>
@@ -1680,19 +1712,41 @@ export default function GoogleCloudRemoteMcpStudio({
           {agentResult && (
             <div className="space-y-3 pt-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
-                <span>Engine: {agentResult.modelUsed}</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                      agentResult.isLiveLlm
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                    }`}
+                  >
+                    {agentResult.isLiveLlm
+                      ? `LIVE GEMINI LLM (${agentResult.executionMode})`
+                      : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                  </span>
+                  <span>Engine: {agentResult.modelUsed}</span>
+                  {agentResult.tokenUsage?.totalTokens > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                      Tokens: {agentResult.tokenUsage.promptTokens} in +{' '}
+                      {agentResult.tokenUsage.outputTokens} out ={' '}
+                      {agentResult.tokenUsage.totalTokens} total
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <span>Total Turn Latency: {agentResult.totalWallTimeMs}ms</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      copyToClipboard(agentResult.synthesis, 'MCP Review Report')
-                    }
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copy Review</span>
-                  </button>
+                  {agentResult.synthesis && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard(agentResult.synthesis, 'MCP Review Report')
+                      }
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Review</span>
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -1705,12 +1759,25 @@ export default function GoogleCloudRemoteMcpStudio({
                   </span>
                 ))}
               </div>
-              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 max-h-[460px] overflow-y-auto">
-                <McpFormattedMarkdown
-                  content={agentResult.synthesis}
-                  onCopy={copyToClipboard}
-                />
-              </div>
+              {agentResult.isLiveLlm && agentResult.synthesis ? (
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 max-h-[460px] overflow-y-auto">
+                  <McpFormattedMarkdown
+                    content={agentResult.synthesis}
+                    onCopy={copyToClipboard}
+                  />
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 text-xs font-mono">
+                  <div className="font-extrabold text-rose-600 dark:text-rose-300">
+                    Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
+                  </div>
+                  {(agentResult.diagnostics || []).map((diag, idx) => (
+                    <div key={idx} className="text-zinc-700 dark:text-zinc-300">
+                      • {diag}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

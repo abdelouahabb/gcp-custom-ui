@@ -1166,23 +1166,56 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
 
             {logAiReport && (
               <div className="p-4 rounded-2xl border border-blue-500/40 bg-blue-500/5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
-                    VERTEX AI ({logAiReport.modelUsed}) · ROOT-CAUSE &amp; REMEDIATION REPORT ({logAiReport.latencyMs}ms)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => copyText(logAiReport.analysisMarkdown)}
-                    className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copy Report</span>
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                        logAiReport.isLiveLlm
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                      }`}
+                    >
+                      {logAiReport.isLiveLlm
+                        ? `LIVE GEMINI LLM (${logAiReport.executionMode})`
+                        : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                    </span>
+                    <span className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
+                      {logAiReport.modelUsed} · ROOT-CAUSE &amp; REMEDIATION REPORT ({logAiReport.latencyMs}ms)
+                    </span>
+                    {logAiReport.tokenUsage?.totalTokens > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                        Tokens: {logAiReport.tokenUsage.totalTokens}
+                      </span>
+                    )}
+                  </div>
+                  {logAiReport.analysisMarkdown && (
+                    <button
+                      type="button"
+                      onClick={() => copyText(logAiReport.analysisMarkdown)}
+                      className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Report</span>
+                    </button>
+                  )}
                 </div>
-                <FormattedMarkdown
-                  text={logAiReport.analysisMarkdown}
-                  onCopy={copyText}
-                />
+                {logAiReport.isLiveLlm && logAiReport.analysisMarkdown ? (
+                  <FormattedMarkdown
+                    text={logAiReport.analysisMarkdown}
+                    onCopy={copyText}
+                  />
+                ) : (
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs font-mono">
+                    <div className="font-extrabold text-rose-600 dark:text-rose-300">
+                      Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
+                    </div>
+                    {(logAiReport.diagnostics || []).map((d, i) => (
+                      <div key={i} className="text-zinc-700 dark:text-zinc-300">
+                        • {d}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

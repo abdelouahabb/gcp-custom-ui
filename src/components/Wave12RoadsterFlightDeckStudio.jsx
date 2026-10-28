@@ -1213,18 +1213,51 @@ export default function Wave12RoadsterFlightDeckStudio({
           {directorResult && (
             <div className="space-y-3 pt-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
-                <span>Engine: {directorResult.engineUsed}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                      directorResult.isLiveLlm
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                    }`}
+                  >
+                    {directorResult.isLiveLlm
+                      ? `LIVE GEMINI LLM (${directorResult.executionMode})`
+                      : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                  </span>
+                  <span>Engine: {directorResult.engineUsed}</span>
+                  {directorResult.tokenUsage?.totalTokens > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                      Tokens: {directorResult.tokenUsage.promptTokens} in +{' '}
+                      {directorResult.tokenUsage.outputTokens} out ={' '}
+                      {directorResult.tokenUsage.totalTokens} total
+                    </span>
+                  )}
+                </div>
                 <span>
                   Latency: {directorResult.latencyMs}ms · SHA-256:{' '}
                   {(directorResult.stateSha256 || '').slice(0, 14)}...
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 max-h-[480px] overflow-y-auto">
-                <RoadsterMarkdownView
-                  content={directorResult.briefingMarkdown}
-                  onCopy={copyText}
-                />
-              </div>
+              {directorResult.isLiveLlm && directorResult.briefingMarkdown ? (
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 max-h-[480px] overflow-y-auto">
+                  <RoadsterMarkdownView
+                    content={directorResult.briefingMarkdown}
+                    onCopy={copyText}
+                  />
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 text-xs font-mono">
+                  <div className="font-extrabold text-rose-600 dark:text-rose-300">
+                    Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
+                  </div>
+                  {(directorResult.diagnostics || []).map((d, i) => (
+                    <div key={i} className="text-zinc-700 dark:text-zinc-300">
+                      • {d}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

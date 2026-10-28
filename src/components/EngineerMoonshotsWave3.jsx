@@ -2071,17 +2071,11 @@ CMD ["server/index.js"]`;
               <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-amber-600 dark:text-amber-300">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  {missingKeyBanner
-                    ? `No API Key Sealed Yet! Follow These 3 Steps to Switch from Offline Deterministic Mode to Live ${
-                        selectedGeminiModel === 'CUSTOM' && customModelId.trim()
-                          ? customModelId.trim()
-                          : selectedGeminiModel
-                      }:`
-                    : `How to Activate Live ${
-                        selectedGeminiModel === 'CUSTOM' && customModelId.trim()
-                          ? customModelId.trim()
-                          : selectedGeminiModel
-                      } / gemini-3.1-pro (Takes 15 Seconds):`}
+                  {`Keyless Vertex AI OAuth2 (${
+                    selectedGeminiModel === 'CUSTOM' && customModelId.trim()
+                      ? customModelId.trim()
+                      : selectedGeminiModel
+                  } / gemini-3.1-pro) is active out-of-the-box! Or optionally seal a Google AI Studio key below:`}
                 </span>
               </div>
               <a
@@ -2306,65 +2300,33 @@ CMD ["server/index.js"]`;
               type="button"
               disabled={askingAi}
               onClick={() => handleAskGeminiArchitect(aiPrompt)}
-              title={
-                vaultStatus.configured || apiKeyInput.trim().length >= 12
-                  ? `Send your prompt + live ${projectId} resource telemetry to ${
-                      selectedGeminiModel === 'CUSTOM' && customModelId.trim()
-                        ? customModelId.trim()
-                        : selectedGeminiModel
-                    } (8,192 output token budget)`
-                  : 'Run local Deterministic SRE Co-Architect preview (or paste an AIzaSy... key above to auto-seal and query live Gemini)'
-              }
+              title={`Send your prompt + live ${projectId} resource telemetry to ${
+                selectedGeminiModel === 'CUSTOM' && customModelId.trim()
+                  ? customModelId.trim()
+                  : selectedGeminiModel
+              } via Keyless Vertex AI OAuth2 or Sealed AI Studio Key (8,192 output token budget)`}
               className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {askingAi
                 ? `Synthesizing (${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel})...`
                 : vaultStatus.configured || apiKeyInput.trim().length >= 12
-                ? `Ask Live ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel}`
-                : `Ask ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel} (Seal Key Above for Live AI)`}
+                ? `Ask Live ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel} (AI Studio Vault)`
+                : `Ask Live ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel} (Keyless Vertex AI)`}
             </button>
           </div>
 
           {aiResponse && (
             <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
-              {!vaultStatus.configured && (
-                <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-700 dark:text-amber-300">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                    <span>
-                      <strong>Offline Deterministic Mode Active:</strong> No API
-                      key was sealed in the RAM Vault, so the response below was
-                      generated locally. Paste your{' '}
-                      <code className="text-emerald-400">AIzaSy...</code> key
-                      above to switch to live{' '}
-                      <strong>
-                        {selectedGeminiModel === 'CUSTOM' &&
-                        customModelId.trim()
-                          ? customModelId.trim()
-                          : selectedGeminiModel}
-                      </strong>
-                      !
-                    </span>
+              {!aiResponse.isLiveLlm && (
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/40 space-y-1.5 text-xs font-mono text-rose-600 dark:text-rose-300">
+                  <div className="font-extrabold">
+                    Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
                   </div>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Open Google AI Studio to get a free Gemini API key"
-                      className="px-2.5 py-1 rounded bg-amber-500 text-zinc-950 font-extrabold text-[11px] hover:bg-amber-400"
-                    >
-                      ↗ Get Key (AI Studio)
-                    </a>
-                    <button
-                      type="button"
-                      onClick={focusAndHighlightKeyInput}
-                      title="Scroll up and focus the encrypted API key input box"
-                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold text-[11px] cursor-pointer"
-                    >
-                      Paste Key Above
-                    </button>
-                  </div>
+                  {(aiResponse.diagnostics || []).map((d, idx) => (
+                    <div key={idx} className="text-zinc-700 dark:text-zinc-300">
+                      • {d}
+                    </div>
+                  ))}
                 </div>
               )}
 

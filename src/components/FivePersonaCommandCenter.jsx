@@ -1716,9 +1716,12 @@ export default function FivePersonaCommandCenter({
                     ))}
                   </div>
                   <div className="lg:col-span-5 p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-[10px] font-extrabold text-emerald-400">
-                        Compiled Terraform HCL (main.tf)
+                        Compiled Terraform HCL (main.tf) ·{' '}
+                        {compiledIntentPlan.isLiveLlm
+                          ? `LIVE ${compiledIntentPlan.resolvedModelId || compiledIntentPlan.compilerModel} (${compiledIntentPlan.tokenUsage?.totalTokens || 0} tok)`
+                          : compiledIntentPlan.compilerModel}
                       </span>
                       <button
                         type="button"
@@ -1736,6 +1739,16 @@ export default function FivePersonaCommandCenter({
                     <pre className="text-[10px] text-zinc-300 overflow-x-auto whitespace-pre-wrap">
                       {compiledIntentPlan.compiledTerraformHcl}
                     </pre>
+                    {compiledIntentPlan.aiSynthesisMarkdown && (
+                      <div className="pt-2 border-t border-zinc-800 space-y-1">
+                        <div className="text-[10px] font-extrabold text-blue-400">
+                          Live Gemini 10-Persona Synthesis ({compiledIntentPlan.executionMode})
+                        </div>
+                        <pre className="text-[10px] text-zinc-300 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {compiledIntentPlan.aiSynthesisMarkdown}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

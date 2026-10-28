@@ -1151,21 +1151,54 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               ))}
             </div>
 
-            {iamAiPlan?.markdown && (
+            {iamAiPlan && (
               <div className="p-5 rounded-2xl border border-blue-500/40 bg-white dark:bg-zinc-900/95 space-y-3">
-                <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-                  <div className="text-xs font-mono font-extrabold uppercase text-blue-700 dark:text-blue-300">
-                    LIVE GEMINI 3.8 FLASH LEAST-PRIVILEGE IAM REFACTORING PLAN ({iamAiPlan.latencyMs}ms)
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                        iamAiPlan.isLiveLlm
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                      }`}
+                    >
+                      {iamAiPlan.isLiveLlm
+                        ? `LIVE GEMINI LLM (${iamAiPlan.executionMode})`
+                        : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                    </span>
+                    <span className="text-xs font-mono font-extrabold uppercase text-blue-700 dark:text-blue-300">
+                      {iamAiPlan.modelUsed} · LEAST-PRIVILEGE IAM REFACTORING PLAN ({iamAiPlan.latencyMs}ms)
+                    </span>
+                    {iamAiPlan.tokenUsage?.totalTokens > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                        Tokens: {iamAiPlan.tokenUsage.totalTokens}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => copyText(iamAiPlan.markdown)}
-                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-[11px] font-mono font-bold cursor-pointer"
-                  >
-                    Copy Full Plan
-                  </button>
+                  {iamAiPlan.markdown && (
+                    <button
+                      type="button"
+                      onClick={() => copyText(iamAiPlan.markdown)}
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      Copy Full Plan
+                    </button>
+                  )}
                 </div>
-                <FormattedMarkdown text={iamAiPlan.markdown} onCopy={copyText} />
+                {iamAiPlan.isLiveLlm && iamAiPlan.markdown ? (
+                  <FormattedMarkdown text={iamAiPlan.markdown} onCopy={copyText} />
+                ) : (
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs font-mono">
+                    <div className="font-extrabold text-rose-600 dark:text-rose-300">
+                      Live Gemini Inference Did Not Complete (Zero Synthetic Fallback Policy)
+                    </div>
+                    {(iamAiPlan.diagnostics || []).map((d, i) => (
+                      <div key={i} className="text-zinc-700 dark:text-zinc-300">
+                        • {d}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

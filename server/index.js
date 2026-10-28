@@ -22021,14 +22021,252 @@ app.delete('/api/ai-vault/clear', (req, res) => {
   });
 });
 
+/**
+ * Unified Dual-Engine Live Gemini Executor (100% Real LLM Inference · Zero Synthetic Fallback)
+ * - Engine 1: Google AI Studio API Key (`generativelanguage.googleapis.com/v1beta`) via Sealed AES-256-GCM RAM Vault
+ * - Engine 2: Keyless Google Cloud Vertex AI (`aiplatform.googleapis.com/v1/projects/:id/locations/global`) via active GCP OAuth2 Bearer Token
+ */
+async function executeLiveDualEngineGemini({
+  projectId,
+  token = null,
+  model = 'gemini-3.8-flash',
+  preferredProvider = 'AUTO', // 'AUTO' | 'VERTEX_AI_OAUTH' | 'AI_STUDIO_KEY'
+  encryptedKeyBase64 = '',
+  inlineApiKey = '',
+  promptText = '',
+  temperature = 0.2,
+  maxOutputTokens = 2048,
+  timeoutMs = 45000,
+}) {
+  const t0 = Date.now();
+  const rawModel = String(model || 'gemini-3.8-flash').trim();
+  const isProRequested = rawModel.includes('pro');
+  const selectedModel = isProRequested ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
+  const baseCandidates = isProRequested
+    ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
+    : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
+  const candidateModels = Array.from(
+    new Set([rawModel, ...baseCandidates].filter(Boolean))
+  );
+
+  // Unwrap optional RSA-OAEP-256 wire envelope or inline API key into AES-256-GCM Server RAM Vault
+  if (encryptedKeyBase64) {
+    try {
+      const decryptedBuf = crypto.privateDecrypt(
+        {
+          key: AI_VAULT_RSA_KEYPAIR.privateKey,
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+          oaepHash: 'sha256',
+        },
+        Buffer.from(String(encryptedKeyBase64), 'base64')
+      );
+      const unwrapped = JSON.parse(decryptedBuf.toString('utf8'));
+      const unwrappedKey = String(unwrapped.apiKey || '').trim();
+      if (unwrappedKey.length >= 12) {
+        encryptApiKeyToMemory(
+          unwrappedKey,
+          selectedModel,
+          `RSA-OAEP-256 Browser Ciphertext (${AI_VAULT_RSA_FINGERPRINT}) -> AES-256-GCM Server RAM`
+        );
+      }
+    } catch {
+      // ignore invalid RSA envelope
+    }
+  } else if (inlineApiKey && String(inlineApiKey).trim().length >= 12) {
+    encryptApiKeyToMemory(
+      String(inlineApiKey).trim(),
+      selectedModel,
+      'Local Loopback -> AES-256-GCM Server RAM'
+    );
+  }
+
+  let resolvedToken = token;
+  if (!resolvedToken) {
+    try {
+      const authObj = await getLocalOrMetadataAccessToken();
+      resolvedToken = authObj?.token || null;
+    } catch {
+      resolvedToken = null;
+    }
+  }
+
+  let textOut = null;
+  let resolvedModelId = null;
+  let executionMode = 'NO_LIVE_LLM_AVAILABLE';
+  let isLiveLlm = false;
+  let engineUsed = null;
+  let tokenUsage = null;
+  let finishReason = null;
+  const diagnostics = [];
+
+  const sealedApiKey = decryptApiKeyFromMemory();
+
+  // ==========================================================================
+  // ENGINE 1: GOOGLE AI STUDIO API KEY (`generativelanguage.googleapis.com`)
+  // ==========================================================================
+  if (preferredProvider !== 'VERTEX_AI_OAUTH') {
+    if (sealedApiKey) {
+      for (const cand of candidateModels) {
+        try {
+          const gRes = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+              cand
+            )}:generateContent?key=${encodeURIComponent(sealedApiKey)}`,
+            {
+              contents: [{ role: 'user', parts: [{ text: promptText }] }],
+              generationConfig: {
+                temperature,
+                maxOutputTokens,
+              },
+            },
+            { timeout: timeoutMs }
+          );
+          const candidateObj = gRes.data?.candidates?.[0] || {};
+          const parts = candidateObj?.content?.parts || [];
+          const visibleParts = parts.filter(
+            (p) => !p.thought && typeof p.text === 'string'
+          );
+          const extracted = (visibleParts.length > 0 ? visibleParts : parts)
+            .map((p) => p.text)
+            .filter(Boolean)
+            .join('\n');
+          if (extracted) {
+            textOut = extracted;
+            resolvedModelId = cand;
+            executionMode = 'LIVE_GOOGLE_AI_STUDIO_API';
+            isLiveLlm = true;
+            finishReason = candidateObj.finishReason || 'STOP';
+            const usage = gRes.data?.usageMetadata || {};
+            tokenUsage = {
+              promptTokens: usage.promptTokenCount || 0,
+              outputTokens: usage.candidatesTokenCount || 0,
+              thoughtTokens: usage.thoughtsTokenCount || 0,
+              totalTokens: usage.totalTokenCount || 0,
+            };
+            engineUsed = `Live Google AI Studio API (${cand} · Sealed AES-256-GCM RAM Key ${
+              encryptedAiStudioVault.maskedKey || 'AIza••••'
+            })`;
+            diagnostics.push(
+              `[AI_STUDIO_SUCCESS] Generated live response via generativelanguage.googleapis.com (${cand}, ${tokenUsage.totalTokens} tokens).`
+            );
+            break;
+          }
+        } catch (gErr) {
+          const errMsg =
+            gErr.response?.data?.error?.message || gErr.message || 'Unknown error';
+          diagnostics.push(`[AI_STUDIO_${cand}] ${errMsg}`);
+        }
+      }
+    } else {
+      diagnostics.push(
+        '[AI_STUDIO_VAULT] No Google AI Studio API Key (AIzaSy...) is sealed in the RAM Vault.'
+      );
+    }
+  }
+
+  // ==========================================================================
+  // ENGINE 2: KEYLESS GOOGLE CLOUD VERTEX AI (`aiplatform.googleapis.com/locations/global`)
+  // ==========================================================================
+  if (!textOut && preferredProvider !== 'AI_STUDIO_KEY' && resolvedToken && projectId) {
+    const encProj = encodeURIComponent(projectId);
+    for (const cand of candidateModels) {
+      try {
+        const vertexUrl = `https://aiplatform.googleapis.com/v1/projects/${encProj}/locations/global/publishers/google/models/${encodeURIComponent(
+          cand
+        )}:generateContent`;
+        const vRes = await gcpFetch(vertexUrl, resolvedToken, projectId, {
+          method: 'POST',
+          body: {
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens,
+              thinkingConfig: {
+                thinkingBudget: isProRequested ? 512 : 128,
+              },
+            },
+          },
+          timeout: timeoutMs,
+        });
+        const candidateObj = vRes?.candidates?.[0] || {};
+        const parts = candidateObj?.content?.parts || [];
+        const visibleParts = parts.filter(
+          (p) => !p.thought && typeof p.text === 'string'
+        );
+        const extracted = (visibleParts.length > 0 ? visibleParts : parts)
+          .map((p) => p.text)
+          .filter(Boolean)
+          .join('\n');
+        if (extracted) {
+          textOut = extracted;
+          resolvedModelId = cand;
+          executionMode = 'LIVE_VERTEX_AI_OAUTH';
+          isLiveLlm = true;
+          finishReason = candidateObj.finishReason || 'STOP';
+          const usage = vRes?.usageMetadata || {};
+          tokenUsage = {
+            promptTokens: usage.promptTokenCount || 0,
+            outputTokens: usage.candidatesTokenCount || 0,
+            thoughtTokens: usage.thoughtsTokenCount || 0,
+            totalTokens: usage.totalTokenCount || 0,
+          };
+          engineUsed = `Live Google Cloud Vertex AI (aiplatform.googleapis.com/locations/global · ${cand} · Keyless GCP OAuth2)`;
+          diagnostics.push(
+            `[VERTEX_AI_SUCCESS] Generated live keyless response via aiplatform.googleapis.com/locations/global (${cand}, ${tokenUsage.totalTokens} tokens).`
+          );
+          break;
+        }
+      } catch (vErr) {
+        const errMsg =
+          vErr.response?.data?.error?.message || vErr.message || 'Vertex AI call failed';
+        diagnostics.push(`[VERTEX_AI_${cand}] ${errMsg}`);
+        if (
+          vErr.response?.status === 403 ||
+          String(errMsg).includes('has not been used in project') ||
+          String(errMsg).includes('is disabled')
+        ) {
+          break;
+        }
+      }
+    }
+  }
+
+  return {
+    ok: Boolean(isLiveLlm && textOut),
+    projectId,
+    selectedModel,
+    resolvedModelId,
+    executionMode,
+    isLiveLlm,
+    engineUsed,
+    finishReason,
+    latencyMs: Date.now() - t0,
+    tokenUsage,
+    diagnostics,
+    text: textOut,
+    aiVaultStatus: {
+      aiStudioVaultConfigured: Boolean(
+        encryptedAiStudioVault.ciphertextHex || process.env.GEMINI_API_KEY
+      ),
+      aiStudioMaskedKey:
+        encryptedAiStudioVault.maskedKey ||
+        (process.env.GEMINI_API_KEY ? 'ENV_GEMINI_API_KEY' : null),
+      aiStudioKeyFingerprint: encryptedAiStudioVault.keyFingerprint || null,
+    },
+  };
+}
+
 app.post('/api/project/:id/ai-vault/ask', async (req, res) => {
   const projectId = req.params.id;
   const {
     prompt = '',
     telemetrySummary = {},
     model: requestedModel,
+    preferredProvider = 'AUTO',
+    encryptedKeyBase64 = '',
+    inlineApiKey = '',
   } = req.body || {};
-  const apiKey = decryptApiKeyFromMemory();
+
   const primaryModel =
     (requestedModel && String(requestedModel).trim()) ||
     encryptedAiStudioVault.model ||
@@ -22039,124 +22277,47 @@ Live Project Telemetry Snapshot:
 ${JSON.stringify(telemetrySummary, null, 2)}
 Provide concise, actionable, production-grade guidance with exact gcloud CLI commands or JSON/Terraform snippets where helpful.`;
 
-  if (apiKey) {
-    const candidateModels = Array.from(
-      new Set([
-        primaryModel,
-        'gemini-3.8-flash',
-        'gemini-3.1-pro',
-      ])
-    );
+  const { token } = await resolveRequestAuth(req).catch(() => ({ token: null }));
+  const llmRes = await executeLiveDualEngineGemini({
+    projectId,
+    token,
+    model: primaryModel,
+    preferredProvider,
+    encryptedKeyBase64,
+    inlineApiKey,
+    promptText: `${systemContext}\n\nEngineer Request: ${prompt}`,
+    temperature: 0.25,
+    maxOutputTokens: 4096,
+    timeoutMs: 45000,
+  });
 
-    let lastErr = null;
-    for (const candidateModel of candidateModels) {
-      try {
-        const geminiRes = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-            candidateModel
-          )}:generateContent?key=${encodeURIComponent(apiKey)}`,
-          {
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  { text: `${systemContext}\n\nEngineer Request: ${prompt}` },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.25,
-              maxOutputTokens: 8192,
-            },
-          },
-          { timeout: 60000 }
-        );
-
-        const candidate = geminiRes.data?.candidates?.[0] || {};
-        const rawParts = candidate?.content?.parts || [];
-        const visibleParts = rawParts.filter(
-          (p) => !p.thought && typeof p.text === 'string'
-        );
-        const answer =
-          (visibleParts.length > 0 ? visibleParts : rawParts)
-            .map((p) => p.text)
-            .filter(Boolean)
-            .join('\n') || 'No response generated.';
-        const usage = geminiRes.data?.usageMetadata || {};
-
-        return res.json({
-          ok: true,
-          source:
-            candidateModel === primaryModel
-              ? `LIVE_GEMINI_API (${primaryModel})`
-              : `LIVE_GEMINI_API (${primaryModel} → routed via ${candidateModel})`,
-          cipherUsed: 'AES-256-GCM Transient Decrypt',
-          finishReason: candidate.finishReason || 'STOP',
-          tokenUsage: {
-            promptTokens: usage.promptTokenCount || 0,
-            outputTokens: usage.candidatesTokenCount || 0,
-            thoughtTokens: usage.thoughtsTokenCount || 0,
-            totalTokens: usage.totalTokenCount || 0,
-          },
-          answer,
-        });
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-
+  if (!llmRes.isLiveLlm || !llmRes.text) {
     return res.status(400).json({
+      ok: false,
+      isLiveLlm: false,
+      executionMode: llmRes.executionMode,
+      diagnostics: llmRes.diagnostics,
       error:
-        lastErr?.response?.data?.error?.message ||
-        lastErr?.message ||
-        'Google AI Studio API call failed — verify your API key in the AES-256-GCM Vault.',
+        llmRes.diagnostics[llmRes.diagnostics.length - 1] ||
+        'Live Gemini API call did not complete (Zero Synthetic Fallback). Ensure Vertex AI API is enabled or seal a Google AI Studio key.',
     });
   }
 
-  // Deterministic Local SRE Synthesis Fallback when no AI Studio key is configured yet
-  const vms = telemetrySummary.vmsCount ?? 0;
-  const runs = telemetrySummary.cloudRunCount ?? 0;
-  const buckets = telemetrySummary.bucketsCount ?? 0;
-  const burnHr = Number(telemetrySummary.hourlyBurnUsd || 0).toFixed(4);
-  const realBucketNames = (telemetrySummary.buckets || [])
-    .map((b) => b.name)
-    .filter(Boolean);
-  const sampleBucket = realBucketNames[0] || `${projectId}-data-vault`;
-  const realRunNames = (telemetrySummary.cloudRun || [])
-    .map((r) => r.name)
-    .filter(Boolean);
-  const sampleRun = realRunNames[0] || `${projectId}-api`;
-
-  const fallbackAnswer = `###  Action Required: No Google AI Studio API Key Sealed Yet (Target Engine: \`${primaryModel}\`)
-You clicked **Ask \`${primaryModel}\`** while the **AES-256-GCM RAM Vault** is empty, so CloudPulse ran the **Offline Deterministic Rule Engine** instead of calling Google AI Studio.
-
-####  How to Activate Live \`${primaryModel}\` / \`gemini-3.1-pro\` in 15 Seconds:
-1. **Get or Copy a Key**: Open **[https://aistudio.google.com/apikey](https://aistudio.google.com/apikey)** and copy your \`AIzaSy...\` API key.
-2. **Paste into the Vault Input Above**: Paste the key into the password box labeled *"Paste Google AI Studio Key (AIzaSy...)"*.
-3. **Seal in RAM (or Just Click Ask)**: Click **\` Seal in RAM Vault\`** (or simply paste the key and click **\`Ask ${primaryModel}\`** — CloudPulse will auto-seal it in AES-256-GCM RAM and run your live query immediately!).
-
----
-
-###  Offline Deterministic SRE Audit Preview (Project: \`${projectId}\`)
-1. **Live Footprint Snapshot**:
-   - **Compute VMs**: \`${vms}\` · **Cloud Run Services**: \`${runs}\` · **Storage Buckets**: \`${buckets}\` (${realBucketNames.length > 0 ? realBucketNames.map((n) => `\`gs://${n}\``).join(', ') : 'none'})
-   - **Live Hourly Burn**: \`$${burnHr}/hr\` (\`~$${(Number(burnHr) * 730).toFixed(2)}/mo\`)
-2. **Immediate Deterministic Engineering Actions for \`${projectId}\`**:
-   - **Cloud Storage Compliance (${realBucketNames.length > 0 ? `\`gs://${sampleBucket}\`` : 'Your Buckets'})**: Enforce Public Access Prevention, Uniform Bucket-Level Access, and a minimum \`7d\` Soft-Delete Ransomware Air-Gap:
-     \`\`\`bash
-     gcloud storage buckets update gs://${sampleBucket} --public-access-prevention --uniform-bucket-level-access --soft-delete-duration=7d --project=${projectId}
-     \`\`\`
-   - **Serverless Cold-Start & FinOps (${realRunNames.length > 0 ? `\`${sampleRun}\`` : 'Cloud Run'})**: Enable Startup CPU Boost and scale-to-zero request billing:
-     \`\`\`bash
-     gcloud run services update ${sampleRun} --cpu-boost --min-instances=0 --billing=request --project=${projectId}
-     \`\`\``;
-
   return res.json({
     ok: true,
-    missingApiKey: true,
-    source: `DETERMINISTIC_SRE_ENGINE (Waiting for API Key to unlock ${primaryModel})`,
-    cipherUsed: 'Local Telemetry Analyzer (Zero-Key Fallback)',
-    answer: fallbackAnswer,
+    isLiveLlm: true,
+    executionMode: llmRes.executionMode,
+    resolvedModelId: llmRes.resolvedModelId,
+    source: llmRes.engineUsed,
+    cipherUsed:
+      llmRes.executionMode === 'LIVE_GOOGLE_AI_STUDIO_API'
+        ? 'AES-256-GCM Transient Decrypt'
+        : 'Keyless Google Cloud OAuth2 (Vertex AI Global)',
+    finishReason: llmRes.finishReason || 'STOP',
+    latencyMs: llmRes.latencyMs,
+    tokenUsage: llmRes.tokenUsage,
+    diagnostics: llmRes.diagnostics,
+    answer: llmRes.text,
   });
 });
 
@@ -28028,13 +28189,14 @@ app.post(
   }
 );
 
-// 2D. POST /api/project/:projectId/wave8/war-room/ai-sre-commander -> Gemini 3.8 Flash & Gemini 3.1 Pro Autonomous SRE Incident Commander
+// 2D. POST /api/project/:projectId/wave8/war-room/ai-sre-commander -> 100% Real Gemini 3.8 Flash & Gemini 3.1 Pro Autonomous SRE Incident Commander (Zero Synthetic Fallback)
 app.post(
   '/api/project/:projectId/wave8/war-room/ai-sre-commander',
   async (req, res) => {
     const { projectId } = req.params;
     const {
       model = 'gemini-3.8-flash',
+      preferredProvider = 'AUTO',
       prompt = '',
       sloBurnRadar = {},
       clusters = [],
@@ -28050,7 +28212,7 @@ app.post(
       }
 
       const topClustersText = (clusters || [])
-        .slice(0, 4)
+        .slice(0, 6)
         .map(
           (c) =>
             `- [${c.severity}] ${c.clusterTitle} (${c.count} events on ${(
@@ -28059,47 +28221,70 @@ app.post(
         )
         .join('\n');
 
-      const synthesisMarkdown = `### Principal SRE Incident Commander Briefing (\`${selectedModel}\` · Project \`${projectId}\`)
+      const promptText = `You are the CloudPulse 2026 Principal SRE Incident Commander (${selectedModel}) protecting Google Cloud project "${projectId}".
+Analyze the following 100% live Google Cloud Monitoring & Cloud Logging telemetry and produce a concise, actionable Markdown Incident Response Briefing & Runbook:
 
-**1. Live SLO & Error-Budget Verdict**
-- **Alert State:** \`${sloBurnRadar.alertStatus || 'NOMINAL_WITHIN_SLO'}\` (\`1h Fast-Burn = ${sloBurnRadar.fastBurn1h ?? 0}x\` vs \`14.4x\` Page cap · \`6h Slow-Burn = ${sloBurnRadar.slowBurn6h ?? 0}x\` vs \`6.0x\` Ticket cap)
-- **Remaining 30-Day Budget:** \`${sloBurnRadar.budgetRemainingPct ?? 100}%\` (\`${sloBurnRadar.budgetMinutesRemaining ?? 43.2} mins\` remaining at \`${sloBurnRadar.sloTargetPct ?? 99.9}%\` target)
-${
-  prompt
-    ? `- **Operator Directive Analyzed:** *"${String(prompt).trim()}"*\n`
-    : ''
-}
-**2. Correlated Root-Cause Telemetry (` +
-        `logging.googleapis.com/v2` +
-        `)**
+Operator Directive: ${prompt || 'Diagnose live SLO error-budget posture and active log error clusters'}
+Live SLO & Error-Budget Burn Radar: ${JSON.stringify(sloBurnRadar)}
+Correlated Cloud Logging Error Clusters:
 ${topClustersText || '- Zero active error clusters detected across Cloud Logging.'}
 
-**3. Immediate 3-Step Autonomous Mitigation Runbook**
-1. **Eliminate Container OOM (Exit 137) & Cold-Start 504s:** Ensure Cloud Run services run with \`--cpu-boost\`, \`--memory=2Gi\`, and \`--min-instances=1\` for latency-critical ingress paths.
-2. **Enforce Multi-Window Alerting & Uptime Probes:** Keep at least 1 Global HTTPS Uptime Check (\`60s\` interval) and 1 \`14.4x\` Fast-Burn Alert Policy active in \`monitoring.googleapis.com/v3\`.
-3. **Zero-Message-Loss Eventing & VPC-SC Isolation:** Route all asynchronous retries into a companion \`-dlq\` Dead-Letter Topic (\`maxDeliveryAttempts=5\`) and lock all regional subnets to \`privateIpGoogleAccess=true\`.
+Structure your Markdown response with:
+### 1. Live SLO & Error-Budget Verdict (${projectId})
+### 2. Correlated Root-Cause Telemetry Analysis
+### 3. Immediate 3-Step Autonomous Mitigation Runbook (with \`\`\`bash gcloud commands)`;
 
-\`\`\`bash
-# 1-Tap Principal SRE Verification & Mitigation CLI
-gcloud logging read 'severity>=ERROR' --project=${projectId} --limit=10 --format="table(timestamp,severity,resource.type,protoPayload.methodName)"
-gcloud monitoring uptime list-configs --project=${projectId}
-\`\`\``;
+      const llmRes = await executeLiveDualEngineGemini({
+        projectId,
+        token,
+        model: selectedModel,
+        preferredProvider,
+        promptText,
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+        timeoutMs: 45000,
+      });
+
+      if (!llmRes.isLiveLlm || !llmRes.text) {
+        return res.json({
+          ok: false,
+          projectId,
+          isLiveLlm: false,
+          executionMode: llmRes.executionMode,
+          modelUsed: null,
+          resolvedModelId: null,
+          latencyMs: Date.now() - t0,
+          tokenUsage: null,
+          diagnostics: llmRes.diagnostics,
+          synthesisMarkdown: null,
+          receipt: null,
+          message:
+            'Live Gemini API call did not complete (Zero Synthetic Fallback).',
+        });
+      }
 
       const receipt = appendSreRunbookReceipt(projectId, {
         timestamp: new Date().toISOString(),
-        action: 'AI_SRE_COMMANDER_SYNTHESIS',
-        target: `${selectedModel} (${projectId})`,
-        details: `Generated Principal SRE Incident Commander briefing and remediation runbook using ${selectedModel}.`,
+        action: `AI_SRE_COMMANDER_${llmRes.executionMode}`,
+        target: `${llmRes.resolvedModelId || selectedModel} (${projectId})`,
+        details: `Generated live Principal SRE Incident Commander briefing via ${llmRes.engineUsed} (${
+          llmRes.tokenUsage?.totalTokens || 0
+        } tokens).`,
       });
 
       return res.json({
         ok: true,
         projectId,
-        modelUsed: selectedModel,
+        isLiveLlm: true,
+        executionMode: llmRes.executionMode,
+        resolvedModelId: llmRes.resolvedModelId,
+        modelUsed: llmRes.engineUsed,
         latencyMs: Date.now() - t0,
-        synthesisMarkdown,
+        tokenUsage: llmRes.tokenUsage,
+        diagnostics: llmRes.diagnostics,
+        synthesisMarkdown: llmRes.text,
         receipt,
-        message: `Synthesized Principal SRE Incident Briefing with ${selectedModel}!`,
+        message: `Synthesized live Principal SRE Incident Briefing via ${llmRes.resolvedModelId || selectedModel}!`,
       });
     } catch (err) {
       return res.status(500).json({
@@ -43613,38 +43798,20 @@ app.post(
 
         let liveModelResponseText = null;
         if (!injectionDetected) {
-          try {
-            const vertexRes = await gcpApiRequest({
-              method: 'POST',
-              url: `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
-                projectId
-              )}/locations/global/publishers/google/models/${encodeURIComponent(
-                selectedModel === 'gemini-3.1-pro'
-                  ? 'gemini-3.1-pro-preview'
-                  : selectedModel.startsWith('gemini')
-                  ? selectedModel
-                  : 'gemini-3.8-flash'
-              )}:generateContent`,
-              token,
-              quotaProject: projectId,
-              timeout: 7000,
-              data: {
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: redactedPrompt }],
-                  },
-                ],
-                generationConfig: { maxOutputTokens: 160, temperature: 0.2 },
-              },
-            });
-            liveModelResponseText =
-              vertexRes?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-          } catch (vertexErr) {
-            liveModelResponseText = `Vertex AI endpoint (${selectedModel}) returned: ${
-              vertexErr.response?.data?.error?.message || vertexErr.message
-            }`;
-          }
+          const llmRes = await executeLiveDualEngineGemini({
+            projectId,
+            token,
+            model: selectedModel,
+            promptText: redactedPrompt,
+            temperature: 0.2,
+            maxOutputTokens: 256,
+            timeoutMs: 25000,
+          });
+          liveModelResponseText =
+            llmRes.text ||
+            (llmRes.diagnostics?.length
+              ? llmRes.diagnostics[llmRes.diagnostics.length - 1]
+              : null);
         }
 
         const measuredLatencyMs = Math.max(1, Date.now() - t0);
@@ -50993,12 +51160,16 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
 
 // 5. POST /api/project/:projectId/mcp/agent-chat
 // Executes live Google Cloud Remote MCP tools (readOnlyHint=true) and synthesizes
-// the grounded response with Vertex AI Gemini 3.8 Flash
+// the grounded response via Dual-Engine Live Gemini (Keyless Vertex AI OAuth2 + Google AI Studio Vault — Zero Synthetic Fallback)
 app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
   const { projectId } = req.params;
   const {
     prompt = 'Audit my live project storage buckets, BigQuery datasets, billing status, and recent audit logs via Google Cloud Remote MCP servers and recommend next steps.',
     region = 'us-central1',
+    model = 'gemini-3.8-flash',
+    preferredProvider = 'AUTO',
+    encryptedKeyBase64 = '',
+    inlineApiKey = '',
   } = req.body || {};
   const t0 = Date.now();
 
@@ -51108,7 +51279,7 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
       })
     );
 
-    // 2. Call Vertex AI Gemini 3.8 Flash with the live MCP tool outputs
+    // 2. Call Live Dual-Engine Gemini (Keyless Vertex AI OAuth2 locations/global + AI Studio RAM Vault — Zero Synthetic Fallback)
     const groundingContext = mcpTraces
       .map(
         (t) =>
@@ -51116,127 +51287,47 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
       )
       .join('\n\n');
 
-    let geminiSynthesis = '';
-    let geminiModelUsed = 'gemini-3.8-flash (Vertex AI + Official MCP Grounding)';
-    try {
-      const vertexUrl = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/gemini-3.8-flash:generateContent`;
-      const vertexRes = await gcpApiRequest({
-        method: 'POST',
-        url: vertexUrl,
-        token,
-        quotaProject: projectId,
-        timeout: 16000,
-        data: {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: `You are the CloudPulse 2026 Principal SRE & Cloud Architect Agent connected to Google Cloud's Official Remote MCP Servers (JSON-RPC 2.0) for project "${projectId}".\n\nUser Request:\n${prompt}\n\nLive JSON-RPC 2.0 MCP Tool Execution Ground Truth:\n${groundingContext}\n\nStructure your response in clean Markdown with:\n1. ### Executive Estate & FinOps Summary\n2. ### Live Findings by Official MCP Server\n3. ### Recommended Remediation & Next-Step Commands (with \`\`\`bash code blocks)`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 2048,
-          },
-        },
-      });
-      geminiSynthesis =
-        vertexRes?.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || '')
-          .join('') || '';
-    } catch {
-      // Fallback deterministic synthesis from the live MCP tool outputs if Vertex AI API is not enabled in region
-      geminiModelUsed = 'Deterministic MCP Telemetry Synthesizer (Live JSON-RPC Ground Truth)';
-    }
+    const promptText = `You are the CloudPulse 2026 Principal SRE & Cloud Architect Agent connected to Google Cloud's Official Remote MCP Servers (JSON-RPC 2.0) for project "${projectId}".
 
-    if (!geminiSynthesis) {
-      const okCount = mcpTraces.filter((t) => t.ok).length;
-      const billingTrace = mcpTraces.find((t) => t.serverId === 'cloudbilling');
-      const storageTrace = mcpTraces.find((t) => t.serverId === 'storage');
-      const bqTrace = mcpTraces.find((t) => t.serverId === 'bigquery');
-      const logTrace = mcpTraces.find((t) => t.serverId === 'logging');
-      const docTrace = mcpTraces.find((t) => t.serverId === 'developerknowledge');
+User Request:
+${prompt}
 
-      const billingInfo = billingTrace?.parsedOutput || {};
-      const bucketsList =
-        storageTrace?.parsedOutput?.items ||
-        storageTrace?.parsedOutput?.buckets ||
-        [];
-      const datasetsList =
-        bqTrace?.parsedOutput?.datasetIds ||
-        bqTrace?.parsedOutput?.datasets ||
-        (Array.isArray(bqTrace?.parsedOutput) ? bqTrace.parsedOutput : []);
-      const logEntries = logTrace?.parsedOutput?.entries || [];
-      const docResults = docTrace?.parsedOutput?.results || [];
+Live JSON-RPC 2.0 MCP Tool Execution Ground Truth:
+${groundingContext}
 
-      geminiSynthesis = [
-        `### 1. Executive Estate & FinOps Summary (\`${projectId}\`)`,
-        `- **Official MCP JSON-RPC 2.0 Coverage**: **${okCount} / ${mcpTraces.length}** Google-managed \`*.googleapis.com/mcp\` endpoints responded live.`,
-        `- **Cloud Billing Status (\`cloudbilling.googleapis.com/mcp\`)**: Billing Enabled = **\`${Boolean(
-          billingInfo.billingEnabled
-        )}\`** · Account = **\`${
-          billingInfo.billingAccountName || 'Linked Billing Account'
-        }\`** (${billingTrace?.latencyMs || 0}ms).`,
-        `- **Cloud Storage Posture (\`storage.googleapis.com/storage/mcp\`)**: Discovered **${
-          Array.isArray(bucketsList) ? bucketsList.length : 0
-        }** bucket(s)${
-          Array.isArray(bucketsList) && bucketsList.length > 0
-            ? ` (${bucketsList
-                .slice(0, 5)
-                .map((b) => `\`${b.name || b.id || b}\``)
-                .join(', ')})`
-            : ''
-        } (${storageTrace?.latencyMs || 0}ms).`,
-        `- **BigQuery Lakehouse (\`bigquery.googleapis.com/mcp\`)**: Discovered **${
-          Array.isArray(datasetsList) ? datasetsList.length : 0
-        }** dataset(s)${
-          Array.isArray(datasetsList) && datasetsList.length > 0
-            ? ` (${datasetsList
-                .slice(0, 6)
-                .map((d) => `\`${typeof d === 'string' ? d : d.datasetId || d.id || JSON.stringify(d)}\``)
-                .join(', ')})`
-            : ''
-        } (${bqTrace?.latencyMs || 0}ms).`,
-        `- **Cloud Audit & Operations Logs (\`logging.googleapis.com/mcp\`)**: Sampled **${
-          Array.isArray(logEntries) ? logEntries.length : 0
-        }** recent log entries (${logTrace?.latencyMs || 0}ms).`,
-        '',
-        `### 2. Grounded Google Developer Knowledge (\`developerknowledge.googleapis.com/mcp\`)`,
-        ...(Array.isArray(docResults) && docResults.length > 0
-          ? docResults
-              .slice(0, 3)
-              .map(
-                (doc, idx) =>
-                  `${idx + 1}. **${
-                    doc.title || doc.parent || `Official Doc Reference #${idx + 1}`
-                  }** — ${String(doc.content || doc.snippet || '')
-                    .replace(/\s+/g, ' ')
-                    .slice(0, 220)}...`
-              )
-          : [
-              `- Queried \`developerknowledge.googleapis.com/mcp\` (${docTrace?.latencyMs || 0}ms): Enforce least-privilege IAM roles and \`readOnlyHint=true\` annotations for autonomous MCP agents.`,
-            ]),
-        '',
-        `### 3. Recommended Follow-Up Commands`,
-        '```bash',
-        `# Verify active MCP-managed services and IAM policy bindings on ${projectId}`,
-        `gcloud services list --enabled --project=${projectId} --filter="name:(run OR bigquery OR storage OR aiplatform)"`,
-        `gcloud projects get-iam-policy ${projectId} --format="table(bindings.role,bindings.members)"`,
-        '```',
-      ].join('\n');
-    }
+Structure your response in clean Markdown with:
+1. ### Executive Estate & FinOps Summary (${projectId})
+2. ### Live Findings by Official MCP Server
+3. ### Recommended Remediation & Next-Step Commands (with \`\`\`bash code blocks)`;
+
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model,
+      preferredProvider,
+      encryptedKeyBase64,
+      inlineApiKey,
+      promptText,
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
 
     return res.json({
-      ok: true,
+      ok: llmRes.isLiveLlm,
       projectId,
       prompt,
-      modelUsed: geminiModelUsed,
+      model: llmRes.selectedModel,
+      resolvedModelId: llmRes.resolvedModelId,
+      executionMode: llmRes.executionMode,
+      isLiveLlm: llmRes.isLiveLlm,
+      modelUsed: llmRes.engineUsed,
+      tokenUsage: llmRes.tokenUsage,
+      diagnostics: llmRes.diagnostics,
+      aiVaultStatus: llmRes.aiVaultStatus,
       totalWallTimeMs: Date.now() - t0,
       mcpTraces,
-      synthesis: geminiSynthesis,
+      synthesis: llmRes.text,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -52314,96 +52405,50 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
       .join('\n')
       .slice(0, 1500);
 
-    let briefingMarkdown = '';
-    let engineUsed = 'Vertex AI Gemini 3.8 Flash + Autopilot Telemetry Grounding';
-
-    try {
-      const vertexRes = await axios.post(
-        `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
+    const requestedModel = String(req.body?.model || 'gemini-3.8-flash').trim();
+    const promptText = [
+      `You are the CloudPulse 2026 Wave 12 Flight Director for Google Cloud project "${projectId}".`,
+      `User Mission Brief: ${missionBrief}`,
+      `Live Autopilot Telemetry (SHA-256: ${autopilotState.stateSha256}):`,
+      JSON.stringify(
         {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: [
-                    `You are the CloudPulse 2026 Wave 12 Flight Director for Google Cloud project "${projectId}".`,
-                    `User Mission Brief: ${missionBrief}`,
-                    `Live Autopilot Telemetry (SHA-256: ${autopilotState.stateSha256}):`,
-                    JSON.stringify(
-                      {
-                        flightReadinessScore: autopilotState.flightReadinessScore,
-                        inventorySummary: inv,
-                        vectors: autopilotState.vectors,
-                        maneuvers: (autopilotState.maneuvers || []).slice(0, 5),
-                      },
-                      null,
-                      2
-                    ),
-                    `Official Google Developer Knowledge MCP Context:\n${docText}`,
-                    'Respond in rich Markdown with: ### 1. Flight Readiness & Telemetry Executive Table, ### 2. Prioritized Autopilot Maneuvers, and ### 3. Copy-Ready gcloud Remediation Commands.',
-                  ].join('\n\n'),
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.15,
-            maxOutputTokens: 8192,
-            thinkingConfig: { thinkingBudget: 512 },
-          },
+          flightReadinessScore: autopilotState.flightReadinessScore,
+          inventorySummary: inv,
+          vectors: autopilotState.vectors,
+          maneuvers: (autopilotState.maneuvers || []).slice(0, 5),
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'x-goog-user-project': projectId,
-          },
-          timeout: 14000,
-        }
-      );
-      briefingMarkdown =
-        vertexRes.data?.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || '')
-          .join('') || '';
-    } catch {
-      engineUsed = 'Deterministic Flight Director Engine (Live GCP REST + MCP Ground Truth)';
-    }
+        null,
+        2
+      ),
+      docText ? `Official Google Developer Knowledge MCP Context:\n${docText}` : '',
+      'Respond in rich Markdown with: ### 1. Flight Readiness & Telemetry Executive Table, ### 2. Prioritized Autopilot Maneuvers, and ### 3. Copy-Ready gcloud Remediation Commands.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
 
-    if (!briefingMarkdown) {
-      briefingMarkdown = [
-        `### 1. Flight Readiness & Live Telemetry Matrix (\`${projectId}\`)`,
-        `| Telemetry Vector | Live Status | Metric | Score |`,
-        `| :--- | :--- | :--- | :--- |`,
-        ...(autopilotState.vectors || []).map(
-          (v) => `| **${v.label}** | \`${v.status}\` | ${v.metric} | **${v.score}/100** |`
-        ),
-        '',
-        `**Canonical State Merkle Digest (\`SHA-256\`)**: \`${autopilotState.stateSha256}\``,
-        '',
-        `### 2. Prioritized Autopilot Self-Healing Maneuvers (${(autopilotState.maneuvers || []).length})`,
-        ...(autopilotState.maneuvers || []).slice(0, 5).map(
-          (m, idx) =>
-            `${idx + 1}. **[${m.severity}] ${m.title}** — Target: \`${m.targetResource}\` (+${m.securityGainPts} Posture Pts · Est. Savings: \`$${m.estimatedMonthlySavingsUsd}/mo\`)`
-        ),
-        '',
-        `### 3. Copy-Ready \`gcloud\` Autopilot Flight Commands`,
-        '```bash',
-        ...(autopilotState.maneuvers || [])
-          .slice(0, 4)
-          .map((m) => `${m.cliEquivalent}`),
-        '```',
-      ].join('\n');
-    }
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: requestedModel,
+      promptText,
+      temperature: 0.15,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
 
     return res.json({
-      ok: true,
+      ok: llmRes.isLiveLlm,
       projectId,
-      engineUsed,
+      isLiveLlm: llmRes.isLiveLlm,
+      executionMode: llmRes.executionMode,
+      resolvedModelId: llmRes.resolvedModelId,
+      engineUsed: llmRes.engineUsed,
+      tokenUsage: llmRes.tokenUsage,
+      diagnostics: llmRes.diagnostics,
       latencyMs: Date.now() - t0,
       flightReadinessScore: autopilotState.flightReadinessScore,
       stateSha256: autopilotState.stateSha256,
-      briefingMarkdown,
+      briefingMarkdown: llmRes.text,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -53518,86 +53563,32 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
       },
     ];
 
-    let consensusMarkdown = '';
-    let engineUsed = 'OPTIMUS_DETERMINISTIC_SWARM_SYNTHESIZER';
+    const promptText = [
+      `You are the CloudPulse 2026 Wave 13 Optimus 3-Agent Autonomous Council Moderator for GCP project "${projectId}".`,
+      `Council Topic: "${councilTopic}"`,
+      `Live Project State SHA-256: ${autopilotState.stateSha256} (Flight Readiness Score: ${autopilotState.flightReadinessScore}/100)`,
+      `Agent 01 (FinOps Hawk): ${JSON.stringify(agents[0].findings)}`,
+      `Agent 02 (Zero-Trust Sentinel): ${JSON.stringify(agents[1].findings)}`,
+      `Agent 03 (SRE Reliability Prime): ${JSON.stringify(agents[2].findings)}`,
+      `Produce a concise, high-impact Markdown Consensus Resolution with:`,
+      `1. ### Optimus 3-Agent Executive Consensus Matrix (Markdown table comparing Agent, Score, Verdict, and Top Priority Action)`,
+      `2. ### Unified Architecture Resolution (3 bullet points reconciling cost, zero-trust security, and SRE reliability)`,
+      `3. ### Copy-Ready gcloud & bq Execution Runbook (fenced bash code block)`,
+      `Do not use any emojis.`,
+    ].join('\n');
 
-    try {
-      const vertexRes = await axios.post(
-        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
-        {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: [
-                    `You are the CloudPulse 2026 Wave 13 Optimus 3-Agent Autonomous Council Moderator for GCP project "${projectId}".`,
-                    `Council Topic: "${councilTopic}"`,
-                    `Live Project State SHA-256: ${autopilotState.stateSha256} (Flight Readiness Score: ${autopilotState.flightReadinessScore}/100)`,
-                    `Agent 01 (FinOps Hawk): ${JSON.stringify(agents[0].findings)}`,
-                    `Agent 02 (Zero-Trust Sentinel): ${JSON.stringify(agents[1].findings)}`,
-                    `Agent 03 (SRE Reliability Prime): ${JSON.stringify(agents[2].findings)}`,
-                    `Produce a concise, high-impact Markdown Consensus Resolution with:`,
-                    `1. ### Optimus 3-Agent Executive Consensus Matrix (Markdown table comparing Agent, Score, Verdict, and Top Priority Action)`,
-                    `2. ### Unified Architecture Resolution (3 bullet points reconciling cost, zero-trust security, and SRE reliability)`,
-                    `3. ### Copy-Ready gcloud & bq Execution Runbook (fenced bash code block)`,
-                    `Do not use any emojis.`,
-                  ].join('\n'),
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 8192,
-            thinkingConfig: { thinkingBudget: 512 },
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'x-goog-user-project': projectId,
-          },
-          timeout: 18000,
-        }
-      );
-      const text =
-        vertexRes.data?.candidates?.[0]?.content?.parts
-          ?.filter((p) => !p.thought)
-          ?.map((p) => p.text || '')
-          .join('\n') || '';
-      if (text.trim().length > 350) {
-        consensusMarkdown = text.trim();
-        engineUsed = 'VERTEX_AI_GEMINI_3_8_FLASH_COUNCIL';
-      }
-    } catch {
-      // Deterministic fallback below
-    }
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: req.body?.model || 'gemini-3.8-flash',
+      promptText,
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
 
-    if (!consensusMarkdown) {
-      consensusMarkdown = [
-        `### 1. Optimus 3-Agent Executive Consensus Matrix (\`${projectId}\`)`,
-        '',
-        `| Autonomous Agent | Score | Verdict | Primary Directive |`,
-        `| :--- | :--- | :--- | :--- |`,
-        `| **Agent 01 · FinOps Hawk** | \`${agents[0].score}/100\` | \`${agents[0].verdict}\` | Maintain zero orphan disk/IP waste & enforce GCS Autoclass |`,
-        `| **Agent 02 · Zero-Trust Sentinel** | \`${agents[1].score}/100\` | \`${agents[1].verdict}\` | Lock \`${inv.riskyFirewallsCount}\` open firewall(s) to IAP & harden \`${inv.unhardenedBucketsCount}\` bucket(s) |`,
-        `| **Agent 03 · SRE Reliability Prime** | \`${agents[2].score}/100\` | \`${agents[2].verdict}\` | Maintain multi-region BigQuery/GCS geo-standby & 7-day Soft-Delete |`,
-        '',
-        `### 2. Unified Architecture Resolution (Merkle Root \`${autopilotState.stateSha256.slice(0, 20)}...\`)`,
-        `- **Zero-Trust Perimeter Before Scale**: Restrict any world-open \`0.0.0.0/0\` management ports to Google Cloud IAP (\`35.235.240.0/20\`) and enforce \`publicAccessPrevention=enforced\` on all \`${inv.bucketsCount}\` Cloud Storage bucket(s).`,
-        `- **Scale-to-Zero & Storage Tiering**: Keep Cloud Run services on request-based billing (\`minInstanceCount=0\`) and enable GCS Autoclass so cold Lakehouse objects transition automatically to Nearline/Archive.`,
-        `- **Cryptographic Auditability**: Seal every remediation and cross-region failover inside the Wave 13 Ed25519 Black-Box Flight Recorder.`,
-        '',
-        `### 3. Copy-Ready \`gcloud\` & \`bq\` Consensus Runbook`,
-        '```bash',
-        ...(autopilotState.maneuvers || [])
-          .slice(0, 4)
-          .map((m) => m.cliEquivalent),
-        '```',
-      ].join('\n');
-    }
+    const consensusMarkdown = llmRes.text;
+    const engineUsed = llmRes.engineUsed;
 
     const ledgerBlock = appendWave13BlackBoxBlock(
       projectId,
@@ -53608,6 +53599,7 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
         flightReadinessScore: autopilotState.flightReadinessScore,
         stateSha256: autopilotState.stateSha256,
         engineUsed,
+        tokenUsage: llmRes.tokenUsage,
       }
     );
 
@@ -54438,41 +54430,27 @@ Produce a concise, actionable Markdown report with:
 3. **Copy-Pasteable gcloud Remediation Commands**: Exact \`gcloud projects add-iam-policy-binding ${projectId}\` and \`gcloud projects remove-iam-policy-binding ${projectId}\` commands for the real principals above.
 Do NOT use any emojis.`;
 
-    let markdown = '';
-    let engineUsed = 'vertex-ai-gemini-3.8-flash';
-    try {
-      const vRes = await axios.post(
-        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
-        {
-          contents: [{ role: 'user', parts: [{ text: promptText }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 8192,
-            thinkingConfig: { thinkingBudget: 512 },
-          },
-        },
-        { headers, timeout: 25000 }
-      );
-      const parts = vRes.data?.candidates?.[0]?.content?.parts || [];
-      markdown =
-        parts
-          .filter((p) => !p.thought && typeof p.text === 'string')
-          .map((p) => p.text)
-          .join('\n') || '';
-    } catch {
-      engineUsed = 'deterministic-iam-analyzer';
-      markdown = `### Live IAM Blast-Radius Analysis (${projectId})\n\n| Role | Members Count |\n| :--- | :--- |\n${bindings
-        .slice(0, 10)
-        .map((b) => `| \`${b.role}\` | ${(b.members || []).length} |`)
-        .join('\n')}`;
-    }
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: req.body?.model || 'gemini-3.8-flash',
+      promptText,
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
 
     return res.json({
-      ok: true,
+      ok: llmRes.isLiveLlm,
       projectId,
-      engineUsed,
+      isLiveLlm: llmRes.isLiveLlm,
+      executionMode: llmRes.executionMode,
+      resolvedModelId: llmRes.resolvedModelId,
+      engineUsed: llmRes.engineUsed,
+      tokenUsage: llmRes.tokenUsage,
+      diagnostics: llmRes.diagnostics,
       latencyMs: Date.now() - t0,
-      markdown,
+      markdown: llmRes.text,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -55407,48 +55385,26 @@ app.post('/api/project/:projectId/wave15/logging-ai-surgeon', async (req, res) =
       `Do not use any emojis.`,
     ].join('\n');
 
-    const headers = getAttributionHeaders(token, projectId);
-    let analysisMarkdown = '';
-    let modelUsed = 'vertex-ai-gemini-3.8-flash';
-    try {
-      const vRes = await axios.post(
-        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
-          projectId
-        )}/locations/global/publishers/google/models/gemini-3.8-flash:generateContent`,
-        {
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            thinkingConfig: { thinkingBudget: 512 },
-          },
-        },
-        { headers, timeout: 25000 }
-      );
-      const parts = vRes.data?.candidates?.[0]?.content?.parts || [];
-      analysisMarkdown =
-        parts
-          .filter((p) => !p.thought && typeof p.text === 'string')
-          .map((p) => p.text)
-          .join('\n') || '';
-    } catch {
-      modelUsed = 'deterministic-log-correlator';
-      analysisMarkdown = `### Live Cloud Logging Root-Cause Summary (${projectId})\n\n| Timestamp | Severity | Resource Type | Message |\n| :--- | :--- | :--- | :--- |\n${(
-        entries || []
-      )
-        .slice(0, 8)
-        .map(
-          (e) =>
-            `| \`${e.timestamp}\` | **${e.severity}** | \`${e.resourceType}\` | ${String(e.message || '').replace(/\|/g, '/')} |`
-        )
-        .join('\n')}\n\n\`\`\`bash\ngcloud logging read '${filterExecuted || 'severity>=DEFAULT'}' --project=${projectId} --limit=25\n\`\`\``;
-    }
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: req.body?.model || 'gemini-3.8-flash',
+      promptText: prompt,
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      timeoutMs: 45000,
+    });
 
     return res.json({
-      ok: true,
+      ok: llmRes.isLiveLlm,
       projectId,
-      modelUsed,
-      analysisMarkdown,
+      isLiveLlm: llmRes.isLiveLlm,
+      executionMode: llmRes.executionMode,
+      resolvedModelId: llmRes.resolvedModelId,
+      modelUsed: llmRes.engineUsed,
+      tokenUsage: llmRes.tokenUsage,
+      diagnostics: llmRes.diagnostics,
+      analysisMarkdown: llmRes.text,
       latencyMs: Date.now() - t0,
     });
   } catch (err) {
@@ -64920,11 +64876,36 @@ resource "google_storage_bucket" "tribunal_hardened_${targetBucket.replace(/[^a-
 }
 `;
 
+      const llmRes = await executeLiveDualEngineGemini({
+        projectId,
+        token,
+        model: selectedModel,
+        promptText: `You are the CloudPulse 2030 10-Persona Enterprise Architecture Board for Google Cloud project "${projectId}" (${region}).
+Engineering Intent: "${intentPrompt}"
+Live Resource Inventory:
+- VPC Firewalls: ${firewalls.length} total (${openFirewalls.length} open 0.0.0.0/0 rules; target="${targetFw}")
+- Cloud Storage Buckets: ${buckets.length} total (${unhardenedBuckets.length} unhardened; target="gs://${targetBucket}")
+- Cloud Run Services: ${runServices.length}
+- BigQuery Datasets: ${datasets.length} (target="${targetDataset}")
+- Service Accounts: ${serviceAccounts.length} (target="${targetSa}")
+
+Provide a concise, high-signal Markdown Executive Architecture Verdict & Terraform Guardrail Commentary (3 short sections: 1. Intent & Risk Verdict, 2. Key Persona Guardrails Enforced, 3. Rollout & Verification CLI).`,
+        temperature: 0.2,
+        maxOutputTokens: 1536,
+        timeoutMs: 45000,
+      });
+
       return res.json({
         status: 'OK',
         projectId,
         region,
-        modelUsed: selectedModel,
+        isLiveLlm: llmRes.isLiveLlm,
+        executionMode: llmRes.executionMode,
+        resolvedModelId: llmRes.resolvedModelId,
+        modelUsed: llmRes.engineUsed || selectedModel,
+        tokenUsage: llmRes.tokenUsage,
+        diagnostics: llmRes.diagnostics,
+        aiSynthesisMarkdown: llmRes.text,
         intentPrompt,
         compiledAt: new Date().toISOString(),
         compileLatencyMs: Date.now() - startedAtMs,
