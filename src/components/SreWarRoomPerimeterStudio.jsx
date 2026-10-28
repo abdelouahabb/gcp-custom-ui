@@ -713,8 +713,8 @@ export default function SreWarRoomPerimeterStudio({
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#141518] p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] font-mono font-bold">
-              <Flame className="w-3.5 h-3.5 text-red-500" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[11px] font-mono font-bold">
+              <Flame className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>
                 WAVE-8 · 12-PILLAR PRINCIPAL SRE INCIDENT WAR-ROOM, MULTI-WINDOW SLO BURN RADAR &amp; ZERO-EXFIL ARCHITECT
               </span>
@@ -744,7 +744,7 @@ export default function SreWarRoomPerimeterStudio({
                   }}
                   className={`px-2.5 py-1 rounded-md font-bold cursor-pointer transition-all ${
                     sloTarget === opt.val
-                      ? 'bg-red-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                   }`}
                 >
@@ -863,7 +863,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="text-[10px] font-mono text-zinc-500">
               6h / 24h Multi-Window Burn
             </div>
-            <div className="text-xl font-black text-blue-500 mt-0.5">
+            <div className="text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
               {slo.slowBurn6h}x / {slo.burn24h}x
             </div>
             <div className="text-[10px] font-mono text-zinc-400">
@@ -875,7 +875,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="text-[10px] font-mono text-zinc-500">
               Monitoring Uptime &amp; Alerts
             </div>
-            <div className="text-xl font-black text-blue-500 mt-0.5">
+            <div className="text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
               {uptimeChecks.length} / {alertPolicies.length}
             </div>
             <div className="text-[10px] font-mono text-zinc-400">
@@ -887,7 +887,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="text-[10px] font-mono text-zinc-500">
               VPC-SC &amp; Subnet PGA Shield
             </div>
-            <div className="text-xl font-black text-emerald-500 mt-0.5">
+            <div className="text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
               {vpcScData?.pgaCoveragePct ?? 100}% PGA
             </div>
             <div className="text-[10px] font-mono text-zinc-400">
@@ -900,7 +900,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="text-[10px] font-mono text-zinc-500">
               Pub/Sub &amp; DLQ Resilience
             </div>
-            <div className="text-xl font-black text-amber-500 mt-0.5">
+            <div className="text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
               {pubsubData?.summary?.dlqProtectedCount || 0}/
               {pubsubData?.summary?.subscriptionsCount || 0} DLQ
             </div>
@@ -959,10 +959,10 @@ export default function SreWarRoomPerimeterStudio({
                 onClick={() => setActivePillar(p.id)}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active
-                    ? 'bg-red-600 text-white border-red-400 shadow-md'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : isAlert
                     ? 'bg-red-500/10 border-red-500/40 text-zinc-900 dark:text-white'
-                    : 'bg-zinc-50/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-red-500/40 text-zinc-800 dark:text-zinc-200'
+                    : 'bg-zinc-50/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-zinc-800 dark:text-zinc-200'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1.5">

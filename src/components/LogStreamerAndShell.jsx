@@ -944,11 +944,11 @@ export default function LogStreamerAndShell({
                 onClick={() => setShowLqlTutorialModal((v) => !v)}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold cursor-pointer border transition-colors ${
                   showLqlTutorialModal
-                    ? 'bg-emerald-600 text-white border-emerald-500'
-                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
-                <BookOpen className="w-3.5 h-3.5" />
+                <BookOpen className="w-3.5 h-3.5 text-blue-500" />
                 <span>{showLqlTutorialModal ? 'Hide LQL & NLP Guide' : 'LQL Tutorial & How NLP Works'}</span>
               </button>
 

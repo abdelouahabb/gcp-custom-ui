@@ -1453,7 +1453,7 @@ ORDER BY
             data-feature-id="FINOPS_AUTO_GRAB_CSV"
             onClick={handleAutoGrabCreditsCsv}
             disabled={autoGrabbingCsv}
-            className="h-9 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            className="h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
             title='Clicks button[id$="billingtest-download-credits-csv"] via CDP (if enabled) and auto-ingests the latest Credits CSV from ~/Downloads or ~/Desktop'
           >
             <RefreshCw
@@ -1468,8 +1468,8 @@ ORDER BY
             </span>
           </button>
 
-          <label className="h-9 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
-            <Database className="w-3.5 h-3.5 shrink-0" />
+          <label className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
+            <Database className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span>Upload Remaining Bonus CSV</span>
             <input
               type="file"
@@ -1483,9 +1483,9 @@ ORDER BY
             type="button"
             data-feature-id="FINOPS_PASTE_BONUS_CSV_DRAWER"
             onClick={() => setShowConsoleSyncDrawer((p) => !p)}
-            className="h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            className="h-9 px-3 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
-            <CreditCard className="w-3.5 h-3.5 shrink-0" />
+            <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span>
               {syncedConsoleCredits.length > 0
                 ? `Paste / Update Bonus CSV (${syncedConsoleCredits.length} Rows)`

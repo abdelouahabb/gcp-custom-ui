@@ -1,16 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export const DEFAULT_CHART_COLORS = [
-  '#1a73e8', // Google Cloud Blue 600
-  '#1e8e3e', // Google Cloud Green 600
-  '#e37400', // Google Cloud Amber 600
-  '#d93025', // Google Cloud Red 600
-  '#4285f4', // Google Cloud Blue 500
-  '#34a853', // Google Cloud Green 500
-  '#fbbc04', // Google Cloud Yellow 500
-  '#ea4335', // Google Cloud Red 500
-  '#8ab4f8', // Google Cloud Blue 300
-  '#5f6368', // Google Cloud Neutral 500
+  '#1a73e8', // 1. Google Cloud Blue (Primary Brand & Active Series)
+  '#1e8e3e', // 2. Google Cloud Green (Healthy / Allow / Free-Tier)
+  '#f9ab00', // 3. Google Cloud Yellow-Amber (Warning / Drift / Quota)
+  '#d93025', // 4. Google Cloud Red (Critical / Deny / Alert)
+  '#5f6368', // 5. Google Cloud Neutral Slate (Baseline / Secondary)
 ];
 
 const ThemeContext = createContext(null);

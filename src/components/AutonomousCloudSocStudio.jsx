@@ -1005,11 +1005,11 @@ Format your response with clear Markdown headings:${
                   vpcName: initialSocSeed?.vpcName || 'default',
                 })
               }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-emerald-500/45 text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-extrabold transition-colors cursor-pointer"
               title="Open VPC Networks & Zero-Trust Firewall Studio with bidirectional SOC sync"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>🌐 VPC &amp; Firewall Studio &rarr;</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+              <span>VPC &amp; Firewall Studio &rarr;</span>
             </button>
 
             <button
@@ -1018,11 +1018,11 @@ Format your response with clear Markdown headings:${
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-extrabold transition-colors cursor-pointer border ${
                 showGitOpsBridge
                   ? 'bg-blue-600 border-blue-400 text-white'
-                  : 'bg-zinc-900 hover:bg-zinc-800 border-blue-500/40 text-blue-300'
+                  : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-200'
               }`}
               title="Inspect live Terraform HCL git diff generated from your Cloud SOC SOAR actions"
             >
-              <FileCode2 className="w-3.5 h-3.5" />
+              <FileCode2 className="w-3.5 h-3.5 text-blue-400" />
               <span>
                 GitOps HCL Bridge ({healthAndDriftBridge?.flightMutationsCount || 0})
               </span>
@@ -1031,10 +1031,10 @@ Format your response with clear Markdown headings:${
             <button
               type="button"
               onClick={() => setActivePillar('AUTONOMOUS_SELF_HEALING_GUARDIAN')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-extrabold transition-colors cursor-pointer"
               title="Open 12-Invariant Zero-Trust Compliance Engine & 1-Click Self-Healing Reconciler"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>
                 Self-Healing ({selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount})
               </span>
@@ -1327,7 +1327,7 @@ Format your response with clear Markdown headings:${
             </div>
             <div
               className={`text-lg font-extrabold mt-0.5 ${
-                summary.criticalChainsCount > 0 ? 'text-red-400' : 'text-blue-400'
+                summary.criticalChainsCount > 0 ? 'text-red-400' : 'text-zinc-100'
               }`}
             >
               {summary.killChainsCount} Chains ({summary.criticalChainsCount} High/Crit)
@@ -1343,7 +1343,7 @@ Format your response with clear Markdown headings:${
             </div>
             <div
               className={`text-lg font-extrabold mt-0.5 ${
-                summary.toxicCombinationsCount > 0 ? 'text-red-400' : 'text-emerald-400'
+                summary.toxicCombinationsCount > 0 ? 'text-red-400' : 'text-zinc-100'
               }`}
             >
               {summary.toxicCombinationsCount} Toxic / {summary.totalWorkloadsInspected} Workloads
@@ -1359,7 +1359,7 @@ Format your response with clear Markdown headings:${
             </div>
             <div
               className={`text-lg font-extrabold mt-0.5 ${
-                summary.userManagedSaKeysCount > 0 ? 'text-amber-400' : 'text-emerald-400'
+                summary.userManagedSaKeysCount > 0 ? 'text-amber-400' : 'text-zinc-100'
               }`}
             >
               {summary.userManagedSaKeysCount} User .json Keys · {summary.supplyChainFindingsCount} Containers
@@ -1377,9 +1377,7 @@ Format your response with clear Markdown headings:${
               className={`text-lg font-extrabold mt-0.5 ${
                 summary.canaryHitsCount > 0
                   ? 'text-red-400'
-                  : summary.deployedCanariesCount > 0
-                  ? 'text-emerald-400'
-                  : 'text-zinc-400'
+                  : 'text-zinc-100'
               }`}
             >
               {summary.deployedCanariesCount}/3 Armed · {summary.canaryHitsCount} Tripwire Hits

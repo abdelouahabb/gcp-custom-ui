@@ -4424,7 +4424,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 onClick={() => focusOnClientOrigin(3.2, { scrollToMap: true })}
-                className="px-2.5 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                className="px-2.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
                 title="Click to scroll and zoom the World Map directly to your live client location (IP Hidden for Privacy)"
               >
                 PROBING LIVE FROM: {liveClientOriginNode.city},{' '}
@@ -4459,9 +4459,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 onClick={() => onSelectTab('VPC_NETWORKS')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-extrabold cursor-pointer shadow-sm"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Open Global VPC &amp; $0 Reachability Prover</span>
               </button>
             )}
@@ -4586,7 +4586,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   }}
                   className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                      ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
@@ -4595,9 +4595,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       <span
                         className={`w-2 h-2 rounded-full ${
                           isSelected
-                            ? 'bg-emerald-500 animate-pulse'
+                            ? 'bg-blue-500 animate-pulse'
                             : isFastest
-                            ? 'bg-blue-500'
+                            ? 'bg-emerald-500'
                             : 'bg-zinc-400'
                         }`}
                       />
@@ -4607,20 +4607,20 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     </div>
                     <div className="flex items-center gap-1">
                       {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
                           SELECTED
                         </span>
                       )}
                       {isFastest && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
+                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
                           FASTEST
                         </span>
                       )}
                       <span
                         className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold ${
                           isSelected
-                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                            ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                            : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
                         {probe.tcpMs}ms TCP
@@ -5234,7 +5234,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     onClick={() => selectRegionInPlace(sn.region, 2.8)}
                     className={`p-3 rounded-xl border text-xs font-mono space-y-1 cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                        ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
                         : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                     }`}
                   >
@@ -5244,7 +5244,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       </span>
                       <div className="flex items-center gap-1">
                         {isSelected && (
-                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">
                             SELECTED
                           </span>
                         )}
@@ -6254,12 +6254,12 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   <stop offset="100%" stopColor="#1a73e8" stopOpacity="0" />
                 </radialGradient>
                 <radialGradient id="selectedRegionHalo" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.65" />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#1e8e3e" stopOpacity="0.65" />
+                  <stop offset="100%" stopColor="#1e8e3e" stopOpacity="0" />
                 </radialGradient>
                 <radialGradient id="chaosRegionHalo" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#ea4335" stopOpacity="0.7" />
-                  <stop offset="100%" stopColor="#ea4335" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#d93025" stopOpacity="0.7" />
+                  <stop offset="100%" stopColor="#d93025" stopOpacity="0" />
                 </radialGradient>
               </defs>
 
@@ -6452,7 +6452,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <path
                   d={clientUplinkTelemetry.arc.d}
                   fill="none"
-                  stroke="#f59e0b"
+                  stroke="#f9ab00"
                   strokeWidth={1.8 * invScale}
                   strokeDasharray="5 3"
                   strokeOpacity="0.72"
@@ -6472,13 +6472,13 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 <circle
                   r={10}
                   fill="none"
-                  stroke="#f59e0b"
+                  stroke="#f9ab00"
                   strokeWidth="1.1"
                   strokeDasharray="2.5 2"
                 />
                 <circle
                   r={5.2}
-                  fill="#f59e0b"
+                  fill="#f9ab00"
                   stroke="#020617"
                   strokeWidth="1.4"
                 >
@@ -6493,13 +6493,13 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   rx={3}
                   fill="#020617"
                   fillOpacity="0.92"
-                  stroke="#f59e0b"
+                  stroke="#f9ab00"
                   strokeWidth="0.9"
                 />
                 <text
                   y={-10.6}
                   textAnchor="middle"
-                  fill="#fde68a"
+                  fill="#fdd663"
                   fontSize="6.2"
                   fontWeight="bold"
                   fontFamily="monospace"

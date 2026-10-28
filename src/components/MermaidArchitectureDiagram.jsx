@@ -166,30 +166,30 @@ export function parseMermaidFlowchart(rawCode = '') {
   };
 }
 
-// Strict Google Cloud Console 4-color + Neutral layer palette
+// Strict Google Cloud Console Blue + Neutral layer palette (Zero Rainbow Layer Cycling)
 const LAYER_STYLES = [
   {
     badgeBg: '#1a73e8',
     border: '#1a73e8',
-    fill: 'rgba(26, 115, 232, 0.06)',
+    fill: 'rgba(26, 115, 232, 0.05)',
     nodeAccent: '#1a73e8',
-  },
-  {
-    badgeBg: '#1e8e3e',
-    border: '#1e8e3e',
-    fill: 'rgba(30, 142, 62, 0.06)',
-    nodeAccent: '#1e8e3e',
-  },
-  {
-    badgeBg: '#f9ab00',
-    border: '#f9ab00',
-    fill: 'rgba(249, 171, 0, 0.06)',
-    nodeAccent: '#d93025',
   },
   {
     badgeBg: '#5f6368',
     border: '#5f6368',
-    fill: 'rgba(95, 99, 104, 0.06)',
+    fill: 'rgba(95, 99, 104, 0.05)',
+    nodeAccent: '#1a73e8',
+  },
+  {
+    badgeBg: '#1a73e8',
+    border: '#1a73e8',
+    fill: 'rgba(26, 115, 232, 0.05)',
+    nodeAccent: '#1a73e8',
+  },
+  {
+    badgeBg: '#5f6368',
+    border: '#5f6368',
+    fill: 'rgba(95, 99, 104, 0.05)',
     nodeAccent: '#1a73e8',
   },
 ];

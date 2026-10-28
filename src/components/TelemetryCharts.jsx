@@ -47,7 +47,7 @@ export default function TelemetryCharts({ telemetry, projectId, onOpenCopilot })
         barMaxWidth: 44,
         itemStyle: {
           borderRadius: [6, 6, 0, 0],
-          color: (params) => chartColors[params.dataIndex % chartColors.length],
+          color: chartColors[0] || '#1a73e8',
         },
         data: finopsSeries.map((d) => d.count ?? 0),
       },
@@ -78,7 +78,7 @@ export default function TelemetryCharts({ telemetry, projectId, onOpenCopilot })
             onClick={() =>
               onOpenCopilot(`Audit live resources and APIs in ${projectId}`)
             }
-            className="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-3 py-1.5 rounded-[8px] transition-colors self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-3 py-1.5 rounded-md transition-colors self-start sm:self-auto"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Audit Project with Gemini</span>

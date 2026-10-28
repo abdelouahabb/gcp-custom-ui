@@ -249,7 +249,7 @@ export default function Startup10xMentorStudio({
             <div className="text-[10px] uppercase text-zinc-500 font-bold">
               Startup 10X Scale Readiness
             </div>
-            <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+            <div className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {auditData?.startup10xScore ?? 88}/100
             </div>
             <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -286,7 +286,7 @@ export default function Startup10xMentorStudio({
             <div className="text-[10px] uppercase text-zinc-500 font-bold">
               Credit Vampires Detected
             </div>
-            <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
+            <div className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               ${runway.totalMonthlyVampireWasteUsd}/mo
             </div>
             <div className="text-[10px] text-zinc-500 mt-0.5">

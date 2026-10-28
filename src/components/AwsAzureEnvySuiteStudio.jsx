@@ -2378,9 +2378,7 @@ export default function AwsAzureEnvySuiteStudio({
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
-                    ? isChinaSuite
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm ring-2 ring-amber-500/25'
-                      : 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/25'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/25'
                     : 'bg-zinc-50/90 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 border-zinc-200/90 dark:border-zinc-800'
                 }`}
               >

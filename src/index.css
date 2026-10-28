@@ -123,5 +123,38 @@ span[class*="px-"][class*="border"]:not([class*="absolute"]) {
   border-radius: 9999px;
 }
 
+/* ============================================================================
+ * Google Cloud Console 5-Color Anti-Rainbow Guardrail:
+ * 1. Neutral Slate (#131314 / #202124 / #3c4043 / #f8f9fa / #ffffff)
+ * 2. Google Cloud Blue (#1a73e8 / #8ab4f8) -> Primary CTAs & Active Controls
+ * 3. Google Cloud Green (#1e8e3e / #81c995) -> Semantic Healthy / Allow Tags
+ * 4. Google Cloud Yellow-Amber (#f9ab00 / #fdd663) -> Semantic Warning Tags
+ * 5. Google Cloud Red (#d93025 / #f28b82) -> Semantic Destructive / Critical
+ *
+ * Non-destructive solid buttons (emerald, amber, teal, purple, indigo, cyan)
+ * are unified to Google Cloud Blue (#1a73e8) so button bars never look like
+ * a rainbow of green/orange/blue/purple buttons side-by-side.
+ * ============================================================================ */
+button.bg-emerald-600.text-white,
+button.bg-amber-600.text-white,
+button.bg-teal-600.text-white,
+button.bg-purple-600.text-white,
+button.bg-indigo-600.text-white,
+button.bg-cyan-600.text-white {
+  background-color: #1a73e8 !important;
+  border-color: #185abc !important;
+  color: #ffffff !important;
+}
+
+button.bg-emerald-600.text-white:hover,
+button.bg-amber-600.text-white:hover,
+button.bg-teal-600.text-white:hover,
+button.bg-purple-600.text-white:hover,
+button.bg-indigo-600.text-white:hover,
+button.bg-cyan-600.text-white:hover {
+  background-color: #1967d2 !important;
+}
+
+
 
 
