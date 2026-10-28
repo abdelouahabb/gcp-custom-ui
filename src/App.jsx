@@ -3482,7 +3482,7 @@ function CloudPulseCockpit() {
     toastTimerRef.current = setTimeout(() => {
       setToastMessage(null);
       toastTimerRef.current = null;
-    }, 9000);
+    }, 4000);
   }, []);
 
   // Global Mandatory Delete & Destructive Action Confirmation Gatekeeper
@@ -3529,7 +3529,6 @@ function CloudPulseCockpit() {
                     error: cancelText,
                   },
                 };
-                showToast(cancelText);
                 reject(cancelErr);
               },
             },
@@ -3542,7 +3541,7 @@ function CloudPulseCockpit() {
     return () => {
       axios.interceptors.request.eject(interceptorId);
     };
-  }, [showToast]);
+  }, []);
 
   // Restore browser token from sessionStorage or URL hash (OAuth 2.0 redirect)
   useEffect(() => {
@@ -4755,94 +4754,82 @@ function CloudPulseCockpit() {
 
         {/* Main Content Body */}
         <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1">
-          {toastMessage && (
-            <>
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm transition-all">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-zinc-600 dark:text-zinc-300 shrink-0" />
-                  <span>{toastMessage}</span>
+          {(toastMessage || errorBanner) && (
+            <div className="fixed bottom-5 right-5 z-[95] flex flex-col items-end gap-2.5 max-w-md pointer-events-none">
+              {toastMessage && (
+                <div className="pointer-events-auto w-full bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{toastMessage}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setToastMessage(null)}
+                    title="Dismiss notification"
+                    className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+                  >
+                    Dismiss
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setToastMessage(null)}
-                  title="Dismiss notification banner"
-                  className="text-xs underline opacity-75 hover:opacity-100"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <div className="fixed bottom-5 right-5 z-[95] max-w-md bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{toastMessage}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setToastMessage(null)}
-                  title="Dismiss notification"
-                  className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </>
-          )}
+              )}
 
-          {errorBanner && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-800 dark:text-red-300 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <span>{errorBanner}</span>
-              <div className="flex items-center gap-3">
-                {(() => {
-                  const primaryProj =
-                    (contextData?.defaultProject &&
-                    contextData.defaultProject !== selectedProjectId
-                      ? contextData.defaultProject
-                      : '') ||
-                    contextData?.projects?.find(
-                      (p) => p.projectId !== selectedProjectId
-                    )?.projectId ||
-                    '';
-                  if (primaryProj && primaryProj !== selectedProjectId) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          sessionStorage.setItem(
-                            'cloudpulse_project_explicit',
-                            'true'
-                          );
-                          setErrorBanner(null);
-                          setSelectedProjectId(primaryProj);
-                          showToast(
-                            `Switched active project to ${primaryProj}`
-                          );
-                        }}
-                        title={`Switch active GCP project to ${primaryProj}`}
-                        className="px-2.5 py-1 rounded bg-red-800 text-white dark:bg-red-200 dark:text-red-950 font-semibold hover:opacity-90 transition-opacity cursor-pointer"
-                      >
-                        Switch to {primaryProj}
-                      </button>
-                    );
-                  }
-                  return null;
-                })()}
-                <button
-                  type="button"
-                  onClick={() => fetchProjectOverview(selectedProjectId)}
-                  title="Retry fetching live GCP telemetry"
-                  className="underline font-semibold cursor-pointer"
-                >
-                  Retry
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setErrorBanner(null)}
-                  title="Dismiss banner"
-                  className="opacity-75 hover:opacity-100 cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
+              {errorBanner && (
+                <div className="pointer-events-auto w-full bg-zinc-950/95 border border-red-500/60 text-red-200 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs font-mono shadow-2xl backdrop-blur-md">
+                  <span>{errorBanner}</span>
+                  <div className="flex items-center justify-end gap-2.5">
+                    {(() => {
+                      const primaryProj =
+                        (contextData?.defaultProject &&
+                        contextData.defaultProject !== selectedProjectId
+                          ? contextData.defaultProject
+                          : '') ||
+                        contextData?.projects?.find(
+                          (p) => p.projectId !== selectedProjectId
+                        )?.projectId ||
+                        '';
+                      if (primaryProj && primaryProj !== selectedProjectId) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sessionStorage.setItem(
+                                'cloudpulse_project_explicit',
+                                'true'
+                              );
+                              setErrorBanner(null);
+                              setSelectedProjectId(primaryProj);
+                              showToast(
+                                `Switched active project to ${primaryProj}`
+                              );
+                            }}
+                            title={`Switch active GCP project to ${primaryProj}`}
+                            className="px-2.5 py-1 rounded bg-red-600 text-white font-semibold hover:bg-red-500 transition-colors cursor-pointer text-[10px]"
+                          >
+                            Switch to {primaryProj}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <button
+                      type="button"
+                      onClick={() => fetchProjectOverview(selectedProjectId)}
+                      title="Retry fetching live GCP telemetry"
+                      className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 text-red-300 text-[10px] font-bold cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setErrorBanner(null)}
+                      title="Dismiss banner"
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
