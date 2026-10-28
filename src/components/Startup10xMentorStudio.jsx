@@ -53,8 +53,8 @@ const STARTUP_10X_MODULES = [
   {
     id: 'CREDIT_CLIFF_RUNWAY',
     step: '03',
-    title: 'Credit Vampires & Runway Extender',
-    subtitle: 'Live Burn Ledger, GCS Lifecycle & BQ',
+    title: 'Credit Runway & 6-Vector Cost Audit',
+    subtitle: 'Live Burn Ledger, Always-Free Check, Disks, IPs & Storage',
     icon: DollarSign,
   },
   {
@@ -968,133 +968,315 @@ export default function Startup10xMentorStudio({
       )}
 
       {/* ==================================================================== */}
-      {/* MODULE 03: STARTUP CREDIT VAMPIRES & RUNWAY EXTENDER                 */}
+      {/* MODULE 03: STARTUP CREDIT RUNWAY & 6-VECTOR LIVE COST AUDIT          */}
       {/* ==================================================================== */}
       {showModule('CREDIT_CLIFF_RUNWAY') && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
-          <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
-                PILLAR 03
-              </span>
-              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
-                Google for Startups Credit Vampire Detector &amp; 1-Click Runway Extender
-              </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">
+                  PILLAR 03
+                </span>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Startup Credit Runway &amp; 6-Vector Live Cost Audit (Always-Free vs Paid Burn)
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                Audits 6 silent 24/7 cloud cost vectors on <code className="font-mono font-bold">{projectId}</code> — Compute VMs, Persistent Disks (<code className="font-mono">pd-balanced</code> vs <code className="font-mono">$0 pd-standard</code>), Static IPs, Cloud Run warm instances, GCS lifecycles, and BigQuery time-travel.
+              </p>
             </div>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-              Apply 30-day Nearline Lifecycle + Public Access Prevention on your live GCS buckets and 168h Time-Travel + attribution labels on your BigQuery datasets in 1 click.
-            </p>
+            {onNavigateTab && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('ZOMBIE_HUNTER')}
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                >
+                  Zombie Exterminator ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('FINOPS')}
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                >
+                  FinOps Studio ↗
+                </button>
+              </div>
+            )}
           </div>
 
+          {/* 1. Credit Runway & Live Monthly Burn Summary Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-500 font-extrabold">
+                Selected Startup Credit Tier
+              </div>
+              <div className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 mt-0.5">
+                ${Number(runway.creditTierUsd || creditTierUsd).toLocaleString()}
+              </div>
+              <div className="text-[10.5px] text-zinc-500">
+                Up to 24 months program validity
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-500 font-extrabold">
+                Live Detected Resource Burn
+              </div>
+              <div className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 mt-0.5">
+                ${Number(runway.liveResourceMonthlyBurnUsd || 0).toFixed(2)}/mo
+              </div>
+              <div className="text-[10.5px] text-zinc-500">
+                Computed from live VMs, Disks, IPs, Run &amp; Storage
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-500 font-extrabold">
+                Recoverable Monthly Savings
+              </div>
+              <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                ${Number(runway.totalMonthlyVampireWasteUsd || 0).toFixed(2)}/mo
+              </div>
+              <div className="text-[10.5px] text-zinc-500">
+                {(runway.vampireItems || []).length} optimization item(s) found
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <div className="text-[10px] uppercase text-emerald-700 dark:text-emerald-300 font-extrabold">
+                Projected Credit Runway
+              </div>
+              <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {runway.optimizedRunwayMonths} Months
+              </div>
+              <div className="text-[10.5px] text-emerald-700/80 dark:text-emerald-300/80">
+                {runway.extraRunwayMonthsGained > 0
+                  ? `+${runway.extraRunwayMonthsGained} extra months gained`
+                  : '✓ Full 24-month credit window preserved'}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Actionable Cost Optimization Findings (if any detected on live resources) */}
+          {(runway.vampireItems || []).length > 0 && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <div className="text-xs font-mono font-extrabold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>
+                  Live Cost Optimization Findings ({runway.vampireItems.length})
+                </span>
+              </div>
+              <div className="space-y-2">
+                {runway.vampireItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-lg bg-white dark:bg-[#121316] border border-amber-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                        {item.resource}
+                      </div>
+                      <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                        Why it costs money: {item.issue}
+                      </div>
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        Fix: {item.fixLabel}
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-xs">
+                      Save ${Number(item.monthlyWasteUsd || 0).toFixed(2)}/mo
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. 6-Vector Live Startup Cost & Always-Free Eligibility Audit Table */}
+          {Array.isArray(runway.costAuditChecks) &&
+            runway.costAuditChecks.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                  6-Vector Live GCP Cost &amp; Always-Free Eligibility Breakdown
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {runway.costAuditChecks.map((chk) => (
+                    <div
+                      key={chk.id}
+                      className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                          {chk.category} ({chk.resourceCount})
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            chk.status === 'OPTIMAL'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                          }`}
+                        >
+                          ${Number(chk.monthlyBurnUsd || 0).toFixed(2)}/mo
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-800 dark:text-zinc-200 font-bold">
+                        {chk.summary}
+                      </div>
+                      <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        💡 {chk.tip}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          {/* 4. 1-Click Storage & BigQuery Dataset Hardening (with clear status when 0 exist) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Live Buckets Lifecycle Hardening */}
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-              <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
-                Live Cloud Storage Buckets ({bucketFindings.length})
-              </div>
-              {bucketFindings.map((b) => (
-                <div
-                  key={b.name}
-                  className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
-                      gs://{b.name}
-                    </div>
-                    <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                      {b.location} ·{' '}
-                      {b.hasLifecycle ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          ✓ 30d Nearline Lifecycle Active
-                        </span>
-                      ) : (
-                        <span className="text-amber-600 dark:text-amber-400 font-bold">
-                          ⚠ Missing Lifecycle (Est. -$12/mo)
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Live Cloud Storage Buckets ({bucketFindings.length})
+                </div>
+                {onNavigateTab && (
                   <button
                     type="button"
-                    data-feature-id="STARTUP_10X_PATCH_BUCKET_SHIELD"
-                    disabled={
-                      busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
-                    }
-                    onClick={() =>
-                      handleLiveRemediate(
-                        'PATCH_BUCKET_STARTUP_SHIELD',
-                        b.name,
-                        b.location
-                      )
-                    }
-                    className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
-                      b.hasLifecycle && b.papEnforced
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                        : 'bg-blue-600 hover:bg-blue-500 text-white'
-                    }`}
+                    onClick={() => onNavigateTab('CLOUD_STORAGE')}
+                    className="text-[10.5px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                   >
-                    {busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
-                      ? 'Applying...'
-                      : b.hasLifecycle && b.papEnforced
-                      ? '✓ Shielded & Lifecycled'
-                      : '1-Click Shield & Lifecycle'}
+                    Cloud Storage Studio ↗
                   </button>
+                )}
+              </div>
+              {bucketFindings.length === 0 ? (
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
+                  ✓ 0 Cloud Storage buckets in <code className="font-bold">{projectId}</code> ($0.00/mo storage burn · 5 GB US Standard free tier available).
                 </div>
-              ))}
+              ) : (
+                bucketFindings.map((b) => (
+                  <div
+                    key={b.name}
+                    className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
+                        gs://{b.name}
+                      </div>
+                      <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                        {b.location} ·{' '}
+                        {b.hasLifecycle ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            ✓ 30d Nearline Lifecycle Active
+                          </span>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">
+                            ⚠ Missing Lifecycle (Est. -$12/mo)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      data-feature-id="STARTUP_10X_PATCH_BUCKET_SHIELD"
+                      disabled={
+                        busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
+                      }
+                      onClick={() =>
+                        handleLiveRemediate(
+                          'PATCH_BUCKET_STARTUP_SHIELD',
+                          b.name,
+                          b.location
+                        )
+                      }
+                      className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
+                        b.hasLifecycle && b.papEnforced
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }`}
+                    >
+                      {busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
+                        ? 'Applying...'
+                        : b.hasLifecycle && b.papEnforced
+                        ? '✓ Shielded & Lifecycled'
+                        : '1-Click Shield & Lifecycle'}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Live BigQuery Datasets Optimizer */}
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-              <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
-                Live BigQuery Datasets ({datasetFindings.length})
-              </div>
-              {datasetFindings.map((d) => (
-                <div
-                  key={d.datasetId}
-                  className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
-                      {projectId}:{d.datasetId}
-                    </div>
-                    <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                      Location: {d.location} ·{' '}
-                      {d.isStartupOptimized ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          ✓ 168h Time-Travel &amp; Labeled
-                        </span>
-                      ) : (
-                        <span>168h Time-Travel &amp; Attribution</span>
-                      )}
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Live BigQuery Datasets ({datasetFindings.length})
+                </div>
+                {onNavigateTab && (
                   <button
                     type="button"
-                    data-feature-id="STARTUP_10X_PATCH_BQ_OPTIMIZER"
-                    disabled={
-                      busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
-                    }
-                    onClick={() =>
-                      handleLiveRemediate(
-                        'PATCH_BQ_STARTUP_OPTIMIZER',
-                        d.datasetId,
-                        d.location
-                      )
-                    }
-                    className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
-                      d.isStartupOptimized
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                        : 'bg-blue-600 hover:bg-blue-500 text-white'
-                    }`}
+                    onClick={() => onNavigateTab('BIGQUERY_STUDIO')}
+                    className="text-[10.5px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                   >
-                    {busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
-                      ? 'Patching...'
-                      : d.isStartupOptimized
-                      ? '✓ Optimized'
-                      : '1-Click Optimize Dataset'}
+                    BigQuery Studio ↗
                   </button>
+                )}
+              </div>
+              {datasetFindings.length === 0 ? (
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
+                  ✓ 0 BigQuery datasets in <code className="font-bold">{projectId}</code> ($0.00/mo warehouse burn · 10 GB storage + 1 TB queries/mo free tier available).
                 </div>
-              ))}
+              ) : (
+                datasetFindings.map((d) => (
+                  <div
+                    key={d.datasetId}
+                    className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-50 truncate">
+                        {projectId}:{d.datasetId}
+                      </div>
+                      <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                        Location: {d.location} ·{' '}
+                        {d.isStartupOptimized ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            ✓ 168h Time-Travel &amp; Labeled
+                          </span>
+                        ) : (
+                          <span>168h Time-Travel &amp; Attribution</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      data-feature-id="STARTUP_10X_PATCH_BQ_OPTIMIZER"
+                      disabled={
+                        busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
+                      }
+                      onClick={() =>
+                        handleLiveRemediate(
+                          'PATCH_BQ_STARTUP_OPTIMIZER',
+                          d.datasetId,
+                          d.location
+                        )
+                      }
+                      className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
+                        d.isStartupOptimized
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }`}
+                    >
+                      {busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
+                        ? 'Patching...'
+                        : d.isStartupOptimized
+                        ? '✓ Optimized'
+                        : '1-Click Optimize Dataset'}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
