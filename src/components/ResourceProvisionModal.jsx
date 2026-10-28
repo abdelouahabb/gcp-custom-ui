@@ -1843,8 +1843,8 @@ export default function ResourceProvisionModal({
         if (e.target === e.currentTarget && onClose) onClose();
       }}
     >
-      <div className="bg-white dark:bg-[#202124] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
-        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-white dark:bg-[#202124]">
+      <div className="bg-white dark:bg-[#202124] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-[96vw] max-w-[1760px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-1.5rem)] flex flex-col overflow-hidden my-auto">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 sm:px-8 pt-4 pb-3.5 bg-white dark:bg-[#202124]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
               <PlusCircle className="w-5 h-5" />
@@ -1872,9 +1872,9 @@ export default function ResourceProvisionModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-5 space-y-5">
           {/* Service Type Selector Grid (8 Services: 4x2 on tablet/laptop, 8x1 on wide desktop) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
             {SERVICE_TABS.map((t) => {
               const Icon = t.icon;
               const active = serviceType === t.id;
@@ -1884,15 +1884,15 @@ export default function ResourceProvisionModal({
                   type="button"
                   onClick={() => handleTabSwitch(t.id)}
                   title={t.desc}
-                  className={`p-2.5 rounded-md border text-left transition-all cursor-pointer min-w-0 ${
+                  className={`p-3 rounded-lg border text-left transition-all cursor-pointer min-w-0 ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'bg-zinc-50/70 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
                   }`}
                 >
-                  <Icon className="w-4 h-4 mb-1" />
+                  <Icon className="w-4 h-4 mb-1.5" />
                   <div className="text-xs font-bold truncate whitespace-nowrap">{t.label}</div>
-                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate whitespace-nowrap">
+                  <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 truncate whitespace-nowrap">
                     {t.desc}
                   </div>
                 </button>
