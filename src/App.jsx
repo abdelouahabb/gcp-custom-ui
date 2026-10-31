@@ -100,6 +100,7 @@ import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipeli
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
+import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
 
 /**
@@ -5127,6 +5128,13 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GLOBAL_MAP' && (
                 <div className="space-y-4">
+                  <MultiCloudGlobalParityPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                    onRunInShell={handleRunInShell}
+                  />
                   <GlobalNetworkWorldMap
                     projectId={selectedProjectId}
                     overview={overview}
@@ -5158,35 +5166,46 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'INNOVATION_LAB' && (
-                <Revolutionary2026Suite
-                  projectId={selectedProjectId}
-                  overview={overview}
-                  initialSubTab={innovationSubTab}
-                  onRefreshOverview={() => {
-                    fetchProjectOverview(selectedProjectId);
-                    setVmRefreshTrigger((c) => c + 1);
-                  }}
-                  onOpenProvision={handleOpenProvision}
-                  onDeleteResource={handleDeleteResource}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                  onOpenBigQuerySql={(sqlText) => {
-                    if (sqlText) setBigQueryInitialSql(sqlText);
-                    setActiveTab('BIGQUERY_STUDIO');
-                  }}
-                  onSelectStudioTab={handleNavigateStudioTab}
-                  onSelectProject={(pid) => {
-                    sessionStorage.setItem(
-                      'cloudpulse_project_explicit',
-                      'true'
-                    );
-                    setSelectedProjectId(pid);
-                    showToast(`Switched active project to ${pid}`);
-                  }}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <MultiCloudGlobalParityPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    activeSubTab={innovationSubTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <Revolutionary2026Suite
+                    projectId={selectedProjectId}
+                    overview={overview}
+                    initialSubTab={innovationSubTab}
+                    onSubTabChange={setInnovationSubTab}
+                    onRefreshOverview={() => {
+                      fetchProjectOverview(selectedProjectId);
+                      setVmRefreshTrigger((c) => c + 1);
+                    }}
+                    onOpenProvision={handleOpenProvision}
+                    onDeleteResource={handleDeleteResource}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onSelectStudioTab={handleNavigateStudioTab}
+                    onSelectProject={(pid) => {
+                      sessionStorage.setItem(
+                        'cloudpulse_project_explicit',
+                        'true'
+                      );
+                      setSelectedProjectId(pid);
+                      showToast(`Switched active project to ${pid}`);
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'STARTUP_10X' && (
@@ -6166,45 +6185,67 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'AWS_AZURE_PARITY' && (
-                <AwsAzureEnvySuiteStudio
-                  key="aws-azure-parity"
-                  cloudFamily="AWS_AZURE"
-                  initialTab={awsAzureSubTab}
-                  projectId={selectedProjectId}
-                  onSwitchCloudFamily={(family) =>
-                    setActiveTab(
-                      family === 'ALIBABA_HUAWEI'
-                        ? 'ALIBABA_HUAWEI_PARITY'
-                        : 'AWS_AZURE_PARITY'
-                    )
-                  }
-                  onNavigateToGcpTab={handleNavigateStudioTab}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <MultiCloudGlobalParityPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    activeSubTab={awsAzureSubTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <AwsAzureEnvySuiteStudio
+                    key="aws-azure-parity"
+                    cloudFamily="AWS_AZURE"
+                    initialTab={awsAzureSubTab}
+                    onSubTabChange={setAwsAzureSubTab}
+                    projectId={selectedProjectId}
+                    onSwitchCloudFamily={(family) =>
+                      setActiveTab(
+                        family === 'ALIBABA_HUAWEI'
+                          ? 'ALIBABA_HUAWEI_PARITY'
+                          : 'AWS_AZURE_PARITY'
+                      )
+                    }
+                    onNavigateToGcpTab={handleNavigateStudioTab}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'ALIBABA_HUAWEI_PARITY' && (
-                <AwsAzureEnvySuiteStudio
-                  key="alibaba-huawei-parity"
-                  cloudFamily="ALIBABA_HUAWEI"
-                  initialTab={alibabaHuaweiSubTab}
-                  projectId={selectedProjectId}
-                  onSwitchCloudFamily={(family) =>
-                    setActiveTab(
-                      family === 'ALIBABA_HUAWEI'
-                        ? 'ALIBABA_HUAWEI_PARITY'
-                        : 'AWS_AZURE_PARITY'
-                    )
-                  }
-                  onNavigateToGcpTab={handleNavigateStudioTab}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <MultiCloudGlobalParityPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    activeSubTab={alibabaHuaweiSubTab}
+                    onSelectTab={handleNavigateStudioTab}
+                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <AwsAzureEnvySuiteStudio
+                    key="alibaba-huawei-parity"
+                    cloudFamily="ALIBABA_HUAWEI"
+                    initialTab={alibabaHuaweiSubTab}
+                    onSubTabChange={setAlibabaHuaweiSubTab}
+                    projectId={selectedProjectId}
+                    onSwitchCloudFamily={(family) =>
+                      setActiveTab(
+                        family === 'ALIBABA_HUAWEI'
+                          ? 'ALIBABA_HUAWEI_PARITY'
+                          : 'AWS_AZURE_PARITY'
+                      )
+                    }
+                    onNavigateToGcpTab={handleNavigateStudioTab}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'CLOUD_SOC' && (

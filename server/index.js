@@ -77148,6 +77148,968 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
   }
 });
 
+// ============================================================================
+// WAVE 7: 6-STAGE GLOBAL MULTI-CLOUD PARITY, SUBSEA BACKBONE & 2026 FRONTIER PIPELINE
+// Unifies:
+//  1) 40-Region Subsea Backbone, Firewall X-Ray & Carbon CFE (GLOBAL_MAP)
+//  2) AWS to GCP Parity Bridge: IAM Sim, S3 Presigned, SSM & CloudTrail (AWS_AZURE_PARITY)
+//  3) Azure Enterprise Parity: Resource Groups, Spend Fuse & Front Door WAF (AWS_AZURE_PARITY)
+//  4) Alibaba & Huawei Hyperscale Parity: 11.11 Surge, CEN QoS & Fractional vGPU (ALIBABA_HUAWEI_PARITY)
+//  5) 10-Persona Architecture Council & Pre-Flight War-Room (INNOVATION_LAB -> FIVE_PERSONA_COUNCIL)
+//  6) gcloud SDK 591.0.0 Frontier Lab & Multi-Cloud Terraform Bridge (INNOVATION_LAB -> GCLOUD_ALPHA_BETA)
+// ============================================================================
+const wave7MultiCloudParityCache = new Map();
+
+const REGION_CFE_MAP = {
+  'us-central1': 93,
+  'us-west1': 89,
+  'northamerica-northeast1': 99,
+  'southamerica-east1': 91,
+  'europe-west1': 81,
+  'europe-north1': 98,
+  'europe-west4': 69,
+  'europe-west9': 92,
+  'us-east1': 36,
+  'us-east4': 52,
+  'asia-east1': 24,
+  'asia-northeast1': 34,
+};
+
+app.get('/api/project/:projectId/multicloud-global-parity/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+    const baseResources = Array.isArray(cachedOverview?.resources)
+      ? cachedOverview.resources
+      : [];
+    const baseVpcs = Array.isArray(cachedOverview?.vpcs)
+      ? cachedOverview.vpcs
+      : [];
+    const baseFirewalls = Array.isArray(cachedOverview?.firewalls)
+      ? cachedOverview.firewalls
+      : [];
+
+    let extra = wave7MultiCloudParityCache.get(projectId);
+    if ((!extra || Date.now() - extra.ts > 25000) && headers) {
+      const [
+        iamRes,
+        saRes,
+        secretsRes,
+        bucketsRes,
+        vmsRes,
+        vpcsRes,
+        fwRes,
+        auditRes,
+        svcRes,
+      ] = await Promise.allSettled([
+        axios.post(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}:getIamPolicy`,
+          {},
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://iam.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/serviceAccounts?pageSize=100`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/secrets?pageSize=25`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}&maxResults=25`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50`,
+          { headers, timeout: 4500 }
+        ),
+        baseVpcs.length > 0
+          ? Promise.resolve({ data: { items: baseVpcs } })
+          : axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+              { headers, timeout: 4000 }
+            ),
+        baseFirewalls.length > 0
+          ? Promise.resolve({ data: { items: baseFirewalls } })
+          : axios.get(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls`,
+              { headers, timeout: 4000 }
+            ),
+        axios.post(
+          `https://logging.googleapis.com/v2/entries:list`,
+          {
+            resourceNames: [`projects/${projectId}`],
+            filter: 'logName:"cloudaudit.googleapis.com"',
+            orderBy: 'timestamp desc',
+            pageSize: 25,
+          },
+          { headers, timeout: 4500 }
+        ),
+        Array.isArray(cachedOverview?.enabledApis) && cachedOverview.enabledApis.length > 0
+          ? Promise.resolve({
+              data: {
+                services: cachedOverview.enabledApis.map((s) => ({
+                  name: s.name || s.serviceName,
+                })),
+              },
+            })
+          : axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=150`,
+              { headers, timeout: 4500 }
+            ),
+      ]);
+
+      const bindings =
+        iamRes.status === 'fulfilled'
+          ? iamRes.value.data?.bindings || []
+          : [];
+      const principalRolesMap = new Map();
+      bindings.forEach((b) => {
+        const role = b.role;
+        (b.members || []).forEach((m) => {
+          if (!principalRolesMap.has(m)) {
+            principalRolesMap.set(m, new Set());
+          }
+          principalRolesMap.get(m).add(role);
+        });
+      });
+
+      const saAccounts =
+        saRes.status === 'fulfilled'
+          ? saRes.value.data?.accounts || []
+          : [];
+      const principals = saAccounts.map((sa) => {
+        const memberKey = `serviceAccount:${sa.email}`;
+        const roles = Array.from(principalRolesMap.get(memberKey) || []);
+        return {
+          member: memberKey,
+          kind: 'serviceAccount',
+          email: sa.email,
+          rolesCount: roles.length,
+          primaryRole: roles[0] || 'roles/iam.serviceAccountUser',
+        };
+      });
+      principalRolesMap.forEach((rolesSet, memberKey) => {
+        if (memberKey.startsWith('user:')) {
+          const email = memberKey.replace('user:', '');
+          const roles = Array.from(rolesSet);
+          principals.unshift({
+            member: memberKey,
+            kind: 'user',
+            email,
+            rolesCount: roles.length,
+            primaryRole: roles[0] || 'roles/owner',
+          });
+        }
+      });
+
+      const secrets = (
+        secretsRes.status === 'fulfilled'
+          ? secretsRes.value.data?.secrets || []
+          : []
+      ).map((s) => {
+        const parts = String(s.name || '').split('/');
+        return {
+          name: parts[parts.length - 1] || 'secret',
+          fullName: s.name,
+        };
+      });
+
+      const buckets = (
+        bucketsRes.status === 'fulfilled'
+          ? bucketsRes.value.data?.items || []
+          : []
+      ).map((b) => ({
+        name: b.name,
+        location: String(b.location || 'US').toLowerCase(),
+        storageClass: b.storageClass || 'STANDARD',
+      }));
+
+      const vms = [];
+      if (vmsRes.status === 'fulfilled' && vmsRes.value.data?.items) {
+        Object.entries(vmsRes.value.data.items).forEach(([scope, scoped]) => {
+          (scoped?.instances || []).forEach((inst) => {
+            const zone = String(inst.zone || scope || '')
+              .split('/')
+              .pop();
+            const region = zone.split('-').slice(0, 2).join('-') || 'us-central1';
+            const mType = String(inst.machineType || '')
+              .split('/')
+              .pop();
+            vms.push({
+              name: inst.name,
+              status: inst.status || 'RUNNING',
+              zone,
+              region,
+              machineType: mType || 'e2-medium',
+            });
+          });
+        });
+      }
+
+      const vpcs = (
+        vpcsRes.status === 'fulfilled'
+          ? vpcsRes.value.data?.items || []
+          : baseVpcs
+      ).map((v) => ({
+        name: v.name || 'default',
+        autoCreateSubnetworks: Boolean(v.autoCreateSubnetworks),
+      }));
+
+      const firewalls = (
+        fwRes.status === 'fulfilled'
+          ? fwRes.value.data?.items || []
+          : baseFirewalls
+      )
+        .map((fw) => {
+          const sourceRanges = fw.sourceRanges || [];
+          const isPublic = sourceRanges.includes('0.0.0.0/0');
+          const allowed = fw.allowed || [];
+          const ports = allowed.flatMap((a) => a.ports || []);
+          const protocol = allowed[0]?.IPProtocol || fw.protocol || 'tcp';
+          const exposesAdmin =
+            isPublic &&
+            (ports.includes('22') ||
+              ports.includes('3389') ||
+              allowed.some(
+                (a) =>
+                  a.IPProtocol === 'all' ||
+                  ((a.IPProtocol === 'tcp' || a.IPProtocol === 'udp') &&
+                    (!a.ports || a.ports.length === 0))
+              ));
+          return {
+            name: fw.name,
+            network: String(fw.network || 'default')
+              .split('/')
+              .pop(),
+            direction: fw.direction || 'INGRESS',
+            isPublic,
+            exposesAdmin,
+            protocol,
+            ports: ports.length > 0 ? ports.join(',') : 'all',
+          };
+        })
+        .sort(
+          (a, b) =>
+            Number(b.exposesAdmin) - Number(a.exposesAdmin) ||
+            Number(b.isPublic) - Number(a.isPublic)
+        );
+
+      const auditEvents = (
+        auditRes.status === 'fulfilled'
+          ? auditRes.value.data?.entries || []
+          : []
+      ).map((e) => ({
+        methodName: e.protoPayload?.methodName || 'gcp.audit.event',
+        serviceName: e.protoPayload?.serviceName || 'cloudaudit.googleapis.com',
+        principalEmail:
+          e.protoPayload?.authenticationInfo?.principalEmail || 'system',
+        timestamp: e.timestamp,
+      }));
+
+      const enabledApis = (
+        svcRes.status === 'fulfilled' ? svcRes.value.data?.services || [] : []
+      ).map((s) => String(s.name || '').split('/').pop());
+
+      extra = {
+        ts: Date.now(),
+        principals,
+        secrets,
+        buckets,
+        vms,
+        vpcs,
+        firewalls,
+        auditEvents,
+        enabledApis,
+      };
+      wave7MultiCloudParityCache.set(projectId, extra);
+    }
+
+    const principals = extra?.principals || [];
+    const secrets = extra?.secrets || [];
+    const buckets = extra?.buckets || [];
+    const vms = extra?.vms || [];
+    const vpcs = extra?.vpcs || [];
+    const firewalls = extra?.firewalls || [];
+    const auditEvents = extra?.auditEvents || [];
+    const enabledApis = extra?.enabledApis || [];
+
+    // Discover active regions in the project
+    const activeRegionsSet = new Set();
+    vms.forEach((v) => {
+      if (v.region) activeRegionsSet.add(v.region);
+    });
+    buckets.forEach((b) => {
+      if (b.location && b.location.includes('-')) {
+        activeRegionsSet.add(b.location);
+      }
+    });
+    baseResources.forEach((r) => {
+      const reg = String(r.region || r.location || '').toLowerCase();
+      if (reg && reg.includes('-') && !reg.startsWith('global')) {
+        activeRegionsSet.add(reg.split('-').slice(0, 2).join('-'));
+      }
+    });
+    if (activeRegionsSet.size === 0) {
+      activeRegionsSet.add('us-central1');
+    }
+    const activeRegions = Array.from(activeRegionsSet);
+    const avgCfePct = Math.round(
+      activeRegions.reduce((acc, r) => acc + (REGION_CFE_MAP[r] || 68), 0) /
+        Math.max(1, activeRegions.length)
+    );
+
+    const openAdminFirewalls = firewalls.filter((f) => f.exposesAdmin);
+    const openPublicFirewalls = firewalls.filter((f) => f.isPublic);
+
+    // Synthesize logical Azure-style Resource Groups from live project regions/workloads
+    const synthesizedResourceGroups = activeRegions.map((reg) => {
+      const regVms = vms.filter((v) => v.region === reg);
+      const regBuckets = buckets.filter((b) => b.location === reg);
+      return {
+        slug: `rg-${projectId}-${reg}`,
+        region: reg,
+        memberCount: regVms.length + regBuckets.length + vpcs.length,
+        cfePct: REGION_CFE_MAP[reg] || 68,
+      };
+    });
+
+    // Strict 3-Column Left-to-Right Mermaid Flowcharts (Zero Same-Column Edge Loops)
+    const stage1MermaidDsl = [
+      'flowchart LR',
+      '  subgraph SUBSEA["1. Global Anycast & Subsea Edge"]',
+      `    EDGE["40 GCP Regions · ${activeRegions.length} Active in ${projectId}"]`,
+      `    CFE["Avg Carbon-Free Energy: ${avgCfePct}% CFE"]`,
+      '  end',
+      '  subgraph BACKBONE["2. VPC & Firewall X-Ray"]',
+      ...vpcs.slice(0, 2).map(
+        (v, i) => `    VPC${i}["VPC: ${v.name} (Global Routing)"]`
+      ),
+      ...firewalls.slice(0, 2).map(
+        (f, i) =>
+          `    FW${i}["Firewall: ${f.name} (${f.protocol}:${f.ports})"]`
+      ),
+      '  end',
+      '  subgraph FLEET["3. Live Regional Workloads"]',
+      ...(vms.length > 0
+        ? vms.slice(0, 2).map(
+            (v, i) =>
+              `    VM${i}["VM: ${v.name} (${v.zone} · ${v.status})"]`
+          )
+        : [`    REG0["Active Region: ${activeRegions[0]} Ready"]`]),
+      '  end',
+      '  EDGE -->|"Subsea Fiber"| VPC0',
+      ...(firewalls.length > 0
+        ? [
+            '  CFE -->|"Firewall X-Ray"| FW0',
+            vms.length > 0
+              ? '  FW0 -->|"Inspects Packet"| VM0'
+              : '  FW0 -->|"Protects"| REG0',
+          ]
+        : []),
+      vms.length > 0
+        ? '  VPC0 -->|"Routes NIC"| VM0'
+        : '  VPC0 -->|"Subnets"| REG0',
+    ].join('\n');
+
+    const stage2MermaidDsl = [
+      'flowchart LR',
+      '  subgraph AWS_PAT["1. AWS Enterprise Pattern"]',
+      '    AWS_IAM["AWS IAM Policy Simulator"]',
+      '    AWS_SSM["AWS Systems Manager (SSM) & S3"]',
+      '    AWS_CT["AWS CloudTrail Lake SQL"]',
+      '  end',
+      '  subgraph GCP_BRIDGE["2. Native GCP Control Plane"]',
+      `    GCP_SIM["Policy Troubleshooter (${principals.length} Principals)"]`,
+      `    GCP_IAP["IAP Tunnel + V4 Signer (${vms.length} VMs · ${buckets.length} Buckets)"]`,
+      `    GCP_AUD["Cloud Audit Logs (${auditEvents.length} Live Events)"]`,
+      '  end',
+      '  subgraph LIVE_TARGETS["3. Live Project Identities & Assets"]',
+      ...(principals.length > 0
+        ? principals
+            .slice(0, 2)
+            .map(
+              (p, i) =>
+                `    PR${i}["${p.email.slice(0, 24)} (${p.rolesCount} roles)"]`
+            )
+        : [`    PR0["Project IAM Policy (${projectId})"]`]),
+      ...(secrets.length > 0
+        ? [
+            `    SEC0["Secret Manager (${secrets.length} Live Secrets)"]`,
+          ]
+        : []),
+      '  end',
+      '  AWS_IAM -->|"1:1 Parity"| GCP_SIM',
+      '  AWS_SSM -->|"Zero-Key IAP"| GCP_IAP',
+      '  AWS_CT -->|"cloudaudit"| GCP_AUD',
+      '  GCP_SIM -->|"Evaluates"| PR0',
+      ...(secrets.length > 0
+        ? ['  GCP_IAP -->|"Rotates"| SEC0']
+        : ['  GCP_IAP -->|"Audits"| PR0']),
+      '  GCP_AUD -->|"Traces"| PR0',
+    ].join('\n');
+
+    const stage3MermaidDsl = [
+      'flowchart LR',
+      '  subgraph AZ_PAT["1. Azure Governance Pattern"]',
+      '    AZ_RG["Azure Resource Groups & ARM Drift"]',
+      '    AZ_FUSE["Azure Cost Management Hard-Spend Cap"]',
+      '    AZ_FD["Azure Front Door + WAF"]',
+      '  end',
+      '  subgraph GCP_GOV["2. GCP Governance & Edge Equivalent"]',
+      `    GCP_RG["Logical Tag Groups (${synthesizedResourceGroups.length} Regional Groups)"]`,
+      '    GCP_FUSE["Billing Budget + Pub/Sub Stop-Loss Fuse"]',
+      '    GCP_ARMOR["Global HTTPS LB + Cloud Armor WAF"]',
+      '  end',
+      '  subgraph LIVE_SCOPE["3. Enforced Project Scope"]',
+      ...synthesizedResourceGroups.slice(0, 2).map(
+        (rg, i) =>
+          `    RG${i}["${rg.slug} (${rg.memberCount} assets · ${rg.cfePct}% CFE)"]`
+      ),
+      '  end',
+      '  AZ_RG -->|"Maps To"| GCP_RG',
+      '  AZ_FUSE -->|"Auto-Park"| GCP_FUSE',
+      '  AZ_FD -->|"Anycast"| GCP_ARMOR',
+      '  GCP_RG -->|"Groups"| RG0',
+      '  GCP_FUSE -->|"Guards"| RG0',
+      '  GCP_ARMOR -->|"Shields"| RG0',
+    ].join('\n');
+
+    const stage4MermaidDsl = [
+      'flowchart LR',
+      '  subgraph HYPER_EDGE["1. Alibaba & Huawei Hyperscale"]',
+      '    PTS["11.11 PTS + MSE Sentinel QPS Shedder"]',
+      '    CEN["Alibaba CEN + Global Accelerator QoS"]',
+      '  end',
+      '  subgraph HYPER_COMPUTE["2. Fractional GPU & 2PC Mesh"]',
+      '    VOLC["Huawei CCE Volcano 0.25x Fractional vGPU"]',
+      '    RMQ["RocketMQ 5.0 2PC + Nacos Zero-Restart"]',
+      '  end',
+      '  subgraph HYPER_DATA["3. HTAP Clone & NOC Command Wall"]',
+      `    HTAP["PolarDB/GaussDB -> AlloyDB 1.6s Clone"]`,
+      `    NOC["DataV / Astro NOC (${activeRegions.length} Active Regions)"]`,
+      '  end',
+      '  PTS -->|"25k QPS Gate"| VOLC',
+      '  CEN -->|"Gold QoS Slice"| RMQ',
+      '  VOLC -->|"Inference"| NOC',
+      '  RMQ -->|"2PC Escrow"| HTAP',
+    ].join('\n');
+
+    const stage5MermaidDsl = [
+      'flowchart LR',
+      '  subgraph PROPOSAL["1. Live Infrastructure Telemetry"]',
+      `    INV["${projectId}: ${vms.length} VMs · ${vpcs.length} VPCs · ${secrets.length} Secrets"]`,
+      `    PERIM["${openAdminFirewalls.length} Open Admin Firewalls · ${principals.length} Principals"]`,
+      '  end',
+      '  subgraph COUNCIL["2. 10-Persona Architecture Board"]',
+      '    ARCH["(01) Cloud Architect & (04) NetOps"]',
+      '    SEC["(05) DevSecOps & (07) SRE Commander"]',
+      '    FIN["(08) DBRE, (09) FinOps & (10) K8s Platform"]',
+      '  end',
+      '  subgraph VERDICT["3. Pre-Flight Verdict & Remediation"]',
+      '    GATE["5-Gate Pre-Flight Quota, IAM & CIDR Signoff"]',
+      '  end',
+      '  INV -->|"Audits Topology"| ARCH',
+      '  PERIM -->|"Scans Exposure"| SEC',
+      '  INV -->|"Sizes Burn"| FIN',
+      '  ARCH -->|"Approves"| GATE',
+      '  SEC -->|"Locks IAP"| GATE',
+      '  FIN -->|"Right-Sizes"| GATE',
+    ].join('\n');
+
+    const multicloudParityTf = `# ============================================================================
+# CloudPulse 2026 · Wave 7 Multi-Cloud (AWS / Azure / Alibaba) -> GCP Terraform Bridge
+# Project: ${projectId} · Active Regions: ${activeRegions.join(', ')}
+# Live Telemetry: ${principals.length} IAM Principals · ${vms.length} VMs · ${secrets.length} Secrets · ${vpcs.length} VPCs
+# ============================================================================
+
+terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 6.12.0"
+    }
+  }
+}
+
+# 1. Azure Resource Group Parity -> Google Cloud Resource Manager Tag Key & Value
+resource "google_tags_tag_key" "azure_resource_group_key" {
+  parent      = "projects/${projectId}"
+  short_name  = "resource_group"
+  description = "Azure-style Resource Group lifecycle & cost attribution boundary"
+}
+
+resource "google_tags_tag_value" "rg_prod_core" {
+  parent      = google_tags_tag_key.azure_resource_group_key.id
+  short_name  = "rg-${projectId}-${activeRegions[0] || 'us-central1'}"
+  description = "Primary regional workload group (${avgCfePct}% Carbon-Free Energy)"
+}
+
+# 2. Azure Front Door / AWS ALB + WAF Parity -> Global Cloud Armor Edge Policy
+resource "google_compute_security_policy" "multicloud_frontdoor_waf" {
+  name        = "${projectId}-frontdoor-waf-armor"
+  project     = "${projectId}"
+  description = "OWASP Top-10 + 11.11 MSE Sentinel QPS Rate-Limiting Gate"
+
+  rule {
+    action   = "throttle"
+    priority = 1000
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+      rate_limit_threshold {
+        count        = 600
+        interval_sec = 60
+      }
+    }
+  }
+
+  rule {
+    action   = "allow"
+    priority = 2147483647
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+}`;
+
+    const globalBackboneYaml = `# ============================================================================
+# CloudPulse 2026 · Global Subsea Backbone, Cross-Region Anycast & CEN QoS Spec
+# Project: ${projectId} · Active Regions: ${activeRegions.join(', ')} (${avgCfePct}% Avg CFE)
+# ============================================================================
+apiVersion: networking.gke.io/v1
+kind: MultiClusterIngress
+metadata:
+  name: ${projectId}-global-subsea-anycast
+  namespace: default
+  annotations:
+    networking.gke.io/security-policy: "${projectId}-frontdoor-waf-armor"
+    cloudpulse.google.com/subsea-backbone-tier: "PREMIUM_TIER_ANYCAST"
+    cloudpulse.google.com/active-regions: "${activeRegions.join(',')}"
+    cloudpulse.google.com/carbon-free-energy-pct: "${avgCfePct}%"
+spec:
+  template:
+    spec:
+      backend:
+        serviceName: ${projectId}-multi-region-svc
+        servicePort: 443`;
+
+    const gcloud591RunbookSh = `#!/usr/bin/env bash
+# ============================================================================
+# CloudPulse 2026 · Google Cloud SDK 591.0.0 [GA/BETA/ALPHA] & Multi-Cloud Parity Runbook
+# Project: ${projectId}
+# ============================================================================
+set -euo pipefail
+
+PROJECT_ID="${projectId}"
+PRIMARY_REGION="${activeRegions[0] || 'us-central1'}"
+
+echo "[1/4] Auditing IAM Policy bindings (AWS IAM Simulator parity - ${principals.length} live principals)..."
+gcloud projects get-iam-policy "\${PROJECT_ID}" --format="table(bindings.role,bindings.members)"
+
+echo "[2/4] Inspecting VPC Firewall perimeter & 0.0.0.0/0 exposure (${openPublicFirewalls.length} public rules)..."
+gcloud compute firewall-rules list --project="\${PROJECT_ID}" --format="table(name,network,direction,sourceRanges.list(),allowed[].map().firewall_rule().list())"
+
+echo "[3/4] Querying recent Cloud Audit Logs (AWS CloudTrail Lake parity - ${auditEvents.length} recent events)..."
+gcloud logging read 'logName:"cloudaudit.googleapis.com"' --project="\${PROJECT_ID}" --limit=10 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)"
+
+echo "[4/4] Verifying SDK 591.0.0 Cloud Quotas & Enabled Service APIs (${enabledApis.length} enabled APIs)..."
+gcloud beta quotas info list --project="\${PROJECT_ID}" --service=compute.googleapis.com --limit=10 || true`;
+
+    const stages = [
+      {
+        id: 'STAGE_1_GLOBAL_SUBSEA_BACKBONE',
+        stepNumber: 1,
+        title: '1. 40-Region Subsea Backbone, Firewall X-Ray & Carbon CFE',
+        shortTitle: 'Global Subsea Map',
+        targetTab: 'GLOBAL_MAP',
+        secondaryTab: 'VPC_NETWORKS',
+        secondaryLabel: 'Open VPC & Firewall Perimeter Studio',
+        status: openAdminFirewalls.length > 0 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
+        metricBadge: `${activeRegions.length} Active Region(s) · ${avgCfePct}% CFE · ${firewalls.length} Firewalls`,
+        summary: `Project "${projectId}" spans ${activeRegions.length} active region(s) (${activeRegions.join(', ')}) averaging ${avgCfePct}% Carbon-Free Energy across ${vpcs.length} VPC(s), ${vms.length} Compute VM(s), and ${firewalls.length} firewall rule(s) (${openAdminFirewalls.length} exposing admin ports 22/3389 to 0.0.0.0/0).`,
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...activeRegions.slice(0, 2).map((reg) => ({
+            kind: `Active GCP Region (${REGION_CFE_MAP[reg] || 68}% CFE)`,
+            name: `${reg} Subsea Fiber Node`,
+            meta: `${vms.filter((v) => v.region === reg).length} VM(s) · ${buckets.filter((b) => b.location === reg).length} Bucket(s) · Great-Circle RTT Ready`,
+            targetTab: 'GLOBAL_MAP',
+          })),
+          ...firewalls.slice(0, 3).map((fw) => ({
+            kind: fw.exposesAdmin
+              ? 'Public Admin Firewall (0.0.0.0/0)'
+              : fw.isPublic
+              ? 'Public Web Firewall (0.0.0.0/0)'
+              : 'Internal VPC Firewall Rule',
+            name: fw.name,
+            meta: `Click to trace ${fw.protocol.toUpperCase()}:${fw.ports} on Global Map Firewall X-Ray`,
+            targetTab: 'GLOBAL_MAP',
+            globalMapXRay: {
+              ruleName: fw.name,
+              vpcName: fw.network,
+              protocol: fw.protocol,
+              port: Number(String(fw.ports).split(',')[0]) || 22,
+              sourceRanges: fw.isPublic ? ['0.0.0.0/0'] : ['10.128.0.0/9'],
+            },
+          })),
+          {
+            kind: 'Cross-Region Carbon & GPU Teleporter',
+            name: 'Compare 40 Regions CFE% & GPU SKUs',
+            meta: 'Open Cross-Region Teleporter in Innovation Lab',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'TELEPORT_DIFF',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_2_AWS_PARITY_BRIDGE',
+        stepNumber: 2,
+        title: '2. AWS to GCP Parity Bridge (IAM Sim, S3 Presigned, SSM & CloudTrail)',
+        shortTitle: 'AWS Parity Bridge',
+        targetTab: 'AWS_AZURE_PARITY',
+        targetSubTab: 'IAM_SIMULATOR',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'IAM_SURGEON',
+        secondaryLabel: 'Autonomous IAM Surgeon',
+        status: 'OPTIMAL',
+        metricBadge: `${principals.length} IAM · ${vms.length} SSM VMs · ${auditEvents.length} CloudTrail`,
+        summary: `1:1 AWS-to-GCP control plane for "${projectId}": test ${principals.length} live IAM principal(s) in the AWS IAM Policy Simulator, run zero-key fleet commands across ${vms.length} Compute VM(s) (${vms.map((v) => v.name).join(', ') || 'ready'}), rotate ${secrets.length} Secret Manager secret(s), and query ${auditEvents.length} live Cloud Audit Log event(s).`,
+        cliCmd: `gcloud projects get-iam-policy ${projectId}`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          {
+            kind: 'AWS IAM Policy Simulator & Switch-Role',
+            name: `Simulate ${principals.length} Live IAM Principals`,
+            meta:
+              principals.length > 0
+                ? `Includes ${principals[0].email} (${principals[0].rolesCount} roles)`
+                : 'Test permissions & Switch-Role impersonation',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'IAM_SIMULATOR',
+          },
+          {
+            kind: 'AWS Systems Manager (SSM) Run Command',
+            name:
+              vms.length > 0
+                ? `Target VM Fleet: ${vms.map((v) => `${v.name} (${v.zone})`).join(', ')}`
+                : 'Zero-Key IAP & OS Config Fleet Runner',
+            meta: `${vms.length} live Compute VM target(s) in ${projectId}`,
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'SSM_FLEET_COMMAND',
+          },
+          {
+            kind: 'AWS CloudTrail Lake Time-Detective',
+            name: `Query ${auditEvents.length} Live cloudaudit Events`,
+            meta:
+              auditEvents.length > 0
+                ? `Latest: ${auditEvents[0].methodName}`
+                : 'Inspect live control-plane & data-access events',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
+          },
+          {
+            kind: 'AWS Secrets Manager / Key Vault Sync',
+            name: `${secrets.length} Live Secret Manager Vault Items`,
+            meta:
+              secrets.length > 0
+                ? `Secrets: ${secrets.slice(0, 3).map((s) => s.name).join(', ')}`
+                : 'Configure 30-day cryptographic secret rotation',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'KEYVAULT_ROTATION',
+          },
+          {
+            kind: 'AWS S3 Presigned URLs & Browser Upload',
+            name: `${buckets.length} GCS Bucket(s) · V4 Cryptographic Signer`,
+            meta: 'Generate time-bound V4 Signed / SAS URLs in 1 click',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'SAS_PRESIGNED',
+          },
+          {
+            kind: 'AWS Bedrock & Azure AI Foundry Gateway',
+            name: 'Multi-Model Router (Gemini 3.8 + Claude 3.7 + DLP)',
+            meta: 'Prompt-injection shield + automatic model failover',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'BEDROCK_FOUNDRY_AI_GATEWAY',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_AZURE_ENTERPRISE_PARITY',
+        stepNumber: 3,
+        title: '3. Azure Enterprise Parity (Resource Groups, Spend Fuse & Front Door WAF)',
+        shortTitle: 'Azure Governance',
+        targetTab: 'AWS_AZURE_PARITY',
+        targetSubTab: 'RESOURCE_GROUPS',
+        secondaryTab: 'FINOPS',
+        secondaryLabel: 'Open FinOps & Credit Guardian',
+        status: 'OPTIMAL',
+        metricBadge: `${synthesizedResourceGroups.length} Tag Group(s) · Spend Fuse · Front Door WAF`,
+        summary: `Brings Azure's best governance primitives to "${projectId}": group resources by lifecycle (${synthesizedResourceGroups.map((g) => g.slug).join(', ')}), arm the Hard-Spend Stop-Loss Fuse, deploy a 1-Screen Global HTTPS Load Balancer + Cloud Armor WAF, and detect CloudFormation/ARM stack drift.`,
+        cliCmd: `gcloud resource-manager tags keys list --parent=projects/${projectId}`,
+        mermaidDsl: stage3MermaidDsl,
+        stageItems: [
+          {
+            kind: 'Azure Resource Groups + RBAC + 1-Click Teardown',
+            name: `Manage ${synthesizedResourceGroups.length} Logical Resource Group(s)`,
+            meta: `Regions: ${activeRegions.join(', ')} · Cascade hibernate or teardown`,
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'RESOURCE_GROUPS',
+          },
+          {
+            kind: 'Azure Cost Management Stop-Loss Fuse',
+            name: 'Hard-Spend Kill-Switch Fuse (80% / 95% / 100%)',
+            meta: 'Auto-cap Cloud Run & stop VMs before budget overrun',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'SPEND_FUSE',
+          },
+          {
+            kind: 'Azure Front Door / AWS ALB + WAF Wizard',
+            name: '1-Screen Global Anycast HTTPS LB + Cloud Armor',
+            meta: 'Collapses 7 GCP networking steps into 1 atomic deploy',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'GLOBAL_LB_WIZARD',
+          },
+          {
+            kind: 'CloudFormation / Azure ARM Stack Drift',
+            name: 'Snapshot Live Project State & Detect Drift',
+            meta: '1-click rollback when out-of-band console edits occur',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'CFN_ARM_STACKS',
+          },
+          {
+            kind: 'Route 53 / Azure Front Door Traffic Manager',
+            name: 'Weighted Geo-Proximity DNS & Health Failover',
+            meta: 'US / EU / APAC traffic splitting with sub-second probe',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'ROUTE53_FRONTDOOR_TRAFFIC',
+          },
+          {
+            kind: 'Azure Lighthouse & AWS RAM Cross-Project Share',
+            name: 'Zero-Copy Shared VPC, BigQuery & Vertex AI Delegation',
+            meta: 'Time-bound IAM Conditions across spoke projects',
+            targetTab: 'AWS_AZURE_PARITY',
+            subTab: 'RAM_LIGHTHOUSE_ORG_SHARING',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_4_ALIBABA_HUAWEI_HYPERSCALE',
+        stepNumber: 4,
+        title: '4. Alibaba & Huawei Hyperscale Parity (11.11 Surge, CEN QoS & vGPU)',
+        shortTitle: 'Alibaba & Huawei',
+        targetTab: 'ALIBABA_HUAWEI_PARITY',
+        targetSubTab: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+        secondaryTab: 'GKE_STUDIO',
+        secondaryLabel: 'GKE Autopilot & GPU Fleet',
+        status: 'OPTIMAL',
+        metricBadge: `8 Hyperscale Engines · 11.11 Surge · 0.25x vGPU`,
+        summary: `Unlocks Alibaba Cloud (Aliyun) & Huawei Cloud hyperscale patterns on GCP for "${projectId}": 11.11 Singles-Day PTS + MSE Sentinel QPS Shedder, CEN + Global Accelerator DSCP QoS Slicer, PolarDB/GaussDB 1.6s HTAP Clone, Huawei CCE Volcano 0.25x Fractional vGPU, RocketMQ 2PC, Nacos Wasm Mesh, and DataV NOC Wall.`,
+        cliCmd: `gcloud compute networks list --project=${projectId}`,
+        mermaidDsl: stage4MermaidDsl,
+        stageItems: [
+          {
+            kind: 'Alibaba PTS + MSE Sentinel Surge Engine',
+            name: "11.11 Singles' Day Flash-Sale QPS Shedder",
+            meta: 'Warm min-instances + graceful HTTP 429 waiting-room queue',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+          },
+          {
+            kind: 'Alibaba CEN + Global Accelerator QoS Slicer',
+            name: 'Cross-Border Anycast Bandwidth & DSCP Slicer',
+            meta: '50% Gold Payment · 35% Silver API · 15% Bronze Replication',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE',
+          },
+          {
+            kind: 'PolarDB & Huawei GaussDB Serverless HTAP',
+            name: '1.6-Second Copy-on-Write Database Clone & Read Pool',
+            meta: 'Zero-ETL OLTP + Columnar HTAP scaling on AlloyDB / Cloud SQL',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
+          },
+          {
+            kind: 'Huawei CCE Volcano & Alibaba PAI vGPU Pool',
+            name: '0.25x Fractional GPU Slicing (4 LLMs per Physical GPU)',
+            meta: 'Cut AI inference GPU burn by up to -72% on GKE',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'HUAWEI_CCE_MODELARTS_AI_POOL',
+          },
+          {
+            kind: 'RocketMQ 5.0 2PC & Nacos + Higress Config Mesh',
+            name: 'Transactional Half-Messages & Zero-Restart Wasm Push',
+            meta: 'Distributed escrow sagas + sub-second gray header routing',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY',
+          },
+          {
+            kind: 'DataV / Huawei Astro Digital-Twin NOC Wall',
+            name: `Live Multi-Region NOC Wall (${activeRegions.join(', ')})`,
+            meta: 'Real-time fiber RTT, audit velocity & subsea cut drill',
+            targetTab: 'ALIBABA_HUAWEI_PARITY',
+            subTab: 'HUAWEI_DATAV_NOC_COMMAND_WALL',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_5_TEN_PERSONA_COUNCIL',
+        stepNumber: 5,
+        title: '5. 10-Persona Enterprise Architecture Council & Pre-Flight War-Room',
+        shortTitle: '10-Persona Board',
+        targetTab: 'INNOVATION_LAB',
+        targetSubTab: 'FIVE_PERSONA_COUNCIL',
+        secondaryTab: 'STARTUP_10X',
+        secondaryLabel: 'Startup 10X Scale Radar',
+        status: 'OPTIMAL',
+        metricBadge: `10 Personas · 5-Gate Pre-Flight · Live C4 Graph`,
+        summary: `Convenes all 10 specialized principal engineering personas against "${projectId}"'s live state (${vms.length} VMs, ${vpcs.length} VPCs, ${firewalls.length} firewalls, ${secrets.length} secrets): Cloud Architect, Cloud Engineer, Data Engineer, NetOps, DevSecOps, AI/MLOps, SRE Commander, DBRE, FinOps, and K8s Platform Engineer.`,
+        cliCmd: `gcloud asset search-all-resources --scope=projects/${projectId} --page-size=20`,
+        mermaidDsl: stage5MermaidDsl,
+        stageItems: [
+          {
+            kind: 'Unified 10-Persona Architecture Review Board',
+            name: 'Convene Full 10-Persona War-Room & C4 Diagram',
+            meta: 'Cross-persona blast-radius signoff & executive scorecard',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_COUNCIL',
+          },
+          {
+            kind: 'Persona 01 & 04 · Cloud Architect + NetOps',
+            name: 'SPOF Blast-Radius, 4-Hop Packet Tracer & IPAM Guard',
+            meta: `Audits ${vpcs.length} VPC(s) & ${firewalls.length} firewall rule(s) in ${projectId}`,
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_NETOPS',
+          },
+          {
+            kind: 'Persona 02 & 05 · Cloud Engineer + DevSecOps',
+            name: '5-Gate Pre-Flight Validator, Escalation Graph & OIDC WIF',
+            meta: `Audits ${principals.length} IAM principal(s) & ${secrets.length} secret(s)`,
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_DEVSECOPS',
+          },
+          {
+            kind: 'Persona 03 & 08 · Data Engineer + DBRE',
+            name: 'Column Lineage Guard, Lock-Tree & Zero-Downtime DDL',
+            meta: 'BigQuery, Spanner, AlloyDB & Cloud SQL reliability suite',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_DBRE',
+          },
+          {
+            kind: 'Persona 06 & 10 · AI/MLOps + K8s Platform Engineer',
+            name: 'Vertex Model Armor, Smart Router & K8s Pod Right-Sizer',
+            meta: 'Prompt firewall + PDB scale-down blocker & STRICT mTLS',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_PLATFORM_K8S',
+          },
+          {
+            kind: 'Persona 07 & 09 · SRE Commander + FinOps Lead',
+            name: '14.4x SLO Freeze Gate, Unit Economics & 3-Cloud Arbitrage',
+            meta: `Avg regional carbon score: ${avgCfePct}% CFE`,
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_FINOPS_ENG',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_6_SDK_591_FRONTIER_TERRAFORM',
+        stepNumber: 6,
+        title: '6. gcloud SDK 591.0.0 Frontier Lab, Quantum Nexus & Multi-Cloud .tf',
+        shortTitle: 'SDK 591.0.0 & .tf',
+        targetTab: 'INNOVATION_LAB',
+        targetSubTab: 'GCLOUD_ALPHA_BETA',
+        openArtifactTab: 'MULTICLOUD_PARITY_TF',
+        secondaryTab: 'INNOVATION_LAB',
+        secondarySubTab: 'TERRAFORM',
+        secondaryLabel: 'Open Reverse-Terraform Exporter',
+        status: 'OPTIMAL',
+        metricBadge: `SDK 591.0.0 · ${enabledApis.length} APIs · Multi-Cloud .tf`,
+        summary: `Executes Google Cloud SDK 591.0.0 [GA/BETA/ALPHA] capabilities across "${projectId}" (${enabledApis.length} enabled APIs) and synthesizes ready-to-apply Multi-Cloud Parity Terraform HCL (multicloud_aws_azure_to_gcp.tf), Global Subsea Anycast YAML, and CLI verification runbooks.`,
+        cliCmd: `gcloud beta quotas info list --project=${projectId} --service=compute.googleapis.com --limit=10`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: 'Multi-Cloud Parity Terraform Blueprint',
+            name: 'multicloud_aws_azure_to_gcp.tf (Tags + Cloud Armor WAF)',
+            meta: 'Click to inspect & download synthesized Terraform 1.5+ HCL',
+            targetTab: 'INNOVATION_LAB',
+            openArtifactTab: 'MULTICLOUD_PARITY_TF',
+          },
+          {
+            kind: '[GA/BETA/ALPHA] gcloud SDK 591.0.0 Frontier Lab',
+            name: 'Worker Pools, Model Armor, PAM JIT, Lustre & Quotas',
+            meta: `${enabledApis.length} live enabled GCP APIs in ${projectId}`,
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'GCLOUD_ALPHA_BETA',
+          },
+          {
+            kind: '2026 Quantum Nexus (5-in-1 Resilience Suite)',
+            name: 'Causal Blast-Radius, State Rollback & PR Shadow Previews',
+            meta: 'Open Quantum Nexus in 2026 Innovation Lab',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'QUANTUM_NEXUS',
+          },
+          {
+            kind: 'Full Project Reverse-Terraform + imports.tf',
+            name: `Codify ${vms.length} VMs, ${vpcs.length} VPCs & ${secrets.length} Secrets into HCL`,
+            meta: 'Zero-downtime Terraform 1.5+ import{} generator',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'TERRAFORM',
+          },
+        ],
+      },
+    ];
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        activeRegions: activeRegions.length,
+        avgCfePct,
+        vpcs: vpcs.length,
+        firewalls: firewalls.length,
+        openAdminFirewalls: openAdminFirewalls.length,
+        vms: vms.length,
+        buckets: buckets.length,
+        secrets: secrets.length,
+        principals: principals.length,
+        auditEvents: auditEvents.length,
+        enabledApis: enabledApis.length,
+        resourceGroups: synthesizedResourceGroups.length,
+      },
+      stages,
+      artifacts: {
+        multicloudParityTf,
+        globalBackboneYaml,
+        gcloud591RunbookSh,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 7 Global Multi-Cloud Parity, Subsea Backbone & 2026 Frontier blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {

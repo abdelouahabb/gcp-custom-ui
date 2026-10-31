@@ -203,6 +203,7 @@ export default function Revolutionary2026Suite({
   projectId,
   overview,
   initialSubTab = 'WAVE11_MOONSHOT',
+  onSubTabChange,
   onRefreshOverview,
   onOpenProvision,
   onDeleteResource,
@@ -232,32 +233,55 @@ export default function Revolutionary2026Suite({
     if (norm === 'FINOPS_SLEEP') return 'FINOPS';
     return 'ALL';
   }); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
+  const applyNormalizedSubTab = useCallback((rawId) => {
+    const normalized = normalizeSubTabId(rawId);
+    setSubTab(normalized);
+    if (normalized === 'TERRAFORM') {
+      setLabCategory('AI_IAC');
+      setTimeout(() => {
+        terraformSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 120);
+    } else if (normalized === 'FINOPS_SLEEP') {
+      setLabCategory('FINOPS');
+      setTimeout(() => {
+        zombieSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+        window.dispatchEvent(new CustomEvent('cloudpulse:scan-zombies'));
+      }, 140);
+    } else {
+      setLabCategory('ALL');
+    }
+  }, []);
+
   useEffect(() => {
     if (initialSubTab) {
-      const normalized = normalizeSubTabId(initialSubTab);
-      setSubTab(normalized);
-      if (normalized === 'TERRAFORM') {
-        setLabCategory('AI_IAC');
-        setTimeout(() => {
-          terraformSectionRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
-        }, 120);
-      } else if (normalized === 'FINOPS_SLEEP') {
-        setLabCategory('FINOPS');
-        setTimeout(() => {
-          zombieSectionRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
-          window.dispatchEvent(new CustomEvent('cloudpulse:scan-zombies'));
-        }, 140);
-      } else {
-        setLabCategory('ALL');
-      }
+      applyNormalizedSubTab(initialSubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, applyNormalizedSubTab]);
+
+  useEffect(() => {
+    const handleInnovationSubTab = (evt) => {
+      const targetSubTab = evt?.detail?.subTab;
+      if (targetSubTab) {
+        applyNormalizedSubTab(targetSubTab);
+        onSubTabChange?.(targetSubTab);
+      }
+    };
+    window.addEventListener(
+      'cloudpulse:innovation-subtab',
+      handleInnovationSubTab
+    );
+    return () =>
+      window.removeEventListener(
+        'cloudpulse:innovation-subtab',
+        handleInnovationSubTab
+      );
+  }, [applyNormalizedSubTab, onSubTabChange]);
   const [vms, setVms] = useState(() =>
     (overview?.resources || []).filter((r) => r.type === 'Compute Engine VM')
   );
@@ -1398,7 +1422,10 @@ export default function Revolutionary2026Suite({
                   key={t.id}
                   type="button"
                   data-feature-id={t.id}
-                  onClick={() => setSubTab(t.id)}
+                  onClick={() => {
+                    setSubTab(t.id);
+                    onSubTabChange?.(t.id);
+                  }}
                   title={t.tip}
                   className={`w-full h-11 px-3 rounded-md border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     active

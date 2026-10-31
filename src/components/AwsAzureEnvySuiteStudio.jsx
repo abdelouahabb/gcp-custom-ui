@@ -43,6 +43,7 @@ export default function AwsAzureEnvySuiteStudio({
   projectId,
   cloudFamily = 'AWS_AZURE',
   initialTab = 'RESOURCE_GROUPS',
+  onSubTabChange,
   onSwitchCloudFamily,
   onNavigateToGcpTab,
   onOpenHealthAndDrift,
@@ -63,6 +64,19 @@ export default function AwsAzureEnvySuiteStudio({
       setActiveSubTab(initialTab);
     }
   }, [initialTab]);
+
+  useEffect(() => {
+    const handleParitySubTab = (evt) => {
+      const subTab = evt?.detail?.subTab;
+      if (subTab) {
+        setActiveSubTab(subTab);
+        onSubTabChange?.(subTab);
+      }
+    };
+    window.addEventListener('cloudpulse:parity-subtab', handleParitySubTab);
+    return () =>
+      window.removeEventListener('cloudpulse:parity-subtab', handleParitySubTab);
+  }, [onSubTabChange]);
   const [loading, setLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
   const [data, setData] = useState(null);
@@ -2375,7 +2389,10 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 data-feature-id={`PARITY_TAB_${tab.id}`}
                 title={`${cleanTitle} (${tab.badge})`}
-                onClick={() => setActiveSubTab(tab.id)}
+                onClick={() => {
+                  setActiveSubTab(tab.id);
+                  onSubTabChange?.(tab.id);
+                }}
                 className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/25'
