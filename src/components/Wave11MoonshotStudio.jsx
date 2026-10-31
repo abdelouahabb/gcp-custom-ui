@@ -61,11 +61,78 @@ const SUB_TABS = [
   },
 ];
 
+const FIRESTORE_DOC_PRESETS = [
+  {
+    id: 'release-v3-moonshot',
+    label: '1. Canary Release Manifest',
+    collection: 'cloudpulse_deployments',
+    payload: {
+      service: 'cloudpulse-2026-cockpit',
+      releaseTrack: 'GA_PRODUCTION',
+      canaryPhasesPct: [10, 25, 50, 100],
+      activeCanaryWeightPct: 25,
+      autoRollbackSloBurnThreshold: 2.0,
+      zeroSyntheticVerified: true,
+      region: 'us-central1',
+    },
+  },
+  {
+    id: 'flag-quantum-dpi-waf',
+    label: '2. Feature Flag Rollout',
+    collection: 'cloudpulse_feature_flags',
+    payload: {
+      flagKey: 'ENABLE_SURICATA_L7_DPI_SURGEON',
+      enabled: true,
+      rolloutPercentage: 100,
+      targetEnvironments: ['dev', 'staging', 'prod'],
+      ownerTeam: 'secops-war-room',
+      zeroDowntimeReload: true,
+    },
+  },
+  {
+    id: 'agent-session-gemini38',
+    label: '3. AI Agent Session Memory',
+    collection: 'cloudpulse_agent_memory',
+    payload: {
+      agentId: 'gemini-3.8-flash-sre-commander',
+      mcpServersConnected: 48,
+      lastToolInvoked: 'compute.googleapis.com/firewalls.patch',
+      tokenBudgetRemaining: 94200,
+      groundedConfidenceScore: 0.994,
+    },
+  },
+  {
+    id: 'tenant-finops-guardrail',
+    label: '4. Tenant FinOps Quota Ledger',
+    collection: 'cloudpulse_finops_ledger',
+    payload: {
+      tenantId: 'enterprise-core-prod',
+      monthlyBudgetUsd: 250.0,
+      alwaysFreeTierEnforced: true,
+      cloudRunMinInstances: 0,
+      idleGpuAutoParkMinutes: 15,
+    },
+  },
+  {
+    id: 'ed25519-audit-receipt',
+    label: '5. Zero-Trust Audit Receipt',
+    collection: 'cloudpulse_audit_receipts',
+    payload: {
+      signatureAlgorithm: 'Ed25519 (RFC 8032)',
+      invariantStatus: '12_OF_12_COMPLIANT',
+      cloudArmorOwaspRulesArmed: 8,
+      pitrRetentionDays: 7,
+      verifiedBy: 'Autonomous Cloud SOC Guardian',
+    },
+  },
+];
+
 export default function Wave11MoonshotStudio({
   projectId,
   overview,
   liveBurn,
   onSelectProject,
+  onSelectStudioTab,
   onRunInShell,
   onShowToast,
   onShowError,
@@ -79,29 +146,30 @@ export default function Wave11MoonshotStudio({
   // Cloud Deploy form state
   const [pipelineId, setPipelineId] = useState('cloudpulse-canary-pipeline');
   const [pipelineDesc, setPipelineDesc] = useState(
-    'Progressive Canary Delivery Pipeline (Dev -> Staging -> 25%/50%/100% Prod)'
+    'Progressive Canary Delivery Pipeline (Dev -> Staging -> Canary Prod)'
   );
   const [enableCanary, setEnableCanary] = useState(true);
+  const [canaryProfile, setCanaryProfile] = useState('25,50');
+  const [verifyCanary, setVerifyCanary] = useState(true);
   const [requireProdApproval, setRequireProdApproval] = useState(true);
   const [creatingPipeline, setCreatingPipeline] = useState(false);
+  const [deletingPipelineId, setDeletingPipelineId] = useState(null);
+  const [showDeployYamlPreview, setShowDeployYamlPreview] = useState(false);
 
   // Firestore form state
   const [docIdInput, setDocIdInput] = useState('release-v3-moonshot');
   const [docJsonInput, setDocJsonInput] = useState(
-    JSON.stringify(
-      {
-        service: 'cloudpulse-2026-cockpit',
-        releaseTrack: 'GA_PRODUCTION',
-        canaryWeightPct: 25,
-        zeroSyntheticVerified: true,
-        region: 'us-central1',
-      },
-      null,
-      2
-    )
+    JSON.stringify(FIRESTORE_DOC_PRESETS[0].payload, null, 2)
   );
+  const [docSearchQuery, setDocSearchQuery] = useState('');
   const [savingDoc, setSavingDoc] = useState(false);
   const [creatingDb, setCreatingDb] = useState(false);
+  const [patchingDbName, setPatchingDbName] = useState(null);
+
+  // FinOps & Regional Quotas filter state
+  const [quotaSearch, setQuotaSearch] = useState('');
+  const [quotaCategoryFilter, setQuotaCategoryFilter] = useState('ALL');
+  const [actingRecId, setActingRecId] = useState(null);
 
   // Multi-Project Matrix & Stress Audit state
   const [multiProjectData, setMultiProjectData] = useState(null);
@@ -166,6 +234,10 @@ export default function Wave11MoonshotStudio({
     e.preventDefault();
     if (!projectId) return;
     setCreatingPipeline(true);
+    const parsedPercentages = String(canaryProfile || '25,50')
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0 && n < 100);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -177,6 +249,8 @@ export default function Wave11MoonshotStudio({
           description: pipelineDesc,
           cloudRunLocation: region,
           enableCanary,
+          canaryPercentages: parsedPercentages.length > 0 ? parsedPercentages : [25, 50],
+          verifyCanary,
           requireProdApproval,
         }
       );
@@ -197,6 +271,155 @@ export default function Wave11MoonshotStudio({
       }
     } finally {
       setCreatingPipeline(false);
+    }
+  };
+
+  const handleDeletePipeline = async (targetPipelineId) => {
+    if (!projectId || !targetPipelineId) return;
+    setDeletingPipelineId(targetPipelineId);
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/wave11/clouddeploy/pipeline`,
+        {
+          params: {
+            region,
+            pipelineId: targetPipelineId,
+            deleteTargets: true,
+          },
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Deleted Cloud Deploy pipeline "${targetPipelineId}" in ${region}.`
+        );
+      }
+      fetchWave11Overview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to delete Cloud Deploy pipeline.'
+        );
+      }
+    } finally {
+      setDeletingPipelineId(null);
+    }
+  };
+
+  const handleToggleFirestorePitr = async (dbName, currentlyEnabled) => {
+    if (!projectId) return;
+    const cleanDbId = String(dbName || '(default)').split('/').pop() || '(default)';
+    setPatchingDbName(cleanDbId);
+    try {
+      const res = await axios.patch(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/wave11/firestore/database`,
+        {
+          databaseId: cleanDbId,
+          pointInTimeRecovery: !currentlyEnabled,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Updated 7-Day PITR on Firestore database "${cleanDbId}".`
+        );
+      }
+      fetchWave11Overview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to toggle Firestore 7-Day PITR.'
+        );
+      }
+    } finally {
+      setPatchingDbName(null);
+    }
+  };
+
+  const handleApplyFirestorePreset = (preset) => {
+    if (!preset) return;
+    setCollectionId(preset.collection);
+    setDocIdInput(preset.id);
+    setDocJsonInput(JSON.stringify(preset.payload, null, 2));
+    if (onShowToast) {
+      onShowToast(
+        `Loaded template "${preset.label}" (${preset.collection}/${preset.id})`
+      );
+    }
+  };
+
+  const handleExportFirestoreCollection = (docsToExport) => {
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            projectId,
+            databaseId: '(default)',
+            collectionId,
+            exportedAt: new Date().toISOString(),
+            documentCount: docsToExport.length,
+            documents: docsToExport,
+          },
+          null,
+          2
+        ),
+      ],
+      { type: 'application/json;charset=utf-8' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `firestore-${projectId}-${collectionId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (onShowToast) {
+      onShowToast(
+        `Exported ${docsToExport.length} document(s) from "${collectionId}" as JSON.`
+      );
+    }
+  };
+
+  const handleRecommenderAction = async (rec, actionType) => {
+    if (!projectId || !rec?.fullName) return;
+    setActingRecId(rec.fullName);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/wave11/recommender/action`,
+        {
+          recommendationFullName: rec.fullName,
+          action: actionType,
+          etag: rec.etag || '',
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Marked Active Assist recommendation as ${actionType}.`
+        );
+      }
+      fetchWave11Overview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to update Active Assist recommendation state.'
+        );
+      }
+    } finally {
+      setActingRecId(null);
     }
   };
 
@@ -649,35 +872,111 @@ export default function Wave11MoonshotStudio({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono cursor-pointer">
+              <div>
+                <label className="block text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 mb-1">
+                  Progressive Canary Traffic Split Strategy
+                </label>
+                <select
+                  value={canaryProfile}
+                  onChange={(e) => setCanaryProfile(e.target.value)}
+                  disabled={!enableCanary}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 disabled:opacity-50"
+                >
+                  <option value="25,50">Standard 3-Phase Canary (25% → 50% → 100%)</option>
+                  <option value="10,25,50">Cautious 4-Phase Canary (10% → 25% → 50% → 100%)</option>
+                  <option value="5,20,50,80">High-Safety 5-Phase Canary (5% → 20% → 50% → 80% → 100%)</option>
+                  <option value="50">Fast 2-Phase Split (50% → 100%)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono cursor-pointer">
                   <input
                     type="checkbox"
                     checked={enableCanary}
                     onChange={(e) => setEnableCanary(e.target.checked)}
                   />
-                  <span>25% → 50% → 100% Canary</span>
+                  <span>Progressive Canary</span>
                 </label>
-                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono cursor-pointer">
+                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={verifyCanary}
+                    disabled={!enableCanary}
+                    onChange={(e) => setVerifyCanary(e.target.checked)}
+                  />
+                  <span>Auto-Verify Job</span>
+                </label>
+                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono cursor-pointer">
                   <input
                     type="checkbox"
                     checked={requireProdApproval}
                     onChange={(e) => setRequireProdApproval(e.target.checked)}
                   />
-                  <span>Require IAM Prod Approval</span>
+                  <span>Prod IAM Gate</span>
                 </label>
               </div>
 
-              <button
-                type="submit"
-                disabled={creatingPipeline}
-                className="w-full py-2.5 px-4 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {creatingPipeline
-                  ? 'Provisioning Targets & Pipeline on clouddeploy.googleapis.com...'
-                  : `Provision Dev → Staging → Prod Pipeline in ${region}`}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={creatingPipeline}
+                  className="flex-1 py-2.5 px-4 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {creatingPipeline
+                    ? 'Provisioning Targets & Pipeline on clouddeploy.googleapis.com...'
+                    : `Provision Dev → Staging → Prod Pipeline in ${region}`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeployYamlPreview((v) => !v)}
+                  className="py-2.5 px-3 rounded-md text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                >
+                  {showDeployYamlPreview ? 'Hide YAML' : 'clouddeploy.yaml'}
+                </button>
+              </div>
             </form>
+
+            {showDeployYamlPreview && (
+              <div className="p-3 rounded-xl bg-zinc-950 text-emerald-400 border border-zinc-800 space-y-2 text-[11px] font-mono">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400 font-bold">
+                    Generated clouddeploy.yaml + skaffold.yaml
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        'clouddeploy_yaml',
+                        `apiVersion: deploy.cloud.google.com/v1\nkind: DeliveryPipeline\nmetadata:\n  name: ${pipelineId}\ndescription: "${pipelineDesc}"\nserialPipeline:\n  stages:\n  - targetId: ${pipelineId}-dev\n    profiles: [dev]\n  - targetId: ${pipelineId}-staging\n    profiles: [staging]\n  - targetId: ${pipelineId}-prod\n    profiles: [prod]${
+                          enableCanary
+                            ? `\n    strategy:\n      canary:\n        runtimeConfig:\n          cloudRun:\n            automaticTrafficControl: true\n        canaryDeployment:\n          percentages: [${canaryProfile}]\n          verify: ${verifyCanary}`
+                            : ''
+                        }`
+                      )
+                    }
+                    className="text-blue-400 hover:underline cursor-pointer"
+                  >
+                    {copiedKey === 'clouddeploy_yaml' ? 'Copied!' : 'Copy YAML'}
+                  </button>
+                </div>
+                <pre className="overflow-x-auto text-[10.5px] leading-relaxed">
+{`apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: ${pipelineId}
+serialPipeline:
+  stages:
+  - targetId: ${pipelineId}-dev
+  - targetId: ${pipelineId}-staging
+  - targetId: ${pipelineId}-prod${
+    enableCanary
+      ? `\n    strategy:\n      canary:\n        canaryDeployment:\n          percentages: [${canaryProfile}]\n          verify: ${verifyCanary}`
+      : ''
+  }`}
+                </pre>
+              </div>
+            )}
 
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 space-y-1">
               <div className="font-bold text-zinc-800 dark:text-zinc-200">
@@ -692,7 +991,7 @@ export default function Wave11MoonshotStudio({
                 <code>-dev</code>, <code>-staging</code>, <code>-prod</code>).
               </div>
               <div>
-                3. Creates the serial + automatic traffic-split Canary pipeline.
+                3. Creates the serial + automatic traffic-split Canary pipeline (first pipeline is $0.00/mo Free Tier).
               </div>
             </div>
           </div>
@@ -721,40 +1020,64 @@ export default function Wave11MoonshotStudio({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pipelines.map((p) => (
-                    <div
-                      key={p.fullName || p.name}
-                      className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="font-mono font-extrabold text-sm text-zinc-950 dark:text-white">
-                          {p.name}
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                          {p.readyCondition}
-                        </span>
-                      </div>
-                      {p.description && (
-                        <div className="text-xs text-zinc-600 dark:text-zinc-400">
-                          {p.description}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {(p.stages || []).map((st, idx) => (
-                          <React.Fragment key={st.targetId}>
-                            {idx > 0 && (
-                              <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-                            )}
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                              {st.targetId}
-                              {st.hasCanary &&
-                                ` (Canary ${st.canaryPercentages.join('%→')}%)`}
+                  {pipelines.map((p) => {
+                    const releaseCli = `gcloud deploy releases create rel-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-01 --delivery-pipeline=${p.name} --region=${region} --project=${projectId}`;
+                    return (
+                      <div
+                        key={p.fullName || p.name}
+                        className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-mono font-extrabold text-sm text-zinc-950 dark:text-white">
+                            {p.name}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              {p.readyCondition}
                             </span>
-                          </React.Fragment>
-                        ))}
+                            {onRunInShell && (
+                              <button
+                                type="button"
+                                onClick={() => onRunInShell(releaseCli)}
+                                title="Promote a new release across this pipeline in Cloud Shell"
+                                className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                              >
+                                + Create Release CLI
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={deletingPipelineId === p.name}
+                              onClick={() => handleDeletePipeline(p.name)}
+                              title={`Delete Cloud Deploy pipeline "${p.name}" and its targets in ${region}`}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer disabled:opacity-50"
+                            >
+                              {deletingPipelineId === p.name ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                        {p.description && (
+                          <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                            {p.description}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {(p.stages || []).map((st, idx) => (
+                            <React.Fragment key={st.targetId}>
+                              {idx > 0 && (
+                                <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
+                              )}
+                              <span className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                                {st.targetId}
+                                {st.hasCanary &&
+                                  ` (Canary ${st.canaryPercentages.join('%→')}%)`}
+                              </span>
+                            </React.Fragment>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -811,6 +1134,29 @@ export default function Wave11MoonshotStudio({
                   {creatingDb ? 'Creating (default)...' : 'Init (default) DB'}
                 </button>
               )}
+            </div>
+
+            {/* 5 Enterprise NoSQL Document Presets */}
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                1-Click Enterprise Document Templates:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FIRESTORE_DOC_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleApplyFirestorePreset(preset)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                      docIdInput === preset.id
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <form onSubmit={handleUpsertFirestoreDoc} className="space-y-3">
@@ -876,28 +1222,68 @@ export default function Wave11MoonshotStudio({
                   ({firestoreDocs.length})
                 </h3>
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={docSearchQuery}
+                  onChange={(e) => setDocSearchQuery(e.target.value)}
+                  placeholder="Filter docs by ID or field..."
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                />
+                {firestoreDocs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleExportFirestoreCollection(firestoreDocs)}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                  >
+                    Export JSON ({firestoreDocs.length})
+                  </button>
+                )}
+              </div>
             </div>
 
             {firestoreDbs.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {firestoreDbs.map((db) => (
-                  <div
-                    key={db.fullName || db.name}
-                    className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-extrabold text-zinc-900 dark:text-white">
-                        DB: {db.name} ({db.locationId})
+                {firestoreDbs.map((db) => {
+                  const pitrEnabled = String(
+                    db.pointInTimeRecoveryEnablement || ''
+                  ).includes('ENABLED');
+                  const shortDbId = String(db.name || '(default)').split('/').pop() || '(default)';
+                  return (
+                    <div
+                      key={db.fullName || db.name}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="font-extrabold text-zinc-900 dark:text-white">
+                          DB: {shortDbId} ({db.locationId})
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {db.type} · 7-Day PITR: {pitrEnabled ? 'ENABLED' : 'DISABLED'}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-zinc-500">
-                        {db.type} · PITR: {db.pointInTimeRecoveryEnablement}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          disabled={patchingDbName === shortDbId}
+                          onClick={() => handleToggleFirestorePitr(shortDbId, pitrEnabled)}
+                          title="Toggle 7-Day Point-in-Time Recovery (PITR) on this Firestore database"
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border cursor-pointer ${
+                            pitrEnabled
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {patchingDbName === shortDbId
+                            ? 'Updating...'
+                            : pitrEnabled
+                            ? 'PITR ON'
+                            : 'Enable PITR'}
+                        </button>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                      LIVE
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -907,41 +1293,63 @@ export default function Wave11MoonshotStudio({
                   No documents in collection &ldquo;{collectionId}&rdquo; yet.
                 </div>
                 <div className="text-[11px] text-zinc-500">
-                  Write a live document using the JSON editor on the left to persist it directly in Cloud Firestore.
+                  Pick a 1-Click Enterprise Template on the left and click Upsert Document to persist it in Cloud Firestore.
                 </div>
               </div>
             ) : (
               <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                {firestoreDocs.map((doc) => (
-                  <div
-                    key={doc.fullName || doc.id}
-                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-extrabold text-xs text-zinc-950 dark:text-white">
-                        {doc.collectionId}/{doc.id}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-zinc-500">
-                          {doc.updateTime
-                            ? new Date(doc.updateTime).toLocaleString()
-                            : ''}
+                {firestoreDocs
+                  .filter((doc) => {
+                    if (!docSearchQuery.trim()) return true;
+                    const q = docSearchQuery.toLowerCase();
+                    return (
+                      String(doc.id || '').toLowerCase().includes(q) ||
+                      JSON.stringify(doc.fields || {}).toLowerCase().includes(q)
+                    );
+                  })
+                  .map((doc) => (
+                    <div
+                      key={doc.fullName || doc.id}
+                      className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-extrabold text-xs text-zinc-950 dark:text-white">
+                          {doc.collectionId}/{doc.id}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFirestoreDoc(doc.id)}
-                          title={`Delete Firestore document ${doc.collectionId}/${doc.id}`}
-                          className="p-1 rounded-md hover:bg-red-500/15 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {doc.updateTime
+                              ? new Date(doc.updateTime).toLocaleString()
+                              : ''}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDocIdInput(doc.id);
+                              setDocJsonInput(JSON.stringify(doc.fields || {}, null, 2));
+                              if (onShowToast) {
+                                onShowToast(`Loaded "${doc.id}" into editor for live modification.`);
+                              }
+                            }}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
+                          >
+                            Load in Editor
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFirestoreDoc(doc.id)}
+                            title={`Delete Firestore document ${doc.collectionId}/${doc.id}`}
+                            className="p-1 rounded-md hover:bg-red-500/15 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
+                      <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">
+                        {JSON.stringify(doc.fields, null, 2)}
+                      </pre>
                     </div>
-                    <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">
-                      {JSON.stringify(doc.fields, null, 2)}
-                    </pre>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -952,7 +1360,7 @@ export default function Wave11MoonshotStudio({
       {activeSubTab === 'FINOPS_QUOTAS' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Live Active Assist Recommendations ({recommendations.length})
@@ -961,9 +1369,24 @@ export default function Wave11MoonshotStudio({
                   Direct from <code>recommender.googleapis.com/v1</code> (VM Rightsizing, Idle IPs, Idle Disks, IAM Least-Privilege)
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                Save ${wave11Data?.finopsQuotas?.totalMonthlySavingsUsd ?? 0}/mo
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  Save ${wave11Data?.finopsQuotas?.totalMonthlySavingsUsd ?? 0}/mo
+                </span>
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectStudioTab('FINOPS', null, {
+                        spotlightLabel: 'FinOps Zombie Reaper & Rightsizing',
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                  >
+                    Open FinOps Studio →
+                  </button>
+                )}
+              </div>
             </div>
 
             {recommendations.length === 0 ? (
@@ -977,11 +1400,11 @@ export default function Wave11MoonshotStudio({
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[420px] overflow-y-auto">
+              <div className="space-y-2.5 max-h-[460px] overflow-y-auto">
                 {recommendations.map((rec) => (
                   <div
                     key={rec.fullName || rec.id}
-                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
@@ -994,6 +1417,24 @@ export default function Wave11MoonshotStudio({
                     <div className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
                       {rec.description}
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={actingRecId === rec.fullName}
+                        onClick={() => handleRecommenderAction(rec, 'MARK_CLAIMED')}
+                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                      >
+                        Claim &amp; Track
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actingRecId === rec.fullName}
+                        onClick={() => handleRecommenderAction(rec, 'MARK_DISMISSED')}
+                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer disabled:opacity-50"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1001,7 +1442,7 @@ export default function Wave11MoonshotStudio({
           </div>
 
           <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Live Compute Regional Quota Saturation ({regionalQuotas.length})
@@ -1013,44 +1454,121 @@ export default function Wave11MoonshotStudio({
               </div>
             </div>
 
+            {/* Quota Search & Category Filter Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={quotaSearch}
+                onChange={(e) => setQuotaSearch(e.target.value)}
+                placeholder="Search metric (e.g. CPUS, GPUS, ADDRESSES)..."
+                className="px-3 py-1.5 rounded-xl text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+              />
+              <select
+                value={quotaCategoryFilter}
+                onChange={(e) => setQuotaCategoryFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="ALL">All Quota Metrics ({regionalQuotas.length})</option>
+                <option value="ELEVATED">Elevated / Critical (&gt;0% Used)</option>
+                <option value="GPU_AI">GPUs &amp; AI Accelerators (L4 / A100 / H100)</option>
+                <option value="CPU_VM">vCPUs &amp; Compute Instances</option>
+                <option value="NETWORK_IP">Static IPs, VPCs &amp; Firewalls</option>
+              </select>
+            </div>
+
             <div className="max-h-[420px] overflow-y-auto space-y-2 pr-1">
-              {regionalQuotas.slice(0, 25).map((q, idx) => (
-                <div
-                  key={`${q.region}-${q.metric}-${idx}`}
-                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                      {q.metric}{' '}
-                      <span className="text-zinc-500 font-normal">
-                        ({q.region})
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-mono text-zinc-500">
-                      Usage: {q.usage} / Limit: {q.limit}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                        q.status === 'CRITICAL'
-                          ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
-                          : q.status === 'ELEVATED'
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                      }`}
+              {regionalQuotas
+                .filter((q) => {
+                  const m = String(q.metric || '').toUpperCase();
+                  if (
+                    quotaSearch.trim() &&
+                    !m.includes(quotaSearch.trim().toUpperCase()) &&
+                    !String(q.region || '')
+                      .toLowerCase()
+                      .includes(quotaSearch.trim().toLowerCase())
+                  ) {
+                    return false;
+                  }
+                  if (quotaCategoryFilter === 'ELEVATED') {
+                    return Number(q.usage || 0) > 0 || q.status !== 'HEALTHY';
+                  }
+                  if (quotaCategoryFilter === 'GPU_AI') {
+                    return m.includes('GPU') || m.includes('NVIDIA') || m.includes('A2') || m.includes('G2');
+                  }
+                  if (quotaCategoryFilter === 'CPU_VM') {
+                    return m.includes('CPU') || m.includes('INSTANCE') || m.includes('DISK');
+                  }
+                  if (quotaCategoryFilter === 'NETWORK_IP') {
+                    return m.includes('ADDRESS') || m.includes('IP') || m.includes('FIREWALL') || m.includes('NETWORK');
+                  }
+                  return true;
+                })
+                .slice(0, 40)
+                .map((q, idx) => {
+                  const nextLimit = Math.max(Number(q.limit || 1) * 2, 10);
+                  const quotaCli = `gcloud alpha services quota update --service=compute.googleapis.com --consumer=projects/${projectId} --metric=compute.googleapis.com/${String(q.metric || '').toLowerCase()} --unit=1/{project}/{region} --dimensions=region=${q.region} --value=${nextLimit}`;
+                  return (
+                    <div
+                      key={`${q.region}-${q.metric}-${idx}`}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
                     >
-                      {q.utilizationPct}% · {q.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {q.metric}{' '}
+                            <span className="text-zinc-500 font-normal">
+                              ({q.region})
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-mono text-zinc-500">
+                            Usage: {q.usage} / Limit: {q.limit}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(`quota-${idx}`, quotaCli)}
+                            title="Copy gcloud quota increase request command"
+                            className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                          >
+                            {copiedKey === `quota-${idx}` ? 'Copied CLI!' : '+ Request Bump CLI'}
+                          </button>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                              q.status === 'CRITICAL'
+                                ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+                                : q.status === 'ELEVATED'
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {q.utilizationPct}% · {q.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            q.status === 'CRITICAL'
+                              ? 'bg-red-500'
+                              : q.status === 'ELEVATED'
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, Math.max(2, Number(q.utilizationPct || 0)))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: MULTI-PROJECT COMPARISON MATRIX & 18-STUDIO STRESS AUDIT */}
+      {/* TAB 4: MULTI-PROJECT COMPARISON MATRIX & 24-STUDIO STRESS AUDIT */}
       {activeSubTab === 'MULTI_PROJECT_AUDIT' && (
         <div className="space-y-6">
           {/* Multi-Project Estate Comparison Card */}
@@ -1153,19 +1671,19 @@ export default function Wave11MoonshotStudio({
             )}
           </div>
 
-          {/* 18-Studio Live Client-Readiness & Latency Stress Audit */}
+          {/* 24-Studio Live Client-Readiness & Latency Stress Audit */}
           <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>
-                    Live 18-Studio Client-Readiness &amp; P95 Latency Stress Audit
+                    Live 24-Studio Client-Readiness &amp; P95 Latency Stress Audit
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500">
-                  Fires concurrent live probes across all 18 backend studio endpoints for project{' '}
-                  <code className="font-mono">{projectId}</code>, measuring real HTTP status, payload size, and P95 latency.
+                  Fires concurrent live probes across all 24 backend studio endpoints for project{' '}
+                  <code className="font-mono">{projectId}</code>, measuring real HTTP status, payload size, P95 latency, and 1-Click Cross-UI Spotlight navigation.
                 </p>
               </div>
               <button
@@ -1181,8 +1699,8 @@ export default function Wave11MoonshotStudio({
                 />
                 <span>
                   {runningStressAudit
-                    ? 'Probing All 18 Live GCP Studio Endpoints...'
-                    : 'Run Full 18-Studio Live Stress Audit'}
+                    ? 'Probing All 24 Live GCP Studio Endpoints...'
+                    : 'Run Full 24-Studio Live Stress Audit ($0.00)'}
                 </span>
               </button>
             </div>
@@ -1235,6 +1753,7 @@ export default function Wave11MoonshotStudio({
                         <th className="py-2 px-3">RTT Latency</th>
                         <th className="py-2 px-3">Payload</th>
                         <th className="py-2 px-3">Verification</th>
+                        <th className="py-2 px-3">Spotlight</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1264,6 +1783,26 @@ export default function Wave11MoonshotStudio({
                             >
                               {r.status}
                             </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            {onSelectStudioTab && r.targetStudioTab && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onSelectStudioTab(
+                                    r.targetStudioTab,
+                                    r.targetSubTab || undefined,
+                                    {
+                                      spotlightLabel: r.studioName,
+                                      featureId: r.targetSubTab || r.targetStudioTab,
+                                    }
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
+                              >
+                                Jump →
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

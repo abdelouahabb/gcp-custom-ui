@@ -458,6 +458,26 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Wave 11 Cloud Deploy Pipeline Deletion (/wave11/clouddeploy/pipeline)
+    if (rawUrl.includes('/wave11/clouddeploy/pipeline')) {
+      const pipeId = body.pipelineId || params.pipelineId || 'cloudpulse-canary-pipeline';
+      const reg = body.region || params.region || 'us-central1';
+      return {
+        title: `Delete Cloud Deploy Pipeline "${pipeId}" & Delivery Targets in ${reg}?`,
+        laymanSummary: `In Plain English: Removes the Cloud Deploy release pipeline "${pipeId}" and its associated Dev/Staging/Prod delivery targets in ${reg}. Deleting unused pipelines ensures you stay within Google Cloud Deploy's 1-free-pipeline allowance ($18/mo for extra pipelines).`,
+        resourceKind: 'Cloud Deploy Delivery Pipeline + Targets (clouddeploy.googleapis.com/v1)',
+        targetName: `${pipeId} (${reg})`,
+        location: reg,
+        projectId,
+        method: 'DELETE PIPELINE',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Pipeline "${pipeId}"`,
+        cancelToast: `Deletion of Cloud Deploy pipeline "${pipeId}" cancelled.`,
+        costWarning: `FINOPS SAVINGS: Deleting additional Cloud Deploy delivery pipelines avoids the $18.00/month per-pipeline management fee (your first pipeline is $0.00/mo).`,
+        impactWarning: `Permanently deletes Cloud Deploy pipeline "${pipeId}" and its "-dev", "-staging", and "-prod" target definitions in ${reg}. Existing Cloud Run services are NOT deleted.`,
+      };
+    }
+
     // Wave 11 Firestore Document Deletion (/wave11/firestore/documents)
     if (rawUrl.includes('/wave11/firestore/documents')) {
       const dbId = body.databaseId || params.databaseId || '(default)';
@@ -465,6 +485,7 @@ function classifyDestructiveAxiosConfig(config) {
       const docId = body.documentId || params.documentId || 'doc';
       return {
         title: `Permanently Delete Firestore Document "${colId}/${docId}"?`,
+        laymanSummary: `In Plain English: Deletes the single NoSQL JSON document "${docId}" inside collection "${colId}" of your "${dbId}" Firestore database. Other documents in the collection are untouched.`,
         resourceKind: 'Cloud Firestore Native Document (firestore.googleapis.com/v1)',
         targetName: `${dbId} / ${colId} / ${docId}`,
         location: dbId,
@@ -1897,10 +1918,16 @@ function classifyDestructiveAxiosConfig(config) {
     if (rawUrl.includes('/wave11/clouddeploy/pipeline')) {
       const pipeId = body.pipelineId || 'cloudpulse-canary-pipeline';
       const reg = body.region || 'us-central1';
+      const canaryPctText = Array.isArray(body.canaryPercentages)
+        ? `${body.canaryPercentages.join('% → ')}% → 100%`
+        : '25% → 50% → 100%';
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm 1-Tap Cloud Deploy Pipeline ("${pipeId}")?`,
+        title: `Provision Cloud Deploy Progressive Canary Pipeline ("${pipeId}") in ${reg}?`,
+        laymanSummary: `In Plain English: Instead of pushing new code straight to 100% of your users and hoping nothing breaks, this creates an official Google Cloud Deploy conveyor belt ("${pipeId}") in ${reg} with 3 stages: Dev → Staging → Production (${
+          body.enableCanary !== false ? `with a ${canaryPctText} Canary rollout` : 'serial rollout'
+        }${body.requireProdApproval !== false ? ' + mandatory human approval gate before Production' : ''}). Your first pipeline is 100% free ($0.00/mo).`,
         headerBadge: 'Wave 11 Cloud Deploy & Canary Delivery Gatekeeper',
         targetLabel: 'Cloud Deploy Delivery Pipeline & 3 Cloud Run Targets',
         resourceKind: 'Cloud Deploy Pipeline + 3 Targets (clouddeploy.googleapis.com/v1)',
@@ -1911,21 +1938,62 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Confirm & Provision "${pipeId}"`,
         cancelToast: `Cloud Deploy pipeline "${pipeId}" cancelled.`,
-        whatHappensNext: `1. Enables clouddeploy.googleapis.com on project "${projectId}" if not yet active.\n2. Provisions 3 Cloud Run delivery targets (${pipeId}-dev, ${pipeId}-staging, ${pipeId}-prod) in ${reg}.\n3. Creates the serial + Canary (25% → 50% → 100%) DeliveryPipeline via clouddeploy.googleapis.com/v1.`,
+        whatHappensNext: `1. Enables clouddeploy.googleapis.com on project "${projectId}" if not yet active.\n2. Provisions 3 Cloud Run delivery targets (${pipeId}-dev, ${pipeId}-staging, ${pipeId}-prod) in ${reg}.\n3. Creates the serial + Canary (${canaryPctText}) DeliveryPipeline via clouddeploy.googleapis.com/v1.`,
         costWarning: `CLOUD DEPLOY FREE-TIER & PRICING NOTICE: Your first 1 active Delivery Pipeline per billing account is FREE ($0.00/mo). Each additional active Delivery Pipeline costs $18.00/mo, plus standard Cloud Build minutes (2,500 build-min/mo Always Free) when releases are promoted.`,
         impactWarning: `This provisions a live Cloud Deploy delivery pipeline and 3 delivery targets in "${projectId}" (${reg}).`,
       };
     }
 
-    // 3G-2. Wave 11 Cloud Firestore Native Database Provisioner (/wave11/firestore/database)
+    // 3G-2. Wave 11 Cloud Firestore Native Database Provisioner & PITR Updater (/wave11/firestore/database)
     if (rawUrl.includes('/wave11/firestore/database')) {
       const dbId = body.databaseId || '(default)';
       const locId = body.locationId || 'nam5';
       const dbType = body.type || 'FIRESTORE_NATIVE';
+      if (method === 'patch') {
+        const isPitr = typeof body.pointInTimeRecovery === 'boolean';
+        const enabledVal = isPitr ? body.pointInTimeRecovery : body.deleteProtection;
+        const featureName = isPitr ? '7-Day Point-in-Time Recovery (PITR)' : 'Accidental Delete Protection';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `${enabledVal ? 'Enable' : 'Disable'} ${featureName} on Firestore Database "${dbId}"?`,
+          laymanSummary: isPitr
+            ? `In Plain English: ${
+                enabledVal
+                  ? `Turns on 7-Day Time-Travel Recovery (PITR) for your Firestore database "${dbId}". If someone accidentally deletes or corrupts documents, you can read or restore the database from any exact microsecond over the past 7 days!`
+                  : `Turns off 7-Day Point-in-Time Recovery (PITR) on "${dbId}" (retaining standard 1-hour recovery window).`
+              }`
+            : `In Plain English: ${
+                enabledVal
+                  ? `Puts a safety lock on Firestore database "${dbId}" so no human or script can accidentally delete the database until the lock is turned off.`
+                  : `Unlocks Delete Protection on Firestore database "${dbId}".`
+              }`,
+          headerBadge: 'Wave 11 Cloud Firestore Governance Gatekeeper',
+          targetLabel: 'Cloud Firestore Database Configuration',
+          resourceKind: 'Cloud Firestore Database (firestore.googleapis.com/v1)',
+          targetName: `${dbId} (${featureName} -> ${enabledVal ? 'ENABLED' : 'DISABLED'})`,
+          location: 'Multi-Region / Global',
+          projectId,
+          method: 'PATCH FIRESTORE DB',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & ${enabledVal ? 'Enable' : 'Disable'} ${isPitr ? '7-Day PITR' : 'Delete Lock'}`,
+          cancelToast: `Firestore database update cancelled.`,
+          whatHappensNext: `1. Calls PATCH https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}.\n2. Sets ${
+            isPitr
+              ? `pointInTimeRecoveryEnablement="${enabledVal ? 'POINT_IN_TIME_RECOVERY_ENABLED' : 'POINT_IN_TIME_RECOVERY_DISABLED'}"`
+              : `deleteProtectionState="${enabledVal ? 'DELETE_PROTECTION_ENABLED' : 'DELETE_PROTECTION_DISABLED'}"`
+          }.`,
+          costWarning: isPitr
+            ? `PITR STORAGE NOTICE: Delete protection is $0.00/mo; 7-Day PITR is $0.00 within your 1 GiB Always-Free Firestore storage allowance (~$0.18/GiB-mo beyond 1 GiB).`
+            : `ZERO COST ($0.00/MO): Firestore Delete Protection is 100% free.`,
+          impactWarning: `Updates live protection settings on Firestore database "${dbId}" in project "${projectId}".`,
+        };
+      }
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm 1-Tap Firestore Database Provisioning ("${dbId}")?`,
+        title: `Provision Cloud Firestore NoSQL Database ("${dbId}") in "${locId}"?`,
+        laymanSummary: `In Plain English: Creates your serverless NoSQL document database ("${dbId}") in "${locId}" with 7-day Time-Travel recovery enabled. Google Cloud's "(default)" Firestore database includes 1 GiB of storage, 50,000 reads/day, and 20,000 writes/day for $0.00/mo Always Free!`,
         headerBadge: 'Wave 11 Cloud Firestore Native & Free-Tier Gatekeeper',
         targetLabel: 'Cloud Firestore Database Instance',
         resourceKind: `Cloud Firestore (${dbType} · firestore.googleapis.com/v1)`,
@@ -1950,7 +2018,8 @@ function classifyDestructiveAxiosConfig(config) {
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Live Firestore Document Write ("${colId}/${docId}")?`,
+        title: `Save NoSQL JSON Document "${colId}/${docId}" to Cloud Firestore?`,
+        laymanSummary: `In Plain English: Saves (or updates) the JSON document "${docId}" inside collection "${colId}" of your "${dbId}" Firestore database. Counts as 1 write against your 20,000 free writes per day ($0.00).`,
         headerBadge: 'Wave 11 Cloud Firestore Document Mutation Gatekeeper',
         targetLabel: 'Target Firestore Collection & Document Path',
         resourceKind: 'Cloud Firestore Document (firestore.googleapis.com/v1)',
@@ -1959,7 +2028,7 @@ function classifyDestructiveAxiosConfig(config) {
         projectId,
         method: 'WRITE FIRESTORE DOC',
         endpoint: rawUrl,
-        confirmLabel: `Confirm & Write Document "${docId}"`,
+        confirmLabel: `Confirm & Save Document "${docId}"`,
         cancelToast: `Firestore document write to "${colId}/${docId}" cancelled.`,
         whatHappensNext: `1. Encodes your JSON payload into typed Firestore Value fields (stringValue, integerValue, doubleValue, booleanValue, mapValue, arrayValue).\n2. Calls PATCH https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}/documents/${colId}/${docId} to upsert the live document.`,
         costWarning: `FIRESTORE WRITE QUOTA NOTICE: Counts as 1 document write operation against your 20,000 FREE writes/day Always Free allowance ($0.00 within Free Tier; $0.18 per 100,000 writes beyond Free Tier).`,
@@ -1967,8 +2036,40 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // 3G-3B. Wave 11 Active Assist Recommendation Claim / Dismiss (/wave11/recommender/action)
+    if (rawUrl.includes('/wave11/recommender/action')) {
+      const recAct = String(body.action || 'MARK_CLAIMED').toUpperCase();
+      const recShort = String(body.recommendationFullName || '').split('/').pop() || 'recommendation';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `${recAct === 'MARK_DISMISSED' ? 'Dismiss' : 'Mark as Claimed'}: Active Assist Recommendation "${recShort}"?`,
+        laymanSummary: `In Plain English: Updates the status of Google Cloud Active Assist recommendation "${recShort}" (${
+          recAct === 'MARK_DISMISSED'
+            ? 'hiding it as dismissed so it no longer clutters your FinOps queue'
+            : 'marking it as claimed by your team while you apply the optimization'
+        }) at $0.00 cost.`,
+        headerBadge: 'Wave 11 Active Assist Recommender Gatekeeper',
+        targetLabel: 'Target Active Assist Recommendation',
+        resourceKind: 'Active Assist Recommender (recommender.googleapis.com/v1)',
+        targetName: recShort,
+        location: 'Global Recommender',
+        projectId,
+        method: recAct,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & ${recAct === 'MARK_DISMISSED' ? 'Dismiss' : 'Claim'} ($0.00)`,
+        cancelToast: `Recommender state update cancelled.`,
+        whatHappensNext: `1. Fetches current recommendation etag from recommender.googleapis.com/v1.\n2. Calls POST :${
+          recAct === 'MARK_DISMISSED' ? 'markDismissed' : 'markClaimed'
+        } and records the update in the Flight Recorder.`,
+        costWarning: `ZERO COST ($0.00/MO): Updating Active Assist recommendation state is 100% free.`,
+        impactWarning: `Updates status of recommendation "${recShort}" in project "${projectId}".`,
+      };
+    }
+
     // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only Diagnostic & BAS Endpoints + VM SCP/SFTP, SSH Identity Mode & Storage Workbench / S3 Importer (Bypass Gatekeeper)
     if (
+      rawUrl.includes('/wave11/stress-audit') ||
       rawUrl.includes('/soc/ai-commander') ||
       rawUrl.includes('/soc/deep-probe') ||
       rawUrl.includes('/soc/purple-team-drill') ||

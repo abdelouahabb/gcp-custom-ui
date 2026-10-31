@@ -49845,8 +49845,18 @@ app.post('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, res)
     description = 'Managed by CloudPulse 2026 Progressive Canary Delivery Studio',
     cloudRunLocation = 'us-central1',
     enableCanary = true,
+    canaryPercentages = [25, 50],
+    verifyCanary = false,
     requireProdApproval = true,
   } = req.body || {};
+
+  const parsedPercentages = Array.isArray(canaryPercentages)
+    ? canaryPercentages
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0 && n < 100)
+    : [25, 50];
+  const effectivePercentages =
+    parsedPercentages.length > 0 ? parsedPercentages : [25, 50];
 
   const cleanPipelineId = String(pipelineId)
     .toLowerCase()
@@ -49889,8 +49899,8 @@ app.post('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, res)
                     },
                   },
                   canaryDeployment: {
-                    percentages: [25, 50],
-                    verify: false,
+                    percentages: effectivePercentages,
+                    verify: Boolean(verifyCanary),
                   },
                 },
               },
@@ -49986,6 +49996,233 @@ app.post('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, res)
         err.response?.data?.error?.message ||
         err.message ||
         'Failed to provision Google Cloud Deploy pipeline.',
+    });
+  }
+});
+
+// Delete a live Google Cloud Deploy Delivery Pipeline & Associated Targets
+app.delete('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, res) => {
+  const { projectId } = req.params;
+  const region = String(req.query.region || req.body?.region || 'us-central1').trim();
+  const pipelineId = String(req.query.pipelineId || req.body?.pipelineId || '').trim();
+  const deleteTargets = req.query.deleteTargets !== 'false' && req.body?.deleteTargets !== false;
+
+  if (!pipelineId) {
+    return res.status(400).json({ error: 'pipelineId is required.' });
+  }
+
+  try {
+    const token = await resolveRequestToken(req);
+    const t0 = Date.now();
+    await gcpApiRequest({
+      method: 'DELETE',
+      url: `https://clouddeploy.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(
+        region
+      )}/deliveryPipelines/${encodeURIComponent(pipelineId)}?force=true`,
+      token,
+      quotaProject: projectId,
+      timeout: 8500,
+    });
+
+    const deletedTargets = [];
+    if (deleteTargets) {
+      for (const suffix of ['dev', 'staging', 'prod']) {
+        const targetId = `${pipelineId}-${suffix}`;
+        try {
+          await gcpApiRequest({
+            method: 'DELETE',
+            url: `https://clouddeploy.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(
+              region
+            )}/targets/${encodeURIComponent(targetId)}`,
+            token,
+            quotaProject: projectId,
+            timeout: 5000,
+          });
+          deletedTargets.push(targetId);
+        } catch {
+          // ignore if target does not exist
+        }
+      }
+    }
+
+    recordFlightEvent(projectId, {
+      action: 'CLOUD_DEPLOY_PIPELINE_DELETE',
+      resourceType: 'CLOUD_DEPLOY_PIPELINE',
+      resourceName: pipelineId,
+      region,
+      details: `Deleted Google Cloud Deploy pipeline "${pipelineId}"${
+        deletedTargets.length > 0 ? ` and targets (${deletedTargets.join(', ')})` : ''
+      } in ${region}`,
+    });
+
+    return res.json({
+      ok: true,
+      pipelineId,
+      region,
+      deletedTargets,
+      elapsedMs: Date.now() - t0,
+      message: `Deleted Cloud Deploy pipeline "${pipelineId}"${
+        deletedTargets.length > 0 ? ` and ${deletedTargets.length} delivery targets` : ''
+      } in ${region}.`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to delete Google Cloud Deploy pipeline.',
+    });
+  }
+});
+
+// Toggle Point-in-Time Recovery (PITR) or Delete Protection on a live Cloud Firestore Database
+app.patch('/api/project/:projectId/wave11/firestore/database', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    databaseId = '(default)',
+    pointInTimeRecovery,
+    deleteProtection,
+  } = req.body || {};
+
+  try {
+    const token = await resolveRequestToken(req);
+    const updateMaskParts = [];
+    const payload = {};
+
+    if (typeof pointInTimeRecovery === 'boolean') {
+      updateMaskParts.push('pointInTimeRecoveryEnablement');
+      payload.pointInTimeRecoveryEnablement = pointInTimeRecovery
+        ? 'POINT_IN_TIME_RECOVERY_ENABLED'
+        : 'POINT_IN_TIME_RECOVERY_DISABLED';
+    }
+    if (typeof deleteProtection === 'boolean') {
+      updateMaskParts.push('deleteProtectionState');
+      payload.deleteProtectionState = deleteProtection
+        ? 'DELETE_PROTECTION_ENABLED'
+        : 'DELETE_PROTECTION_DISABLED';
+    }
+
+    if (updateMaskParts.length === 0) {
+      return res.status(400).json({ error: 'Specify pointInTimeRecovery or deleteProtection boolean.' });
+    }
+
+    const op = await gcpApiRequest({
+      method: 'PATCH',
+      url: `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/databases/${encodeURIComponent(databaseId)}?updateMask=${updateMaskParts.join(',')}`,
+      token,
+      quotaProject: projectId,
+      timeout: 8500,
+      data: payload,
+    });
+
+    recordFlightEvent(projectId, {
+      action: 'FIRESTORE_DATABASE_PATCH',
+      resourceType: 'FIRESTORE_DATABASE',
+      resourceName: databaseId,
+      region: 'global',
+      details: `Updated Firestore database "${databaseId}" (${updateMaskParts.join(', ')})`,
+    });
+
+    return res.json({
+      ok: true,
+      databaseId,
+      updatedFields: payload,
+      operationName: op?.name || null,
+      message: `Updated Firestore database "${databaseId}" (${
+        typeof pointInTimeRecovery === 'boolean'
+          ? `7-Day PITR: ${pointInTimeRecovery ? 'ENABLED' : 'DISABLED'}`
+          : `Delete Protection: ${deleteProtection ? 'ENABLED' : 'DISABLED'}`
+      }).`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to update Cloud Firestore database configuration.',
+    });
+  }
+});
+
+// Mark a Google Cloud Active Assist Recommendation as Claimed or Dismissed
+app.post('/api/project/:projectId/wave11/recommender/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    recommendationFullName = '',
+    action = 'MARK_CLAIMED',
+    etag = '',
+  } = req.body || {};
+
+  if (!recommendationFullName) {
+    return res.status(400).json({ error: 'recommendationFullName is required.' });
+  }
+
+  const cleanName = String(recommendationFullName).replace(/^\/+/, '');
+  const verb =
+    String(action).toUpperCase() === 'MARK_DISMISSED'
+      ? 'markDismissed'
+      : String(action).toUpperCase() === 'MARK_SUCCEEDED'
+      ? 'markSucceeded'
+      : 'markClaimed';
+
+  try {
+    const token = await resolveRequestToken(req);
+    let currentEtag = etag;
+    if (!currentEtag) {
+      const recGet = await gcpApiRequest({
+        method: 'GET',
+        url: `https://recommender.googleapis.com/v1/${cleanName}`,
+        token,
+        quotaProject: projectId,
+        timeout: 5000,
+      });
+      currentEtag = recGet?.etag || '';
+    }
+
+    const updatedRec = await gcpApiRequest({
+      method: 'POST',
+      url: `https://recommender.googleapis.com/v1/${cleanName}:${verb}`,
+      token,
+      quotaProject: projectId,
+      timeout: 6500,
+      data: {
+        etag: currentEtag,
+        stateMetadata: {
+          managed_by: 'cloudpulse_2026',
+          updated_at: new Date().toISOString(),
+        },
+      },
+    });
+
+    recordFlightEvent(projectId, {
+      action: `RECOMMENDER_${String(action).toUpperCase()}`,
+      resourceType: 'ACTIVE_ASSIST_RECOMMENDATION',
+      resourceName: cleanName.split('/').pop() || cleanName,
+      region: 'global',
+      details: `Executed ${verb} on Active Assist Recommendation "${cleanName}"`,
+    });
+
+    return res.json({
+      ok: true,
+      action: verb,
+      recommendationName: cleanName,
+      newState: updatedRec?.stateInfo?.state || verb.toUpperCase(),
+      message: `Updated Active Assist recommendation status to ${
+        updatedRec?.stateInfo?.state || verb
+      }.`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        `Failed to ${verb} Active Assist recommendation.`,
     });
   }
 });
@@ -50366,7 +50603,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
   }
 });
 
-// Live 23-Studio Client-Readiness & Latency Stress Audit
+// Live 24-Studio Client-Readiness & Latency Stress Audit
 app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
   const { projectId } = req.params;
   const tStart = Date.now();
@@ -50378,96 +50615,150 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
       studioId: 'AUTH_CONTEXT',
       studioName: 'Multi-Account OAuth & Project Context Bridge',
       endpoint: '/api/context',
+      targetStudioTab: 'OVERVIEW',
     },
     {
       studioId: 'OVERVIEW',
       studioName: '2026 Executive SRE Cockpit & Fleet Inventory',
       endpoint: `/api/project/${encProj}/overview`,
+      targetStudioTab: 'OVERVIEW',
+    },
+    {
+      studioId: 'CLOUD_SOC',
+      studioName: 'Autonomous Cloud SOC, 10X Cloud IDS/IPS & L7 Suricata DPI Surgeon',
+      endpoint: `/api/project/${encProj}/soc/overview`,
+      targetStudioTab: 'CLOUD_SOC',
+    },
+    {
+      studioId: 'STARTUP_10X',
+      studioName: 'Startup 10X Mentor Studio (Runway, Burn Guardrails & Launch Readiness)',
+      endpoint: `/api/project/${encProj}/startup-10x/overview`,
+      targetStudioTab: 'STARTUP_10X',
+    },
+    {
+      studioId: 'MCP_HUB',
+      studioName: '48 Official Google Cloud Remote MCP Servers Hub',
+      endpoint: `/api/project/${encProj}/mcp/servers`,
+      targetStudioTab: 'MCP_HUB',
     },
     {
       studioId: 'INNOVATION_QUANTUM',
       studioName: '2026 Quantum Nexus (KMS, Enclaves & Blast-Radius)',
       endpoint: `/api/project/${encProj}/quantum-nexus/overview`,
+      targetStudioTab: 'INNOVATION_LAB',
+      targetSubTab: 'QUANTUM_NEXUS',
     },
     {
       studioId: 'CLOUD_STORAGE',
       studioName: 'Cloud Storage Compliance & WORM Studio',
       endpoint: `/api/project/${encProj}/storage/buckets`,
+      targetStudioTab: 'CLOUD_STORAGE',
     },
     {
       studioId: 'CLOUD_RUN',
       studioName: 'Cloud Run Gen2 Serverless & GPU Fleet Manager',
       endpoint: `/api/project/${encProj}/cloudrun`,
+      targetStudioTab: 'CLOUD_RUN',
     },
     {
       studioId: 'GKE_STUDIO',
       studioName: 'Google Kubernetes Engine (GKE) Autopilot & GPU Studio',
       endpoint: `/api/project/${encProj}/wave9/gke-vertex`,
+      targetStudioTab: 'GKE_STUDIO',
     },
     {
       studioId: 'WAVE9_SUPPLY_CHAIN',
       studioName: 'Cloud Build CI/CD & Artifact Registry SLSA-3 Studio',
       endpoint: `/api/project/${encProj}/wave9/supply-chain`,
+      targetStudioTab: 'WAVE9_STUDIO',
     },
     {
       studioId: 'FUNCTIONS_STUDIO',
       studioName: 'Cloud Functions Gen2 & Eventarc Trigger Studio',
       endpoint: `/api/project/${encProj}/functions/overview`,
+      targetStudioTab: 'FUNCTIONS_STUDIO',
     },
     {
       studioId: 'CLOUD_SQL_STUDIO',
       studioName: 'Cloud SQL (PG 17 / MySQL 8.4) & AlloyDB Vector Studio',
       endpoint: `/api/project/${encProj}/wave9/cloud-sql`,
+      targetStudioTab: 'CLOUD_SQL_STUDIO',
     },
     {
       studioId: 'DATA_ENGINEER_STUDIO',
       studioName: '2026 Data Engineering, Dataform & Serverless Spark Studio',
       endpoint: `/api/project/${encProj}/data-engineer/overview`,
+      targetStudioTab: 'DATA_ENGINEER_STUDIO',
     },
     {
       studioId: 'BIGQUERY_STUDIO',
       studioName: 'BigQuery Capacitor Warehouse & SQL X-Ray Studio',
       endpoint: `/api/project/${encProj}/bigquery/datasets`,
+      targetStudioTab: 'BIGQUERY_STUDIO',
     },
     {
       studioId: 'SPANNER_FRONTIER',
       studioName: 'Cloud Spanner Graph (ISO GQL), Workflows & Model Armor',
       endpoint: `/api/project/${encProj}/wave10/frontier`,
+      targetStudioTab: 'WAVE10_FRONTIER',
     },
     {
       studioId: 'SOVEREIGN_IAM',
       studioName: 'Sovereign IAM Surgeon, SA Key Kill-Switch & Drift Radar',
       endpoint: `/api/project/${encProj}/sovereign/iam-surgeon`,
+      targetStudioTab: 'SOVEREIGN_STUDIO',
+      targetSubTab: 'IAM_SURGEON',
     },
     {
       studioId: 'SOVEREIGN_TIME_MACHINE',
       studioName: 'Sovereign Cloud Time-Machine & Snapshot Vault',
       endpoint: `/api/project/${encProj}/sovereign/time-machine`,
+      targetStudioTab: 'SOVEREIGN_STUDIO',
+      targetSubTab: 'TIME_MACHINE',
     },
     {
       studioId: 'SRE_WAR_ROOM',
       studioName: 'Autonomous SRE Incident War-Room & VPC-SC Perimeter',
       endpoint: `/api/project/${encProj}/wave8/war-room`,
+      targetStudioTab: 'SRE_WAR_ROOM',
     },
     {
       studioId: 'ALPHA_BETA_LAB',
       studioName: '[ALPHA/BETA/GA] gcloud 591.0.0 Frontier Lab (Wave 1–4)',
       endpoint: `/api/project/${encProj}/alpha-beta/overview`,
+      targetStudioTab: 'INNOVATION_LAB',
+      targetSubTab: 'GCLOUD_ALPHA_BETA',
     },
     {
       studioId: 'APP_ENGINE_EXTERMINATOR',
       studioName: 'App Engine Service Exterminator & $0/mo Default Neutralizer',
       endpoint: `/api/project/${encProj}/appengine/overview`,
+      targetStudioTab: 'FINOPS',
     },
     {
       studioId: 'FINOPS_CREDITS',
       studioName: 'Cloud Billing Account, Credits & Free-Tier Auditor',
       endpoint: `/api/project/${encProj}/billing-guardian`,
+      targetStudioTab: 'FINOPS',
+    },
+    {
+      studioId: 'RECYCLE_BIN',
+      studioName: '30-Day Cloud Recycle Bin & Soft-Delete Recovery Vault',
+      endpoint: `/api/project/${encProj}/recycle-bin/overview`,
+      targetStudioTab: 'RECYCLE_BIN',
+    },
+    {
+      studioId: 'ALIBABA_HUAWEI_PARITY',
+      studioName: 'Alibaba Cloud & Huawei Cloud Hyperscale Parity Studio',
+      endpoint: `/api/project/${encProj}/alibaba-huawei-parity/overview`,
+      targetStudioTab: 'ALIBABA_HUAWEI_PARITY',
     },
     {
       studioId: 'WAVE11_MOONSHOT',
       studioName: 'Wave 11 Cloud Deploy, Firestore NoSQL & Quota Optimizer',
       endpoint: `/api/project/${encProj}/wave11/overview`,
+      targetStudioTab: 'INNOVATION_LAB',
+      targetSubTab: 'WAVE11_MOONSHOT',
     },
   ];
 
@@ -50487,6 +50778,8 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
           studioId: p.studioId,
           studioName: p.studioName,
           endpoint: p.endpoint,
+          targetStudioTab: p.targetStudioTab || 'OVERVIEW',
+          targetSubTab: p.targetSubTab || null,
           httpStatus: resp.status,
           latencyMs: rttMs,
           payloadBytes: Buffer.byteLength(bodyStr, 'utf8'),
@@ -50499,6 +50792,8 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
           studioId: p.studioId,
           studioName: p.studioName,
           endpoint: p.endpoint,
+          targetStudioTab: p.targetStudioTab || 'OVERVIEW',
+          targetSubTab: p.targetSubTab || null,
           httpStatus: e.response?.status || 500,
           latencyMs: rttMs,
           payloadBytes: 0,
