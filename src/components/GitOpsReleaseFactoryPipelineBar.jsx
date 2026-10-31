@@ -211,7 +211,14 @@ function GitOpsMermaidFlowchartSvg({ dsl, onNodeClick }) {
     if (nodeId.startsWith('CR') || nodeId.startsWith('REV') || nodeId.startsWith('LB')) {
       return { targetTab: 'CLOUD_RUN' };
     }
-    if (nodeId.startsWith('FN') || nodeId.startsWith('TOP') || nodeId.startsWith('EARC') || nodeId.startsWith('SUB')) {
+    if (
+      nodeId.startsWith('FN') ||
+      nodeId.startsWith('TOP') ||
+      nodeId.startsWith('ETR') ||
+      nodeId.startsWith('BUS') ||
+      nodeId.startsWith('EARC') ||
+      nodeId.startsWith('SUB')
+    ) {
       return { targetTab: 'FUNCTIONS_STUDIO' };
     }
     if (nodeId.startsWith('CL') || nodeId.startsWith('CP')) {
@@ -601,6 +608,7 @@ export default function GitOpsReleaseFactoryPipelineBar({
     targetTab,
     subTab,
     openArtifactTab,
+    functionsFocus,
   } = {}) => {
     if (openArtifactTab) {
       setActiveArtifactTab(openArtifactTab);
@@ -631,7 +639,17 @@ export default function GitOpsReleaseFactoryPipelineBar({
       );
     }
 
-    if (!isTabSwitch && (!subTab || isWave9SubTabSwitch)) {
+    if (functionsFocus) {
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:functions-focus', {
+            detail: functionsFocus,
+          })
+        );
+      }, 90);
+    }
+
+    if (!isTabSwitch && (!subTab || isWave9SubTabSwitch || functionsFocus)) {
       setTimeout(() => {
         const nextStudioEl = barRef.current?.nextElementSibling;
         if (nextStudioEl) {
@@ -659,7 +677,7 @@ export default function GitOpsReleaseFactoryPipelineBar({
                 Wave 6 · 6-Stage GitOps, Cloud Build, Artifact Registry & Release Factory
               </span>
               <span className="text-[11px] font-mono text-slate-400">
-                {counts.builds ?? 0} Builds · {counts.arRepos ?? 0} AR Repos ({counts.totalDigests ?? 0} Digests · {counts.orphanDigests ?? 0} Orphans) · {counts.cloudRunSvcs ?? 0} Cloud Run · {counts.cloudFunctions ?? 0} Fn · {counts.gkeClusters ?? 0} GKE
+                {counts.builds ?? 0} Builds · {counts.arRepos ?? 0} AR Repos ({counts.totalDigests ?? 0} Digests · {counts.orphanDigests ?? 0} Orphans) · {counts.cloudRunSvcs ?? 0} Cloud Run · {counts.eventarcTriggers ?? 0} Eventarc · {counts.pubsubTopics ?? 0} Topics · {counts.gkeClusters ?? 0} GKE
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-0.5">
@@ -870,6 +888,7 @@ export default function GitOpsReleaseFactoryPipelineBar({
                         targetTab: item.targetTab,
                         subTab: item.subTab,
                         openArtifactTab: item.openArtifactTab,
+                        functionsFocus: item.functionsFocus,
                       })
                     }
                     className="cursor-pointer rounded-lg border border-slate-800/90 bg-slate-900/90 px-2.5 py-1.5 hover:border-indigo-500/40 transition flex items-center justify-between gap-2"

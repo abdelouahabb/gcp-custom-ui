@@ -31101,12 +31101,24 @@ app.get('/api/project/:projectId/functions/overview', async (req, res) => {
       triggersRes.status === 'fulfilled'
         ? triggersRes.value.data?.triggers || []
         : [];
-    const rawTopics =
+    const SYSTEM_TOPIC_PREFIXES = [
+      'container-analysis-',
+      'eventarc-',
+      'gcf-',
+      'cloud-builds',
+      'firebase-',
+    ];
+    const allTopicNames =
       topicsRes.status === 'fulfilled'
-        ? (topicsRes.value.data?.topics || []).map((t) =>
-            String(t.name || '').split('/').pop()
-          )
+        ? (topicsRes.value.data?.topics || [])
+            .map((t) => String(t.name || '').split('/').pop())
+            .filter(Boolean)
         : [];
+    const userTopics = allTopicNames.filter(
+      (name) =>
+        !SYSTEM_TOPIC_PREFIXES.some((p) => name.toLowerCase().startsWith(p))
+    );
+    const rawTopics = userTopics.length > 0 ? userTopics : allTopicNames;
     const rawBuckets =
       bucketsRes.status === 'fulfilled'
         ? (bucketsRes.value.data?.items || []).map((b) => b.name)
@@ -76227,6 +76239,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         arLoc3,
         runRes,
         fnRes,
+        eventarcRes,
         pubsubRes,
         gkeRes,
         svcRes,
@@ -76261,6 +76274,10 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         ),
         axios.get(
           `https://cloudfunctions.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/functions`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://eventarc.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/triggers`,
           { headers, timeout: 4000 }
         ),
         axios.get(
@@ -76345,7 +76362,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
       let orphanDigestsCount = 0;
       if (arRepos.length > 0) {
         const imgProbes = await Promise.allSettled(
-          arRepos.slice(0, 4).map((repo) =>
+          arRepos.slice(0, 6).map((repo) =>
             axios.get(
               `https://artifactregistry.googleapis.com/v1/${repo.fullName}/dockerImages?pageSize=25`,
               { headers, timeout: 3500 }
@@ -76420,6 +76437,24 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         };
       });
 
+      const eventarcTriggers = (
+        eventarcRes.status === 'fulfilled' &&
+        Array.isArray(eventarcRes.value?.data?.triggers)
+          ? eventarcRes.value.data.triggers
+          : []
+      ).map((tr) => {
+        const parts = String(tr.name || '').split('/');
+        return {
+          name: parts[parts.length - 1] || 'eventarc-trigger',
+          location: parts[3] || 'us-central1',
+          destinationService:
+            tr.destination?.cloudRun?.service || 'cloud-run-sink',
+          transportTopic: String(tr.transport?.pubsub?.topic || '')
+            .split('/')
+            .pop(),
+        };
+      });
+
       const SYSTEM_PUBSUB_PREFIXES = [
         'container-analysis-',
         'eventarc-',
@@ -76470,6 +76505,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         orphanDigestsCount,
         cloudRunSvcs,
         cloudFunctions,
+        eventarcTriggers,
         pubsubTopics,
         gkeClusters,
         enabledApis,
@@ -76484,6 +76520,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
     const orphanDigestsCount = Number(extra?.orphanDigestsCount || 0);
     const cloudRunSvcs = extra?.cloudRunSvcs || [];
     const cloudFunctions = extra?.cloudFunctions || [];
+    const eventarcTriggers = extra?.eventarcTriggers || [];
     const pubsubTopics = extra?.pubsubTopics || [];
     const gkeClusters = extra?.gkeClusters || [];
     const enabledApis = extra?.enabledApis || [];
@@ -76512,7 +76549,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
     const primaryRunSvc = cloudRunSvcs[0]?.name || 'cloudpulse-api';
     const primaryRunRegion = cloudRunSvcs[0]?.region || 'us-central1';
 
-    // --- Stage 1 Mermaid: GitHub -> Cloud Build Triggers / Builds (Strictly when builds or triggers or Cloud Build + AR/Run exist) ---
+    // --- Stage 1 Mermaid: GitHub -> Cloud Build Triggers -> Builds (Strictly 3 Left-to-Right columns when triggers & builds exist) ---
     let stage1MermaidDsl = null;
     if (builds.length + triggers.length > 0 || (cloudBuildApiEnabled && (arRepos.length + cloudRunSvcs.length > 0))) {
       const s1Lines = [`flowchart LR`];
@@ -76520,15 +76557,19 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
       s1Lines.push(`  subgraph GITOPS["GitHub Source & OIDC WIF"]`);
       s1Lines.push(`    GH["GitHub Push / PR (${projectId})"]`);
       s1Lines.push(`  end`);
-      s1Lines.push(`  subgraph CBUILD["Google Cloud Build (${builds.length} Builds · ${triggers.length} Triggers)"]`);
+
       if (triggers.length > 0) {
-        triggers.slice(0, 2).forEach((tr, idx) => {
+        s1Lines.push(`  subgraph TRIGGERS["Cloud Build Triggers (${triggers.length} Active)"]`);
+        triggers.slice(0, 3).forEach((tr, idx) => {
           s1Lines.push(`    TR${idx}["Trigger: ${tr.name}"]`);
           s1Edges.push(`  GH -->|"Webhook / OIDC"| TR${idx}`);
         });
+        s1Lines.push(`  end`);
       }
+
       if (builds.length > 0) {
-        builds.slice(0, 3).forEach((b, idx) => {
+        s1Lines.push(`  subgraph CBUILD["Cloud Build Executions (${builds.length} Runs)"]`);
+        builds.slice(0, 4).forEach((b, idx) => {
           s1Lines.push(`    BLD${idx}["Build #${b.shortId} (${b.status})"]`);
           s1Edges.push(
             triggers.length > 0
@@ -76536,11 +76577,13 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
               : `  GH -->|"gcloud builds submit"| BLD${idx}`
           );
         });
+        s1Lines.push(`  end`);
       } else if (triggers.length === 0) {
+        s1Lines.push(`  subgraph CBUILD["Google Cloud Build"]`);
         s1Lines.push(`    CB_API["Cloud Build Engine (cloudbuild.googleapis.com)"]`);
+        s1Lines.push(`  end`);
         s1Edges.push(`  GH -->|"SLSA-3 Container Build"| CB_API`);
       }
-      s1Lines.push(`  end`);
       if (s1Edges.length > 0) {
         stage1MermaidDsl = [...s1Lines, ...s1Edges].join('\n');
       }
@@ -76555,7 +76598,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
       s2Lines.push(`    PUB["Container Build & SLSA-3 Provenance"]`);
       s2Lines.push(`  end`);
       s2Lines.push(`  subgraph AR_REPOS["Artifact Registry (${arRepos.length} Repo(s) · ${totalDigestsCount} Digest(s))"]`);
-      arRepos.slice(0, 3).forEach((r, idx) => {
+      arRepos.slice(0, 5).forEach((r, idx) => {
         s2Lines.push(
           `    AR${idx}["Repo: ${r.name} (${r.format} · ${r.location}${r.immutableTags ? ' · Immutable' : ''})"]`
         );
@@ -76571,7 +76614,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
       stage2MermaidDsl = [...s2Lines, ...s2Edges].join('\n');
     }
 
-    // --- Stage 3 Mermaid: Cloud Run Services, Revisions & Canary Traffic (Strictly when cloudRunSvcs.length > 0) ---
+    // --- Stage 3 Mermaid: Cloud Run Services -> Revisions & Canary Traffic (3 Left-to-Right columns when cloudRunSvcs.length > 0) ---
     let stage3MermaidDsl = null;
     if (cloudRunSvcs.length > 0) {
       const s3Lines = [`flowchart LR`];
@@ -76579,50 +76622,73 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
       s3Lines.push(`  subgraph INGRESS["Global HTTPS Ingress"]`);
       s3Lines.push(`    LB["Cloud Run TLS & Traffic Splitter"]`);
       s3Lines.push(`  end`);
-      s3Lines.push(`  subgraph CR_FLEET["Cloud Run Fleet (${cloudRunSvcs.length} Active)"]`);
+      s3Lines.push(`  subgraph CR_FLEET["Cloud Run Services (${cloudRunSvcs.length} Active)"]`);
       cloudRunSvcs.slice(0, 3).forEach((s, idx) => {
         s3Lines.push(
           `    CR${idx}["Service: ${s.name} (${s.region} · ${s.gen2 ? 'Gen2' : 'Gen1'} · min:${s.minScale})"]`
         );
-        s3Lines.push(`    REV${idx}["Revision: ${s.latestReadyRevision}"]`);
         s3Edges.push(`  LB -->|"HTTPS (${s.trafficTargets} Target)"| CR${idx}`);
-        s3Edges.push(`  CR${idx} -->|"Active Traffic"| REV${idx}`);
+      });
+      s3Lines.push(`  end`);
+      s3Lines.push(`  subgraph CR_REVS["Active Revisions"]`);
+      cloudRunSvcs.slice(0, 3).forEach((s, idx) => {
+        s3Lines.push(`    REV${idx}["Revision: ${s.latestReadyRevision}"]`);
+        s3Edges.push(`  CR${idx} -->|"100% Traffic"| REV${idx}`);
       });
       s3Lines.push(`  end`);
       stage3MermaidDsl = [...s3Lines, ...s3Edges].join('\n');
     }
 
-    // --- Stage 4 Mermaid: Cloud Functions & Eventarc / Pub/Sub Bus (Strictly when cloudFunctions.length + pubsubTopics.length > 0) ---
+    // --- Stage 4 Mermaid: Cloud Functions, Eventarc Triggers & Pub/Sub Bus (100% Live Resources Only) ---
     let stage4MermaidDsl = null;
-    if (cloudFunctions.length + pubsubTopics.length > 0) {
+    if (cloudFunctions.length + eventarcTriggers.length + pubsubTopics.length > 0) {
       const s4Lines = [`flowchart LR`];
       const s4Edges = [];
-      s4Lines.push(`  subgraph EVENT_BUS["Eventarc & Pub/Sub Bus"]`);
-      if (pubsubTopics.length > 0) {
-        pubsubTopics.slice(0, 3).forEach((t, idx) => {
+      if (pubsubTopics.length > 0 && (eventarcTriggers.length > 0 || cloudFunctions.length > 0)) {
+        s4Lines.push(`  subgraph EVENT_BUS["Live Pub/Sub Topics (${pubsubTopics.length} Active)"]`);
+        pubsubTopics.slice(0, 4).forEach((t, idx) => {
           s4Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
         });
-      } else {
-        s4Lines.push(`    EARC["Eventarc Cloud Audit & Storage Bus"]`);
-      }
-      s4Lines.push(`  end`);
-      s4Lines.push(`  subgraph FN_SINKS["Serverless Consumers"]`);
-      if (cloudFunctions.length > 0) {
+        s4Lines.push(`  end`);
+        s4Lines.push(
+          `  subgraph FN_SINKS["Live Eventarc Triggers (${eventarcTriggers.length}) & Functions (${cloudFunctions.length})"]`
+        );
+        eventarcTriggers.slice(0, 3).forEach((tr, idx) => {
+          s4Lines.push(
+            `    ETR${idx}["Eventarc: ${tr.name} (${tr.location} -> ${tr.destinationService})"]`
+          );
+          s4Edges.push(`  TOP0 -->|"CloudEvent Push"| ETR${idx}`);
+        });
         cloudFunctions.slice(0, 3).forEach((fn, idx) => {
           s4Lines.push(`    FN${idx}["Function (${fn.envGen}): ${fn.name} (${fn.runtime})"]`);
-          s4Edges.push(
-            pubsubTopics.length > 0
-              ? `  TOP0 -->|"Eventarc Push"| FN${idx}`
-              : `  EARC -->|"CloudEvent"| FN${idx}`
-          );
+          s4Edges.push(`  TOP0 -->|"Eventarc Trigger"| FN${idx}`);
         });
+        s4Lines.push(`  end`);
       } else if (pubsubTopics.length > 0) {
-        s4Lines.push(`    SUB_SINK["Eventarc / Cloud Functions Consumer Ready"]`);
-        pubsubTopics.slice(0, 3).forEach((_, idx) => {
-          s4Edges.push(`  TOP${idx} -->|"Pub/Sub Trigger"| SUB_SINK`);
+        s4Lines.push(`  subgraph PUB_PROJ["Cloud Pub/Sub Bus (${projectId})"]`);
+        s4Lines.push(`    BUS["Project Event Bus (${projectId})"]`);
+        s4Lines.push(`  end`);
+        s4Lines.push(`  subgraph EVENT_BUS["Live Pub/Sub Topics (${pubsubTopics.length} Active)"]`);
+        pubsubTopics.slice(0, 4).forEach((t, idx) => {
+          s4Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
+          s4Edges.push(`  BUS -->|"Publishes JSON Events"| TOP${idx}`);
         });
+        s4Lines.push(`  end`);
+      } else if (eventarcTriggers.length + cloudFunctions.length > 0) {
+        s4Lines.push(`  subgraph EVENT_BUS["Eventarc Cloud Audit Bus"]`);
+        s4Lines.push(`    EARC["Eventarc Router (${projectId})"]`);
+        s4Lines.push(`  end`);
+        s4Lines.push(`  subgraph FN_SINKS["Live Eventarc Triggers & Functions"]`);
+        eventarcTriggers.slice(0, 3).forEach((tr, idx) => {
+          s4Lines.push(`    ETR${idx}["Eventarc: ${tr.name} (${tr.location})"]`);
+          s4Edges.push(`  EARC -->|"CloudEvent"| ETR${idx}`);
+        });
+        cloudFunctions.slice(0, 3).forEach((fn, idx) => {
+          s4Lines.push(`    FN${idx}["Function (${fn.envGen}): ${fn.name}"]`);
+          s4Edges.push(`  EARC -->|"CloudEvent"| FN${idx}`);
+        });
+        s4Lines.push(`  end`);
       }
-      s4Lines.push(`  end`);
       if (s4Edges.length > 0) {
         stage4MermaidDsl = [...s4Lines, ...s4Edges].join('\n');
       }
@@ -76838,7 +76904,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         cliCmd: `gcloud artifacts repositories list --project=${projectId}`,
         mermaidDsl: stage2MermaidDsl,
         stageItems: [
-          ...arRepos.slice(0, 3).map((r) => ({
+          ...arRepos.slice(0, 5).map((r) => ({
             kind: `Artifact Registry (${r.format})`,
             name: `${r.name} (${r.location})`,
             meta: r.immutableTags
@@ -76913,12 +76979,19 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         secondaryTab: 'CLOUD_STORAGE',
         secondaryLabel: 'GCS Bucket Event Triggers',
         status: 'OPTIMAL',
-        metricBadge: `${cloudFunctions.length} Functions · ${pubsubTopics.length} Pub/Sub Topics`,
+        metricBadge: `${cloudFunctions.length} Fn · ${eventarcTriggers.length} Eventarc · ${pubsubTopics.length} Topics`,
         summary:
-          cloudFunctions.length + pubsubTopics.length > 0
-            ? `${cloudFunctions.length} Cloud Function(s) and ${pubsubTopics.length} user Pub/Sub topic(s) active in ${projectId} for event-driven webhooks, Cloud Storage object triggers, and async pipelines.`
-            : `0 Cloud Functions and 0 user Pub/Sub topics in "${projectId}". Author Gen2 Eventarc functions triggered by Pub/Sub messages or GCS object uploads.`,
-        cliCmd: `gcloud functions list --project=${projectId}`,
+          cloudFunctions.length + eventarcTriggers.length + pubsubTopics.length > 0
+            ? `${cloudFunctions.length} Cloud Function(s), ${eventarcTriggers.length} live Eventarc trigger(s)${
+                eventarcTriggers.length > 0
+                  ? ` (${eventarcTriggers.map((t) => `${t.name} [${t.location} -> ${t.destinationService}]`).join(', ')})`
+                  : ''
+              }, and ${pubsubTopics.length} user Pub/Sub topic(s) (${pubsubTopics.map((t) => t.name).join(', ')}) active in ${projectId}.`
+            : `0 Cloud Functions, 0 Eventarc triggers, and 0 user Pub/Sub topics in "${projectId}". Author Gen2 Eventarc functions triggered by Pub/Sub messages or GCS object uploads.`,
+        cliCmd:
+          eventarcTriggers.length > 0
+            ? `gcloud eventarc triggers list --location=- --project=${projectId}`
+            : `gcloud functions list --project=${projectId}`,
         mermaidDsl: stage4MermaidDsl,
         stageItems: [
           ...cloudFunctions.slice(0, 2).map((fn) => ({
@@ -76926,18 +76999,28 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
             name: fn.name,
             meta: `${fn.runtime} · ${fn.region}${fn.hasEventTrigger ? ' · Eventarc' : ' · HTTPS'}`,
             targetTab: 'FUNCTIONS_STUDIO',
+            functionsFocus: { subTab: 'LIVE_FLEET', functionName: fn.name },
           })),
-          ...pubsubTopics.slice(0, 2).map((t) => ({
+          ...eventarcTriggers.slice(0, 3).map((tr) => ({
+            kind: `Live Eventarc Trigger (${tr.location})`,
+            name: tr.name,
+            meta: `Routes Pub/Sub events -> Cloud Run service "${tr.destinationService}"`,
+            targetTab: 'FUNCTIONS_STUDIO',
+            functionsFocus: { subTab: 'LIVE_FLEET', triggerName: tr.name },
+          })),
+          ...pubsubTopics.slice(0, 3).map((t) => ({
             kind: 'Pub/Sub Event Topic',
             name: t.name,
-            meta: 'Eventarc / Cloud Functions trigger bus',
+            meta: 'Click to configure Gen2 Eventarc trigger for this topic',
             targetTab: 'FUNCTIONS_STUDIO',
+            functionsFocus: { subTab: 'TRIGGER_WIZARD', topicName: t.name },
           })),
           {
             kind: 'Cloud Functions & Eventarc Studio',
             name: 'Inspect Gen2 Functions, Eventarc & Pub/Sub Triggers',
             meta: 'Open Cloud Functions & Eventarc Studio',
             targetTab: 'FUNCTIONS_STUDIO',
+            functionsFocus: { subTab: 'LIVE_FLEET' },
           },
         ],
       },
@@ -77035,6 +77118,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         orphanDigests: orphanDigestsCount,
         cloudRunSvcs: cloudRunSvcs.length,
         cloudFunctions: cloudFunctions.length,
+        eventarcTriggers: eventarcTriggers.length,
         pubsubTopics: pubsubTopics.length,
         gkeClusters: gkeClusters.length,
         releaseApis: releaseApis.length,
