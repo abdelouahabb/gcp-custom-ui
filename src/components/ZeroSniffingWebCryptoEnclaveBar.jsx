@@ -453,34 +453,6 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     }
   };
 
-  const handleDisableVertexAi = async () => {
-    if (!projectId) return;
-    setEnablingVertex(true);
-    try {
-      await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/apis/toggle`,
-        {
-          serviceName: 'aiplatform.googleapis.com',
-          action: 'DISABLE',
-          disableDependentServices: false,
-        }
-      );
-      setVertexStatus('DISABLED');
-      setVertexCheckedAt(new Date().toISOString());
-      notify(
-        `Disabled Vertex AI API (aiplatform.googleapis.com) on ${projectId}.`
-      );
-    } catch (err) {
-      notify(
-        `Vertex AI API disable notice: ${
-          err.response?.data?.error || err.message
-        }`
-      );
-    } finally {
-      setEnablingVertex(false);
-    }
-  };
-
   const handleSealKey = async () => {
     const clean = String(apiKeyInput || '').trim();
     if (!clean || clean.length < 12) {
@@ -735,26 +707,22 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
               <div className="flex items-center gap-1.5">
                 {vertexStatus === 'ENABLED' ? (
                   <>
+                    <span
+                      data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-extrabold select-none"
+                      title="Vertex AI API (aiplatform.googleapis.com) is enabled and active on this project"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Vertex AI API Enabled</span>
+                    </span>
                     <button
                       type="button"
-                      data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
                       onClick={() => checkVertexAiStatus(true)}
                       disabled={enablingVertex}
-                      className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                      title="Re-verify live aiplatform.googleapis.com status via Service Usage API"
+                      className="px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                      title="Re-check live Service Usage status (read-only)"
                     >
-                      {enablingVertex
-                        ? 'Checking...'
-                        : '✓ Vertex AI Enabled (Re-Verify)'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDisableVertexAi}
-                      disabled={enablingVertex}
-                      className="px-2 py-1 rounded bg-zinc-200 hover:bg-red-500/20 dark:bg-zinc-800 dark:hover:bg-red-500/20 text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
-                      title="Disable aiplatform.googleapis.com on this project"
-                    >
-                      Disable API
+                      ↻ Refresh Check
                     </button>
                   </>
                 ) : (
@@ -762,13 +730,15 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                     type="button"
                     data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
                     onClick={handleEnableVertexAi}
-                    disabled={enablingVertex}
+                    disabled={enablingVertex || vertexStatus === 'CHECKING'}
                     className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
                     title="Enable aiplatform.googleapis.com on this project for keyless OAuth2 Gemini inference"
                   >
                     {enablingVertex
                       ? 'Enabling Vertex AI API...'
-                      : '⚡ Enable Vertex AI API Now ($0.00)'}
+                      : vertexStatus === 'CHECKING'
+                      ? 'Checking Vertex AI API...'
+                      : '⚡ Enable Vertex AI API ($0.00)'}
                   </button>
                 )}
               </div>
