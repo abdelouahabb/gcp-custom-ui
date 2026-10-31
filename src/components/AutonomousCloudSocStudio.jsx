@@ -5772,21 +5772,31 @@ Format your response with clear Markdown headings:${
                             </button>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleJumpToVpcStudio({
-                                ruleName: sig.targetRuleName,
-                                filterMode:
-                                  sig.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP'
-                                    ? 'EXPOSED'
-                                    : 'ALL',
-                              })
-                            }
-                            className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
-                          >
-                            🌐 Inspect in VPC Studio &rarr;
-                          </button>
+                          {sig.network === 'cloudaudit.googleapis.com' ? (
+                            <button
+                              type="button"
+                              onClick={() => setActivePillar('KILL_CHAIN')}
+                              className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              🎯 Inspect Actor in Kill-Chain Engine &rarr;
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleJumpToVpcStudio({
+                                  ruleName: sig.targetRuleName,
+                                  filterMode:
+                                    sig.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP'
+                                      ? 'EXPOSED'
+                                      : 'ALL',
+                                })
+                              }
+                              className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              🌐 Inspect Rule in VPC Studio &rarr;
+                            </button>
+                          )}
 
                           {sig.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP' && (
                             <button

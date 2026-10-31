@@ -58403,6 +58403,9 @@ app.get(
       (fw) =>
         !fw.disabled &&
         fw.direction === 'INGRESS' &&
+        Array.isArray(fw.allowed) &&
+        fw.allowed.length > 0 &&
+        (!Array.isArray(fw.denied) || fw.denied.length === 0) &&
         (fw.sourceRanges || []).includes('0.0.0.0/0') &&
         !String(fw.name || '').startsWith('cloudpulse-soc-')
     );
@@ -61157,6 +61160,9 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         (fw) =>
           !fw.disabled &&
           fw.direction === 'INGRESS' &&
+          Array.isArray(fw.allowed) &&
+          fw.allowed.length > 0 &&
+          (!Array.isArray(fw.denied) || fw.denied.length === 0) &&
           (fw.sourceRanges || []).includes('0.0.0.0/0') &&
           !String(fw.name || '').startsWith('cloudpulse-soc-')
       );
@@ -61196,6 +61202,14 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         details: `Batch-hardened ${lockedNames.length} world-open (0.0.0.0/0) VPC firewall rule(s) (${
           lockedNames.join(', ') || 'none'
         }) to Google Cloud IAP (35.235.240.0/20).`,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'SOC_BATCH_LOCK_FIREWALLS_TO_IAP',
+        resourceType: 'VPC_FIREWALL',
+        resourceName: lockedNames.join(', ') || 'all-open-firewalls',
+        region: 'global',
+        details: `Batch-hardened ${lockedNames.length} world-open (0.0.0.0/0) VPC firewall rules to Cloud IAP (35.235.240.0/20)`,
       });
 
       return res.json({
