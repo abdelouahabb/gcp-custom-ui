@@ -2034,6 +2034,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Execute 12-Invariant Self-Healing Reconciler on "${projectId}"?`,
+        laymanSummary: `In Plain English: Think of this as a 1-click "Auto-Fix All Free Security Best Practices" button for your Google Cloud project. It automatically turns on IAM 2FA login for VMs (OS Login), turns off risky serial-port backdoors, locks public storage buckets so strangers can't read your files, enables private internal networking for subnets, and sets up a free decoy honey-token tripwire—all for $0.00/mo.`,
         headerBadge: 'Wave 16 Autonomous Self-Healing Guardian Gatekeeper',
         targetLabel: 'Target Project Zero-Trust Invariants',
         resourceKind: 'Autonomous 12-Invariant Self-Healing Reconciler',
@@ -2042,7 +2043,7 @@ function classifyDestructiveAxiosConfig(config) {
         projectId,
         method: 'SELF-HEAL RECONCILE',
         endpoint: rawUrl,
-        confirmLabel: 'Confirm & Heal Non-Compliant Invariants',
+        confirmLabel: 'Confirm & Heal Non-Compliant Invariants ($0.00)',
         cancelToast: `Autonomous Self-Healing Reconciler cancelled.`,
         whatHappensNext: `1. Evaluates all 12 Zero-Trust invariants and remediates auto-healable violations (enforces OS Login, disables serial-port access, enforces GCS Uniform Bucket-Level Access & Public Access Prevention, enables VPC Subnet Private Google Access, enables Binary Authorization dry-run audit logging, and arms $0.00/mo Canary Tripwires).\n2. Signs the reconciliation receipt with Ed25519 (RFC 8032) and appends Terraform HCL changes to the ClickOps-to-GitOps bridge.`,
         costWarning: `ZERO-COST ($0.00/MO) SECURITY OPERATION: All self-healing compliance mutations operate on control-plane metadata and IAM/ACL policies with $0.00/mo in additional Google Cloud billing.`,
@@ -2072,6 +2073,7 @@ function classifyDestructiveAxiosConfig(config) {
       const socSpecs = {
         BLOCK_ATTACKER_IP_CIDR: {
           title: `Quarantine Attacker CIDR "${body.targetIpCidr || socTarget}" at VPC Perimeter?`,
+          laymanSummary: `In Plain English: This tells Google Cloud's network border to immediately block all incoming traffic from the suspicious IP address "${body.targetIpCidr || socTarget}" (Priority-100 DENY rule) so that attacker cannot connect to any of your servers in VPC "${body.network || 'default'}". It costs $0.00/mo and you can unblock it anytime in 1 click.`,
           resourceKind: 'VPC Ingress DENY Firewall Rule (compute.googleapis.com/v1)',
           targetName: `${body.targetIpCidr || socTarget} (VPC: ${body.network || 'default'})`,
           confirmLabel: `Create Priority-100 VPC DENY Rule (${body.targetIpCidr || socTarget})`,
@@ -2082,6 +2084,7 @@ function classifyDestructiveAxiosConfig(config) {
         DELETE_QUARANTINE_RULE: {
           gateType: 'DELETE',
           title: `Remove VPC Quarantine Firewall Rule "${body.firewallRuleName || socTarget}"?`,
+          laymanSummary: `In Plain English: This lifts the network block ("${body.firewallRuleName || socTarget}") that was previously created by the IPS/SOC quarantine engine, allowing traffic from that IP range again.`,
           resourceKind: 'VPC Quarantine Firewall Rule (compute.googleapis.com/v1)',
           targetName: String(body.firewallRuleName || socTarget),
           confirmLabel: `Delete Quarantine Rule "${body.firewallRuleName || socTarget}"`,
@@ -2091,6 +2094,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         REVOKE_CLOUDRUN_PUBLIC_INGRESS: {
           title: `Revoke Public Internet Access (allUsers) on Cloud Run "${body.serviceName || socTarget}"?`,
+          laymanSummary: `In Plain English: Right now, anyone on the public internet can call your Cloud Run service "${body.serviceName || socTarget}" without logging in ("allUsers"). Clicking confirm puts an IAM lock on it so only authenticated users or services with a valid Google Cloud token are allowed inside.`,
           resourceKind: 'Cloud Run v2 IAM Policy (run.googleapis.com/v2)',
           targetName: `${body.serviceName || socTarget} (${body.region || 'us-central1'})`,
           confirmLabel: `Strip allUsers & Enforce Zero-Trust IAM Auth`,
@@ -2100,6 +2104,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         LOCK_OPEN_VPC_FIREWALL_TO_IAP: {
           title: `Lock Open VPC Firewall Rule "${body.firewallRuleName || socTarget}" to Cloud IAP Only?`,
+          laymanSummary: `In Plain English: Firewall rule "${body.firewallRuleName || socTarget}" currently leaves administrative ports open to the whole internet (0.0.0.0/0), allowing bots to brute-force your servers. Clicking confirm replaces 0.0.0.0/0 with Google's free Identity-Aware Proxy (IAP) tunnel range (35.235.240.0/20) so only people signed into your Google Cloud account can connect.`,
           resourceKind: 'VPC Firewall Source Range Hardening (compute.googleapis.com/v1)',
           targetName: `${body.firewallRuleName || socTarget} (0.0.0.0/0 -> 35.235.240.0/20)`,
           confirmLabel: `Replace 0.0.0.0/0 with Cloud IAP Range (35.235.240.0/20)`,
@@ -2109,6 +2114,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         TOMBSTONE_APP_ENGINE_EDGE_DENY: {
           title: `Enforce App Engine Edge Firewall DENY Rule (${body.sourceRange || '203.0.113.0/24'})?`,
+          laymanSummary: `In Plain English: Blocks malicious IP range "${body.sourceRange || '203.0.113.0/24'}" right at Google's outer edge firewall before those requests can even wake up or bill your App Engine servers.`,
           resourceKind: 'App Engine Edge Ingress Firewall (appengine.googleapis.com/v1)',
           targetName: `${projectId}.appspot.com · Priority ${body.priority || 1000} DENY`,
           confirmLabel: `Deploy App Engine Edge DENY Rule`,
@@ -2118,6 +2124,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         DISABLE_SERVICE_ACCOUNT_KEY: {
           title: `Disable Leaked/Aging Service Account Key "${body.keyId || socTarget}"?`,
+          laymanSummary: `In Plain English: Deactivates this static JSON private key for "${body.serviceAccountEmail || 'your Service Account'}" so if the key file was leaked or stolen, nobody can use it to access your cloud anymore. It is non-destructive—you can re-enable the key if needed.`,
           resourceKind: 'IAM Service Account User-Managed Key (iam.googleapis.com/v1)',
           targetName: `${body.serviceAccountEmail || 'Service Account'} · Key ${String(body.keyId || '').slice(0, 16)}`,
           confirmLabel: `Immediately Disable RSA Private Key`,
@@ -2127,6 +2134,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         DEPLOY_ZERO_COST_CANARY_TRAP: {
           title: `Deploy $0.00/mo Zero-Cost Deception Canary Tripwire (${body.canaryType || 'SECRET_HONEYTOKEN'})?`,
+          laymanSummary: `In Plain English: Creates a harmless "bait" secret or decoy storage bucket that looks like a high-value master key to an intruder. Legitimate apps never touch it—so if anyone ever tries to read it, the IDS/SOC radar immediately knows an intruder is snooping inside your project. Costs $0.00/mo.`,
           resourceKind: 'Cloud Deception Honey-Token & Audit Tripwire',
           targetName:
             body.canaryType === 'GCS_HONEYBUCKET'
@@ -2142,6 +2150,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         TRIGGER_CANARY_AUDIT_PROBE: {
           title: `Fire Live Canary Audit Tripwire Verification Probe?`,
+          laymanSummary: `In Plain English: Performs a safe test-touch on your decoy Canary Honey-Token to prove that Google Cloud Audit Logs and your SOC alarm bell detect it within seconds. Costs $0.00.`,
           resourceKind: 'Cloud Audit Logs Canary Verification Probe',
           targetName: `projects/${projectId}/secrets/soc-canary-master-billing-key-2026`,
           confirmLabel: `Trigger Live Canary Access & Verify Cloud Audit Log`,
@@ -2151,6 +2160,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         CAPTURE_IAM_CHECKPOINT: {
           title: `Capture SHA-256 Golden IAM Policy Checkpoint for "${projectId}"?`,
+          laymanSummary: `In Plain English: Takes a read-only "backup photo" of who has access to your Google Cloud project right now. If someone accidentally or maliciously grants admin access later, you can roll back to this exact snapshot in 1 click. Costs $0.00.`,
           resourceKind: 'Resource Manager IAM Policy Snapshot (cloudresourcemanager.googleapis.com/v1)',
           targetName: `projects/${projectId} (Live IAM Bindings Snapshot)`,
           confirmLabel: `Capture Golden IAM Checkpoint ($0.00)`,
@@ -2160,6 +2170,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         RESTORE_IAM_CHECKPOINT: {
           title: `Roll Back Project IAM Policy to Golden Checkpoint "${body.checkpointId || 'Latest'}"?`,
+          laymanSummary: `In Plain English: Restores your project's IAM access permissions back to your saved Golden Snapshot ("${body.checkpointId || 'Latest'}"), automatically undoing any unauthorized permissions added since that snapshot was taken.`,
           resourceKind: 'Resource Manager IAM Policy Rollback (cloudresourcemanager.googleapis.com/v1)',
           targetName: `projects/${projectId} -> Checkpoint ${body.checkpointId || 'Golden Baseline'}`,
           confirmLabel: `Restore IAM Policy to Golden Checkpoint`,
@@ -2169,6 +2180,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         LOCK_GCS_BUCKET_PUBLIC_ACCESS: {
           title: `Enforce Public Access Prevention & Uniform IAM on Bucket "${body.bucketName || socTarget}"?`,
+          laymanSummary: `In Plain English: Puts a strict privacy lock on storage bucket "gs://${body.bucketName || socTarget}" so its files can never be accidentally exposed to the public internet ("allUsers"). Only people and services granted IAM permission in your project will be able to access it.`,
           resourceKind: 'Cloud Storage Bucket Security Policy (storage.googleapis.com/storage/v1)',
           targetName: `gs://${body.bucketName || socTarget}`,
           confirmLabel: `Lock Bucket "${body.bucketName || socTarget}" (Enforce PAP + UBLA)`,
@@ -2178,6 +2190,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         LOCK_ALL_GCS_BUCKETS_PUBLIC_ACCESS: {
           title: `Enforce Public Access Prevention & Uniform IAM Across ALL Buckets in "${projectId}"?`,
+          laymanSummary: `In Plain English: Locks down every Cloud Storage bucket in your project at once so none of your buckets can ever be left open to anonymous strangers on the public internet. Costs $0.00/mo.`,
           resourceKind: 'Fleet-Wide Cloud Storage Hardening (storage.googleapis.com/storage/v1)',
           targetName: `All Cloud Storage Buckets in ${projectId}`,
           confirmLabel: `Lock All GCS Buckets (PAP + Uniform IAM)`,
@@ -2188,6 +2201,7 @@ function classifyDestructiveAxiosConfig(config) {
         DELETE_LOG_EXCLUSION: {
           gateType: 'DELETE',
           title: `Delete Cloud Logging Sink Exclusion Filter "${body.exclusionName || socTarget}"?`,
+          laymanSummary: `In Plain English: Attackers sometimes hide their tracks by creating a "Log Exclusion" rule that tells Google Cloud to throw away security logs. Deleting "${body.exclusionName || socTarget}" removes that blindfold so 100% of your audit logs are recorded again.`,
           resourceKind: 'Cloud Logging Exclusion Filter (logging.googleapis.com/v2)',
           targetName: `projects/${projectId}/exclusions/${body.exclusionName || socTarget}`,
           confirmLabel: `Delete Log Exclusion & Restore Full Audit Visibility`,
@@ -2197,6 +2211,10 @@ function classifyDestructiveAxiosConfig(config) {
         },
         TOGGLE_SERVICE_ACCOUNT_FREEZE: {
           title: `${body.disable !== false ? 'Freeze & Disable' : 'Unfreeze & Re-Enable'} Service Account "${body.serviceAccountEmail || socTarget}"?`,
+          laymanSummary:
+            body.disable !== false
+              ? `In Plain English: Immediately hits the "pause button" on robot account "${body.serviceAccountEmail || socTarget}" so it cannot mint any new access tokens if you suspect it was compromised. You can unfreeze it in 1 click anytime.`
+              : `In Plain English: Unpauses robot account "${body.serviceAccountEmail || socTarget}" so your apps using this Service Account can authenticate normally again.`,
           resourceKind: 'IAM Service Account Kill-Switch (iam.googleapis.com/v1)',
           targetName: String(body.serviceAccountEmail || socTarget),
           confirmLabel: `${body.disable !== false ? 'Freeze Service Account Immediately' : 'Re-Enable Service Account'}`,
@@ -2209,6 +2227,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         EXECUTE_DEFCON1_LOCKDOWN: {
           title: `Execute DEFCON-1 Multi-Vector Project Perimeter Lockdown on "${projectId}"?`,
+          laymanSummary: `In Plain English: This is the emergency "Lock All Doors & Windows" button for an active cyber incident. In one click, it locks unauthenticated public Cloud Run apps, restricts open 0.0.0.0/0 SSH/RDP firewall rules to Google's IAP tunnel, locks public Cloud Storage buckets, and saves a Golden IAM Snapshot—all for $0.00.`,
           resourceKind: 'Autonomous Multi-API Emergency Perimeter Lockdown',
           targetName: `${projectId} (Cloud Run IAM + VPC IAP + GCS PAP)`,
           confirmLabel: `Execute DEFCON-1 Perimeter Lockdown ($0.00)`,
@@ -2218,6 +2237,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         SEVER_IAM_ESCALATION_BINDING: {
           title: `Sever High-Risk IAM Privilege Escalation Binding (${body.role || 'Admin Role'}) from "${body.member || socTarget}"?`,
+          laymanSummary: `In Plain English: Removes the overly powerful "${body.role || 'Admin'}" permission from "${body.member || socTarget}" while leaving their other normal permissions untouched, preventing privilege escalation.`,
           resourceKind: 'Project IAM Policy Binding Surgery (cloudresourcemanager.googleapis.com/v1)',
           targetName: `${body.member || socTarget} -> ${body.role || 'roles/owner'}`,
           confirmLabel: `Remove "${body.role || 'Role'}" from "${body.member || socTarget}"`,
@@ -2227,6 +2247,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT: {
           title: `Enforce Project-Wide IAM OS Login & Disable VM Serial Port Access on "${projectId}"?`,
+          laymanSummary: `In Plain English: Upgrades all Virtual Machines in "${projectId}" so SSH logins require your real Google Cloud IAM identity + 2-Factor Authentication (` + '`enable-oslogin=TRUE`' + `) instead of old static SSH keys, and closes the unauthenticated VM serial-port troubleshooting backdoor (` + '`serial-port-enable=FALSE`' + `).`,
           resourceKind: 'Compute Engine Common Instance Metadata (compute.googleapis.com/v1)',
           targetName: `projects/${projectId} (enable-oslogin=TRUE, serial-port-enable=FALSE)`,
           confirmLabel: `Enforce OS Login & Disable Serial Port Project-Wide`,
@@ -2236,6 +2257,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         PURGE_PROJECT_WIDE_SSH_KEYS: {
           title: `Purge Project-Wide Static SSH Keys from Compute Engine Metadata on "${projectId}"?`,
+          laymanSummary: `In Plain English: Deletes shared static SSH public keys stored in your project's global metadata—which otherwise let anyone holding one old key hop across every VM in your project—and turns on IAM OS Login instead.`,
           resourceKind: 'Compute Engine Metadata SSH Key Purge (compute.googleapis.com/v1)',
           targetName: `projects/${projectId}/commonInstanceMetadata (ssh-keys / sshKeys)`,
           confirmLabel: `Purge Static Project SSH Keys & Enforce OS Login`,
@@ -2245,6 +2267,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         LOCK_BIGQUERY_DATASET_PUBLIC_ACL: {
           title: `Revoke Public Access (allUsers / allAuthenticatedUsers) on BigQuery Dataset "${body.datasetId || socTarget}"?`,
+          laymanSummary: `In Plain English: Removes public internet read access ("allUsers") from your BigQuery database folder "${body.datasetId || socTarget}" so strangers cannot query or download your private tables.`,
           resourceKind: 'BigQuery Dataset Access Control List (bigquery.googleapis.com/bigquery/v2)',
           targetName: `${projectId}:${body.datasetId || socTarget}`,
           confirmLabel: `Lock BigQuery Dataset ACL ("${body.datasetId || socTarget}")`,
@@ -2254,6 +2277,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ROTATE_SECRET_VERSION_NOW: {
           title: `Cryptographically Rotate Secret Manager Secret "${body.secretId || socTarget}" Now?`,
+          laymanSummary: `In Plain English: Generates a brand-new 256-bit encrypted secret version for "${body.secretId || socTarget}" and disables old versions so any previously leaked value becomes useless immediately (and disabled versions cost $0.00/mo).`,
           resourceKind: 'Secret Manager Cryptographic Version Rotation (secretmanager.googleapis.com/v1)',
           targetName: `projects/${projectId}/secrets/${body.secretId || socTarget}`,
           confirmLabel: `Mint Fresh 256-Bit SecretVersion & Disable Old Versions`,
@@ -2263,6 +2287,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ROTATE_ALL_STALE_SECRETS: {
           title: `Batch-Rotate All Stale / Unversioned Secrets Across Project "${projectId}"?`,
+          laymanSummary: `In Plain English: Automatically generates a fresh encrypted version for every Secret Manager secret older than 90 days across "${projectId}" and turns off the old versions so you don't get billed for stale versions.`,
           resourceKind: 'Secret Manager Fleet Cryptographic Rotation (secretmanager.googleapis.com/v1)',
           targetName: `All Stale Secrets in ${projectId}`,
           confirmLabel: `Rotate All Stale Secrets to Fresh Version`,
@@ -2272,6 +2297,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ENFORCE_SUBNET_PRIVATE_GOOGLE_ACCESS: {
           title: `Enable Private Google Access (PGA) on VPC Subnet "${body.subnetName || socTarget}" (${body.region || 'us-central1'})?`,
+          laymanSummary: `In Plain English: Lets internal servers in subnet "${body.subnetName || socTarget}" talk to Google Cloud services (like Cloud Storage or BigQuery) over Google's private internal fiber network without needing a public internet IP address. Costs $0.00/mo.`,
           resourceKind: 'VPC Subnetwork Private Google Access (compute.googleapis.com/v1)',
           targetName: `projects/${projectId}/regions/${body.region || 'us-central1'}/subnetworks/${body.subnetName || socTarget}`,
           confirmLabel: `Enable Private Google Access ($0.00/mo)`,
@@ -2281,6 +2307,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ENFORCE_ALL_SUBNETS_PGA: {
           title: `Enforce Private Google Access (PGA) Across ALL VPC Subnets in "${projectId}"?`,
+          laymanSummary: `In Plain English: Turns on free Private Google Access across every subnet in your project so internal VMs and containers can reach Google APIs privately without exposing public IPs.`,
           resourceKind: 'Fleet-Wide VPC Subnetwork PGA Hardening (compute.googleapis.com/v1)',
           targetName: `All VPC Subnetworks in ${projectId}`,
           confirmLabel: `Enable PGA on All Non-Compliant Subnets ($0.00/mo)`,
@@ -2290,6 +2317,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ENABLE_CLOUD_DNS_DNSSEC: {
           title: `Enable Cryptographic DNSSEC Signing on Cloud DNS Zone "${body.zoneName || socTarget}"?`,
+          laymanSummary: `In Plain English: Turns on cryptographic digital signatures (DNSSEC) for your DNS domain zone "${body.zoneName || socTarget}" at $0.00 extra cost so attackers cannot hijack or spoof your domain lookups.`,
           resourceKind: 'Cloud DNS Managed Zone DNSSEC (dns.googleapis.com/dns/v1)',
           targetName: `projects/${projectId}/managedZones/${body.zoneName || socTarget}`,
           confirmLabel: `Enable DNSSEC Signing on "${body.zoneName || socTarget}"`,
@@ -2299,6 +2327,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         PROVISION_HARDENED_DNS_ZONE: {
           title: `Provision DNSSEC-Hardened Cloud DNS Zone "${body.zoneName || 'cloudpulse-soc-zone'}"?`,
+          laymanSummary: `In Plain English: Creates a new managed DNS zone ("${body.zoneName || 'cloudpulse-soc-zone'}") with anti-spoofing DNSSEC signatures already turned on from day one (~$0.20/month).`,
           resourceKind: 'Cloud DNS Managed Zone with DNSSEC (dns.googleapis.com/dns/v1)',
           targetName: `${body.zoneName || 'cloudpulse-soc-zone'} (${body.dnsName || `${projectId}.internal.`})`,
           confirmLabel: `Create DNSSEC-Hardened Cloud DNS Zone`,
@@ -2308,6 +2337,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         PROVISION_SOC_KMS_KEYRING: {
           title: `Provision Cloud KMS KeyRing & 90-Day Auto-Rotating CMEK Key in "${projectId}"?`,
+          laymanSummary: `In Plain English: Creates your own customer-managed encryption key ("soc-cmek-primary-key") in Google Cloud KMS that automatically rotates itself every 90 days so you control the master encryption keys for your disks, buckets, and databases.`,
           resourceKind: 'Cloud KMS KeyRing + Symmetric CryptoKey (cloudkms.googleapis.com/v1)',
           targetName: `projects/${projectId}/locations/global/keyRings/cloudpulse-soc-keyring/cryptoKeys/soc-cmek-primary-key`,
           confirmLabel: `Provision KMS KeyRing & 90-Day Auto-Rotating Key`,
@@ -2317,6 +2347,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         DISABLE_UNUSED_GCP_API: {
           title: `Disable Attack-Surface Google Cloud API "${body.serviceName || socTarget}" on "${projectId}"?`,
+          laymanSummary: `In Plain English: Turns off the unused Google Cloud service API "${body.serviceName || socTarget}" so hackers or rogue scripts cannot spin up hidden resources inside that service. You can turn it back on anytime in 1 click at $0.00.`,
           resourceKind: 'Service Usage API Surface Reduction (serviceusage.googleapis.com/v1)',
           targetName: `projects/${projectId}/services/${body.serviceName || socTarget}`,
           confirmLabel: `Disable API "${body.serviceName || socTarget}"`,
@@ -2326,6 +2357,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         HARDEN_BINARY_AUTH_POLICY: {
           title: `Enforce Binary Authorization Container Attestation Policy on "${projectId}"?`,
+          laymanSummary: `In Plain English: Turns on Google Cloud Binary Authorization so container deployments are checked for trusted build signatures (and logs an alert if someone tries to deploy an unsigned or unverified container image). Costs $0.00/mo in dry-run/audit mode.`,
           resourceKind: 'Binary Authorization Policy (binaryauthorization.googleapis.com/v1)',
           targetName: `projects/${projectId}/policy (${body.evaluationMode || 'REQUIRE_ATTESTATION'})`,
           confirmLabel: `Enforce Binary Authorization Policy ($0.00)`,
@@ -2335,6 +2367,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         PROVISION_IMMUTABLE_ARTIFACT_REPO: {
           title: `Provision Immutable-Tag Docker Artifact Registry "${body.repoName || 'cloudpulse-immutable-containers'}"?`,
+          laymanSummary: `In Plain English: Creates a tamper-proof Docker container vault ("${body.repoName || 'cloudpulse-immutable-containers'}") where once a version tag (like v1.0.0) is uploaded, nobody—not even a compromised CI script—can silently overwrite that tag with malware.`,
           resourceKind: 'Artifact Registry Docker Repository (artifactregistry.googleapis.com/v1)',
           targetName: `projects/${projectId}/locations/${body.region || 'us-central1'}/repositories/${body.repoName || 'cloudpulse-immutable-containers'}`,
           confirmLabel: `Create Immutable Docker Repository ($0.00 Empty)`,
@@ -2344,6 +2377,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         ENFORCE_ARTIFACT_REPO_IMMUTABLE_TAGS: {
           title: `Lock Container Image Tags (immutableTags=true) on Repository "${body.repoName || socTarget}"?`,
+          laymanSummary: `In Plain English: Flips on "Immutable Tags" for your existing Docker repository "${body.repoName || socTarget}" at $0.00 cost so attackers cannot overwrite existing production image tags with trojanized containers.`,
           resourceKind: 'Artifact Registry Tag Immutability (artifactregistry.googleapis.com/v1)',
           targetName: `projects/${projectId}/locations/${body.location || 'us-central1'}/repositories/${body.repoName || socTarget}`,
           confirmLabel: `Enforce Immutable Image Tags ($0.00)`,
@@ -2354,6 +2388,7 @@ function classifyDestructiveAxiosConfig(config) {
         DELETE_SUSPICIOUS_VPC_ROUTE: {
           gateType: 'DELETE',
           title: `Delete Suspicious VPC Network Route "${body.routeName || socTarget}"?`,
+          laymanSummary: `In Plain English: Removes custom network route "${body.routeName || socTarget}" from your VPC routing table so traffic cannot be secretly detoured through an unauthorized VM or tunnel.`,
           resourceKind: 'VPC Network Route (compute.googleapis.com/v1)',
           targetName: `projects/${projectId}/global/routes/${body.routeName || socTarget}`,
           confirmLabel: `Delete Suspicious VPC Route "${body.routeName || socTarget}"`,
@@ -2363,6 +2398,7 @@ function classifyDestructiveAxiosConfig(config) {
         },
         PROVISION_CLOUD_ARMOR_IPS_WAF: {
           title: `Provision Google Cloud Armor L7 IPS WAF Policy "${body.policyName || 'cloudpulse-soc-ips-waf-armor'}" on "${projectId}"?`,
+          laymanSummary: `In Plain English: Creates a live Google Cloud Armor Web Application Firewall policy ("${body.policyName || 'cloudpulse-soc-ips-waf-armor'}") pre-loaded with SQL Injection and Cross-Site Scripting (XSS) protection so malicious web payloads are blocked with HTTP 403 Forbidden at Google's edge.`,
           resourceKind: 'Google Cloud Armor L7 IPS Security Policy (compute.googleapis.com/v1)',
           targetName: `projects/${projectId}/global/securityPolicies/${body.policyName || 'cloudpulse-soc-ips-waf-armor'}`,
           confirmLabel: `Provision Cloud Armor L7 IPS WAF Policy`,
