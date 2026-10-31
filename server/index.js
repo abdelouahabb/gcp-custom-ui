@@ -75326,8 +75326,16 @@ app.get('/api/project/:projectId/oltp-database-pipeline/blueprint', async (req, 
           {
             kind: '35-Day PITR Time-Machine',
             name: `Clone ${primarySqlName} to Any Millisecond`,
-            meta: 'Non-destructive WAL replay clone for forensics',
+            meta: 'Click to open 35d WAL replay clone runbook (pitr_clone_and_failover.sh)',
             targetTab: 'CLOUD_SQL_STUDIO',
+            openArtifactTab: 'PITR_SH',
+          },
+          {
+            kind: 'Regional HA & Zero-ETL Terraform',
+            name: 'oltp_database_ha_pitr.tf (Cloud SQL + IAM + BQ)',
+            meta: 'Click to inspect Regional HA & IAM DB Auth HCL',
+            targetTab: 'CLOUD_SQL_STUDIO',
+            openArtifactTab: 'TERRAFORM',
           },
           {
             kind: '30-Day Database Recycle Bin',
@@ -75412,6 +75420,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         vmsRes,
         runRes,
         svcRes,
+        disksRes,
+        addrsRes,
       ] = await Promise.allSettled([
         axios.get(
           `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/billingInfo`,
@@ -75483,6 +75493,14 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
               `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=150`,
               { headers, timeout: 4500 }
             ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/disks?maxResults=60`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/addresses?maxResults=60`,
+          { headers, timeout: 4000 }
+        ),
       ]);
 
       const billingInfo =
@@ -75580,6 +75598,30 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         .map((s) => (s.config?.name || s.name || '').split('/').pop())
         .filter(Boolean);
 
+      let unattachedDisksCount = 0;
+      if (disksRes.status === 'fulfilled') {
+        const diskItems = disksRes.value.data?.items || {};
+        Object.values(diskItems).forEach((scopeVal) => {
+          (scopeVal?.disks || []).forEach((d) => {
+            if (d.status !== 'DELETING' && (!d.users || d.users.length === 0)) {
+              unattachedDisksCount += 1;
+            }
+          });
+        });
+      }
+
+      let unusedStaticIpsCount = 0;
+      if (addrsRes.status === 'fulfilled') {
+        const addrItems = addrsRes.value.data?.items || {};
+        Object.values(addrItems).forEach((scopeVal) => {
+          (scopeVal?.addresses || []).forEach((addr) => {
+            if (addr.status !== 'DELETING' && addr.status !== 'IN_USE') {
+              unusedStaticIpsCount += 1;
+            }
+          });
+        });
+      }
+
       extra = {
         ts: Date.now(),
         billingEnabled,
@@ -75590,6 +75632,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         vms,
         cloudRunSvcs,
         enabledApis,
+        unattachedDisksCount,
+        unusedStaticIpsCount,
       };
       wave6FinOpsCostKillProbeCache.set(projectId, extra);
     }
@@ -75602,6 +75646,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
     const vms = extra?.vms || [];
     const cloudRunSvcs = extra?.cloudRunSvcs || [];
     const enabledApis = extra?.enabledApis || [];
+    const unattachedDisksCount = Number(extra?.unattachedDisksCount || 0);
+    const unusedStaticIpsCount = Number(extra?.unusedStaticIpsCount || 0);
 
     const runningVms = vms.filter(
       (v) => v.status === 'RUNNING' || v.status === 'HEALTHY'
@@ -75859,6 +75905,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         title: '1. Billing Account, Credits & Startup 10X Tier',
         shortTitle: 'Billing & Credits',
         targetTab: 'FINOPS',
+        scrollToId: 'finops-billing-guardian-section',
         secondaryTab: 'STARTUP_10X',
         secondaryLabel: 'Startup 10X Credit Radar',
         status: billingEnabled ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
@@ -75880,6 +75927,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
               ? 'Active billing linkage verified via Cloud Billing API'
               : 'Zero surprise billing exposure',
             targetTab: 'FINOPS',
+            scrollToId: 'finops-billing-guardian-section',
           },
           {
             kind: 'Startup 10X Credits',
@@ -75892,6 +75940,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             name: 'Inspect Multi-Grant Burn & Expiration Runway',
             meta: 'Track GenAI, Trial & Partner credit burn rate',
             targetTab: 'FINOPS',
+            scrollToId: 'finops-billing-guardian-section',
           },
         ],
       },
@@ -75901,11 +75950,17 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         title: '2. Always-Free Tier & Idle Zombie Reaper',
         shortTitle: 'Free Tier & Zombie Reaper',
         targetTab: 'FINOPS',
-        secondaryTab: 'VM_SSH',
-        secondaryLabel: 'Inspect VM Fleet',
-        status: 'OPTIMAL',
+        scrollToId: 'finops-zombie-reaper-section',
+        triggerEvent: 'cloudpulse:scan-zombies',
+        secondaryTab: 'INNOVATION_LAB',
+        secondarySubTab: 'FINOPS_SLEEP',
+        secondaryLabel: 'Night-Mode Sleep & Burn Radar',
+        status:
+          unattachedDisksCount + unusedStaticIpsCount + stoppedVms.length > 0
+            ? 'ACTION_RECOMMENDED'
+            : 'OPTIMAL',
         metricBadge: `${runningVms.length} Running · ${stoppedVms.length} Stopped VMs`,
-        summary: `Audits ${vms.length} VM(s) (${runningVms.length} running, ${stoppedVms.length} stopped), ${buckets.length} GCS bucket(s), and ${cloudRunSvcs.length} Cloud Run service(s) against GCP Always-Free Tier quotas (1 e2-micro, 5 GB GCS, 2M Cloud Run reqs, 1 TiB BQ).`,
+        summary: `Audits ${vms.length} VM(s) (${runningVms.length} running, ${stoppedVms.length} stopped), ${unattachedDisksCount} unattached disk(s), ${unusedStaticIpsCount} unused Static IP(s), ${buckets.length} GCS bucket(s), and ${cloudRunSvcs.length} Cloud Run service(s) against GCP Always-Free Tier quotas.`,
         cliCmd: `gcloud compute instances list --project=${projectId}`,
         mermaidDsl: stage2MermaidDsl,
         stageItems: [
@@ -75924,8 +75979,10 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
           {
             kind: 'Idle Zombie Reaper',
             name: 'Scan Unattached Disks, Static IPs & Idle VMs',
-            meta: 'Reclaim wasted spend in FinOps Studio',
+            meta: `${unattachedDisksCount} Orphan Disk(s) · ${unusedStaticIpsCount} Unused IP(s) · ${stoppedVms.length} Stopped VM(s) — Click to scan & reclaim`,
             targetTab: 'FINOPS',
+            scrollToId: 'finops-zombie-reaper-section',
+            triggerEvent: 'cloudpulse:scan-zombies',
           },
         ],
       },
@@ -75959,6 +76016,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             name: `${projectId}:${ds.name}`,
             meta: `${ds.location} · Billing Export Target`,
             targetTab: 'BIGQUERY_STUDIO',
+            sqlPayload: finopsSkuBurnSql,
           })),
         ],
       },
@@ -75968,8 +76026,10 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         title: '4. Paid API & GPU Quota Guardrails',
         shortTitle: 'API & Quota Guardrails',
         targetTab: 'OVERVIEW',
-        secondaryTab: 'FINOPS',
-        secondaryLabel: 'FinOps Quota Cap',
+        scrollToId: 'emergency-api-killswitch-section',
+        secondaryTab: 'INNOVATION_LAB',
+        secondarySubTab: 'DREAM_BRAIN',
+        secondaryLabel: 'Pre-Crime 30-Day Billing & Spend Cap',
         status: 'OPTIMAL',
         metricBadge: `${highBurnApis.length} High-Burn · ${enabledApis.length} Total APIs`,
         summary: `Discovered ${highBurnApis.length} billable compute/AI/database service API(s) (${highBurnApis.slice(0, 4).join(', ') || 'none'}) out of ${enabledApis.length} total enabled APIs in ${projectId}.`,
@@ -75981,12 +76041,14 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             name: api,
             meta: 'Monitored by Emergency API Kill-Switch',
             targetTab: 'OVERVIEW',
+            scrollToId: 'emergency-api-killswitch-section',
           })),
           {
             kind: 'Emergency API Kill-Switch',
             name: `Manage All ${enabledApis.length} Enabled APIs`,
             meta: 'Disable unused paid APIs with 30-day restore safety',
             targetTab: 'OVERVIEW',
+            scrollToId: 'emergency-api-killswitch-section',
           },
         ],
       },
@@ -75996,7 +76058,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         title: '5. Pub/Sub Budget Alert & Autonomous Cost-Kill',
         shortTitle: 'Budget Alert & Cost-Kill',
         targetTab: 'FINOPS',
-        secondaryTab: 'CLOUD_FUNCTIONS',
+        openArtifactTab: 'TERRAFORM',
+        secondaryTab: 'FUNCTIONS_STUDIO',
         secondaryLabel: 'Pub/Sub & Functions Studio',
         status: 'OPTIMAL',
         metricBadge: `${pubsubTopics.length} Pub/Sub Topics · 50/80/100% Gate`,
@@ -76008,13 +76071,21 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             kind: 'Live Pub/Sub Alert Topic',
             name: t.name,
             meta: 'Ready for Cloud Billing JSON budget webhook',
-            targetTab: 'CLOUD_FUNCTIONS',
+            targetTab: 'FUNCTIONS_STUDIO',
           })),
           {
-            kind: 'Budget Threshold Guard',
+            kind: 'Budget Threshold Guard (Terraform)',
             name: '50% Actual · 80% Actual · 100% Forecasted',
-            meta: 'Includes credit_types_treatment = INCLUDE_ALL_CREDITS',
+            meta: 'Click to inspect billing_budget_guard.tf (INCLUDE_ALL_CREDITS)',
             targetTab: 'FINOPS',
+            openArtifactTab: 'TERRAFORM',
+          },
+          {
+            kind: 'Emergency Cost-Freeze Runbook',
+            name: 'emergency_cost_kill.sh (Stop VMs & Audit APIs)',
+            meta: 'Click to open non-destructive cost-freeze CLI runbook',
+            targetTab: 'FINOPS',
+            openArtifactTab: 'KILL_SH',
           },
         ],
       },
@@ -76064,6 +76135,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         vms: vms.length,
         runningVms: runningVms.length,
         stoppedVms: stoppedVms.length,
+        unattachedDisks: unattachedDisksCount,
+        unusedStaticIps: unusedStaticIpsCount,
         buckets: buckets.length,
         datasets: datasets.length,
         pubsubTopics: pubsubTopics.length,

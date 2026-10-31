@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   DollarSign,
@@ -50,6 +50,8 @@ export default function FinOpsCostKillPipelineBar({
   const [activeArtifactTab, setActiveArtifactTab] = useState('TERRAFORM');
   const [copiedKey, setCopiedKey] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const barRef = useRef(null);
+  const synthDrawerRef = useRef(null);
 
   const fetchBlueprint = useCallback(async () => {
     if (!projectId) return;
@@ -106,6 +108,58 @@ export default function FinOpsCostKillPipelineBar({
           })
         );
       }, 140);
+    }
+  };
+
+  const handleExecuteAction = ({
+    targetTab,
+    subTab,
+    scrollToId,
+    triggerEvent,
+    openArtifactTab,
+    sqlPayload,
+  }) => {
+    if (sqlPayload) {
+      handleLoadSqlInBigQuery(sqlPayload);
+      return;
+    }
+    if (openArtifactTab) {
+      setActiveArtifactTab(openArtifactTab);
+      setSynthDrawerOpen(true);
+      setTimeout(() => {
+        synthDrawerRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }, 80);
+      return;
+    }
+    const isTabSwitch = Boolean(targetTab && targetTab !== activeTab);
+    if (typeof onSelectTab === 'function' && (isTabSwitch || subTab)) {
+      onSelectTab(targetTab || activeTab, subTab);
+    }
+    const performScrollAndTrigger = () => {
+      if (scrollToId) {
+        const el = document.getElementById(scrollToId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else if (!isTabSwitch && !subTab) {
+        barRef.current?.nextElementSibling?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+      if (triggerEvent) {
+        window.dispatchEvent(
+          new CustomEvent(triggerEvent, { detail: { projectId } })
+        );
+      }
+    };
+    if (isTabSwitch || subTab) {
+      setTimeout(performScrollAndTrigger, 160);
+    } else {
+      performScrollAndTrigger();
     }
   };
 
@@ -211,7 +265,10 @@ export default function FinOpsCostKillPipelineBar({
       : `${projectId || 'gcp'}-emergency-cost-kill.sh`;
 
   return (
-    <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-slate-950/95 via-amber-950/20 to-slate-950/95 p-3.5 shadow-xl">
+    <div
+      ref={barRef}
+      className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-slate-950/95 via-amber-950/20 to-slate-950/95 p-3.5 shadow-xl"
+    >
       {/* Top Header Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -376,13 +433,17 @@ export default function FinOpsCostKillPipelineBar({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (stage.sampleSql && stage.targetTab === 'BIGQUERY_STUDIO') {
-                          handleLoadSqlInBigQuery(stage.sampleSql);
-                          return;
-                        }
-                        if (typeof onSelectTab === 'function' && stage.targetTab) {
-                          onSelectTab(stage.targetTab, stage.targetSubTab);
-                        }
+                        handleExecuteAction({
+                          targetTab: stage.targetTab,
+                          subTab: stage.targetSubTab,
+                          scrollToId: stage.scrollToId,
+                          triggerEvent: stage.triggerEvent,
+                          openArtifactTab: stage.openArtifactTab,
+                          sqlPayload:
+                            stage.sampleSql && stage.targetTab === 'BIGQUERY_STUDIO'
+                              ? stage.sampleSql
+                              : null,
+                        });
                       }}
                       className="inline-flex items-center gap-0.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300"
                       title={`Jump to ${stage.shortTitle}`}
@@ -440,7 +501,18 @@ export default function FinOpsCostKillPipelineBar({
                     <button
                       type="button"
                       onClick={() =>
-                        onSelectTab(selectedStageObj.targetTab, selectedStageObj.targetSubTab)
+                        handleExecuteAction({
+                          targetTab: selectedStageObj.targetTab,
+                          subTab: selectedStageObj.targetSubTab,
+                          scrollToId: selectedStageObj.scrollToId,
+                          triggerEvent: selectedStageObj.triggerEvent,
+                          openArtifactTab: selectedStageObj.openArtifactTab,
+                          sqlPayload:
+                            selectedStageObj.sampleSql &&
+                            selectedStageObj.targetTab === 'BIGQUERY_STUDIO'
+                              ? selectedStageObj.sampleSql
+                              : null,
+                        })
                       }
                       className="inline-flex items-center gap-1 rounded-lg bg-amber-600/25 hover:bg-amber-600/35 border border-amber-400/40 px-2.5 py-1 text-[11px] font-bold text-amber-200 transition"
                     >
@@ -453,7 +525,10 @@ export default function FinOpsCostKillPipelineBar({
                     <button
                       type="button"
                       onClick={() =>
-                        onSelectTab(selectedStageObj.secondaryTab, selectedStageObj.secondarySubTab)
+                        handleExecuteAction({
+                          targetTab: selectedStageObj.secondaryTab,
+                          subTab: selectedStageObj.secondarySubTab,
+                        })
                       }
                       className="inline-flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition"
                     >
@@ -471,15 +546,16 @@ export default function FinOpsCostKillPipelineBar({
                     {selectedStageObj.stageItems.map((item, i) => (
                       <div
                         key={`${item.name}-${i}`}
-                        onClick={() => {
-                          if (item.sqlPayload) {
-                            handleLoadSqlInBigQuery(item.sqlPayload);
-                            return;
-                          }
-                          if (item.targetTab && typeof onSelectTab === 'function') {
-                            onSelectTab(item.targetTab, item.subTab);
-                          }
-                        }}
+                        onClick={() =>
+                          handleExecuteAction({
+                            targetTab: item.targetTab,
+                            subTab: item.subTab,
+                            scrollToId: item.scrollToId,
+                            triggerEvent: item.triggerEvent,
+                            openArtifactTab: item.openArtifactTab,
+                            sqlPayload: item.sqlPayload,
+                          })
+                        }
                         className="cursor-pointer rounded-lg border border-slate-800/90 bg-slate-900/90 px-2.5 py-1.5 hover:border-amber-500/40 transition flex items-center justify-between gap-2"
                       >
                         <div className="min-w-0">
@@ -553,7 +629,10 @@ export default function FinOpsCostKillPipelineBar({
 
           {/* Decoupled FinOps Budget Terraform, BigQuery SQL & Cost-Kill CLI Drawer */}
           {synthDrawerOpen && (
-            <div className="mt-3 rounded-xl border border-emerald-500/40 bg-slate-950/95 p-3.5 shadow-2xl">
+            <div
+              ref={synthDrawerRef}
+              className="mt-3 rounded-xl border border-emerald-500/40 bg-slate-950/95 p-3.5 shadow-2xl"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-emerald-400" />

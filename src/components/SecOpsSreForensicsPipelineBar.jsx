@@ -730,7 +730,17 @@ export default function SecOpsSreForensicsPipelineBar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectTab(stage.targetTab, stage.targetSubTab);
+                      const isTabSwitch = Boolean(
+                        stage.targetTab && stage.targetTab !== activeTab
+                      );
+                      if (isTabSwitch || stage.targetSubTab) {
+                        onSelectTab(stage.targetTab, stage.targetSubTab);
+                      } else {
+                        containerRef.current?.nextElementSibling?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        });
+                      }
                     }}
                     title={`Jump directly to ${
                       STUDIO_TAB_LABELS[stage.targetTab] || stage.shortTitle
@@ -769,9 +779,19 @@ export default function SecOpsSreForensicsPipelineBar({
               {onSelectTab && (
                 <button
                   type="button"
-                  onClick={() =>
-                    onSelectTab(activeStage.targetTab, activeStage.targetSubTab)
-                  }
+                  onClick={() => {
+                    const isTabSwitch = Boolean(
+                      activeStage.targetTab && activeStage.targetTab !== activeTab
+                    );
+                    if (isTabSwitch || activeStage.targetSubTab) {
+                      onSelectTab(activeStage.targetTab, activeStage.targetSubTab);
+                    } else {
+                      containerRef.current?.nextElementSibling?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
+                    }
+                  }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -912,7 +932,15 @@ export default function SecOpsSreForensicsPipelineBar({
                           setSelectedArtifactTab(item.openArtifactTab);
                           setPlaybookDrawerOpen(true);
                         } else if (onSelectTab && item.targetTab) {
-                          onSelectTab(item.targetTab, item.subTab);
+                          const isTabSwitch = item.targetTab !== activeTab;
+                          if (isTabSwitch || item.subTab) {
+                            onSelectTab(item.targetTab, item.subTab);
+                          } else {
+                            containerRef.current?.nextElementSibling?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start',
+                            });
+                          }
                         }
                       }}
                       className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-rose-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"

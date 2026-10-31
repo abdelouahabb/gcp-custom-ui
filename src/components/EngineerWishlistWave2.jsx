@@ -175,19 +175,21 @@ export default function EngineerWishlistWave2({
   const [zombieData, setZombieData] = useState(null);
   const [loadingZombies, setLoadingZombies] = useState(false);
   const [exterminatingId, setExterminatingId] = useState(null);
+  const [zombieHighlightPulse, setZombieHighlightPulse] = useState(false);
   // Real-time GCP Zone/Region Operation progress trackers keyed by zombie.id
   const [operationTrackers, setOperationTrackers] = useState({});
 
   const fetchZombies = useCallback(async (silent = false) => {
-    if (!projectId) return;
+    if (!projectId) return null;
     if (!silent) setLoadingZombies(true);
     try {
       const res = await axios.get(
         `/api/project/${encodeURIComponent(projectId)}/zombies`
       );
       setZombieData(res.data);
+      return res.data;
     } catch {
-      // ignore
+      return null;
     } finally {
       if (!silent) setLoadingZombies(false);
     }
@@ -198,6 +200,27 @@ export default function EngineerWishlistWave2({
       fetchZombies();
     }
   }, [activeMode, fetchZombies]);
+
+  useEffect(() => {
+    if (activeMode !== 'ZOMBIES') return undefined;
+    const handleTriggerScan = async () => {
+      setZombieHighlightPulse(true);
+      setTimeout(() => setZombieHighlightPulse(false), 2600);
+      const data = await fetchZombies(false);
+      if (typeof onShowToast === 'function') {
+        const count = data?.zombiesCount ?? 0;
+        const waste = Number(data?.totalMonthlyWasteUsd || 0).toFixed(2);
+        onShowToast(
+          count > 0
+            ? `Zombie Reaper Scan Complete: ${count} unattached/idle resource(s) detected ($${waste}/mo waste) in ${projectId}`
+            : `Zombie Reaper Scan Complete: 0 unattached disks, 0 unused Static IPs, and 0 stopped VM boot disks in ${projectId} ($0.00/mo waste)`
+        );
+      }
+    };
+    window.addEventListener('cloudpulse:scan-zombies', handleTriggerScan);
+    return () =>
+      window.removeEventListener('cloudpulse:scan-zombies', handleTriggerScan);
+  }, [activeMode, fetchZombies, onShowToast, projectId]);
 
   const handleExterminateZombie = async (zombie) => {
     setExterminatingId(zombie.id);
@@ -790,7 +813,13 @@ export default function EngineerWishlistWave2({
     const exterminatedHistory = zombieData?.exterminatedHistory || [];
     const totalSavedAnnualUsd = zombieData?.totalSavedAnnualUsd || 0;
     return (
-      <div className="space-y-4">
+      <div
+        className={`space-y-4 rounded-2xl transition-all duration-500 ${
+          zombieHighlightPulse
+            ? 'ring-2 ring-amber-400/90 shadow-lg shadow-amber-500/20 p-1'
+            : ''
+        }`}
+      >
         <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-500/[0.06] border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="text-xs font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1.5">

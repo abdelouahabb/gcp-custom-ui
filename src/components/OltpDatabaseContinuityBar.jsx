@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Database,
@@ -52,6 +52,8 @@ export default function OltpDatabaseContinuityBar({
   const [activeArtifactTab, setActiveArtifactTab] = useState('TERRAFORM');
   const [copiedKey, setCopiedKey] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const barRef = useRef(null);
+  const synthDrawerRef = useRef(null);
 
   const fetchBlueprint = useCallback(async () => {
     if (!projectId) return;
@@ -109,6 +111,43 @@ export default function OltpDatabaseContinuityBar({
         );
       }, 140);
     }
+  };
+
+  const handleExecuteAction = ({
+    targetTab,
+    subTab,
+    openArtifactTab,
+    sqlPayload,
+    provisionType,
+  }) => {
+    if (provisionType && typeof onOpenProvision === 'function') {
+      onOpenProvision(provisionType);
+      return;
+    }
+    if (sqlPayload) {
+      handleLoadSqlInBigQuery(sqlPayload);
+      return;
+    }
+    if (openArtifactTab) {
+      setActiveArtifactTab(openArtifactTab);
+      setSynthDrawerOpen(true);
+      setTimeout(() => {
+        synthDrawerRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }, 80);
+      return;
+    }
+    const isTabSwitch = Boolean(targetTab && targetTab !== activeTab);
+    if (typeof onSelectTab === 'function' && (isTabSwitch || subTab)) {
+      onSelectTab(targetTab || activeTab, subTab);
+      return;
+    }
+    barRef.current?.nextElementSibling?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
   };
 
   const stages = blueprint?.stages || [
@@ -203,7 +242,10 @@ export default function OltpDatabaseContinuityBar({
       : `${projectId || 'gcp'}-pitr-clone-failover.sh`;
 
   return (
-    <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-slate-950/95 via-teal-950/20 to-slate-950/95 p-3.5 shadow-xl">
+    <div
+      ref={barRef}
+      className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-slate-950/95 via-teal-950/20 to-slate-950/95 p-3.5 shadow-xl"
+    >
       {/* Top Header Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -368,13 +410,15 @@ export default function OltpDatabaseContinuityBar({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (stage.sampleSql && stage.targetTab === 'BIGQUERY_STUDIO') {
-                          handleLoadSqlInBigQuery(stage.sampleSql);
-                          return;
-                        }
-                        if (typeof onSelectTab === 'function' && stage.targetTab) {
-                          onSelectTab(stage.targetTab, stage.targetSubTab);
-                        }
+                        handleExecuteAction({
+                          targetTab: stage.targetTab,
+                          subTab: stage.targetSubTab,
+                          openArtifactTab: stage.openArtifactTab,
+                          sqlPayload:
+                            stage.sampleSql && stage.targetTab === 'BIGQUERY_STUDIO'
+                              ? stage.sampleSql
+                              : null,
+                        });
                       }}
                       className="inline-flex items-center gap-0.5 text-[10px] font-bold text-cyan-400 hover:text-cyan-300"
                       title={`Jump to ${stage.shortTitle}`}
@@ -432,7 +476,16 @@ export default function OltpDatabaseContinuityBar({
                     <button
                       type="button"
                       onClick={() =>
-                        onSelectTab(selectedStageObj.targetTab, selectedStageObj.targetSubTab)
+                        handleExecuteAction({
+                          targetTab: selectedStageObj.targetTab,
+                          subTab: selectedStageObj.targetSubTab,
+                          openArtifactTab: selectedStageObj.openArtifactTab,
+                          sqlPayload:
+                            selectedStageObj.sampleSql &&
+                            selectedStageObj.targetTab === 'BIGQUERY_STUDIO'
+                              ? selectedStageObj.sampleSql
+                              : null,
+                        })
                       }
                       className="inline-flex items-center gap-1 rounded-lg bg-teal-600/25 hover:bg-teal-600/35 border border-teal-400/40 px-2.5 py-1 text-[11px] font-bold text-teal-200 transition"
                     >
@@ -445,7 +498,10 @@ export default function OltpDatabaseContinuityBar({
                     <button
                       type="button"
                       onClick={() =>
-                        onSelectTab(selectedStageObj.secondaryTab, selectedStageObj.secondarySubTab)
+                        handleExecuteAction({
+                          targetTab: selectedStageObj.secondaryTab,
+                          subTab: selectedStageObj.secondarySubTab,
+                        })
                       }
                       className="inline-flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition"
                     >
@@ -463,19 +519,15 @@ export default function OltpDatabaseContinuityBar({
                     {selectedStageObj.stageItems.map((item, i) => (
                       <div
                         key={`${item.name}-${i}`}
-                        onClick={() => {
-                          if (item.provisionType && typeof onOpenProvision === 'function') {
-                            onOpenProvision(item.provisionType);
-                            return;
-                          }
-                          if (item.sqlPayload) {
-                            handleLoadSqlInBigQuery(item.sqlPayload);
-                            return;
-                          }
-                          if (item.targetTab && typeof onSelectTab === 'function') {
-                            onSelectTab(item.targetTab, item.subTab);
-                          }
-                        }}
+                        onClick={() =>
+                          handleExecuteAction({
+                            targetTab: item.targetTab,
+                            subTab: item.subTab,
+                            openArtifactTab: item.openArtifactTab,
+                            sqlPayload: item.sqlPayload,
+                            provisionType: item.provisionType,
+                          })
+                        }
                         className="cursor-pointer rounded-lg border border-slate-800/90 bg-slate-900/90 px-2.5 py-1.5 hover:border-teal-500/40 transition flex items-center justify-between gap-2"
                       >
                         <div className="min-w-0">
@@ -553,7 +605,10 @@ export default function OltpDatabaseContinuityBar({
 
           {/* Decoupled OLTP DB Terraform, EXTERNAL_QUERY() SQL & PITR Runbook Drawer */}
           {synthDrawerOpen && (
-            <div className="mt-3 rounded-xl border border-emerald-500/40 bg-slate-950/95 p-3.5 shadow-2xl">
+            <div
+              ref={synthDrawerRef}
+              className="mt-3 rounded-xl border border-emerald-500/40 bg-slate-950/95 p-3.5 shadow-2xl"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />

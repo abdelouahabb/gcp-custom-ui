@@ -99,6 +99,7 @@ import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar'
 import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
+import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -3447,6 +3448,8 @@ function CloudPulseCockpit() {
         ? 'VERTEX_AI_STUDIO'
         : tabId === 'CLOUD_BUILD'
         ? 'WAVE9_STUDIO'
+        : tabId === 'CLOUD_FUNCTIONS' || tabId === 'FUNCTIONS'
+        ? 'FUNCTIONS_STUDIO'
         : tabId === 'GKE_KUBERNETES'
         ? 'GKE_STUDIO'
         : tabId;
@@ -5961,31 +5964,54 @@ function CloudPulseCockpit() {
                     }}
                     onRunInShell={handleRunInShell}
                   />
-                  <BillingAccountCreditGuardian
-                    projectId={selectedProjectId}
-                    liveBurn={liveBurn}
-                    gdePrivacyConfig={gdePrivacyConfig}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
-                    onOpenProvision={handleOpenProvision}
-                    onOpenSecretManagerStudio={() => {
-                      setSovereignSubTab('SECRETS_KMS_WAF');
-                      setActiveTab('SOVEREIGN_STUDIO');
-                    }}
-                    onOpenEmergencyKillSwitch={() => {
-                      setActiveTab('OVERVIEW');
-                      setTimeout(() => {
-                        document
-                          .getElementById('emergency-api-killswitch-section')
-                          ?.scrollIntoView({ behavior: 'smooth' });
-                      }, 150);
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onGrantsSummaryChange={setGdeSummary}
-                  />
+                  <div
+                    id="finops-billing-guardian-section"
+                    className="scroll-mt-24"
+                  >
+                    <BillingAccountCreditGuardian
+                      projectId={selectedProjectId}
+                      liveBurn={liveBurn}
+                      gdePrivacyConfig={gdePrivacyConfig}
+                      onOpenBigQuerySql={(sqlText) => {
+                        if (sqlText) setBigQueryInitialSql(sqlText);
+                        setActiveTab('BIGQUERY_STUDIO');
+                      }}
+                      onOpenProvision={handleOpenProvision}
+                      onOpenSecretManagerStudio={() => {
+                        setSovereignSubTab('SECRETS_KMS_WAF');
+                        setActiveTab('SOVEREIGN_STUDIO');
+                      }}
+                      onOpenEmergencyKillSwitch={() => {
+                        setActiveTab('OVERVIEW');
+                        setTimeout(() => {
+                          document
+                            .getElementById('emergency-api-killswitch-section')
+                            ?.scrollIntoView({ behavior: 'smooth' });
+                        }, 150);
+                      }}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onGrantsSummaryChange={setGdeSummary}
+                    />
+                  </div>
+                  <div
+                    id="finops-zombie-reaper-section"
+                    className="scroll-mt-24"
+                  >
+                    <EngineerWishlistWave2
+                      activeMode="ZOMBIES"
+                      projectId={selectedProjectId}
+                      overview={overview}
+                      vms={(overview?.resources || []).filter(
+                        (r) => r.type === 'Compute Engine VM'
+                      )}
+                      onRefreshOverview={() =>
+                        fetchProjectOverview(selectedProjectId, { force: true })
+                      }
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}

@@ -217,14 +217,21 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const terraformSectionRef = useRef(null);
-  const normalizeSubTabId = (id) =>
-    id === 'REVERSE_TERRAFORM' ? 'TERRAFORM' : id;
+  const zombieSectionRef = useRef(null);
+  const normalizeSubTabId = (id) => {
+    if (id === 'REVERSE_TERRAFORM') return 'TERRAFORM';
+    if (id === 'ZOMBIE_HUNTER' || id === 'ZOMBIES') return 'FINOPS_SLEEP';
+    return id;
+  };
   const [subTab, setSubTab] = useState(
     normalizeSubTabId(initialSubTab) || 'WAVE11_MOONSHOT'
   );
-  const [labCategory, setLabCategory] = useState(() =>
-    normalizeSubTabId(initialSubTab) === 'TERRAFORM' ? 'AI_IAC' : 'ALL'
-  ); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
+  const [labCategory, setLabCategory] = useState(() => {
+    const norm = normalizeSubTabId(initialSubTab);
+    if (norm === 'TERRAFORM') return 'AI_IAC';
+    if (norm === 'FINOPS_SLEEP') return 'FINOPS';
+    return 'ALL';
+  }); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   useEffect(() => {
     if (initialSubTab) {
       const normalized = normalizeSubTabId(initialSubTab);
@@ -237,6 +244,15 @@ export default function Revolutionary2026Suite({
             block: 'start',
           });
         }, 120);
+      } else if (normalized === 'FINOPS_SLEEP') {
+        setLabCategory('FINOPS');
+        setTimeout(() => {
+          zombieSectionRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+          window.dispatchEvent(new CustomEvent('cloudpulse:scan-zombies'));
+        }, 140);
       } else {
         setLabCategory('ALL');
       }
@@ -2080,7 +2096,10 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           </div>
 
           {/* Unified Zombie Resource Hunter inside Night-Mode Sleep, Burn Radar & Zombie Hunter */}
-          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div
+            ref={zombieSectionRef}
+            className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2 scroll-mt-24"
+          >
             <div className="flex items-center justify-between gap-2 px-1">
               <div className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                 Zombie Resource Hunter &amp; Unattached Waste Evictor (Static IPs, Stopped VM Disks, Cold Buckets)
