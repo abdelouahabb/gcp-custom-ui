@@ -586,10 +586,38 @@ export default function Wave11MoonshotStudio({
     }
   };
 
+  const formatQuotaUsageLimit = (q) => {
+    const metric = String(q?.metric || '').toUpperCase();
+    const unitSuffix = metric.includes('_GB') ? ' GB' : '';
+    const usageNum = Number(q?.usage || 0);
+    const limitNum = Number(q?.limit || 0);
+    const isUnlimited =
+      Boolean(q?.isUnlimited) ||
+      q?.limit === null ||
+      q?.limit === 'Unlimited' ||
+      limitNum >= 1e12;
+    const usageStr = Number.isFinite(usageNum)
+      ? `${usageNum.toLocaleString('en-US')}${unitSuffix}`
+      : `${q?.usage ?? 0}`;
+    const limitStr = isUnlimited
+      ? 'Unlimited (No Hard Cap)'
+      : Number.isFinite(limitNum)
+      ? `${limitNum.toLocaleString('en-US')}${unitSuffix}`
+      : `${q?.limit ?? 0}`;
+    return { usageStr, limitStr, isUnlimited };
+  };
+
   const handleDownloadExecutiveReport = () => {
     const nowIso = new Date().toISOString();
     const summary = overview?.summary || {};
-    const quotas = wave11Data?.finopsQuotas?.regionalQuotas || [];
+    const rawQuotas = wave11Data?.finopsQuotas?.regionalQuotas || [];
+    const quotas = rawQuotas.filter(
+      (q) =>
+        !(
+          (Boolean(q?.isUnlimited) || Number(q?.limit || 0) >= 1e12) &&
+          Number(q?.usage || 0) <= 0
+        )
+    );
     const recs = wave11Data?.finopsQuotas?.recommendations || [];
     const pipelines = wave11Data?.cloudDeploy?.deliveryPipelines || [];
     const dbs = wave11Data?.firestore?.databases || [];
@@ -659,17 +687,17 @@ export default function Wave11MoonshotStudio({
       <thead><tr><th>Region</th><th>Quota Metric</th><th>Usage / Limit</th><th>Utilization %</th><th>Status</th></tr></thead>
       <tbody>
         ${
-          quotas.slice(0, 12).map(
-            (q) =>
-              `<tr><td>${q.region}</td><td>${q.metric}</td><td>${q.usage} / ${q.limit}</td><td>${q.utilizationPct}%</td><td>${q.status}</td></tr>`
-          ).join('') || '<tr><td colspan="5">No elevated regional quotas detected.</td></tr>'
+          quotas.slice(0, 12).map((q) => {
+            const { usageStr, limitStr } = formatQuotaUsageLimit(q);
+            return `<tr><td>${q.region}</td><td>${q.metric}</td><td>${usageStr} / ${limitStr}</td><td>${q.utilizationPct}%</td><td>${q.status}</td></tr>`;
+          }).join('') || '<tr><td colspan="5">No elevated regional quotas detected.</td></tr>'
         }
       </tbody>
     </table>
 
     ${
       auditRows.length > 0
-        ? `<h2 style="margin-top:28px;">3. Live 18-Studio Client-Readiness Stress Audit (Avg ${stressAuditData?.avgLatencyMs}ms · P95 ${stressAuditData?.p95LatencyMs}ms)</h2>
+        ? `<h2 style="margin-top:28px;">3. Live ${auditRows.length}-Studio Client-Readiness Stress Audit (Avg ${stressAuditData?.avgLatencyMs}ms · P95 ${stressAuditData?.p95LatencyMs}ms)</h2>
     <table>
       <thead><tr><th>Studio ID</th><th>Studio Name</th><th>Endpoint</th><th>HTTP</th><th>Latency</th><th>Payload</th></tr></thead>
       <tbody>
@@ -1501,11 +1529,20 @@ serialPipeline:
                   if (quotaCategoryFilter === 'NETWORK_IP') {
                     return m.includes('ADDRESS') || m.includes('IP') || m.includes('FIREWALL') || m.includes('NETWORK');
                   }
+                  if (
+                    (Boolean(q?.isUnlimited) || Number(q?.limit || 0) >= 1e12) &&
+                    Number(q?.usage || 0) <= 0
+                  ) {
+                    return false;
+                  }
                   return true;
                 })
                 .slice(0, 40)
                 .map((q, idx) => {
-                  const nextLimit = Math.max(Number(q.limit || 1) * 2, 10);
+                  const { usageStr, limitStr, isUnlimited } = formatQuotaUsageLimit(q);
+                  const nextLimit = isUnlimited
+                    ? 100
+                    : Math.max(Number(q.limit || 1) * 2, 10);
                   const quotaCli = `gcloud alpha services quota update --service=compute.googleapis.com --consumer=projects/${projectId} --metric=compute.googleapis.com/${String(q.metric || '').toLowerCase()} --unit=1/{project}/{region} --dimensions=region=${q.region} --value=${nextLimit}`;
                   return (
                     <div
@@ -1521,7 +1558,7 @@ serialPipeline:
                             </span>
                           </div>
                           <div className="text-[11px] font-mono text-zinc-500">
-                            Usage: {q.usage} / Limit: {q.limit}
+                            Usage: {usageStr} / Limit: {limitStr}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">

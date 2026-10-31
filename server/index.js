@@ -16827,7 +16827,14 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
         }
         const usage = Number(q.usage || 0);
         const limit = Number(q.limit || 1);
-        const pct = limit > 0 ? Math.min(100, Math.round((usage / limit) * 1000) / 10) : 0;
+        if (limit >= 1e12 && usage <= 0) {
+          continue;
+        }
+        const isUnlimited = limit >= 1e12;
+        const pct =
+          !isUnlimited && limit > 0
+            ? Math.min(100, Math.round((usage / limit) * 1000) / 10)
+            : 0;
         quotaItems.push({
           id: `compute-global-${q.metric}`,
           service: 'compute.googleapis.com',
@@ -16835,7 +16842,7 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
           metric: q.metric,
           region: 'global',
           usage,
-          limit,
+          limit: isUnlimited ? 'Unlimited' : limit,
           utilizationPct: pct,
           status:
             pct >= 85
@@ -16844,10 +16851,12 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
               ? 'ELEVATED_WARNING'
               : 'HEALTHY_HEADROOM',
           unit: q.metric.includes('GB') ? 'GB' : 'count',
-          cliIncreaseCmd: `gcloud alpha services quota update --service=compute.googleapis.com --consumer=projects/${projectId} --metric=compute.googleapis.com/${q.metric.toLowerCase()} --value=${Math.max(
-            limit * 2,
-            limit + 10
-          )}`,
+          cliIncreaseCmd: isUnlimited
+            ? `gcloud compute project-info describe --project=${projectId}`
+            : `gcloud alpha services quota update --service=compute.googleapis.com --consumer=projects/${projectId} --metric=compute.googleapis.com/${q.metric.toLowerCase()} --value=${Math.max(
+                limit * 2,
+                limit + 10
+              )}`,
         });
       }
     }
@@ -16863,6 +16872,9 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
         for (const rq of regQuotas) {
           const usage = Number(rq.usage || 0);
           const limit = Number(rq.limit || 1);
+          if (limit >= 1e12 && usage <= 0) {
+            continue;
+          }
           if (
             usage === 0 &&
             !(
@@ -16880,7 +16892,11 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
           ) {
             continue;
           }
-          const pct = limit > 0 ? Math.min(100, Math.round((usage / limit) * 1000) / 10) : 0;
+          const isUnlimited = limit >= 1e12;
+          const pct =
+            !isUnlimited && limit > 0
+              ? Math.min(100, Math.round((usage / limit) * 1000) / 10)
+              : 0;
           quotaItems.push({
             id: `compute-${regName}-${rq.metric}`,
             service: 'compute.googleapis.com',
@@ -16888,7 +16904,7 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
             metric: `${rq.metric} (${regName})`,
             region: regName,
             usage,
-            limit,
+            limit: isUnlimited ? 'Unlimited' : limit,
             utilizationPct: pct,
             status:
               pct >= 85
@@ -49714,21 +49730,70 @@ app.get('/api/project/:projectId/wave11/overview', async (req, res) => {
       };
     });
 
-    // Regional Compute Quotas (extract top utilized quotas across regions)
+    // Regional Compute Quotas (extract top utilized & primary regional quotas, filtering out INT64_MAX 9223372036854776000 unbounded sentinels)
+    const INT64_UNBOUNDED_SENTINEL = 1e12;
+    const CORE_REGIONAL_METRICS = new Set([
+      'CPUS',
+      'IN_USE_ADDRESSES',
+      'STATIC_ADDRESSES',
+      'SSD_TOTAL_GB',
+      'DISKS_TOTAL_GB',
+      'PREEMPTIBLE_CPUS',
+      'NVIDIA_L4_GPUS',
+      'NVIDIA_A100_GPUS',
+      'NVIDIA_A100_80GB_GPUS',
+      'NVIDIA_T4_GPUS',
+      'C2_CPUS',
+      'C3_CPUS',
+      'N2_CPUS',
+      'N2D_CPUS',
+    ]);
+    const PRIORITY_REGIONS = new Set([
+      region,
+      'us-central1',
+      'us-east1',
+      'europe-west1',
+      'asia-east1',
+    ]);
+    const METRIC_SORT_RANK = {
+      CPUS: 1,
+      IN_USE_ADDRESSES: 2,
+      SSD_TOTAL_GB: 3,
+      DISKS_TOTAL_GB: 4,
+      STATIC_ADDRESSES: 5,
+      NVIDIA_L4_GPUS: 6,
+      NVIDIA_A100_GPUS: 7,
+      NVIDIA_A100_80GB_GPUS: 8,
+      NVIDIA_T4_GPUS: 9,
+      PREEMPTIBLE_CPUS: 10,
+    };
+
     const rawRegions =
       computeRegionsSettled.status === 'fulfilled'
         ? computeRegionsSettled.value?.items || []
         : [];
     const regionalQuotas = [];
     for (const reg of rawRegions) {
+      const isPriorityRegion = PRIORITY_REGIONS.has(reg.name);
       for (const q of reg.quotas || []) {
-        if (q.limit > 0 && (q.usage > 0 || /CPU|GPU|NVIDIA|DISKS_TOTAL_GB|IN_USE_ADDRESSES|SSD/i.test(q.metric))) {
-          const utilizationPct = Number(((q.usage / q.limit) * 100).toFixed(2));
+        const usage = Number(q.usage || 0);
+        const limit = Number(q.limit || 0);
+        // Skip INT64_MAX (9223372036854776000) unbounded sentinel limits unless there is non-zero usage
+        if (limit <= 0 || (limit >= INT64_UNBOUNDED_SENTINEL && usage <= 0)) {
+          continue;
+        }
+        // Include any quota anywhere with active usage > 0, or core finite quotas in priority regions
+        if (usage > 0 || (isPriorityRegion && CORE_REGIONAL_METRICS.has(q.metric))) {
+          const isUnlimited = limit >= INT64_UNBOUNDED_SENTINEL;
+          const utilizationPct = isUnlimited
+            ? 0
+            : Number(((usage / limit) * 100).toFixed(2));
           regionalQuotas.push({
             region: reg.name,
             metric: q.metric,
-            usage: q.usage,
-            limit: q.limit,
+            usage,
+            limit: isUnlimited ? null : limit,
+            isUnlimited,
             utilizationPct,
             status:
               utilizationPct >= 85
@@ -49740,7 +49805,17 @@ app.get('/api/project/:projectId/wave11/overview', async (req, res) => {
         }
       }
     }
-    regionalQuotas.sort((a, b) => b.utilizationPct - a.utilizationPct || b.usage - a.usage);
+    regionalQuotas.sort((a, b) => {
+      if (b.utilizationPct !== a.utilizationPct) return b.utilizationPct - a.utilizationPct;
+      if (b.usage !== a.usage) return b.usage - a.usage;
+      const aSelected = a.region === region ? 0 : PRIORITY_REGIONS.has(a.region) ? 1 : 2;
+      const bSelected = b.region === region ? 0 : PRIORITY_REGIONS.has(b.region) ? 1 : 2;
+      if (aSelected !== bSelected) return aSelected - bSelected;
+      const aRank = METRIC_SORT_RANK[a.metric] || 99;
+      const bRank = METRIC_SORT_RANK[b.metric] || 99;
+      if (aRank !== bRank) return aRank - bRank;
+      return String(a.region).localeCompare(String(b.region));
+    });
 
     // Combine Active Assist Recommendations
     const allRecs = [];
