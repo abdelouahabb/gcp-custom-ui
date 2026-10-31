@@ -5791,6 +5791,14 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <CloudFunctionsEventarcStudio
                     projectId={selectedProjectId}
                     onRunInShell={handleRunInShell}
@@ -5813,6 +5821,14 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GKE_STUDIO' && (
                 <div className="space-y-4">
+                  <EnterpriseStackPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    overview={overview}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
                   <GkeFleetStudio
                     projectId={selectedProjectId}
                     onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}

@@ -834,8 +834,14 @@ export default function EnterpriseStackPipelineBar({
 
   const homeStage =
     stages.find((s) => s.targetTab === activeTab) ||
-    (activeTab === 'CLOUD_FUNCTIONS' || activeTab === 'CLOUD_RUN'
-      ? stages.find((s) => s.id === 'STAGE_3_WORKLOAD_COMPUTE')
+    ([
+      'CLOUD_RUN',
+      'FUNCTIONS_STUDIO',
+      'CLOUD_FUNCTIONS',
+      'GKE_STUDIO',
+      'GKE_KUBERNETES',
+    ].includes(activeTab)
+      ? stages.find((s) => s.id === 'STAGE_3_COMPUTE_SERVERLESS')
       : stages.find((s) => s.secondaryTab === activeTab)) ||
     stages[0];
 
