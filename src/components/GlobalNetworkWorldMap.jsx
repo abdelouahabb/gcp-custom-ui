@@ -3899,7 +3899,8 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
     ]);
   };
 
-  // Deep-link seed from VPC & Firewalls Studio ("🔬 X-Ray on Map")
+  // Deep-link seed from VPC & Firewalls Studio or Wave 7 Pipeline Bar ("🔬 X-Ray on Map")
+  const xrayDockRef = useRef(null);
   useEffect(() => {
     if (!initialXRaySeed?.nonce) return;
     const nextOrigin = initialXRaySeed.originId || 'my-live-client';
@@ -3927,6 +3928,13 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
       ...prev.slice(-(maxConcurrentPackets - 1)),
       pkt,
     ]);
+
+    setTimeout(() => {
+      xrayDockRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 110);
   }, [
     initialXRaySeed?.nonce,
     initialXRaySeed?.originId,
@@ -7409,7 +7417,10 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           {/* ================================================================= */}
           {/* UNIFIED 3-PILLAR 10X ORBITAL COMMAND DOCK BELOW WORLD MAP         */}
           {/* ================================================================= */}
-          <div className="bg-zinc-50/95 dark:bg-[#090d16] border-t border-zinc-200 dark:border-zinc-800/90 p-3 space-y-2.5 text-[11px] font-mono">
+          <div
+            ref={xrayDockRef}
+            className="bg-zinc-50/95 dark:bg-[#090d16] border-t border-zinc-200 dark:border-zinc-800/90 p-3 space-y-2.5 text-[11px] font-mono"
+          >
             {/* Segmented 3-Pillar Mode Selector Bar (Fixed 3-Column Grid — Zero Layout Shift) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-1 shadow-xs">
               {[

@@ -241,6 +241,18 @@ function MultiCloudMermaidFlowchartSvg({ dsl, onNodeClick }) {
         subTab: 'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
       };
     }
+    if (nodeId.startsWith('SEC0')) {
+      return { targetTab: 'AWS_AZURE_PARITY', subTab: 'KEYVAULT_ROTATION' };
+    }
+    if (nodeId === 'ARCH') {
+      return { targetTab: 'INNOVATION_LAB', subTab: 'FIVE_PERSONA_NETOPS' };
+    }
+    if (nodeId === 'SEC') {
+      return { targetTab: 'INNOVATION_LAB', subTab: 'FIVE_PERSONA_DEVSECOPS' };
+    }
+    if (nodeId === 'FIN') {
+      return { targetTab: 'INNOVATION_LAB', subTab: 'FIVE_PERSONA_FINOPS_ENG' };
+    }
     if (nodeId.startsWith('SEC')) {
       return { targetTab: 'AWS_AZURE_PARITY', subTab: 'KEYVAULT_ROTATION' };
     }

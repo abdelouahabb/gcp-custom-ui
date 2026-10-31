@@ -1207,14 +1207,9 @@ export default function Revolutionary2026Suite({
                     'WAVE14_QUANTUM_DOCTOR',
                     'WAVE15_DYSON_MOONSHOT',
                     'WAVE16_ENTERPRISE_MOONSHOT',
-                    'FIVE_PERSONA_COUNCIL',
-                    'FIVE_PERSONA_ARCHITECT',
-                    'FIVE_PERSONA_CLOUD_ENG',
-                    'FIVE_PERSONA_DATA_ENG',
-                    'FIVE_PERSONA_NETOPS',
-                    'FIVE_PERSONA_DEVSECOPS',
                     'GCLOUD_ALPHA_BETA',
-                  ].includes(subTab)
+                  ].includes(subTab) &&
+                  !String(subTab || '').startsWith('FIVE_PERSONA_')
                 ) {
                   setSubTab('WAVE11_MOONSHOT');
                 } else if (nextCat === 'QUANTUM') {
