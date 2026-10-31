@@ -76245,7 +76245,7 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
         svcRes,
       ] = await Promise.allSettled([
         axios.get(
-          `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/builds?pageSize=12`,
+          `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/builds?pageSize=20`,
           { headers, timeout: 4000 }
         ),
         axios.get(
@@ -76857,13 +76857,15 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
             meta: `${b.machineType}${b.slsaVerified ? ' · SLSA-3 Verified' : ''}`,
             targetTab: 'WAVE9_STUDIO',
             subTab: 'CLOUD_BUILD_GITHUB',
+            wave9Focus: { buildId: b.id },
           })),
-          ...triggers.slice(0, 2).map((tr) => ({
+          ...triggers.slice(0, 3).map((tr) => ({
             kind: 'Cloud Build Trigger',
             name: tr.name,
-            meta: tr.repo,
+            meta: `GitHub Repo: ${tr.repo}`,
             targetTab: 'WAVE9_STUDIO',
             subTab: 'CLOUD_BUILD_GITHUB',
+            wave9Focus: { triggerName: tr.name, githubRepo: tr.repo },
           })),
           {
             kind: 'GitHub -> Container Builder',
@@ -76912,6 +76914,11 @@ app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req,
               : 'Mutable Tags · Recommend Immutable Lock',
             targetTab: 'WAVE9_STUDIO',
             subTab: 'SUPPLY_CHAIN_AR',
+            wave9Focus: {
+              repoName: r.fullName,
+              repoShortName: r.name,
+              repoLocation: r.location,
+            },
           })),
           {
             kind:

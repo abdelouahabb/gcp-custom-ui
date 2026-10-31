@@ -609,6 +609,7 @@ export default function GitOpsReleaseFactoryPipelineBar({
     subTab,
     openArtifactTab,
     functionsFocus,
+    wave9Focus,
   } = {}) => {
     if (openArtifactTab) {
       setActiveArtifactTab(openArtifactTab);
@@ -631,12 +632,14 @@ export default function GitOpsReleaseFactoryPipelineBar({
       onSelectTab(targetTab, subTab);
     }
 
-    if (targetTab === 'WAVE9_STUDIO' && subTab) {
-      window.dispatchEvent(
-        new CustomEvent('cloudpulse:wave9-subtab', {
-          detail: { subTab },
-        })
-      );
+    if (targetTab === 'WAVE9_STUDIO' && (subTab || wave9Focus)) {
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:wave9-subtab', {
+            detail: { subTab, ...(wave9Focus || {}) },
+          })
+        );
+      }, 60);
     }
 
     if (functionsFocus) {
@@ -649,7 +652,10 @@ export default function GitOpsReleaseFactoryPipelineBar({
       }, 90);
     }
 
-    if (!isTabSwitch && (!subTab || isWave9SubTabSwitch || functionsFocus)) {
+    if (
+      !isTabSwitch &&
+      (!subTab || isWave9SubTabSwitch || functionsFocus || wave9Focus)
+    ) {
       setTimeout(() => {
         const nextStudioEl = barRef.current?.nextElementSibling;
         if (nextStudioEl) {
@@ -889,6 +895,7 @@ export default function GitOpsReleaseFactoryPipelineBar({
                         subTab: item.subTab,
                         openArtifactTab: item.openArtifactTab,
                         functionsFocus: item.functionsFocus,
+                        wave9Focus: item.wave9Focus,
                       })
                     }
                     className="cursor-pointer rounded-lg border border-slate-800/90 bg-slate-900/90 px-2.5 py-1.5 hover:border-indigo-500/40 transition flex items-center justify-between gap-2"
