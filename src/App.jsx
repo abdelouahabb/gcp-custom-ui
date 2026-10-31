@@ -3545,7 +3545,14 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3G-15. Google Cloud API Enable / Toggle (/apis/enable or /apis/toggle)
     if (rawUrl.includes('/apis/enable') || rawUrl.includes('/apis/toggle')) {
-      const apiName = body.serviceName || body.apiName || (Array.isArray(body.apis) ? body.apis.join(', ') : 'googleapis.com');
+      const apiName =
+        body.serviceName ||
+        body.apiName ||
+        (Array.isArray(body.services)
+          ? body.services.join(', ')
+          : Array.isArray(body.apis)
+          ? body.apis.join(', ')
+          : 'googleapis.com');
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
@@ -3560,6 +3567,7 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Enable "${apiName}" ($0.00 Activation)`,
         cancelToast: `API activation for "${apiName}" cancelled.`,
+        laymanSummary: `You are turning ON the "${apiName}" service switch in project "${projectId}". Turning on a Google Cloud API is 100% free ($0.00) and simply unlocks the service so your project can make requests to it.`,
         whatHappensNext: `1. Calls POST https://serviceusage.googleapis.com/v1/projects/${projectId}/services/${apiName}:enable.\n2. Polls the Service Usage long-running operation until the API endpoint is active and ready to serve requests on "${projectId}".`,
         costWarning: `ZERO ACTIVATION COST ($0.00): Enabling a Google Cloud API in Service Usage is free ($0.00). Billing only occurs if you subsequently provision billable resources or exceed the API's monthly free quota.`,
         impactWarning: `Activates service API "${apiName}" on project "${projectId}".`,

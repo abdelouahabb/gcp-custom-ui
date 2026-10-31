@@ -290,7 +290,9 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     rsaPublicKeySpkiBase64: null,
     rsaKeyFingerprint: 'RSA2048-OAEP-SHA256',
   });
-  const [vertexEnabled, setVertexEnabled] = useState(true);
+  const [vertexStatus, setVertexStatus] = useState('CHECKING'); // 'CHECKING' | 'ENABLED' | 'DISABLED' | 'UNKNOWN'
+  const [vertexLatencyMs, setVertexLatencyMs] = useState(null);
+  const [vertexCheckedAt, setVertexCheckedAt] = useState(null);
   const [enablingVertex, setEnablingVertex] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
@@ -377,8 +379,37 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     }
   }, []);
 
+  const checkVertexAiStatus = useCallback(
+    async (showToastFeedback = false) => {
+      if (!projectId) return;
+      setVertexStatus('CHECKING');
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/vertex-ai/status`
+        );
+        const isEnabled =
+          Boolean(res.data?.enabled) ||
+          String(res.data?.state || '').toUpperCase() === 'ENABLED';
+        setVertexStatus(isEnabled ? 'ENABLED' : 'DISABLED');
+        setVertexLatencyMs(res.data?.latencyMs ?? null);
+        setVertexCheckedAt(res.data?.checkedAt || new Date().toISOString());
+        if (showToastFeedback) {
+          notify(
+            isEnabled
+              ? `Verified live: Vertex AI API (aiplatform.googleapis.com) is ENABLED on "${projectId}" (${res.data?.latencyMs || 0}ms).`
+              : `Vertex AI API (aiplatform.googleapis.com) is currently DISABLED on "${projectId}". Click "Enable Vertex AI API Now" to activate it.`
+          );
+        }
+      } catch {
+        setVertexStatus('UNKNOWN');
+      }
+    },
+    [projectId, notify]
+  );
+
   useEffect(() => {
     fetchVaultStatus();
+    checkVertexAiStatus(false);
     const listener = () => {
       setInternalProvider(sharedBrowserEnclave.preferredProvider);
       setTransportMode(sharedBrowserEnclave.transportMode);
@@ -389,7 +420,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     return () => {
       sharedBrowserEnclave.listeners.delete(listener);
     };
-  }, [fetchVaultStatus]);
+  }, [fetchVaultStatus, checkVertexAiStatus]);
 
   const handleToggleTransportMode = (mode) => {
     sharedBrowserEnclave.transportMode = mode;
@@ -403,15 +434,45 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
     try {
       await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/apis/enable`,
-        { services: ['aiplatform.googleapis.com'] }
+        { serviceName: 'aiplatform.googleapis.com', services: ['aiplatform.googleapis.com'] }
       );
-      setVertexEnabled(true);
+      setVertexStatus('ENABLED');
+      setVertexCheckedAt(new Date().toISOString());
+      await checkVertexAiStatus(false);
       notify(
-        `Enabled Vertex AI API (aiplatform.googleapis.com) on ${projectId} for keyless Gemini OAuth2 inference!`
+        `Enabled & verified Vertex AI API (aiplatform.googleapis.com) on ${projectId} for keyless Gemini OAuth2 inference!`
       );
     } catch (err) {
       notify(
         `Vertex AI API enable notice: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setEnablingVertex(false);
+    }
+  };
+
+  const handleDisableVertexAi = async () => {
+    if (!projectId) return;
+    setEnablingVertex(true);
+    try {
+      await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/apis/toggle`,
+        {
+          serviceName: 'aiplatform.googleapis.com',
+          action: 'DISABLE',
+          disableDependentServices: false,
+        }
+      );
+      setVertexStatus('DISABLED');
+      setVertexCheckedAt(new Date().toISOString());
+      notify(
+        `Disabled Vertex AI API (aiplatform.googleapis.com) on ${projectId}.`
+      );
+    } catch (err) {
+      notify(
+        `Vertex AI API disable notice: ${
           err.response?.data?.error || err.message
         }`
       );
@@ -655,19 +716,85 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                     ? '🟢 ACTIVE PRIMARY (AUTO · NO KEY NEEDED)'
                     : '🟢 STANDBY FAILOVER READY'}
                 </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold border ${
+                    vertexStatus === 'ENABLED'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                      : vertexStatus === 'DISABLED'
+                      ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                  }`}
+                >
+                  {vertexStatus === 'ENABLED'
+                    ? '✅ aiplatform.googleapis.com: ENABLED'
+                    : vertexStatus === 'DISABLED'
+                    ? '🔴 aiplatform.googleapis.com: DISABLED'
+                    : '⏳ Checking Service Usage API...'}
+                </span>
               </div>
-              <button
-                type="button"
-                data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
-                onClick={handleEnableVertexAi}
-                disabled={enablingVertex}
-                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                title="Ensure aiplatform.googleapis.com is enabled on this project for keyless OAuth2 Gemini inference"
-              >
-                {enablingVertex
-                  ? 'Enabling Vertex AI...'
-                  : '⚡ Verify / Enable Vertex AI API'}
-              </button>
+              <div className="flex items-center gap-1.5">
+                {vertexStatus === 'ENABLED' ? (
+                  <>
+                    <button
+                      type="button"
+                      data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
+                      onClick={() => checkVertexAiStatus(true)}
+                      disabled={enablingVertex}
+                      className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                      title="Re-verify live aiplatform.googleapis.com status via Service Usage API"
+                    >
+                      {enablingVertex
+                        ? 'Checking...'
+                        : '✓ Vertex AI Enabled (Re-Verify)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisableVertexAi}
+                      disabled={enablingVertex}
+                      className="px-2 py-1 rounded bg-zinc-200 hover:bg-red-500/20 dark:bg-zinc-800 dark:hover:bg-red-500/20 text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                      title="Disable aiplatform.googleapis.com on this project"
+                    >
+                      Disable API
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
+                    onClick={handleEnableVertexAi}
+                    disabled={enablingVertex}
+                    className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+                    title="Enable aiplatform.googleapis.com on this project for keyless OAuth2 Gemini inference"
+                  >
+                    {enablingVertex
+                      ? 'Enabling Vertex AI API...'
+                      : '⚡ Enable Vertex AI API Now ($0.00)'}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div
+              className={`px-2.5 py-1.5 rounded-md text-[10.5px] font-mono flex flex-wrap items-center justify-between gap-2 border ${
+                vertexStatus === 'ENABLED'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                  : vertexStatus === 'DISABLED'
+                  ? 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
+                  : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+              }`}
+            >
+              <span>
+                {vertexStatus === 'ENABLED'
+                  ? `🟢 Live Service Usage Verified: aiplatform.googleapis.com is ENABLED on "${projectId}" — ready for keyless OAuth2 Gemini calls.`
+                  : vertexStatus === 'DISABLED'
+                  ? `🔴 Live Service Usage Check: aiplatform.googleapis.com is currently DISABLED on "${projectId}". Click "⚡ Enable Vertex AI API Now ($0.00)" above to turn it on.`
+                  : `⏳ Querying serviceusage.googleapis.com/v1/projects/${projectId}/services/aiplatform.googleapis.com...`}
+              </span>
+              {vertexCheckedAt && (
+                <span className="text-[10px] opacity-80 shrink-0">
+                  Verified {new Date(vertexCheckedAt).toLocaleTimeString()}
+                  {vertexLatencyMs ? ` (${vertexLatencyMs}ms)` : ''}
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug">
               Authenticates directly with your active Google Cloud session token against{' '}

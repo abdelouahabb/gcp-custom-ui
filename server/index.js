@@ -22471,6 +22471,53 @@ app.get('/api/ai-vault/status', (req, res) => {
   });
 });
 
+// Fast Live Service Usage Check for Vertex AI API (aiplatform.googleapis.com)
+app.get('/api/project/:projectId/vertex-ai/status', async (req, res) => {
+  const { projectId } = req.params;
+  const t0 = Date.now();
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+    const svcRes = await gcpFetch(
+      `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/services/aiplatform.googleapis.com`,
+      token,
+      projectId,
+      { timeout: 6000 }
+    );
+    const state = String(svcRes?.state || 'DISABLED').toUpperCase();
+    const enabled = state === 'ENABLED';
+    return res.json({
+      ok: true,
+      projectId,
+      serviceName: 'aiplatform.googleapis.com',
+      title: svcRes?.config?.title || 'Vertex AI API',
+      state,
+      enabled,
+      latencyMs: Date.now() - t0,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.json({
+      ok: false,
+      projectId,
+      serviceName: 'aiplatform.googleapis.com',
+      title: 'Vertex AI API',
+      state: 'UNKNOWN',
+      enabled: false,
+      latencyMs: Date.now() - t0,
+      checkedAt: new Date().toISOString(),
+      warning:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Could not query Service Usage API.',
+    });
+  }
+});
+
 // Live Auto-Discovery of Gemini Models from Google AI Studio (/v1beta/models over HTTPS TLS 1.3)
 app.get('/api/ai-vault/models', async (req, res) => {
   const apiKey = decryptApiKeyFromMemory();
