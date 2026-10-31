@@ -1264,6 +1264,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/enterprise-personas/tribunal') ||
       rawUrl.includes('/enterprise-personas/zkp-verify') ||
       rawUrl.includes('/enterprise-personas/intent-compiler') ||
+      rawUrl.includes('/enterprise-personas/war-room-debate') ||
       rawUrl.includes('/enterprise-personas/agentless-vm-xray') ||
       rawUrl.includes('/enterprise-personas/wire-packet-waterfall') ||
       rawUrl.includes('/enterprise-personas/practitioner-devkit') ||
@@ -1299,13 +1300,14 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Revert to Pre-Fix GCP State`,
         cancelToast: 'Rollback capsule revert cancelled.',
-        whatHappensNext: `1. Reads the SHA-256 sealed pre-mutation resource JSON stored in Rollback Capsule "${capId}".\n2. Calls PATCH against Google Cloud REST APIs to restore the exact pre-remediation sourceRanges or iamConfiguration.`,
+        laymanSummary: `Safely rewinds your Google Cloud firewall or storage bucket back to the exact setting it had before the 10-Persona Council hardened it.`,
+        whatHappensNext: `1. Reads the SHA-256 sealed pre-mutation resource JSON stored in Rollback Capsule "${capId}".\n2. Calls PATCH against Google Cloud REST APIs to restore the exact pre-remediation sourceRanges, logConfig, or iamConfiguration.`,
         costWarning: `ZERO COST IMPACT ($0.00/MO): Restoring firewall rules or bucket IAM settings incurs $0.00/mo.`,
         impactWarning: `Restores the previous resource configuration on project "${projectId}".`,
       };
     }
 
-    // 3A-0000. 10-Persona Council Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENFORCE_BUCKET_PAP)
+    // 3A-0000. 10-Persona Council Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENABLE_FIREWALL_AUDIT_LOGGING | ENFORCE_BUCKET_PAP | BATCH_REMEDIATE_ALL_SAFE_FINDINGS)
     if (
       rawUrl.includes('/enterprise-personas/action') &&
       String(body.action || '').toUpperCase() ===
@@ -1313,6 +1315,27 @@ function classifyDestructiveAxiosConfig(config) {
     ) {
       const remType = String(body.remediationType || '').toUpperCase();
       const targetRes = body.targetResource || 'GCP Resource';
+      if (remType === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Batch-Remediate All Open Firewalls & Unhardened Buckets in "${projectId}"?`,
+          headerBadge: '10-Persona Architecture Council · 1-Click Batch Remediator',
+          targetLabel: 'Target GCP Project Perimeter & Storage Fleet',
+          resourceKind: 'VPC Firewall Rules (IAP Scope) + GCS Buckets (PAP Enforced)',
+          targetName: `${projectId} (All Safe Non-Destructive Findings)`,
+          location: 'Global VPC & Multi-Region Storage',
+          projectId,
+          method: 'BATCH PATCH (REVERSIBLE)',
+          endpoint: rawUrl,
+          confirmLabel: `Batch-Harden All Safe Findings & Seal Rollback Capsules`,
+          cancelToast: `Batch remediation on "${projectId}" cancelled.`,
+          laymanSummary: `Automatically locks every world-open SSH/RDP firewall rule to Google Cloud Identity-Aware Proxy (IAP) and blocks accidental public internet sharing on all Cloud Storage buckets—while saving a 1-click Undo Capsule for every single change.`,
+          whatHappensNext: `1. Captures a cryptographic SHA-256 pre-mutation Rollback Capsule for each open firewall rule and unhardened bucket.\n2. Patches open 0.0.0.0/0 firewall rules to Cloud IAP (35.235.240.0/20) and enforces publicAccessPrevention="enforced" + uniformBucketLevelAccess=true on unhardened buckets.\n3. Re-evaluates the 10-Persona Readiness Score and T0 vs. T_Now Merkle Diff.`,
+          costWarning: `ZERO COST IMPACT ($0.00/MO): Hardening VPC firewall rules to Cloud IAP and enforcing GCS Public Access Prevention incurs $0.00/mo.`,
+          impactWarning: `Secures open firewall rules and storage buckets in "${projectId}". Every single mutation can be reverted in 1 click from the Rollback Capsule Drawer.`,
+        };
+      }
       if (remType === 'LOCK_FIREWALL_TO_IAP') {
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
@@ -1328,9 +1351,31 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Lock "${targetRes}" to Cloud IAP (35.235.240.0/20)`,
           cancelToast: `Firewall remediation on "${targetRes}" cancelled.`,
+          laymanSummary: `Closes public internet access (0.0.0.0/0) on firewall rule "${targetRes}" and restricts it exclusively to Google Cloud's encrypted Identity-Aware Proxy (IAP) tunnel range (35.235.240.0/20), sealing a 1-click Undo Capsule first.`,
           whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${targetRes}.\n2. Replaces world-open 0.0.0.0/0 sourceRanges with Google Cloud IAP TCP forwarding (35.235.240.0/20).\n3. Re-runs the 10-Persona Architecture Council and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
           costWarning: `ZERO COST IMPACT ($0.00/MO): Updating VPC firewall sourceRanges and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
           impactWarning: `Direct public internet connections to ports governed by "${targetRes}" will be blocked unless tunnelled through authenticated Google Cloud IAP (gcloud compute start-iap-tunnel).`,
+        };
+      }
+      if (remType === 'ENABLE_FIREWALL_AUDIT_LOGGING') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Enable VPC Firewall Audit Logging on "${targetRes}"?`,
+          headerBadge: '10-Persona Architecture Council · Live NetOps Audit Logging',
+          targetLabel: 'Target VPC Firewall Rule',
+          resourceKind: 'Compute Engine Firewall LogConfig (compute.googleapis.com/v1)',
+          targetName: targetRes,
+          location: 'Global VPC',
+          projectId,
+          method: 'PATCH FW LOGGING',
+          endpoint: rawUrl,
+          confirmLabel: `Enable Audit Logging on "${targetRes}"`,
+          cancelToast: `Firewall logging update on "${targetRes}" cancelled.`,
+          laymanSummary: `Turns on connection audit logging (logConfig.enable=true) for firewall rule "${targetRes}" so every allowed or blocked connection is recorded in Cloud Logging, with a 1-click Undo Capsule.`,
+          whatHappensNext: `1. Saves the current logConfig state of "${targetRes}" in a SHA-256 Rollback Capsule.\n2. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${targetRes} with logConfig={enable:true, metadata:"INCLUDE_ALL_METADATA"}.`,
+          costWarning: `CLOUD LOGGING NOTICE: Enabling firewall rule logging is free on the Compute Engine control plane; Cloud Logging includes 50 GiB/month free per project.`,
+          impactWarning: `Enables non-disruptive connection metadata logging on firewall rule "${targetRes}" in project "${projectId}".`,
         };
       }
       return {
@@ -1347,6 +1392,7 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Enforce PublicAccessPrevention on gs://${targetRes}`,
         cancelToast: `Bucket hardening on "gs://${targetRes}" cancelled.`,
+        laymanSummary: `Locks Cloud Storage bucket "gs://${targetRes}" so files can never be accidentally exposed to anonymous public internet users (allUsers), while keeping all authenticated IAM service accounts working normally.`,
         whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${targetRes}.\n2. Sets iamConfiguration.publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n3. Re-runs the 10-Persona Architecture Council and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
         costWarning: `ZERO COST IMPACT ($0.00/MO): Enforcing Public Access Prevention and Uniform Bucket-Level Access incurs $0.00/mo.`,
         impactWarning: `Blocks any public allUsers / allAuthenticatedUsers object ACLs on "gs://${targetRes}" in project "${projectId}".`,

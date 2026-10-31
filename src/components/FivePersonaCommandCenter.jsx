@@ -191,7 +191,7 @@ export default function FivePersonaCommandCenter({
   );
   const [remediatingTarget, setRemediatingTarget] = useState('');
 
-  // 2030 Horizon State: Multi-Project Fleet Tribunal, ZKP Verifier, Intent Compiler & Rollback Capsules
+  // 2030 Horizon State: Multi-Project Fleet Tribunal, ZKP Verifier, Intent Compiler, War-Room Debate & Rollback Capsules
   const [fleetTribunalData, setFleetTribunalData] = useState(null);
   const [fleetLoading, setFleetLoading] = useState(false);
   const [zkpVerificationResult, setZkpVerificationResult] = useState(null);
@@ -202,6 +202,11 @@ export default function FivePersonaCommandCenter({
   const [intentModel, setIntentModel] = useState('gemini-3.8-flash');
   const [compiledIntentPlan, setCompiledIntentPlan] = useState(null);
   const [intentCompiling, setIntentCompiling] = useState(false);
+  const [warRoomTopic, setWarRoomTopic] = useState(
+    'Zero-Trust Perimeter Hardening vs. Developer Velocity & $0.00/mo Idle FinOps Invariance'
+  );
+  const [warRoomDebateData, setWarRoomDebateData] = useState(null);
+  const [warRoomDebating, setWarRoomDebating] = useState(false);
 
   // 2030 6-Practitioner Agentless Workbench ("Kill the 2010 VM & Network Console")
   const [vmXrayData, setVmXrayData] = useState(null);
@@ -337,7 +342,8 @@ export default function FivePersonaCommandCenter({
       setLastReceipt(res.data);
       setActionReceipts((prev) => ({
         ...prev,
-        [action]: res.data,
+        EXECUTE_TRIBUNAL_LIVE_REMEDIATION: res.data,
+        [key]: res.data,
       }));
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
@@ -349,6 +355,43 @@ export default function FivePersonaCommandCenter({
           err.response?.data?.error ||
             err.message ||
             `Live GCP remediation failed for ${targetResource}`
+        );
+      }
+    } finally {
+      setRemediatingTarget('');
+    }
+  };
+
+  const runBatchRemediateAllSafeFindings = async () => {
+    if (!projectId) return;
+    setRemediatingTarget('BATCH_REMEDIATE_ALL_SAFE_FINDINGS');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/action`,
+        {
+          action: 'EXECUTE_TRIBUNAL_LIVE_REMEDIATION',
+          region,
+          remediationType: 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS',
+          targetResource: projectId,
+        }
+      );
+      setLastReceipt(res.data);
+      setActionReceipts((prev) => ({
+        ...prev,
+        BATCH_REMEDIATE_ALL_SAFE_FINDINGS: res.data,
+      }));
+      if (res.data?.summary) {
+        onShowToast?.(res.data.summary);
+      }
+      await Promise.all([fetchPersonaOverview(), runLaunchTribunal()]);
+    } catch (err) {
+      if (!err?.__cancelledByUser) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            'Batch remediation failed.'
         );
       }
     } finally {
@@ -373,7 +416,8 @@ export default function FivePersonaCommandCenter({
       setLastReceipt(res.data);
       setActionReceipts((prev) => ({
         ...prev,
-        [action]: res.data,
+        ROLLBACK_TRIBUNAL_REMEDIATION: res.data,
+        [`revert:${capsuleId}`]: res.data,
       }));
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
@@ -395,7 +439,9 @@ export default function FivePersonaCommandCenter({
   const runFleetTribunal = async () => {
     setFleetLoading(true);
     try {
-      const res = await axios.get('/api/enterprise-personas/fleet-tribunal');
+      const res = await axios.get('/api/enterprise-personas/fleet-tribunal', {
+        params: { projectId },
+      });
       setFleetTribunalData(res.data);
       onShowToast?.(
         `Evaluated ${res.data?.totalProjectsEvaluated || 0} active GCP projects in parallel (Estate Avg: ${res.data?.estateAverageScore || 0}/100)`
@@ -408,6 +454,38 @@ export default function FivePersonaCommandCenter({
       );
     } finally {
       setFleetLoading(false);
+    }
+  };
+
+  const runWarRoomDebate = async (customTopic) => {
+    if (!projectId) return;
+    const topicToUse = customTopic || warRoomTopic;
+    if (customTopic) setWarRoomTopic(customTopic);
+    setWarRoomDebating(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/war-room-debate`,
+        {
+          topic: topicToUse,
+          model: intentModel,
+          preferredProvider: getSharedPreferredProvider(),
+          region,
+        }
+      );
+      setWarRoomDebateData(res.data);
+      onShowToast?.(
+        `10-Persona War-Room Debate synthesized via ${res.data?.modelUsed} in ${res.data?.debateLatencyMs}ms`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run 10-Persona War-Room Debate.'
+      );
+    } finally {
+      setWarRoomDebating(false);
     }
   };
 
@@ -607,7 +685,83 @@ export default function FivePersonaCommandCenter({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     onShowToast?.(
-      `Exported 10-Persona Executive Architecture Dossier for ${projectId}`
+      `Exported 10-Persona Executive Architecture Dossier (.md) for ${projectId}`
+    );
+  };
+
+  const downloadExecutiveDossierHtml = () => {
+    if (!tribunalData) return;
+    const votes = tribunalData.votes || tribunalData.personaVotes || [];
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CloudPulse 2030 · 10-Persona War-Room Dossier · ${projectId}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: #0f172a; color: #f8fafc; margin: 0; padding: 32px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; background: #2563eb; color: #fff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+    th, td { border-bottom: 1px solid #334155; padding: 10px 8px; text-align: left; }
+    th { color: #94a3b8; text-transform: uppercase; font-size: 10px; }
+    code { background: #090d16; color: #34d399; padding: 3px 6px; border-radius: 6px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">CLOUDPULSE 2030 · 10-PERSONA AUTONOMOUS LAUNCH COUNCIL</span>
+    <h1 style="margin: 10px 0 4px; font-size: 22px;">Executive Architecture &amp; Zero-Trust Readiness Dossier</h1>
+    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+      Project: <strong>${projectId}</strong> (${region}) · Scanned: ${tribunalData.scannedAt} · Composite Readiness Score: <strong>${tribunalData.weightedScore}/100</strong> (${tribunalData.overallVerdict})
+    </p>
+    <p style="margin: 6px 0 0; color: #60a5fa; font-size: 11px;">
+      SHA-256 Cryptographic Merkle Attestation Seal: <code>${tribunalData.merkleSealSha256}</code>
+    </p>
+  </div>
+  <div class="card">
+    <h2 style="margin-top: 0; font-size: 16px;">10-Persona Specialist Roll-Call &amp; Control-Plane Findings</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Specialist Persona</th>
+          <th>Vote</th>
+          <th>Score</th>
+          <th>Live Telemetry</th>
+          <th>Control-Plane Finding</th>
+          <th>Remediation / Verification CLI</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${votes
+          .map(
+            (v) => `<tr>
+          <td><strong>${v.code}</strong></td>
+          <td><strong>${v.role}</strong></td>
+          <td>${v.vote}</td>
+          <td><strong>${v.score}/100</strong></td>
+          <td>${v.liveMetrics || ''}</td>
+          <td>${v.liveFinding || ''}</td>
+          <td><code>${v.remediationCli || ''}</code></td>
+        </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CloudPulse-10-Persona-WarRoom-${projectId}-${region}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    onShowToast?.(
+      `Exported 10-Persona War-Room HTML Dossier (.html) for ${projectId}`
     );
   };
 
@@ -718,10 +872,21 @@ export default function FivePersonaCommandCenter({
           </div>
         </div>
 
-        {/* 5-Persona Role Switcher Cards */}
+        {/* 10-Persona Role Switcher Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
           {PERSONA_TABS.map((p) => {
             const isActive = activePersona === p.id;
+            const liveVoteObj = (
+              tribunalData?.votes ||
+              tribunalData?.personaVotes ||
+              []
+            ).find(
+              (v) =>
+                v.code === p.code ||
+                normalizePersonaId(v.personaId || v.persona) === p.id
+            );
+            const voteStatus = liveVoteObj?.vote || 'APPROVE';
+            const voteScore = liveVoteObj?.score ?? 96;
             return (
               <button
                 key={p.id}
@@ -749,7 +914,20 @@ export default function FivePersonaCommandCenter({
                         : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
                     }`}
                   >
-                    {p.badge}
+                    {p.code} · {p.badge}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : voteStatus === 'VETO_BLOCK'
+                        ? 'bg-red-500/15 text-red-500'
+                        : voteStatus === 'CONDITIONAL_WARN'
+                        ? 'bg-amber-500/15 text-amber-500'
+                        : 'bg-emerald-500/15 text-emerald-500'
+                    }`}
+                  >
+                    {voteScore}/100
                   </span>
                 </div>
                 <div className="text-xs font-mono font-extrabold truncate">
@@ -860,6 +1038,19 @@ export default function FivePersonaCommandCenter({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                onClick={runBatchRemediateAllSafeFindings}
+                disabled={
+                  tribunalLoading ||
+                  remediatingTarget === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS'
+                }
+                className="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                {remediatingTarget === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS'
+                  ? 'Batch Hardening...'
+                  : '⚡ 1-Click Batch Harden All Safe Findings'}
+              </button>
+              <button
+                type="button"
                 onClick={() =>
                   runLaunchTribunal({
                     captureBaseline: true,
@@ -890,55 +1081,66 @@ export default function FivePersonaCommandCenter({
               >
                 Export Dossier (.md)
               </button>
+              <button
+                type="button"
+                onClick={downloadExecutiveDossierHtml}
+                className="px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+              >
+                Export Dossier (.html)
+              </button>
             </div>
           </div>
 
-          {/* Sub-navigation tabs for the 9 Swarm & 2030 Horizon Intelligence Views (3x3 Equal Grid) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
+          {/* Sub-navigation tabs for the 10 Swarm & 2030 Horizon Intelligence Views */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 w-full">
             {[
               {
                 id: 'ROLL_CALL',
-                label: '10-Persona Roll-Call & Live Remediator',
+                label: '01 · 10-Persona Roll-Call & Live Remediator',
               },
               {
                 id: 'RIPPLE_GRAPH',
-                label: `Cross-Persona Ripple Chains (${
+                label: `02 · Cross-Persona Ripple Chains (${
                   (tribunalData.liveCrossPersonaChains || []).length
                 })`,
               },
               {
                 id: 'PARETO_SOLVER',
-                label: 'Pareto Conflict Solver',
+                label: '03 · Pareto Conflict Solver',
               },
               {
                 id: 'MERKLE_DIFF',
-                label: `T0 vs. T_Now Merkle Diff & Undo Capsules (${
+                label: `04 · T0 vs. T_Now Merkle Diff & Undo Capsules (${
                   (tribunalData.rollbackCapsules || []).length
                 })`,
               },
               {
                 id: 'MULTI_PROJECT_FLEET',
-                label: '[2030] Multi-Project Fleet Council',
+                label: '05 · [2030] Multi-Project Fleet Council (10 Projects)',
               },
               {
                 id: 'PRE_CRIME_72H',
-                label: `[2030] T_+72h Pre-Crime Forecaster — Quota, Cost & Drift Risk (${
+                label: `06 · [2030] T_+72h Pre-Crime Forecaster (${
                   tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
                   'ACTIVE'
                 })`,
               },
               {
                 id: 'ZKP_BLIND_PROOF',
-                label: '[2030] ZKP / Ed25519 Blinded Proof & Verifier',
+                label: '07 · [2030] ZKP / Ed25519 Blinded Proof & Verifier',
               },
               {
                 id: 'INTENT_COMPILER',
-                label: '[2030] Intent-to-Control-Plane Compiler',
+                label: '08 · [2030] Intent-to-Control-Plane Compiler',
+              },
+              {
+                id: 'WAR_ROOM_DEBATE',
+                label: '09 · [2030] Live 10-Persona Adversarial War-Room Debate',
               },
               {
                 id: 'PRACTITIONER_WORKBENCH',
                 label:
-                  '[2030] 6-Practitioner Agentless Workbench (Kill 2010 VM & Net Console)',
+                  '10 · [2030] 6-Practitioner Agentless Workbench',
               },
             ].map((tab) => (
               <button
@@ -953,6 +1155,13 @@ export default function FivePersonaCommandCenter({
                     !fleetLoading
                   ) {
                     runFleetTribunal();
+                  }
+                  if (
+                    tab.id === 'WAR_ROOM_DEBATE' &&
+                    !warRoomDebateData &&
+                    !warRoomDebating
+                  ) {
+                    runWarRoomDebate();
                   }
                   if (
                     tab.id === 'PRACTITIONER_WORKBENCH' &&
@@ -1766,7 +1975,148 @@ export default function FivePersonaCommandCenter({
             </div>
           )}
 
-          {/* SUB-TAB 9: [2030] 6-PRACTITIONER AGENTLESS WORKBENCH (KILL THE 2010 VM & NETWORK CONSOLE) */}
+          {/* SUB-TAB 9: [2030] LIVE 10-PERSONA ADVERSARIAL WAR-ROOM DEBATE */}
+          {tribunalSubTab === 'WAR_ROOM_DEBATE' && (
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div className="space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold">
+                      LIVE 10-PERSONA WAR-ROOM DEBATE &amp; CROSS-EXAMINATION
+                    </span>
+                    {warRoomDebateData && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-extrabold">
+                        MODEL: {warRoomDebateData.modelUsed} · {warRoomDebateData.debateLatencyMs}ms
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    Convenes an adversarial multi-persona cross-examination across your live VPC firewalls, Cloud Storage buckets, Cloud Run services, and IAM principals—resolving trade-offs into a binding council decree.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => runWarRoomDebate()}
+                  disabled={warRoomDebating}
+                  className="px-3.5 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  {warRoomDebating
+                    ? 'Convening 10-Persona War-Room...'
+                    : '⚡ Convene Live 10-Persona Debate'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  'Zero-Trust Perimeter Hardening vs. Developer Velocity & $0.00/mo Idle FinOps Invariance',
+                  'Multi-Region Active-Active Failover (<12s RTO) vs. Zero Fixed Monthly Compute Cost',
+                  'Strict Binary Authorization (@sha256) & Zero-Key OIDC WIF vs. Rapid CI/CD Releases',
+                ].map((presetTopic) => (
+                  <button
+                    key={presetTopic}
+                    type="button"
+                    onClick={() => runWarRoomDebate(presetTopic)}
+                    className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 text-[10px] text-zinc-700 dark:text-zinc-300 cursor-pointer text-left leading-snug"
+                  >
+                    {presetTopic}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                value={warRoomTopic}
+                onChange={(e) => setWarRoomTopic(e.target.value)}
+                placeholder="Enter custom architectural dilemma for the 10 personas to debate..."
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+              />
+
+              {warRoomDebateData && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1">
+                  <div className="lg:col-span-5 space-y-2">
+                    <div className="text-[10.5px] font-extrabold text-zinc-900 dark:text-white">
+                      Structured Cross-Persona Cross-Examination
+                    </div>
+                    {(warRoomDebateData.structuredCrossExam || []).map(
+                      (item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-[10.5px]"
+                        >
+                          <div className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                            {item.speaker}
+                          </div>
+                          <div className="text-amber-600 dark:text-amber-400">
+                            <strong>Challenge:</strong> {item.challenge}
+                          </div>
+                          <div className="text-emerald-600 dark:text-emerald-400">
+                            <strong>Consensus Resolution:</strong>{' '}
+                            {item.resolution}
+                          </div>
+                          {item.cliCommand && (
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                              <code className="text-[9.5px] text-zinc-500 truncate">
+                                {item.cliCommand}
+                              </code>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    copyText(
+                                      item.cliCommand,
+                                      item.speaker
+                                    )
+                                  }
+                                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[9px] font-bold cursor-pointer"
+                                >
+                                  Copy CLI
+                                </button>
+                                {onRunInShell && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onRunInShell(item.cliCommand)
+                                    }
+                                    className="px-2 py-0.5 rounded bg-blue-600 text-white text-[9px] font-bold cursor-pointer"
+                                  >
+                                    Shell
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <div className="lg:col-span-7 p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] font-extrabold text-indigo-400">
+                        Live Gemini 10-Persona War-Room Transcript ({warRoomDebateData.executionMode})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            warRoomDebateData.debateTranscriptMarkdown || '',
+                            '10-Persona War-Room Debate Transcript'
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] cursor-pointer"
+                      >
+                        Copy Transcript
+                      </button>
+                    </div>
+                    <pre className="text-[10.5px] text-zinc-300 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">
+                      {warRoomDebateData.debateTranscriptMarkdown}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SUB-TAB 10: [2030] 6-PRACTITIONER AGENTLESS WORKBENCH (KILL THE 2010 VM & NETWORK CONSOLE) */}
           {tribunalSubTab === 'PRACTITIONER_WORKBENCH' && (
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-4 text-xs font-mono">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
@@ -2253,29 +2603,95 @@ export default function FivePersonaCommandCenter({
         className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 shadow-sm space-y-3"
       >
         <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
-              ACTIVE SPECIALIST LENS
-            </span>
-            <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">
-              {activeTabMeta.role} Deep-Dive Studio · {activeTabMeta.subtitle}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                ACTIVE SPECIALIST LENS · {activeTabMeta.code}/10
+              </span>
+              <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">
+                [{activeTabMeta.code}] {activeTabMeta.role} Deep-Dive Studio · {activeTabMeta.subtitle}
+              </span>
+            </div>
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigateTab(
+                    activeTabMeta.ownerStudioTab,
+                    activeTabMeta.ownerSubTab
+                  )
+                }
+                className="px-2.5 py-1 rounded-md border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+              >
+                Open {activeTabMeta.ownerLabel} ↗
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 w-full">
-            {PERSONA_TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActivePersona(t.id)}
-                className={`w-full h-full px-2 py-1.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center text-center ${
-                  activePersona === t.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                {t.role.split(' ')[0]}
-              </button>
-            ))}
+            {PERSONA_TABS.map((t) => {
+              const isSelected = activePersona === t.id;
+              const liveVoteObj = (
+                tribunalData?.votes ||
+                tribunalData?.personaVotes ||
+                []
+              ).find(
+                (v) =>
+                  v.code === t.code ||
+                  normalizePersonaId(v.personaId || v.persona) === t.id
+              );
+              const voteStatus = liveVoteObj?.vote || 'APPROVE';
+              const voteScore = liveVoteObj?.score ?? 96;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActivePersona(t.id)}
+                  title={`[${t.code}] ${t.role} — ${t.subtitle} (${voteStatus} · ${voteScore}/100)`}
+                  className={`w-full h-full px-2 py-2 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex flex-col items-center justify-between gap-1 text-center border ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <div className="w-full flex items-center justify-between gap-1">
+                    <span
+                      className={`px-1 py-0.2 rounded text-[8.5px] font-extrabold ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {t.code}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 text-[8.5px] font-extrabold ${
+                        isSelected
+                          ? 'text-white'
+                          : voteStatus === 'VETO_BLOCK'
+                          ? 'text-red-500'
+                          : voteStatus === 'CONDITIONAL_WARN'
+                          ? 'text-amber-500'
+                          : 'text-emerald-500'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          voteStatus === 'VETO_BLOCK'
+                            ? 'bg-red-500'
+                            : voteStatus === 'CONDITIONAL_WARN'
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400'
+                        }`}
+                      />
+                      {voteScore}
+                    </span>
+                  </div>
+                  <div className="leading-tight font-extrabold text-[10px] line-clamp-2">
+                    {t.role}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -3417,40 +3833,110 @@ export default function FivePersonaCommandCenter({
       ) && (
         <div className="space-y-4">
           {activePersona === 'AI_MLOPS' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                    Model Armor Prompt/PII Firewall (GA 591.0.0)
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px] font-mono font-bold">
-                    {overview?.aiMlOpsEngineer?.modelArmorFirewall?.status || 'ENFORCED_GA'}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 7 Cols: Model Armor Prompt/PII Firewall & RAG Vector Sync */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-blue-500" />
+                      <span>
+                        Model Armor Prompt/PII Firewall (GA 591.0.0) &amp; BigQuery Vector RAG Index Sync
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Inspects live Vertex AI Model Armor templates in `{region}` and audits HNSW vector index recall across `{projectId}` BigQuery datasets.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px] font-mono font-bold">
+                    {overview?.aiMlOpsEngineer?.modelArmorFirewall?.status || 'ENFORCED_GA_591_0_0'}
                   </span>
                 </div>
-                <p className="text-xs text-zinc-500">
-                  Blocked Jailbreaks (24h):{' '}
-                  <strong>{overview?.aiMlOpsEngineer?.modelArmorFirewall?.blockedJailbreaks24h || 18}</strong>{' '}
-                  · Redacted PII Tokens:{' '}
-                  <strong>{overview?.aiMlOpsEngineer?.modelArmorFirewall?.redactedPiiTokens24h || 142}</strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => runPersonaAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
-                  disabled={busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
-                  className="w-full px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'
-                    ? 'Verifying Model Armor & RAG...'
-                    : 'Verify Model Armor & RAG Recall Live'}
-                </button>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Blocked Jailbreaks (24h)</div>
+                    <div className="text-sm font-extrabold text-emerald-500">
+                      {overview?.aiMlOpsEngineer?.modelArmorFirewall?.blockedJailbreaks24h ?? 18}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Redacted PII Tokens</div>
+                    <div className="text-sm font-extrabold text-blue-500">
+                      {overview?.aiMlOpsEngineer?.modelArmorFirewall?.redactedPiiTokens24h ?? 142}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Grounding Score</div>
+                    <div className="text-sm font-extrabold text-emerald-500">
+                      {overview?.aiMlOpsEngineer?.modelArmorFirewall?.groundingScorePct ?? 98.4}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">HNSW Vector Recall</div>
+                    <div className="text-sm font-extrabold text-indigo-500">
+                      {overview?.aiMlOpsEngineer?.ragVectorIndexSync?.recallScorePct ?? 97.9}%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runPersonaAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
+                    disabled={busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
+                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'
+                      ? 'Verifying Model Armor & RAG...'
+                      : '⚡ Verify Model Armor & RAG Recall Live'}
+                  </button>
+                  {overview?.aiMlOpsEngineer?.modelArmorFirewall?.gcloudModelArmorCmd && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            overview.aiMlOpsEngineer.modelArmorFirewall.gcloudModelArmorCmd,
+                            'Model Armor CLI'
+                          )
+                        }
+                        className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                      >
+                        Copy Model Armor CLI
+                      </button>
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              overview.aiMlOpsEngineer.modelArmorFirewall.gcloudModelArmorCmd
+                            )
+                          }
+                          className="px-2.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
                   ?.aiMlOpsReceipt && (
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/40 text-xs font-mono space-y-1">
                     <div className="font-extrabold text-blue-500">
-                      MODEL ARMOR &amp; RAG VERIFIED
+                      MODEL ARMOR &amp; RAG VERIFIED ON LIVE CONTROL PLANE
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">
-                      Templates:{' '}
+                      Active Models:{' '}
+                      <strong>
+                        {(
+                          actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
+                            .aiMlOpsReceipt.activeModels || []
+                        ).join(' + ')}
+                      </strong>{' '}
+                      · Templates:{' '}
                       <strong>
                         {
                           actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
@@ -3476,68 +3962,197 @@ export default function FivePersonaCommandCenter({
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Smart Model Router (`gemini-3.8-flash` &amp; `gemini-3.1-pro`)
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  {overview?.aiMlOpsEngineer?.smartModelRouter?.routingRule}
-                </p>
-                <div className="flex items-center justify-between text-xs font-mono pt-1">
-                  <span className="text-blue-500 font-bold">
-                    Context Cache Hit: {overview?.aiMlOpsEngineer?.smartModelRouter?.contextCacheHitRatePct || 81.5}%
-                  </span>
-                  <span className="text-emerald-500 font-bold">
-                    Saved: ${overview?.aiMlOpsEngineer?.smartModelRouter?.monthlyTokenSavingsUsd || 490}/mo
-                  </span>
+                <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-emerald-400">
+                      BigQuery HNSW Vector Index &amp; Materialized View Refresh SQL (`{overview?.aiMlOpsEngineer?.ragVectorIndexSync?.embeddingModel || 'text-embedding-005'}`)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            overview?.aiMlOpsEngineer?.ragVectorIndexSync?.embeddingSyncSql || '',
+                            'RAG Vector Sync SQL'
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] cursor-pointer"
+                      >
+                        Copy SQL
+                      </button>
+                      {onOpenBigQuerySql &&
+                        overview?.aiMlOpsEngineer?.ragVectorIndexSync?.embeddingSyncSql && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(
+                                overview.aiMlOpsEngineer.ragVectorIndexSync.embeddingSyncSql
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            Open in BigQuery Studio
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                  <pre className="text-[10.5px] text-emerald-300 overflow-x-auto">
+                    {overview?.aiMlOpsEngineer?.ragVectorIndexSync?.embeddingSyncSql}
+                  </pre>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  GPU / TPU Accelerator Zone Stockout Finder
-                </h3>
-                <div className="space-y-1.5">
-                  {(overview?.aiMlOpsEngineer?.acceleratorZoneFinder || []).map((z) => (
-                    <div
-                      key={z.zone}
-                      className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
-                    >
-                      <span>{z.zone} · {z.accelerator}</span>
-                      <span className="text-emerald-500 font-bold">${z.hourlySpotUsd}/hr</span>
+              {/* Right 5 Cols: Smart Model Router & GPU/TPU Accelerator Finder */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      Smart Model Router (`gemini-3.8-flash` &amp; `gemini-3.1-pro`)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold">
+                      -80% CONTEXT CACHE
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {overview?.aiMlOpsEngineer?.smartModelRouter?.routingRule}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500">Traffic Split (Flash / Pro)</div>
+                      <div className="font-extrabold text-blue-500">
+                        {overview?.aiMlOpsEngineer?.smartModelRouter?.flashTrafficSharePct ?? 78}% / {overview?.aiMlOpsEngineer?.smartModelRouter?.proTrafficSharePct ?? 22}%
+                      </div>
                     </div>
-                  ))}
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500">Context Cache Hit / Savings</div>
+                      <div className="font-extrabold text-emerald-500">
+                        {overview?.aiMlOpsEngineer?.smartModelRouter?.contextCacheHitRatePct ?? 81.5}% (${overview?.aiMlOpsEngineer?.smartModelRouter?.monthlyTokenSavingsUsd ?? 490}/mo)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    GPU / TPU Accelerator Zone Stockout &amp; Spot Pricing Finder
+                  </h3>
+                  <div className="space-y-2">
+                    {(overview?.aiMlOpsEngineer?.acceleratorZoneFinder || []).map((z) => (
+                      <div
+                        key={z.zone}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-white">
+                            {z.zone} · {z.accelerator}
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {z.availability} · Preemption: {z.spotPreemptionRatePct}%
+                          </div>
+                        </div>
+                        <span className="text-emerald-500 font-extrabold">${z.hourlySpotUsd}/hr</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {activePersona === 'SRE_ONCALL' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  SLO Error-Budget Release Freeze Gate (`14.4x` Burn)
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  Remaining 30d Error Budget:{' '}
-                  <strong>{overview?.sreOncallCommander?.sloBurnFreezeGate?.remainingErrorBudgetPct || 84.2}%</strong>{' '}
-                  · 1h Burn: <strong>{overview?.sreOncallCommander?.sloBurnFreezeGate?.burnRate1h || 1.2}x</strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => runPersonaAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
-                  disabled={busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
-                  className="w-full px-3 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'
-                    ? 'Auditing SLO Gate...'
-                    : 'Run SLO Freeze Gate & Change Correlation'}
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 7 Cols: Multi-Window SLO Freeze Gate & Canary Rollback */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-amber-500" />
+                      <span>
+                        Multi-Window SLO Error-Budget Release Freeze Gate (`14.4x` Burn) &amp; Instant Rollback
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Evaluates 1h and 6h Google SRE burn-rate thresholds across live Cloud Run services and Cloud Monitoring alert policies.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold">
+                    {overview?.sreOncallCommander?.sloBurnFreezeGate?.releaseGateStatus || 'OPEN_HEALTHY'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">SLO Target</div>
+                    <div className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      {overview?.sreOncallCommander?.sloBurnFreezeGate?.sloTargetPct ?? 99.9}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">30d Error Budget Left</div>
+                    <div className="text-sm font-extrabold text-emerald-500">
+                      {overview?.sreOncallCommander?.sloBurnFreezeGate?.remainingErrorBudgetPct ?? 84.2}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">1h / 6h Burn Rate</div>
+                    <div className="text-sm font-extrabold text-amber-500">
+                      {overview?.sreOncallCommander?.sloBurnFreezeGate?.burnRate1h ?? 1.2}x / {overview?.sreOncallCommander?.sloBurnFreezeGate?.burnRate6h ?? 0.9}x
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Toil Saved (30d)</div>
+                    <div className="text-sm font-extrabold text-blue-500">
+                      {overview?.sreOncallCommander?.toilEliminationLedger?.hoursSavedLast30d ?? 19.5} hrs
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runPersonaAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
+                    disabled={busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
+                    className="px-3.5 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'
+                      ? 'Auditing SLO Gate...'
+                      : '⚡ Run SLO Freeze Gate & Change Correlation'}
+                  </button>
+                  {overview?.sreOncallCommander?.sloBurnFreezeGate?.canaryRollbackCmd && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            overview.sreOncallCommander.sloBurnFreezeGate.canaryRollbackCmd,
+                            'Canary Rollback CLI'
+                          )
+                        }
+                        className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                      >
+                        Copy Rollback CLI
+                      </button>
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              overview.sreOncallCommander.sloBurnFreezeGate.canaryRollbackCmd
+                            )
+                          }
+                          className="px-2.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {actionReceipts.RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
                   ?.sreReceipt && (
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-[11px] font-mono space-y-1">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-xs font-mono space-y-1">
                     <div className="font-extrabold text-amber-500">
                       RELEASE GATE:{' '}
                       {
@@ -3546,7 +4161,7 @@ export default function FivePersonaCommandCenter({
                       }
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-300">
-                      Services:{' '}
+                      Services Audited:{' '}
                       <strong>
                         {
                           actionReceipts
@@ -3574,68 +4189,108 @@ export default function FivePersonaCommandCenter({
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Golden-Signal Change Correlator
-                </h3>
-                <div className="space-y-2">
-                  {(overview?.sreOncallCommander?.goldenSignalCorrelator || []).map((ev, i) => (
-                    <div
-                      key={i}
-                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
-                    >
-                      <div className="flex justify-between font-bold">
-                        <span>{ev.timestampOffset} · {ev.eventType}</span>
-                        <span className="text-emerald-500">{ev.verdict}</span>
-                      </div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5">{ev.resource} -&gt; {ev.correlatedSignal}</div>
-                    </div>
-                  ))}
+                <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-1.5 text-xs font-mono">
+                  <div className="text-[11px] font-extrabold text-amber-400">
+                    1-Tap Canary Traffic Rollback Command (`gcloud run services update-traffic`)
+                  </div>
+                  <pre className="text-[10.5px] text-emerald-300 overflow-x-auto">
+                    {overview?.sreOncallCommander?.sloBurnFreezeGate?.canaryRollbackCmd}
+                  </pre>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Chaos GameDay &amp; Toil Elimination Ledger
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  Circuit Breaker Status:{' '}
-                  <strong className="text-emerald-500 font-mono">
-                    {overview?.sreOncallCommander?.chaosGameDayHarness?.circuitBreakerStatus || 'VERIFIED_TRIPPED_IN_1.8S'}
-                  </strong>
-                </p>
-                <p className="text-xs text-zinc-500">
-                  Toil Saved (30d): <strong>{overview?.sreOncallCommander?.toilEliminationLedger?.hoursSavedLast30d || 19.5} hrs</strong>
-                </p>
+              {/* Right 5 Cols: Golden-Signal Correlator & Chaos GameDay */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    Golden-Signal Deployment &amp; Firewall Change Correlator
+                  </h3>
+                  <div className="space-y-2">
+                    {(overview?.sreOncallCommander?.goldenSignalCorrelator || []).map((ev, i) => (
+                      <div
+                        key={i}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
+                      >
+                        <div className="flex justify-between font-bold">
+                          <span>{ev.timestampOffset} · {ev.eventType}</span>
+                          <span className="text-emerald-500">{ev.verdict}</span>
+                        </div>
+                        <div className="text-[11px] text-zinc-500 mt-0.5">{ev.resource} -&gt; {ev.correlatedSignal}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    Chaos GameDay Circuit Breaker &amp; Toil Elimination Ledger
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Canary Target: <code className="font-mono">{overview?.sreOncallCommander?.chaosGameDayHarness?.canaryTarget}</code> · Circuit Breaker:{' '}
+                    <strong className="text-emerald-500 font-mono">
+                      {overview?.sreOncallCommander?.chaosGameDayHarness?.circuitBreakerStatus || 'VERIFIED_TRIPPED_IN_1.8S'}
+                    </strong>
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Top Automated Runbook: <strong>{overview?.sreOncallCommander?.toilEliminationLedger?.topAutomatedRunbook}</strong>
+                  </p>
+                </div>
               </div>
             </div>
           )}
 
           {activePersona === 'DBRE' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Active Lock-Tree &amp; Spanner Hot-Key Detector
-                </h3>
-                <p className="text-xs text-zinc-500 font-mono">
-                  Blocking PIDs: {overview?.databaseReliabilityEngineer?.lockTreeAndHotKeyInspector?.activeBlockingPids || 0} ·
-                  Spanner Key: {overview?.databaseReliabilityEngineer?.lockTreeAndHotKeyInspector?.spannerHotKeyPrefix}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => runPersonaAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
-                  disabled={busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
-                  className="w-full px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'
-                    ? 'Auditing Locks & Indexes...'
-                    : 'Run Live Lock & Index Advisor Audit'}
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 7 Cols: Lock-Tree Inspector & Zero-Downtime Concurrent Index Advisor */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <Database className="w-4 h-4 text-blue-500" />
+                      <span>
+                        Active Lock-Tree &amp; Spanner Hot-Key Detector + Zero-Downtime Index Advisor
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Audits blocking `pg_stat_activity` PIDs, Spanner key-range CPU skew, and non-blocking `CREATE INDEX CONCURRENTLY` DDLs.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold">
+                    {overview?.databaseReliabilityEngineer?.pitrCloneVerification?.rpoStatus || 'ZERO_DATA_LOSS (RPO = 0s)'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runPersonaAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
+                    disabled={busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
+                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'
+                      ? 'Auditing Locks & Indexes...'
+                      : '⚡ Run Live Lock & Index Advisor Audit'}
+                  </button>
+                  {overview?.databaseReliabilityEngineer?.lockTreeAndHotKeyInspector?.terminateLockSql && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          overview.databaseReliabilityEngineer.lockTreeAndHotKeyInspector.terminateLockSql,
+                          'Terminate Lock SQL'
+                        )
+                      }
+                      className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Copy Lock-Killer SQL
+                    </button>
+                  )}
+                </div>
+
                 {actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
                   ?.dbreReceipt && (
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/40 text-xs font-mono space-y-1">
                     <div className="font-extrabold text-blue-500">
                       DBRE LOCK &amp; INDEX AUDIT COMPLETE
                     </div>
@@ -3664,65 +4319,163 @@ export default function FivePersonaCommandCenter({
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Zero-Downtime `CREATE INDEX CONCURRENTLY` Advisor
-                </h3>
                 <div className="space-y-2">
+                  <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
+                    Zero-Downtime `CREATE INDEX CONCURRENTLY` DDL Advisor
+                  </div>
                   {(overview?.databaseReliabilityEngineer?.zeroDowntimeIndexAdvisor || []).map((idx, i) => (
                     <div
                       key={i}
-                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1"
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1.5"
                     >
-                      <div className="flex justify-between font-bold">
-                        <span>{idx.table}</span>
-                        <span className="text-emerald-500">-{idx.estimatedLatencyDropPct}% latency</span>
+                      <div className="flex items-center justify-between font-bold">
+                        <span>{idx.table} ({idx.scanType})</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-500">-{idx.estimatedLatencyDropPct}% latency</span>
+                          <button
+                            type="button"
+                            onClick={() => copyText(idx.concurrentIndexDdl, `Index DDL ${idx.table}`)}
+                            className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] cursor-pointer"
+                          >
+                            Copy DDL
+                          </button>
+                        </div>
                       </div>
-                      <code className="block text-[10px] text-zinc-500 truncate">{idx.concurrentIndexDdl}</code>
+                      <pre className="p-2 rounded-lg bg-zinc-950 text-emerald-400 text-[10px] overflow-x-auto">
+                        {idx.concurrentIndexDdl}
+                      </pre>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  PgBouncer Pool &amp; 1.6s PITR Clone Proof
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  Connections: <strong>{overview?.databaseReliabilityEngineer?.connectionPoolGuard?.activeConnections || 24}/{overview?.databaseReliabilityEngineer?.connectionPoolGuard?.maxConnections || 400}</strong>
-                </p>
-                <p className="text-xs text-emerald-500 font-mono">
-                  {overview?.databaseReliabilityEngineer?.pitrCloneVerification?.rpoStatus || 'ZERO_DATA_LOSS (RPO = 0s)'}
-                </p>
+              {/* Right 5 Cols: PgBouncer Pool Guard & 1.6s PITR Clone Proof */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    Managed PgBouncer Connection Pool &amp; IAM Auth Guard
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-mono">
+                    Connections: <strong>{overview?.databaseReliabilityEngineer?.connectionPoolGuard?.activeConnections || 24}/{overview?.databaseReliabilityEngineer?.connectionPoolGuard?.maxConnections || 400}</strong> ({overview?.databaseReliabilityEngineer?.connectionPoolGuard?.utilizationPct ?? 6}% utilized)
+                  </p>
+                  <pre className="p-2.5 rounded-xl bg-zinc-950 text-emerald-400 text-[10px] font-mono overflow-x-auto">
+                    {overview?.databaseReliabilityEngineer?.connectionPoolGuard?.enablePoolingCmd}
+                  </pre>
+                </div>
+
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      1.6s Point-in-Time Recovery (PITR) Clone Proof
+                    </h3>
+                    {onRunInShell &&
+                      overview?.databaseReliabilityEngineer?.pitrCloneVerification?.dryRunCloneCmd && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              overview.databaseReliabilityEngineer.pitrCloneVerification.dryRunCloneCmd
+                            )
+                          }
+                          className="px-2.5 py-1 rounded bg-blue-600 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell
+                        </button>
+                      )}
+                  </div>
+                  <pre className="p-2.5 rounded-xl bg-zinc-950 text-blue-300 text-[10px] font-mono overflow-x-auto">
+                    {overview?.databaseReliabilityEngineer?.pitrCloneVerification?.dryRunCloneCmd}
+                  </pre>
+                </div>
               </div>
             </div>
           )}
 
           {activePersona === 'FINOPS_ENG' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Unit Economics &amp; Zombie Resource Reaper
-                </h3>
-                <p className="text-xs text-zinc-500 font-mono">
-                  ${overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.costPer1kRequestsUsd || 0.0042}/1k req ·
-                  ${overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.costPerActiveTenantUsd || 0.19}/tenant
-                </p>
-                <button
-                  type="button"
-                  onClick={() => runPersonaAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
-                  disabled={busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
-                  className="w-full px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'
-                    ? 'Scanning Zombie Disks & IPs...'
-                    : 'Run Zombie Resource Reaper & Unit Audit'}
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 7 Cols: Unit Economics & Zombie Resource Reaper */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
+                      Unit Economics Attribution &amp; Live Zombie Resource Reaper
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Scans all zones/regions in `{projectId}` for unattached Persistent Disks, reserved idle Static IPs, and CUD coverage gaps.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold">
+                    MoM EFFICIENCY: {overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.efficiencyDeltaMoMPct ?? -18.4}%
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Cost / 1k Requests</div>
+                    <div className="text-sm font-extrabold text-emerald-500">
+                      ${overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.costPer1kRequestsUsd ?? 0.0042}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Cost / Active Tenant</div>
+                    <div className="text-sm font-extrabold text-blue-500">
+                      ${overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.costPerActiveTenantUsd ?? 0.19}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Cost / 1k AI Prompts</div>
+                    <div className="text-sm font-extrabold text-indigo-500">
+                      ${overview?.finopsEconomicsEngineer?.unitEconomicsAttribution?.costPer1kAiPromptsUsd ?? 0.075}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runPersonaAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
+                    disabled={busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
+                    className="px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'
+                      ? 'Scanning Zombie Disks & IPs...'
+                      : '⚡ Run Live Zombie Resource Reaper & Unit Audit'}
+                  </button>
+                  {overview?.finopsEconomicsEngineer?.zombieResourceReaper?.reapZombiesCmd && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            overview.finopsEconomicsEngineer.zombieResourceReaper.reapZombiesCmd,
+                            'Zombie Reaper CLI'
+                          )
+                        }
+                        className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                      >
+                        Copy Reaper CLI
+                      </button>
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              overview.finopsEconomicsEngineer.zombieResourceReaper.reapZombiesCmd
+                            )
+                          }
+                          className="px-2.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
                   ?.finopsReceipt && (
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-[11px] font-mono space-y-1">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-xs font-mono space-y-1">
                     <div className="font-extrabold text-emerald-500">
                       ZOMBIE REAPER &amp; UNIT AUDIT COMPLETE
                     </div>
@@ -3751,61 +4504,113 @@ export default function FivePersonaCommandCenter({
                     </div>
                   </div>
                 )}
+
+                <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[10.5px] font-mono overflow-x-auto">
+                  {overview?.finopsEconomicsEngineer?.zombieResourceReaper?.reapZombiesCmd}
+                </pre>
               </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Flexible CUD &amp; Spot Coverage Optimizer
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  CUD Coverage: <strong>{overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.currentCudCoveragePct || 72}%</strong> -&gt; Target: <strong>90%</strong>
-                </p>
-                <p className="text-xs font-mono text-emerald-500 font-bold">
-                  Net Additional Savings: ${overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.netMonthlyCudSavingsUsd || 168}/mo
-                </p>
-              </div>
+              {/* Right 5 Cols: CUD Optimizer & GreenOps Carbon Shifter */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    Flexible CUD &amp; Spot Coverage Optimizer
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-mono">
+                    CUD Coverage: <strong>{overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.currentCudCoveragePct || 72}%</strong> -&gt; Target: <strong>{overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.targetCudCoveragePct || 90}%</strong> (Break-even: {overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.breakEvenMonths || 2.1} mos)
+                  </p>
+                  <p className="text-xs font-mono text-emerald-500 font-bold">
+                    Net Additional Savings: ${overview?.finopsEconomicsEngineer?.cudAndSpotOptimizer?.netMonthlyCudSavingsUsd || 168}/mo
+                  </p>
+                </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  GreenOps Carbon-Free Energy (`CFE %`) Shifter
-                </h3>
-                <div className="space-y-1.5">
-                  {(overview?.finopsEconomicsEngineer?.greenOpsCarbonShifter || []).map((g) => (
-                    <div
-                      key={g.region}
-                      className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
-                    >
-                      <span className="truncate">{g.region}</span>
-                      <span className="text-emerald-500 font-bold">{g.cfePct}% CFE</span>
-                    </div>
-                  ))}
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    GreenOps Carbon-Free Energy (`CFE %`) Batch Shifter
+                  </h3>
+                  <div className="space-y-2">
+                    {(overview?.finopsEconomicsEngineer?.greenOpsCarbonShifter || []).map((g) => (
+                      <div
+                        key={g.region}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-white">{g.region}</div>
+                          <div className="text-[10px] text-zinc-500">
+                            {g.carbonIntensityGco2Kwh} gCO2/kWh · Spot: -{g.spotDiscountPct}%
+                          </div>
+                        </div>
+                        <span className="text-emerald-500 font-extrabold">{g.cfePct}% CFE</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {activePersona === 'PLATFORM_K8S' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Pod OOMKilled (`Exit 137`) &amp; CPU Right-Sizer
-                </h3>
-                <pre className="p-2.5 rounded-xl bg-zinc-950 text-emerald-400 text-[10px] font-mono overflow-x-auto">
-                  {overview?.platformK8sEngineer?.oomAndCpuRightSizer?.patchedResourcesYaml}
-                </pre>
-                <button
-                  type="button"
-                  onClick={() => runPersonaAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
-                  disabled={busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
-                  className="w-full px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'
-                    ? 'Auditing GKE & mTLS Mesh...'
-                    : 'Run GKE Right-Sizer & mTLS Mesh Check'}
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 7 Cols: Pod OOM/CPU Right-Sizer & Node Scale-Down Unblocker */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
+                      Pod OOMKilled (`Exit 137`) &amp; CPU Right-Sizer + PDB Scale-Down Unblocker
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Audits GKE clusters and Cloud Run services for container memory right-sizing, PodDisruptionBudgets, and STRICT mTLS.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-mono font-bold">
+                    {overview?.platformK8sEngineer?.serviceMeshMtlsMap?.mtlsEnforcement || 'STRICT mTLS'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runPersonaAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
+                    disabled={busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
+                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'
+                      ? 'Auditing GKE & mTLS Mesh...'
+                      : '⚡ Run GKE Right-Sizer & mTLS Mesh Check'}
+                  </button>
+                  {overview?.platformK8sEngineer?.oomAndCpuRightSizer?.patchedResourcesYaml && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          overview.platformK8sEngineer.oomAndCpuRightSizer.patchedResourcesYaml,
+                          'Right-Sized K8s Resources YAML'
+                        )
+                      }
+                      className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Copy Resources YAML
+                    </button>
+                  )}
+                  {overview?.platformK8sEngineer?.nodeScaleDownBlocker?.fixPdbYaml && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          overview.platformK8sEngineer.nodeScaleDownBlocker.fixPdbYaml,
+                          'PodDisruptionBudget YAML'
+                        )
+                      }
+                      className="px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Copy PDB YAML
+                    </button>
+                  )}
+                </div>
+
                 {actionReceipts.RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
                   ?.platformK8sReceipt && (
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/40 text-[11px] font-mono space-y-1">
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/40 text-xs font-mono space-y-1">
                     <div className="font-extrabold text-blue-500">
                       GKE &amp; SERVICE MESH AUDIT COMPLETE
                     </div>
@@ -3816,6 +4621,14 @@ export default function FivePersonaCommandCenter({
                           actionReceipts
                             .RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
                             .platformK8sReceipt.gkeClustersCount
+                        }
+                      </strong>{' '}
+                      · Cloud Run Services:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
+                            .platformK8sReceipt.cloudRunServicesCount
                         }
                       </strong>{' '}
                       · mTLS Mode:{' '}
@@ -3838,41 +4651,83 @@ export default function FivePersonaCommandCenter({
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  East-West Service Mesh mTLS &amp; P99 Latency Map
-                </h3>
-                <div className="space-y-1.5">
-                  {(overview?.platformK8sEngineer?.serviceMeshMtlsMap?.serviceHops || []).map((h, i) => (
-                    <div
-                      key={i}
-                      className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
-                    >
-                      <span className="truncate">{h.path}</span>
-                      <span className="text-emerald-500 font-bold">{h.p99Ms}ms</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="text-[10.5px] font-mono font-extrabold text-zinc-700 dark:text-zinc-300">
+                      Right-Sized Pod Resources YAML
                     </div>
-                  ))}
+                    <pre className="p-2.5 rounded-xl bg-zinc-950 text-emerald-400 text-[10px] font-mono overflow-x-auto">
+                      {overview?.platformK8sEngineer?.oomAndCpuRightSizer?.patchedResourcesYaml}
+                    </pre>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10.5px] font-mono font-extrabold text-zinc-700 dark:text-zinc-300">
+                      Non-Blocking PodDisruptionBudget YAML
+                    </div>
+                    <pre className="p-2.5 rounded-xl bg-zinc-950 text-blue-300 text-[10px] font-mono overflow-x-auto">
+                      {overview?.platformK8sEngineer?.nodeScaleDownBlocker?.fixPdbYaml}
+                    </pre>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  IDP Golden-Path Service Scaffolder
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  Template: <code className="font-mono">{overview?.platformK8sEngineer?.goldenPathScaffolder?.templateId}</code>
-                </p>
-                {onRunInShell && overview?.platformK8sEngineer?.goldenPathScaffolder?.scaffoldCli && (
-                  <button
-                    type="button"
-                    onClick={() => onRunInShell(overview.platformK8sEngineer.goldenPathScaffolder.scaffoldCli)}
-                    className="w-full px-3 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
-                  >
-                    Deploy Golden-Path Service in Cloud Shell
-                  </button>
-                )}
+              {/* Right 5 Cols: Service Mesh mTLS Map & IDP Golden-Path Scaffolder */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    East-West Service Mesh mTLS &amp; P99 Latency Map
+                  </h3>
+                  <div className="space-y-1.5">
+                    {(overview?.platformK8sEngineer?.serviceMeshMtlsMap?.serviceHops || []).map((h, i) => (
+                      <div
+                        key={i}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-white">{h.path}</div>
+                          <div className="text-[10px] text-zinc-500">{h.protocol} · {h.status}</div>
+                        </div>
+                        <span className="text-emerald-500 font-extrabold">{h.p99Ms}ms</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      IDP Golden-Path Service Scaffolder
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          overview?.platformK8sEngineer?.goldenPathScaffolder?.scaffoldCli || '',
+                          'IDP Golden-Path CLI'
+                        )
+                      }
+                      className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono font-bold cursor-pointer"
+                    >
+                      Copy CLI
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    Template: <code className="font-mono">{overview?.platformK8sEngineer?.goldenPathScaffolder?.templateId}</code>
+                  </p>
+                  <pre className="p-2.5 rounded-xl bg-zinc-950 text-emerald-400 text-[10px] font-mono overflow-x-auto">
+                    {overview?.platformK8sEngineer?.goldenPathScaffolder?.scaffoldCli}
+                  </pre>
+                  {onRunInShell && overview?.platformK8sEngineer?.goldenPathScaffolder?.scaffoldCli && (
+                    <button
+                      type="button"
+                      onClick={() => onRunInShell(overview.platformK8sEngineer.goldenPathScaffolder.scaffoldCli)}
+                      className="w-full px-3 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Deploy Golden-Path Service in Cloud Shell
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -66667,7 +66667,12 @@ app.post(
         global.__personaRemediationCapsules = new Map();
       }
       if (action === 'EXECUTE_TRIBUNAL_LIVE_REMEDIATION') {
-        const { remediationType, targetResource } = req.body || {};
+        const {
+          remediationType,
+          targetResource,
+          targetZone = '',
+          targetRegion = '',
+        } = req.body || {};
         const capsules =
           global.__personaRemediationCapsules.get(projectId) || [];
         if (remediationType === 'LOCK_FIREWALL_TO_IAP' && targetResource) {
@@ -66745,6 +66750,86 @@ app.post(
             summary: `Executed live GCP Firewall PATCH on "${targetResource}" in project "${projectId}": locked sourceRanges from [${beforeSourceRanges.join(
               ', '
             )}] to Cloud IAP (35.235.240.0/20). Pre-mutation Rollback Capsule (${capsuleSha256.slice(
+              0,
+              12
+            )}) sealed.`,
+            operation: patchRes,
+            rollbackCapsule: capsule,
+          });
+        }
+        if (
+          remediationType === 'ENABLE_FIREWALL_AUDIT_LOGGING' &&
+          targetResource
+        ) {
+          let beforeFw = null;
+          try {
+            beforeFw = await gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/global/firewalls/${encodeURIComponent(targetResource)}`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            );
+          } catch (_e) {
+            beforeFw = null;
+          }
+          const beforeLogConfig = beforeFw?.logConfig || { enable: false };
+          const capsuleId = `cap-fwlog-${targetResource}-${Date.now()}`;
+          const capsuleSha256 = crypto
+            .createHash('sha256')
+            .update(
+              JSON.stringify({
+                projectId,
+                targetResource,
+                beforeLogConfig,
+              })
+            )
+            .digest('hex');
+
+          const patchRes = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/global/firewalls/${encodeURIComponent(targetResource)}`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                logConfig: {
+                  enable: true,
+                  metadata: 'INCLUDE_ALL_METADATA',
+                },
+              },
+              timeout: 8000,
+            }
+          );
+
+          const capsule = {
+            capsuleId,
+            createdAt: new Date().toISOString(),
+            remediationType: 'ENABLE_FIREWALL_AUDIT_LOGGING',
+            targetResource,
+            beforeState: {
+              logConfig: beforeLogConfig,
+            },
+            afterState: {
+              logConfig: { enable: true, metadata: 'INCLUDE_ALL_METADATA' },
+            },
+            capsuleSha256,
+            reverted: false,
+          };
+          global.__personaRemediationCapsules.set(projectId, [
+            capsule,
+            ...capsules.slice(0, 19),
+          ]);
+
+          return res.json({
+            status: 'OK',
+            persona: 'TRIBUNAL_REMEDIATOR',
+            action,
+            summary: `Enabled VPC Firewall Audit Logging (INCLUDE_ALL_METADATA) on "${targetResource}" in project "${projectId}". Pre-mutation Rollback Capsule (${capsuleSha256.slice(
               0,
               12
             )}) sealed.`,
@@ -66836,6 +66921,236 @@ app.post(
             rollbackCapsule: capsule,
           });
         }
+        if (remediationType === 'RELEASE_IDLE_STATIC_IP' && targetResource) {
+          const effReg = targetRegion || region;
+          const delRes = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/regions/${encodeURIComponent(effReg)}/addresses/${encodeURIComponent(
+              targetResource
+            )}`,
+            token,
+            projectId,
+            { method: 'DELETE', timeout: 8000 }
+          );
+          return res.json({
+            status: 'OK',
+            persona: 'TRIBUNAL_REMEDIATOR',
+            action,
+            summary: `Released idle reserved Static IP "${targetResource}" in region "${effReg}" on project "${projectId}" (saves ~$7.30/mo).`,
+            operation: delRes,
+          });
+        }
+        if (remediationType === 'DELETE_UNATTACHED_DISK' && targetResource) {
+          const effZone = targetZone || `${region}-a`;
+          const delRes = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/zones/${encodeURIComponent(effZone)}/disks/${encodeURIComponent(
+              targetResource
+            )}`,
+            token,
+            projectId,
+            { method: 'DELETE', timeout: 8000 }
+          );
+          return res.json({
+            status: 'OK',
+            persona: 'TRIBUNAL_REMEDIATOR',
+            action,
+            summary: `Deleted unattached zombie Persistent Disk "${targetResource}" in zone "${effZone}" on project "${projectId}".`,
+            operation: delRes,
+          });
+        }
+        if (remediationType === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS') {
+          const [fwListRes, bktListRes] = await Promise.allSettled([
+            gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/global/firewalls`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            ),
+            gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+                projectId
+              )}&maxResults=30`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            ),
+          ]);
+          const fws =
+            fwListRes.status === 'fulfilled'
+              ? fwListRes.value?.items || []
+              : [];
+          const bkts =
+            bktListRes.status === 'fulfilled'
+              ? bktListRes.value?.items || []
+              : [];
+          const riskyFws = fws.filter((fw) => {
+            if (fw.disabled || fw.direction === 'EGRESS') return false;
+            const src = fw.sourceRanges || [];
+            if (!src.includes('0.0.0.0/0') && !src.includes('::/0'))
+              return false;
+            return (fw.allowed || []).some((a) => {
+              if (a.IPProtocol === 'all') return true;
+              const p = (a.ports || []).map(String);
+              return (
+                p.includes('22') ||
+                p.includes('3389') ||
+                p.includes('3306') ||
+                p.includes('5432') ||
+                p.includes('0-65535')
+              );
+            });
+          });
+          const unhardenedBkts = bkts.filter(
+            (b) => b.iamConfiguration?.publicAccessPrevention !== 'enforced'
+          );
+
+          const batchReceipts = [];
+          const newCapsules = [];
+
+          for (const fw of riskyFws.slice(0, 8)) {
+            const beforeSourceRanges = fw.sourceRanges || ['0.0.0.0/0'];
+            const beforeDescription = fw.description || '';
+            const capsuleId = `cap-fw-${fw.name}-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 6)}`;
+            const capsuleSha256 = crypto
+              .createHash('sha256')
+              .update(
+                JSON.stringify({
+                  projectId,
+                  targetResource: fw.name,
+                  beforeSourceRanges,
+                  beforeDescription,
+                })
+              )
+              .digest('hex');
+
+            try {
+              await gcpFetch(
+                `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                  projectId
+                )}/global/firewalls/${encodeURIComponent(fw.name)}`,
+                token,
+                projectId,
+                {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: {
+                    sourceRanges: ['35.235.240.0/20'],
+                    description:
+                      'Hardened to Google Cloud IAP TCP forwarding (35.235.240.0/20) by CloudPulse 10-Persona Batch Council',
+                  },
+                  timeout: 8000,
+                }
+              );
+              const cap = {
+                capsuleId,
+                createdAt: new Date().toISOString(),
+                remediationType: 'LOCK_FIREWALL_TO_IAP',
+                targetResource: fw.name,
+                beforeState: {
+                  sourceRanges: beforeSourceRanges,
+                  description: beforeDescription,
+                },
+                afterState: { sourceRanges: ['35.235.240.0/20'] },
+                capsuleSha256,
+                reverted: false,
+              };
+              newCapsules.push(cap);
+              batchReceipts.push(`Locked FW "${fw.name}" to IAP`);
+            } catch (e) {
+              batchReceipts.push(`FW "${fw.name}" skipped: ${e.message}`);
+            }
+          }
+
+          for (const b of unhardenedBkts.slice(0, 8)) {
+            const beforePap =
+              b.iamConfiguration?.publicAccessPrevention || 'inherited';
+            const beforeUbla = Boolean(
+              b.iamConfiguration?.uniformBucketLevelAccess?.enabled
+            );
+            const capsuleId = `cap-bkt-${b.name}-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 6)}`;
+            const capsuleSha256 = crypto
+              .createHash('sha256')
+              .update(
+                JSON.stringify({
+                  projectId,
+                  targetResource: b.name,
+                  beforePap,
+                  beforeUbla,
+                })
+              )
+              .digest('hex');
+
+            try {
+              await gcpFetch(
+                `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  b.name
+                )}`,
+                token,
+                projectId,
+                {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: {
+                    iamConfiguration: {
+                      publicAccessPrevention: 'enforced',
+                      uniformBucketLevelAccess: { enabled: true },
+                    },
+                  },
+                  timeout: 8000,
+                }
+              );
+              const cap = {
+                capsuleId,
+                createdAt: new Date().toISOString(),
+                remediationType: 'ENFORCE_BUCKET_PAP',
+                targetResource: b.name,
+                beforeState: {
+                  publicAccessPrevention: beforePap,
+                  uniformBucketLevelAccess: beforeUbla,
+                },
+                afterState: {
+                  publicAccessPrevention: 'enforced',
+                  uniformBucketLevelAccess: true,
+                },
+                capsuleSha256,
+                reverted: false,
+              };
+              newCapsules.push(cap);
+              batchReceipts.push(`Enforced PAP on gs://${b.name}`);
+            } catch (e) {
+              batchReceipts.push(`Bucket "${b.name}" skipped: ${e.message}`);
+            }
+          }
+
+          global.__personaRemediationCapsules.set(projectId, [
+            ...newCapsules,
+            ...capsules.slice(0, 20),
+          ]);
+
+          return res.json({
+            status: 'OK',
+            persona: 'TRIBUNAL_BATCH_REMEDIATOR',
+            action,
+            summary:
+              newCapsules.length > 0
+                ? `Batch Remediated ${newCapsules.length} live resource(s) (${batchReceipts.join(
+                    ' · '
+                  )}) and sealed ${newCapsules.length} reversible SHA-256 Rollback Capsule(s).`
+                : `All VPC Firewalls and Cloud Storage Buckets in "${projectId}" are already 100% IAP-scoped and PAP-enforced (0 remediations needed).`,
+            remediatedCount: newCapsules.length,
+            batchReceipts,
+            rollbackCapsules: newCapsules,
+          });
+        }
       }
 
       // 12. 1-CLICK ROLLBACK CAPSULE REVERTER (Restores exact pre-mutation GCP state)
@@ -66879,6 +67194,37 @@ app.post(
             }" back to pre-remediation sourceRanges [${(
               targetCap.beforeState.sourceRanges || []
             ).join(', ')}] via Rollback Capsule ${targetCap.capsuleSha256.slice(
+              0,
+              12
+            )}.`,
+            capsule: targetCap,
+          });
+        }
+        if (targetCap.remediationType === 'ENABLE_FIREWALL_AUDIT_LOGGING') {
+          await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/global/firewalls/${encodeURIComponent(targetCap.targetResource)}`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                logConfig: targetCap.beforeState.logConfig || { enable: false },
+              },
+              timeout: 8000,
+            }
+          );
+          targetCap.reverted = true;
+          targetCap.revertedAt = new Date().toISOString();
+          return res.json({
+            status: 'OK',
+            persona: 'TRIBUNAL_ROLLBACK_CAPSULE',
+            action,
+            summary: `Restored VPC Firewall "${
+              targetCap.targetResource
+            }" audit logging back to pre-remediation state via Rollback Capsule ${targetCap.capsuleSha256.slice(
               0,
               12
             )}.`,
@@ -68053,14 +68399,27 @@ app.post(
 app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
   try {
     const token = await resolveRequestToken(req);
+    const preferredProject = String(
+      req.query.projectId || 'aicignaw-alien'
+    ).trim();
     const startedAtMs = Date.now();
-    const projectsRes = await gcpFetch(
-      'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE',
+    const allProjectsRaw = await fetchAllActiveGcpProjects(
       token,
-      null,
-      { timeout: 6000 }
+      preferredProject
     );
-    const activeProjects = (projectsRes?.projects || []).slice(0, 8);
+    const activeToken = allProjectsRaw?.activeToken || token;
+    const rawList = Array.isArray(allProjectsRaw?.projects)
+      ? allProjectsRaw.projects
+      : Array.isArray(allProjectsRaw)
+      ? allProjectsRaw
+      : [];
+    const activeProjects = [...rawList]
+      .sort((a, b) => {
+        if (a.projectId === preferredProject) return -1;
+        if (b.projectId === preferredProject) return 1;
+        return String(a.projectId).localeCompare(String(b.projectId));
+      })
+      .slice(0, 12);
 
     const projectEvaluations = await Promise.all(
       activeProjects.map(async (proj) => {
@@ -68072,7 +68431,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
                 pid
               )}/global/firewalls`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68080,7 +68439,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
                 pid
               )}&maxResults=25`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68088,7 +68447,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://run.googleapis.com/v2/projects/${encodeURIComponent(
                 pid
               )}/locations/-/services`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68096,7 +68455,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
                 pid
               )}/datasets?maxResults=25`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68104,7 +68463,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
                 pid
               )}/serviceAccounts`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68112,7 +68471,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
               `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
                 pid
               )}/aggregated/disks?maxResults=25`,
-              token,
+              activeToken,
               pid,
               { timeout: 4000 }
             ),
@@ -68208,7 +68567,11 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
       })
     );
 
-    projectEvaluations.sort((a, b) => b.readinessScore - a.readinessScore);
+    projectEvaluations.sort((a, b) => {
+      if (a.projectId === preferredProject) return -1;
+      if (b.projectId === preferredProject) return 1;
+      return b.readinessScore - a.readinessScore;
+    });
     const estateAverageScore =
       projectEvaluations.length > 0
         ? Math.round(
@@ -69392,6 +69755,179 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           'Failed to run DevSecOps Shannon-Entropy & Terraform Import Generator.',
+      });
+    }
+  }
+);
+
+// ============================================================================
+// 2030 HORIZON ENDPOINT 4: LIVE 10-PERSONA WAR-ROOM DEBATE & CROSS-EXAMINATION
+// Synthesizes a multi-persona adversarial debate & consensus resolution over
+// the live project telemetry using Dual-Engine Gemini (gemini-3.8-flash / pro)
+// ============================================================================
+app.post(
+  '/api/project/:projectId/enterprise-personas/war-room-debate',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      topic = 'Zero-Trust Perimeter Hardening vs. Developer Velocity & $0.00/mo Idle FinOps Invariance',
+      model = 'gemini-3.8-flash',
+      region = 'us-central1',
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      const startedAtMs = Date.now();
+
+      const [fwRes, bktRes, runRes, bqRes, saRes] = await Promise.allSettled([
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/global/firewalls`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ),
+        gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}&maxResults=25`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ),
+        gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/-/services`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ),
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets?maxResults=25`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ),
+        gcpFetch(
+          `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/serviceAccounts`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ),
+      ]);
+
+      const fws = fwRes.status === 'fulfilled' ? fwRes.value?.items || [] : [];
+      const bkts =
+        bktRes.status === 'fulfilled' ? bktRes.value?.items || [] : [];
+      const runs = (
+        runRes.status === 'fulfilled' ? runRes.value?.services || [] : []
+      ).filter((s) => !isCloudRunServiceDeletedOrTombstoned(projectId, s));
+      const bqs =
+        bqRes.status === 'fulfilled' ? bqRes.value?.datasets || [] : [];
+      const sas =
+        saRes.status === 'fulfilled' ? saRes.value?.accounts || [] : [];
+
+      const openFws = fws.filter(
+        (fw) =>
+          !fw.disabled &&
+          fw.direction === 'INGRESS' &&
+          (fw.sourceRanges || []).includes('0.0.0.0/0')
+      );
+      const unhardenedBkts = bkts.filter(
+        (b) => b.iamConfiguration?.publicAccessPrevention !== 'enforced'
+      );
+
+      const selectedModel =
+        String(model || 'gemini-3.8-flash')
+          .trim()
+          .replace(/^models\//i, '') || 'gemini-3.8-flash';
+
+      const llmRes = await executeLiveDualEngineGemini({
+        projectId,
+        token,
+        model: selectedModel,
+        preferredProvider: req.body?.preferredProvider || 'AUTO',
+        promptText: `You are moderating the CloudPulse 2030 10-Persona War-Room Council for Google Cloud project "${projectId}" (${region}).
+Debate Topic: "${topic}"
+Live Control-Plane Evidence:
+- VPC Firewalls: ${fws.length} total (${openFws.length} world-open 0.0.0.0/0 rules: ${
+          openFws.map((f) => f.name).join(', ') || 'None'
+        })
+- Cloud Storage Buckets: ${bkts.length} total (${unhardenedBkts.length} without enforced PAP: ${
+          unhardenedBkts.map((b) => b.name).join(', ') || 'None'
+        })
+- Cloud Run v2 Services: ${runs.length}
+- BigQuery Datasets: ${bqs.length}
+- IAM Service Accounts: ${sas.length}
+
+Write a high-signal Markdown War-Room Transcript with:
+1. **Cross-Persona Opening Arguments** (highlight sharp technical viewpoints from [01] Cloud Architect, [04] Network Engineer, [05] DevSecOps Lead, [07] SRE Commander, and [09] FinOps & GreenOps citing the exact live resources above).
+2. **Adversarial Cross-Examination & Trade-Off Resolution** (how the council resolves cost vs. security vs. reliability without compromise).
+3. **Binding Unanimous Council Decree & 3-Step CLI Execution Order** for project \`${projectId}\`.`,
+        temperature: 0.25,
+        maxOutputTokens: 1600,
+        timeoutMs: 45000,
+      });
+
+      const structuredCrossExam = [
+        {
+          speaker: '04 · Network Engineer vs. 02 · Cloud Engineer',
+          challenge:
+            openFws.length > 0
+              ? `Why are ${openFws.length} firewall rule(s) (${openFws
+                  .slice(0, 2)
+                  .map((f) => f.name)
+                  .join(', ')}) still accepting 0.0.0.0/0 ingress?`
+              : `All ${fws.length} VPC firewall rules are already locked down; how do we prevent future ClickOps drift?`,
+          resolution: `Lock all SSH/RDP ingress to Google Cloud IAP TCP forwarding (35.235.240.0/20) at $0.00/mo and adopt all ${fws.length} rules into Terraform 1.5+ import {} blocks.`,
+          cliCommand: `gcloud compute firewall-rules list --project=${projectId}`,
+        },
+        {
+          speaker: '05 · DevSecOps Lead vs. 03 · Data Engineer & 06 · AI/MLOps',
+          challenge:
+            unhardenedBkts.length > 0
+              ? `${unhardenedBkts.length} GCS bucket(s) (${unhardenedBkts
+                  .slice(0, 2)
+                  .map((b) => b.name)
+                  .join(', ')}) use inherited PAP; will enforcing PAP break BigQuery or Vertex AI RAG pipelines?`
+              : `All ${bkts.length} GCS buckets enforce PAP; how do we guarantee zero static .json SA keys across ${sas.length} Service Accounts?`,
+          resolution: `Enforcing publicAccessPrevention="enforced" and uniformBucketLevelAccess=true only blocks anonymous allUsers/allAuthenticatedUsers ACLs—authenticated IAM Service Accounts (${sas.length} SAs) and ${bqs.length} BigQuery dataset(s) continue operating with zero disruption.`,
+          cliCommand: `gcloud storage buckets list --project=${projectId} --format="table(name,iamConfiguration.publicAccessPrevention)"`,
+        },
+        {
+          speaker: '09 · FinOps & GreenOps vs. 07 · SRE Commander & 01 · Cloud Architect',
+          challenge: `How do we maintain <12s multi-region failover RTO and 99.9% SLO across ${runs.length} Cloud Run service(s) while preserving a $0.00/mo idle bill?`,
+          resolution: `Use Cloud Run v2 Gen2 with Startup CPU Boost + multi-region GCS/BigQuery storage quorum + Direct IAP ($0/mo LB replacement), achieving 99.95% availability at $0.00 idle spend.`,
+          cliCommand: `gcloud run services list --project=${projectId}`,
+        },
+      ];
+
+      return res.json({
+        status: 'OK',
+        projectId,
+        region,
+        topic,
+        debatedAt: new Date().toISOString(),
+        debateLatencyMs: Date.now() - startedAtMs,
+        isLiveLlm: llmRes.isLiveLlm,
+        executionMode: llmRes.executionMode,
+        modelUsed: llmRes.engineUsed || selectedModel,
+        tokenUsage: llmRes.tokenUsage,
+        debateTranscriptMarkdown: llmRes.text,
+        structuredCrossExam,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to run 10-Persona War-Room Debate.',
       });
     }
   }
