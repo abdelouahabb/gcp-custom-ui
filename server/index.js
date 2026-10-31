@@ -52734,6 +52734,9 @@ async function computeProjectAutopilotState(projectId, token) {
     const allowedStr = JSON.stringify(fw.allowed || []);
     return /"22"|"3389"|"3306"|"5432"|"6379"|"27017"|"all"/i.test(allowedStr);
   });
+  const unloggedFirewalls = firewalls.filter(
+    (fw) => !fw.disabled && !fw.logConfig?.enable
+  );
 
   // Extract Cloud Run Services
   const runServices = (runRes.data?.services || []).map((s) => {
@@ -52751,6 +52754,10 @@ async function computeProjectAutopilotState(projectId, token) {
       invokerIamDisabled: Boolean(s.invokerIamDisabled),
     };
   });
+  const nonZeroRunServices = runServices.filter(
+    (s) => s.minInstances > 0 || !s.cpuIdle
+  );
+  const runningVms = vms.filter((v) => v.status === 'RUNNING');
 
   // Extract Buckets
   const buckets = (bucketsRes.data?.items || []).map((b) => ({
@@ -52780,7 +52787,7 @@ async function computeProjectAutopilotState(projectId, token) {
     displayName: a.displayName || a.email,
   }));
 
-  // Synthesize actionable Self-Healing Flight Maneuvers
+  // Synthesize actionable Self-Healing Flight Maneuvers (8 Maneuver Types)
   const maneuvers = [];
 
   riskyFirewalls.forEach((fw) => {
@@ -52789,6 +52796,7 @@ async function computeProjectAutopilotState(projectId, token) {
       maneuverType: 'LOCK_FIREWALL_TO_IAP',
       vector: 'HULL_INTEGRITY',
       severity: 'CRITICAL',
+      safeBatchEligible: true,
       title: `Lock World-Open Firewall "${fw.name}" to Google IAP (35.235.240.0/20)`,
       targetResource: fw.name,
       location: 'global',
@@ -52800,12 +52808,31 @@ async function computeProjectAutopilotState(projectId, token) {
     });
   });
 
+  unloggedFirewalls.slice(0, 4).forEach((fw) => {
+    maneuvers.push({
+      id: `fw-log-${fw.name}`,
+      maneuverType: 'ENABLE_FIREWALL_AUDIT_LOGGING',
+      vector: 'HULL_INTEGRITY',
+      severity: 'MEDIUM',
+      safeBatchEligible: true,
+      title: `Enable VPC Firewall Audit Telemetry Logging on "${fw.name}"`,
+      targetResource: fw.name,
+      location: 'global',
+      estimatedMonthlySavingsUsd: 0,
+      securityGainPts: 6,
+      apiEndpoint: `PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fw.name}`,
+      cliEquivalent: `gcloud compute firewall-rules update ${fw.name} --enable-logging --logging-metadata=include-all --project=${projectId}`,
+      payload: { ruleName: fw.name },
+    });
+  });
+
   unhardenedBuckets.slice(0, 6).forEach((b) => {
     maneuvers.push({
       id: `bkt-harden-${b.name}`,
       maneuverType: 'HARDEN_STORAGE_BUCKET',
       vector: 'DATA_GRAVITY_SHIELD',
       severity: 'HIGH',
+      safeBatchEligible: true,
       title: `Enforce Public-Access Prevention, Uniform IAM & 7d Soft-Delete on gs://${b.name}`,
       targetResource: b.name,
       location: b.location,
@@ -52823,6 +52850,7 @@ async function computeProjectAutopilotState(projectId, token) {
       maneuverType: 'RELEASE_IDLE_STATIC_IP',
       vector: 'AERODYNAMIC_DRAG',
       severity: 'MEDIUM',
+      safeBatchEligible: false,
       title: `Release Unattached Static IPv4 "${ip.name}" (${ip.address})`,
       targetResource: ip.name,
       location: ip.region,
@@ -52841,6 +52869,7 @@ async function computeProjectAutopilotState(projectId, token) {
       maneuverType: 'DELETE_UNATTACHED_DISK',
       vector: 'AERODYNAMIC_DRAG',
       severity: 'MEDIUM',
+      safeBatchEligible: false,
       title: `Reclaim Orphaned ${d.sizeGb}GB Persistent Disk "${d.name}"`,
       targetResource: d.name,
       location: d.zone,
@@ -52852,12 +52881,49 @@ async function computeProjectAutopilotState(projectId, token) {
     });
   });
 
+  nonZeroRunServices.forEach((svc) => {
+    maneuvers.push({
+      id: `run-zero-${svc.region}-${svc.name}`,
+      maneuverType: 'SCALE_CLOUD_RUN_TO_ZERO',
+      vector: 'THRUSTER_EFFICIENCY',
+      severity: 'MEDIUM',
+      safeBatchEligible: false,
+      title: `Enable Scale-to-Zero & Request-Scoped CPU on Cloud Run "${svc.name}" (${svc.region})`,
+      targetResource: `${svc.name} (${svc.region})`,
+      location: svc.region,
+      estimatedMonthlySavingsUsd: Number((Math.max(1, svc.minInstances) * 18.5).toFixed(2)),
+      securityGainPts: 3,
+      apiEndpoint: `PATCH https://run.googleapis.com/v2/projects/${projectId}/locations/${svc.region}/services/${svc.name}`,
+      cliEquivalent: `gcloud run services update ${svc.name} --region=${svc.region} --min-instances=0 --cpu-throttling --project=${projectId}`,
+      payload: { serviceName: svc.name, region: svc.region },
+    });
+  });
+
+  runningVms.slice(0, 4).forEach((vm) => {
+    maneuvers.push({
+      id: `vm-stop-${vm.zone}-${vm.name}`,
+      maneuverType: 'STOP_IDLE_COMPUTE_VM',
+      vector: 'THRUSTER_EFFICIENCY',
+      severity: 'LOW',
+      safeBatchEligible: false,
+      title: `Stop Running Compute VM "${vm.name}" (${vm.machineType} in ${vm.zone}) — Preserves Disk`,
+      targetResource: `${vm.name} (${vm.zone})`,
+      location: vm.zone,
+      estimatedMonthlySavingsUsd: 24.5,
+      securityGainPts: 5,
+      apiEndpoint: `POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${vm.zone}/instances/${vm.name}/stop`,
+      cliEquivalent: `gcloud compute instances stop ${vm.name} --zone=${vm.zone} --project=${projectId}`,
+      payload: { instanceName: vm.name, zone: vm.zone },
+    });
+  });
+
   // Always provide a safe, zero-cost Autopilot Canary Lakehouse Calibration maneuver
   maneuvers.push({
     id: `autopilot-canary-dataset-${projectId}`,
     maneuverType: 'CALIBRATE_AUTOPILOT_DATASET',
     vector: 'AVIONICS_READINESS',
     severity: 'READY',
+    safeBatchEligible: true,
     title: `Calibrate Zero-Gravity Autopilot Telemetry Dataset (autopilot_flight_deck_2026)`,
     targetResource: `${projectId}.autopilot_flight_deck_2026`,
     location: 'US',
@@ -52868,9 +52934,19 @@ async function computeProjectAutopilotState(projectId, token) {
     payload: { datasetId: 'autopilot_flight_deck_2026', location: 'US' },
   });
 
+  const totalEstimatedMonthlySavingsUsd = Number(
+    maneuvers
+      .reduce((acc, m) => acc + Number(m.estimatedMonthlySavingsUsd || 0), 0)
+      .toFixed(2)
+  );
+  const totalSecurityGainPts = maneuvers.reduce(
+    (acc, m) => acc + Number(m.securityGainPts || 0),
+    0
+  );
+
   const dragDeduction = Math.min(
     30,
-    unattachedDisks.length * 6 + idleStaticIps.length * 8
+    unattachedDisks.length * 6 + idleStaticIps.length * 8 + nonZeroRunServices.length * 4
   );
   const hullDeduction = Math.min(
     45,
@@ -52884,7 +52960,9 @@ async function computeProjectAutopilotState(projectId, token) {
     unattachedDisks: unattachedDisks.map((d) => d.name),
     idleStaticIps: idleStaticIps.map((i) => i.name),
     riskyFirewalls: riskyFirewalls.map((f) => f.name),
+    unloggedFirewalls: unloggedFirewalls.map((f) => f.name),
     unhardenedBuckets: unhardenedBuckets.map((b) => b.name),
+    nonZeroRunServices: nonZeroRunServices.map((s) => `${s.name}:${s.minInstances}`),
     datasets: datasets.map((d) => d.datasetId),
   });
   const stateSha256 = crypto
@@ -52896,15 +52974,15 @@ async function computeProjectAutopilotState(projectId, token) {
     {
       id: 'HULL_INTEGRITY',
       label: 'Hull Integrity (Zero-Trust Perimeter)',
-      score: Math.max(20, 100 - riskyFirewalls.length * 18),
-      metric: `${riskyFirewalls.length} open 0.0.0.0/0 critical rules / ${firewalls.length} total`,
+      score: Math.max(20, 100 - riskyFirewalls.length * 18 - unloggedFirewalls.length * 2),
+      metric: `${riskyFirewalls.length} open 0.0.0.0/0 critical · ${unloggedFirewalls.length} unlogged / ${firewalls.length} rules`,
       status: riskyFirewalls.length === 0 ? 'OPTIMAL' : 'ACTION_REQUIRED',
     },
     {
       id: 'AERODYNAMIC_DRAG',
       label: 'Aerodynamic Drag (FinOps Waste)',
       score: Math.max(30, 100 - (unattachedDisks.length + idleStaticIps.length) * 12),
-      metric: `${unattachedDisks.length} orphan disks · ${idleStaticIps.length} idle IPs`,
+      metric: `${unattachedDisks.length} orphan disks · ${idleStaticIps.length} idle IPs ($${totalEstimatedMonthlySavingsUsd}/mo reclaimable)`,
       status:
         unattachedDisks.length + idleStaticIps.length === 0
           ? 'OPTIMAL'
@@ -52920,9 +52998,9 @@ async function computeProjectAutopilotState(projectId, token) {
     {
       id: 'THRUSTER_EFFICIENCY',
       label: 'Thruster Scale-to-Zero Efficiency',
-      score: 96,
-      metric: `${runServices.length} Cloud Run services · ${vms.length} Compute VMs`,
-      status: 'OPTIMAL',
+      score: Math.max(50, 100 - nonZeroRunServices.length * 10 - runningVms.length * 4),
+      metric: `${runServices.length} Cloud Run (${nonZeroRunServices.length} min>0) · ${vms.length} VMs (${runningVms.length} running)`,
+      status: nonZeroRunServices.length === 0 ? 'OPTIMAL' : 'TUNE_AVAILABLE',
     },
     {
       id: 'VAULT_CRYPTO_POSTURE',
@@ -52946,14 +53024,19 @@ async function computeProjectAutopilotState(projectId, token) {
     scanWallTimeMs: Date.now() - t0,
     flightReadinessScore,
     stateSha256,
+    totalEstimatedMonthlySavingsUsd,
+    totalSecurityGainPts,
     vectors,
     inventorySummary: {
       vmsCount: vms.length,
+      runningVmsCount: runningVms.length,
       unattachedDisksCount: unattachedDisks.length,
       idleStaticIpsCount: idleStaticIps.length,
       firewallsCount: firewalls.length,
       riskyFirewallsCount: riskyFirewalls.length,
+      unloggedFirewallsCount: unloggedFirewalls.length,
       runServicesCount: runServices.length,
+      nonZeroRunServicesCount: nonZeroRunServices.length,
       bucketsCount: buckets.length,
       unhardenedBucketsCount: unhardenedBuckets.length,
       datasetsCount: datasets.length,
@@ -52969,7 +53052,7 @@ async function computeProjectAutopilotState(projectId, token) {
 app.get('/api/project/:projectId/wave12/autopilot-radar', async (req, res) => {
   const { projectId } = req.params;
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }
@@ -52987,7 +53070,7 @@ app.post('/api/project/:projectId/wave12/autopilot-execute', async (req, res) =>
   const t0 = Date.now();
 
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }
@@ -52999,56 +53082,126 @@ app.post('/api/project/:projectId/wave12/autopilot-execute', async (req, res) =>
       'x-goog-user-project': projectId,
     };
 
-    let executionSummary = '';
-    let targetResource = '';
+    const executeSingleManeuver = async (type, p = {}) => {
+      if (type === 'LOCK_FIREWALL_TO_IAP') {
+        const ruleName = p.ruleName;
+        await axios.patch(
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${encodeURIComponent(ruleName)}`,
+          { sourceRanges: ['35.235.240.0/20'] },
+          { headers, timeout: 12000 }
+        );
+        return {
+          targetResource: ruleName,
+          summary: `Locked firewall rule "${ruleName}" sourceRanges to Google Cloud IAP (35.235.240.0/20).`,
+        };
+      }
+      if (type === 'ENABLE_FIREWALL_AUDIT_LOGGING') {
+        const ruleName = p.ruleName;
+        await axios.patch(
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${encodeURIComponent(ruleName)}`,
+          {
+            logConfig: {
+              enable: true,
+              metadata: 'INCLUDE_ALL_METADATA',
+            },
+          },
+          { headers, timeout: 12000 }
+        );
+        return {
+          targetResource: ruleName,
+          summary: `Enabled VPC Firewall Audit Telemetry Logging (INCLUDE_ALL_METADATA) on "${ruleName}".`,
+        };
+      }
+      if (type === 'HARDEN_STORAGE_BUCKET') {
+        const bucketName = p.bucketName;
+        await axios.patch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucketName)}`,
+          {
+            iamConfiguration: {
+              publicAccessPrevention: 'enforced',
+              uniformBucketLevelAccess: { enabled: true },
+            },
+            softDeletePolicy: {
+              retentionDurationSeconds: 604800,
+            },
+          },
+          { headers, timeout: 12000 }
+        );
+        return {
+          targetResource: `gs://${bucketName}`,
+          summary: `Enforced Public Access Prevention, Uniform Bucket-Level IAM, and 7-day Soft-Delete on gs://${bucketName}.`,
+        };
+      }
+      if (type === 'RELEASE_IDLE_STATIC_IP') {
+        const { addressName, region = 'us-central1' } = p;
+        await axios.delete(
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/regions/${encodeURIComponent(region)}/addresses/${encodeURIComponent(addressName)}`,
+          { headers, timeout: 12000 }
+        );
+        return {
+          targetResource: `${addressName} (${region})`,
+          summary: `Released unattached static IPv4 address "${addressName}" in ${region} (saving $7.30/mo).`,
+        };
+      }
+      if (type === 'DELETE_UNATTACHED_DISK') {
+        const { diskName, zone = 'us-central1-a' } = p;
+        await axios.delete(
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${encodeURIComponent(zone)}/disks/${encodeURIComponent(diskName)}`,
+          { headers, timeout: 12000 }
+        );
+        return {
+          targetResource: `${diskName} (${zone})`,
+          summary: `Deleted unattached Persistent Disk "${diskName}" in ${zone}.`,
+        };
+      }
+      if (type === 'SCALE_CLOUD_RUN_TO_ZERO') {
+        const { serviceName, region = 'us-central1' } = p;
+        const svcUrl = `https://run.googleapis.com/v2/projects/${projectId}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(serviceName)}`;
+        const currentRes = await axios.get(svcUrl, { headers, timeout: 10000 });
+        const svc = currentRes.data || {};
+        const template = svc.template || {};
+        const containers = (template.containers || []).map((c) => ({
+          ...c,
+          resources: {
+            ...(c.resources || {}),
+            cpuIdle: true,
+          },
+        }));
+        await axios.patch(
+          `${svcUrl}?updateMask=template.scaling.minInstanceCount,template.containers`,
+          {
+            template: {
+              ...template,
+              scaling: {
+                ...(template.scaling || {}),
+                minInstanceCount: 0,
+              },
+              containers,
+            },
+          },
+          { headers, timeout: 15000 }
+        );
+        return {
+          targetResource: `${serviceName} (${region})`,
+          summary: `Updated Cloud Run service "${serviceName}" (${region}) to minInstanceCount=0 and request-scoped CPU throttling.`,
+        };
+      }
+      if (type === 'STOP_IDLE_COMPUTE_VM') {
+        const { instanceName, zone = 'us-central1-a' } = p;
+        await axios.post(
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(instanceName)}/stop`,
+          {},
+          { headers, timeout: 15000 }
+        );
+        return {
+          targetResource: `${instanceName} (${zone})`,
+          summary: `Initiated graceful stop on Compute Engine VM "${instanceName}" in ${zone} (boot disk preserved).`,
+        };
+      }
 
-    if (maneuverType === 'LOCK_FIREWALL_TO_IAP') {
-      const ruleName = payload.ruleName;
-      targetResource = ruleName;
-      await axios.patch(
-        `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${encodeURIComponent(ruleName)}`,
-        { sourceRanges: ['35.235.240.0/20'] },
-        { headers, timeout: 12000 }
-      );
-      executionSummary = `Locked firewall rule "${ruleName}" sourceRanges to Google Cloud IAP (35.235.240.0/20).`;
-    } else if (maneuverType === 'HARDEN_STORAGE_BUCKET') {
-      const bucketName = payload.bucketName;
-      targetResource = `gs://${bucketName}`;
-      await axios.patch(
-        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucketName)}`,
-        {
-          iamConfiguration: {
-            publicAccessPrevention: 'enforced',
-            uniformBucketLevelAccess: { enabled: true },
-          },
-          softDeletePolicy: {
-            retentionDurationSeconds: 604800,
-          },
-        },
-        { headers, timeout: 12000 }
-      );
-      executionSummary = `Enforced Public Access Prevention, Uniform Bucket-Level IAM, and 7-day Soft-Delete on gs://${bucketName}.`;
-    } else if (maneuverType === 'RELEASE_IDLE_STATIC_IP') {
-      const { addressName, region = 'us-central1' } = payload;
-      targetResource = `${addressName} (${region})`;
-      await axios.delete(
-        `https://compute.googleapis.com/compute/v1/projects/${projectId}/regions/${encodeURIComponent(region)}/addresses/${encodeURIComponent(addressName)}`,
-        { headers, timeout: 12000 }
-      );
-      executionSummary = `Released unattached static IPv4 address "${addressName}" in ${region} (saving $7.30/mo).`;
-    } else if (maneuverType === 'DELETE_UNATTACHED_DISK') {
-      const { diskName, zone = 'us-central1-a' } = payload;
-      targetResource = `${diskName} (${zone})`;
-      await axios.delete(
-        `https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${encodeURIComponent(zone)}/disks/${encodeURIComponent(diskName)}`,
-        { headers, timeout: 12000 }
-      );
-      executionSummary = `Deleted unattached Persistent Disk "${diskName}" in ${zone}.`;
-    } else {
-      // CALIBRATE_AUTOPILOT_DATASET
-      const datasetId = payload.datasetId || 'autopilot_flight_deck_2026';
-      const location = payload.location || 'US';
-      targetResource = `${projectId}:${datasetId}`;
+      // Default: CALIBRATE_AUTOPILOT_DATASET
+      const datasetId = p.datasetId || 'autopilot_flight_deck_2026';
+      const location = p.location || 'US';
       try {
         await axios.post(
           `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets`,
@@ -53060,7 +53213,10 @@ app.post('/api/project/:projectId/wave12/autopilot-execute', async (req, res) =>
           },
           { headers, timeout: 12000 }
         );
-        executionSummary = `Provisioned BigQuery dataset "${projectId}:${datasetId}" (${location}) for Autopilot telemetry.`;
+        return {
+          targetResource: `${projectId}:${datasetId}`,
+          summary: `Provisioned BigQuery dataset "${projectId}:${datasetId}" (${location}) for Autopilot telemetry.`,
+        };
       } catch (err) {
         if (err.response?.status === 409) {
           await axios.patch(
@@ -53074,11 +53230,38 @@ app.post('/api/project/:projectId/wave12/autopilot-execute', async (req, res) =>
             },
             { headers, timeout: 12000 }
           );
-          executionSummary = `Updated & calibrated existing BigQuery dataset "${projectId}:${datasetId}" (${location}).`;
-        } else {
-          throw err;
+          return {
+            targetResource: `${projectId}:${datasetId}`,
+            summary: `Updated & calibrated existing BigQuery dataset "${projectId}:${datasetId}" (${location}).`,
+          };
+        }
+        throw err;
+      }
+    };
+
+    let executionSummary = '';
+    let targetResource = '';
+
+    if (maneuverType === 'BATCH_RECONCILE_SAFE_DRIFT') {
+      const safeManeuvers = (beforeState.maneuvers || []).filter((m) => m.safeBatchEligible);
+      const summaries = [];
+      for (const m of safeManeuvers) {
+        try {
+          const r = await executeSingleManeuver(m.maneuverType, m.payload);
+          summaries.push(r.summary);
+        } catch (batchErr) {
+          summaries.push(
+            `Skipped ${m.targetResource}: ${batchErr.response?.data?.error?.message || batchErr.message}`
+          );
         }
       }
+      targetResource = `${safeManeuvers.length} Safe Resources`;
+      executionSummary =
+        summaries.join(' | ') || 'Calibrated Autopilot Safe Drift Baseline.';
+    } else {
+      const singleRes = await executeSingleManeuver(maneuverType, payload);
+      targetResource = singleRes.targetResource;
+      executionSummary = singleRes.summary;
     }
 
     const afterState = await computeProjectAutopilotState(projectId, token);
@@ -53099,6 +53282,14 @@ app.post('/api/project/:projectId/wave12/autopilot-execute', async (req, res) =>
     receipts.unshift(receipt);
     if (receipts.length > 25) receipts.length = 25;
 
+    recordFlightEvent(projectId, {
+      studio: 'WAVE12_ROADSTER',
+      action: `AUTOPILOT_${maneuverType}`,
+      target: targetResource,
+      summary: executionSummary,
+      sha256: afterState.stateSha256,
+    });
+
     return res.json({
       ok: true,
       projectId,
@@ -53117,7 +53308,7 @@ app.get('/api/project/:projectId/wave12/teleport-inventory', async (req, res) =>
   const { projectId } = req.params;
   const t0 = Date.now();
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }
@@ -53126,14 +53317,9 @@ app.get('/api/project/:projectId/wave12/teleport-inventory', async (req, res) =>
       'x-goog-user-project': projectId,
     };
 
-    const [projectsRes, bucketsRes, datasetsRes, secretsRes, runRes] =
+    const [allProjectsRaw, bucketsRes, datasetsRes, secretsRes, runRes, fwRes] =
       await Promise.all([
-        axios
-          .get('https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE', {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 8000,
-          })
-          .catch(() => ({ data: { projects: [] } })),
+        fetchAllActiveGcpProjects(token, projectId).catch(() => []),
         axios
           .get(`https://storage.googleapis.com/storage/v1/b?project=${projectId}`, {
             headers,
@@ -53158,13 +53344,30 @@ app.get('/api/project/:projectId/wave12/teleport-inventory', async (req, res) =>
             timeout: 8000,
           })
           .catch(() => ({ data: { services: [] } })),
+        axios
+          .get(`https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls`, {
+            headers,
+            timeout: 8000,
+          })
+          .catch(() => ({ data: { items: [] } })),
       ]);
 
-    const activeProjects = (projectsRes.data?.projects || []).map((p) => ({
-      projectId: p.projectId,
-      name: p.name || p.projectId,
-      projectNumber: p.projectNumber,
-    }));
+    const projectsListArr = Array.isArray(allProjectsRaw)
+      ? allProjectsRaw
+      : Array.isArray(allProjectsRaw?.projects)
+      ? allProjectsRaw.projects
+      : [];
+    const activeProjects = projectsListArr
+      .map((p) => ({
+        projectId: p.projectId,
+        name: p.name || p.projectId,
+        projectNumber: p.projectNumber,
+      }))
+      .sort((a, b) => {
+        if (a.projectId === projectId) return -1;
+        if (b.projectId === projectId) return 1;
+        return String(a.projectId).localeCompare(String(b.projectId));
+      });
 
     const buckets = (bucketsRes.data?.items || []).map((b) => ({
       name: b.name,
@@ -53192,6 +53395,13 @@ app.get('/api/project/:projectId/wave12/teleport-inventory', async (req, res) =>
       };
     });
 
+    const firewalls = (fwRes.data?.items || []).map((fw) => ({
+      name: fw.name,
+      direction: fw.direction || 'INGRESS',
+      priority: fw.priority ?? 1000,
+      sourceRanges: fw.sourceRanges || [],
+    }));
+
     return res.json({
       ok: true,
       sourceProjectId: projectId,
@@ -53201,6 +53411,7 @@ app.get('/api/project/:projectId/wave12/teleport-inventory', async (req, res) =>
       datasets,
       secrets,
       cloudRunServices,
+      firewalls,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -53220,7 +53431,7 @@ app.post('/api/project/:projectId/wave12/cross-project-teleport', async (req, re
   const t0 = Date.now();
 
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }
@@ -53237,6 +53448,44 @@ app.post('/api/project/:projectId/wave12/cross-project-teleport', async (req, re
     };
 
     const steps = [];
+    const buildTeleportResponse = (srcName, dstName) => {
+      const teleportSha256 = crypto
+        .createHash('sha256')
+        .update(
+          JSON.stringify({
+            teleportKind,
+            sourceProjectId,
+            destProjectId,
+            srcName,
+            dstName,
+            steps,
+            ts: Date.now(),
+          })
+        )
+        .digest('hex');
+
+      recordFlightEvent(sourceProjectId, {
+        studio: 'WAVE12_ROADSTER',
+        action: `TELEPORT_${teleportKind}`,
+        target: `${sourceProjectId}:${srcName} -> ${destProjectId}:${dstName}`,
+        summary: steps[steps.length - 1] || `Teleported ${srcName} to ${destProjectId}:${dstName}`,
+        sha256: teleportSha256,
+      });
+
+      return {
+        ok: true,
+        teleportKind,
+        sourceProjectId,
+        destProjectId,
+        sourceResourceName: srcName,
+        destResourceName: dstName,
+        location,
+        teleportSha256,
+        timestamp: new Date().toISOString(),
+        latencyMs: Date.now() - t0,
+        steps,
+      };
+    };
 
     if (teleportKind === 'GCS_BUCKET_CLONE') {
       const srcBucket = sourceResourceName;
@@ -53291,16 +53540,7 @@ app.post('/api/project/:projectId/wave12/cross-project-teleport', async (req, re
         `Zero-Gravity Backbone Rewrite complete: ${copiedCount} live object(s) teleported from gs://${srcBucket || '(new)'} -> gs://${dstBucket}.`
       );
 
-      return res.json({
-        ok: true,
-        teleportKind,
-        sourceProjectId,
-        destProjectId,
-        sourceResourceName: srcBucket,
-        destResourceName: dstBucket,
-        latencyMs: Date.now() - t0,
-        steps,
-      });
+      return res.json(buildTeleportResponse(srcBucket, dstBucket));
     }
 
     if (teleportKind === 'SECRET_MANAGER_SYNC') {
@@ -53350,16 +53590,178 @@ app.post('/api/project/:projectId/wave12/cross-project-teleport', async (req, re
       );
       steps.push(`Sealed new Secret Version "${verRes.data?.name || 'latest'}" in "${destProjectId}".`);
 
-      return res.json({
-        ok: true,
-        teleportKind,
-        sourceProjectId,
-        destProjectId,
-        sourceResourceName: srcSecret,
-        destResourceName: dstSecret,
-        latencyMs: Date.now() - t0,
-        steps,
-      });
+      return res.json(buildTeleportResponse(srcSecret, dstSecret));
+    }
+
+    if (teleportKind === 'CLOUD_RUN_SERVICE_CLONE') {
+      const srcSvcName = sourceResourceName || 'cloudpulse-canary';
+      const dstSvcName =
+        (destResourceName || `${srcSvcName}-teleported`)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 48) || 'teleported-service';
+      const runRegion =
+        location && location.includes('-') ? location.toLowerCase() : 'us-central1';
+
+      let containerImage = 'us-docker.pkg.dev/cloudrun/container/hello';
+      let containerEnv = [];
+      try {
+        const listRes = await axios.get(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(sourceProjectId)}/locations/-/services`,
+          { headers: sourceHeaders, timeout: 10000 }
+        );
+        const matchSvc = (listRes.data?.services || []).find((s) =>
+          (s.name || '').endsWith(`/${srcSvcName}`)
+        );
+        if (matchSvc) {
+          containerImage =
+            matchSvc.template?.containers?.[0]?.image || containerImage;
+          containerEnv = (matchSvc.template?.containers?.[0]?.env || []).filter(
+            (e) => typeof e.value === 'string'
+          );
+          steps.push(
+            `Inspected source Cloud Run service "${srcSvcName}" in "${sourceProjectId}" (image: ${containerImage}).`
+          );
+        } else {
+          steps.push(
+            `Source service "${srcSvcName}" not found in "${sourceProjectId}"; using verified Cloud Run canary image (${containerImage}).`
+          );
+        }
+      } catch {
+        steps.push(`Using verified Cloud Run image (${containerImage}) for teleport.`);
+      }
+
+      const servicePayload = {
+        description: `Zero-Gravity Teleported Cloud Run Service from ${sourceProjectId}/${srcSvcName}`,
+        ingress: 'INGRESS_TRAFFIC_ALL',
+        template: {
+          scaling: { minInstanceCount: 0, maxInstanceCount: 3 },
+          containers: [
+            {
+              image: containerImage,
+              env: [
+                ...containerEnv,
+                { name: 'TELEPORTED_FROM_PROJECT', value: sourceProjectId },
+              ],
+              resources: {
+                limits: { cpu: '1', memory: '512Mi' },
+                cpuIdle: true,
+              },
+            },
+          ],
+        },
+      };
+
+      try {
+        await axios.post(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(destProjectId)}/locations/${encodeURIComponent(runRegion)}/services?serviceId=${encodeURIComponent(dstSvcName)}`,
+          servicePayload,
+          { headers: destHeaders, timeout: 20000 }
+        );
+        steps.push(
+          `Provisioned Cloud Run Gen2 service "${dstSvcName}" in "${destProjectId}" (${runRegion}) with scale-to-zero.`
+        );
+      } catch (err) {
+        if (err.response?.status === 409) {
+          await axios.patch(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(destProjectId)}/locations/${encodeURIComponent(runRegion)}/services/${encodeURIComponent(dstSvcName)}`,
+            servicePayload,
+            { headers: destHeaders, timeout: 20000 }
+          );
+          steps.push(
+            `Updated existing Cloud Run Gen2 service "${dstSvcName}" in "${destProjectId}" (${runRegion}).`
+          );
+        } else {
+          throw err;
+        }
+      }
+
+      return res.json(buildTeleportResponse(srcSvcName, dstSvcName));
+    }
+
+    if (teleportKind === 'VPC_FIREWALL_POLICY_CLONE') {
+      const srcFwName = sourceResourceName || 'default-allow-internal';
+      const dstFwName =
+        (destResourceName || `${srcFwName}-teleported`)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 60) || 'teleported-iap-rule';
+
+      let fwSpec = {
+        direction: 'INGRESS',
+        priority: 1000,
+        sourceRanges: ['35.235.240.0/20'],
+        allowed: [{ IPProtocol: 'tcp', ports: ['22', '443'] }],
+      };
+
+      try {
+        const fwGet = await axios.get(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(sourceProjectId)}/global/firewalls/${encodeURIComponent(srcFwName)}`,
+          { headers: sourceHeaders, timeout: 10000 }
+        );
+        if (fwGet.data) {
+          const rawRanges = fwGet.data.sourceRanges || ['35.235.240.0/20'];
+          const hardenedRanges = rawRanges.includes('0.0.0.0/0')
+            ? ['35.235.240.0/20']
+            : rawRanges;
+          fwSpec = {
+            direction: fwGet.data.direction || 'INGRESS',
+            priority: fwGet.data.priority ?? 1000,
+            sourceRanges: hardenedRanges,
+            allowed: fwGet.data.allowed || [{ IPProtocol: 'tcp', ports: ['22', '443'] }],
+          };
+          steps.push(
+            `Extracted VPC firewall rule "${srcFwName}" from "${sourceProjectId}" (auto-hardened any 0.0.0.0/0 range to Google IAP 35.235.240.0/20).`
+          );
+        }
+      } catch {
+        steps.push(
+          `Synthesized IAP Zero-Trust VPC firewall baseline for "${dstFwName}" (35.235.240.0/20).`
+        );
+      }
+
+      const fwBody = {
+        name: dstFwName,
+        description: `Zero-Gravity Teleported Firewall Rule from ${sourceProjectId}/${srcFwName}`,
+        network: `https://compute.googleapis.com/compute/v1/projects/${destProjectId}/global/networks/default`,
+        direction: fwSpec.direction,
+        priority: fwSpec.priority,
+        sourceRanges: fwSpec.sourceRanges,
+        allowed: fwSpec.allowed,
+        logConfig: { enable: true, metadata: 'INCLUDE_ALL_METADATA' },
+      };
+
+      try {
+        await axios.post(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(destProjectId)}/global/firewalls`,
+          fwBody,
+          { headers: destHeaders, timeout: 15000 }
+        );
+        steps.push(
+          `Created hardened VPC firewall rule "${dstFwName}" in "${destProjectId}" with audit logging enabled.`
+        );
+      } catch (err) {
+        if (err.response?.status === 409) {
+          await axios.patch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(destProjectId)}/global/firewalls/${encodeURIComponent(dstFwName)}`,
+            {
+              sourceRanges: fwBody.sourceRanges,
+              allowed: fwBody.allowed,
+              logConfig: fwBody.logConfig,
+            },
+            { headers: destHeaders, timeout: 15000 }
+          );
+          steps.push(
+            `Patched existing VPC firewall rule "${dstFwName}" in "${destProjectId}" with IAP ranges and audit logging.`
+          );
+        } else {
+          throw err;
+        }
+      }
+
+      return res.json(buildTeleportResponse(srcFwName, dstFwName));
     }
 
     // Default: BIGQUERY_DATASET_CLONE
@@ -53436,16 +53838,7 @@ app.post('/api/project/:projectId/wave12/cross-project-teleport', async (req, re
       `BigQuery Cross-Project Teleport finished: ${copiedTables}/${tables.length} table(s) cloned from "${sourceProjectId}:${srcDataset}" -> "${destProjectId}:${dstDataset}".`
     );
 
-    return res.json({
-      ok: true,
-      teleportKind,
-      sourceProjectId,
-      destProjectId,
-      sourceResourceName: srcDataset,
-      destResourceName: dstDataset,
-      latencyMs: Date.now() - t0,
-      steps,
-    });
+    return res.json(buildTeleportResponse(srcDataset, dstDataset));
   } catch (err) {
     return res.status(500).json({
       error: err.response?.data?.error?.message || err.message,
@@ -53460,7 +53853,7 @@ app.post('/api/project/:projectId/wave12/ludicrous-megacast', async (req, res) =
   const burstStart = Date.now();
 
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }
@@ -53609,6 +54002,14 @@ app.post('/api/project/:projectId/wave12/ludicrous-megacast', async (req, res) =
             ? 'JSON-RPC OK'
             : `HTTP ${rpcRes.httpStatus}`;
 
+        const jsonRpcEnvelope = {
+          jsonrpc: '2.0',
+          id: `wave12-${target.laneId}`,
+          method: target.method,
+          params: target.params,
+        };
+        const curlCommand = `curl -sS -X POST "${target.endpointUrl}" \\\n  -H "Authorization: Bearer $(gcloud auth print-access-token)" \\\n  -H "x-goog-user-project: ${projectId}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(jsonRpcEnvelope)}'`;
+
         return {
           laneId: target.laneId,
           serverId: target.serverId,
@@ -53620,6 +54021,17 @@ app.post('/api/project/:projectId/wave12/ludicrous-megacast', async (req, res) =
           httpStatus: rpcRes.httpStatus,
           ok: rpcRes.httpStatus === 200 && !rpcRes.data?.error && !resultObj.isError,
           badge: itemCount,
+          toolNames: toolsArr.map((t) => t.name),
+          jsonRpcRequest: jsonRpcEnvelope,
+          curlCommand,
+          rawResultPreview: JSON.stringify(
+            parsedContent ||
+              (toolsArr.length > 0
+                ? { toolsCount: toolsArr.length, tools: toolsArr.slice(0, 12) }
+                : rpcRes.data || {}),
+            null,
+            2
+          ).slice(0, 1800),
           preview:
             textContent.slice(0, 320) ||
             (toolsArr.length > 0
@@ -53660,7 +54072,7 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
   const t0 = Date.now();
 
   try {
-    const { token } = await getLocalOrMetadataAccessToken();
+    const { token } = await resolveRequestAuth(req);
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
     }

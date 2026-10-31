@@ -1498,23 +1498,55 @@ function classifyDestructiveAxiosConfig(config) {
     if (rawUrl.includes('/wave12/autopilot-execute')) {
       const mId = String(body.maneuverType || body.maneuverId || 'CALIBRATE_AUTOPILOT_DATASET').toUpperCase();
       const targetName = body.targetResource || body.targetName || 'All Eligible Project Resources';
+      const isDestructive = mId === 'RELEASE_IDLE_STATIC_IP' || mId === 'DELETE_UNATTACHED_DISK';
+      const isVmStop = mId === 'STOP_IDLE_COMPUTE_VM';
+      const isScaleZero = mId === 'SCALE_CLOUD_RUN_TO_ZERO';
+      const isBatch = mId === 'BATCH_RECONCILE_SAFE_DRIFT';
+
+      const laymanMap = {
+        LOCK_FIREWALL_TO_IAP: `Locks world-open VPC firewall rule "${targetName}" so only Google Identity-Aware Proxy (35.235.240.0/20) can reach SSH/RDP/database ports instead of the entire public internet (0.0.0.0/0).`,
+        ENABLE_FIREWALL_AUDIT_LOGGING: `Turns on VPC Firewall Rule Audit Logging (INCLUDE_ALL_METADATA) on "${targetName}" so every allowed or denied connection attempt is recorded in Cloud Logging.`,
+        HARDEN_STORAGE_BUCKET: `Enforces Public-Access Prevention, Uniform Bucket-Level IAM, and a 7-day Soft-Delete recovery window on Cloud Storage bucket "${targetName}".`,
+        RELEASE_IDLE_STATIC_IP: `Releases unattached reserved static IPv4 address "${targetName}" back to Google Cloud to stop the $7.30/month idle IP charge.`,
+        DELETE_UNATTACHED_DISK: `Deletes orphaned, unattached Compute Engine Persistent Disk "${targetName}" to stop ongoing monthly block storage charges.`,
+        SCALE_CLOUD_RUN_TO_ZERO: `Updates Cloud Run service "${targetName}" to minInstanceCount=0 and request-scoped CPU billing so it costs $0.00 whenever idle.`,
+        STOP_IDLE_COMPUTE_VM: `Gracefully stops running Compute Engine VM "${targetName}" while preserving its boot disk so you stop paying hourly CPU/RAM charges.`,
+        CALIBRATE_AUTOPILOT_DATASET: `Provisions or updates the "autopilot_flight_deck_2026" BigQuery telemetry dataset in "${projectId}" ($0.00 metadata operation).`,
+        BATCH_RECONCILE_SAFE_DRIFT: `Executes all non-destructive, zero-downtime security hardening maneuvers (IAP Firewall Locking, Firewall Audit Logging, GCS Bucket Hardening, and Autopilot Dataset Calibration) in one closed-loop pass.`,
+      };
+
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Automated Drift Remediation: "${mId}"?`,
+        title: isBatch
+          ? `Confirm 1-Tap Batch Safe Drift Reconciliation (${targetName})?`
+          : `Confirm Automated Drift Remediation: "${mId}"?`,
         headerBadge: 'Automated Drift Reconciler Gatekeeper',
         targetLabel: 'Remediation Action & Target Resource',
         resourceKind: `Closed-Loop Drift Reconciler (${mId})`,
         targetName: `${projectId} · ${targetName}`,
-        location: 'Global / Multi-Region',
+        location: body.payload?.region || body.payload?.zone || body.payload?.location || 'Global / Multi-Region',
         projectId,
         method: `REMEDIATE DRIFT (${mId})`,
         endpoint: rawUrl,
-        confirmLabel: `Execute Drift Remediation (${mId})`,
+        confirmLabel: isBatch
+          ? `Execute Batch Safe Drift Reconcile`
+          : `Execute Drift Remediation (${mId})`,
         cancelToast: `Drift remediation action ${mId} cancelled.`,
-        whatHappensNext: `1. Computes pre-change SHA-256 Merkle state digest across your live GCP project.\n2. Executes "${mId}" (${body.title || targetName}) via live Google Cloud REST APIs.\n3. Re-runs the 6-vector telemetry scan and verifies the post-change SHA-256 digest.`,
-        costWarning: `ZERO EXTRA CHARGE ($0.00): Hardening GCS buckets (Uniform Bucket-Level Access + 7-day Soft Delete), locking firewall rules to IAP, or calibrating the audit dataset incurs $0.00 in API charges and reduces ongoing FinOps burn.`,
-        impactWarning: `Mutates live configuration on target resource "${targetName}" in project "${projectId}".`,
+        laymanSummary:
+          laymanMap[mId] ||
+          `Executes closed-loop infrastructure drift remediation (${mId}) on "${targetName}" in project "${projectId}".`,
+        whatHappensNext: `1. Computes pre-change SHA-256 Merkle state digest across your live GCP project.\n2. ${laymanMap[mId] || `Executes "${mId}" (${body.title || targetName}) via live Google Cloud REST APIs.`}\n3. Re-runs the 6-vector telemetry scan and seals a cryptographic post-change SHA-256 receipt.`,
+        costWarning: isDestructive
+          ? `COST REDUCTION ACTION: Reclaiming "${targetName}" immediately stops ongoing monthly idle resource charges ($0.00 API call cost).`
+          : isVmStop || isScaleZero
+          ? `FINOPS SCALE-TO-ZERO SAVINGS: Eliminates idle compute burn on "${targetName}" ($0.00 API call cost).`
+          : `ZERO EXTRA CHARGE ($0.00): Hardening GCS buckets, locking firewall rules to IAP, or calibrating the audit dataset incurs $0.00 in API charges.`,
+        impactWarning: isDestructive
+          ? `PERMANENT DELETION WARNING: Permanently deletes unattached resource "${targetName}" in project "${projectId}".`
+          : isVmStop
+          ? `WORKLOAD STOP NOTICE: Gracefully stops VM "${targetName}" (boot disk and data are preserved; VM can be restarted anytime).`
+          : `Mutates live configuration on target resource "${targetName}" in project "${projectId}".`,
       };
     }
 
@@ -1525,6 +1557,15 @@ function classifyDestructiveAxiosConfig(config) {
       const dstProj = body.destProjectId || body.targetProjectId || projectId;
       const dstName = body.destResourceName || body.targetName || srcName;
       const dstLoc = body.location || body.targetLocation || 'US';
+
+      const teleportLaymanMap = {
+        BIGQUERY_DATASET_CLONE: `Clones BigQuery dataset "${srcName}" and its tables from "${projectId}" directly into destination project "${dstProj}" as "${dstName}" over Google's internal Jupiter backbone.`,
+        GCS_BUCKET_CLONE: `Provisions hardened Cloud Storage bucket "gs://${dstName}" in "${dstProj}" and rewrites live objects from "gs://${srcName}" server-side with zero local browser download.`,
+        SECRET_MANAGER_SYNC: `Creates Secret Manager vault "${dstName}" in destination project "${dstProj}" and seals the latest encrypted secret payload from "${projectId}/${srcName}".`,
+        CLOUD_RUN_SERVICE_CLONE: `Clones the container image, environment configuration, and scale-to-zero settings of Cloud Run service "${srcName}" from "${projectId}" into destination project "${dstProj}" as "${dstName}".`,
+        VPC_FIREWALL_POLICY_CLONE: `Clones VPC firewall rule "${srcName}" from "${projectId}" into destination project "${dstProj}" as "${dstName}" (automatically hardening any 0.0.0.0/0 rule to Google IAP 35.235.240.0/20 and enabling audit logging).`,
+      };
+
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
@@ -1539,9 +1580,12 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Engage Zero-Gravity Teleport to "${dstProj}"`,
         cancelToast: 'Cross-project teleportation cancelled.',
-        whatHappensNext: `1. Verifies or provisions target container "${dstName}" in destination project "${dstProj}" (${dstLoc}).\n2. Clones live ${kind} metadata and payloads directly across Google Cloud's internal Jupiter backbone without local browser/proxy downloads.\n3. Returns a cryptographic SHA-256 teleportation receipt.`,
-        costWarning: `STANDARD DESTINATION STORAGE & NETWORK NOTICE: Creating datasets or secrets incurs $0.00–$0.06/secret-mo. Cloning objects/tables into "${dstProj}" incurs standard destination storage rates ($0.020/GB-mo) and cross-region replication fees if source and destination locations differ.`,
-        impactWarning: `Creates/updates live ${kind} "${dstName}" inside destination project "${dstProj}".`,
+        laymanSummary:
+          teleportLaymanMap[kind] ||
+          `Teleports ${kind} "${srcName}" from "${projectId}" to "${dstProj}:${dstName}".`,
+        whatHappensNext: `1. Verifies or provisions target container "${dstName}" in destination project "${dstProj}" (${dstLoc}).\n2. ${teleportLaymanMap[kind] || `Clones live ${kind} metadata and payloads directly across Google Cloud's internal Jupiter backbone.`}\n3. Returns a cryptographic SHA-256 teleportation receipt.`,
+        costWarning: `STANDARD DESTINATION STORAGE & NETWORK NOTICE: Creating datasets, firewall rules, or scale-to-zero Cloud Run services incurs $0.00 idle cost; Secret Manager costs $0.06/secret-mo (first 6 versions free); cloning objects/tables incurs standard storage rates ($0.020/GB-mo).`,
+        impactWarning: `Creates or updates live ${kind} "${dstName}" inside destination project "${dstProj}".`,
       };
     }
 
