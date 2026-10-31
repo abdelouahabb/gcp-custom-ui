@@ -50511,16 +50511,40 @@ app.delete('/api/project/:projectId/wave11/firestore/documents', async (req, res
 // Multi-Project Live Estate Comparison Matrix (Scans all authenticated GCP projects in parallel)
 app.get('/api/multi-project/compare', async (req, res) => {
   const t0 = Date.now();
+  const currentProjectId = String(
+    req.query.projectId || req.headers['x-gcp-project'] || ''
+  ).trim();
   try {
     const token = await resolveRequestToken(req);
-    const projectsRes = await gcpApiRequest({
-      method: 'GET',
-      url: 'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE&pageSize=15',
-      token,
-      timeout: 5000,
-    });
+    const defaultProject = currentProjectId || (await resolveHostDefaultProject());
+    const { projects: allActiveProjects, activeToken } =
+      await fetchAllActiveGcpProjects(token, defaultProject);
+    const effectiveToken = activeToken || token;
 
-    const activeProjects = (projectsRes?.projects || []).slice(0, 8);
+    const projectMap = new Map();
+    for (const p of allActiveProjects || []) {
+      if (p?.projectId) {
+        projectMap.set(p.projectId, p);
+      }
+    }
+    if (currentProjectId && !projectMap.has(currentProjectId)) {
+      projectMap.set(currentProjectId, {
+        projectId: currentProjectId,
+        name: currentProjectId,
+        projectNumber: '',
+        createTime: null,
+        lifecycleState: 'ACTIVE',
+      });
+    }
+
+    // Order so currentProjectId is always first, then scan up to 25 projects in parallel
+    const orderedProjects = Array.from(projectMap.values()).sort((a, b) => {
+      if (a.projectId === currentProjectId) return -1;
+      if (b.projectId === currentProjectId) return 1;
+      return 0;
+    });
+    const activeProjects = orderedProjects.slice(0, 25);
+
     const projectRows = await Promise.all(
       activeProjects.map(async (proj) => {
         const pid = proj.projectId;
@@ -50539,7 +50563,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(
               pid
             )}/billingInfo`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 3500,
           }),
@@ -50548,7 +50572,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
               pid
             )}/aggregated/instances?maxResults=50`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 4000,
           }),
@@ -50557,7 +50581,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
               pid
             )}&maxResults=100`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 4000,
           }),
@@ -50566,7 +50590,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
               pid
             )}/datasets?maxResults=100`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 4000,
           }),
@@ -50575,7 +50599,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
               pid
             )}/global/networks`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 3500,
           }),
@@ -50584,7 +50608,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://run.googleapis.com/v2/projects/${encodeURIComponent(
               pid
             )}/locations/-/services`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 4000,
           }),
@@ -50593,7 +50617,7 @@ app.get('/api/multi-project/compare', async (req, res) => {
             url: `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
               pid
             )}/instances`,
-            token,
+            token: effectiveToken,
             quotaProject: pid,
             timeout: 3500,
           }),
@@ -50642,11 +50666,20 @@ app.get('/api/multi-project/compare', async (req, res) => {
               )
             : 'Unlinked';
 
+        const totalResourcesCount =
+          totalVms +
+          cloudRunCount +
+          bucketsCount +
+          datasetsCount +
+          vpcsCount +
+          cloudSqlCount;
+
         return {
           projectId: pid,
           projectName: proj.name || pid,
           projectNumber: proj.projectNumber || '',
           createTime: proj.createTime || null,
+          isCurrentProject: Boolean(currentProjectId && pid === currentProjectId),
           billingEnabled,
           billingAccountId: billingAccountName || 'Unlinked',
           totalVms,
@@ -50656,13 +50689,25 @@ app.get('/api/multi-project/compare', async (req, res) => {
           datasetsCount,
           vpcsCount,
           cloudSqlCount,
+          totalResourcesCount,
           probeLatencyMs: Date.now() - pStart,
         };
       })
     );
 
+    projectRows.sort((a, b) => {
+      if (a.isCurrentProject && !b.isCurrentProject) return -1;
+      if (!a.isCurrentProject && b.isCurrentProject) return 1;
+      if (a.billingEnabled !== b.billingEnabled) return a.billingEnabled ? -1 : 1;
+      if (b.totalResourcesCount !== a.totalResourcesCount) {
+        return b.totalResourcesCount - a.totalResourcesCount;
+      }
+      return String(a.projectId).localeCompare(String(b.projectId));
+    });
+
     return res.json({
       ok: true,
+      currentProjectId: currentProjectId || null,
       totalProjectsScanned: projectRows.length,
       elapsedMs: Date.now() - t0,
       scannedAt: new Date().toISOString(),

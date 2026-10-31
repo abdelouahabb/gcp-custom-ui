@@ -218,10 +218,41 @@ export default function Wave11MoonshotStudio({
     }
   }, [projectId, region]);
 
+  const fetchMultiProjectMatrix = useCallback(
+    async (showToast = false) => {
+      setLoadingMultiProject(true);
+      try {
+        const res = await axios.get('/api/multi-project/compare', {
+          params: { projectId },
+        });
+        setMultiProjectData(res.data);
+        if (showToast && onShowToast) {
+          onShowToast(
+            `Scanned ${res.data?.totalProjectsScanned || 0} live GCP projects in ${
+              res.data?.elapsedMs || 0
+            }ms.`
+          );
+        }
+      } catch (err) {
+        if (showToast && onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to run multi-project estate comparison.'
+          );
+        }
+      } finally {
+        setLoadingMultiProject(false);
+      }
+    },
+    [projectId, onShowToast, onShowError]
+  );
+
   useEffect(() => {
     fetchWave11Overview();
     fetchSelfHostPackage();
-  }, [fetchWave11Overview, fetchSelfHostPackage]);
+    fetchMultiProjectMatrix(false);
+  }, [fetchWave11Overview, fetchSelfHostPackage, fetchMultiProjectMatrix]);
 
   const handleCopy = (key, text) => {
     navigator.clipboard.writeText(text || '');
@@ -536,28 +567,7 @@ export default function Wave11MoonshotStudio({
   };
 
   const handleRunMultiProjectScan = async () => {
-    setLoadingMultiProject(true);
-    try {
-      const res = await axios.get('/api/multi-project/compare');
-      setMultiProjectData(res.data);
-      if (onShowToast) {
-        onShowToast(
-          `Scanned ${res.data?.totalProjectsScanned || 0} live GCP projects in ${
-            res.data?.elapsedMs || 0
-          }ms.`
-        );
-      }
-    } catch (err) {
-      if (onShowError) {
-        onShowError(
-          err.response?.data?.error ||
-            err.message ||
-            'Failed to run multi-project estate comparison.'
-        );
-      }
-    } finally {
-      setLoadingMultiProject(false);
-    }
+    await fetchMultiProjectMatrix(true);
   };
 
   const handleRunStressAudit = async () => {
@@ -570,7 +580,7 @@ export default function Wave11MoonshotStudio({
       setStressAuditData(res.data);
       if (onShowToast) {
         onShowToast(
-          `Completed 18-Studio Live Stress Audit: ${res.data?.passedCount}/${res.data?.totalStudiosProbed} verified (avg ${res.data?.avgLatencyMs}ms, P95 ${res.data?.p95LatencyMs}ms).`
+          `Completed ${res.data?.totalStudiosProbed || 24}-Studio Live Stress Audit: ${res.data?.passedCount}/${res.data?.totalStudiosProbed} verified (avg ${res.data?.avgLatencyMs}ms, P95 ${res.data?.p95LatencyMs}ms).`
         );
       }
     } catch (err) {
@@ -621,6 +631,7 @@ export default function Wave11MoonshotStudio({
     const recs = wave11Data?.finopsQuotas?.recommendations || [];
     const pipelines = wave11Data?.cloudDeploy?.deliveryPipelines || [];
     const dbs = wave11Data?.firestore?.databases || [];
+    const estateProjects = multiProjectData?.projects || [];
     const auditRows = stressAuditData?.results || [];
 
     const htmlReport = `<!DOCTYPE html>
@@ -696,8 +707,25 @@ export default function Wave11MoonshotStudio({
     </table>
 
     ${
+      estateProjects.length > 0
+        ? `<h2 style="margin-top:28px;">3. Live Multi-Project Cloud Estate Comparison Matrix (${estateProjects.length} Active Projects)</h2>
+    <table>
+      <thead><tr><th>Project ID &amp; Name</th><th>Billing</th><th>VMs (Run/Total)</th><th>Cloud Run</th><th>GCS Buckets</th><th>BQ Datasets</th><th>Cloud SQL</th><th>VPCs</th></tr></thead>
+      <tbody>
+        ${estateProjects
+          .map(
+            (p) =>
+              `<tr><td><strong>${p.projectId}</strong>${p.projectId === projectId ? ' <span class="ok">[CURRENT]</span>' : ''}<div style="font-size:11px;color:#94a3b8;">${p.projectName || p.projectId}</div></td><td class="${p.billingEnabled ? 'ok' : ''}">${p.billingEnabled ? 'ACTIVE' : 'UNLINKED'}</td><td>${p.runningVms} / ${p.totalVms}</td><td>${p.cloudRunCount}</td><td>${p.bucketsCount}</td><td>${p.datasetsCount}</td><td>${p.cloudSqlCount}</td><td>${p.vpcsCount}</td></tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>`
+        : ''
+    }
+
+    ${
       auditRows.length > 0
-        ? `<h2 style="margin-top:28px;">3. Live ${auditRows.length}-Studio Client-Readiness Stress Audit (Avg ${stressAuditData?.avgLatencyMs}ms · P95 ${stressAuditData?.p95LatencyMs}ms)</h2>
+        ? `<h2 style="margin-top:28px;">4. Live ${auditRows.length}-Studio Client-Readiness Stress Audit (Avg ${stressAuditData?.avgLatencyMs}ms · P95 ${stressAuditData?.p95LatencyMs}ms)</h2>
     <table>
       <thead><tr><th>Studio ID</th><th>Studio Name</th><th>Endpoint</th><th>HTTP</th><th>Latency</th><th>Payload</th></tr></thead>
       <tbody>
@@ -1646,7 +1674,7 @@ serialPipeline:
                 <table className="w-full text-left border-collapse text-xs font-mono">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] uppercase text-zinc-500">
-                      <th className="py-2.5 px-3">Project ID</th>
+                      <th className="py-2.5 px-3">Project ID &amp; Name</th>
                       <th className="py-2.5 px-3">Billing</th>
                       <th className="py-2.5 px-3">VMs (Run/Total)</th>
                       <th className="py-2.5 px-3">Cloud Run</th>
@@ -1659,49 +1687,75 @@ serialPipeline:
                     </tr>
                   </thead>
                   <tbody>
-                    {multiProjectData.projects.map((p) => (
-                      <tr
-                        key={p.projectId}
-                        className="border-b border-zinc-100 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-                      >
-                        <td className="py-2.5 px-3 font-extrabold text-zinc-900 dark:text-white">
-                          {p.projectId}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              p.billingEnabled
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                            }`}
-                          >
-                            {p.billingEnabled ? 'ACTIVE' : 'UNLINKED'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          {p.runningVms} / {p.totalVms}
-                        </td>
-                        <td className="py-2.5 px-3">{p.cloudRunCount}</td>
-                        <td className="py-2.5 px-3">{p.bucketsCount}</td>
-                        <td className="py-2.5 px-3">{p.datasetsCount}</td>
-                        <td className="py-2.5 px-3">{p.cloudSqlCount}</td>
-                        <td className="py-2.5 px-3">{p.vpcsCount}</td>
-                        <td className="py-2.5 px-3 text-zinc-500">
-                          {p.probeLatencyMs}ms
-                        </td>
-                        <td className="py-2.5 px-3">
-                          {onSelectProject && p.projectId !== projectId && (
-                            <button
-                              type="button"
-                              onClick={() => onSelectProject(p.projectId)}
-                              className="px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-[10px] font-bold cursor-pointer"
+                    {multiProjectData.projects.map((p) => {
+                      const isCurrent = p.projectId === projectId || p.isCurrentProject;
+                      return (
+                        <tr
+                          key={p.projectId}
+                          className={`border-b border-zinc-100 dark:border-zinc-800/70 transition-colors ${
+                            isCurrent
+                              ? 'bg-blue-500/10 dark:bg-blue-500/15'
+                              : 'hover:bg-zinc-50 dark:hover:bg-zinc-900/50'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-extrabold text-zinc-900 dark:text-white">
+                                {p.projectId}
+                              </span>
+                              {isCurrent && (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-blue-600 text-white">
+                                  CURRENT PROJECT
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-zinc-500">
+                              {p.projectName || p.projectId}
+                              {p.projectNumber ? ` · #${p.projectNumber}` : ''}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                p.billingEnabled
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                              }`}
                             >
-                              Switch
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              {p.billingEnabled ? 'ACTIVE' : 'UNLINKED'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {p.runningVms} / {p.totalVms}
+                          </td>
+                          <td className="py-2.5 px-3">{p.cloudRunCount}</td>
+                          <td className="py-2.5 px-3">{p.bucketsCount}</td>
+                          <td className="py-2.5 px-3">{p.datasetsCount}</td>
+                          <td className="py-2.5 px-3">{p.cloudSqlCount}</td>
+                          <td className="py-2.5 px-3">{p.vpcsCount}</td>
+                          <td className="py-2.5 px-3 text-zinc-500">
+                            {p.probeLatencyMs}ms
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {isCurrent ? (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                                Active
+                              </span>
+                            ) : (
+                              onSelectProject && (
+                                <button
+                                  type="button"
+                                  onClick={() => onSelectProject(p.projectId)}
+                                  className="px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-[10px] font-bold cursor-pointer"
+                                >
+                                  Switch
+                                </button>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
