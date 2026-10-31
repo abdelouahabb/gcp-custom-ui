@@ -1494,25 +1494,43 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3A-000a. Wave 13 Starlink Orbital Geo-Failover Standby (/wave13/starlink-failover-execute)
     if (rawUrl.includes('/wave13/starlink-failover-execute')) {
+      const isBroadcastAll =
+        String(body.failoverMode || '').toUpperCase() === 'BROADCAST_ALL_CORRIDORS';
       const corridorId = body.corridorId || 'corridor-us-eu';
-      const targetReg = body.targetRegion || 'US';
+      const targetReg = isBroadcastAll ? 'US + EU' : body.targetRegion || 'US';
+      const regCode = body.regionCode || corridorId.replace(/^region-/, '');
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Multi-Region Geo-Standby Failover (${targetReg})?`,
-        headerBadge: 'Multi-Region Geo-Failover Gatekeeper',
+        title: isBroadcastAll
+          ? `Broadcast All 10 Global Regional Heartbeats to US & EU Geo-Standby Datasets?`
+          : `Confirm Multi-Region Geo-Standby Failover (${regCode} → ${targetReg})?`,
+        headerBadge: 'Wave 13 Multi-Region Geo-Failover Gatekeeper',
         targetLabel: 'Intercontinental Corridor & Geo-Standby Jurisdiction',
-        resourceKind: `BigQuery Geo-Failover Dataset (${corridorId})`,
-        targetName: `${projectId}:starlink_orbital_failover_${String(targetReg).toLowerCase()}`,
+        resourceKind: isBroadcastAll
+          ? 'BigQuery Dual Multi-Region Standby Datasets (US + EU) + 10 Live Heartbeat Rows'
+          : `BigQuery Geo-Failover Dataset (${corridorId} · ${regCode})`,
+        targetName: isBroadcastAll
+          ? `${projectId}:starlink_orbital_failover_us + starlink_orbital_failover_eu`
+          : `${projectId}:starlink_orbital_failover_${String(targetReg).toLowerCase()}`,
         location: targetReg,
         projectId,
-        method: 'MULTI-REGION GEO-FAILOVER',
+        method: isBroadcastAll ? '10-REGION HEARTBEAT BROADCAST' : 'MULTI-REGION GEO-FAILOVER',
         endpoint: rawUrl,
-        confirmLabel: `Provision Geo-Standby Dataset in ${targetReg} ($0.00)`,
+        confirmLabel: isBroadcastAll
+          ? `Broadcast 10 Regional Heartbeats to US & EU ($0.00)`
+          : `Provision Geo-Standby Dataset in ${targetReg} ($0.00)`,
         cancelToast: 'Multi-Region Geo-Standby cancelled.',
-        whatHappensNext: `1. Provisions or synchronizes standby BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in "${targetReg}" via bigquery.googleapis.com/bigquery/v2.\n2. Binds corridor failover metadata for "${corridorId}".\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Signed Audit Trail Ledger.`,
-        costWarning: `ZERO IDLE COST ($0.00/MO): Creating or updating a BigQuery dataset container incurs $0.00/mo in Google Cloud charges.`,
-        impactWarning: `Provisions/updates live BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in project "${projectId}".`,
+        laymanSummary: isBroadcastAll
+          ? `In Plain English: Creates or verifies both your US and EU multi-region disaster-recovery BigQuery databases ("starlink_orbital_failover_us" and "starlink_orbital_failover_eu"), measures live TLS 1.3 latency across all 10 global Google Cloud regions simultaneously, and streams 10 live heartbeat records into BigQuery.`
+          : `In Plain English: Creates or updates a multi-region standby BigQuery database ("starlink_orbital_failover_${String(targetReg).toLowerCase()}") in ${targetReg}, probes live TLS 1.3 latency to ${regCode}, and streams a live failover heartbeat row into "live_failover_heartbeats".`,
+        whatHappensNext: isBroadcastAll
+          ? `1. Provisions or verifies standby BigQuery datasets "starlink_orbital_failover_us" (US) and "starlink_orbital_failover_eu" (EU) plus table "live_failover_heartbeats".\n2. Probes live TLS 1.3 handshakes across all 10 global corridors and streams 10 heartbeat rows via tabledata.insertAll.\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Signed Audit Trail Ledger.`
+          : `1. Provisions or synchronizes standby BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in "${targetReg}" via bigquery.googleapis.com/bigquery/v2.\n2. Streams a live TLS 1.3 latency heartbeat row for "${regCode}" into table "live_failover_heartbeats".\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Signed Audit Trail Ledger.`,
+        costWarning: `ZERO IDLE COST ($0.00/MO): Creating or updating a BigQuery dataset container and streaming heartbeat metadata rows falls within the 10 GiB Always-Free storage tier ($0.00/mo).`,
+        impactWarning: isBroadcastAll
+          ? `Provisions/updates US and EU geo-standby datasets and appends 10 heartbeat rows in project "${projectId}".`
+          : `Provisions/updates live BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in project "${projectId}".`,
       };
     }
 
@@ -1523,8 +1541,8 @@ function classifyDestructiveAxiosConfig(config) {
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm 4-Node Cloud DAG Provisioning ("${slug}")?`,
-        headerBadge: 'Natural-Language 4-Node DAG Gatekeeper',
+        title: `Confirm 4-Node Cloud DAG Provisioning ("${slug}") in ${loc}?`,
+        headerBadge: 'Wave 13 Natural-Language 4-Node DAG Gatekeeper',
         targetLabel: '4-Node Parallel Cloud Architecture DAG',
         resourceKind: 'GCS Hardened Bucket + BigQuery Dataset + Typed Table + Secret Manager Vault',
         targetName: `${projectId} · ${slug} (${loc})`,
@@ -1534,7 +1552,8 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Provision 4-Node DAG on ${projectId}`,
         cancelToast: '4-Node DAG provisioning cancelled.',
-        whatHappensNext: `1. Node 01: Provisions hardened Cloud Storage bucket (Public Access Prevention + Uniform IAM + 7d Soft-Delete) via storage.googleapis.com/storage/v1.\n2. Node 02 & 03: Provisions BigQuery dataset "${slug}_lakehouse" and 5-column typed table "neural_telemetry_events" via bigquery.googleapis.com/bigquery/v2.\n3. Node 04: Provisions AES-256 hardware-encrypted Secret Manager container via secretmanager.googleapis.com/v1.\n4. Seals the 4-node execution receipt in the Ed25519 Signed Audit Trail Ledger.`,
+        laymanSummary: `In Plain English: Turns your 1-sentence plain-English architecture request into 4 real, zero-trust Google Cloud resources in ${loc}: (1) a locked-down Cloud Storage bucket with a signed JSON manifest, (2) a BigQuery Lakehouse dataset, (3) a typed BigQuery table with a live row streamed & queried back via SQL, and (4) an AES-256 hardware-encrypted Secret Manager vault.`,
+        whatHappensNext: `1. Node 01: Provisions hardened Cloud Storage bucket (Public Access Prevention + Uniform IAM + 7d Soft-Delete) and uploads "neuralink-dag-manifest.json" via storage.googleapis.com/storage/v1.\n2. Node 02 & 03: Provisions BigQuery dataset "${slug}_lakehouse" and typed table "${slug}_events", streams a live row via insertAll, and queries it back via Standard SQL.\n3. Node 04: Provisions AES-256 hardware-encrypted Secret Manager container and seals a live SecretVersion via secretmanager.googleapis.com/v1.\n4. Seals the 4-node execution receipt in the Ed25519 Signed Audit Trail Ledger.`,
         costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 INITIAL COST): Empty GCS buckets, BigQuery dataset/table metadata, and up to 6 Secret Manager versions per month fall within Google Cloud's Always-Free Tier ($0.00/mo).`,
         impactWarning: `Provisions/verifies 4 live Google Cloud resources in project "${projectId}" (${loc}).`,
       };
