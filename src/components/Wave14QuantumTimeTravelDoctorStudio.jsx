@@ -15,11 +15,44 @@ import {
   Sparkles,
   Wrench,
   Users,
+  Terminal,
+  Download,
 } from 'lucide-react';
 import ZeroSniffingWebCryptoEnclaveBar, {
   getSharedActiveModel,
   getSharedPreferredProvider,
 } from './ZeroSniffingWebCryptoEnclaveBar';
+
+const PQC_ENVELOPE_TEMPLATES = [
+  {
+    id: 'STARLINK_LASER',
+    label: 'Starlink Orbital Laser Master Key',
+    secretName: 'wave14-quantum-envelope-vault',
+    pqContextLabel: 'ML-KEM-1024-HYBRID-X25519-HKDF-SHA512',
+    plaintext: 'STARLINK_LASER_MASTER_KEY=quantum-shield-x25519-shake256-live',
+  },
+  {
+    id: 'VERTEX_SIGNING',
+    label: 'Vertex AI Sovereign Enclave Root Key',
+    secretName: 'wave14-vertex-enclave-root',
+    pqContextLabel: 'FIPS-203-ML-KEM-1024-VERTEX-ENCLAVE',
+    plaintext: 'VERTEX_SOVEREIGN_SIGNING_SECRET=ed25519-rfc8032-enclave-2026',
+  },
+  {
+    id: 'BQ_AEAD_DEK',
+    label: 'BigQuery Column-Level AEAD Data Key',
+    secretName: 'wave14-bq-aead-column-dek',
+    pqContextLabel: 'BQ-AEAD-PQC-HYBRID-X25519-SHA512',
+    plaintext: 'BQ_AEAD_KEYSET_WRAPPED=aes256-gcm-column-encryption-active',
+  },
+  {
+    id: 'MTLS_SPIFFE_CA',
+    label: 'Zero-Trust SPIFFE mTLS Root Authority',
+    secretName: 'wave14-spiffe-mtls-root-ca',
+    pqContextLabel: 'SPIFFE-SVID-ML-KEM-1024-X25519',
+    plaintext: 'SPIFFE_TRUST_DOMAIN_CA=spiffe://cloudpulse.sovereign.mesh/ca-v1',
+  },
+];
 
 const WAVE14_TABS = [
   {
@@ -243,6 +276,9 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
   projectId,
   onShowToast,
   onRefreshOverview,
+  onRunInShell,
+  onSelectStudioTab,
+  onOpenBigQuerySql,
 }) {
   const [activeTab, setActiveTab] = useState('BIGQUERY_TIME_TRAVEL');
 
@@ -262,6 +298,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [healingResource, setHealingResource] = useState('');
+  const [driftFilterKind, setDriftFilterKind] = useState('ALL');
 
   // Module 03: Live IAM Blast-Radius Graph State
   const [iamData, setIamData] = useState(null);
@@ -281,6 +318,8 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
   const [sealingEnvelope, setSealingEnvelope] = useState(false);
   const [decryptedResult, setDecryptedResult] = useState(null);
   const [decryptingEnvelope, setDecryptingEnvelope] = useState(false);
+  const [pqcTamperResult, setPqcTamperResult] = useState(null);
+  const [verifyingPqcTamper, setVerifyingPqcTamper] = useState(false);
 
   const notify = useCallback(
     (msg) => {
@@ -495,6 +534,84 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
     }
   };
 
+  const handleVerifyPqcTamperProof = async () => {
+    if (!projectId) return;
+    setVerifyingPqcTamper(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave14/quantum-envelope-tamper-verify`,
+        {
+          secretName,
+          version: 'latest',
+        }
+      );
+      setPqcTamperResult(res.data);
+      notify(res.data?.proofSummary || 'Dual-Layer PQC Tamper Proof passed!');
+    } catch (err) {
+      notify(
+        `PQC Tamper Proof notice (seal envelope first if secret does not exist): ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setVerifyingPqcTamper(false);
+    }
+  };
+
+  const exportWave14DossierHtml = () => {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Wave 14 Self-Healing Cloud Doctor &amp; PQC Vault Dossier — ${projectId}</title>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #09090b; color: #f4f4f5; padding: 32px; line-height: 1.6; }
+  h1, h2 { color: #60a5fa; }
+  .card { border: 1px solid #27272a; border-radius: 12px; padding: 16px; margin-bottom: 16px; background: #18181b; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #065f46; color: #6ee7b7; font-size: 11px; font-weight: bold; }
+  pre { background: #000; padding: 12px; border-radius: 8px; overflow-x: auto; color: #34d399; font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>Wave 14 Self-Healing Cloud Doctor, PITR SQL, IAM Blast-Radius &amp; PQC Vault Dossier</h1>
+  <p><strong>Project ID:</strong> ${projectId} · <strong>Exported At:</strong> ${new Date().toISOString()}</p>
+  <div class="card">
+    <h2>1. Autonomous Self-Healing Fleet Compliance</h2>
+    <p>Compliance: <span class="badge">${auditData ? `${auditData.compliancePct}% (${auditData.compliantCount}/${auditData.totalChecked} Resources)` : 'N/A'}</span></p>
+    <pre>${JSON.stringify(auditData?.resources || [], null, 2)}</pre>
+  </div>
+  <div class="card">
+    <h2>2. Live IAM Blast-Radius Matrix (projects:getIamPolicy)</h2>
+    <p>Total Principals: ${iamData?.totalPrincipals || 0} · Primitive Role Holders: ${iamData?.primitiveRoleHolders || 0}</p>
+    <pre>${JSON.stringify(iamData?.principals || [], null, 2)}</pre>
+  </div>
+  <div class="card">
+    <h2>3. BigQuery Time-Travel Forensics (FOR SYSTEM_TIME AS OF)</h2>
+    <pre>${JSON.stringify(
+      timeTravelData
+        ? {
+            datasetId: timeTravelData.datasetId,
+            tableId: timeTravelData.tableId,
+            currentRowCount: timeTravelData.currentRowCount,
+            historicalRowCount: timeTravelData.historicalRowCount,
+            executedSqlTimeTravel: timeTravelData.executedSqlTimeTravel,
+            recoveryDdlSql: timeTravelData.recoveryDdlSql,
+          }
+        : { status: 'Not yet executed in this session' },
+      null,
+      2
+    )}</pre>
+  </div>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cloudpulse-wave14-doctor-pqc-dossier-${projectId}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify('Exported Wave 14 Self-Healing & PQC Vault Dossier (.html)');
+  };
+
   useEffect(() => {
     fetchTimeTravelTables();
     fetchSelfHealingAudit();
@@ -523,33 +640,43 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 shrink-0">
-            <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
-              <div className="text-[10px] font-mono uppercase text-zinc-400">
-                SLO Compliance
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 shrink-0">
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
+                <div className="text-[10px] font-mono uppercase text-zinc-400">
+                  SLO Compliance
+                </div>
+                <div className="text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {auditData ? `${auditData.compliancePct}% (${auditData.compliantCount}/${auditData.totalChecked})` : 'Auditing...'}
+                </div>
               </div>
-              <div className="text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                {auditData ? `${auditData.compliancePct}% (${auditData.compliantCount}/${auditData.totalChecked})` : 'Auditing...'}
+              <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
+                <div className="text-[10px] font-mono uppercase text-zinc-400">
+                  IAM Principals
+                </div>
+                <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
+                  {iamData ? `${iamData.totalPrincipals} Live` : 'Scanning...'}
+                </div>
+              </div>
+              <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
+                <div className="text-[10px] font-mono uppercase text-zinc-400">
+                  Temporal Rows
+                </div>
+                <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
+                  {timeTravelData
+                    ? `${timeTravelData.currentRowCount} Now / ${timeTravelData.historicalRowCount} Past`
+                    : 'Ready'}
+                </div>
               </div>
             </div>
-            <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
-              <div className="text-[10px] font-mono uppercase text-zinc-400">
-                IAM Principals
-              </div>
-              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                {iamData ? `${iamData.totalPrincipals} Live` : 'Scanning...'}
-              </div>
-            </div>
-            <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
-              <div className="text-[10px] font-mono uppercase text-zinc-400">
-                Temporal Rows
-              </div>
-              <div className="text-sm font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                {timeTravelData
-                  ? `${timeTravelData.currentRowCount} Now / ${timeTravelData.historicalRowCount} Past`
-                  : 'Ready'}
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={exportWave14DossierHtml}
+              className="px-3.5 py-2 rounded-xl border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Dossier (.html)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -735,38 +862,112 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 {/* Executed SQL Queries Box */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-1">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
                       <span>PRESENT STATE SQL (CURRENT_TIMESTAMP)</span>
-                      <button
-                        type="button"
-                        onClick={() => copyText(timeTravelData.executedSqlNow)}
-                        className="text-blue-400 hover:underline cursor-pointer"
-                      >
-                        Copy SQL
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onOpenBigQuerySql && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(timeTravelData.executedSqlNow)
+                            }
+                            className="text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            Open in BigQuery SQL Studio
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => copyText(timeTravelData.executedSqlNow)}
+                          className="text-blue-400 hover:underline cursor-pointer"
+                        >
+                          Copy SQL
+                        </button>
+                      </div>
                     </div>
                     <code className="block text-[11px] font-mono text-emerald-300 break-all">
                       {timeTravelData.executedSqlNow}
                     </code>
                   </div>
                   <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-1">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
                       <span>HISTORICAL SNAPSHOT SQL (FOR SYSTEM_TIME AS OF)</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          copyText(timeTravelData.executedSqlTimeTravel)
-                        }
-                        className="text-blue-400 hover:underline cursor-pointer"
-                      >
-                        Copy SQL
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onOpenBigQuerySql && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(
+                                timeTravelData.executedSqlTimeTravel
+                              )
+                            }
+                            className="text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            Open in BigQuery SQL Studio
+                          </button>
+                        )}
+                        {onRunInShell && timeTravelData.bqTimeTravelCliCommand && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRunInShell(timeTravelData.bqTimeTravelCliCommand)
+                            }
+                            className="text-amber-300 hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>Run bq CLI in Shell</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyText(timeTravelData.executedSqlTimeTravel)
+                          }
+                          className="text-blue-400 hover:underline cursor-pointer"
+                        >
+                          Copy SQL
+                        </button>
+                      </div>
                     </div>
                     <code className="block text-[11px] font-mono text-blue-300 break-all">
                       {timeTravelData.executedSqlTimeTravel}
                     </code>
                   </div>
                 </div>
+
+                {/* PITR Recovery DDL Clone Box */}
+                {timeTravelData.recoveryDdlSql && (
+                  <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-blue-300">
+                      <span>
+                        ZERO-COPY POINT-IN-TIME RECOVERY (PITR) CLONE DDL SQL
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {onOpenBigQuerySql && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(timeTravelData.recoveryDdlSql)
+                            }
+                            className="text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            Open PITR Clone DDL in BigQuery Studio
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => copyText(timeTravelData.recoveryDdlSql)}
+                          className="text-blue-400 hover:underline cursor-pointer"
+                        >
+                          Copy PITR Clone DDL
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="text-[11px] font-mono text-amber-300 overflow-x-auto whitespace-pre-wrap">
+                      {timeTravelData.recoveryDdlSql}
+                    </pre>
+                  </div>
+                )}
 
                 {/* Temporal Delta Banner */}
                 <div className="p-3.5 rounded-xl border border-blue-500/40 bg-blue-500/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -922,48 +1123,82 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
       {/* =================================================================== */}
       {activeTab === 'SELF_HEALING_DOCTOR' && (
         <div className="space-y-5">
-          <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-emerald-500" />
-                <span>
-                  Autonomous Self-Healing Cloud Doctor (Live GCS, BigQuery &amp; Secret Manager Drift Remediation)
-                </span>
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Scans real GCS buckets, BigQuery datasets, and Secret Manager containers in <code>{projectId}</code> against Zero-Trust SLO invariants (Uniform Bucket-Level Access, Public Access Prevention, Governance Labels, and Active SecretVersions) and heals drifted resources via live Google Cloud <code>PATCH</code> / <code>POST</code> calls.
-              </p>
+          <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-emerald-500" />
+                  <span>
+                    Autonomous Self-Healing Cloud Doctor (Live GCS, BigQuery, Secret Manager, VPC Firewall &amp; Cloud Run Drift Remediation)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Scans real GCS buckets, BigQuery datasets, Secret Manager containers, VPC Firewalls, and Cloud Run services in <code>{projectId}</code> against Zero-Trust SLO invariants (Uniform Bucket-Level Access, Public Access Prevention, 7d Soft-Delete, Governance Labels, Firewall Audit Logging, and Active SecretVersions) and heals drifted resources via live Google Cloud <code>PATCH</code> / <code>POST</code> calls.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={fetchSelfHealingAudit}
+                  disabled={loadingAudit}
+                  className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
+                  />
+                  <span>Re-Scan Drift</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleHealResources('ALL')}
+                  disabled={Boolean(healingResource) || auditData?.driftedCount === 0}
+                  className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {healingResource === 'ALL'
+                      ? 'Executing Live REST PATCH Loop...'
+                      : `Heal All Drifted Resources Live (${auditData?.driftedCount || 0})`}
+                  </span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={fetchSelfHealingAudit}
-                disabled={loadingAudit}
-                className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
-                />
-                <span>Re-Scan Drift</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleHealResources('ALL')}
-                disabled={Boolean(healingResource) || auditData?.driftedCount === 0}
-                className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shadow-sm"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>
-                  {healingResource === 'ALL'
-                    ? 'Executing Live REST PATCH Loop...'
-                    : `Heal All Drifted Resources Live (${auditData?.driftedCount || 0})`}
-                </span>
-              </button>
+
+            {/* Resource Kind Filter Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+              {[
+                { id: 'ALL', label: 'All Resources' },
+                { id: 'DRIFTED', label: 'Drifted Only' },
+                { id: 'GCS_BUCKET', label: 'GCS Buckets' },
+                { id: 'BIGQUERY_DATASET', label: 'BigQuery Datasets' },
+                { id: 'SECRET_MANAGER', label: 'Secret Manager' },
+                { id: 'VPC_FIREWALL', label: 'VPC Firewalls' },
+                { id: 'CLOUD_RUN_SERVICE', label: 'Cloud Run' },
+              ].map((flt) => (
+                <button
+                  key={flt.id}
+                  type="button"
+                  onClick={() => setDriftFilterKind(flt.id)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold cursor-pointer border transition-all ${
+                    driftFilterKind === flt.id
+                      ? 'bg-emerald-600 text-white border-emerald-500'
+                      : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                  }`}
+                >
+                  {flt.label}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(auditData?.resources || []).map((r) => (
+            {(auditData?.resources || [])
+              .filter((r) => {
+                if (driftFilterKind === 'ALL') return true;
+                if (driftFilterKind === 'DRIFTED') return !r.compliant;
+                return r.kind === driftFilterKind;
+              })
+              .map((r) => (
               <div
                 key={r.resourceId}
                 className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 ${
@@ -1008,23 +1243,51 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                     </ul>
                   )}
 
-                  <div className="p-2 rounded-xl bg-zinc-950 text-[10px] font-mono text-zinc-400 break-all">
-                    {r.remediationApiCall}
+                  <div className="p-2 rounded-xl bg-zinc-950 text-[10px] font-mono text-zinc-400 break-all space-y-1">
+                    <div>{r.remediationApiCall}</div>
+                    {r.gcloudCliCommand && (
+                      <div className="text-emerald-400 pt-1 border-t border-zinc-800">
+                        $ {r.gcloudCliCommand}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {!r.compliant && (
-                  <button
-                    type="button"
-                    onClick={() => handleHealResources(r.resourceId)}
-                    disabled={Boolean(healingResource)}
-                    className="w-full py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
-                  >
-                    {healingResource === r.resourceId
-                      ? 'Patching Live...'
-                      : 'Heal Resource Live via REST PATCH'}
-                  </button>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  {!r.compliant && (
+                    <button
+                      type="button"
+                      onClick={() => handleHealResources(r.resourceId)}
+                      disabled={Boolean(healingResource)}
+                      className="w-full py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      {healingResource === r.resourceId
+                        ? 'Patching Live...'
+                        : 'Heal Resource Live via REST PATCH'}
+                    </button>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    {r.gcloudCliCommand && (
+                      <button
+                        type="button"
+                        onClick={() => copyText(r.gcloudCliCommand)}
+                        className="flex-1 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        Copy CLI
+                      </button>
+                    )}
+                    {onRunInShell && r.gcloudCliCommand && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(r.gcloudCliCommand)}
+                        className="flex-1 py-1 rounded border border-blue-500/40 bg-blue-500/10 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-300 cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <Terminal className="w-3 h-3" />
+                        <span>Run in Shell</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -1161,6 +1424,41 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                       </span>
                     ))}
                   </div>
+                  {p.remediationCli && (
+                    <div className="p-2 rounded-xl bg-zinc-950 text-[10px] font-mono text-emerald-300 break-all whitespace-pre-wrap">
+                      {p.remediationCli}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateIamAiPlan(p.principal)}
+                      disabled={generatingIamPlan}
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-mono font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI Plan for Principal</span>
+                    </button>
+                    {p.remediationCli && (
+                      <button
+                        type="button"
+                        onClick={() => copyText(p.remediationCli)}
+                        className="px-2.5 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        Copy gcloud CLI
+                      </button>
+                    )}
+                    {onRunInShell && p.remediationCli && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(p.remediationCli)}
+                        className="px-2.5 py-1 rounded border border-emerald-500/40 bg-emerald-500/10 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer flex items-center gap-1"
+                      >
+                        <Terminal className="w-3 h-3" />
+                        <span>Run in Shell</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1240,7 +1538,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   Performs real ephemeral X25519 key agreement mixed with a 512-bit SHAKE256 Post-Quantum Lattice salt via HKDF-SHA512, encrypts your payload with AES-256-GCM, signs the canonical envelope with Ed25519 (RFC 8032), and seals it as a live <code>SecretVersion</code> in Google Cloud Secret Manager.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <button
                   type="submit"
                   disabled={sealingEnvelope}
@@ -1266,6 +1564,51 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                       : 'Fetch & Decrypt from Secret Manager'}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={handleVerifyPqcTamperProof}
+                  disabled={verifyingPqcTamper}
+                  className="px-3.5 py-2 rounded-md border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 disabled:opacity-50 text-amber-800 dark:text-amber-300 text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {verifyingPqcTamper
+                      ? 'Verifying 1-Bit Tamper...'
+                      : 'Verify 1-Bit Tamper-Rejection Proof'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* PQC Preset Templates */}
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-mono font-bold uppercase text-zinc-400">
+                Post-Quantum Envelope Templates (Click to Populate)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {PQC_ENVELOPE_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      setSecretName(tpl.secretName);
+                      setPqContextLabel(tpl.pqContextLabel);
+                      setPlaintextInput(tpl.plaintext);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      secretName === tpl.secretName
+                        ? 'border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="text-[11px] font-mono font-extrabold truncate">
+                      {tpl.label}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 truncate">
+                      {tpl.secretName}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1354,6 +1697,25 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-950 text-emerald-300 font-mono text-xs break-all">
                   Decrypted Plaintext: <strong>{decryptedResult.decryptedPlaintext}</strong>
+                </div>
+              </div>
+            )}
+
+            {pqcTamperResult && (
+              <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-amber-800 dark:text-amber-200">
+                    <ShieldCheck className="w-4 h-4 text-amber-500" />
+                    <span>
+                      DUAL-LAYER PQC 1-BIT TAMPER-REJECTION PROOF ({pqcTamperResult.secretVersionTested})
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                    Ed25519 Rejected Tamper: {String(!pqcTamperResult.tamperedEd25519Verified).toUpperCase()} · AES-256-GCM AuthTag Rejected: {String(pqcTamperResult.aesGcmRejectedTamper).toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-xs font-mono text-zinc-800 dark:text-zinc-200">
+                  {pqcTamperResult.proofSummary}
                 </div>
               </div>
             )}
