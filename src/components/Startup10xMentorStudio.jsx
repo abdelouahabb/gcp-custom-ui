@@ -133,6 +133,31 @@ export default function Startup10xMentorStudio({
     fetchStartupAudit();
   }, [fetchStartupAudit]);
 
+  useEffect(() => {
+    const handleFocusEvent = (e) => {
+      const targetMod = e?.detail?.module;
+      const scrollId = e?.detail?.scrollToId;
+      if (targetMod) {
+        setActiveModule((prev) =>
+          prev === 'ALL' ? 'ALL' : targetMod
+        );
+      }
+      if (scrollId) {
+        setTimeout(() => {
+          document
+            .getElementById(scrollId)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      }
+    };
+    window.addEventListener('cloudpulse:startup-10x-focus', handleFocusEvent);
+    return () =>
+      window.removeEventListener(
+        'cloudpulse:startup-10x-focus',
+        handleFocusEvent
+      );
+  }, []);
+
   const handleCopy = (text, id) => {
     navigator.clipboard?.writeText(text);
     setCopiedId(id);
@@ -392,7 +417,10 @@ export default function Startup10xMentorStudio({
       {/* ==================================================================== */}
       {/* TOP EXECUTIVE STARTUP 10X COMMAND HEADER                             */}
       {/* ==================================================================== */}
-      <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+      <div
+        id="startup-10x-header-section"
+        className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4"
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-3xl">
             <div className="flex items-center gap-2 flex-wrap">
@@ -551,7 +579,7 @@ export default function Startup10xMentorStudio({
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  soc2Blockers.openFirewalls.length > 0 ||
+                  soc2Blockers.openFirewalls.some((fw) => !fw.isWebHttpHttpsOnly) ||
                   quotaWall.liveTraffic24h?.total429Count24h > 0
                     ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                     : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
@@ -561,13 +589,20 @@ export default function Startup10xMentorStudio({
               </span>
             </div>
             <div className="text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              {soc2Blockers.openFirewalls.length} Open 0.0.0.0/0 · {soc2Blockers.unhardenedBucketsCount} Unshielded
+              {soc2Blockers.adminOpenFirewallsCount ??
+                soc2Blockers.openFirewalls.filter((fw) => !fw.isWebHttpHttpsOnly)
+                  .length}{' '}
+              Admin 0.0.0.0/0 · {soc2Blockers.unhardenedBucketsCount} Unshielded
             </div>
             <div className="text-[10px] text-zinc-600 dark:text-zinc-400">
               {(
                 quotaWall.liveTraffic24h?.totalRequests24h || 0
               ).toLocaleString()}{' '}
-              API Calls in last 24h
+              API Calls (24h) ·{' '}
+              {soc2Blockers.webOpenFirewallsCount ??
+                soc2Blockers.openFirewalls.filter((fw) => fw.isWebHttpHttpsOnly)
+                  .length}{' '}
+              Web (80/443)
             </div>
           </div>
         </div>
@@ -772,7 +807,10 @@ export default function Startup10xMentorStudio({
       {/* MODULE 01: COMPUTE ENGINE VMs + CLOUD RUN COLD-START & DIRECT VPC    */}
       {/* ==================================================================== */}
       {showModule('COLD_START_VPC_LAG') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div
+          id="startup-10x-compute-section"
+          className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -1050,7 +1088,10 @@ export default function Startup10xMentorStudio({
       {/* MODULE 02: LAUNCH-DAY QUOTA WALL & LIVE 24H HTTP 429 RADAR           */}
       {/* ==================================================================== */}
       {showModule('QUOTA_WALL_RADAR') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div
+          id="startup-10x-quota-section"
+          className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -1162,7 +1203,10 @@ export default function Startup10xMentorStudio({
       {/* MODULE 03: STARTUP CREDIT RUNWAY & 6-VECTOR LIVE COST AUDIT          */}
       {/* ==================================================================== */}
       {showModule('CREDIT_CLIFF_RUNWAY') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div
+          id="startup-10x-runway-section"
+          className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -1451,9 +1495,41 @@ export default function Startup10xMentorStudio({
                         Fix: {item.fixLabel}
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-xs">
-                      Save ${Number(item.monthlyWasteUsd || 0).toFixed(2)}/mo
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-xs">
+                        Save ${Number(item.monthlyWasteUsd || 0).toFixed(2)}/mo
+                      </span>
+                      {item.remediateAction && item.targetName ? (
+                        <button
+                          type="button"
+                          disabled={
+                            busyTarget ===
+                            `${item.remediateAction}:${item.targetName}`
+                          }
+                          onClick={() =>
+                            handleLiveRemediate(
+                              item.remediateAction,
+                              item.targetName,
+                              item.region || 'us-central1'
+                            )
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                        >
+                          {busyTarget ===
+                          `${item.remediateAction}:${item.targetName}`
+                            ? 'Applying...'
+                            : '1-Click Remediate'}
+                        </button>
+                      ) : item.navigateTab && onNavigateTab ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab(item.navigateTab)}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-[11px] font-bold cursor-pointer"
+                        >
+                          Open Studio ↗
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1708,7 +1784,10 @@ export default function Startup10xMentorStudio({
       {/* MODULE 04: ENTERPRISE SOC2 DEAL-BLOCKER SCANNER & 1-CLICK REMEDIATOR */}
       {/* ==================================================================== */}
       {showModule('SOC2_DEAL_BLOCKER') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div
+          id="startup-10x-soc2-section"
+          className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -1776,12 +1855,16 @@ export default function Startup10xMentorStudio({
                   )}
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                      soc2Blockers.openFirewalls.length === 0
+                      soc2Blockers.openFirewalls.filter(
+                        (fw) => !fw.isWebHttpHttpsOnly
+                      ).length === 0
                         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                         : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                     }`}
                   >
-                    {soc2Blockers.openFirewalls.length === 0
+                    {soc2Blockers.openFirewalls.filter(
+                      (fw) => !fw.isWebHttpHttpsOnly
+                    ).length === 0
                       ? '✓ SOC2 PASS'
                       : 'ACTION RECOMMENDED'}
                   </span>
@@ -1805,12 +1888,12 @@ export default function Startup10xMentorStudio({
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
                             fw.isWebHttpHttpsOnly
-                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                               : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                           }`}
                         >
                           {fw.isWebHttpHttpsOnly
-                            ? 'PUBLIC WEB (80/443)'
+                            ? '✓ PUBLIC WEB (80/443)'
                             : 'ADMIN / INTERNAL PORT'}
                         </span>
                       </div>
@@ -1818,22 +1901,31 @@ export default function Startup10xMentorStudio({
                         VPC: {fw.network} · Ports: {fw.portsSummary || 'all'}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      data-feature-id="STARTUP_10X_LOCK_FIREWALL_IAP"
-                      disabled={
-                        busyTarget === `LOCK_OPEN_FIREWALL_IAP:${fw.name}`
-                      }
-                      onClick={() =>
-                        handleLiveRemediate('LOCK_OPEN_FIREWALL_IAP', fw.name)
-                      }
-                      title={`Restrict ${fw.name} from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20)`}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50"
-                    >
-                      {busyTarget === `LOCK_OPEN_FIREWALL_IAP:${fw.name}`
-                        ? 'Locking to IAP...'
-                        : 'Lock to Cloud IAP'}
-                    </button>
+                    {fw.isWebHttpHttpsOnly ? (
+                      <span
+                        title="Standard HTTP/HTTPS web ingress rule — preserved by 1-Click Admin IAP Lock"
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold shrink-0"
+                      >
+                        ✓ Web Port Preserved
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        data-feature-id="STARTUP_10X_LOCK_FIREWALL_IAP"
+                        disabled={
+                          busyTarget === `LOCK_OPEN_FIREWALL_IAP:${fw.name}`
+                        }
+                        onClick={() =>
+                          handleLiveRemediate('LOCK_OPEN_FIREWALL_IAP', fw.name)
+                        }
+                        title={`Restrict ${fw.name} from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20)`}
+                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50"
+                      >
+                        {busyTarget === `LOCK_OPEN_FIREWALL_IAP:${fw.name}`
+                          ? 'Locking to IAP...'
+                          : 'Lock to Cloud IAP'}
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -1943,7 +2035,10 @@ export default function Startup10xMentorStudio({
       {/* MODULE 05: DATA-GRAVITY CO-LOCATION & -80% CONTEXT CACHE CALCULATOR  */}
       {/* ==================================================================== */}
       {showModule('GEMINI_RAG_LATENCY') && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div
+          id="startup-10x-rag-section"
+          className="scroll-mt-24 p-5 rounded-2xl bg-white dark:bg-[#18191c] border border-zinc-200 dark:border-zinc-800 space-y-4"
+        >
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-extrabold">

@@ -33,14 +33,17 @@ export default function SovereignTimeMachineIamStudio({
   onNavigateTab,
   onOpenHealthAndDrift,
 }) {
+  const normalizeSovereignSubTab = (sub) =>
+    sub === 'MERKLE_DRIFT' ? 'TIME_MACHINE' : sub || 'IAM_SURGEON';
+
   const [activeSubTab, setActiveSubTab] = useState(
-    initialSubTab || 'IAM_SURGEON'
+    normalizeSovereignSubTab(initialSubTab)
   );
   const [copiedText, setCopiedText] = useState('');
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(normalizeSovereignSubTab(initialSubTab));
     }
   }, [initialSubTab]);
 

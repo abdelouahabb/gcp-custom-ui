@@ -3409,13 +3409,22 @@ function CloudPulseCockpit() {
   const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
     if (tabId === 'TIME_MACHINE') {
-      setSovereignSubTab('MERKLE_DRIFT');
+      setSovereignSubTab('TIME_MACHINE');
       setActiveTab('SOVEREIGN_STUDIO');
       return;
     }
     if (tabId === 'ZOMBIE_HUNTER') {
-      setInnovationSubTab('ZOMBIE_HUNTER');
-      setActiveTab('INNOVATION_LAB');
+      setActiveTab('FINOPS');
+      setTimeout(() => {
+        document
+          .getElementById('finops-zombie-reaper-section')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:scan-zombies', {
+            detail: { projectId: selectedProjectId },
+          })
+        );
+      }, 150);
       return;
     }
     if (tabId === 'SECRETS_KMS') {

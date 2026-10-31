@@ -69543,6 +69543,10 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           issue: `minInstanceCount=${s.minInstances} (24/7 warm idle tax)`,
           monthlyWasteUsd: s.warmMonthlyTaxUsd,
           fixLabel: 'Scale to minInstances=0 + Enable Startup CPU Boost',
+          remediateAction: 'PATCH_CLOUD_RUN_10X_BOOST',
+          targetName: s.name,
+          region: s.region,
+          navigateTab: 'CLOUD_RUN',
         });
       }
     }
@@ -69554,6 +69558,7 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           issue: 'Standard On-Demand VM (or non-Always-Free tier)',
           monthlyWasteUsd: v.spotMonthlySavingsUsd,
           fixLabel: 'Convert to Spot VM (-65%) or us-central1 e2-micro ($0 Always-Free)',
+          navigateTab: 'VM_SSH',
         });
       }
     }
@@ -69565,6 +69570,7 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           issue: 'Orphaned Persistent Disk billed 24/7 with no VM attached',
           monthlyWasteUsd: d.orphanedWasteUsd,
           fixLabel: 'Snapshot & delete unattached disk in Zombie Exterminator',
+          navigateTab: 'ZOMBIE_HUNTER',
         });
       } else if (d.diskType !== 'pd-standard' && d.sizeGb <= 30) {
         vampireItems.push({
@@ -69573,6 +69579,7 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           issue: `${d.diskType} costs $${d.monthlyCostUsd}/mo (only pd-standard <= 30 GB is $0 Always-Free)`,
           monthlyWasteUsd: d.monthlyCostUsd,
           fixLabel: 'Use pd-standard (up to 30 GB) for $0.00/mo Always-Free disk storage',
+          navigateTab: 'VM_SSH',
         });
       }
     }
@@ -69583,7 +69590,8 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           resource: `Static External IP: ${a.name} (${a.address || a.region})`,
           issue: 'RESERVED static IP not attached to a running VM ($0.01/hr idle fee)',
           monthlyWasteUsd: a.monthlyWasteUsd,
-          fixLabel: 'Release unused Static IP address',
+          fixLabel: 'Release unused Static IP address in Zombie Exterminator',
+          navigateTab: 'ZOMBIE_HUNTER',
         });
       }
     }
@@ -69595,6 +69603,10 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           issue: 'STANDARD storage with no 30d Nearline Lifecycle or Autoclass',
           monthlyWasteUsd: 12.0,
           fixLabel: '1-Click Shield & 30d Nearline Lifecycle',
+          remediateAction: 'PATCH_BUCKET_STARTUP_SHIELD',
+          targetName: b.name,
+          region: b.location,
+          navigateTab: 'CLOUD_STORAGE',
         });
       }
     }
@@ -69751,10 +69763,18 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
       score -= pts;
       scoreDeductions.push(`-${pts} pts: ${unboostedRunCount} Cloud Run service(s) missing Startup CPU Boost`);
     }
-    if (openFirewalls.length > 0) {
-      const pts = Math.min(20, openFirewalls.length * 6);
+    const adminOpenFirewalls = openFirewalls.filter(
+      (f) => !f.isWebHttpHttpsOnly
+    );
+    const webOpenFirewalls = openFirewalls.filter(
+      (f) => f.isWebHttpHttpsOnly
+    );
+    if (adminOpenFirewalls.length > 0) {
+      const pts = Math.min(20, adminOpenFirewalls.length * 5);
       score -= pts;
-      scoreDeductions.push(`-${pts} pts: ${openFirewalls.length} world-open 0.0.0.0/0 firewall rule(s)`);
+      scoreDeductions.push(
+        `-${pts} pts: ${adminOpenFirewalls.length} world-open 0.0.0.0/0 admin/internal firewall rule(s) (${adminOpenFirewalls.map((f) => f.name).join(', ')})`
+      );
     }
     if (unLifecycledBucketCount > 0) {
       const pts = Math.min(15, unLifecycledBucketCount * 4);
@@ -69816,6 +69836,8 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
       },
       soc2Blockers: {
         openFirewalls,
+        adminOpenFirewallsCount: adminOpenFirewalls.length,
+        webOpenFirewallsCount: webOpenFirewalls.length,
         totalPrimitivePrincipals,
         primitivePrincipalsList,
         unhardenedBucketsCount: unhardenedBuckets.length,
@@ -69824,13 +69846,13 @@ app.get('/api/project/:projectId/startup-10x/audit', async (req, res) => {
           {
             controlId: 'CC6.6 · Network Perimeter & Admin Ports',
             question: 'Are SSH/RDP/Jupyter and internal ports restricted from 0.0.0.0/0?',
-            status: openFirewalls.length === 0 ? 'PASS' : 'ACTION_NEEDED',
+            status: adminOpenFirewalls.length === 0 ? 'PASS' : 'ACTION_NEEDED',
             liveEvidence:
-              openFirewalls.length === 0
-                ? '0 world-open 0.0.0.0/0 ingress firewall rules detected on VPC.'
-                : `${openFirewalls.length} rule(s) allow 0.0.0.0/0 (${openFirewalls
+              adminOpenFirewalls.length === 0
+                ? `0 world-open 0.0.0.0/0 admin/SSH/RDP firewall rules detected (${webOpenFirewalls.length} public web 80/443 ingress rule(s) active).`
+                : `${adminOpenFirewalls.length} admin/internal rule(s) allow 0.0.0.0/0 (${adminOpenFirewalls
                     .map((f) => `${f.name}[${f.portsSummary || 'all'}]`)
-                    .join(', ')}) — click "Lock All to Cloud IAP" below.`,
+                    .join(', ')}) — click "1-Click Lock Admin/SSH/RDP Ports to Cloud IAP" above.`,
           },
           {
             controlId: 'CC6.7 · Object Storage Public Access Prevention',
@@ -75907,6 +75929,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         targetTab: 'FINOPS',
         scrollToId: 'finops-billing-guardian-section',
         secondaryTab: 'STARTUP_10X',
+        secondaryScrollToId: 'startup-10x-runway-section',
+        secondaryStartupModule: 'CREDIT_CLIFF_RUNWAY',
         secondaryLabel: 'Startup 10X Credit Radar',
         status: billingEnabled ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
         metricBadge: billingEnabled
@@ -75934,6 +75958,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             name: 'Google for Startups $2k -> $100k -> $350k AI Tier',
             meta: 'Audit Startup eligibility & runway multiplier',
             targetTab: 'STARTUP_10X',
+            scrollToId: 'startup-10x-runway-section',
+            startupModule: 'CREDIT_CLIFF_RUNWAY',
           },
           {
             kind: 'GDE & Trial Credit Ledger',
@@ -75993,6 +76019,7 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
         shortTitle: 'BQ Billing Export SQL',
         targetTab: 'BIGQUERY_STUDIO',
         secondaryTab: 'FINOPS',
+        secondaryScrollToId: 'finops-billing-guardian-section',
         secondaryLabel: 'FinOps Credit Ledger',
         status: datasets.length > 0 ? 'OPTIMAL' : 'ACTION_RECOMMENDED',
         metricBadge: `${datasets.length} BQ Datasets · FinOps SQL`,
@@ -76049,6 +76076,14 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             meta: 'Disable unused paid APIs with 30-day restore safety',
             targetTab: 'OVERVIEW',
             scrollToId: 'emergency-api-killswitch-section',
+          },
+          {
+            kind: 'Startup 10X Quota & 429 Radar',
+            name: 'Inspect GPU Quotas & 24h HTTP 429 Throttling',
+            meta: 'Open Launch-Day Quota Wall in Startup 10X',
+            targetTab: 'STARTUP_10X',
+            scrollToId: 'startup-10x-quota-section',
+            startupModule: 'QUOTA_WALL_RADAR',
           },
         ],
       },
@@ -76120,6 +76155,8 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
             name: 'Scale from $0 MVP to 10M Users Without Burnout',
             meta: 'Open Startup 10X Playbooks & Credit Optimizer',
             targetTab: 'STARTUP_10X',
+            scrollToId: 'startup-10x-header-section',
+            startupModule: 'ALL',
           },
         ],
       },

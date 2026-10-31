@@ -300,6 +300,7 @@ export default function SecOpsSreForensicsPipelineBar({
   onRunInShell,
 }) {
   const containerRef = useRef(null);
+  const playbookDrawerRef = useRef(null);
   const [blueprint, setBlueprint] = useState(null);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -535,7 +536,10 @@ export default function SecOpsSreForensicsPipelineBar({
 
       {/* Dedicated SecOps & SOAR Playbook Synthesizer Drawer */}
       {playbookDrawerOpen && (
-        <div className="pt-3 border-t border-rose-500/30 bg-rose-500/[0.03] rounded-xl p-3 space-y-3 animate-fadeIn">
+        <div
+          ref={playbookDrawerRef}
+          className="pt-3 border-t border-rose-500/30 bg-rose-500/[0.03] rounded-xl p-3 space-y-3 animate-fadeIn"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -666,6 +670,9 @@ export default function SecOpsSreForensicsPipelineBar({
                 if (drawerOpen && activeStage?.id === stage.id) {
                   setDrawerOpen(false);
                 } else {
+                  if (selectedStageId !== stage.id) {
+                    setMermaidExpanded(false);
+                  }
                   setSelectedStageId(stage.id);
                   setDrawerOpen(true);
                 }
@@ -931,6 +938,12 @@ export default function SecOpsSreForensicsPipelineBar({
                         if (item.openArtifactTab) {
                           setSelectedArtifactTab(item.openArtifactTab);
                           setPlaybookDrawerOpen(true);
+                          setTimeout(() => {
+                            playbookDrawerRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'nearest',
+                            });
+                          }, 80);
                         } else if (onSelectTab && item.targetTab) {
                           const isTabSwitch = item.targetTab !== activeTab;
                           if (isTabSwitch || item.subTab) {
@@ -990,6 +1003,7 @@ export default function SecOpsSreForensicsPipelineBar({
                           (s) => s.stepNumber === activeStage.stepNumber + 1
                         );
                         if (nextStage) {
+                          setMermaidExpanded(false);
                           setSelectedStageId(nextStage.id);
                         }
                       }}

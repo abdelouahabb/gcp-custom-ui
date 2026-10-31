@@ -116,6 +116,7 @@ export default function FinOpsCostKillPipelineBar({
     subTab,
     scrollToId,
     triggerEvent,
+    startupModule,
     openArtifactTab,
     sqlPayload,
   }) => {
@@ -139,11 +140,20 @@ export default function FinOpsCostKillPipelineBar({
       onSelectTab(targetTab || activeTab, subTab);
     }
     const performScrollAndTrigger = () => {
+      if (startupModule) {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:startup-10x-focus', {
+            detail: { module: startupModule, scrollToId, projectId },
+          })
+        );
+      }
       if (scrollToId) {
-        const el = document.getElementById(scrollToId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        setTimeout(() => {
+          const el = document.getElementById(scrollToId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, startupModule ? 40 : 0);
       } else if (!isTabSwitch && !subTab) {
         barRef.current?.nextElementSibling?.scrollIntoView({
           behavior: 'smooth',
@@ -528,6 +538,8 @@ export default function FinOpsCostKillPipelineBar({
                         handleExecuteAction({
                           targetTab: selectedStageObj.secondaryTab,
                           subTab: selectedStageObj.secondarySubTab,
+                          scrollToId: selectedStageObj.secondaryScrollToId,
+                          startupModule: selectedStageObj.secondaryStartupModule,
                         })
                       }
                       className="inline-flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition"
@@ -552,6 +564,7 @@ export default function FinOpsCostKillPipelineBar({
                             subTab: item.subTab,
                             scrollToId: item.scrollToId,
                             triggerEvent: item.triggerEvent,
+                            startupModule: item.startupModule,
                             openArtifactTab: item.openArtifactTab,
                             sqlPayload: item.sqlPayload,
                           })
