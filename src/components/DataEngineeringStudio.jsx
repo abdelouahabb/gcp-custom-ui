@@ -29,6 +29,7 @@ import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 export default function DataEngineeringStudio({
   projectId,
   initialSubTab,
+  subTabNonce = 0,
   onNavigateTab,
   onOpenBigQuerySql,
   onOpenBigLakeStudio,
@@ -45,7 +46,7 @@ export default function DataEngineeringStudio({
     if (initialSubTab) {
       setActiveSubTab(initialSubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, subTabNonce]);
   const [loading, setLoading] = useState(false);
   const [busyAction, setBusyAction] = useState('');
   const [copiedKey, setCopiedKey] = useState('');

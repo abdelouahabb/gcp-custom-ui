@@ -75,6 +75,7 @@ const STORAGE_CLASS_RATES_PER_GB = {
 export default function CloudStorageStudio({
   projectId,
   initialSubTab = 'BUCKETS',
+  subTabNonce = 0,
   initialBucketName = '',
   initialObjectName = '',
   onOpenProvision,
@@ -239,7 +240,7 @@ export default function CloudStorageStudio({
         handleListS3Compatible(true, s3ProviderType);
       }
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, subTabNonce]);
 
   useEffect(() => {
     if (initialBucketName) {

@@ -3426,6 +3426,10 @@ function CloudPulseCockpit() {
   const [storageTargetBucket, setStorageTargetBucket] = useState('');
   const [storageTargetObject, setStorageTargetObject] = useState('');
   const [recycleBinCategory, setRecycleBinCategory] = useState('ALL');
+  const [bigQuerySubTab, setBigQuerySubTab] = useState('TABLES_SQL');
+  const [sreSubTab, setSreSubTab] = useState('SLO_BURN_AND_RCA');
+  const [studioSubTabNonce, setStudioSubTabNonce] = useState(0);
+  const [bigQuerySqlNonce, setBigQuerySqlNonce] = useState(0);
 
   // Universal Cross-UI Feature Spotlight & Return Breadcrumb State (Prevents getting lost after clicking deep-links across Studios)
   const [featureSpotlightEnabled, setFeatureSpotlightEnabled] = useState(() => {
@@ -3718,7 +3722,13 @@ function CloudPulseCockpit() {
           studioTitle,
         triggeredAt: Date.now(),
       };
-      setActiveSpotlightBanner(bannerPayload);
+      setActiveSpotlightBanner((prev) => ({
+        ...bannerPayload,
+        fromTab:
+          fromTab === targetTab && prev?.fromTab && prev.fromTab !== targetTab
+            ? prev.fromTab
+            : fromTab,
+      }));
       pulseSpotlightTargetDom(bannerPayload);
 
       if (spotlightBannerTimerRef.current) {
@@ -3734,7 +3744,12 @@ function CloudPulseCockpit() {
   const handleOpenBigQuerySql = useCallback(
     (sqlText, contextLabel = 'SQL Query Workbench & Optimizer') => {
       const prevTab = activeTabRef.current;
-      if (sqlText) setBigQueryInitialSql(sqlText);
+      if (sqlText) {
+        setBigQueryInitialSql(sqlText);
+        setBigQuerySqlNonce((n) => n + 1);
+      }
+      setBigQuerySubTab('TABLES_SQL');
+      setStudioSubTabNonce((n) => n + 1);
       setActiveTab('BIGQUERY_STUDIO');
       triggerCrossUiSpotlight({
         fromTab: prevTab,
@@ -3765,6 +3780,7 @@ function CloudPulseCockpit() {
   const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
     const prevTab = activeTabRef.current;
+    setStudioSubTabNonce((n) => n + 1);
     if (tabId === 'TIME_MACHINE') {
       setSovereignSubTab('TIME_MACHINE');
       setActiveTab('SOVEREIGN_STUDIO');
@@ -3853,6 +3869,10 @@ function CloudPulseCockpit() {
       setDataEngineerSubTab(subTab);
     } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(subTab);
+    } else if (subTab && normalizedTab === 'BIGQUERY_STUDIO') {
+      setBigQuerySubTab(subTab);
+    } else if (subTab && normalizedTab === 'SRE_WAR_ROOM') {
+      setSreSubTab(subTab);
     } else if (subTab && normalizedTab === 'WAVE9_STUDIO') {
       setWave9SubTab(subTab);
     } else if (subTab && normalizedTab === 'CLOUD_SOC') {
@@ -5853,16 +5873,8 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     overview={overview}
                     initialSubTab={innovationSubTab}
-                    onSubTabChange={(sub) => {
-                      setInnovationSubTab(sub);
-                      triggerCrossUiSpotlight({
-                        fromTab: 'INNOVATION_LAB',
-                        targetTab: 'INNOVATION_LAB',
-                        targetSubTab: sub,
-                        targetLabel: `2026 Innovation Lab → ${sub}`,
-                        badgeText: sub,
-                      });
-                    }}
+                    subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setInnovationSubTab}
                     onRefreshOverview={() => {
                       fetchProjectOverview(selectedProjectId);
                       setVmRefreshTrigger((c) => c + 1);
@@ -5963,6 +5975,7 @@ function CloudPulseCockpit() {
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     initialSubTab={storageSubTab}
+                    subTabNonce={studioSubTabNonce}
                     initialBucketName={storageTargetBucket}
                     initialObjectName={storageTargetObject}
                     onOpenProvision={handleOpenProvision}
@@ -6014,6 +6027,9 @@ function CloudPulseCockpit() {
                   <BigQueryStudio
                     projectId={selectedProjectId}
                     initialSql={bigQueryInitialSql}
+                    sqlSeedNonce={bigQuerySqlNonce}
+                    initialSubTab={bigQuerySubTab}
+                    subTabNonce={studioSubTabNonce}
                     onOpenBigLakeStudio={(sub) =>
                       handleNavigateStudioTab(
                         'BIGLAKE_STUDIO',
@@ -6075,6 +6091,7 @@ function CloudPulseCockpit() {
                   <BigLakeIcebergStudio
                     projectId={selectedProjectId}
                     initialSubTab={bigLakeSubTab}
+                    subTabNonce={studioSubTabNonce}
                     onRunInShell={handleRunInShell}
                     onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenDataEngineerStudio={(sub) =>
@@ -6119,6 +6136,7 @@ function CloudPulseCockpit() {
                   <DataEngineeringStudio
                     projectId={selectedProjectId}
                     initialSubTab={dataEngineerSubTab}
+                    subTabNonce={studioSubTabNonce}
                     onNavigateTab={handleNavigateStudioTab}
                     onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenBigLakeStudio={(sub) =>
@@ -6215,16 +6233,8 @@ function CloudPulseCockpit() {
                   <Wave9AiGkeSqlSupplyChainStudio
                     projectId={selectedProjectId}
                     initialSubTab={wave9SubTab}
-                    onSubTabChange={(sub) => {
-                      setWave9SubTab(sub);
-                      triggerCrossUiSpotlight({
-                        fromTab: 'WAVE9_STUDIO',
-                        targetTab: 'WAVE9_STUDIO',
-                        targetSubTab: sub,
-                        targetLabel: `Cloud Build & Supply Chain → ${sub}`,
-                        badgeText: sub,
-                      });
-                    }}
+                    subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setWave9SubTab}
                     onTriggerToast={showToast}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -6304,6 +6314,7 @@ function CloudPulseCockpit() {
                   <SovereignTimeMachineIamStudio
                     projectId={selectedProjectId}
                     initialSubTab={sovereignSubTab}
+                    subTabNonce={studioSubTabNonce}
                     onTriggerToast={showToast}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
                     onNavigateTab={handleNavigateStudioTab}
@@ -6346,6 +6357,8 @@ function CloudPulseCockpit() {
                   />
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}
+                    initialSubTab={sreSubTab}
+                    subTabNonce={studioSubTabNonce}
                     onTriggerToast={showToast}
                     onRunInShell={handleRunInShell}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
@@ -6778,6 +6791,7 @@ function CloudPulseCockpit() {
                   <CloudRecycleBinStudio
                     projectId={selectedProjectId}
                     initialCategory={recycleBinCategory}
+                    subTabNonce={studioSubTabNonce}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
@@ -6802,16 +6816,8 @@ function CloudPulseCockpit() {
                     key="aws-azure-parity"
                     cloudFamily="AWS_AZURE"
                     initialTab={awsAzureSubTab}
-                    onSubTabChange={(sub) => {
-                      setAwsAzureSubTab(sub);
-                      triggerCrossUiSpotlight({
-                        fromTab: 'AWS_AZURE_PARITY',
-                        targetTab: 'AWS_AZURE_PARITY',
-                        targetSubTab: sub,
-                        targetLabel: `AWS & Azure Parity → ${sub}`,
-                        badgeText: sub,
-                      });
-                    }}
+                    subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setAwsAzureSubTab}
                     projectId={selectedProjectId}
                     onSwitchCloudFamily={(family) =>
                       handleNavigateStudioTab(
@@ -6843,16 +6849,8 @@ function CloudPulseCockpit() {
                     key="alibaba-huawei-parity"
                     cloudFamily="ALIBABA_HUAWEI"
                     initialTab={alibabaHuaweiSubTab}
-                    onSubTabChange={(sub) => {
-                      setAlibabaHuaweiSubTab(sub);
-                      triggerCrossUiSpotlight({
-                        fromTab: 'ALIBABA_HUAWEI_PARITY',
-                        targetTab: 'ALIBABA_HUAWEI_PARITY',
-                        targetSubTab: sub,
-                        targetLabel: `Alibaba & Huawei Parity → ${sub}`,
-                        badgeText: sub,
-                      });
-                    }}
+                    subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setAlibabaHuaweiSubTab}
                     projectId={selectedProjectId}
                     onSwitchCloudFamily={(family) =>
                       handleNavigateStudioTab(

@@ -65,6 +65,7 @@ const BIGLAKE_TABS = [
 export default function BigLakeIcebergStudio({
   projectId,
   initialSubTab,
+  subTabNonce = 0,
   onRunInShell,
   onOpenBigQuerySql,
   onOpenDataEngineerStudio,
@@ -81,7 +82,7 @@ export default function BigLakeIcebergStudio({
     if (initialSubTab) {
       setActiveTab(initialSubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, subTabNonce]);
   const [copiedId, setCopiedId] = useState(null);
 
   // Live GCP state

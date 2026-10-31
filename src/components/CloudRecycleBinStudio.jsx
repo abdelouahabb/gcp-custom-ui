@@ -48,6 +48,7 @@ function formatRelativeAge(ageHours) {
 export default function CloudRecycleBinStudio({
   projectId,
   initialCategory = 'ALL',
+  subTabNonce = 0,
   onRunInShell,
   onShowToast,
   onShowError,
@@ -69,7 +70,7 @@ export default function CloudRecycleBinStudio({
     if (initialCategory) {
       setCategoryTab(initialCategory);
     }
-  }, [initialCategory]);
+  }, [initialCategory, subTabNonce]);
 
   const fetchRecycleBin = useCallback(
     async (daysOverride) => {

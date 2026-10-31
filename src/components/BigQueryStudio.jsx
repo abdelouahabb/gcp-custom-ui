@@ -121,6 +121,9 @@ function formatBytes(bytes) {
 export default function BigQueryStudio({
   projectId,
   initialSql,
+  sqlSeedNonce = 0,
+  initialSubTab = null,
+  subTabNonce = 0,
   onOpenBigLakeStudio,
   onOpenDataEngineerStudio,
   onNavigateTab,
@@ -132,7 +135,9 @@ export default function BigQueryStudio({
   onShowToast,
   onShowError,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('DATASETS');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || (initialSql && initialSql.trim() ? 'TABLES_SQL' : 'DATASETS')
+  );
   const [datasets, setDatasets] = useState([]);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
   const [selectedDatasetId, setSelectedDatasetId] = useState('');
@@ -161,8 +166,16 @@ export default function BigQueryStudio({
     if (initialSql && initialSql.trim()) {
       setSqlInput(initialSql);
       setActiveSubTab('TABLES_SQL');
+    } else if (sqlSeedNonce > 0) {
+      setActiveSubTab('TABLES_SQL');
     }
-  }, [initialSql]);
+  }, [initialSql, sqlSeedNonce]);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab, subTabNonce]);
 
   // FinOps Storage & Slot Crystal Simulator state
   const [simLogicalTb, setSimLogicalTb] = useState(25); // 25 TB logical

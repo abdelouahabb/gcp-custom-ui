@@ -43,6 +43,7 @@ export default function AwsAzureEnvySuiteStudio({
   projectId,
   cloudFamily = 'AWS_AZURE',
   initialTab = 'RESOURCE_GROUPS',
+  subTabNonce = 0,
   onSubTabChange,
   onSwitchCloudFamily,
   onNavigateToGcpTab,
@@ -63,7 +64,7 @@ export default function AwsAzureEnvySuiteStudio({
     if (initialTab) {
       setActiveSubTab(initialTab);
     }
-  }, [initialTab]);
+  }, [initialTab, subTabNonce]);
 
   useEffect(() => {
     const handleParitySubTab = (evt) => {

@@ -28,6 +28,7 @@ import {
 export default function SovereignTimeMachineIamStudio({
   projectId,
   initialSubTab = 'IAM_SURGEON',
+  subTabNonce = 0,
   onTriggerToast,
   onRefreshOverview,
   onNavigateTab,
@@ -45,7 +46,7 @@ export default function SovereignTimeMachineIamStudio({
     if (initialSubTab) {
       setActiveSubTab(normalizeSovereignSubTab(initialSubTab));
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, subTabNonce]);
 
   // --- Tab 1: IAM Least-Privilege Surgeon State ---
   const [iamData, setIamData] = useState(null);

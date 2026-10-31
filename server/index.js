@@ -75055,12 +75055,14 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
             name: '14.4x (1h) & 6.0x (6h) Error Budget Radar',
             meta: 'Automated release freeze & canary rollback trigger',
             targetTab: 'SRE_WAR_ROOM',
+            subTab: 'SLO_BURN_AND_RCA',
           },
           {
             kind: 'Pillar 04 · Synthetic Prober',
             name: 'Live DNS + TCP + TLS 1.3 + HTTPS Stopwatch',
             meta: 'Real-time blackbox endpoint latency probe',
             targetTab: 'SRE_WAR_ROOM',
+            subTab: 'BLACKBOX_SYNTHETIC_PROBER',
           },
           {
             kind: 'Monitored Workloads',
@@ -75073,6 +75075,7 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
             name: 'Fault Injection & MTTR Stopwatch',
             meta: 'Open 12-Pillar SRE War-Room',
             targetTab: 'SRE_WAR_ROOM',
+            subTab: 'CHAOS_GAME_DAY_LAB',
           },
         ],
       },

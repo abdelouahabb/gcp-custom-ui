@@ -115,13 +115,22 @@ const SRE_PILLARS = [
 
 export default function SreWarRoomPerimeterStudio({
   projectId,
+  initialSubTab = 'SLO_BURN_AND_RCA',
+  subTabNonce = 0,
   onTriggerToast,
   onRunInShell,
   onNavigateTab,
   onOpenHealthAndDrift,
   onRefreshOverview,
 }) {
-  const [activePillar, setActivePillar] = useState('SLO_BURN_AND_RCA');
+  const [activePillar, setActivePillar] = useState(
+    initialSubTab || 'SLO_BURN_AND_RCA'
+  );
+  useEffect(() => {
+    if (initialSubTab) {
+      setActivePillar(initialSubTab);
+    }
+  }, [initialSubTab, subTabNonce]);
   const [sloTarget, setSloTarget] = useState(99.9);
   const [copiedText, setCopiedText] = useState('');
 
@@ -961,6 +970,7 @@ export default function SreWarRoomPerimeterStudio({
               <button
                 key={p.id}
                 type="button"
+                data-subtab-id={p.id}
                 data-feature-id={`SRE_PILLAR_${p.id}`}
                 onClick={() => setActivePillar(p.id)}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${

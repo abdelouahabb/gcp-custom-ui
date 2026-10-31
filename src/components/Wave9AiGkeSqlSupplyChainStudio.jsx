@@ -19,6 +19,7 @@ import {
 export default function Wave9AiGkeSqlSupplyChainStudio({
   projectId,
   initialSubTab = 'CLOUD_BUILD_GITHUB',
+  subTabNonce = 0,
   onSubTabChange,
   onTriggerToast,
   onRefreshOverview,
@@ -38,7 +39,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     ) {
       setActiveSubTab(initialSubTab);
     }
-  }, [initialSubTab]);
+  }, [initialSubTab, subTabNonce]);
 
   useEffect(() => {
     const handleWave9SubTab = (evt) => {

@@ -203,6 +203,7 @@ export default function Revolutionary2026Suite({
   projectId,
   overview,
   initialSubTab = 'WAVE11_MOONSHOT',
+  subTabNonce = 0,
   onSubTabChange,
   onRefreshOverview,
   onOpenProvision,
@@ -262,7 +263,7 @@ export default function Revolutionary2026Suite({
     if (initialSubTab) {
       applyNormalizedSubTab(initialSubTab);
     }
-  }, [initialSubTab, applyNormalizedSubTab]);
+  }, [initialSubTab, subTabNonce, applyNormalizedSubTab]);
 
   useEffect(() => {
     const handleInnovationSubTab = (evt) => {
