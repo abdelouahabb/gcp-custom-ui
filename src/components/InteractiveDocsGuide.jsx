@@ -1764,29 +1764,31 @@ const DOC_SECTIONS = [
   },
   {
     id: 'cloud-soc-7-pillar-ids-ips-dpi-and-7-stage-domain-pipelines',
-    wave: 'WAVE 20 7-PILLAR CLOUD SOC · CLOUD IDS/IPS SURICATA DPI SURGEON & 7-STAGE DOMAIN PIPELINE BARS',
+    wave: 'WAVE 20 10X CLOUD IDS/IPS · L3–L7 DPI SHANNON ENTROPY SURGEON, 8-RULE OWASP CRS v3.3 MATRIX, EGRESS C2 KILL-SWITCH & eBPF/XDP SYNTHESIZER',
     title:
-      '48. 7-Pillar Autonomous Cloud SOC + Cloud IDS / IPS & L7 Suricata DPI Packet Surgeon + 7-Stage Pipeline Bars Across All 7 Domains',
-    badge: 'Cloud SOC (Pillar 07 IDS/IPS) + All 7 Domain Pipeline Bars (Stages 1–7)',
+      '48. 10X Cloud IDS / IPS & L7 Suricata 7.0 DPI Packet Surgeon (Interactive Byte-Stream Simulator, 8-Rule OWASP CRS v3.3 Matrix, Outbound Egress C2 Kill-Switch, VPC Flow-Log Enforcer & 4-Engine Artifact Synthesizer)',
+    badge: 'Cloud SOC (Pillar 21 IDS/IPS/WAF) + All 7 Domain Pipeline Bars (Stages 1–7)',
     badgeColor:
       'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30',
     icon: ShieldAlert,
     targetTab: 'CLOUD_SOC',
-    targetSubTab: 'CLOUD_IDS_IPS_DPI',
+    targetSubTab: 'CLOUD_IDS_IPS_WAF',
     problemSolved:
-      'Traditional VPC Firewall rules operate only at Layer 3/4 (IP & Port) and cannot inspect Layer 7 payloads for CVEs, SQLi, SSRF (169.254.169.254), JNDI Log4Shell, or C2 callbacks inside allowed HTTPS ports—while separate 5- or 6-stage domain pipeline bars lacked a unified 7-stage end-to-end architecture across all 7 CloudPulse domains.',
+      'Traditional VPC Firewall rules operate only at Layer 3/4 (IP & Port) and cannot inspect Layer 7 payloads for CVEs, SQLi, SSRF (169.254.169.254), JNDI Log4Shell, OWASP LLM01 prompt injection, or outbound Stratum crypto-mining C2 callbacks—while security teams lack an interactive L3–L7 packet byte-stream tester, granular 8-rule OWASP CRS v3.3 WAF management, 1-click VPC Flow Log / Firewall Hit-Log coverage enforcement, and multi-engine export (Suricata, Terraform, gcloud NGFW/IDS, and Linux eBPF/XDP).',
     howItWorks: [
-      'Pillar 07 in Autonomous Cloud SOC — Cloud IDS / IPS & L7 Suricata DPI Packet Surgeon (AutonomousCloudSocStudio.jsx): Probes live Google Cloud IDS Endpoints (ids.googleapis.com/v1), VPC Packet Mirroring Policies (compute.googleapis.com/v1/aggregated/packetMirrorings), Cloud NGFW Security Profiles & Threat-Prevention Overrides (networksecurity.googleapis.com/v1), and live Suricata/Threat Log streams (logging.googleapis.com/v2).',
-      '3 Live IDS/IPS Control-Plane Actions + 3 Cloud Shell CLI Generators: Execute (1) 1-Tap IPS Inline Quarantine (QUORUM_IPS_INLINE_QUARANTINE -> priority-100 VPC INGRESS DENY rule), (2) Suppress False-Positive Signature ID (SUPPRESS_IDS_THREAT_EXCEPTION -> patches threatExceptions[] on your Security Profile or seals an Ed25519 exception receipt), and (3) Verify L7 DPI Telemetry Pipeline (EMIT_IDS_CANARY_DPI_EVENT -> writes a live Suricata CVE verification entry to Cloud Logging), plus 1-click CLI dispatch for creating Cloud IDS Endpoints, Packet Mirroring Policies, and NGFW Enterprise Security Profiles.',
-      'Unified 7-Stage Pipeline Bars Across All 7 Domains: Upgraded all 7 domain pipeline bars (EnterpriseStackPipelineBar, DataLakehouseAiPipelineBar, SecOpsSreForensicsPipelineBar, OltpDatabaseContinuityBar, FinOpsCostKillPipelineBar, GitOpsReleaseFactoryPipelineBar, and MultiCloudGlobalParityPipelineBar) to a symmetrical 7-Stage architecture (lg:grid-cols-7) with live Stage 7 capstone synthesis & verification.',
+      '1. Interactive L3–L7 Deep Packet Inspection (DPI) & Shannon Byte-Entropy Simulator (POST /api/project/:id/soc/ips-dpi-simulate): Test 6 real-world exploit presets (CVE-2021-44228 Log4Shell JNDI, OWASP CRS 942100 SQLi UNION, MITRE T1552.005 GCE Metadata 169.254.169.254 SSRF, OWASP LLM01 Prompt-Injection IAM Override, MITRE T1496 Stratum Crypto-Miner Egress, MITRE T1110 SSH Brute-Force) or any custom byte payload. Computes real Shannon Entropy H(X) (bits/byte), renders a 16-byte Hex + ASCII Wireframe Dump, evaluates the packet live against your project’s VPC Firewalls, Cloud Armor WAF policies, and Suricata 7.0 AST/PCRE signatures, and optionally writes a verified DPI alert to Cloud Logging (entries:write).',
+      '2. 8-Signature Cloud Armor L7 OWASP ModSecurity CRS v3.3 Rule Matrix (UPSERT_CLOUD_ARMOR_WAF_RULE, DEPLOY_ALL_8_OWASP_WAF_RULES, DELETE_CLOUD_ARMOR_WAF_RULE): Inspect live ARMED / UNARMED status across all 8 official OWASP v3.3 preconfigured WAF rules (#1000 SQLi, #1010 XSS, #1020 RCE, #1030 LFI/RFI, #1040 Scanner Detection, #1050 HTTP Smuggling/Protocol Attack, #1060 Session Fixation/PHP, #1070 Log4Shell JNDI/NodeJS) with 1-click individual rule arm/remove or 1-click deploy all 8 rules.',
+      '3. Outbound Egress C2, Stratum Crypto-Miner (:3333/:4444/:14444) & Log4Shell JNDI (:1389) Kill-Switch (TOGGLE_EGRESS_C2_KILLSWITCH): Deploys or toggles a $0.00/mo Priority-110 VPC EGRESS DENY rule (cloudpulse-soc-egress-c2-miner-block) with INCLUDE_ALL_METADATA hit logging to block outbound connections to crypto-mining pools, reverse shells, and JNDI LDAP callback ports.',
+      '4. L3/L4 VPC Flow Logs & Firewall Hit-Log Telemetry Coverage Enforcer (TOGGLE_SUBNET_VPC_FLOW_LOGS & ENABLE_ALL_FIREWALL_HIT_LOGGING): Audits live VPC subnets (enableFlowLogs) and active firewall rules (logConfig.enable) to compute a Network Visibility Score (%) and enables 5-second VPC Flow Logs or Firewall Hit Logging in 1 click.',
+      '5. Threat Exception & False-Positive Signature Whitelist Vault (SUPPRESS_IDS_SIGNATURE & RESTORE_IDS_SIGNATURE) + 4-Format Multi-Engine Synthesizer: Mute noisy Suricata SIDs with an Ed25519-sealed operator justification note (and restore them anytime), and export ready-to-run artifacts across 4 engines: (1) suricata-cloudpulse.rules, (2) cloud_armor_ips_waf.tf (8-rule OWASP v3.3 HCL), (3) ngfw_cloud_ids_deploy.sh (gcloud ids + packet-mirrorings + network-security), and (4) ebpf_xdp_inline_drop.c (Linux kernel eBPF/XDP line-rate XDP_DROP C program).',
     ],
     apisUsed: [
-      'GET /api/project/:id/soc/overview (ids.googleapis.com/v1 + networksecurity.googleapis.com/v1 + compute.googleapis.com/v1/aggregated/packetMirrorings + logging.googleapis.com/v2)',
-      'POST /api/project/:id/soc/action (QUORUM_IPS_INLINE_QUARANTINE | SUPPRESS_IDS_THREAT_EXCEPTION | EMIT_IDS_CANARY_DPI_EVENT)',
-      'GET /api/project/:id/secops-sre-pipeline/blueprint & all 7 Domain Pipeline Blueprint Endpoints (7 Stages each)',
+      'GET /api/project/:id/soc/overview & POST /api/project/:id/soc/ips-dpi-simulate',
+      'POST /api/project/:id/soc/action (UPSERT_CLOUD_ARMOR_WAF_RULE | DEPLOY_ALL_8_OWASP_WAF_RULES | DELETE_CLOUD_ARMOR_WAF_RULE | TOGGLE_EGRESS_C2_KILLSWITCH | TOGGLE_SUBNET_VPC_FLOW_LOGS | ENABLE_ALL_FIREWALL_HIT_LOGGING | SUPPRESS_IDS_SIGNATURE | RESTORE_IDS_SIGNATURE)',
+      'compute.googleapis.com/v1 (firewalls, subnetworks, securityPolicies, packetMirrorings) + ids.googleapis.com/v1 + logging.googleapis.com/v2',
     ],
     billingImpact:
-      '100% $0.00/mo control-plane inspection, IPS VPC quarantine rules, and DPI verification logs; Cloud IDS endpoint creation is dispatched as an explicit opt-in CLI command with transparent hourly billing disclosures.',
+      '100% $0.00/mo for L3/L4 VPC Andromeda Ingress/Egress IPS rules, in-memory L7 DPI packet simulation, and 4-engine code synthesis; Cloud Armor WAF, VPC Flow Logs, and Cloud IDS endpoints include full FinOps pre-execution disclosures.',
   },
   {
     id: 'universal-cross-ui-feature-spotlight-and-return-breadcrumb',
