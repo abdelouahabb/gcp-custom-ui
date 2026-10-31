@@ -3427,11 +3427,178 @@ function CloudPulseCockpit() {
   const [storageTargetObject, setStorageTargetObject] = useState('');
   const [recycleBinCategory, setRecycleBinCategory] = useState('ALL');
 
+  // Universal Cross-UI Feature Spotlight & Return Breadcrumb State (Prevents getting lost after clicking deep-links across Studios)
+  const [featureSpotlightEnabled, setFeatureSpotlightEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('cloudpulse_feature_spotlight_v1') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [activeSpotlightBanner, setActiveSpotlightBanner] = useState(null);
+  const spotlightCleanupTimerRef = useRef(null);
+  const spotlightBannerTimerRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const pulseSpotlightTargetDom = useCallback((spec = {}) => {
+    const clearExistingHighlight = () => {
+      document
+        .querySelectorAll('.cloudpulse-target-spotlight-active, .cloudpulse-nav-spotlight-active')
+        .forEach((el) => {
+          el.classList.remove(
+            'cloudpulse-target-spotlight-active',
+            'cloudpulse-nav-spotlight-active'
+          );
+          el.removeAttribute('data-spotlight-badge');
+        });
+    };
+
+    const runLocateAndHighlight = (shouldScroll = true) => {
+      clearExistingHighlight();
+      const targetTab = spec.targetTab || activeTabRef.current;
+      const badgeLabel =
+        spec.badgeText ||
+        spec.targetLabel ||
+        spec.targetSubTab ||
+        targetTab;
+
+      // 1. Highlight top navigation tab button
+      const navBtn = document.querySelector(
+        `nav button[data-feature-id="${targetTab}"]`
+      );
+      if (navBtn) {
+        navBtn.classList.add('cloudpulse-nav-spotlight-active');
+      }
+
+      // 2. Locate exact target container or card inside the destination Studio
+      let targetEl = null;
+      if (spec.targetElementId) {
+        targetEl = document.getElementById(spec.targetElementId);
+      }
+      if (!targetEl && targetTab === 'CLOUD_SOC') {
+        targetEl = document.getElementById('soc-active-pillar-panel');
+        if (spec.targetSubTab) {
+          const pillarBtn = document.querySelector(
+            `button[data-soc-pillar="${spec.targetSubTab}"]`
+          );
+          if (pillarBtn) {
+            pillarBtn.classList.add('cloudpulse-nav-spotlight-active');
+          }
+        }
+      }
+      if (!targetEl && targetTab === 'GLOBAL_MAP' && spec.isXRay) {
+        targetEl = document.getElementById('global-map-xray-dock');
+      }
+      if (!targetEl && targetTab === 'VPC_NETWORKS') {
+        if (spec.ruleName) {
+          targetEl = document.getElementById(`vpc-fw-card-${spec.ruleName}`);
+        }
+        if (!targetEl) {
+          targetEl = document.getElementById('live-vpc-firewall-rules-section');
+        }
+      }
+      if (!targetEl) {
+        const mainEl = document.getElementById('cloudpulse-main-workspace');
+        if (mainEl) {
+          // Find the primary Studio container below the top Pipeline Bar
+          const studioChildren = mainEl.querySelectorAll(
+            ':scope > div.space-y-4 > *, :scope > div.space-y-6 > *'
+          );
+          if (studioChildren.length >= 2) {
+            targetEl = studioChildren[1];
+          } else if (studioChildren.length === 1) {
+            targetEl = studioChildren[0];
+          }
+        }
+      }
+
+      if (targetEl) {
+        targetEl.setAttribute(
+          'data-spotlight-badge',
+          `🎯 SPOTLIGHT TARGET — ${String(badgeLabel).slice(0, 48)}`
+        );
+        targetEl.classList.add('cloudpulse-target-spotlight-active');
+        if (shouldScroll) {
+          targetEl.scrollIntoView({
+            behavior: 'smooth',
+            block: spec.targetElementId || spec.ruleName || spec.isXRay ? 'center' : 'start',
+          });
+        }
+      }
+
+      if (spotlightCleanupTimerRef.current) {
+        clearTimeout(spotlightCleanupTimerRef.current);
+      }
+      spotlightCleanupTimerRef.current = setTimeout(() => {
+        clearExistingHighlight();
+      }, 6500);
+    };
+
+    setTimeout(() => runLocateAndHighlight(true), 140);
+    setTimeout(() => runLocateAndHighlight(false), 480);
+  }, []);
+
+  const triggerCrossUiSpotlight = useCallback(
+    (spec = {}) => {
+      let enabled = true;
+      try {
+        enabled =
+          localStorage.getItem('cloudpulse_feature_spotlight_v1') !== 'false';
+      } catch {
+        enabled = true;
+      }
+      if (!enabled) return;
+
+      const fromTab = spec.fromTab || activeTabRef.current;
+      const bannerPayload = {
+        fromTab,
+        targetTab: spec.targetTab,
+        targetSubTab: spec.targetSubTab || null,
+        targetElementId: spec.targetElementId || null,
+        ruleName: spec.ruleName || null,
+        isXRay: Boolean(spec.isXRay),
+        targetLabel:
+          spec.targetLabel ||
+          (spec.targetSubTab
+            ? `${spec.targetTab} → ${spec.targetSubTab}`
+            : spec.targetTab),
+        badgeText:
+          spec.badgeText ||
+          spec.targetSubTab ||
+          spec.ruleName ||
+          spec.targetLabel ||
+          spec.targetTab,
+        triggeredAt: Date.now(),
+      };
+      setActiveSpotlightBanner(bannerPayload);
+      pulseSpotlightTargetDom(bannerPayload);
+
+      if (spotlightBannerTimerRef.current) {
+        clearTimeout(spotlightBannerTimerRef.current);
+      }
+      spotlightBannerTimerRef.current = setTimeout(() => {
+        setActiveSpotlightBanner(null);
+      }, 10000);
+    },
+    [pulseSpotlightTargetDom]
+  );
+
   const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
+    const prevTab = activeTabRef.current;
     if (tabId === 'TIME_MACHINE') {
       setSovereignSubTab('TIME_MACHINE');
       setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'TIME_MACHINE',
+        targetLabel: 'IAM & Sovereign Studio → IAM Policy Time-Machine',
+        badgeText: 'IAM Policy Time-Machine',
+      });
       return;
     }
     if (tabId === 'ZOMBIE_HUNTER') {
@@ -3446,11 +3613,25 @@ function CloudPulseCockpit() {
           })
         );
       }, 150);
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'FINOPS',
+        targetElementId: 'finops-zombie-reaper-section',
+        targetLabel: 'FinOps Studio → Idle VM & Zombie Resource Reaper',
+        badgeText: 'Zombie Resource Reaper',
+      });
       return;
     }
     if (tabId === 'SECRETS_KMS') {
       setSovereignSubTab('SECRETS_KMS_WAF');
       setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'SECRETS_KMS_WAF',
+        targetLabel: 'IAM & Sovereign Studio → Secret Manager & KMS Vault',
+        badgeText: 'Secret Manager & KMS Vault',
+      });
       return;
     }
     const normalizedTab =
@@ -3512,7 +3693,18 @@ function CloudPulseCockpit() {
       }
     }
     setActiveTab(normalizedTab);
-  }, []);
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: normalizedTab,
+      targetSubTab: subTab || null,
+      targetLabel: subTab
+        ? `${normalizedTab} → ${subTab}`
+        : extraTarget?.bucketName
+        ? `${normalizedTab} → Bucket "${extraTarget.bucketName}"`
+        : normalizedTab,
+      badgeText: subTab || extraTarget?.bucketName || normalizedTab,
+    });
+  }, [selectedProjectId, triggerCrossUiSpotlight]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
@@ -3979,12 +4171,20 @@ function CloudPulseCockpit() {
   const [cloudSocSeed, setCloudSocSeed] = useState(null);
 
   const handleRunInShell = (cmd) => {
+    const prevTab = activeTabRef.current;
     setShellSeedCommand(cmd);
     setActiveTab('LOGS_SHELL');
     showToast(`Loaded command into Mobile Cloud Shell: ${cmd}`);
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'LOGS_SHELL',
+      targetLabel: `Logs & Cloud Shell → "${String(cmd || '').slice(0, 44)}"`,
+      badgeText: 'Cloud Shell Terminal',
+    });
   };
 
   const handleOpenInLogsExplorer = (spec) => {
+    const prevTab = activeTabRef.current;
     setLogExplorerSeedSpec({ ...spec, triggeredAt: Date.now() });
     if (spec?.gcloudCommand) {
       setShellSeedCommand(spec.gcloudCommand);
@@ -3995,32 +4195,76 @@ function CloudPulseCockpit() {
         spec?.summary || spec?.category || 'Forensic Trace'
       })`
     );
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'LOGS_SHELL',
+      targetLabel: `Cloud Logs Explorer → ${spec?.summary || spec?.regionId || 'Forensic Trace'}`,
+      badgeText: spec?.regionId || 'Logs Explorer',
+    });
   };
 
   const handleTestRuleOnGlobalMap = (seed) => {
+    const prevTab = activeTabRef.current;
     setGlobalMapXRaySeed({ ...seed, nonce: Date.now() });
     setActiveTab('GLOBAL_MAP');
+    const ruleTag = `${seed?.ruleName || 'Packet'} (${String(
+      seed?.protocol || 'tcp'
+    ).toUpperCase()}:${seed?.port || 22})`;
     showToast(
       `Tracing firewall rule "${seed?.ruleName || 'custom'}" (${String(
         seed?.protocol || 'tcp'
       ).toUpperCase()}:${seed?.port || 22}) in Global Map Firewall X-Ray`
     );
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'GLOBAL_MAP',
+      targetElementId: 'global-map-xray-dock',
+      isXRay: true,
+      targetLabel: `Global Map → Live Firewall X-Ray Debugger (${ruleTag})`,
+      badgeText: `Firewall X-Ray: ${ruleTag}`,
+    });
   };
 
   const handleOpenInVpcFirewallStudio = (seed) => {
+    const prevTab = activeTabRef.current;
     setVpcStudioRuleSeed({ ...seed, nonce: Date.now() });
     setActiveTab('VPC_NETWORKS');
     showToast(
       `Opened "${seed?.ruleName || seed?.vpcName || 'Firewall Policy'}" in VPC & Firewalls Studio`
     );
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'VPC_NETWORKS',
+      ruleName: seed?.ruleName || null,
+      targetElementId: seed?.ruleName
+        ? `vpc-fw-card-${seed.ruleName}`
+        : 'live-vpc-firewall-rules-section',
+      targetLabel: `VPC & Firewalls Studio → ${
+        seed?.ruleName ? `Rule "${seed.ruleName}"` : seed?.vpcName || 'Firewall Rules'
+      }`,
+      badgeText: seed?.ruleName ? `Rule: ${seed.ruleName}` : 'VPC Firewall Rules',
+    });
   };
 
   const handleOpenInCloudSoc = (seed) => {
+    const prevTab = activeTabRef.current;
     setCloudSocSeed({ ...seed, nonce: Date.now() });
     setActiveTab('CLOUD_SOC');
     showToast(
       `Opened "${seed?.ruleName || seed?.vpcName || 'VPC Perimeter'}" in Cloud SOC & SOAR War-Room`
     );
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'CLOUD_SOC',
+      targetSubTab: seed?.targetPillar || 'TOXIC_GRAPH',
+      targetElementId: 'soc-active-pillar-panel',
+      targetLabel: `Cloud SOC → ${
+        seed?.ruleName
+          ? `Rule "${seed.ruleName}" in Toxic Attack Graph`
+          : seed?.targetPillar || 'SOAR War-Room'
+      }`,
+      badgeText: seed?.ruleName || seed?.targetPillar || 'Cloud SOC Pillar',
+    });
   };
 
   const handleOpenProvision = (serviceType = 'GCS_BUCKET', locationSpec = null) => {
@@ -4745,6 +4989,52 @@ function CloudPulseCockpit() {
               {/* Global UI Timezone & Live Clock Selector Pill */}
               <TimezoneSelectorPill onShowToast={showToast} />
 
+              {/* Cross-UI Target Spotlight Toggle Button */}
+              <button
+                type="button"
+                data-feature-id="SPOTLIGHT_GUIDE_TOGGLE"
+                onClick={() => {
+                  const nextVal = !featureSpotlightEnabled;
+                  setFeatureSpotlightEnabled(nextVal);
+                  try {
+                    localStorage.setItem(
+                      'cloudpulse_feature_spotlight_v1',
+                      nextVal ? 'true' : 'false'
+                    );
+                  } catch {
+                    // ignore
+                  }
+                  if (!nextVal) {
+                    setActiveSpotlightBanner(null);
+                    document
+                      .querySelectorAll(
+                        '.cloudpulse-target-spotlight-active, .cloudpulse-nav-spotlight-active'
+                      )
+                      .forEach((el) => {
+                        el.classList.remove(
+                          'cloudpulse-target-spotlight-active',
+                          'cloudpulse-nav-spotlight-active'
+                        );
+                        el.removeAttribute('data-spotlight-badge');
+                      });
+                  }
+                  showToast(
+                    nextVal
+                      ? '🎯 Cross-UI Feature Spotlight ENABLED — Jumping between Studios will highlight the destination feature & show a return breadcrumb.'
+                      : 'Cross-UI Feature Spotlight disabled.'
+                  );
+                }}
+                title="Toggle Temporary Cross-UI Feature Spotlight & Return Breadcrumb when clicking features that jump to another Studio"
+                className={`inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0 ${
+                  featureSpotlightEnabled
+                    ? 'bg-blue-600/15 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/50 hover:bg-blue-600/25'
+                    : 'bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Spotlight: {featureSpotlightEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+
               {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
               <button
                 type="button"
@@ -4844,7 +5134,66 @@ function CloudPulseCockpit() {
         </header>
 
         {/* Main Content Body */}
-        <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1">
+        <main
+          id="cloudpulse-main-workspace"
+          className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1"
+        >
+          {/* Sticky Cross-UI Feature Spotlight Arrival Beacon & 1-Click Return Breadcrumb */}
+          {featureSpotlightEnabled && activeSpotlightBanner && (
+            <div className="sticky top-16 z-40 rounded-xl border-2 border-amber-500/80 bg-zinc-950/95 text-zinc-100 px-4 py-2.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-extrabold uppercase tracking-wider">
+                  🎯 SPOTLIGHT TARGET
+                </span>
+                <span className="text-zinc-300">
+                  Jumped from{' '}
+                  <strong className="text-blue-300">
+                    {navTabs.find((t) => t.id === activeSpotlightBanner.fromTab)
+                      ?.label || activeSpotlightBanner.fromTab}
+                  </strong>{' '}
+                  &rarr;{' '}
+                  <strong className="text-amber-300">
+                    {activeSpotlightBanner.targetLabel}
+                  </strong>
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => pulseSpotlightTargetDom(activeSpotlightBanner)}
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
+                >
+                  📍 Locate &amp; Flash Target Again
+                </button>
+
+                {activeSpotlightBanner.fromTab &&
+                  activeSpotlightBanner.fromTab !== activeTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const returnTo = activeSpotlightBanner.fromTab;
+                        setActiveSpotlightBanner(null);
+                        setActiveTab(returnTo);
+                      }}
+                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-100 text-[10.5px] font-extrabold cursor-pointer"
+                    >
+                      &larr; Back to{' '}
+                      {navTabs.find((t) => t.id === activeSpotlightBanner.fromTab)
+                        ?.label || activeSpotlightBanner.fromTab}
+                    </button>
+                  )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSpotlightBanner(null)}
+                  className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10.5px] font-bold cursor-pointer"
+                >
+                  ✕ Dismiss
+                </button>
+              </div>
+            </div>
+          )}
           {(toastMessage || errorBanner) && (
             <div className="fixed bottom-5 right-5 z-[95] flex flex-col items-end gap-2.5 max-w-md pointer-events-none">
               {toastMessage && (
@@ -4938,7 +5287,7 @@ function CloudPulseCockpit() {
                     setVmRefreshTrigger((c) => c + 1);
                   }}
                   onDeleteResource={handleDeleteResource}
-                  onNavigateTab={(tabId) => setActiveTab(tabId)}
+                  onNavigateTab={handleNavigateStudioTab}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
@@ -5084,7 +5433,7 @@ function CloudPulseCockpit() {
                                 key={item.id}
                                 type="button"
                                 data-feature-id={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => handleNavigateStudioTab(item.id)}
                                 className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
                               >
                                 <div className="min-w-0">
@@ -6107,7 +6456,7 @@ function CloudPulseCockpit() {
                     telemetry={overview?.telemetry}
                     projectId={selectedProjectId}
                     onOpenCopilot={handleOpenCopilotWithPrompt}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onSelectTab={handleNavigateStudioTab}
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}
@@ -6344,8 +6693,7 @@ function CloudPulseCockpit() {
           (r) => r.type === 'Compute Engine VM'
         )}
         onSelectTab={(tabId, subTab) => {
-          if (subTab) setInnovationSubTab(subTab);
-          setActiveTab(tabId);
+          handleNavigateStudioTab(tabId, subTab);
         }}
         onOpenCreateModal={(type) => {
           if (type === 'CLOUD_RUN') handleOpenProvision('CLOUD_RUN');

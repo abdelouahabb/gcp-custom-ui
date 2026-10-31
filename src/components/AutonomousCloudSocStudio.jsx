@@ -414,6 +414,12 @@ export default function AutonomousCloudSocStudio({
     if (initialSocSeed.quarantineIp) {
       setQuarantineIpInput(initialSocSeed.quarantineIp);
     }
+    setTimeout(() => {
+      const el = document.getElementById('soc-active-pillar-panel');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 140);
   }, [
     initialSocSeed?.nonce,
     initialSocSeed?.targetPillar,
@@ -1450,6 +1456,7 @@ Format your response with clear Markdown headings:${
               <button
                 key={p.id}
                 type="button"
+                data-soc-pillar={p.id}
                 onClick={() => setActivePillar(p.id)}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
                   isActive
@@ -1511,6 +1518,7 @@ Format your response with clear Markdown headings:${
         </div>
       )}
 
+      <div id="soc-active-pillar-panel" className="scroll-mt-24 space-y-4">
       {/* ====================================================================
           PILLAR 01: MITRE ATT&CK KILL-CHAINS & 1-CLICK SOAR IP QUARANTINE
          ==================================================================== */}
@@ -5775,7 +5783,20 @@ Format your response with clear Markdown headings:${
                           {sig.network === 'cloudaudit.googleapis.com' ? (
                             <button
                               type="button"
-                              onClick={() => setActivePillar('KILL_CHAIN')}
+                              onClick={() => {
+                                setActivePillar('KILL_CHAINS');
+                                setTimeout(() => {
+                                  const el = document.getElementById('soc-active-pillar-panel');
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    if (localStorage.getItem('cloudpulse_feature_spotlight_v1') !== 'false') {
+                                      el.setAttribute('data-spotlight-badge', `🎯 JUMPED HERE — Kill-Chain Actor: ${sig.principalEmail || 'Audit Stream'}`);
+                                      el.classList.add('cloudpulse-target-spotlight-active');
+                                      setTimeout(() => el.classList.remove('cloudpulse-target-spotlight-active'), 6500);
+                                    }
+                                  }
+                                }, 80);
+                              }}
                               className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
                             >
                               🎯 Inspect Actor in Kill-Chain Engine &rarr;
@@ -5980,6 +6001,7 @@ Format your response with clear Markdown headings:${
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
