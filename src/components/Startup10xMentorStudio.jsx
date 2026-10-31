@@ -1914,14 +1914,14 @@ export default function Startup10xMentorStudio({
                           <button
                             type="button"
                             onClick={() =>
-                              copyText(
+                              handleCopy(
                                 `[${ctrl.controlId}] ${ctrl.question}\nStatus: ${ctrl.status}\nLive GCP Evidence (${projectId}): ${ctrl.liveEvidence}`,
                                 ctrl.controlId
                               )
                             }
                             className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                           >
-                            {copiedKey === ctrl.controlId ? 'Copied!' : 'Copy Answer'}
+                            {copiedId === ctrl.controlId ? 'Copied!' : 'Copy Answer'}
                           </button>
                         </div>
                       </div>
