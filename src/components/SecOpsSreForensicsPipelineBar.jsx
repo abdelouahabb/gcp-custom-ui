@@ -112,6 +112,9 @@ function inferTargetTabFromNodeId(nodeId = '') {
   if (id.startsWith('SEC')) {
     return { targetTab: 'SOVEREIGN_STUDIO', subTab: 'SECRETS_KMS_WAF' };
   }
+  if (id === 'IDS_IN' || id === 'SUR_ENG' || id === 'WAF_ENG' || id === 'SHUN') {
+    return { targetTab: 'CLOUD_SOC', subTab: 'CLOUD_IDS_IPS_WAF' };
+  }
   if (id.startsWith('FW') || id.startsWith('VPC') || id === 'PUB' || id === 'IAP') {
     return { targetTab: 'VPC_NETWORKS' };
   }
@@ -398,14 +401,15 @@ export default function SecOpsSreForensicsPipelineBar({
     {
       id: 'STAGE_4_SOAR_QUARANTINE',
       stepNumber: 4,
-      shortTitle: 'SOAR & Active Defense',
+      shortTitle: 'Cloud IDS / IPS & SOAR',
       targetTab: 'CLOUD_SOC',
+      targetSubTab: 'CLOUD_IDS_IPS_WAF',
       secondaryTab: 'SOVEREIGN_STUDIO',
       secondarySubTab: 'IAM_SURGEON',
       secondaryLabel: 'SA Key Kill-Switch',
       status: 'OPTIMAL',
-      metricBadge: 'IAP Lock + Deny',
-      summary: 'Automated SOAR /32 quarantine, Cloud IAP bastion lock & SA key revocation.',
+      metricBadge: 'IDS + IAP Lock',
+      summary: 'Cloud IDS Suricata 7.0 signatures, Cloud Armor L7 WAF & SOAR /32 quarantine.',
       cliCmd: `gcloud compute firewall-rules list --project=${projectId} --filter="direction=INGRESS"`,
       mermaidDsl: null,
     },
@@ -742,7 +746,8 @@ export default function SecOpsSreForensicsPipelineBar({
                       );
                       if (isTabSwitch || stage.targetSubTab) {
                         onSelectTab(stage.targetTab, stage.targetSubTab);
-                      } else {
+                      }
+                      if (!isTabSwitch) {
                         containerRef.current?.nextElementSibling?.scrollIntoView({
                           behavior: 'smooth',
                           block: 'start',
@@ -792,7 +797,8 @@ export default function SecOpsSreForensicsPipelineBar({
                     );
                     if (isTabSwitch || activeStage.targetSubTab) {
                       onSelectTab(activeStage.targetTab, activeStage.targetSubTab);
-                    } else {
+                    }
+                    if (!isTabSwitch) {
                       containerRef.current?.nextElementSibling?.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start',
@@ -918,7 +924,14 @@ export default function SecOpsSreForensicsPipelineBar({
                       dsl={activeStage.mermaidDsl}
                       onNodeClick={(target) => {
                         if (onSelectTab && target?.targetTab) {
+                          const isTabSwitch = target.targetTab !== activeTab;
                           onSelectTab(target.targetTab, target.subTab);
+                          if (!isTabSwitch) {
+                            containerRef.current?.nextElementSibling?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start',
+                            });
+                          }
                         }
                       }}
                     />
@@ -948,7 +961,8 @@ export default function SecOpsSreForensicsPipelineBar({
                           const isTabSwitch = item.targetTab !== activeTab;
                           if (isTabSwitch || item.subTab) {
                             onSelectTab(item.targetTab, item.subTab);
-                          } else {
+                          }
+                          if (!isTabSwitch) {
                             containerRef.current?.nextElementSibling?.scrollIntoView({
                               behavior: 'smooth',
                               block: 'start',

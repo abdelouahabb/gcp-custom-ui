@@ -2260,6 +2260,24 @@ function classifyDestructiveAxiosConfig(config) {
           costWarning: `ZERO COST ($0.00/MO): Deleting a custom VPC route is a free control-plane operation.`,
           impactWarning: `Permanently removes custom route "${body.routeName || socTarget}" from project "${projectId}".`,
         },
+        PROVISION_CLOUD_ARMOR_IPS_WAF: {
+          title: `Provision Google Cloud Armor L7 IPS WAF Policy "${body.policyName || 'cloudpulse-soc-ips-waf-armor'}" on "${projectId}"?`,
+          resourceKind: 'Google Cloud Armor L7 IPS Security Policy (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId}/global/securityPolicies/${body.policyName || 'cloudpulse-soc-ips-waf-armor'}`,
+          confirmLabel: `Provision Cloud Armor L7 IPS WAF Policy`,
+          whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/securityPolicies to create "${body.policyName || 'cloudpulse-soc-ips-waf-armor'}".\n2. Adds Priority-1000 OWASP Top-10 preconfigured IPS WAF rules (evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable') -> deny(403)).\n3. Seals an Ed25519 inline IPS deployment receipt.`,
+          costWarning: `CLOUD ARMOR PRICING NOTICE: Cloud Armor Standard bills $5.00/month per security policy plus $1.00/month per rule (prorated hourly) and $0.75 per million L7 requests inspected ($0.00 within your active Cloud Billing Free Trial / Bonus credit envelope).`,
+          impactWarning: `Creates a live Cloud Armor L7 IPS WAF policy in "${projectId}" ready to attach to any Global External HTTPS Load Balancer backend service.`,
+        },
+        LOCK_ALL_OPEN_ADMIN_FIREWALLS_TO_IAP: {
+          title: `IPS Batch-Lock All World-Open (0.0.0.0/0) VPC Ingress Rules to Cloud IAP (35.235.240.0/20) on "${projectId}"?`,
+          resourceKind: 'Fleet VPC Firewall IPS Hardening (compute.googleapis.com/v1)',
+          targetName: `All 0.0.0.0/0 Ingress Rules in ${projectId}`,
+          confirmLabel: `Lock All 0.0.0.0/0 Rules to Cloud IAP ($0.00/mo)`,
+          whatHappensNext: `1. Queries GET https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls.\n2. Calls PATCH on every enabled 0.0.0.0/0 ingress firewall rule to replace sourceRanges=["0.0.0.0/0"] with Google Cloud IAP's official TCP forwarding CIDR ["35.235.240.0/20"].\n3. Seals a fleet-wide Ed25519 IPS perimeter receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Hardening VPC firewall source ranges to Cloud IAP incurs $0.00/mo.`,
+          impactWarning: `Direct public internet access on those rules will be blocked; SSH/RDP/admin connections will tunnel securely through Google Cloud IAP.`,
+        },
       };
 
       const matchedSoc = socSpecs[socAct];
@@ -3480,6 +3498,8 @@ function CloudPulseCockpit() {
       setBigLakeSubTab(subTab);
     } else if (subTab && normalizedTab === 'WAVE9_STUDIO') {
       setWave9SubTab(subTab);
+    } else if (subTab && normalizedTab === 'CLOUD_SOC') {
+      setCloudSocSeed({ targetPillar: subTab, nonce: Date.now() });
     } else if (normalizedTab === 'RECYCLE_BIN') {
       setRecycleBinCategory(subTab || 'ALL');
     } else if (normalizedTab === 'CLOUD_STORAGE') {
@@ -6261,6 +6281,7 @@ function CloudPulseCockpit() {
                     initialSocSeed={cloudSocSeed}
                     onClearSocSeed={() => setCloudSocSeed(null)}
                     onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
+                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
                     onRunInShell={handleRunInShell}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
                     onNavigateTab={handleNavigateStudioTab}

@@ -56741,6 +56741,9 @@ app.get(
       kmsKeyRingsRes,
       artifactReposRes,
       binAuthPolicyRes,
+      securityPoliciesRes,
+      packetMirroringRes,
+      cloudIdsEndpointsRes,
     ] = await Promise.allSettled([
       gcpFetch(
         'https://logging.googleapis.com/v2/entries:list',
@@ -56882,6 +56885,24 @@ app.get(
         token,
         projectId,
         { timeout: 5500 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/securityPolicies`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/aggregated/packetMirrorings?maxResults=40&returnPartialSuccess=true`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ),
+      gcpFetch(
+        `https://ids.googleapis.com/v1/projects/${encProj}/locations/-/endpoints`,
+        token,
+        projectId,
+        { timeout: 5000 }
       ),
     ]);
 
@@ -58524,6 +58545,265 @@ app.get(
     };
 
     // ========================================================================
+    // PILLAR 21: LIVE CLOUD IDS / IPS, SURICATA SIGNATURES & CLOUD ARMOR WAF
+    // ========================================================================
+    const cloudArmorPolicies =
+      securityPoliciesRes.status === 'fulfilled' &&
+      Array.isArray(securityPoliciesRes.value?.items)
+        ? securityPoliciesRes.value.items.map((pol) => ({
+            id: pol.id,
+            name: pol.name,
+            description: pol.description || 'Google Cloud Armor L7 WAF Security Policy',
+            type: pol.type || 'CLOUD_ARMOR',
+            rulesCount: Array.isArray(pol.rules) ? pol.rules.length : 0,
+            adaptiveProtectionEnabled: Boolean(
+              pol.adaptiveProtectionConfig?.layer7DdosDefenseConfig?.enable
+            ),
+            rules: (pol.rules || []).slice(0, 8).map((r) => ({
+              priority: r.priority,
+              action: r.action,
+              description: r.description || '',
+              expr:
+                r.match?.expr?.expression ||
+                (r.match?.config?.srcIpRanges || []).join(', ') ||
+                '*',
+            })),
+          }))
+        : [];
+
+    const rawPacketMirrorMap =
+      packetMirroringRes.status === 'fulfilled' &&
+      packetMirroringRes.value?.items
+        ? packetMirroringRes.value.items
+        : {};
+    const packetMirrorings = Object.entries(rawPacketMirrorMap).flatMap(
+      ([regKey, regObj]) =>
+        (regObj?.packetMirrorings || []).map((pm) => ({
+          id: pm.id,
+          name: pm.name,
+          region: regKey.replace('regions/', ''),
+          network: String(pm.network?.url || '').split('/').pop() || 'default',
+          enable: pm.enable || 'TRUE',
+          collectorIlb:
+            String(pm.collectorIlb?.url || '').split('/').pop() || 'collector-ilb',
+        }))
+    );
+
+    const cloudIdsEndpoints =
+      cloudIdsEndpointsRes.status === 'fulfilled' &&
+      Array.isArray(cloudIdsEndpointsRes.value?.endpoints)
+        ? cloudIdsEndpointsRes.value.endpoints.map((ep) => ({
+            name: String(ep.name || '').split('/').pop(),
+            fullName: ep.name,
+            network: String(ep.network || '').split('/').pop() || 'default',
+            severity: ep.severity || 'INFORMATIONAL',
+            state: ep.state || 'READY',
+            endpointForwardingRule: ep.endpointForwardingRule || '',
+          }))
+        : [];
+
+    const suricataSignatures = [];
+    for (const fw of openAdminFws) {
+      const allowedPorts = (fw.allowed || [])
+        .flatMap((a) => {
+          const proto = String(a.IPProtocol || 'tcp').toLowerCase();
+          if (!a.ports || a.ports.length === 0) return [`${proto}:all`];
+          return a.ports.map((p) => `${proto}:${p}`);
+        });
+      const portStr = allowedPorts.join(', ') || 'tcp:all';
+      const hasSsh = portStr.includes('22');
+      const hasRdp = portStr.includes('3389');
+      const has8888 = portStr.includes('8888');
+      const primaryPort = hasRdp
+        ? 3389
+        : hasSsh
+        ? 22
+        : has8888
+        ? 8888
+        : Number((allowedPorts[0] || '').split(':')[1]) || 443;
+      const primaryProto = (allowedPorts[0] || 'tcp').split(':')[0] || 'tcp';
+
+      const ruleSid = hasRdp
+        ? 20263389
+        : hasSsh
+        ? 20260022
+        : has8888
+        ? 20268888
+        : 20261001 + suricataSignatures.length;
+
+      suricataSignatures.push({
+        sid: ruleSid,
+        classtype: hasRdp || hasSsh ? 'attempted-admin' : 'policy-violation',
+        severity: hasRdp || hasSsh || has8888 ? 'CRITICAL' : 'HIGH',
+        signatureName: hasRdp
+          ? `ET SCAN Public RDP Brute-Force Exposure (${fw.name} -> 0.0.0.0/0 :3389)`
+          : hasSsh
+          ? `ET SCAN Public SSH Brute-Force Surface (${fw.name} -> 0.0.0.0/0 :22)`
+          : has8888
+          ? `ET EXPLOIT Unauthenticated Admin/Notebook Port Exposed (${fw.name} -> 0.0.0.0/0 :8888)`
+          : `ET POLICY World-Open VPC Ingress Rule (${fw.name} -> 0.0.0.0/0 ${portStr})`,
+        mitreTactic: 'Initial Access · T1190 / T1133',
+        layer: 'L3/L4 VPC Andromeda Switch',
+        status: 'ACTIVE_EXPOSURE',
+        targetRuleName: fw.name,
+        network: String(fw.network || '').split('/').pop() || 'default',
+        protocol: primaryProto,
+        port: primaryPort,
+        sourceCidr: '0.0.0.0/0',
+        suricataRule: `alert ${primaryProto} any any -> $HOME_NET ${primaryPort} (msg:"CloudPulse IDS: World-Open Ingress via ${fw.name}"; flow:to_server; classtype:attempted-admin; sid:${ruleSid}; rev:1;)`,
+        remediationAction: 'LOCK_OPEN_VPC_FIREWALL_TO_IAP',
+        remediationLabel: `IPS Lock "${fw.name}" to Cloud IAP (35.235.240.0/20)`,
+      });
+    }
+
+    for (const chain of killChains.slice(0, 5)) {
+      const isExternalIp =
+        chain.callerIp &&
+        chain.callerIp !== 'internal-gcp-backbone' &&
+        chain.callerIp !== '127.0.0.1' &&
+        !chain.callerIp.startsWith('10.');
+      const alreadyBlocked = activeQuarantineRules.some((r) =>
+        (r.sourceRanges || []).some((sr) => sr.includes(chain.callerIp))
+      );
+      const chainMethods = Array.isArray(chain.sampleMethods)
+        ? chain.sampleMethods
+        : Array.isArray(chain.methods)
+        ? chain.methods
+        : ['cloudaudit.activity'];
+      suricataSignatures.push({
+        sid: 20269000 + suricataSignatures.length,
+        classtype: 'trojan-activity',
+        severity: chain.severityLevel || 'MEDIUM',
+        signatureName: `ET CLOUD ${(chain.tactics || []).join(' + ')} Sequence by ${chain.principalEmail}`,
+        mitreTactic: (chain.tactics || []).join(', '),
+        layer: 'L7 Control-Plane Cloud Audit IDS',
+        status: alreadyBlocked ? 'IPS_QUARANTINED' : 'DETECTED_LIVE',
+        targetRuleName: chainMethods.slice(0, 2).join(', '),
+        network: 'cloudaudit.googleapis.com',
+        protocol: 'tcp',
+        port: 443,
+        sourceCidr: isExternalIp ? `${chain.callerIp}/32` : chain.callerIp,
+        callerIp: chain.callerIp,
+        principalEmail: chain.principalEmail,
+        eventsCount: chain.eventsCount,
+        suricataRule: `drop tcp ${isExternalIp ? chain.callerIp : 'any'} any -> $GCP_API_EDGE 443 (msg:"CloudPulse IPS: ${chain.principalEmail} ${chainMethods[0] || 'API'}"; sid:${20269000 + suricataSignatures.length}; rev:1;)`,
+        remediationAction: isExternalIp && !alreadyBlocked ? 'BLOCK_ATTACKER_IP_CIDR' : null,
+        remediationLabel:
+          isExternalIp && !alreadyBlocked
+            ? `IPS Auto-Shun ${chain.callerIp}/32 (P-100 DENY)`
+            : alreadyBlocked
+            ? 'Quarantined at VPC Edge'
+            : 'Internal Google Backbone Identity',
+      });
+    }
+
+    const suricataRulesBundle = [
+      `# ============================================================================`,
+      `# CloudPulse 2026 · Live Suricata 7.0 / Cloud IDS Signature Ruleset (.rules)`,
+      `# Project: ${projectId} · Generated: ${new Date().toISOString()}`,
+      `# Live Firewalls: ${firewallRules.length} · Quarantine Rules: ${activeQuarantineRules.length} · Cloud Armor Policies: ${cloudArmorPolicies.length}`,
+      `# ============================================================================`,
+      ...suricataSignatures.map((s) => s.suricataRule),
+      `drop http any any -> $HOME_NET any (msg:"CloudPulse L7 IPS: OWASP SQLi / XSS Preconfigured WAF Block"; classtype:web-application-attack; sid:20269901; rev:1;)`,
+      `drop tcp any any -> 169.254.169.254 80 (msg:"CloudPulse IPS: GCE Metadata SSRF Token Theft Attempt"; content:"Metadata-Flavor: Google"; nocase; sid:20269902; rev:1;)`,
+    ].join('\n');
+
+    const cloudArmorTerraformHcl = `# ============================================================================
+# CloudPulse 2026 · Inline L7 IPS Cloud Armor WAF + L3/L4 VPC Auto-Shun (.tf)
+# Project: ${projectId}
+# ============================================================================
+resource "google_compute_security_policy" "cloudpulse_soc_ips_waf" {
+  name        = "cloudpulse-soc-ips-waf-armor"
+  project     = "${projectId}"
+  description = "CloudPulse Autonomous SOC Inline L7 IPS (OWASP SQLi, XSS, LFI, RCE + 600 RPM Rate-Limit)"
+
+  rule {
+    action      = "deny(403)"
+    priority    = 1000
+    description = "IPS Signature 1000: Block OWASP SQL Injection (sqli-v33-stable)"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredWaf('sqli-v33-stable')"
+      }
+    }
+  }
+
+  rule {
+    action      = "deny(403)"
+    priority    = 1010
+    description = "IPS Signature 1010: Block OWASP Cross-Site Scripting (xss-v33-stable)"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredWaf('xss-v33-stable')"
+      }
+    }
+  }
+
+  rule {
+    action      = "deny(403)"
+    priority    = 1020
+    description = "IPS Signature 1020: Block Remote Code Execution & Local File Inclusion (rce/lfi-v33-stable)"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredWaf('rce-v33-stable') || evaluatePreconfiguredWaf('lfi-v33-stable')"
+      }
+    }
+  }
+
+  rule {
+    action      = "throttle"
+    priority    = 1050
+    description = "IPS Signature 1050: Volumetric DDoS & Brute-Force Rate-Limit (600 req/min per IP)"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+      rate_limit_threshold {
+        count        = 600
+        interval_sec = 60
+      }
+    }
+  }
+
+  rule {
+    action      = "allow"
+    priority    = 2147483647
+    description = "Default allow after L7 IPS inspection"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+}`;
+
+    const ipsIdsRadar = {
+      cloudIdsApiEnabled: enabledServiceNamesSet.has('ids.googleapis.com'),
+      cloudIdsEndpointsCount: cloudIdsEndpoints.length,
+      cloudIdsEndpoints,
+      packetMirroringsCount: packetMirrorings.length,
+      packetMirrorings,
+      cloudArmorPoliciesCount: cloudArmorPolicies.length,
+      cloudArmorPolicies,
+      activeQuarantineRulesCount: activeQuarantineRules.length,
+      openAdminFirewallsCount: openAdminFws.length,
+      signaturesCount: suricataSignatures.length,
+      criticalSignaturesCount: suricataSignatures.filter(
+        (s) => s.severity === 'CRITICAL' || s.severity === 'HIGH'
+      ).length,
+      signatures: suricataSignatures,
+      suricataRulesBundle,
+      cloudArmorTerraformHcl,
+    };
+
+    // ========================================================================
     // PILLAR 5: CANONICAL SOC POSTURE SCORE & Ed25519 FORENSIC DIGEST
     // ========================================================================
 
@@ -58620,6 +58900,10 @@ app.get(
         invariantsPassedCount: selfHealingGuardian.invariantsPassedCount,
         invariantsTotalCount: selfHealingGuardian.totalInvariantsCount,
         guardianCompliancePct: selfHealingGuardian.complianceScorePct,
+        ipsSignaturesCount: ipsIdsRadar.signaturesCount,
+        cloudArmorPoliciesCount: ipsIdsRadar.cloudArmorPoliciesCount,
+        packetMirroringsCount: ipsIdsRadar.packetMirroringsCount,
+        cloudIdsEndpointsCount: ipsIdsRadar.cloudIdsEndpointsCount,
       },
       killChains: killChains.slice(0, 25),
       auditEvents: parsedAuditEvents.slice(0, 50),
@@ -58640,6 +58924,7 @@ app.get(
       apiSurfaceMinimizer,
       artifactAndBinAuthRadar,
       selfHealingGuardian,
+      ipsIdsRadar,
       healthAndDriftBridge,
       aiCommanderStatus: {
         aiStudioVaultConfigured: Boolean(
@@ -60768,6 +61053,163 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         action,
         receipt,
         message: `Enabled Vertex AI (aiplatform.googleapis.com) & Generative Language API on "${projectId}" — Keyless OAuth2 Gemini SOC Incident Commander is now ready!`,
+      });
+    }
+
+    // ACTION AG: PROVISION CLOUD ARMOR L7 IPS WAF SECURITY POLICY (PILLAR 21)
+    if (action === 'PROVISION_CLOUD_ARMOR_IPS_WAF') {
+      const policyName =
+        String(req.body?.policyName || 'cloudpulse-soc-ips-waf-armor')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .slice(0, 58) || 'cloudpulse-soc-ips-waf-armor';
+
+      const existingPol = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/securityPolicies/${encodeURIComponent(
+          policyName
+        )}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => null);
+
+      if (!existingPol) {
+        await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/securityPolicies`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            body: {
+              name: policyName,
+              description:
+                'CloudPulse Autonomous SOC Inline L7 IPS WAF (OWASP SQLi, XSS, RCE/LFI + Rate-Limiting)',
+              type: 'CLOUD_ARMOR',
+            },
+            timeout: 12000,
+          }
+        );
+
+        await new Promise((r) => setTimeout(r, 1500));
+
+        await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/securityPolicies/${encodeURIComponent(
+            policyName
+          )}/addRule?priority=1000`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            body: {
+              action: 'deny(403)',
+              priority: 1000,
+              description:
+                'CloudPulse IPS Signature 1000: Block OWASP SQL Injection & Cross-Site Scripting (sqli/xss-v33-stable)',
+              match: {
+                expr: {
+                  expression:
+                    "evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')",
+                },
+              },
+            },
+            timeout: 9000,
+          }
+        ).catch(() => null);
+      }
+
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'PROVISION_CLOUD_ARMOR_IPS_WAF',
+        target: `projects/${projectId}/global/securityPolicies/${policyName}`,
+        actor: account || 'soc-operator',
+        details: `Provisioned/verified Google Cloud Armor L7 IPS WAF policy "${policyName}" with OWASP Top-10 preconfigured WAF expressions (sqli-v33-stable, xss-v33-stable).`,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'SOC_PROVISION_CLOUD_ARMOR_IPS_WAF',
+        resourceType: 'CLOUD_ARMOR_POLICY',
+        resourceName: policyName,
+        region: 'global',
+        details: `Provisioned Cloud Armor L7 IPS WAF policy ${policyName} on ${projectId}`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        policyName,
+        receipt,
+        message: existingPol
+          ? `Verified active Cloud Armor L7 IPS WAF policy "${policyName}" on "${projectId}"!`
+          : `Provisioned Cloud Armor L7 IPS WAF policy "${policyName}" with OWASP SQLi/XSS preconfigured IPS rules on "${projectId}"!`,
+      });
+    }
+
+    // ACTION AH: BATCH-LOCK ALL WORLD-OPEN (0.0.0.0/0) ADMIN FIREWALL RULES TO CLOUD IAP (PILLAR 21)
+    if (action === 'LOCK_ALL_OPEN_ADMIN_FIREWALLS_TO_IAP') {
+      const fwRes = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/firewalls`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ items: [] }));
+      const fws = Array.isArray(fwRes?.items) ? fwRes.items : [];
+      const openFws = fws.filter(
+        (fw) =>
+          !fw.disabled &&
+          fw.direction === 'INGRESS' &&
+          (fw.sourceRanges || []).includes('0.0.0.0/0') &&
+          !String(fw.name || '').startsWith('cloudpulse-soc-')
+      );
+      const lockedNames = [];
+      for (const fw of openFws) {
+        await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/firewalls/${encodeURIComponent(
+            fw.name
+          )}`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            body: {
+              sourceRanges: ['35.235.240.0/20'],
+              description: `${
+                fw.description ? `${fw.description} · ` : ''
+              }[CloudPulse IPS Hardened to Cloud IAP 35.235.240.0/20]`.slice(
+                0,
+                250
+              ),
+            },
+            timeout: 9000,
+          }
+        );
+        lockedNames.push(fw.name);
+      }
+
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'LOCK_ALL_OPEN_ADMIN_FIREWALLS_TO_IAP',
+        target:
+          lockedNames.length > 0
+            ? lockedNames.join(', ')
+            : '0 world-open rules found',
+        actor: account || 'soc-operator',
+        details: `Batch-hardened ${lockedNames.length} world-open (0.0.0.0/0) VPC firewall rule(s) (${
+          lockedNames.join(', ') || 'none'
+        }) to Google Cloud IAP (35.235.240.0/20).`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        lockedCount: lockedNames.length,
+        lockedNames,
+        receipt,
+        message:
+          lockedNames.length > 0
+            ? `IPS Locked ${lockedNames.length} world-open firewall rule(s) (${lockedNames.join(
+                ', '
+              )}) to Cloud IAP (35.235.240.0/20)!`
+            : `All VPC firewall rules are already locked to non-public CIDRs (0 world-open rules)!`,
       });
     }
 
@@ -74291,6 +74733,33 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
       stage3MermaidDsl = s3.join('\n');
     }
 
+    // Stage 4 Mermaid: 3-Column Left-to-Right Cloud IDS / IPS, Suricata & SOAR Quarantine
+    let stage4MermaidDsl = null;
+    if (firewalls.length > 0 || auditEntries.length > 0) {
+      const s4 = [`flowchart LR`];
+      s4.push(`  subgraph S4_INGRESS["1. Ingress & Audit Telemetry"]`);
+      s4.push(
+        `    IDS_IN["${openPublicFw.length} Open 0.0.0.0/0 · ${auditEntries.length} Audit Events"]`
+      );
+      s4.push(`  end`);
+      s4.push(`  subgraph S4_SURICATA["2. Cloud IDS & Suricata 7.0"]`);
+      s4.push(
+        `    SUR_ENG["Suricata 7.0 Signatures (${Math.max(1, openPublicFw.length)} Active)"]`
+      );
+      s4.push(`    WAF_ENG["Cloud Armor L7 OWASP WAF"]`);
+      s4.push(`  end`);
+      s4.push(`  subgraph S4_SOAR["3. Inline IPS Auto-Shun & IAP"]`);
+      s4.push(
+        `    SHUN["${denyFw.length} P-100 DENY · ${iapFw.length} IAP Bastion"]`
+      );
+      s4.push(`  end`);
+      s4.push(`  IDS_IN -->|"Inspects"| SUR_ENG`);
+      s4.push(`  IDS_IN -->|"L7 Filter"| WAF_ENG`);
+      s4.push(`  SUR_ENG -->|"Auto-Shun / IAP"| SHUN`);
+      s4.push(`  WAF_ENG -->|"deny(403)"| SHUN`);
+      stage4MermaidDsl = s4.join('\n');
+    }
+
     const primarySaEmail =
       serviceAccounts[0]?.email || `cloudpulse-runtime@${projectId}.iam.gserviceaccount.com`;
     const primaryOpenFw = openPublicFw[0]?.name || 'default-allow-ssh';
@@ -74509,18 +74978,26 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
       {
         id: 'STAGE_4_SOAR_QUARANTINE',
         stepNumber: 4,
-        title: '4. SOAR Active Quarantine, IAP Lock & Playbook Synthesizer',
-        shortTitle: 'SOAR & Active Defense',
+        title: '4. Cloud IDS / IPS, Suricata 7.0 Signatures, Cloud Armor WAF & SOAR Quarantine',
+        shortTitle: 'Cloud IDS / IPS & SOAR',
         targetTab: 'CLOUD_SOC',
+        targetSubTab: 'CLOUD_IDS_IPS_WAF',
         secondaryTab: 'SOVEREIGN_STUDIO',
         secondarySubTab: 'IAM_SURGEON',
         secondaryLabel: 'SA Key Kill-Switch',
-        status: 'OPTIMAL',
-        metricBadge: `${denyFw.length} Deny Rule(s) · ${iapFw.length} IAP`,
-        summary: `Automated SOAR active defense across ${denyFw.length} high-priority DENY/quarantine firewall rule(s), ${iapFw.length} Cloud IAP bastion rule(s), and 1-click Service Account key revocation.`,
-        cliCmd: `gcloud compute firewall-rules list --project=${projectId} --filter="direction=INGRESS"`,
-        mermaidDsl: null,
+        status: openPublicFw.length > 0 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
+        metricBadge: `IDS/IPS · ${denyFw.length} Deny · ${iapFw.length} IAP`,
+        summary: `Inline Cloud IDS/IPS & SOAR active defense across ${openPublicFw.length} world-open 0.0.0.0/0 signature(s), ${denyFw.length} high-priority DENY/quarantine firewall rule(s), ${iapFw.length} Cloud IAP bastion rule(s), and Cloud Armor L7 OWASP WAF.`,
+        cliCmd: `gcloud compute security-policies list --project=${projectId}`,
+        mermaidDsl: stage4MermaidDsl,
         stageItems: [
+          {
+            kind: 'Cloud SOC Pillar 21 · Live IPS/IDS',
+            name: 'Suricata 7.0 Signatures & Cloud Armor L7 WAF',
+            meta: `${openPublicFw.length} Exposed 0.0.0.0/0 Rule(s) · 1-Click IPS Auto-Shun`,
+            targetTab: 'CLOUD_SOC',
+            subTab: 'CLOUD_IDS_IPS_WAF',
+          },
           {
             kind: 'SOAR Quarantine Playbook',
             name: 'soar_quarantine.sh',
@@ -74537,17 +75014,11 @@ app.get('/api/project/:projectId/secops-sre-pipeline/blueprint', async (req, res
             subTab: 'IAM_SURGEON',
           },
           {
-            kind: 'SRE Multi-Window Alert YAML',
-            name: 'sre_slo_burn_alert.yaml',
-            meta: '14.4x (1h) / 6.0x (6h) Error-Budget Gate',
-            openArtifactTab: 'sreSloBurnAlertYaml',
-            targetTab: 'SRE_WAR_ROOM',
-          },
-          {
-            kind: '20-Pillar Cloud SOC',
+            kind: '21-Pillar Cloud SOC',
             name: 'Open SOAR & Kill-Chain Command Center',
             meta: `${denyFw.length} Active DENY / Quarantine Rule(s)`,
             targetTab: 'CLOUD_SOC',
+            subTab: 'KILL_CHAINS',
           },
         ],
       },

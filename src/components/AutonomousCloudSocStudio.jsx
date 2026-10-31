@@ -164,6 +164,13 @@ const SOC_PILLARS = [
     subtitle: 'Continuous Zero-Trust Invariant Engine & 1-Click Full Reconciler',
     icon: ShieldCheck,
   },
+  {
+    id: 'CLOUD_IDS_IPS_WAF',
+    step: '21',
+    title: 'Cloud IDS / IPS & WAF',
+    subtitle: 'Suricata 7.0 Signatures, Cloud Armor L7 IPS & Auto-Shun SOAR',
+    icon: ShieldAlert,
+  },
 ];
 
 export default function AutonomousCloudSocStudio({
@@ -171,6 +178,7 @@ export default function AutonomousCloudSocStudio({
   initialSocSeed,
   onClearSocSeed,
   onOpenVpcFirewallStudio,
+  onTestRuleOnGlobalMap,
   onRunInShell,
   onOpenHealthAndDrift,
   onNavigateTab,
@@ -412,6 +420,18 @@ export default function AutonomousCloudSocStudio({
     initialSocSeed?.ruleName,
     initialSocSeed?.quarantineIp,
   ]);
+
+  useEffect(() => {
+    const handleSocSubTab = (evt) => {
+      const nextPillar = evt?.detail?.subTab;
+      if (nextPillar) {
+        setActivePillar(nextPillar);
+      }
+    };
+    window.addEventListener('cloudpulse:soc-subtab', handleSocSubTab);
+    return () =>
+      window.removeEventListener('cloudpulse:soc-subtab', handleSocSubTab);
+  }, []);
 
   const handleJumpToVpcStudio = (seed = {}) => {
     const payload = {
@@ -946,6 +966,23 @@ Format your response with clear Markdown headings:${
     complianceScorePct: 100,
     invariants: [],
   };
+  const ipsIdsRadar = socData?.ipsIdsRadar || {
+    cloudIdsApiEnabled: false,
+    cloudIdsEndpointsCount: 0,
+    cloudIdsEndpoints: [],
+    packetMirroringsCount: 0,
+    packetMirrorings: [],
+    cloudArmorPoliciesCount: 0,
+    cloudArmorPolicies: [],
+    activeQuarantineRulesCount: 0,
+    openAdminFirewallsCount: 0,
+    signaturesCount: 0,
+    criticalSignaturesCount: 0,
+    signatures: [],
+    suricataRulesBundle: '',
+    cloudArmorTerraformHcl: '',
+  };
+  const [ipsArtifactTab, setIpsArtifactTab] = useState('SURICATA_RULES'); // 'SURICATA_RULES' | 'CLOUD_ARMOR_TF'
   const healthAndDriftBridge = socData?.healthAndDriftBridge || null;
   const attestation = socData?.cryptographicAttestation || {};
 
@@ -1029,6 +1066,18 @@ Format your response with clear Markdown headings:${
               <FileCode2 className="w-3.5 h-3.5 text-blue-400" />
               <span>
                 GitOps HCL Bridge ({healthAndDriftBridge?.flightMutationsCount || 0})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActivePillar('CLOUD_IDS_IPS_WAF')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/50 text-rose-200 text-xs font-extrabold transition-colors cursor-pointer"
+              title="Open Pillar 21: Live Cloud IDS / IPS, Suricata 7.0 Signatures, Cloud Armor L7 WAF & Auto-Shun SOAR"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+              <span>
+                Cloud IDS / IPS ({ipsIdsRadar.signaturesCount} Signatures · {ipsIdsRadar.cloudArmorPoliciesCount} WAF)
               </span>
             </button>
 
@@ -5499,6 +5548,425 @@ Format your response with clear Markdown headings:${
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 21: LIVE CLOUD IDS / IPS, SURICATA 7.0 SIGNATURES & CLOUD ARMOR WAF
+         ==================================================================== */}
+      {activePillar === 'CLOUD_IDS_IPS_WAF' && (
+        <div className="space-y-4">
+          {/* Top IPS / IDS Executive Control Plane Header */}
+          <div className="p-4 rounded-xl border border-rose-500/40 bg-gradient-to-r from-zinc-950 via-rose-950/20 to-zinc-950 text-zinc-100 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[10px] font-mono font-extrabold uppercase">
+                    PILLAR 21 · INLINE CLOUD IPS / IDS + SURICATA 7.0 + CLOUD ARMOR WAF
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
+                    $0.00/MO AGENTLESS ANDROMEDA + AUDIT IDS
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-mono font-bold">
+                    {ipsIdsRadar.signaturesCount} Live Signatures ({ipsIdsRadar.criticalSignaturesCount} Crit/High)
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-extrabold text-white">
+                  Unified L3/L4 VPC Andromeda IPS, L7 Cloud Armor OWASP WAF &amp; Suricata 7.0 Intrusion Detection (`{projectId}`)
+                </h3>
+                <p className="text-xs text-zinc-400 max-w-4xl">
+                  Evaluates live VPC Firewall ingress exposure (<code className="text-rose-300">0.0.0.0/0</code> on SSH <code className="text-rose-300">:22</code>, RDP <code className="text-rose-300">:3389</code>, Admin <code className="text-rose-300">:8888</code>), <code className="text-blue-300">cloudaudit.googleapis.com</code> behavioral kill-chains, Google Cloud IDS (<code className="text-blue-300">ids.googleapis.com</code>), VPC Packet Mirroring, and Cloud Armor L7 WAF policies. Enforce 1-click inline IPS containment or trace any intrusion signature on the 40-Region Global Map X-Ray.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {ipsIdsRadar.openAdminFirewallsCount > 0 && (
+                  <button
+                    type="button"
+                    disabled={Boolean(actionBusy)}
+                    onClick={() =>
+                      handleExecuteSocAction('IPS_BATCH_LOCK_IAP', {
+                        action: 'LOCK_ALL_OPEN_ADMIN_FIREWALLS_TO_IAP',
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>
+                      {actionBusy === 'IPS_BATCH_LOCK_IAP'
+                        ? 'Locking 0.0.0.0/0 Rules...'
+                        : `IPS Lock All ${ipsIdsRadar.openAdminFirewallsCount} Open 0.0.0.0/0 Rules to IAP`}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={Boolean(actionBusy)}
+                  onClick={() =>
+                    handleExecuteSocAction('PROVISION_CLOUD_ARMOR_IPS_WAF', {
+                      action: 'PROVISION_CLOUD_ARMOR_IPS_WAF',
+                      policyName: 'cloudpulse-soc-ips-waf-armor',
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'PROVISION_CLOUD_ARMOR_IPS_WAF'
+                      ? 'Provisioning Cloud Armor WAF...'
+                      : '1-Click Deploy Cloud Armor L7 IPS WAF (OWASP Top-10)'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Live IPS / IDS Plane Telemetry Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1 font-mono">
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">
+                  1. L3/L4 VPC Andromeda IPS
+                </div>
+                <div className="text-sm font-extrabold text-white">
+                  {ipsIdsRadar.activeQuarantineRulesCount} P-100 DENY · {ipsIdsRadar.openAdminFirewallsCount} Open 0.0.0.0/0
+                </div>
+                <div className="text-[10px] text-emerald-400">
+                  $0.00/mo Virtual Switch Line-Rate Drop
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1 font-mono">
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">
+                  2. L7 Cloud Armor IPS WAF
+                </div>
+                <div className="text-sm font-extrabold text-white">
+                  {ipsIdsRadar.cloudArmorPoliciesCount} Active Security Polic{ipsIdsRadar.cloudArmorPoliciesCount === 1 ? 'y' : 'ies'}
+                </div>
+                <div className="text-[10px] text-blue-300">
+                  OWASP SQLi / XSS / LFI / RCE + Rate-Limit
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1 font-mono">
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">
+                  3. Suricata 7.0 Signature Engine
+                </div>
+                <div className="text-sm font-extrabold text-rose-400">
+                  {ipsIdsRadar.signaturesCount} Triggered Signature(s)
+                </div>
+                <div className="text-[10px] text-zinc-400">
+                  {ipsIdsRadar.criticalSignaturesCount} Critical / High Severity Matches
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1 font-mono">
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">
+                  4. Cloud IDS &amp; Packet Mirroring
+                </div>
+                <div className="text-sm font-extrabold text-white">
+                  {ipsIdsRadar.cloudIdsEndpointsCount} IDS Endpoint · {ipsIdsRadar.packetMirroringsCount} Mirror Policy
+                </div>
+                <div className="text-[10px] text-amber-300">
+                  ids.googleapis.com: {ipsIdsRadar.cloudIdsApiEnabled ? 'ENABLED' : 'AGENTLESS ($0/mo)'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Suricata 7.0 / Cloud IDS Signature Match Table + 1-Click IPS Auto-Shun & Global Map X-Ray */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Crosshair className="w-4 h-4 text-rose-500" />
+                  <span>
+                    Live Suricata 7.0 &amp; Cloud IDS Intrusion Signatures (`{projectId}`)
+                  </span>
+                </h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Every signature below is synthesized from your live VPC firewall perimeter and real <code className="font-mono">cloudaudit.googleapis.com</code> actor chains. Click <strong>Trace in Global Map X-Ray</strong> to fire the exact packet on the 40-Region World Map or execute <strong>1-Click Inline IPS</strong> containment.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-xs font-mono font-bold">
+                {ipsIdsRadar.signatures.length} Live Signature(s)
+              </span>
+            </div>
+
+            {ipsIdsRadar.signatures.length === 0 ? (
+              <div className="p-6 text-center text-xs font-mono text-emerald-500">
+                Zero active intrusion signatures or world-open admin ports detected!
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {ipsIdsRadar.signatures.map((sig) => {
+                  const isCrit =
+                    sig.severity === 'CRITICAL' || sig.severity === 'HIGH';
+                  return (
+                    <div
+                      key={sig.sid}
+                      className={`p-3.5 rounded-xl border font-mono text-xs space-y-2 ${
+                        sig.status === 'IPS_QUARANTINED'
+                          ? 'border-emerald-500/35 bg-emerald-500/5'
+                          : isCrit
+                          ? 'border-rose-500/45 bg-rose-500/10'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2 py-0.5 rounded bg-zinc-900 text-rose-300 border border-rose-500/30 text-[10px] font-extrabold">
+                            SID:{sig.sid}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                              sig.status === 'IPS_QUARANTINED'
+                                ? 'bg-emerald-500/20 text-emerald-500'
+                                : isCrit
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-amber-500/20 text-amber-400'
+                            }`}
+                          >
+                            {sig.severity} · {sig.status}
+                          </span>
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            {sig.signatureName}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-blue-500 dark:text-blue-300">
+                          {sig.layer} · {sig.mitreTactic}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-emerald-300 overflow-x-auto">
+                        <code>{sig.suricataRule}</code>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          Target: <strong className="text-zinc-800 dark:text-zinc-200">{sig.targetRuleName}</strong> · Proto/Port:{' '}
+                          <strong className="text-rose-400">
+                            {String(sig.protocol || 'tcp').toUpperCase()}:{sig.port || 443}
+                          </strong>{' '}
+                          · Source: <code>{sig.sourceCidr}</code>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {typeof onTestRuleOnGlobalMap === 'function' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onTestRuleOnGlobalMap({
+                                  ruleName: sig.targetRuleName,
+                                  protocol: sig.protocol || 'tcp',
+                                  port: sig.port || 22,
+                                  originId:
+                                    sig.port === 22 || sig.port === 3389
+                                      ? 'scanner-botnet-east'
+                                      : 'my-live-client',
+                                })
+                              }
+                              className="px-2.5 py-1 rounded-md bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-600 dark:text-teal-300 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              🔬 Trace in Global Map X-Ray &rarr;
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleJumpToVpcStudio({
+                                ruleName: sig.targetRuleName,
+                                filterMode:
+                                  sig.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP'
+                                    ? 'EXPOSED'
+                                    : 'ALL',
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                          >
+                            🌐 Inspect in VPC Studio &rarr;
+                          </button>
+
+                          {sig.remediationAction === 'LOCK_OPEN_VPC_FIREWALL_TO_IAP' && (
+                            <button
+                              type="button"
+                              disabled={Boolean(actionBusy)}
+                              onClick={() =>
+                                handleExecuteSocAction(
+                                  `IPS_LOCK:${sig.targetRuleName}`,
+                                  {
+                                    action: 'LOCK_OPEN_VPC_FIREWALL_TO_IAP',
+                                    firewallRuleName: sig.targetRuleName,
+                                  }
+                                )
+                              }
+                              className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                            >
+                              🔒 {sig.remediationLabel}
+                            </button>
+                          )}
+
+                          {sig.remediationAction === 'BLOCK_ATTACKER_IP_CIDR' &&
+                            sig.callerIp && (
+                              <button
+                                type="button"
+                                disabled={Boolean(actionBusy)}
+                                onClick={() =>
+                                  handleExecuteSocAction(
+                                    `IPS_SHUN:${sig.callerIp}`,
+                                    {
+                                      action: 'BLOCK_ATTACKER_IP_CIDR',
+                                      targetIpCidr: `${sig.callerIp}/32`,
+                                    }
+                                  )
+                                }
+                                className="px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                              >
+                                🛡️ {sig.remediationLabel}
+                              </button>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Active Cloud Armor L7 IPS WAF Policies & Suricata / Terraform Export Drawer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3 font-mono">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                    Live Google Cloud Armor L7 IPS WAF Policies ({ipsIdsRadar.cloudArmorPoliciesCount})
+                  </h4>
+                  <p className="text-[11px] text-zinc-500">
+                    Fetched live from <code className="text-blue-400">compute.googleapis.com/v1/projects/{projectId}/global/securityPolicies</code>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={Boolean(actionBusy)}
+                  onClick={() =>
+                    handleExecuteSocAction('PROVISION_CLOUD_ARMOR_IPS_WAF', {
+                      action: 'PROVISION_CLOUD_ARMOR_IPS_WAF',
+                      policyName: 'cloudpulse-soc-ips-waf-armor',
+                    })
+                  }
+                  className="px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  + Provision OWASP IPS Policy
+                </button>
+              </div>
+
+              {ipsIdsRadar.cloudArmorPolicies.length === 0 ? (
+                <div className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 space-y-2">
+                  <div>
+                    No Cloud Armor L7 WAF Security Policies are currently deployed in <code>{projectId}</code>.
+                  </div>
+                  <div className="text-[11px] text-zinc-400">
+                    Click <strong>+ Provision OWASP IPS Policy</strong> above to create <code>cloudpulse-soc-ips-waf-armor</code> with Priority-1000 SQLi &amp; XSS preconfigured WAF rules, or use <strong>$0.00/mo L3/L4 VPC Andromeda IPS</strong> at zero cost.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {ipsIdsRadar.cloudArmorPolicies.map((pol) => (
+                    <div
+                      key={pol.name}
+                      className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {pol.name}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                          {pol.type} · {pol.rulesCount} Rule(s)
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-500">
+                        {pol.description}
+                      </div>
+                      <div className="space-y-1 pt-1">
+                        {(pol.rules || []).map((r) => (
+                          <div
+                            key={r.priority}
+                            className="flex items-center justify-between gap-2 text-[10px] px-2 py-1 rounded bg-zinc-950 text-zinc-300"
+                          >
+                            <span>
+                              P-{r.priority} · <strong className="text-rose-400">{r.action}</strong>
+                            </span>
+                            <code className="truncate max-w-xs text-emerald-300">
+                              {r.expr}
+                            </code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Suricata 7.0 .rules & Cloud Armor Terraform Synthesizer */}
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIpsArtifactTab('SURICATA_RULES')}
+                    className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                      ipsArtifactTab === 'SURICATA_RULES'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                    }`}
+                  >
+                    1. suricata-cloudpulse.rules
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIpsArtifactTab('CLOUD_ARMOR_TF')}
+                    className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                      ipsArtifactTab === 'CLOUD_ARMOR_TF'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                    }`}
+                  >
+                    2. cloud_armor_ips_waf.tf
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text =
+                      ipsArtifactTab === 'SURICATA_RULES'
+                        ? ipsIdsRadar.suricataRulesBundle
+                        : ipsIdsRadar.cloudArmorTerraformHcl;
+                    navigator.clipboard?.writeText(text);
+                    setStatusBanner({
+                      type: 'success',
+                      message: `Copied ${
+                        ipsArtifactTab === 'SURICATA_RULES'
+                          ? 'Suricata 7.0 .rules bundle'
+                          : 'Cloud Armor L7 IPS Terraform HCL'
+                      } to clipboard!`,
+                    });
+                  }}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                >
+                  Copy {ipsArtifactTab === 'SURICATA_RULES' ? '.rules' : '.tf'}
+                </button>
+              </div>
+
+              <pre className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-emerald-300 overflow-x-auto max-h-60 leading-relaxed">
+                {ipsArtifactTab === 'SURICATA_RULES'
+                  ? ipsIdsRadar.suricataRulesBundle
+                  : ipsIdsRadar.cloudArmorTerraformHcl}
+              </pre>
+            </div>
           </div>
         </div>
       )}
