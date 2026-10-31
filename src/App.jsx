@@ -1255,9 +1255,12 @@ function classifyDestructiveAxiosConfig(config) {
         !body.insertLiveTestRow) ||
       rawUrl.includes('/wave14/iam-ai-hardening') ||
       rawUrl.includes('/wave14/quantum-envelope-decrypt') ||
+      rawUrl.includes('/wave14/quantum-envelope-tamper-verify') ||
       rawUrl.includes('/wave15/bigquery-anomaly-vector') ||
+      rawUrl.includes('/wave15/bigquery-anomaly-ai-brief') ||
       (rawUrl.includes('/wave15/attest-slsa-provenance') &&
         !body.uploadToBucket) ||
+      rawUrl.includes('/wave15/verify-slsa-dsse') ||
       rawUrl.includes('/wave15/logging-correlator') ||
       rawUrl.includes('/wave15/logging-ai-surgeon') ||
       rawUrl.includes('/wave15/tls-x509-inspector') ||
@@ -1416,6 +1419,7 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Sign & Upload DSSE Envelope to gs://${targetBkt}`,
         cancelToast: 'SLSA v1.0 GCS upload cancelled.',
+        laymanSummary: `In Plain English: Cryptographically signs an official SLSA v1.0 In-Toto software supply-chain provenance certificate (proving the exact SHA-256 container digest and Cloud Build invocation) using Ed25519 and saves the signed .intoto.jsonl bundle into your Cloud Storage bucket "gs://${targetBkt}".`,
         whatHappensNext: `1. Signs the SLSA v1.0 In-Toto Provenance statement using Ed25519 (RFC 8032).\n2. Uploads the signed DSSE JSON bundle to gs://${targetBkt}/slsa-provenance/ via storage.googleapis.com/upload/storage/v1.`,
         costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Storing a ~2 KB JSON attestation object in an existing Cloud Storage bucket incurs negligible ($0.00) storage cost.`,
         impactWarning: `Writes a new SLSA v1.0 attestation object into bucket "${targetBkt}" on project "${projectId}".`,

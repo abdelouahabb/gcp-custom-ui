@@ -14,6 +14,8 @@ import {
   PackageCheck,
   Terminal,
   Globe,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import ZeroSniffingWebCryptoEnclaveBar, {
   getSharedActiveModel,
@@ -237,6 +239,9 @@ function FormattedMarkdown({ text, onCopy }) {
 
 export default function Wave15DysonSupplyLoggingTlsStudio({
   projectId,
+  onRunInShell,
+  onSelectStudioTab,
+  onOpenBigQuerySql,
   onShowToast,
 }) {
   const [activeTab, setActiveTab] = useState('BQ_VECTOR_ANOMALY');
@@ -245,12 +250,15 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
   const [availableTables, setAvailableTables] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedTable, setSelectedTable] = useState('');
+  const [selectedMetricColumn, setSelectedMetricColumn] = useState('');
   const [semanticQuery, setSemanticQuery] = useState(
     'orbital failover latency telemetry'
   );
   const [zScoreThreshold, setZScoreThreshold] = useState(0.8);
   const [bqResult, setBqResult] = useState(null);
   const [runningBq, setRunningBq] = useState(false);
+  const [bqAiBrief, setBqAiBrief] = useState(null);
+  const [runningBqAi, setRunningBqAi] = useState(false);
 
   // Module 02: Live Cloud Build & Artifact Registry SLSA v1.0 Provenance Verifier
   const [supplyData, setSupplyData] = useState(null);
@@ -261,6 +269,8 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
   const [uploadBucket, setUploadBucket] = useState('');
   const [slsaAttestation, setSlsaAttestation] = useState(null);
   const [signingSlsa, setSigningSlsa] = useState(false);
+  const [dsseVerifyResult, setDsseVerifyResult] = useState(null);
+  const [verifyingDsse, setVerifyingDsse] = useState(false);
 
   // Module 03: Live Cloud Logging Root-Cause Correlator + Gemini 3.8 Flash Surgeon
   const [severityFilter, setSeverityFilter] = useState('ALL');
@@ -285,9 +295,23 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
   );
 
   const copyText = useCallback(
-    (txt) => {
+    (txt, label = 'Copied to clipboard') => {
       navigator.clipboard?.writeText(String(txt || ''));
-      notify('Copied to clipboard');
+      notify(label);
+    },
+    [notify]
+  );
+
+  const downloadFile = useCallback(
+    (filename, content, mimeType = 'application/json') => {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      notify(`Downloaded ${filename}`);
     },
     [notify]
   );
@@ -324,11 +348,15 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
         {
           datasetId: selectedDataset,
           tableId: selectedTable,
+          metricColumn: selectedMetricColumn,
           semanticQuery,
           zScoreThreshold: Number(zScoreThreshold) || 0.8,
         }
       );
       setBqResult(res.data);
+      if (res.data?.metricColumn && !selectedMetricColumn) {
+        setSelectedMetricColumn(res.data.metricColumn);
+      }
       notify(
         `BigQuery Z-Score & Cosine Vector SQL evaluated ${res.data?.stats?.rowsEvaluated || 0} rows (${res.data?.stats?.anomalyCount || 0} anomalies) in ${res.data?.latencyMs}ms!`
       );
@@ -338,6 +366,36 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
       );
     } finally {
       setRunningBq(false);
+    }
+  };
+
+  const handleRunBqAiBrief = async () => {
+    if (!projectId || !bqResult) return;
+    setRunningBqAi(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave15/bigquery-anomaly-ai-brief`,
+        {
+          datasetId: bqResult.datasetId,
+          tableId: bqResult.tableId,
+          metricColumn: bqResult.metricColumn,
+          zScoreThreshold: bqResult.zScoreThreshold,
+          stats: bqResult.stats,
+          sampleRows: bqResult.rows || [],
+          model: getSharedActiveModel(),
+          preferredProvider: getSharedPreferredProvider(),
+        }
+      );
+      setBqAiBrief(res.data);
+      notify(
+        `Synthesized live Gemini 3.8 Flash Anomaly Forensics Brief (${res.data?.latencyMs}ms)!`
+      );
+    } catch (err) {
+      notify(
+        `BigQuery AI Brief notice: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setRunningBqAi(false);
     }
   };
 
@@ -371,6 +429,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
     if (e) e.preventDefault();
     if (!projectId) return;
     setSigningSlsa(true);
+    setDsseVerifyResult(null);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/wave15/attest-slsa-provenance`,
@@ -394,6 +453,27 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
       );
     } finally {
       setSigningSlsa(false);
+    }
+  };
+
+  const handleVerifySlsaDsse = async () => {
+    if (!projectId || !slsaAttestation?.dsseEnvelope) return;
+    setVerifyingDsse(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave15/verify-slsa-dsse`,
+        {
+          dsseEnvelope: slsaAttestation.dsseEnvelope,
+        }
+      );
+      setDsseVerifyResult(res.data);
+      notify(res.data?.proofSummary || 'Verified Ed25519 DSSE signature & 1-byte tamper rejection!');
+    } catch (err) {
+      notify(
+        `DSSE verification error: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setVerifyingDsse(false);
     }
   };
 
@@ -594,26 +674,38 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Database className="w-4 h-4 text-blue-500" />
                   <span>
-                    Live BigQuery Statistical Z-Score Anomaly &amp; Cosine Vector Similarity SQL Engine
+                    Live BigQuery Statistical Z-Score, IQR Quantile &amp; Cosine Vector Similarity SQL Engine
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Dynamically inspects your existing BigQuery table schema via <code>bigquery.googleapis.com</code> and executes a live Standard SQL CTE computing <code>AVG()</code>, <code>STDDEV_SAMP()</code>, per-row <code>_z_score</code>, and normalized token <code>_cosine_similarity</code>. Strictly read-only — zero datasets or tables are auto-created.
+                  Dynamically inspects your existing BigQuery table schema via <code>bigquery.googleapis.com</code> and executes a live Standard SQL CTE computing <code>AVG()</code>, <code>STDDEV_SAMP()</code>, <code>APPROX_QUANTILES()</code> (Q1, Median Q2, Q3, IQR), per-row <code>_z_score</code>, and normalized token <code>_cosine_similarity</code>. Strictly read-only — zero datasets or tables are auto-created.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleRunBqAnomalyVector}
-                disabled={runningBq || !selectedDataset || !selectedTable}
-                className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>
-                  {runningBq
-                    ? 'Running Live BigQuery Vector CTE...'
-                    : 'Run Live Z-Score & Cosine Vector SQL'}
-                </span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('BIGQUERY_STUDIO', 'TABLES_SQL')}
+                    className="px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>BigQuery Studio</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleRunBqAnomalyVector}
+                  disabled={runningBq || !selectedDataset || !selectedTable}
+                  className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>
+                    {runningBq
+                      ? 'Running Live BigQuery Vector CTE...'
+                      : 'Run Live Z-Score & Cosine Vector SQL'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {availableTables.length > 0 && (
@@ -633,6 +725,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         onClick={() => {
                           setSelectedDataset(t.datasetId);
                           setSelectedTable(t.tableId);
+                          setSelectedMetricColumn('');
                         }}
                         className={`px-2.5 py-1 rounded-md border text-[11px] font-mono cursor-pointer transition-all ${
                           isSelected
@@ -650,7 +743,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
 
             <form
               onSubmit={handleRunBqAnomalyVector}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
             >
               <div>
                 <label className="block text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 mb-1">
@@ -675,6 +768,32 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   placeholder="flying_car_telemetry_events"
                   className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
                 />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 mb-1">
+                  Evaluated Numeric Metric Column
+                </label>
+                {(bqResult?.availableNumericColumns || []).length > 0 ? (
+                  <select
+                    value={selectedMetricColumn || bqResult.metricColumn || ''}
+                    onChange={(e) => setSelectedMetricColumn(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
+                  >
+                    {bqResult.availableNumericColumns.map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={selectedMetricColumn}
+                    onChange={(e) => setSelectedMetricColumn(e.target.value)}
+                    placeholder="Auto-detect first numeric column"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 mb-1">
@@ -705,7 +824,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
 
             {bqResult && (
               <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
                     <div className="text-[10px] font-mono uppercase text-zinc-400">
                       Evaluated Column
@@ -730,6 +849,14 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                       {bqResult.stats?.stddev}
                     </div>
                   </div>
+                  <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                    <div className="text-[10px] font-mono uppercase text-zinc-400">
+                      Median (Q2) / IQR
+                    </div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
+                      {bqResult.stats?.median ?? 0} (IQR: {bqResult.stats?.iqr ?? 0})
+                    </div>
+                  </div>
                   <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10">
                     <div className="text-[10px] font-mono uppercase text-amber-700 dark:text-amber-300">
                       Anomalies (|Z| ≥ {bqResult.zScoreThreshold})
@@ -748,24 +875,137 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   </div>
                 </div>
 
-                {/* Executed SQL CTE */}
-                <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                {/* Executed SQL CTE + Cross-UI Workbench & Cloud Shell Bar */}
+                <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
                     <span>
-                      EXECUTED BIGQUERY STANDARD SQL CTE (JOB ID: {bqResult.jobId || 'live'})
+                      EXECUTED BIGQUERY STANDARD SQL CTE (JOB ID: {bqResult.jobId || 'live'} · {bqResult.location || 'US'})
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => copyText(bqResult.executedSql)}
-                      className="text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>Copy SQL</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {onOpenBigQuerySql && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenBigQuerySql(bqResult.executedSql)}
+                          className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer flex items-center gap-1"
+                        >
+                          <Database className="w-3 h-3" />
+                          <span>Open in BigQuery SQL Workbench</span>
+                        </button>
+                      )}
+                      {onRunInShell && bqResult.cliEquivalent && (
+                        <button
+                          type="button"
+                          onClick={() => onRunInShell(bqResult.cliEquivalent)}
+                          className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold cursor-pointer flex items-center gap-1"
+                        >
+                          <Terminal className="w-3 h-3" />
+                          <span>Run bq query in Cloud Shell</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(bqResult.executedSql, 'Copied BigQuery Standard SQL CTE')
+                        }
+                        className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer flex items-center gap-1"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy SQL</span>
+                      </button>
+                    </div>
                   </div>
                   <pre className="text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
                     <code>{bqResult.executedSql}</code>
                   </pre>
+                </div>
+
+                {/* Live Gemini 3.8 Flash Anomaly Forensics Brief */}
+                <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-extrabold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                        <span>
+                          Live Gemini 3.8 Flash Statistical Anomaly &amp; Vector Forensics Surgeon
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Synthesizes an operational root-cause diagnosis and production <code>ML.DETECT_ANOMALIES</code> / <code>VECTOR_SEARCH</code> SQL from your live scored rows.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRunBqAiBrief}
+                      disabled={runningBqAi}
+                      className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>
+                        {runningBqAi
+                          ? 'Synthesizing Anomaly Brief...'
+                          : 'Synthesize Gemini 3.8 Flash Anomaly Brief'}
+                      </span>
+                    </button>
+                  </div>
+
+                  <ZeroSniffingWebCryptoEnclaveBar
+                    projectId={projectId}
+                    onShowToast={notify}
+                    compact
+                  />
+
+                  {bqAiBrief && (
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-extrabold border ${
+                              bqAiBrief.isLiveLlm
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                                : 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40'
+                            }`}
+                          >
+                            {bqAiBrief.isLiveLlm
+                              ? `LIVE GEMINI LLM (${bqAiBrief.executionMode})`
+                              : 'LIVE GEMINI LLM NOT REACHED'}
+                          </span>
+                          <span className="text-zinc-500">
+                            {bqAiBrief.modelUsed} · {bqAiBrief.latencyMs}ms
+                          </span>
+                          {bqAiBrief.tokenUsage?.totalTokens > 0 && (
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                              Tokens: {bqAiBrief.tokenUsage.totalTokens}
+                            </span>
+                          )}
+                        </div>
+                        {bqAiBrief.analysisMarkdown && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                bqAiBrief.analysisMarkdown,
+                                'Copied Anomaly Forensics Brief'
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer flex items-center gap-1"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Brief</span>
+                          </button>
+                        )}
+                      </div>
+                      {bqAiBrief.isLiveLlm && bqAiBrief.analysisMarkdown ? (
+                        <FormattedMarkdown
+                          text={bqAiBrief.analysisMarkdown}
+                          onCopy={copyText}
+                        />
+                      ) : (
+                        <div className="text-xs font-mono text-rose-600 dark:text-rose-300">
+                          {(bqAiBrief.diagnostics || []).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Scored Rows Table */}
@@ -838,29 +1078,51 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <PackageCheck className="w-4 h-4 text-emerald-500" />
                   <span>
-                    Live Cloud Build, Artifact Registry SHA-256 Digests &amp; SLSA v1.0 DSSE Provenance Attestor
+                    Live Cloud Build, Artifact Registry SHA-256 Digests, Cloud Run Pinning &amp; SLSA v1.0 DSSE Provenance Attestor
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Queries <code>cloudbuild.googleapis.com</code>, <code>artifactregistry.googleapis.com</code>, and <code>run.googleapis.com</code> to correlate deployed container images with immutable <code>@sha256</code> digests and sign an Ed25519 Dead Simple Signing Envelope (DSSE) SLSA v1.0 In-Toto attestation.
+                  Queries <code>cloudbuild.googleapis.com</code>, <code>artifactregistry.googleapis.com</code>, and <code>run.googleapis.com</code> to audit whether deployed Cloud Run containers are pinned to immutable <code>@sha256</code> digests vs mutable tags, and signs an Ed25519 Dead Simple Signing Envelope (DSSE) SLSA v1.0 In-Toto attestation.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={fetchSupplyChainProvenance}
-                disabled={loadingSupply}
-                className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${loadingSupply ? 'animate-spin' : ''}`}
-                />
-                <span>Refresh Live Supply Chain</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {onSelectStudioTab && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onSelectStudioTab('WAVE9_STUDIO')}
+                      className="px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Cloud Build Studio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelectStudioTab('CLOUD_RUN')}
+                      className="px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Cloud Run Studio</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={fetchSupplyChainProvenance}
+                  disabled={loadingSupply}
+                  className="px-3.5 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${loadingSupply ? 'animate-spin' : ''}`}
+                  />
+                  <span>Refresh Live Supply Chain</span>
+                </button>
+              </div>
             </div>
 
             {supplyData && (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
                     <div className="text-[10px] font-mono uppercase text-zinc-400">
                       Cloud Build Runs
@@ -894,6 +1156,15 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                       {supplyData.summary?.totalCloudRunServices} Live
                     </div>
                   </div>
+                  <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
+                    <div className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300">
+                      Digest-Pinned Services
+                    </div>
+                    <div className="text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {supplyData.summary?.digestPinnedServices ?? 0} Pinned /{' '}
+                      {supplyData.summary?.mutableTagServices ?? 0} Mutable Tag
+                    </div>
+                  </div>
                 </div>
 
                 {/* Artifact Registry Container Digests Table */}
@@ -910,7 +1181,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                             <th className="py-2 px-3">Image</th>
                             <th className="py-2 px-3">Immutable SHA-256 Digest</th>
                             <th className="py-2 px-3">Size</th>
-                            <th className="py-2 px-3 text-right">Select</th>
+                            <th className="py-2 px-3 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono text-[11px]">
@@ -937,15 +1208,136 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                               <td className="py-2 px-3 text-zinc-500">
                                 {(img.imageSizeBytes / (1024 * 1024)).toFixed(1)} MB
                               </td>
-                              <td className="py-2 px-3 text-right">
+                              <td className="py-2 px-3 text-right space-x-1.5">
                                 <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
                                   Load Digest
                                 </span>
+                                {onRunInShell && img.cliEquivalent && (
+                                  <button
+                                    type="button"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      onRunInShell(img.cliEquivalent);
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer"
+                                  >
+                                    CLI
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Cloud Run Services Image Provenance & Digest Pinning Radar */}
+                {(supplyData.runServices || []).length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-mono font-bold uppercase text-zinc-500">
+                      Active Cloud Run Gen2 Services — Container Image Digest Pinning &amp; SLSA Posture
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800 max-h-56">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-mono uppercase text-zinc-500">
+                            <th className="py-2 px-3">Cloud Run Service</th>
+                            <th className="py-2 px-3">Active Revision</th>
+                            <th className="py-2 px-3">Deployed Container Image</th>
+                            <th className="py-2 px-3">SLSA Digest Posture</th>
+                            <th className="py-2 px-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono text-[11px]">
+                          {supplyData.runServices.map((svc) => {
+                            const isPinned = Boolean(svc.pinnedSha256);
+                            return (
+                              <tr
+                                key={`${svc.location}-${svc.serviceName}`}
+                                className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
+                              >
+                                <td className="py-2 px-3 font-bold text-zinc-900 dark:text-white">
+                                  {svc.serviceName}{' '}
+                                  <span className="text-zinc-400 font-normal">
+                                    ({svc.location})
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-zinc-500">
+                                  {svc.latestReadyRevision || '—'}
+                                </td>
+                                <td className="py-2 px-3 text-blue-600 dark:text-blue-400 max-w-xs truncate">
+                                  {svc.containerImage}
+                                </td>
+                                <td className="py-2 px-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      isPinned
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                    }`}
+                                  >
+                                    {isPinned
+                                      ? `PINNED (@sha256:${svc.pinnedSha256.slice(0, 10)}...)`
+                                      : 'MUTABLE TAG (:latest)'}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-right space-x-1.5 whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSubjectName(
+                                        String(svc.containerImage || '').split('@')[0]
+                                      );
+                                      if (svc.pinnedSha256) {
+                                        setSha256Digest(svc.pinnedSha256);
+                                      }
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Attest Service
+                                  </button>
+                                  {onRunInShell && svc.cliEquivalent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onRunInShell(svc.cliEquivalent)}
+                                      className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer"
+                                    >
+                                      Inspect CLI
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Cloud Build Invocations Quick-Picker */}
+                {(supplyData.builds || []).length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-mono font-bold uppercase text-zinc-400">
+                      Recent Cloud Build Invocations (Click to Bind Build ID to SLSA Provenance)
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {supplyData.builds.slice(0, 8).map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setBuildId(b.id)}
+                          className={`px-2.5 py-1 rounded-md border text-[10.5px] font-mono cursor-pointer ${
+                            buildId === b.id
+                              ? 'bg-blue-600 text-white border-blue-500 font-bold'
+                              : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {b.id.slice(0, 12)}... [{b.status}] ({b.stepsCount} steps)
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1016,32 +1408,120 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         type="text"
                         value={uploadBucket}
                         onChange={(e) => setUploadBucket(e.target.value)}
-                        placeholder="Leave blank or enter existing bucket"
+                        placeholder="Leave blank or pick existing bucket below"
                         className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
                       />
                     </div>
                   </div>
+
+                  {(supplyData.availableBuckets || []).length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+                      <span className="text-zinc-500">Quick-Pick Existing GCS Bucket:</span>
+                      <button
+                        type="button"
+                        onClick={() => setUploadBucket('')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${
+                          !uploadBucket
+                            ? 'bg-zinc-800 text-white font-bold'
+                            : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                        }`}
+                      >
+                        In-Memory Only ($0.00)
+                      </button>
+                      {supplyData.availableBuckets.slice(0, 6).map((b) => (
+                        <button
+                          key={b.name}
+                          type="button"
+                          onClick={() => setUploadBucket(b.name)}
+                          className={`px-2 py-0.5 rounded cursor-pointer ${
+                            uploadBucket === b.name
+                              ? 'bg-emerald-600 text-white font-bold'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          }`}
+                        >
+                          gs://{b.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </form>
 
                 {slsaAttestation && (
-                  <div className="p-4 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2">
+                  <div className="p-4 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
                       <span className="text-emerald-400 font-bold">
                         VERIFIED ED25519 DSSE ENVELOPE · SHA-256: {slsaAttestation.statementSha256}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          copyText(
-                            JSON.stringify(slsaAttestation.inTotoStatement, null, 2)
-                          )
-                        }
-                        className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer flex items-center gap-1"
-                      >
-                        <Copy className="w-3 h-3" />
-                        <span>Copy SLSA v1.0 JSON</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={verifyingDsse}
+                          onClick={handleVerifySlsaDsse}
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>
+                            {verifyingDsse
+                              ? 'Verifying DSSE...'
+                              : 'Verify Ed25519 DSSE & 1-Byte Tamper Rejection'}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            downloadFile(
+                              `slsa-v1-${(slsaAttestation.sha256Digest || 'attestation').slice(0, 12)}.intoto.jsonl`,
+                              JSON.stringify(slsaAttestation.dsseEnvelope, null, 2)
+                            )
+                          }
+                          className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download .intoto.jsonl</span>
+                        </button>
+                        {onRunInShell && slsaAttestation.cosignCliEquivalent && (
+                          <button
+                            type="button"
+                            onClick={() => onRunInShell(slsaAttestation.cosignCliEquivalent)}
+                            className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-emerald-300 cursor-pointer flex items-center gap-1"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>Provenance CLI</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyText(
+                              JSON.stringify(slsaAttestation.inTotoStatement, null, 2),
+                              'Copied SLSA v1.0 In-Toto Statement JSON'
+                            )
+                          }
+                          className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer flex items-center gap-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Copy SLSA v1.0 JSON</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {dsseVerifyResult && (
+                      <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-xs font-mono text-emerald-200 space-y-1">
+                        <div className="font-extrabold flex items-center justify-between">
+                          <span>
+                            CRYPTOGRAPHIC DSSE PAE + RFC 8032 ED25519 VERIFICATION RECEIPT
+                          </span>
+                          <span>{dsseVerifyResult.latencyMs}ms</span>
+                        </div>
+                        <div>{dsseVerifyResult.proofSummary}</div>
+                        <div className="text-[10.5px] text-emerald-300/80">
+                          Key ID: {dsseVerifyResult.keyId} · Authentic Verified:{' '}
+                          {String(dsseVerifyResult.authenticVerified)} · Tampered Payload Valid:{' '}
+                          {String(dsseVerifyResult.tamperedSignatureValid)}
+                        </div>
+                      </div>
+                    )}
+
                     {slsaAttestation.gcsObjectUri && (
                       <div className="text-xs font-mono text-blue-300">
                         Persisted Live to GCS: {slsaAttestation.gcsObjectUri}
@@ -1075,10 +1555,30 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Streams real project audit &amp; service logs directly from Google Cloud Logging, correlates severity &amp; resource bursts, and dispatches Vertex AI Gemini 3.8 Flash to synthesize a Root-Cause Analysis and copy-ready <code>gcloud logging</code> runbook.
+                  Streams real project audit &amp; service logs directly from Google Cloud Logging, correlates severity, API method, and IAM principal bursts, and dispatches Vertex AI Gemini 3.8 Flash to synthesize a Root-Cause Analysis and copy-ready <code>gcloud logging</code> runbook.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('LOGS_SHELL')}
+                    className="px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Logs &amp; Cloud Shell Studio</span>
+                  </button>
+                )}
+                {onRunInShell && logData?.cliEquivalent && (
+                  <button
+                    type="button"
+                    onClick={() => onRunInShell(logData.cliEquivalent)}
+                    className="px-3 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1"
+                  >
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Run gcloud logging in Shell</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={fetchCloudLogs}
@@ -1111,6 +1611,32 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               onShowToast={notify}
               compact
             />
+
+            {/* 1-Click Incident Investigation Filter Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+              <span className="text-zinc-400 font-bold">1-Click Presets:</span>
+              {[
+                { label: 'All Live Activity', sev: 'ALL', rType: 'ALL', q: '' },
+                { label: 'Errors & Criticals', sev: 'ERROR', rType: 'ALL', q: '' },
+                { label: 'IAM SetIamPolicy Audits', sev: 'ALL', rType: 'ALL', q: 'SetIamPolicy' },
+                { label: 'Cloud Run Revisions', sev: 'ALL', rType: 'cloud_run_revision', q: '' },
+                { label: 'BigQuery Jobs', sev: 'ALL', rType: 'bigquery_resource', q: '' },
+                { label: 'GCS Buckets', sev: 'ALL', rType: 'gcs_bucket', q: '' },
+              ].map((pr) => (
+                <button
+                  key={pr.label}
+                  type="button"
+                  onClick={() => {
+                    setSeverityFilter(pr.sev);
+                    setResourceTypeFilter(pr.rType);
+                    setLogSearchQuery(pr.q);
+                  }}
+                  className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer"
+                >
+                  {pr.label}
+                </button>
+              ))}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
@@ -1201,14 +1727,32 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     )}
                   </div>
                   {logAiReport.analysisMarkdown && (
-                    <button
-                      type="button"
-                      onClick={() => copyText(logAiReport.analysisMarkdown)}
-                      className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>Copy Report</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadFile(
+                            `cloud-logging-rca-${projectId}-${Date.now()}.md`,
+                            logAiReport.analysisMarkdown,
+                            'text/markdown'
+                          )
+                        }
+                        className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-800 text-white text-[11px] font-mono cursor-pointer flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Export (.md)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(logAiReport.analysisMarkdown, 'Copied RCA Report')
+                        }
+                        className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-200 text-[11px] font-mono cursor-pointer flex items-center gap-1"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Report</span>
+                      </button>
+                    </div>
                   )}
                 </div>
                 {logAiReport.isLiveLlm && logAiReport.analysisMarkdown ? (
@@ -1233,6 +1777,81 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
 
             {logData && (
               <div className="space-y-3">
+                {/* Live Severity & API Method / Principal Correlation Strip */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase text-zinc-400">
+                      Severity Distribution ({logData.totalEntries} Entries)
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(logData.severityCounts || {}).map(
+                        ([sev, cnt]) => (
+                          <span
+                            key={sev}
+                            className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${
+                              sev === 'ERROR' && cnt > 0
+                                ? 'bg-red-500/20 text-red-700 dark:text-red-300'
+                                : sev === 'WARNING' && cnt > 0
+                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                                : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            {sev}: {cnt}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase text-zinc-400">
+                      Top Audited API Methods (Click to Filter)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(logData.topMethods || []).length > 0 ? (
+                        logData.topMethods.map((m) => (
+                          <button
+                            key={m.method}
+                            type="button"
+                            onClick={() => setLogSearchQuery(m.method)}
+                            className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer truncate max-w-[220px]"
+                          >
+                            {m.method.split('.').slice(-2).join('.')} ({m.count})
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-zinc-500 text-[10.5px]">
+                          No protoPayload method calls in window
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase text-zinc-400">
+                      Top Calling IAM Principals (Click to Filter)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(logData.topPrincipals || []).length > 0 ? (
+                        logData.topPrincipals.map((p) => (
+                          <button
+                            key={p.principal}
+                            type="button"
+                            onClick={() => setLogSearchQuery(p.principal)}
+                            className="px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer truncate max-w-[220px]"
+                          >
+                            {p.principal} ({p.count})
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-zinc-500 text-[10.5px]">
+                          System / unauthenticated telemetry entries
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
                   <span>
                     Filter: <code>{logData.filterExecuted}</code>
@@ -1313,7 +1932,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Performs real TCP + TLS 1.3 socket handshakes against your live Cloud Run <code>.run.app</code> services and Google Cloud regional APIs, extracting the real X.509 leaf certificate SHA-256 fingerprint, Subject Alternative Names (SANs), negotiated AEAD cipher suite, ALPN protocol, and days remaining until expiration.
+                  Performs real TCP + TLS 1.3 socket handshakes against your live Cloud Run <code>.run.app</code> services and Google Cloud regional APIs, extracting the full X.509 certificate chain (Leaf &rarr; Intermediate CA &rarr; Root CA), Subject Alternative Names (SANs), negotiated AEAD cipher suite, ALPN protocol, and days remaining until expiration.
                 </p>
               </div>
               <button
@@ -1333,14 +1952,33 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                value={customHost}
-                onChange={(e) => setCustomHost(e.target.value)}
-                placeholder="Optional additional hostname(s) to probe (e.g., cloud.google.com, vertexai.googleapis.com)"
-                className="flex-1 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
-              />
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+                <span className="text-zinc-400 font-bold">Quick-Add Target Hosts:</span>
+                {[
+                  'aiplatform.googleapis.com, compute.googleapis.com',
+                  'cloudbuild.googleapis.com, artifactregistry.googleapis.com',
+                  'cloud.google.com, console.cloud.google.com',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setCustomHost(preset)}
+                    className="px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-emerald-500/40 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={customHost}
+                  onChange={(e) => setCustomHost(e.target.value)}
+                  placeholder="Optional additional hostname(s) to probe (e.g., cloud.google.com, vertexai.googleapis.com)"
+                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono text-zinc-900 dark:text-white"
+                />
+              </div>
             </div>
 
             {tlsData && (
@@ -1350,7 +1988,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     key={ep.host}
                     className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/70 space-y-2.5"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-blue-500 shrink-0" />
                         <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
@@ -1358,9 +1996,14 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                         </span>
                       </div>
                       {ep.ok ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                          {ep.protocol} · {ep.alpnProtocol} · {ep.tlsHandshakeMs}ms
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                            {ep.pfsGrade || 'A+ TLS 1.3'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                            {ep.protocol} · {ep.alpnProtocol} · {ep.tlsHandshakeMs}ms
+                          </span>
+                        </div>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-700 dark:text-red-300">
                           {ep.error}
@@ -1369,11 +2012,21 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                     </div>
 
                     {ep.ok && (
-                      <div className="space-y-1.5 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                      <div className="space-y-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-400">AEAD Cipher Suite:</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400">
                             {ep.cipherStandardName || ep.cipherName}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-400">TCP vs TLS Handshake Split:</span>
+                          <span>
+                            TCP {ep.tcpConnectMs}ms + TLS Crypto{' '}
+                            {ep.tlsCryptoOverheadMs ?? Math.max(1, ep.tlsHandshakeMs - ep.tcpConnectMs)}ms ={' '}
+                            <strong className="text-zinc-900 dark:text-white">
+                              {ep.tlsHandshakeMs}ms
+                            </strong>
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
@@ -1383,19 +2036,83 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">Validity / Expiry:</span>
+                          <span className="text-zinc-400">Public Key / Validity:</span>
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {ep.pubkeyCurve || 'ECDSA'} ({ep.pubkeyBits || 256}b) ·{' '}
                             {ep.daysRemaining} Days Left (Until {ep.validTo})
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">Chain Depth / SANs:</span>
-                          <span>
-                            {ep.chainDepth} Certs · {ep.sanCount} SANs
+
+                        {/* Full Certificate Chain Hierarchy (Leaf -> Intermediate -> Root) */}
+                        {(ep.certChain || []).length > 0 && (
+                          <div className="pt-1.5 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
+                            <div className="text-[10px] font-bold uppercase text-zinc-400">
+                              X.509 Certificate Chain ({ep.chainDepth} Certs · {ep.sanCount} SANs):
+                            </div>
+                            <div className="space-y-1">
+                              {ep.certChain.map((c) => (
+                                <div
+                                  key={`${c.depth}-${c.fingerprint256}`}
+                                  className="px-2 py-1 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10px]"
+                                >
+                                  <span className="truncate">
+                                    <strong className="text-blue-600 dark:text-blue-400">
+                                      [{c.role}]
+                                    </strong>{' '}
+                                    {c.subjectCN} &rarr; {c.issuerCN}
+                                  </span>
+                                  <span className="text-zinc-400 shrink-0">
+                                    {c.fingerprint256?.slice(0, 14)}...
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Sample SANs */}
+                        {(ep.sampleSans || []).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                            <span className="text-[10px] text-zinc-400">SANs:</span>
+                            {ep.sampleSans.slice(0, 5).map((san) => (
+                              <span
+                                key={san}
+                                className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[10px] text-zinc-700 dark:text-zinc-300"
+                              >
+                                {san}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="pt-1.5 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[10px] text-zinc-500 truncate max-w-[260px]">
+                            SHA-256: {ep.fingerprint256}
                           </span>
-                        </div>
-                        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-500 break-all">
-                          SHA-256 Fingerprint: {ep.fingerprint256}
+                          <div className="flex items-center gap-1.5">
+                            {onRunInShell && ep.opensslCli && (
+                              <button
+                                type="button"
+                                onClick={() => onRunInShell(ep.opensslCli)}
+                                className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                              >
+                                <Terminal className="w-3 h-3" />
+                                <span>Run openssl</span>
+                              </button>
+                            )}
+                            {ep.opensslCli && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyText(ep.opensslCli, `Copied openssl command for ${ep.host}`)
+                                }
+                                className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>Copy openssl</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}

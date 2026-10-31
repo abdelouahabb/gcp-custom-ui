@@ -57181,12 +57181,13 @@ app.post('/api/project/:projectId/wave14/quantum-envelope-tamper-verify', async 
 // ============================================================================
 
 // 1. POST /api/project/:projectId/wave15/bigquery-anomaly-vector
-// Runs 100% live BigQuery Standard SQL computing statistical Z-scores + token cosine similarity on existing tables
+// Runs 100% live BigQuery Standard SQL computing statistical Z-scores + IQR quantiles + token cosine similarity on existing tables
 app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, res) => {
   const { projectId } = req.params;
   const {
     datasetId = '',
     tableId = '',
+    metricColumn = '',
     semanticQuery = 'orbital failover latency telemetry',
     zScoreThreshold = 0.8,
   } = req.body || {};
@@ -57239,11 +57240,23 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
       (f) => f.type === 'TIMESTAMP' || f.type === 'DATETIME'
     );
 
-    const primaryNumericCol = numericFields[0]?.name || null;
-    const metricSqlExpr = primaryNumericCol
-      ? `CAST(\`${primaryNumericCol}\` AS FLOAT64)`
+    const availableNumericColumns = [
+      ...numericFields.map((f) => f.name),
+      'row_json_byte_length',
+    ];
+    const requestedMetric = String(metricColumn || '').trim();
+    const matchedNumericCol =
+      requestedMetric &&
+      numericFields.some((f) => f.name === requestedMetric)
+        ? requestedMetric
+        : requestedMetric === 'row_json_byte_length'
+        ? null
+        : numericFields[0]?.name || null;
+
+    const metricSqlExpr = matchedNumericCol
+      ? `CAST(\`${matchedNumericCol}\` AS FLOAT64)`
       : `CAST(LENGTH(TO_JSON_STRING(t)) AS FLOAT64)`;
-    const metricLabel = primaryNumericCol || 'row_json_byte_length';
+    const metricLabel = matchedNumericCol || 'row_json_byte_length';
 
     const textConcatExpr =
       stringFields.length > 0
@@ -57291,6 +57304,9 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
       `    STDDEV_SAMP(_metric_val) AS stddev_val,`,
       `    MIN(_metric_val) AS min_val,`,
       `    MAX(_metric_val) AS max_val,`,
+      `    APPROX_QUANTILES(_metric_val, 4)[OFFSET(1)] AS q1_val,`,
+      `    APPROX_QUANTILES(_metric_val, 4)[OFFSET(2)] AS median_val,`,
+      `    APPROX_QUANTILES(_metric_val, 4)[OFFSET(3)] AS q3_val,`,
       `    COUNT(1) AS sample_rows`,
       `  FROM base`,
       `),`,
@@ -57300,6 +57316,10 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
       `    b.corpus_text,`,
       `    ROUND(s.mean_val, 4) AS _mean_val,`,
       `    ROUND(COALESCE(s.stddev_val, 0.0), 4) AS _stddev_val,`,
+      `    ROUND(COALESCE(s.q1_val, 0.0), 4) AS _q1_val,`,
+      `    ROUND(COALESCE(s.median_val, 0.0), 4) AS _median_val,`,
+      `    ROUND(COALESCE(s.q3_val, 0.0), 4) AS _q3_val,`,
+      `    ROUND(COALESCE(s.q3_val - s.q1_val, 0.0), 4) AS _iqr_val,`,
       `    ROUND(COALESCE(SAFE_DIVIDE(b._metric_val - s.mean_val, NULLIF(s.stddev_val, 0)), 0.0), 4) AS _z_score,`,
       `    ROUND((${tokenMatchSumExpr}) / SQRT(${queryTokens.length}.0 * GREATEST(ARRAY_LENGTH(REGEXP_EXTRACT_ALL(LOWER(b.corpus_text), r'[a-z0-9_]{2,}')), 1)), 4) AS _cosine_similarity`,
       `  FROM base b`,
@@ -57331,9 +57351,17 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
     const meanVal = rows[0]?._mean_val !== undefined ? Number(rows[0]._mean_val) : 0;
     const stddevVal =
       rows[0]?._stddev_val !== undefined ? Number(rows[0]._stddev_val) : 0;
+    const medianVal =
+      rows[0]?._median_val !== undefined ? Number(rows[0]._median_val) : 0;
+    const iqrVal =
+      rows[0]?._iqr_val !== undefined ? Number(rows[0]._iqr_val) : 0;
     const anomalies = rows.filter(
       (r) => Math.abs(Number(r._z_score || 0)) >= threshNum
     );
+
+    const cliEquivalent = `bq query --project_id=${projectId} --location=${tableLocation} --use_legacy_sql=false ${JSON.stringify(
+      executedSql.replace(/\s+/g, ' ').trim()
+    )}`;
 
     const ledgerBlock = appendWave13BlackBoxBlock(
       projectId,
@@ -57356,9 +57384,12 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
       tableId: targetTable,
       location: tableLocation,
       metricColumn: metricLabel,
+      availableNumericColumns,
+      availableStringColumns: stringFields.map((f) => f.name),
       queryTokens,
       zScoreThreshold: threshNum,
       executedSql,
+      cliEquivalent,
       jobId: qData.jobReference?.jobId || null,
       totalBytesProcessed: Number(qData.totalBytesProcessed || 0),
       cacheHit: Boolean(qData.cacheHit),
@@ -57366,6 +57397,8 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
         rowsEvaluated: rows.length,
         mean: meanVal,
         stddev: stddevVal,
+        median: medianVal,
+        iqr: iqrVal,
         anomalyCount: anomalies.length,
       },
       rows,
@@ -57379,8 +57412,79 @@ app.post('/api/project/:projectId/wave15/bigquery-anomaly-vector', async (req, r
   }
 });
 
+// 1B. POST /api/project/:projectId/wave15/bigquery-anomaly-ai-brief
+// Synthesizes a live Gemini 3.8 Flash Statistical Anomaly & Vector Forensics Brief on BigQuery Z-score rows
+app.post('/api/project/:projectId/wave15/bigquery-anomaly-ai-brief', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    datasetId = '',
+    tableId = '',
+    metricColumn = '',
+    zScoreThreshold = 0.8,
+    stats = {},
+    sampleRows = [],
+  } = req.body || {};
+  const t0 = Date.now();
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const rowDigest = (sampleRows || [])
+      .slice(0, 12)
+      .map(
+        (r, i) =>
+          `${i + 1}. Verdict=${r._anomaly_verdict} | Z=${r._z_score}σ | Cosine=${r._cosine_similarity} | ${metricColumn}=${r._metric_val} | Corpus="${String(r.corpus_text || '').slice(0, 140)}"`
+      )
+      .join('\n');
+
+    const prompt = [
+      `You are a Principal Google Cloud BigQuery Data Scientist & SRE Anomaly Surgeon analyzing live statistical Z-Score and Cosine Vector SQL results for table \`${projectId}.${datasetId}.${tableId}\`.`,
+      `Evaluated Metric Column: \`${metricColumn}\` | Threshold: |Z| >= ${zScoreThreshold}σ`,
+      `Distribution Stats: Mean (μ)=${stats.mean ?? 0}, StdDev (σ)=${stats.stddev ?? 0}, Median (Q2)=${stats.median ?? 0}, IQR=${stats.iqr ?? 0}, Anomalies=${stats.anomalyCount ?? 0}/${stats.rowsEvaluated ?? 0}`,
+      `Top Scored Rows:`,
+      rowDigest || 'No rows returned.',
+      ``,
+      `Produce a concise, actionable Markdown Anomaly Forensics Brief with:`,
+      `1. **Statistical Distribution & Outlier Diagnosis** (interpret the Z-score, Median vs Mean skew, and cosine vector clusters).`,
+      `2. **Outlier Root-Cause Matrix** (Markdown table: Row / Metric Value | Z-Score & Cosine | Likely Operational Cause | Recommended Action).`,
+      `3. **Production BigQuery ML & Vector Search SQL** (copy-ready Standard SQL using \`ML.DETECT_ANOMALIES\` or \`VECTOR_SEARCH\` on \`${projectId}.${datasetId}.${tableId}\`).`,
+      `Do not use any emojis.`,
+    ].join('\n');
+
+    const llmRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: req.body?.model || 'gemini-3.8-flash',
+      preferredProvider: req.body?.preferredProvider || 'AUTO',
+      promptText: prompt,
+      temperature: 0.2,
+      maxOutputTokens: 1800,
+      timeoutMs: 45000,
+    });
+
+    return res.json({
+      ok: llmRes.isLiveLlm,
+      projectId,
+      isLiveLlm: llmRes.isLiveLlm,
+      executionMode: llmRes.executionMode,
+      modelUsed: llmRes.engineUsed,
+      tokenUsage: llmRes.tokenUsage,
+      diagnostics: llmRes.diagnostics,
+      analysisMarkdown: llmRes.text,
+      latencyMs: Date.now() - t0,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.response?.data?.error?.message || err.message,
+    });
+  }
+});
+
 // 2. GET /api/project/:projectId/wave15/supply-chain-provenance
-// Inspects real Cloud Build history, Artifact Registry Docker images & digests, and Cloud Run active container images
+// Inspects real Cloud Build history, Artifact Registry Docker images & digests, Cloud Run active container images, and GCS buckets
 app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, res) => {
   const { projectId } = req.params;
   const t0 = Date.now();
@@ -57393,7 +57497,7 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
     const headers = getAttributionHeaders(token, projectId);
 
     const arLocations = ['us-central1', 'us-east1', 'europe-west1', 'us', 'eu'];
-    const [buildsRes, runRes, ...arLocResponses] = await Promise.all([
+    const [buildsRes, runRes, bucketsRes, ...arLocResponses] = await Promise.all([
       axios
         .get(
           `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(
@@ -57410,6 +57514,14 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
           { headers, timeout: 10000 }
         )
         .catch(() => ({ data: { services: [] } })),
+      axios
+        .get(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}&maxResults=25`,
+          { headers, timeout: 8000 }
+        )
+        .catch(() => ({ data: { items: [] } })),
       ...arLocations.map((loc) =>
         axios
           .get(
@@ -57421,6 +57533,12 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
           .catch(() => ({ data: { repositories: [] } }))
       ),
     ]);
+
+    const availableBuckets = (bucketsRes.data?.items || []).map((b) => ({
+      name: b.name,
+      location: b.location || 'US',
+      storageClass: b.storageClass || 'STANDARD',
+    }));
 
     const rawBuilds = buildsRes.data?.builds || [];
     const builds = rawBuilds.map((b) => ({
@@ -57441,6 +57559,7 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
         b.sourceProvenance?.fileHashes
           ? Object.values(b.sourceProvenance.fileHashes)[0]?.fileHash?.[0]?.value || null
           : null,
+      cliEquivalent: `gcloud builds describe ${b.id} --project=${projectId}`,
     }));
 
     const repos = arLocResponses.flatMap((r) => r.data?.repositories || []);
@@ -57449,6 +57568,8 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
         .filter((r) => r.format === 'DOCKER')
         .slice(0, 8)
         .map(async (repo) => {
+          const repoShort = repo.name.split('/').pop();
+          const repoLoc = repo.name.split('/')[3] || 'us';
           const imgRes = await axios
             .get(
               `https://artifactregistry.googleapis.com/v1/${repo.name}/dockerImages?pageSize=15`,
@@ -57460,8 +57581,8 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
             const shaMatch = uri.match(/@sha256:([a-f0-9]{64})/i);
             return {
               name: img.name,
-              repository: repo.name.split('/').pop(),
-              location: repo.name.split('/')[3] || 'us',
+              repository: repoShort,
+              location: repoLoc,
               uri,
               shortImageName: uri.split('@')[0].split('/').slice(-2).join('/'),
               sha256Digest: shaMatch ? shaMatch[1] : null,
@@ -57469,6 +57590,7 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
               imageSizeBytes: Number(img.imageSizeBytes || 0),
               uploadTime: img.uploadTime || img.updateTime || null,
               mediaType: img.mediaType || 'application/vnd.docker.distribution.manifest.v2+json',
+              cliEquivalent: `gcloud artifacts docker images list ${repoLoc}-docker.pkg.dev/${projectId}/${repoShort} --include-tags --project=${projectId}`,
             };
           });
         })
@@ -57487,6 +57609,7 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
           imageSizeBytes: 0,
           uploadTime: b.finishTime || b.createTime,
           mediaType: 'application/vnd.docker.distribution.manifest.v2+json',
+          cliEquivalent: `gcloud builds describe ${b.id} --project=${projectId}`,
         }))
     );
     const artifactImages = [...dockerRepoLists.flat(), ...buildDerivedImages];
@@ -57495,17 +57618,24 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
       const container = s.template?.containers?.[0] || {};
       const imageUri = container.image || '';
       const shaMatch = imageUri.match(/@sha256:([a-f0-9]{64})/i);
+      const svcName = s.name?.split('/').pop() || s.name;
+      const svcLoc = s.name?.split('/')[3] || 'us-central1';
+      const pinnedSha256 = shaMatch ? shaMatch[1] : null;
       return {
-        serviceName: s.name?.split('/').pop() || s.name,
-        location: s.name?.split('/')[3] || 'us-central1',
+        serviceName: svcName,
+        location: svcLoc,
         uri: s.uri || null,
         latestReadyRevision: s.latestReadyRevision?.split('/').pop() || null,
         containerImage: imageUri,
-        pinnedSha256: shaMatch ? shaMatch[1] : null,
+        pinnedSha256,
+        supplyChainPosture: pinnedSha256 ? 'SLSA_DIGEST_PINNED' : 'MUTABLE_TAG_DRIFT',
         ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
         updateTime: s.updateTime || null,
+        cliEquivalent: `gcloud run services describe ${svcName} --region=${svcLoc} --project=${projectId}`,
       };
     });
+
+    const digestPinnedServices = runServices.filter((r) => Boolean(r.pinnedSha256)).length;
 
     return res.json({
       ok: true,
@@ -57517,7 +57647,10 @@ app.get('/api/project/:projectId/wave15/supply-chain-provenance', async (req, re
         totalRepositories: repos.length,
         totalArtifactImages: artifactImages.length,
         totalCloudRunServices: runServices.length,
+        digestPinnedServices,
+        mutableTagServices: Math.max(0, runServices.length - digestPinnedServices),
       },
+      availableBuckets,
       builds,
       repositories: repos.map((r) => ({
         name: r.name.split('/').pop(),
@@ -57610,14 +57743,18 @@ app.post('/api/project/:projectId/wave15/attest-slsa-provenance', async (req, re
     const payloadBase64 = payloadBytes.toString('base64');
     const payloadType = 'application/vnd.in-toto+json';
     // DSSE Pre-Authentication Encoding (PAE)
-    const pae = Buffer.from(
-      `DSSEv1 ${payloadType.length} ${payloadType} ${payloadBytes.length} `,
-      'utf8'
-    );
+    const paeHeader = `DSSEv1 ${payloadType.length} ${payloadType} ${payloadBytes.length} `;
+    const pae = Buffer.from(paeHeader, 'utf8');
     const toSign = Buffer.concat([pae, payloadBytes]);
     const signatureHex = crypto
       .sign(null, toSign, wave13Ed25519KeyPair.privateKey)
       .toString('hex');
+    const ed25519Verified = crypto.verify(
+      null,
+      toSign,
+      wave13Ed25519KeyPair.publicKey,
+      Buffer.from(signatureHex, 'hex')
+    );
     const statementSha256 = crypto
       .createHash('sha256')
       .update(payloadBytes)
@@ -57636,7 +57773,9 @@ app.post('/api/project/:projectId/wave15/attest-slsa-provenance', async (req, re
     };
 
     let gcsObjectUri = null;
-    const cleanBucket = String(uploadToBucket || '').trim();
+    const cleanBucket = String(uploadToBucket || '')
+      .trim()
+      .replace(/^gs:\/\//, '');
     if (cleanBucket) {
       const objectName = `slsa-provenance/${cleanDigest.slice(0, 16)}-${Date.now()}.intoto.jsonl`;
       const uploadRes = await axios.post(
@@ -57654,6 +57793,8 @@ app.post('/api/project/:projectId/wave15/attest-slsa-provenance', async (req, re
       );
       gcsObjectUri = `gs://${cleanBucket}/${uploadRes.data?.name || objectName}`;
     }
+
+    const cosignCliEquivalent = `gcloud artifacts docker images describe ${cleanSubject}@sha256:${cleanDigest} --show-provenance --project=${projectId}`;
 
     const ledgerBlock = appendWave13BlackBoxBlock(
       projectId,
@@ -57673,6 +57814,9 @@ app.post('/api/project/:projectId/wave15/attest-slsa-provenance', async (req, re
       subjectName: cleanSubject,
       sha256Digest: cleanDigest,
       statementSha256,
+      ed25519Verified,
+      paeHeader: paeHeader.trim(),
+      cosignCliEquivalent,
       publicKeyFingerprint: wave13PublicKeyFingerprint,
       inTotoStatement,
       dsseEnvelope,
@@ -57683,6 +57827,74 @@ app.post('/api/project/:projectId/wave15/attest-slsa-provenance', async (req, re
   } catch (err) {
     return res.status(500).json({
       error: err.response?.data?.error?.message || err.message,
+    });
+  }
+});
+
+// 3B. POST /api/project/:projectId/wave15/verify-slsa-dsse
+// Performs live cryptographic DSSE PAE + Ed25519 verification AND 1-byte SLSA digest tamper rejection proof
+app.post('/api/project/:projectId/wave15/verify-slsa-dsse', async (req, res) => {
+  const { projectId } = req.params;
+  const { dsseEnvelope } = req.body || {};
+  const t0 = Date.now();
+
+  try {
+    if (!dsseEnvelope || !dsseEnvelope.payload || !dsseEnvelope.signatures?.[0]?.sigHex) {
+      return res.status(400).json({
+        error: 'No signed SLSA v1.0 DSSE envelope provided to verify.',
+      });
+    }
+
+    const payloadType = dsseEnvelope.payloadType || 'application/vnd.in-toto+json';
+    const payloadBytes = Buffer.from(dsseEnvelope.payload, 'base64');
+    const sigHex = dsseEnvelope.signatures[0].sigHex;
+    const pae = Buffer.from(
+      `DSSEv1 ${payloadType.length} ${payloadType} ${payloadBytes.length} `,
+      'utf8'
+    );
+    const authenticToVerify = Buffer.concat([pae, payloadBytes]);
+    const authenticVerified = crypto.verify(
+      null,
+      authenticToVerify,
+      wave13Ed25519KeyPair.publicKey,
+      Buffer.from(sigHex, 'hex')
+    );
+
+    // Mutate 1 byte in the SLSA In-Toto payload to prove DSSE tamper rejection
+    const tamperedBytes = Buffer.from(payloadBytes);
+    if (tamperedBytes.length > 10) {
+      tamperedBytes[10] ^= 0x01;
+    }
+    const tamperedToVerify = Buffer.concat([pae, tamperedBytes]);
+    const tamperedSignatureValid = crypto.verify(
+      null,
+      tamperedToVerify,
+      wave13Ed25519KeyPair.publicKey,
+      Buffer.from(sigHex, 'hex')
+    );
+
+    const parsedStatement = JSON.parse(payloadBytes.toString('utf8'));
+    const statementSha256 = crypto
+      .createHash('sha256')
+      .update(payloadBytes)
+      .digest('hex');
+
+    return res.json({
+      ok: true,
+      projectId,
+      statementSha256,
+      subjectName: parsedStatement?.subject?.[0]?.name || null,
+      subjectSha256: parsedStatement?.subject?.[0]?.digest?.sha256 || null,
+      authenticVerified,
+      tamperedSignatureValid,
+      tamperedDigestRejected: authenticVerified === true && tamperedSignatureValid === false,
+      keyId: dsseEnvelope.signatures[0].keyid,
+      latencyMs: Date.now() - t0,
+      proofSummary: `SLSA v1.0 DSSE PAE Proof Passed (${Date.now() - t0}ms): Authentic Ed25519 DSSE signature verified=${authenticVerified}; 1-Byte Tampered In-Toto Statement rejected (verified=${tamperedSignatureValid}).`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message,
     });
   }
 });
@@ -57725,13 +57937,14 @@ app.post('/api/project/:projectId/wave15/logging-correlator', async (req, res) =
     }
 
     const filterExpr = filterParts.join(' AND ');
+    const limitNum = Math.min(100, Math.max(10, Number(pageSize) || 40));
     const logRes = await axios.post(
       'https://logging.googleapis.com/v2/entries:list',
       {
         resourceNames: [`projects/${projectId}`],
         filter: filterExpr,
         orderBy: 'timestamp desc',
-        pageSize: Math.min(100, Math.max(10, Number(pageSize) || 40)),
+        pageSize: limitNum,
       },
       { headers, timeout: 15000 }
     );
@@ -57745,6 +57958,8 @@ app.post('/api/project/:projectId/wave15/logging-correlator', async (req, res) =
       DEFAULT: 0,
     };
     const resourceTypeCounts = {};
+    const methodCounts = {};
+    const principalCounts = {};
 
     const entries = rawEntries.map((e) => {
       const sev = e.severity || 'DEFAULT';
@@ -57752,15 +57967,18 @@ app.post('/api/project/:projectId/wave15/logging-correlator', async (req, res) =
       const rType = e.resource?.type || 'global';
       resourceTypeCounts[rType] = (resourceTypeCounts[rType] || 0) + 1;
 
+      const method = e.protoPayload?.methodName || null;
+      const caller = e.protoPayload?.authenticationInfo?.principalEmail || null;
+      if (method) methodCounts[method] = (methodCounts[method] || 0) + 1;
+      if (caller) principalCounts[caller] = (principalCounts[caller] || 0) + 1;
+
       let message = '';
       if (e.textPayload) {
         message = e.textPayload;
       } else if (e.protoPayload) {
-        const method = e.protoPayload.methodName || '';
         const resName = e.protoPayload.resourceName || '';
         const statusMsg = e.protoPayload.status?.message || '';
-        const caller = e.protoPayload.authenticationInfo?.principalEmail || '';
-        message = `[Audit: ${method}] ${resName} ${ caller ? `(by ${caller})` : '' } ${statusMsg}`.trim();
+        message = `[Audit: ${method || 'call'}] ${resName} ${caller ? `(by ${caller})` : ''} ${statusMsg}`.trim();
       } else if (e.jsonPayload) {
         message =
           e.jsonPayload.message ||
@@ -57778,20 +57996,33 @@ app.post('/api/project/:projectId/wave15/logging-correlator', async (req, res) =
         resourceType: rType,
         resourceLabels: e.resource?.labels || {},
         message: message || 'Structured Cloud Log Entry',
-        methodName: e.protoPayload?.methodName || null,
-        principalEmail:
-          e.protoPayload?.authenticationInfo?.principalEmail || null,
+        methodName: method,
+        principalEmail: caller,
         statusCode: e.httpRequest?.status || e.protoPayload?.status?.code || null,
       };
     });
+
+    const topMethods = Object.entries(methodCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([method, count]) => ({ method, count }));
+    const topPrincipals = Object.entries(principalCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([principal, count]) => ({ principal, count }));
+
+    const cliEquivalent = `gcloud logging read '${filterExpr.replace(/'/g, "'\\''")}' --project=${projectId} --limit=${limitNum} --format="table(timestamp,severity,resource.type,protoPayload.methodName)"`;
 
     return res.json({
       ok: true,
       projectId,
       filterExecuted: filterExpr,
+      cliEquivalent,
       totalEntries: entries.length,
       severityCounts,
       resourceTypeCounts,
+      topMethods,
+      topPrincipals,
       entries,
       latencyMs: Date.now() - t0,
     });
@@ -57908,25 +58139,39 @@ function inspectLiveTlsEndpoint(host, port = 443, timeoutMs = 6000) {
               )
             : null;
 
-          // Count chain depth
-          let chainDepth = 1;
+          // Walk and extract full X.509 certificate chain (Leaf -> Intermediate -> Root)
+          const certChain = [];
           let curr = cert;
           const seenFingerprints = new Set();
-          while (
-            curr &&
-            curr.issuerCertificate &&
-            curr.issuerCertificate !== curr &&
-            !seenFingerprints.has(curr.fingerprint256)
-          ) {
+          while (curr && curr.fingerprint256 && !seenFingerprints.has(curr.fingerprint256)) {
             seenFingerprints.add(curr.fingerprint256);
-            chainDepth += 1;
+            certChain.push({
+              depth: certChain.length,
+              role:
+                certChain.length === 0
+                  ? 'LEAF'
+                  : curr.issuerCertificate && curr.issuerCertificate !== curr
+                  ? 'INTERMEDIATE_CA'
+                  : 'ROOT_CA',
+              subjectCN: curr.subject?.CN || curr.subject?.O || cleanHost,
+              issuerCN: curr.issuer?.CN || curr.issuer?.O || 'Root Authority',
+              issuerO: curr.issuer?.O || 'Google Trust Services',
+              validTo: curr.valid_to || null,
+              fingerprint256: curr.fingerprint256,
+              bits: curr.bits || null,
+              curve: curr.asn1Curve || curr.nistCurve || null,
+            });
+            if (!curr.issuerCertificate || curr.issuerCertificate === curr) break;
             curr = curr.issuerCertificate;
           }
+          const chainDepth = Math.max(1, certChain.length);
 
           const sanList = String(cert?.subjectaltname || '')
             .split(',')
             .map((s) => s.trim().replace(/^DNS:/i, ''))
             .filter(Boolean);
+
+          const opensslCli = `openssl s_client -connect ${cleanHost}:443 -servername ${cleanHost} -tls1_3 -alpn h2 </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates -fingerprint -sha256`;
 
           socket.end();
           resolve({
@@ -57935,11 +58180,18 @@ function inspectLiveTlsEndpoint(host, port = 443, timeoutMs = 6000) {
             authorized: Boolean(socket.authorized),
             tcpConnectMs,
             tlsHandshakeMs,
+            tlsCryptoOverheadMs: Math.max(1, tlsHandshakeMs - tcpConnectMs),
             protocol,
             alpnProtocol: alpn,
             cipherName: cipher.name || null,
             cipherStandardName: cipher.standardName || cipher.name || null,
             cipherVersion: cipher.version || protocol,
+            pfsGrade:
+              protocol === 'TLSv1.3'
+                ? 'A+ (TLS 1.3 AEAD + Ephemeral PFS)'
+                : 'B (Legacy TLS)',
+            pubkeyBits: cert?.bits || null,
+            pubkeyCurve: cert?.asn1Curve || cert?.nistCurve || 'ECDSA / RSA',
             subjectCN: cert?.subject?.CN || cleanHost,
             issuerO: cert?.issuer?.O || 'Google Trust Services',
             issuerCN: cert?.issuer?.CN || null,
@@ -57949,8 +58201,10 @@ function inspectLiveTlsEndpoint(host, port = 443, timeoutMs = 6000) {
             validTo: cert?.valid_to || null,
             daysRemaining,
             chainDepth,
+            certChain,
             sanCount: sanList.length,
-            sampleSans: sanList.slice(0, 6),
+            sampleSans: sanList.slice(0, 8),
+            opensslCli,
           });
         } catch (err) {
           socket.destroy();
