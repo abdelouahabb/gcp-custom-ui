@@ -140,9 +140,9 @@ export default function OltpDatabaseContinuityBar({
       return;
     }
     const isTabSwitch = Boolean(targetTab && targetTab !== activeTab);
-    if (typeof onSelectTab === 'function' && (isTabSwitch || subTab)) {
+    if (typeof onSelectTab === 'function' && (targetTab || subTab)) {
       onSelectTab(targetTab || activeTab, subTab);
-      return;
+      if (isTabSwitch || subTab) return;
     }
     barRef.current?.nextElementSibling?.scrollIntoView({
       behavior: 'smooth',

@@ -136,8 +136,8 @@ export default function FinOpsCostKillPipelineBar({
       return;
     }
     const isTabSwitch = Boolean(targetTab && targetTab !== activeTab);
-    if (typeof onSelectTab === 'function' && (isTabSwitch || subTab)) {
-      onSelectTab(targetTab || activeTab, subTab);
+    if (typeof onSelectTab === 'function' && (targetTab || subTab)) {
+      onSelectTab(targetTab || activeTab, subTab, scrollToId ? { targetElementId: scrollToId } : null);
     }
     const performScrollAndTrigger = () => {
       if (startupModule) {

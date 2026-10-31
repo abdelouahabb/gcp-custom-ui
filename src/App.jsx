@@ -3443,6 +3443,35 @@ function CloudPulseCockpit() {
     activeTabRef.current = activeTab;
   }, [activeTab]);
 
+  const STUDIO_DISPLAY_NAMES = {
+    OVERVIEW: 'Project Overview & Control Center',
+    GLOBAL_MAP: '40-Region Global Subsea Map',
+    INNOVATION_LAB: '2026 Innovation Lab (16 Studios)',
+    STARTUP_10X: 'Startup 10X Mentor Studio',
+    MCP_HUB: 'Google Cloud Remote MCP Hub',
+    CLOUD_STORAGE: 'Cloud Storage & WORM Studio',
+    BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
+    BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
+    DATA_ENGINEER_STUDIO: 'Data Engineering & Medallion Studio',
+    CLOUD_SQL_STUDIO: 'Cloud SQL & AlloyDB Studio',
+    WAVE9_STUDIO: 'Cloud Build & Supply Chain Studio',
+    WAVE10_FRONTIER: 'Cloud Spanner Graph & Frontier DB Studio',
+    SOVEREIGN_STUDIO: 'IAM, KMS & Time-Machine Studio',
+    SRE_WAR_ROOM: 'SRE Incident War-Room & Perimeter Studio',
+    CLOUD_RUN: 'Cloud Run Serverless Fleet Studio',
+    FUNCTIONS_STUDIO: 'Cloud Functions Gen2 & Eventarc Studio',
+    GKE_STUDIO: 'GKE Autopilot & Kubernetes Studio',
+    VM_SSH: 'Compute Engine VM Fleet & Browser SSH',
+    VPC_NETWORKS: 'VPC Networks & Firewall Rules Studio',
+    FINOPS: 'FinOps, Billing & Zombie Reaper Studio',
+    LOGS_SHELL: 'Neural Chrono-Logs & Cloud Shell Studio',
+    RECYCLE_BIN: '30-Day Cloud Recycle Bin & Recovery Vault',
+    AWS_AZURE_PARITY: 'AWS & Azure Enterprise Parity Studio',
+    ALIBABA_HUAWEI_PARITY: 'Alibaba & Huawei Hyperscale Parity Studio',
+    CLOUD_SOC: 'Autonomous Cloud SOC & SOAR War-Room',
+    DOCS_GUIDE: 'Interactive Architecture & API Guide',
+  };
+
   const pulseSpotlightTargetDom = useCallback((spec = {}) => {
     const clearExistingHighlight = () => {
       document
@@ -3461,33 +3490,94 @@ function CloudPulseCockpit() {
       const targetTab = spec.targetTab || activeTabRef.current;
       const badgeLabel =
         spec.badgeText ||
-        spec.targetLabel ||
         spec.targetSubTab ||
+        spec.ruleName ||
+        spec.targetLabel ||
+        STUDIO_DISPLAY_NAMES[targetTab] ||
         targetTab;
 
-      // 1. Highlight top navigation tab button
+      // 1. Highlight top navigation tab button (or top-bar shortcut button)
       const navBtn = document.querySelector(
-        `nav button[data-feature-id="${targetTab}"]`
+        `nav button[data-feature-id="${targetTab}"], header button[data-feature-id="${targetTab}"]`
       );
       if (navBtn) {
         navBtn.classList.add('cloudpulse-nav-spotlight-active');
       }
 
-      // 2. Locate exact target container or card inside the destination Studio
+      // 2. Locate the primary Studio root element below the Pipeline Bar
+      const mainEl = document.getElementById('cloudpulse-main-workspace');
+      let studioRoot = null;
+      let studioChildren = [];
+      if (mainEl) {
+        studioChildren = Array.from(
+          mainEl.querySelectorAll(
+            ':scope > div.space-y-4 > *, :scope > div.space-y-6 > *'
+          )
+        );
+        if (targetTab === 'OVERVIEW') {
+          // In OVERVIEW: [0]=SortableKpiRow, [1]=EnterpriseStackPipelineBar, [2]=ResourceControlCenter, [3]=5-Domain Hub
+          studioRoot = studioChildren[2] || studioChildren[0] || null;
+        } else if (studioChildren.length >= 2) {
+          studioRoot = studioChildren[1];
+        } else if (studioChildren.length === 1) {
+          studioRoot = studioChildren[0];
+        } else {
+          studioRoot = mainEl.querySelector(':scope > div:not([data-spotlight-breadcrumb])');
+        }
+      }
+
+      // 3. Highlight active in-Studio Sub-Tab / Pillar / Module button if present
+      if (studioRoot) {
+        let activeSubBtn = null;
+        if (spec.targetSubTab) {
+          activeSubBtn = studioRoot.querySelector(
+            `button[data-soc-pillar="${spec.targetSubTab}"], button[data-subtab-id="${spec.targetSubTab}"], button[data-feature-id*="${spec.targetSubTab}"]`
+          );
+        }
+        if (!activeSubBtn && spec.sqlSeeded && targetTab === 'BIGQUERY_STUDIO') {
+          activeSubBtn = studioRoot.querySelector('button[data-feature-id="BQ_TAB_TABLES_SQL"]');
+        }
+        if (!activeSubBtn) {
+          // Auto-detect active sub-tab button inside the Studio header or sub-tab navigation grid
+          const topCandidates = [
+            studioRoot.children?.[0],
+            studioRoot.children?.[1],
+          ].filter(Boolean);
+          for (const container of topCandidates) {
+            const buttons = Array.from(container.querySelectorAll('button'));
+            const found = buttons.find((btn) => {
+              const cls = String(btn.className || '');
+              const parentBtns = btn.parentElement?.querySelectorAll(':scope > button')?.length || 0;
+              if (parentBtns < 2) return false;
+              return (
+                (cls.includes('bg-blue-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-indigo-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-emerald-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-rose-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-amber-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-purple-600') && cls.includes('text-white')) ||
+                (cls.includes('bg-teal-600') && cls.includes('text-white')) ||
+                cls.includes('ring-2')
+              );
+            });
+            if (found) {
+              activeSubBtn = found;
+              break;
+            }
+          }
+        }
+        if (activeSubBtn) {
+          activeSubBtn.classList.add('cloudpulse-nav-spotlight-active');
+        }
+      }
+
+      // 4. Locate exact target container or focused feature card inside the destination Studio
       let targetEl = null;
       if (spec.targetElementId) {
         targetEl = document.getElementById(spec.targetElementId);
       }
       if (!targetEl && targetTab === 'CLOUD_SOC') {
         targetEl = document.getElementById('soc-active-pillar-panel');
-        if (spec.targetSubTab) {
-          const pillarBtn = document.querySelector(
-            `button[data-soc-pillar="${spec.targetSubTab}"]`
-          );
-          if (pillarBtn) {
-            pillarBtn.classList.add('cloudpulse-nav-spotlight-active');
-          }
-        }
       }
       if (!targetEl && targetTab === 'GLOBAL_MAP' && spec.isXRay) {
         targetEl = document.getElementById('global-map-xray-dock');
@@ -3500,31 +3590,82 @@ function CloudPulseCockpit() {
           targetEl = document.getElementById('live-vpc-firewall-rules-section');
         }
       }
-      if (!targetEl) {
-        const mainEl = document.getElementById('cloudpulse-main-workspace');
-        if (mainEl) {
-          // Find the primary Studio container below the top Pipeline Bar
-          const studioChildren = mainEl.querySelectorAll(
-            ':scope > div.space-y-4 > *, :scope > div.space-y-6 > *'
-          );
-          if (studioChildren.length >= 2) {
-            targetEl = studioChildren[1];
-          } else if (studioChildren.length === 1) {
-            targetEl = studioChildren[0];
+      if (!targetEl && targetTab === 'BIGQUERY_STUDIO' && spec.sqlSeeded) {
+        targetEl = document.getElementById('bigquery-sql-workbench-card');
+        if (!targetEl && studioRoot) {
+          const sqlTextarea = studioRoot.querySelector('textarea');
+          if (sqlTextarea) {
+            targetEl = sqlTextarea.closest('.rounded-2xl, .rounded-xl') || sqlTextarea.parentElement;
           }
+        }
+      }
+      if (!targetEl && targetTab === 'LOGS_SHELL') {
+        targetEl = document.getElementById(
+          spec.isShellCommand ? 'cloud-shell-terminal-card' : 'chrono-logs-explorer-card'
+        );
+      }
+      if (!targetEl && targetTab === 'FINOPS') {
+        targetEl = document.getElementById('finops-billing-guardian-section');
+      }
+
+      // 5. Universal Smart Studio Panel Resolver (Never highlight a giant 3,000px+ outer wrapper!)
+      if (!targetEl && studioRoot) {
+        const visibleKids = Array.from(studioRoot.children || []).filter(
+          (el) => el.getBoundingClientRect().height > 24
+        );
+        if (visibleKids.length >= 3) {
+          // Check if visibleKids[1] is a sub-tab selector bar/grid (e.g., Revolutionary2026Suite, AwsAzureEnvySuiteStudio)
+          const secondKidButtons = visibleKids[1].querySelectorAll('button').length;
+          const secondKidHeight = visibleKids[1].getBoundingClientRect().height;
+          if (spec.targetSubTab || (secondKidButtons >= 3 && secondKidHeight < 440)) {
+            targetEl = visibleKids[2];
+          } else {
+            targetEl = visibleKids[1];
+          }
+        } else if (visibleKids.length === 2) {
+          // visibleKids[0] is Studio Header + Sub-Tab Bar; visibleKids[1] is the active feature panel
+          targetEl = visibleKids[1];
+          if (!spec.targetSubTab) {
+            visibleKids[0].classList.add('cloudpulse-nav-spotlight-active');
+          }
+        } else if (visibleKids.length === 1) {
+          targetEl = visibleKids[0];
+        } else {
+          targetEl = studioRoot;
+        }
+
+        // Drill-down guardrail: if the selected panel is still a multi-section wrapper taller than 1,500px,
+        // focus its first substantive feature card so the border + floating badge are 100% visible in the viewport.
+        let drillCount = 0;
+        while (
+          targetEl &&
+          drillCount < 2 &&
+          targetEl.getBoundingClientRect().height > 1500 &&
+          targetEl.children &&
+          targetEl.children.length >= 1
+        ) {
+          const substantiveChild = Array.from(targetEl.children).find(
+            (c) => c.getBoundingClientRect().height > 90
+          );
+          if (!substantiveChild) break;
+          targetEl = substantiveChild;
+          drillCount += 1;
         }
       }
 
       if (targetEl) {
         targetEl.setAttribute(
           'data-spotlight-badge',
-          `🎯 SPOTLIGHT TARGET — ${String(badgeLabel).slice(0, 48)}`
+          `🎯 SPOTLIGHT TARGET — ${String(badgeLabel).slice(0, 52)}`
         );
         targetEl.classList.add('cloudpulse-target-spotlight-active');
         if (shouldScroll) {
           targetEl.scrollIntoView({
             behavior: 'smooth',
-            block: spec.targetElementId || spec.ruleName || spec.isXRay ? 'center' : 'start',
+            block:
+              spec.targetElementId || spec.ruleName || spec.isXRay || spec.sqlSeeded || spec.isShellCommand
+                ? 'center'
+                : 'start',
           });
         }
       }
@@ -3538,7 +3679,7 @@ function CloudPulseCockpit() {
     };
 
     setTimeout(() => runLocateAndHighlight(true), 140);
-    setTimeout(() => runLocateAndHighlight(false), 480);
+    setTimeout(() => runLocateAndHighlight(false), 500);
   }, []);
 
   const triggerCrossUiSpotlight = useCallback(
@@ -3553,24 +3694,28 @@ function CloudPulseCockpit() {
       if (!enabled) return;
 
       const fromTab = spec.fromTab || activeTabRef.current;
+      const targetTab = spec.targetTab || activeTabRef.current;
+      const studioTitle = STUDIO_DISPLAY_NAMES[targetTab] || targetTab;
       const bannerPayload = {
         fromTab,
-        targetTab: spec.targetTab,
+        targetTab,
         targetSubTab: spec.targetSubTab || null,
         targetElementId: spec.targetElementId || null,
         ruleName: spec.ruleName || null,
         isXRay: Boolean(spec.isXRay),
+        sqlSeeded: Boolean(spec.sqlSeeded),
+        isShellCommand: Boolean(spec.isShellCommand),
         targetLabel:
           spec.targetLabel ||
           (spec.targetSubTab
-            ? `${spec.targetTab} → ${spec.targetSubTab}`
-            : spec.targetTab),
+            ? `${studioTitle} → ${spec.targetSubTab}`
+            : studioTitle),
         badgeText:
           spec.badgeText ||
           spec.targetSubTab ||
           spec.ruleName ||
           spec.targetLabel ||
-          spec.targetTab,
+          studioTitle,
         triggeredAt: Date.now(),
       };
       setActiveSpotlightBanner(bannerPayload);
@@ -3585,6 +3730,37 @@ function CloudPulseCockpit() {
     },
     [pulseSpotlightTargetDom]
   );
+
+  const handleOpenBigQuerySql = useCallback(
+    (sqlText, contextLabel = 'SQL Query Workbench & Optimizer') => {
+      const prevTab = activeTabRef.current;
+      if (sqlText) setBigQueryInitialSql(sqlText);
+      setActiveTab('BIGQUERY_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'BIGQUERY_STUDIO',
+        sqlSeeded: true,
+        targetElementId: 'bigquery-sql-workbench-card',
+        targetLabel: `BigQuery Studio → ${contextLabel}`,
+        badgeText: 'SQL Loaded in Query Workbench',
+      });
+    },
+    [triggerCrossUiSpotlight]
+  );
+
+  const handleScrollToApisWithSpotlight = useCallback(() => {
+    const prevTab = activeTabRef.current;
+    if (prevTab !== 'OVERVIEW') {
+      setActiveTab('OVERVIEW');
+    }
+    triggerCrossUiSpotlight({
+      fromTab: prevTab,
+      targetTab: 'OVERVIEW',
+      targetElementId: 'emergency-api-killswitch-section',
+      targetLabel: 'Project Overview → Emergency Paid API Kill-Switch',
+      badgeText: 'Emergency Paid API Kill-Switch',
+    });
+  }, [triggerCrossUiSpotlight]);
 
   const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
@@ -3693,18 +3869,147 @@ function CloudPulseCockpit() {
       }
     }
     setActiveTab(normalizedTab);
+    const studioTitle = STUDIO_DISPLAY_NAMES[normalizedTab] || normalizedTab;
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: normalizedTab,
       targetSubTab: subTab || null,
-      targetLabel: subTab
-        ? `${normalizedTab} → ${subTab}`
-        : extraTarget?.bucketName
-        ? `${normalizedTab} → Bucket "${extraTarget.bucketName}"`
-        : normalizedTab,
-      badgeText: subTab || extraTarget?.bucketName || normalizedTab,
+      targetElementId: extraTarget?.targetElementId || null,
+      targetLabel:
+        extraTarget?.targetLabel ||
+        (subTab
+          ? `${studioTitle} → ${subTab}`
+          : extraTarget?.bucketName
+          ? `${studioTitle} → Bucket "${extraTarget.bucketName}"`
+          : studioTitle),
+      badgeText:
+        extraTarget?.badgeText ||
+        subTab ||
+        extraTarget?.bucketName ||
+        studioTitle,
     });
   }, [selectedProjectId, triggerCrossUiSpotlight]);
+
+  // Listen for custom focus events across Pipeline Bars & Studios so intra-studio deep-links also spotlight their target
+  useEffect(() => {
+    const handleStartupFocus = (evt) => {
+      const mod = evt?.detail?.module;
+      const scrollToId = evt?.detail?.scrollToId;
+      triggerCrossUiSpotlight({
+        fromTab: activeTabRef.current,
+        targetTab: 'STARTUP_10X',
+        targetSubTab: mod || null,
+        targetElementId: scrollToId || null,
+        targetLabel: `Startup 10X Mentor Studio → ${mod || 'Launch Guardrail'}`,
+        badgeText: mod || 'Startup 10X Module',
+      });
+    };
+    const handleWave9Focus = (evt) => {
+      const subTab = evt?.detail?.subTab;
+      triggerCrossUiSpotlight({
+        fromTab: activeTabRef.current,
+        targetTab: 'WAVE9_STUDIO',
+        targetSubTab: subTab || null,
+        targetLabel: `Cloud Build & Supply Chain → ${subTab || 'CI/CD Pipeline'}`,
+        badgeText: subTab || 'Cloud Build & Supply Chain',
+      });
+    };
+    const handleFunctionsFocus = (evt) => {
+      const section = evt?.detail?.section || 'Eventarc & Gen2 Functions';
+      triggerCrossUiSpotlight({
+        fromTab: activeTabRef.current,
+        targetTab: 'FUNCTIONS_STUDIO',
+        targetLabel: `Cloud Functions & Eventarc → ${section}`,
+        badgeText: section,
+      });
+    };
+
+    // Delegated listener for in-Studio Sub-Tab / Pillar / Module selector buttons across all 22 Studios
+    const handleWorkspaceSubTabClick = (evt) => {
+      const btn = evt.target?.closest?.('button');
+      if (!btn) return;
+      if (btn.closest('[data-spotlight-breadcrumb]')) return;
+      if (btn.closest('[data-feature-id*="_PIPELINE"]')) return;
+
+      const socPillar = btn.getAttribute('data-soc-pillar');
+      const subTabAttr = btn.getAttribute('data-subtab-id');
+      const featureId = btn.getAttribute('data-feature-id') || '';
+      const isExplicitSubTab =
+        Boolean(socPillar) ||
+        Boolean(subTabAttr) ||
+        featureId.startsWith('BQ_TAB_');
+
+      // Also detect multi-button module selector grids inside the top header/toolbar of any Studio
+      let isHeaderModuleGridBtn = false;
+      if (!isExplicitSubTab) {
+        const mainEl = document.getElementById('cloudpulse-main-workspace');
+        const studioChildren = mainEl
+          ? Array.from(
+              mainEl.querySelectorAll(
+                ':scope > div.space-y-4 > *, :scope > div.space-y-6 > *'
+              )
+            )
+          : [];
+        const studioRoot =
+          studioChildren.length >= 2 ? studioChildren[1] : studioChildren[0];
+        if (
+          studioRoot &&
+          (studioRoot.children?.[0]?.contains(btn) ||
+            studioRoot.children?.[1]?.contains(btn))
+        ) {
+          const parent = btn.parentElement;
+          const siblingBtns =
+            parent?.querySelectorAll(':scope > button')?.length || 0;
+          const parentCls = String(parent?.className || '');
+          const btnText = String(btn.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (
+            siblingBtns >= 3 &&
+            parentCls.includes('grid') &&
+            btnText.length >= 4 &&
+            !/^(Refresh|Sync|Copy|Download|Close|Clear|Run|Delete|Cancel|Export|Reset)/i.test(
+              btnText
+            )
+          ) {
+            isHeaderModuleGridBtn = true;
+          }
+        }
+      }
+
+      if (!isExplicitSubTab && !isHeaderModuleGridBtn) return;
+
+      const cleanLabel = (
+        socPillar ||
+        subTabAttr ||
+        String(btn.textContent || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+      ).slice(0, 44);
+
+      triggerCrossUiSpotlight({
+        fromTab: activeTabRef.current,
+        targetTab: activeTabRef.current,
+        targetSubTab: socPillar || subTabAttr || cleanLabel,
+        targetElementId: socPillar ? 'soc-active-pillar-panel' : null,
+        targetLabel: `${
+          STUDIO_DISPLAY_NAMES[activeTabRef.current] || activeTabRef.current
+        } → ${cleanLabel}`,
+        badgeText: cleanLabel,
+      });
+    };
+
+    window.addEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
+    window.addEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
+    window.addEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
+    document.addEventListener('click', handleWorkspaceSubTabClick);
+    return () => {
+      window.removeEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
+      window.removeEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
+      window.removeEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
+      document.removeEventListener('click', handleWorkspaceSubTabClick);
+    };
+  }, [triggerCrossUiSpotlight]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
@@ -4178,6 +4483,8 @@ function CloudPulseCockpit() {
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: 'LOGS_SHELL',
+      isShellCommand: true,
+      targetElementId: 'cloud-shell-terminal-card',
       targetLabel: `Logs & Cloud Shell → "${String(cmd || '').slice(0, 44)}"`,
       badgeText: 'Cloud Shell Terminal',
     });
@@ -4198,6 +4505,7 @@ function CloudPulseCockpit() {
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: 'LOGS_SHELL',
+      targetElementId: 'chrono-logs-explorer-card',
       targetLabel: `Cloud Logs Explorer → ${spec?.summary || spec?.regionId || 'Forensic Trace'}`,
       badgeText: spec?.regionId || 'Logs Explorer',
     });
@@ -4278,19 +4586,19 @@ function CloudPulseCockpit() {
     await fetchProjectOverview(selectedProjectId);
     setVmRefreshTrigger((c) => c + 1);
     if (serviceType === 'CLOUD_RUN') {
-      setActiveTab('CLOUD_RUN');
+      handleNavigateStudioTab('CLOUD_RUN');
     } else if (serviceType === 'GKE_CLUSTER') {
-      setActiveTab('GKE_STUDIO');
+      handleNavigateStudioTab('GKE_STUDIO');
     } else if (serviceType === 'CLOUD_SQL') {
-      setActiveTab('CLOUD_SQL_STUDIO');
+      handleNavigateStudioTab('CLOUD_SQL_STUDIO');
     } else if (serviceType === 'GCS_BUCKET') {
-      setActiveTab('CLOUD_STORAGE');
+      handleNavigateStudioTab('CLOUD_STORAGE');
     } else if (serviceType === 'BIGQUERY_DATASET') {
-      setActiveTab('BIGQUERY_STUDIO');
+      handleNavigateStudioTab('BIGQUERY_STUDIO');
     } else if (serviceType === 'COMPUTE_VM') {
-      setActiveTab('VM_SSH');
+      handleNavigateStudioTab('VM_SSH');
     } else if (serviceType === 'VPC_NETWORK' || serviceType === 'VPC_FIREWALL') {
-      setActiveTab('VPC_NETWORKS');
+      handleNavigateStudioTab('VPC_NETWORKS');
     }
   };
 
@@ -4630,7 +4938,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 data-feature-id="DOCS_GUIDE"
-                onClick={() => setActiveTab('DOCS_GUIDE')}
+                onClick={() => handleNavigateStudioTab('DOCS_GUIDE')}
                 title="Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide"
                 className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
                   activeTab === 'DOCS_GUIDE'
@@ -4646,7 +4954,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 data-feature-id="OVERVIEW"
-                onClick={() => setActiveTab('OVERVIEW')}
+                onClick={() => handleNavigateStudioTab('OVERVIEW')}
                 title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
                 className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
                   activeTab === 'OVERVIEW'
@@ -4661,10 +4969,12 @@ function CloudPulseCockpit() {
               {/* 1-Click 10-Persona Enterprise Architecture Board Launcher */}
               <button
                 type="button"
-                onClick={() => {
-                  setInnovationSubTab('FIVE_PERSONA_COUNCIL');
-                  setActiveTab('INNOVATION_LAB');
-                }}
+                onClick={() =>
+                  handleNavigateStudioTab('INNOVATION_LAB', 'FIVE_PERSONA_COUNCIL', {
+                    targetLabel: '2026 Innovation Lab → 10-Persona Enterprise Architecture Board',
+                    badgeText: '10-Persona Architecture Board',
+                  })
+                }
                 title="Open 10-Persona Enterprise Architecture Board & Pre-Flight War-Room: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps, (06) AI/MLOps Engineer, (07) SRE Commander, (08) Database Reliability Engineer (DBRE), (09) FinOps & GreenOps, and (10) K8s & IDP Platform Engineer"
                 className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
@@ -4675,10 +4985,12 @@ function CloudPulseCockpit() {
               {/* 1-Click [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab Launcher */}
               <button
                 type="button"
-                onClick={() => {
-                  setInnovationSubTab('GCLOUD_ALPHA_BETA');
-                  setActiveTab('INNOVATION_LAB');
-                }}
+                onClick={() =>
+                  handleNavigateStudioTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA', {
+                    targetLabel: '2026 Innovation Lab → gcloud SDK 591.0.0 Frontier Lab',
+                    badgeText: 'gcloud SDK 591.0.0 Lab',
+                  })
+                }
                 title="Open [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
                 className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
@@ -4690,7 +5002,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 data-feature-id="RECYCLE_BIN"
-                onClick={() => setActiveTab('RECYCLE_BIN')}
+                onClick={() => handleNavigateStudioTab('RECYCLE_BIN')}
                 title="Open 30-Day Cloud Recycle Bin: Find what resources were deleted and which Google Cloud APIs were disabled in the last 30 days, with 1-Click Restore & Re-Enable"
                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap border ${
                   activeTab === 'RECYCLE_BIN'
@@ -4814,10 +5126,12 @@ function CloudPulseCockpit() {
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button
                 type="button"
-                onClick={() => {
-                  setInnovationSubTab('FINOPS_SLEEP');
-                  setActiveTab('INNOVATION_LAB');
-                }}
+                onClick={() =>
+                  handleNavigateStudioTab('INNOVATION_LAB', 'FINOPS_SLEEP', {
+                    targetLabel: '2026 Innovation Lab → Night-Mode FinOps Sleep Switch',
+                    badgeText: 'FinOps Night-Mode Sleep Switch',
+                  })
+                }
                 title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch (Zeroes active vCPU/GPU compute via REST API or Google Cloud Scheduler; attached Persistent Disks & unused Static External IPs still bill)"
                 className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0"
               >
@@ -4831,7 +5145,13 @@ function CloudPulseCockpit() {
               {/* Cloud Billing Account & Promotional Credits Pill */}
               <button
                 type="button"
-                onClick={() => setActiveTab('FINOPS')}
+                onClick={() =>
+                  handleNavigateStudioTab('FINOPS', null, {
+                    targetElementId: 'finops-billing-guardian-section',
+                    targetLabel: 'FinOps Studio → Billing Account & Promotional Credits Guardian',
+                    badgeText: 'Billing & Promotional Credits Guardian',
+                  })
+                }
                 title="Open Cloud Billing Account & Promotional Credits Guardian"
                 className={`inline-flex items-center gap-1 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap shrink-0 ${
                   gdeSummary.hasImportedCredits &&
@@ -4913,7 +5233,7 @@ function CloudPulseCockpit() {
                     <button
                       type="button"
                       data-feature-id="CFE_POSTURE"
-                      onClick={() => setActiveTab('GLOBAL_MAP')}
+                      onClick={() => handleNavigateStudioTab('GLOBAL_MAP')}
                       title="Live Grid Carbon-Free Energy (CFE%) & Zero-Trust Posture Grade — Click to open 40-Region Global Map"
                       className="hidden xl:inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
                     >
@@ -5140,7 +5460,10 @@ function CloudPulseCockpit() {
         >
           {/* Sticky Cross-UI Feature Spotlight Arrival Beacon & 1-Click Return Breadcrumb */}
           {featureSpotlightEnabled && activeSpotlightBanner && (
-            <div className="sticky top-16 z-40 rounded-xl border-2 border-amber-500/80 bg-zinc-950/95 text-zinc-100 px-4 py-2.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+            <div
+              data-spotlight-breadcrumb="true"
+              className="sticky top-16 z-40 rounded-xl border-2 border-amber-500/80 bg-zinc-950/95 text-zinc-100 px-4 py-2.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-mono text-xs"
+            >
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-extrabold uppercase tracking-wider">
                   🎯 SPOTLIGHT TARGET
@@ -5303,25 +5626,7 @@ function CloudPulseCockpit() {
                       fetchProjectOverview(selectedProjectId, { force: true })
                     }
                     onNavigateTab={handleNavigateStudioTab}
-                    onScrollToApis={() => {
-                      const scrollNow = () => {
-                        const el = document.getElementById(
-                          'emergency-api-killswitch-section'
-                        );
-                        if (el) {
-                          el.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start',
-                          });
-                        }
-                      };
-                      if (activeTab !== 'OVERVIEW') {
-                        setActiveTab('OVERVIEW');
-                        setTimeout(scrollNow, 120);
-                      } else {
-                        scrollNow();
-                      }
-                    }}
+                    onScrollToApis={handleScrollToApisWithSpotlight}
                   />
 
                   <EnterpriseStackPipelineBar
@@ -5485,7 +5790,7 @@ function CloudPulseCockpit() {
                       projectId={selectedProjectId}
                       enabledApis={overview?.enabledApis || []}
                       onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                      onOpenFinOps={() => setActiveTab('FINOPS')}
+                      onOpenFinOps={() => handleNavigateStudioTab('FINOPS')}
                       onNavigateTab={handleNavigateStudioTab}
                       onRunInShell={handleRunInShell}
                       onShowToast={showToast}
@@ -5514,7 +5819,7 @@ function CloudPulseCockpit() {
                     onRunInShell={handleRunInShell}
                     onOpenLogsExplorer={handleOpenInLogsExplorer}
                     onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
-                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onSelectTab={handleNavigateStudioTab}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
@@ -5548,7 +5853,16 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     overview={overview}
                     initialSubTab={innovationSubTab}
-                    onSubTabChange={setInnovationSubTab}
+                    onSubTabChange={(sub) => {
+                      setInnovationSubTab(sub);
+                      triggerCrossUiSpotlight({
+                        fromTab: 'INNOVATION_LAB',
+                        targetTab: 'INNOVATION_LAB',
+                        targetSubTab: sub,
+                        targetLabel: `2026 Innovation Lab → ${sub}`,
+                        badgeText: sub,
+                      });
+                    }}
                     onRefreshOverview={() => {
                       fetchProjectOverview(selectedProjectId);
                       setVmRefreshTrigger((c) => c + 1);
@@ -5557,10 +5871,7 @@ function CloudPulseCockpit() {
                     onDeleteResource={handleDeleteResource}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
                     onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onSelectStudioTab={handleNavigateStudioTab}
                     onSelectProject={(pid) => {
                       sessionStorage.setItem(
@@ -5583,10 +5894,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     activeTab={activeTab}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                   />
                   <Startup10xMentorStudio
@@ -5618,10 +5926,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -5651,10 +5956,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -5665,10 +5967,7 @@ function CloudPulseCockpit() {
                     initialObjectName={storageTargetObject}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onRefreshGlobal={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -5708,10 +6007,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -5745,9 +6041,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     studioDomain="BIGQUERY"
                     onRunInShell={handleRunInShell}
-                    onLoadBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                    }}
+                    onLoadBigQuerySql={handleOpenBigQuerySql}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -5759,9 +6053,7 @@ function CloudPulseCockpit() {
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
@@ -5776,10 +6068,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -5787,10 +6076,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     initialSubTab={bigLakeSubTab}
                     onRunInShell={handleRunInShell}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenDataEngineerStudio={(sub) =>
                       handleNavigateStudioTab(
                         'DATA_ENGINEER_STUDIO',
@@ -5811,10 +6097,7 @@ function CloudPulseCockpit() {
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
@@ -5829,10 +6112,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -5840,10 +6120,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     initialSubTab={dataEngineerSubTab}
                     onNavigateTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenBigLakeStudio={(sub) =>
                       handleNavigateStudioTab(
                         'BIGLAKE_STUDIO',
@@ -5864,10 +6141,7 @@ function CloudPulseCockpit() {
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
@@ -5882,10 +6156,7 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onSelectTab={handleNavigateStudioTab}
                     onOpenProvision={handleOpenProvision}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                   />
                   <CloudSqlAndAlloyDbStudio
@@ -5894,10 +6165,7 @@ function CloudPulseCockpit() {
                       handleOpenProvision('CLOUD_SQL')
                     }
                     onNavigateTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
                     onRunInShell={handleRunInShell}
                     onRefreshOverview={() =>
@@ -5926,10 +6194,7 @@ function CloudPulseCockpit() {
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
-                      onOpenBigQuerySql={(sqlText) => {
-                        if (sqlText) setBigQueryInitialSql(sqlText);
-                        setActiveTab('BIGQUERY_STUDIO');
-                      }}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
                       onRunInShell={handleRunInShell}
                       onShowToast={showToast}
                       onShowError={setErrorBanner}
@@ -5950,7 +6215,16 @@ function CloudPulseCockpit() {
                   <Wave9AiGkeSqlSupplyChainStudio
                     projectId={selectedProjectId}
                     initialSubTab={wave9SubTab}
-                    onSubTabChange={setWave9SubTab}
+                    onSubTabChange={(sub) => {
+                      setWave9SubTab(sub);
+                      triggerCrossUiSpotlight({
+                        fromTab: 'WAVE9_STUDIO',
+                        targetTab: 'WAVE9_STUDIO',
+                        targetSubTab: sub,
+                        targetLabel: `Cloud Build & Supply Chain → ${sub}`,
+                        badgeText: sub,
+                      });
+                    }}
                     onTriggerToast={showToast}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -5992,19 +6266,13 @@ function CloudPulseCockpit() {
                     activeTab={activeTab}
                     onSelectTab={handleNavigateStudioTab}
                     onOpenProvision={handleOpenProvision}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                   />
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
@@ -6129,10 +6397,9 @@ function CloudPulseCockpit() {
                     onOpenProvisionCloudRun={() =>
                       handleOpenProvision('CLOUD_RUN')
                     }
-                    onOpenSecretManagerStudio={() => {
-                      setSovereignSubTab('SECRETS_KMS_WAF');
-                      setActiveTab('SOVEREIGN_STUDIO');
-                    }}
+                    onOpenSecretManagerStudio={() =>
+                      handleNavigateStudioTab('SECRETS_KMS')
+                    }
                     onSelectTab={handleNavigateStudioTab}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -6370,10 +6637,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     activeTab={activeTab}
                     onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={(sqlText) => {
-                      if (sqlText) setBigQueryInitialSql(sqlText);
-                      setActiveTab('BIGQUERY_STUDIO');
-                    }}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
                     onRunInShell={handleRunInShell}
                   />
                   <div
@@ -6384,23 +6648,12 @@ function CloudPulseCockpit() {
                       projectId={selectedProjectId}
                       liveBurn={liveBurn}
                       gdePrivacyConfig={gdePrivacyConfig}
-                      onOpenBigQuerySql={(sqlText) => {
-                        if (sqlText) setBigQueryInitialSql(sqlText);
-                        setActiveTab('BIGQUERY_STUDIO');
-                      }}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
                       onOpenProvision={handleOpenProvision}
-                      onOpenSecretManagerStudio={() => {
-                        setSovereignSubTab('SECRETS_KMS_WAF');
-                        setActiveTab('SOVEREIGN_STUDIO');
-                      }}
-                      onOpenEmergencyKillSwitch={() => {
-                        setActiveTab('OVERVIEW');
-                        setTimeout(() => {
-                          document
-                            .getElementById('emergency-api-killswitch-section')
-                            ?.scrollIntoView({ behavior: 'smooth' });
-                        }, 150);
-                      }}
+                      onOpenSecretManagerStudio={() =>
+                        handleNavigateStudioTab('SECRETS_KMS')
+                      }
+                      onOpenEmergencyKillSwitch={handleScrollToApisWithSpotlight}
                       onRunInShell={handleRunInShell}
                       onShowToast={showToast}
                       onGrantsSummaryChange={setGdeSummary}
@@ -6431,26 +6684,8 @@ function CloudPulseCockpit() {
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId, { force: true })
                     }
-                    onNavigateTab={(tabId) => setActiveTab(tabId)}
-                    onScrollToApis={() => {
-                      const scrollNow = () => {
-                        const el = document.getElementById(
-                          'emergency-api-killswitch-section'
-                        );
-                        if (el) {
-                          el.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start',
-                          });
-                        }
-                      };
-                      if (activeTab !== 'OVERVIEW') {
-                        setActiveTab('OVERVIEW');
-                        setTimeout(scrollNow, 120);
-                      } else {
-                        scrollNow();
-                      }
-                    }}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onScrollToApis={handleScrollToApisWithSpotlight}
                   />
                   <TelemetryCharts
                     telemetry={overview?.telemetry}
@@ -6513,7 +6748,7 @@ function CloudPulseCockpit() {
                     initialLogExplorerSpec={logExplorerSeedSpec}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
-                    onOpenRecycleBin={() => setActiveTab('RECYCLE_BIN')}
+                    onOpenRecycleBin={() => handleNavigateStudioTab('RECYCLE_BIN')}
                   />
                   <PersonaContextualHelper
                     persona="SRE_ONCALL"
@@ -6567,10 +6802,19 @@ function CloudPulseCockpit() {
                     key="aws-azure-parity"
                     cloudFamily="AWS_AZURE"
                     initialTab={awsAzureSubTab}
-                    onSubTabChange={setAwsAzureSubTab}
+                    onSubTabChange={(sub) => {
+                      setAwsAzureSubTab(sub);
+                      triggerCrossUiSpotlight({
+                        fromTab: 'AWS_AZURE_PARITY',
+                        targetTab: 'AWS_AZURE_PARITY',
+                        targetSubTab: sub,
+                        targetLabel: `AWS & Azure Parity → ${sub}`,
+                        badgeText: sub,
+                      });
+                    }}
                     projectId={selectedProjectId}
                     onSwitchCloudFamily={(family) =>
-                      setActiveTab(
+                      handleNavigateStudioTab(
                         family === 'ALIBABA_HUAWEI'
                           ? 'ALIBABA_HUAWEI_PARITY'
                           : 'AWS_AZURE_PARITY'
@@ -6599,10 +6843,19 @@ function CloudPulseCockpit() {
                     key="alibaba-huawei-parity"
                     cloudFamily="ALIBABA_HUAWEI"
                     initialTab={alibabaHuaweiSubTab}
-                    onSubTabChange={setAlibabaHuaweiSubTab}
+                    onSubTabChange={(sub) => {
+                      setAlibabaHuaweiSubTab(sub);
+                      triggerCrossUiSpotlight({
+                        fromTab: 'ALIBABA_HUAWEI_PARITY',
+                        targetTab: 'ALIBABA_HUAWEI_PARITY',
+                        targetSubTab: sub,
+                        targetLabel: `Alibaba & Huawei Parity → ${sub}`,
+                        badgeText: sub,
+                      });
+                    }}
                     projectId={selectedProjectId}
                     onSwitchCloudFamily={(family) =>
-                      setActiveTab(
+                      handleNavigateStudioTab(
                         family === 'ALIBABA_HUAWEI'
                           ? 'ALIBABA_HUAWEI_PARITY'
                           : 'AWS_AZURE_PARITY'
@@ -6665,7 +6918,7 @@ function CloudPulseCockpit() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleNavigateStudioTab(tab.id)}
                 title={tab.tip}
                 className={`flex flex-col items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
                   isActive
@@ -6707,10 +6960,10 @@ function CloudPulseCockpit() {
           else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
           else if (type === 'BUCKET' || type === 'GCS_BUCKET')
             handleOpenProvision('GCS_BUCKET');
-          else if (type === 'API') setActiveTab('OVERVIEW');
+          else if (type === 'API') handleScrollToApisWithSpotlight();
           else handleOpenProvision(type || 'GCS_BUCKET');
         }}
-        onOpenKillSwitch={() => setActiveTab('OVERVIEW')}
+        onOpenKillSwitch={handleScrollToApisWithSpotlight}
         onOpenCopilot={() => handleOpenCopilotWithPrompt('')}
         onToggleGdeMode={() => {
           setGdePrivacyConfig((prev) => {

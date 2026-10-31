@@ -856,7 +856,10 @@ export default function LogStreamerAndShell({
           5. Log FinOps Byte-Burn & 1-Click `_Default` Sink Exclusion
           6. Live DLP Secret & PII Leak Redaction Radar
          =================================================================== */}
-      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4">
+      <div
+        id="chrono-logs-explorer-card"
+        className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4"
+      >
         {/* Top Studio Header & Live Telemetry KPIs */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -4296,7 +4299,10 @@ export default function LogStreamerAndShell({
         </div>
 
         {/* Right Column: Touch-Optimized Mobile Cloud Shell */}
-        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
+        <div
+          id="cloud-shell-terminal-card"
+          className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">

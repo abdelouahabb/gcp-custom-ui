@@ -1047,7 +1047,10 @@ export default function BigQueryStudio({
 
           {/* Right Column (7 cols): Dry-Run SQL Cost Estimator & Automatic SQL Optimizer */}
           <div className="xl:col-span-7 space-y-4">
-            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
+            <div
+              id="bigquery-sql-workbench-card"
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm"
+            >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
