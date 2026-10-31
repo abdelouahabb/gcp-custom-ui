@@ -662,6 +662,7 @@ export default function EnterpriseStackPipelineBar({
   onRunInShell,
 }) {
   const containerRef = useRef(null);
+  const iacDrawerRef = useRef(null);
   const [blueprint, setBlueprint] = useState(null);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -671,6 +672,20 @@ export default function EnterpriseStackPipelineBar({
   const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL'); // 'VISUAL' | 'CODE'
   const [copiedKey, setCopiedKey] = useState(null);
+
+  const navigateOrScrollToStudio = useCallback(
+    (targetTab, subTab) => {
+      if (!targetTab) return;
+      onSelectTab?.(targetTab, subTab);
+      if (targetTab === activeTab && !subTab) {
+        containerRef.current?.nextElementSibling?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    },
+    [activeTab, onSelectTab]
+  );
 
   useEffect(() => {
     const handleOpenTerraformDrawer = (evt) => {
@@ -747,7 +762,7 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'Zero-Trust VPC',
       summary: 'VPC firewall rules & IAP TCP-22 SSH bastion.',
       cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
-      mermaidDsl: `flowchart LR\n  subgraph IAM["Zero-Trust Identity"]\n    ADC["Cloud Identity / OAuth ADC (${projectId})"]\n    IAP["Cloud IAP TCP-22 Tunnel (35.235.240.0/20)"]\n  end\n  subgraph VPC["VPC Perimeter"]\n    NET["VPC: default"]\n    FW["Firewall Rules: allow-iap-ssh"]\n  end\n  ADC -->|"iam.serviceAccounts.actAs"| IAP\n  IAP -->|"Encrypted TCP-22 / HTTPS"| FW\n  FW -->|"Ingress Guardrail"| NET`,
+      mermaidDsl: null,
     },
     {
       id: 'STAGE_2_STORAGE_LAKEHOUSE',
@@ -923,7 +938,10 @@ export default function EnterpriseStackPipelineBar({
 
       {/* Dedicated Reverse-Terraform (`main.tf`) & CI/CD Blueprint Synthesizer Drawer */}
       {iacDrawerOpen && (
-        <div className="pt-3 border-t border-indigo-500/30 bg-indigo-500/[0.03] rounded-xl p-3 space-y-3 animate-fadeIn">
+        <div
+          ref={iacDrawerRef}
+          className="pt-3 border-t border-indigo-500/30 bg-indigo-500/[0.03] rounded-xl p-3 space-y-3 animate-fadeIn"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -1066,6 +1084,7 @@ export default function EnterpriseStackPipelineBar({
                   setDrawerOpen(false);
                 } else {
                   setSelectedStageId(stage.id);
+                  setMermaidExpanded(false);
                   setDrawerOpen(true);
                 }
               }}
@@ -1075,6 +1094,7 @@ export default function EnterpriseStackPipelineBar({
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   setSelectedStageId(stage.id);
+                  setMermaidExpanded(false);
                   setDrawerOpen(true);
                 }
               }}
@@ -1129,7 +1149,7 @@ export default function EnterpriseStackPipelineBar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectTab(stage.targetTab);
+                      navigateOrScrollToStudio(stage.targetTab);
                     }}
                     title={`Jump directly to ${stage.shortTitle} Studio`}
                     className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 text-[10px] font-mono font-bold transition-colors shrink-0 cursor-pointer"
@@ -1168,7 +1188,7 @@ export default function EnterpriseStackPipelineBar({
                 {onSelectTab && (
                   <button
                     type="button"
-                    onClick={() => onSelectTab(activeStage.targetTab)}
+                    onClick={() => navigateOrScrollToStudio(activeStage.targetTab)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -1183,7 +1203,7 @@ export default function EnterpriseStackPipelineBar({
                   <button
                     type="button"
                     onClick={() =>
-                      onSelectTab(
+                      navigateOrScrollToStudio(
                         activeStage.secondaryTab,
                         activeStage.secondarySubTab
                       )
@@ -1339,7 +1359,7 @@ export default function EnterpriseStackPipelineBar({
                       if (node.provisionType && onOpenProvision) {
                         onOpenProvision(node.provisionType);
                       } else if (node.targetTab && onSelectTab) {
-                        onSelectTab(node.targetTab);
+                        navigateOrScrollToStudio(node.targetTab);
                       }
                     }}
                   />
@@ -1360,10 +1380,16 @@ export default function EnterpriseStackPipelineBar({
                         if (item.openArtifactTab) {
                           setSelectedArtifactTab(item.openArtifactTab);
                           setIacDrawerOpen(true);
+                          setTimeout(() => {
+                            iacDrawerRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'nearest',
+                            });
+                          }, 80);
                         } else if (item.provisionType && onOpenProvision) {
                           onOpenProvision(item.provisionType);
                         } else if (onSelectTab && item.targetTab) {
-                          onSelectTab(item.targetTab, item.subTab);
+                          navigateOrScrollToStudio(item.targetTab, item.subTab);
                         }
                       }}
                       className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
@@ -1415,6 +1441,7 @@ export default function EnterpriseStackPipelineBar({
                         );
                         if (nextStage) {
                           setSelectedStageId(nextStage.id);
+                          setMermaidExpanded(false);
                         }
                       }}
                       className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"

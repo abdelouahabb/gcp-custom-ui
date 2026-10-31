@@ -597,6 +597,7 @@ export default function DataLakehouseAiPipelineBar({
   onRunInShell,
   onShowToast,
 }) {
+  const containerRef = useRef(null);
   const [blueprint, setBlueprint] = useState(null);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -605,6 +606,20 @@ export default function DataLakehouseAiPipelineBar({
   const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL');
   const [copiedKey, setCopiedKey] = useState(null);
+
+  const navigateOrScrollToStudio = useCallback(
+    (targetTab, subTab) => {
+      if (!targetTab) return;
+      onSelectTab?.(targetTab, subTab);
+      if (targetTab === activeTab && !subTab) {
+        containerRef.current?.nextElementSibling?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    },
+    [activeTab, onSelectTab]
+  );
 
   const fetchBlueprint = useCallback(async () => {
     if (!projectId) return;
@@ -761,6 +776,7 @@ export default function DataLakehouseAiPipelineBar({
 
   return (
     <div
+      ref={containerRef}
       data-feature-id="WAVE3_LAKEHOUSE_AI_PIPELINE"
       className="bg-white dark:bg-[#18191b] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-3"
     >
@@ -793,6 +809,7 @@ export default function DataLakehouseAiPipelineBar({
                 setDrawerOpen(false);
               } else {
                 setSelectedStageId('STAGE_4_DATAFORM_AIRFLOW');
+                setMermaidExpanded(false);
                 setDrawerOpen(true);
               }
             }}
@@ -849,6 +866,7 @@ export default function DataLakehouseAiPipelineBar({
                   setDrawerOpen(false);
                 } else {
                   setSelectedStageId(stage.id);
+                  setMermaidExpanded(false);
                   setDrawerOpen(true);
                 }
               }}
@@ -858,6 +876,7 @@ export default function DataLakehouseAiPipelineBar({
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   setSelectedStageId(stage.id);
+                  setMermaidExpanded(false);
                   setDrawerOpen(true);
                 }
               }}
@@ -912,7 +931,7 @@ export default function DataLakehouseAiPipelineBar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectTab(stage.targetTab);
+                      navigateOrScrollToStudio(stage.targetTab);
                     }}
                     title={`Jump directly to ${stage.shortTitle} Studio`}
                     className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold transition-colors shrink-0 cursor-pointer"
@@ -950,7 +969,7 @@ export default function DataLakehouseAiPipelineBar({
                 {onSelectTab && (
                   <button
                     type="button"
-                    onClick={() => onSelectTab(activeStage.targetTab)}
+                    onClick={() => navigateOrScrollToStudio(activeStage.targetTab)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -976,7 +995,7 @@ export default function DataLakehouseAiPipelineBar({
                   <button
                     type="button"
                     onClick={() =>
-                      onSelectTab(
+                      navigateOrScrollToStudio(
                         activeStage.secondaryTab,
                         activeStage.secondarySubTab
                       )
@@ -1126,7 +1145,7 @@ export default function DataLakehouseAiPipelineBar({
                       dsl={activeStage.mermaidDsl}
                       onNodeClick={(hint) => {
                         if (hint?.targetTab && onSelectTab) {
-                          onSelectTab(hint.targetTab, hint.subTab);
+                          navigateOrScrollToStudio(hint.targetTab, hint.subTab);
                         }
                       }}
                     />
@@ -1150,7 +1169,7 @@ export default function DataLakehouseAiPipelineBar({
                               `Loaded "${item.name}" into BigQuery Studio`
                             );
                           } else if (onSelectTab && item.targetTab) {
-                            onSelectTab(item.targetTab, item.subTab);
+                            navigateOrScrollToStudio(item.targetTab, item.subTab);
                           }
                         }}
                         className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
@@ -1285,7 +1304,7 @@ export default function DataLakehouseAiPipelineBar({
                           } else if (item.provisionType && onOpenProvision) {
                             onOpenProvision(item.provisionType);
                           } else if (onSelectTab && item.targetTab) {
-                            onSelectTab(item.targetTab, item.subTab);
+                            navigateOrScrollToStudio(item.targetTab, item.subTab);
                           }
                         }}
                         className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
@@ -1336,6 +1355,7 @@ export default function DataLakehouseAiPipelineBar({
                           );
                           if (nextStage) {
                             setSelectedStageId(nextStage.id);
+                            setMermaidExpanded(false);
                           }
                         }}
                         className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
