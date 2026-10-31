@@ -1752,7 +1752,7 @@ const DOC_SECTIONS = [
       'Top-of-Page Enterprise VPC Networks & Zero-Trust Firewall Center (VpcNetworksAndFirewalls.jsx + GET /api/project/:id/vpc-firewalls): Displays Live VPC Firewall Rules (ALLOW/DENY, INGRESS/EGRESS, Create/Edit/Delete, 4 Quick Templates, and Interactive Packet Priority Match Simulator) at the top of the VPC & Firewalls tab.',
       '1-Click Live Firewall Audit Logging Toggle (● Logs: ON / ○ Logs: OFF) & Cloud Logging Storage Ingestion Warning: Clicking the Logs badge on any firewall rule patches logConfig.enable (INCLUDE_ALL_METADATA) live via PATCH /api/project/:id/firewalls/:name, while the hover explainer warns that every matched TCP/UDP/ICMP connection writes a JSON log entry into the Cloud Logging _Default bucket (consuming the 50 GiB/mo Free Tier and billing $0.50/GiB beyond 50 GiB/mo).',
       'Strict 0.0.0.0/0 Sensitive Filter & Comprehensive Hover Explainers (InnovationHoverExplainer.jsx): Clicking "0.0.0.0/0 Sensitive" or "Inspect N Flagged Rules" strictly filters for CRITICAL and HIGH risk exposures (SSH:22, RDP:3389, DB ports, All-Ports open to 0.0.0.0/0), clears stale search/VPC filters, and smoothly scrolls to #live-vpc-firewall-rules-section.',
-      'Bidirectional VPC ↔ 20-Pillar Autonomous Cloud SOC & SOAR Bridge (VpcNetworksAndFirewalls.jsx ↔ AutonomousCloudSocStudio.jsx): Send any Firewall Rule or VPC Network directly into the Cloud SOC War-Room — routing ALLOW rules to Pillar 02 (3-Vector Toxic Attack Paths), DENY / SOAR quarantine rules (cloudpulse-soc-quarantine-* / Priority ≤ 200) to Pillar 01 (MITRE Kill-Chains & /32 Quarantine), EGRESS / VPC Subnets to Pillar 17 (DNSSEC, 0.0.0.0/0 Egress & Subnet PGA), and 0.0.0.0/0 SSH/RDP exposures to Pillar 20 (INV-01 Self-Healing Reconciler) — or jump from any Cloud SOC pillar straight back into the VPC & Firewall Studio with the exact rule or VPC pre-focused.',
+      'Bidirectional VPC ↔ 7-Pillar Consolidated Autonomous Cloud SOC & SOAR Bridge (VpcNetworksAndFirewalls.jsx ↔ AutonomousCloudSocStudio.jsx): Send any Firewall Rule or VPC Network directly into the 7-Pillar Cloud SOC War-Room — routing ALLOW rules to Pillar 02 (Perimeter, Toxic Graph & VPC / DNS / TLS), DENY / SOAR quarantine rules (cloudpulse-soc-quarantine-* / Priority ≤ 200) to Pillar 01 (MITRE Kill-Chains & /32 Quarantine), EGRESS / VPC Subnets to Pillar 02, and 0.0.0.0/0 SSH/RDP exposures to Pillar 06 (12-Invariant Self-Healing Reconciler) — or jump from any Cloud SOC pillar straight back into the VPC & Firewall Studio with the exact rule or VPC pre-focused.',
     ],
     apisUsed: [
       'GET /api/project/:id/vpc-firewalls, GET /api/project/:id/soc/overview & GET /api/project/:id/global-map/live-telemetry',
@@ -1761,6 +1761,57 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       'VPC Firewall rules and Global Map TLS 1.3 telemetry probes cost $0.00/mo; hover explainers explicitly warn before enabling Firewall Rules Logging on high-traffic rules so you stay within the 50 GiB/mo Cloud Logging Free Tier.',
+  },
+  {
+    id: 'cloud-soc-7-pillar-ids-ips-dpi-and-7-stage-domain-pipelines',
+    wave: 'WAVE 20 7-PILLAR CLOUD SOC · CLOUD IDS/IPS SURICATA DPI SURGEON & 7-STAGE DOMAIN PIPELINE BARS',
+    title:
+      '48. 7-Pillar Autonomous Cloud SOC + Cloud IDS / IPS & L7 Suricata DPI Packet Surgeon + 7-Stage Pipeline Bars Across All 7 Domains',
+    badge: 'Cloud SOC (Pillar 07 IDS/IPS) + All 7 Domain Pipeline Bars (Stages 1–7)',
+    badgeColor:
+      'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30',
+    icon: ShieldAlert,
+    targetTab: 'CLOUD_SOC',
+    targetSubTab: 'CLOUD_IDS_IPS_DPI',
+    problemSolved:
+      'Traditional VPC Firewall rules operate only at Layer 3/4 (IP & Port) and cannot inspect Layer 7 payloads for CVEs, SQLi, SSRF (169.254.169.254), JNDI Log4Shell, or C2 callbacks inside allowed HTTPS ports—while separate 5- or 6-stage domain pipeline bars lacked a unified 7-stage end-to-end architecture across all 7 CloudPulse domains.',
+    howItWorks: [
+      'Pillar 07 in Autonomous Cloud SOC — Cloud IDS / IPS & L7 Suricata DPI Packet Surgeon (AutonomousCloudSocStudio.jsx): Probes live Google Cloud IDS Endpoints (ids.googleapis.com/v1), VPC Packet Mirroring Policies (compute.googleapis.com/v1/aggregated/packetMirrorings), Cloud NGFW Security Profiles & Threat-Prevention Overrides (networksecurity.googleapis.com/v1), and live Suricata/Threat Log streams (logging.googleapis.com/v2).',
+      '3 Live IDS/IPS Control-Plane Actions + 3 Cloud Shell CLI Generators: Execute (1) 1-Tap IPS Inline Quarantine (QUORUM_IPS_INLINE_QUARANTINE -> priority-100 VPC INGRESS DENY rule), (2) Suppress False-Positive Signature ID (SUPPRESS_IDS_THREAT_EXCEPTION -> patches threatExceptions[] on your Security Profile or seals an Ed25519 exception receipt), and (3) Verify L7 DPI Telemetry Pipeline (EMIT_IDS_CANARY_DPI_EVENT -> writes a live Suricata CVE verification entry to Cloud Logging), plus 1-click CLI dispatch for creating Cloud IDS Endpoints, Packet Mirroring Policies, and NGFW Enterprise Security Profiles.',
+      'Unified 7-Stage Pipeline Bars Across All 7 Domains: Upgraded all 7 domain pipeline bars (EnterpriseStackPipelineBar, DataLakehouseAiPipelineBar, SecOpsSreForensicsPipelineBar, OltpDatabaseContinuityBar, FinOpsCostKillPipelineBar, GitOpsReleaseFactoryPipelineBar, and MultiCloudGlobalParityPipelineBar) to a symmetrical 7-Stage architecture (lg:grid-cols-7) with live Stage 7 capstone synthesis & verification.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/soc/overview (ids.googleapis.com/v1 + networksecurity.googleapis.com/v1 + compute.googleapis.com/v1/aggregated/packetMirrorings + logging.googleapis.com/v2)',
+      'POST /api/project/:id/soc/action (QUORUM_IPS_INLINE_QUARANTINE | SUPPRESS_IDS_THREAT_EXCEPTION | EMIT_IDS_CANARY_DPI_EVENT)',
+      'GET /api/project/:id/secops-sre-pipeline/blueprint & all 7 Domain Pipeline Blueprint Endpoints (7 Stages each)',
+    ],
+    billingImpact:
+      '100% $0.00/mo control-plane inspection, IPS VPC quarantine rules, and DPI verification logs; Cloud IDS endpoint creation is dispatched as an explicit opt-in CLI command with transparent hourly billing disclosures.',
+  },
+  {
+    id: 'universal-cross-ui-feature-spotlight-and-return-breadcrumb',
+    wave: 'WAVE 21 UNIVERSAL UX · CROSS-UI FEATURE SPOTLIGHT HALO, FLOATING BADGE & 1-CLICK RETURN BREADCRUMB',
+    title:
+      '49. Universal Cross-UI Feature Spotlight (`Spotlight ON/OFF`), 7.5s Animated Target Halo & 1-Click Return Breadcrumb Across All 22 Studios & 7 Pipeline Bars',
+    badge: 'Top Header Toggle + All 22 Studios + 7 Pipeline Bars + SQL & Shell',
+    badgeColor:
+      'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border-cyan-500/30',
+    icon: Sparkles,
+    targetTab: 'VPC_NETWORKS',
+    problemSolved:
+      'When clicking a deep-link button, pipeline stage card, SQL handoff, or cross-studio remediation that jumps from one UI studio to another (or switches sub-tabs inside a complex studio), operators can lose visual context of which exact panel, firewall rule, bucket, SQL query, or pillar was just activated—and how to return to where they started.',
+    howItWorks: [
+      'Persistent Top-Header Toggle (Spotlight ON / Spotlight OFF): Stored in localStorage ("cloudpulse_feature_spotlight_v1", enabled by default) so operators can enable or disable visual cross-UI spotlighting at any time in 1 click.',
+      'Universal Cross-Studio & Intra-Studio Target Locator (pulseSpotlightTargetDom & triggerCrossUiSpotlight in src/App.jsx): Automatically highlights the exact destination card, sub-tab button (data-soc-pillar, data-subtab-id, data-feature-id), VPC firewall rule (#vpc-fw-card-<name>), GCS bucket, BigQuery SQL Workbench (#bigquery-sql-workbench-card), Chrono-Log Explorer (#chrono-logs-explorer-card), or Cloud Shell Terminal (#cloud-shell-terminal-card) with a 7.5-second pulsing cyan/emerald ring and a floating "★ SPOTLIGHTED FEATURE: <Name>" pill.',
+      'Sticky Return Breadcrumb & Re-Highlight Bar: Renders a non-intrusive top navigation bar showing Origin Studio -> Destination Studio & Feature with a 1-click "← Back to [Origin Studio]" button (preserved even while clicking additional sub-tabs inside the destination Studio) and a "Re-Highlight Target" button that re-scrolls and re-pulses the target element on demand.',
+      'Repeatable Deep-Link Nonce Synchronization (studioSubTabNonce & bigQuerySqlNonce): Ensures clicking the same Pipeline Bar card or cross-studio deep-link a second time after manually switching sub-tabs inside a Studio always re-activates and re-spotlights the target sub-tab.',
+    ],
+    apisUsed: [
+      'Client-Side Zero-Latency DOM & History State Coordinator (triggerCrossUiSpotlight + pulseSpotlightTargetDom + handleNavigateStudioTab)',
+      'Works across all 22 Primary Studios, 7 Domain Pipeline Bars, 10-Persona Contextual Helpers, BigQuery SQL Workbench, Chrono-Log Explorer & Cloud Shell',
+    ],
+    billingImpact:
+      '100% client-side zero-cost UX enhancement ($0.00/mo, zero network overhead).',
   },
 ];
 

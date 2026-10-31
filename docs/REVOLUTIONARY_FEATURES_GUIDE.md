@@ -811,6 +811,29 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - The frontend additionally verifies `parseMermaidFlowchartLr(activeStage.mermaidDsl).edges.length > 0` before displaying the Mermaid banner.
   3. **Stage 4 Live Lakehouse Code Synthesizer & BigQuery SQL Handoffs**: Lists discovered Git-backed Dataform repositories as clickable cards and synthesizes tailored **Dataform Incremental SQLX (`medallion_lakehouse.sqlx`)**, **Cloud Composer Airflow 2.10+ DAG (`cloudpulse_lakehouse_dag.py`)**, and **BigQuery ML + Vertex AI Gemini 2.5 Flash (`bqml_gemini.sql` — `ML.GENERATE_TEXT`)** with 1-click **`Open in BigQuery Studio`** handoff across Stages 2, 3, 4, 5, and 6 (`FOR SYSTEM_TIME AS OF`).
 
+### 70. 7-Pillar Autonomous Cloud SOC, Cloud IDS / IPS & L7 Suricata DPI Packet Surgeon & Unified 7-Stage Pipeline Bars Across All 7 Domains (`src/components/AutonomousCloudSocStudio.jsx` & `server/index.js`)
+- **Where to find it**: Open **`Cloud SOC ★`** -> Pillar **`07 · Cloud IDS / IPS & DPI Surgeon`**, or inspect any of the **7 Domain Pipeline Bars** at the top of all 22 Studios.
+- **Why We Built This**:
+  - Standard VPC Firewalls inspect only L3/L4 headers (IP and port) and cannot detect Layer 7 exploit payloads (CVEs, SQL injection, `169.254.169.254` SSRF, JNDI Log4Shell, or C2 beacons) carried over allowed HTTPS ports. Furthermore, unifying all 7 domain pipeline bars onto a symmetrical **7-Stage (`lg:grid-cols-7`)** architecture gives every domain a complete end-to-end lifecycle from ingestion/perimeter to autonomous self-healing and verification.
+- **How It Works (`GET /api/project/:id/soc/overview` & `POST /api/project/:id/soc/action`)**:
+  1. **Live 4-Plane IDS/IPS & DPI Discovery**: Queries **Cloud IDS Endpoints (`ids.googleapis.com/v1`)**, **VPC Packet Mirroring Policies (`compute.googleapis.com/v1/aggregated/packetMirrorings`)**, **Cloud NGFW Security Profiles & Threat-Prevention Overrides (`networksecurity.googleapis.com/v1`)**, and **Suricata L7 Threat Logs (`logging.googleapis.com/v2`)** in parallel.
+  2. **3 Live SOAR & IPS Actions + 3 Cloud Shell CLI Generators**:
+     - **`QUORUM_IPS_INLINE_QUARANTINE`**: Promotes an IDS alert or attacker IP into a priority-100 VPC `INGRESS DENY ALL` quarantine firewall rule (`compute.googleapis.com/v1`).
+     - **`SUPPRESS_IDS_THREAT_EXCEPTION`**: Adds a noisy Suricata signature ID (`threatExceptions[]`) to your active NGFW Security Profile or records an Ed25519-signed exception receipt.
+     - **`EMIT_IDS_CANARY_DPI_EVENT`**: Writes a live Suricata CVE verification entry to `logging.googleapis.com/v2/entries:write` (`projects/:id/logs/cloudpulse-ids-dpi-threat`) to verify end-to-end L7 detection and SIEM readback.
+  3. **All 7 Domain Pipeline Bars Upgraded to 7 Stages (`lg:grid-cols-7`)**: `EnterpriseStackPipelineBar`, `DataLakehouseAiPipelineBar`, `SecOpsSreForensicsPipelineBar`, `OltpDatabaseContinuityBar`, `FinOpsCostKillPipelineBar`, `GitOpsReleaseFactoryPipelineBar`, and `MultiCloudGlobalParityPipelineBar` each expose 7 interactive stages with live GCP resource counts and 1-click studio deep-links.
+
+### 71. Universal Cross-UI Feature Spotlight (`Spotlight ON/OFF`), 7.5s Animated Target Halo & 1-Click Return Breadcrumb Across All 22 Studios & 7 Pipeline Bars (`src/App.jsx`)
+- **Where to find it**: Active globally across all **22 Primary Studios**, **7 Pipeline Bars**, **BigQuery SQL Workbench**, **Chrono-Log Explorer**, and **Cloud Shell**; toggleable anytime via the **`Spotlight ON / Spotlight OFF`** pill in the top header.
+- **Why We Built This**:
+  - When an operator clicks a deep-link button, pipeline stage card, SQL handoff, or cross-studio remediation that switches UIs (or activates a sub-tab inside a multi-module Studio), they need immediate visual confirmation of which exact feature, rule, bucket, SQL query, or pillar was opened—and a 1-click breadcrumb to return to their starting Studio.
+- **How It Works (`triggerCrossUiSpotlight`, `pulseSpotlightTargetDom` & `handleNavigateStudioTab` in `src/App.jsx`)**:
+  1. **Persistent Top-Header Toggle (`Spotlight ON` / `Spotlight OFF`)**: Stored in `localStorage` (`cloudpulse_feature_spotlight_v1`, default `true`).
+  2. **Universal Target Locator & 7.5s Pulsing Halo**: Automatically scrolls to and highlights the exact target VPC firewall rule (`#vpc-fw-card-<name>`), Studio sub-tab/pillar button (`data-soc-pillar`, `data-subtab-id`, `data-feature-id`), BigQuery SQL Workbench (`#bigquery-sql-workbench-card`), Chrono-Log Explorer (`#chrono-logs-explorer-card`), Cloud Shell Terminal (`#cloud-shell-terminal-card`), or active feature panel with a pulsing cyan/emerald ring and a floating **`★ SPOTLIGHTED FEATURE: <Name>`** badge.
+  3. **Persistent `← Back to [Origin Studio]` Breadcrumb & `Re-Highlight Target`**: Displays a sticky top navigation bar showing `Origin Studio -> Destination Studio & Feature` with a 1-click **`← Back to [Origin Studio]`** button (preserved even while clicking additional sub-tabs inside the destination Studio) and a **`Re-Highlight Target`** button.
+  4. **Nonce-Synchronized Repeatable Deep-Links (`studioSubTabNonce` & `bigQuerySqlNonce`)**: Guarantees that clicking the same cross-UI deep-link or Pipeline Bar card a second time after manually switching sub-tabs inside a Studio always re-activates and re-spotlights the target sub-tab.
+
+
 
 
 
