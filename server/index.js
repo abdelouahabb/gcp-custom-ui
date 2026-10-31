@@ -76198,6 +76198,865 @@ app.get('/api/project/:projectId/finops-cost-kill-pipeline/blueprint', async (re
   }
 });
 
+// ============================================================================
+// WAVE 6: 6-STAGE GITOPS, CLOUD BUILD, ARTIFACT REGISTRY & CLOUD RUN/GKE RELEASE FACTORY PIPELINE
+// ============================================================================
+const wave6GitOpsReleaseFactoryProbeCache = new Map();
+
+app.get('/api/project/:projectId/gitops-release-pipeline/blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const startMs = Date.now();
+  try {
+    const cachedOverview = overviewSwrCache.get(projectId)?.payload || null;
+    const { token } = await resolveRequestAuth(req);
+    const headers = token ? { Authorization: `Bearer ${token}` } : null;
+
+    const baseResources = Array.isArray(cachedOverview?.resources)
+      ? [...cachedOverview.resources]
+      : [];
+
+    let extra = wave6GitOpsReleaseFactoryProbeCache.get(projectId);
+    if ((!extra || Date.now() - extra.ts > 25000) && headers) {
+      const arLocations = ['us-central1', 'us', 'europe-west1', 'us-east1'];
+      const [
+        buildsRes,
+        triggersRes,
+        arLoc0,
+        arLoc1,
+        arLoc2,
+        arLoc3,
+        runRes,
+        fnRes,
+        pubsubRes,
+        gkeRes,
+        svcRes,
+      ] = await Promise.allSettled([
+        axios.get(
+          `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/builds?pageSize=12`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/triggers`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${arLocations[0]}/repositories`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${arLocations[1]}/repositories`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${arLocations[2]}/repositories`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${arLocations[3]}/repositories`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://run.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://cloudfunctions.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/functions`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://pubsub.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/topics?pageSize=25`,
+          { headers, timeout: 4000 }
+        ),
+        axios.get(
+          `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
+          { headers, timeout: 4000 }
+        ),
+        Array.isArray(cachedOverview?.enabledApis) && cachedOverview.enabledApis.length > 0
+          ? Promise.resolve({
+              data: {
+                services: cachedOverview.enabledApis.map((s) => ({
+                  name: s.name || s.serviceName,
+                })),
+              },
+            })
+          : baseResources.some((r) => r.type === 'Enabled GCP Service API')
+          ? Promise.resolve({
+              data: {
+                services: baseResources
+                  .filter((r) => r.type === 'Enabled GCP Service API')
+                  .map((s) => ({
+                    name: s.details?.serviceName || s.storageClass || s.name,
+                  })),
+              },
+            })
+          : axios.get(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/services?filter=state:ENABLED&pageSize=150`,
+              { headers, timeout: 4500 }
+            ),
+      ]);
+
+      const builds = (
+        buildsRes.status === 'fulfilled' ? buildsRes.value.data?.builds || [] : []
+      ).map((b) => ({
+        id: b.id || 'build',
+        shortId: String(b.id || '').slice(0, 8),
+        status: b.status || 'SUCCESS',
+        createTime: b.createTime || null,
+        machineType: b.options?.machineType || 'STANDARD',
+        slsaVerified: b.options?.requestedVerifyOption === 'VERIFIED',
+        images: b.results?.images?.map((i) => i.name) || b.images || [],
+      }));
+
+      const triggers = (
+        triggersRes.status === 'fulfilled' ? triggersRes.value.data?.triggers || [] : []
+      ).map((t) => ({
+        id: t.id || 'trigger',
+        name: t.name || 'github-trigger',
+        repo:
+          t.github?.name ||
+          t.repositoryEventConfig?.repository ||
+          t.triggerTemplate?.repoName ||
+          'GitHub Repo',
+      }));
+
+      const rawArRepos = [];
+      [arLoc0, arLoc1, arLoc2, arLoc3].forEach((r) => {
+        if (r.status === 'fulfilled' && Array.isArray(r.value?.data?.repositories)) {
+          rawArRepos.push(...r.value.data.repositories);
+        }
+      });
+
+      const arRepos = rawArRepos
+        .filter((repo) => !isArtifactDeleting(repo.name))
+        .map((repo) => {
+          const parts = String(repo.name || '').split('/');
+          const shortName = parts[parts.length - 1] || 'repo';
+          const location = parts[3] || 'us-central1';
+          return {
+            fullName: repo.name,
+            name: shortName,
+            location,
+            format: repo.format || 'DOCKER',
+            immutableTags: Boolean(repo.dockerConfig?.immutableTags),
+          };
+        });
+
+      let totalDigestsCount = 0;
+      let orphanDigestsCount = 0;
+      if (arRepos.length > 0) {
+        const imgProbes = await Promise.allSettled(
+          arRepos.slice(0, 4).map((repo) =>
+            axios.get(
+              `https://artifactregistry.googleapis.com/v1/${repo.fullName}/dockerImages?pageSize=25`,
+              { headers, timeout: 3500 }
+            )
+          )
+        );
+        imgProbes.forEach((p) => {
+          if (p.status === 'fulfilled' && Array.isArray(p.value?.data?.dockerImages)) {
+            p.value.data.dockerImages.forEach((img) => {
+              if (!isArtifactDeleting(img.name) && !isArtifactDeleting(img.uri)) {
+                totalDigestsCount += 1;
+                if (!Array.isArray(img.tags) || img.tags.length === 0) {
+                  orphanDigestsCount += 1;
+                }
+              }
+            });
+          }
+        });
+      }
+
+      const cloudRunSvcs = (
+        runRes.status === 'fulfilled' && Array.isArray(runRes.value?.data?.items)
+          ? runRes.value.data.items
+          : []
+      ).map((item) => {
+        const name = item.metadata?.name || 'cloudrun-service';
+        const region =
+          item.metadata?.labels?.['cloud.googleapis.com/location'] || 'us-central1';
+        const url = item.status?.url || '';
+        const latestReadyRevision =
+          item.status?.latestReadyRevisionName || `${name}-00001`;
+        const gen2 =
+          item.spec?.template?.metadata?.annotations?.[
+            'run.googleapis.com/execution-environment'
+          ] === 'gen2';
+        const minScale = Number(
+          item.spec?.template?.metadata?.annotations?.[
+            'autoscaling.knative.dev/minScale'
+          ] || 0
+        );
+        const trafficTargets = Array.isArray(item.status?.traffic)
+          ? item.status.traffic.length
+          : 1;
+        return {
+          name,
+          region,
+          url,
+          latestReadyRevision,
+          gen2,
+          minScale,
+          trafficTargets,
+        };
+      });
+
+      const cloudFunctions = (
+        fnRes.status === 'fulfilled' && Array.isArray(fnRes.value?.data?.functions)
+          ? fnRes.value.data.functions
+          : []
+      ).map((fn) => {
+        const parts = String(fn.name || '').split('/');
+        const shortName = parts[parts.length - 1] || 'function';
+        const region = parts[3] || 'us-central1';
+        const envGen = fn.environment === 'GEN_2' ? 'Gen2' : 'Gen1';
+        const runtime = fn.buildConfig?.runtime || 'nodejs20';
+        const hasEventTrigger = Boolean(fn.eventTrigger);
+        return {
+          name: shortName,
+          region,
+          envGen,
+          runtime,
+          hasEventTrigger,
+        };
+      });
+
+      const SYSTEM_PUBSUB_PREFIXES = [
+        'container-analysis-',
+        'eventarc-',
+        'gcf-',
+        'cloud-builds',
+        'firebase-',
+      ];
+      const pubsubTopics = (
+        pubsubRes.status === 'fulfilled' ? pubsubRes.value.data?.topics || [] : []
+      )
+        .map((t) => ({
+          name: (t.name || '').split('/').pop(),
+          fullName: t.name,
+        }))
+        .filter(
+          (t) =>
+            t.name &&
+            !SYSTEM_PUBSUB_PREFIXES.some((prefix) =>
+              t.name.toLowerCase().startsWith(prefix)
+            )
+        );
+
+      const gkeClusters = (
+        gkeRes.status === 'fulfilled' && Array.isArray(gkeRes.value?.data?.clusters)
+          ? gkeRes.value.data.clusters
+          : []
+      ).map((c) => ({
+        name: c.name || 'gke-cluster',
+        location: c.location || 'us-central1',
+        status: c.status || 'RUNNING',
+        autopilot: Boolean(c.autopilot?.enabled),
+        nodeCount: Number(c.currentNodeCount || 0),
+        workloadIdentity: Boolean(c.workloadIdentityConfig?.workloadPool),
+      }));
+
+      const rawServices =
+        svcRes.status === 'fulfilled' ? svcRes.value.data?.services || [] : [];
+      const enabledApis = rawServices
+        .map((s) => (s.config?.name || s.name || '').split('/').pop())
+        .filter(Boolean);
+
+      extra = {
+        ts: Date.now(),
+        builds,
+        triggers,
+        arRepos,
+        totalDigestsCount,
+        orphanDigestsCount,
+        cloudRunSvcs,
+        cloudFunctions,
+        pubsubTopics,
+        gkeClusters,
+        enabledApis,
+      };
+      wave6GitOpsReleaseFactoryProbeCache.set(projectId, extra);
+    }
+
+    const builds = extra?.builds || [];
+    const triggers = extra?.triggers || [];
+    const arRepos = extra?.arRepos || [];
+    const totalDigestsCount = Number(extra?.totalDigestsCount || 0);
+    const orphanDigestsCount = Number(extra?.orphanDigestsCount || 0);
+    const cloudRunSvcs = extra?.cloudRunSvcs || [];
+    const cloudFunctions = extra?.cloudFunctions || [];
+    const pubsubTopics = extra?.pubsubTopics || [];
+    const gkeClusters = extra?.gkeClusters || [];
+    const enabledApis = extra?.enabledApis || [];
+
+    const RELEASE_API_PATTERNS = [
+      'cloudbuild.googleapis.com',
+      'artifactregistry.googleapis.com',
+      'run.googleapis.com',
+      'cloudfunctions.googleapis.com',
+      'eventarc.googleapis.com',
+      'container.googleapis.com',
+      'binaryauthorization.googleapis.com',
+    ];
+    const releaseApis = enabledApis.filter((api) =>
+      RELEASE_API_PATTERNS.includes(api.toLowerCase())
+    );
+    const cloudBuildApiEnabled = enabledApis.some(
+      (a) => a.toLowerCase() === 'cloudbuild.googleapis.com'
+    );
+    const artifactRegistryApiEnabled = enabledApis.some(
+      (a) => a.toLowerCase() === 'artifactregistry.googleapis.com'
+    );
+
+    const primaryArRepo = arRepos[0]?.name || 'cloudpulse-containers';
+    const primaryArLoc = arRepos[0]?.location || 'us-central1';
+    const primaryRunSvc = cloudRunSvcs[0]?.name || 'cloudpulse-api';
+    const primaryRunRegion = cloudRunSvcs[0]?.region || 'us-central1';
+
+    // --- Stage 1 Mermaid: GitHub -> Cloud Build Triggers / Builds (Strictly when builds or triggers or Cloud Build + AR/Run exist) ---
+    let stage1MermaidDsl = null;
+    if (builds.length + triggers.length > 0 || (cloudBuildApiEnabled && (arRepos.length + cloudRunSvcs.length > 0))) {
+      const s1Lines = [`flowchart LR`];
+      const s1Edges = [];
+      s1Lines.push(`  subgraph GITOPS["GitHub Source & OIDC WIF"]`);
+      s1Lines.push(`    GH["GitHub Push / PR (${projectId})"]`);
+      s1Lines.push(`  end`);
+      s1Lines.push(`  subgraph CBUILD["Google Cloud Build (${builds.length} Builds · ${triggers.length} Triggers)"]`);
+      if (triggers.length > 0) {
+        triggers.slice(0, 2).forEach((tr, idx) => {
+          s1Lines.push(`    TR${idx}["Trigger: ${tr.name}"]`);
+          s1Edges.push(`  GH -->|"Webhook / OIDC"| TR${idx}`);
+        });
+      }
+      if (builds.length > 0) {
+        builds.slice(0, 3).forEach((b, idx) => {
+          s1Lines.push(`    BLD${idx}["Build #${b.shortId} (${b.status})"]`);
+          s1Edges.push(
+            triggers.length > 0
+              ? `  TR0 -->|"SLSA-3 Build"| BLD${idx}`
+              : `  GH -->|"gcloud builds submit"| BLD${idx}`
+          );
+        });
+      } else if (triggers.length === 0) {
+        s1Lines.push(`    CB_API["Cloud Build Engine (cloudbuild.googleapis.com)"]`);
+        s1Edges.push(`  GH -->|"SLSA-3 Container Build"| CB_API`);
+      }
+      s1Lines.push(`  end`);
+      if (s1Edges.length > 0) {
+        stage1MermaidDsl = [...s1Lines, ...s1Edges].join('\n');
+      }
+    }
+
+    // --- Stage 2 Mermaid: Artifact Registry & Digest Provenance (Strictly when arRepos.length > 0) ---
+    let stage2MermaidDsl = null;
+    if (arRepos.length > 0) {
+      const s2Lines = [`flowchart LR`];
+      const s2Edges = [];
+      s2Lines.push(`  subgraph BUILDER["Cloud Build / OCI Publisher"]`);
+      s2Lines.push(`    PUB["Container Build & SLSA-3 Provenance"]`);
+      s2Lines.push(`  end`);
+      s2Lines.push(`  subgraph AR_REPOS["Artifact Registry (${arRepos.length} Repo(s) · ${totalDigestsCount} Digest(s))"]`);
+      arRepos.slice(0, 3).forEach((r, idx) => {
+        s2Lines.push(
+          `    AR${idx}["Repo: ${r.name} (${r.format} · ${r.location}${r.immutableTags ? ' · Immutable' : ''})"]`
+        );
+        s2Edges.push(`  PUB -->|"Push @sha256"| AR${idx}`);
+      });
+      s2Lines.push(`  end`);
+      if (orphanDigestsCount > 0) {
+        s2Lines.push(`  subgraph SWEEPER["Supply Chain Hygiene"]`);
+        s2Lines.push(`    ORPH["${orphanDigestsCount} Untagged Orphan Digest(s)"]`);
+        s2Lines.push(`  end`);
+        s2Edges.push(`  AR0 -->|"1-Click Orphan Sweep"| ORPH`);
+      }
+      stage2MermaidDsl = [...s2Lines, ...s2Edges].join('\n');
+    }
+
+    // --- Stage 3 Mermaid: Cloud Run Services, Revisions & Canary Traffic (Strictly when cloudRunSvcs.length > 0) ---
+    let stage3MermaidDsl = null;
+    if (cloudRunSvcs.length > 0) {
+      const s3Lines = [`flowchart LR`];
+      const s3Edges = [];
+      s3Lines.push(`  subgraph INGRESS["Global HTTPS Ingress"]`);
+      s3Lines.push(`    LB["Cloud Run TLS & Traffic Splitter"]`);
+      s3Lines.push(`  end`);
+      s3Lines.push(`  subgraph CR_FLEET["Cloud Run Fleet (${cloudRunSvcs.length} Active)"]`);
+      cloudRunSvcs.slice(0, 3).forEach((s, idx) => {
+        s3Lines.push(
+          `    CR${idx}["Service: ${s.name} (${s.region} · ${s.gen2 ? 'Gen2' : 'Gen1'} · min:${s.minScale})"]`
+        );
+        s3Lines.push(`    REV${idx}["Revision: ${s.latestReadyRevision}"]`);
+        s3Edges.push(`  LB -->|"HTTPS (${s.trafficTargets} Target)"| CR${idx}`);
+        s3Edges.push(`  CR${idx} -->|"Active Traffic"| REV${idx}`);
+      });
+      s3Lines.push(`  end`);
+      stage3MermaidDsl = [...s3Lines, ...s3Edges].join('\n');
+    }
+
+    // --- Stage 4 Mermaid: Cloud Functions & Eventarc / Pub/Sub Bus (Strictly when cloudFunctions.length + pubsubTopics.length > 0) ---
+    let stage4MermaidDsl = null;
+    if (cloudFunctions.length + pubsubTopics.length > 0) {
+      const s4Lines = [`flowchart LR`];
+      const s4Edges = [];
+      s4Lines.push(`  subgraph EVENT_BUS["Eventarc & Pub/Sub Bus"]`);
+      if (pubsubTopics.length > 0) {
+        pubsubTopics.slice(0, 3).forEach((t, idx) => {
+          s4Lines.push(`    TOP${idx}["Topic: ${t.name}"]`);
+        });
+      } else {
+        s4Lines.push(`    EARC["Eventarc Cloud Audit & Storage Bus"]`);
+      }
+      s4Lines.push(`  end`);
+      s4Lines.push(`  subgraph FN_SINKS["Serverless Consumers"]`);
+      if (cloudFunctions.length > 0) {
+        cloudFunctions.slice(0, 3).forEach((fn, idx) => {
+          s4Lines.push(`    FN${idx}["Function (${fn.envGen}): ${fn.name} (${fn.runtime})"]`);
+          s4Edges.push(
+            pubsubTopics.length > 0
+              ? `  TOP0 -->|"Eventarc Push"| FN${idx}`
+              : `  EARC -->|"CloudEvent"| FN${idx}`
+          );
+        });
+      } else if (pubsubTopics.length > 0) {
+        s4Lines.push(`    SUB_SINK["Eventarc / Cloud Functions Consumer Ready"]`);
+        pubsubTopics.slice(0, 3).forEach((_, idx) => {
+          s4Edges.push(`  TOP${idx} -->|"Pub/Sub Trigger"| SUB_SINK`);
+        });
+      }
+      s4Lines.push(`  end`);
+      if (s4Edges.length > 0) {
+        stage4MermaidDsl = [...s4Lines, ...s4Edges].join('\n');
+      }
+    }
+
+    // --- Stage 5 Mermaid: GKE Autopilot & Standard Fleet (Strictly when gkeClusters.length > 0) ---
+    let stage5MermaidDsl = null;
+    if (gkeClusters.length > 0) {
+      const s5Lines = [`flowchart LR`];
+      const s5Edges = [];
+      s5Lines.push(`  subgraph GKE_CP["GKE Control Plane"]`);
+      s5Lines.push(`    CP["Kubernetes API & Workload Identity (${projectId})"]`);
+      s5Lines.push(`  end`);
+      s5Lines.push(`  subgraph GKE_CLUSTERS["Live GKE Clusters (${gkeClusters.length} Active)"]`);
+      gkeClusters.slice(0, 3).forEach((c, idx) => {
+        s5Lines.push(
+          `    CL${idx}["Cluster: ${c.name} (${c.autopilot ? 'Autopilot' : `${c.nodeCount} Nodes`} · ${c.location})"]`
+        );
+        s5Edges.push(`  CP -->|"${c.status}"| CL${idx}`);
+      });
+      s5Lines.push(`  end`);
+      stage5MermaidDsl = [...s5Lines, ...s5Edges].join('\n');
+    }
+
+    const cloudBuildReleaseYaml = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 6 — SLSA-3 GitOps Release Factory (cloudbuild.yaml)`,
+      `# Target Project    : ${projectId}`,
+      `# Artifact Registry : ${primaryArLoc}-docker.pkg.dev/${projectId}/${primaryArRepo}`,
+      `# Cloud Run Target  : ${primaryRunSvc} (${primaryRunRegion})`,
+      `# ==============================================================================`,
+      `steps:`,
+      `  # Step 1: Build container image with immutable Git SHA tag`,
+      `  - id: 'build-oci-container'`,
+      `    name: 'gcr.io/cloud-builders/docker'`,
+      `    args:`,
+      `      - 'build'`,
+      `      - '-t'`,
+      `      - '${primaryArLoc}-docker.pkg.dev/${projectId}/${primaryArRepo}/${primaryRunSvc}:\${SHORT_SHA}'`,
+      `      - '.'`,
+      ``,
+      `  # Step 2: Push image to Artifact Registry for SLSA-3 vulnerability & SBOM scan`,
+      `  - id: 'push-artifact-registry'`,
+      `    name: 'gcr.io/cloud-builders/docker'`,
+      `    args:`,
+      `      - 'push'`,
+      `      - '${primaryArLoc}-docker.pkg.dev/${projectId}/${primaryArRepo}/${primaryRunSvc}:\${SHORT_SHA}'`,
+      ``,
+      `  # Step 3: Deploy new Cloud Run revision with --no-traffic for Canary Verification`,
+      `  - id: 'deploy-cloud-run-canary-revision'`,
+      `    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'`,
+      `    entrypoint: 'gcloud'`,
+      `    args:`,
+      `      - 'run'`,
+      `      - 'deploy'`,
+      `      - '${primaryRunSvc}'`,
+      `      - '--image=${primaryArLoc}-docker.pkg.dev/${projectId}/${primaryArRepo}/${primaryRunSvc}:\${SHORT_SHA}'`,
+      `      - '--region=${primaryRunRegion}'`,
+      `      - '--execution-environment=gen2'`,
+      `      - '--tag=canary'`,
+      `      - '--no-traffic'`,
+      ``,
+      `images:`,
+      `  - '${primaryArLoc}-docker.pkg.dev/${projectId}/${primaryArRepo}/${primaryRunSvc}:\${SHORT_SHA}'`,
+      ``,
+      `options:`,
+      `  logging: CLOUD_LOGGING_ONLY`,
+      `  requestedVerifyOption: VERIFIED`,
+    ].join('\n');
+
+    const githubOidcReleaseTf = [
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 6 — Zero-Key GitHub OIDC WIF + Release Factory Terraform`,
+      `# Target Project: ${projectId} | Region: ${primaryRunRegion}`,
+      `# Eliminates long-lived JSON Service Account keys for GitHub Actions CI/CD`,
+      `# ==============================================================================`,
+      `terraform {`,
+      `  required_version = ">= 1.5.0"`,
+      `  required_providers {`,
+      `    google = {`,
+      `      source  = "hashicorp/google"`,
+      `      version = "~> 6.0"`,
+      `    }`,
+      `  }`,
+      `}`,
+      ``,
+      `# 1. Immutable Artifact Registry Docker Repository`,
+      `resource "google_artifact_registry_repository" "release_containers" {`,
+      `  project       = "${projectId}"`,
+      `  location      = "${primaryArLoc}"`,
+      `  repository_id = "${primaryArRepo}"`,
+      `  format        = "DOCKER"`,
+      `  docker_config {`,
+      `    immutable_tags = true`,
+      `  }`,
+      `}`,
+      ``,
+      `# 2. Zero-Key GitHub Actions Workload Identity Pool & OIDC Provider`,
+      `resource "google_iam_workload_identity_pool" "github_actions_pool" {`,
+      `  project                   = "${projectId}"`,
+      `  workload_identity_pool_id = "github-release-pool"`,
+      `  display_name              = "GitHub Actions Release Pool"`,
+      `}`,
+      ``,
+      `resource "google_iam_workload_identity_pool_provider" "github_oidc" {`,
+      `  project                            = "${projectId}"`,
+      `  workload_identity_pool_id          = google_iam_workload_identity_pool.github_actions_pool.workload_identity_pool_id`,
+      `  workload_identity_pool_provider_id = "github-oidc-provider"`,
+      `  attribute_mapping = {`,
+      `    "google.subject"       = "assertion.sub"`,
+      `    "attribute.repository" = "assertion.repository"`,
+      `  }`,
+      `  oidc {`,
+      `    issuer_uri = "https://token.actions.githubusercontent.com"`,
+      `  }`,
+      `}`,
+    ].join('\n');
+
+    const canaryRollbackSh = [
+      `#!/usr/bin/env bash`,
+      `# ==============================================================================`,
+      `# CloudPulse 2026 Wave 6 — Canary Traffic Split & 14.4x SLO Instant Rollback CLI`,
+      `# Project: ${projectId} | Service: ${primaryRunSvc} (${primaryRunRegion})`,
+      `# ==============================================================================`,
+      `set -euo pipefail`,
+      `PROJECT_ID="${projectId}"`,
+      `REGION="${primaryRunRegion}"`,
+      `SERVICE="${primaryRunSvc}"`,
+      ``,
+      `echo "[1/3] Listing active Cloud Run revisions for \${SERVICE} (\${REGION})..."`,
+      `gcloud run revisions list --service="\${SERVICE}" --region="\${REGION}" --project="\${PROJECT_ID}"`,
+      ``,
+      `echo "[2/3] Shifting 10% canary traffic to tagged 'canary' revision..."`,
+      `# gcloud run services update-traffic "\${SERVICE}" --to-tags=canary=10 --region="\${REGION}" --project="\${PROJECT_ID}"`,
+      ``,
+      `echo "[3/3] Emergency 1-Click Rollback to 100% LATEST stable revision if 14.4x SLO burn triggers:"`,
+      `# gcloud run services update-traffic "\${SERVICE}" --to-latest --region="\${REGION}" --project="\${PROJECT_ID}"`,
+    ].join('\n');
+
+    const stages = [
+      {
+        id: 'STAGE_1_GITHUB_CLOUD_BUILD',
+        stepNumber: 1,
+        title: '1. GitHub OIDC & Cloud Build CI/CD',
+        shortTitle: 'GitHub & Cloud Build',
+        targetTab: 'WAVE9_STUDIO',
+        targetSubTab: 'CLOUD_BUILD_GITHUB',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'IAM_SURGEON',
+        secondaryLabel: 'Zero-Key GitHub OIDC WIF',
+        status:
+          builds.some((b) => b.status === 'FAILURE')
+            ? 'ACTION_RECOMMENDED'
+            : 'OPTIMAL',
+        metricBadge: `${builds.length} Builds · ${triggers.length} Triggers`,
+        summary:
+          builds.length + triggers.length > 0
+            ? `Discovered ${builds.length} recent Cloud Build execution(s) and ${triggers.length} automated trigger(s) in ${projectId} (Cloud Build API: ${cloudBuildApiEnabled ? 'ENABLED' : 'READY'}).`
+            : `0 Cloud Build runs and 0 triggers recorded yet in "${projectId}" (Cloud Build API: ${cloudBuildApiEnabled ? 'ENABLED' : 'READY'}). Clone and build any GitHub repository into a container image in Cloud Build Studio below.`,
+        cliCmd: `gcloud builds list --project=${projectId} --limit=10`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...builds.slice(0, 2).map((b) => ({
+            kind: `Cloud Build (${b.status})`,
+            name: `Build #${b.shortId}`,
+            meta: `${b.machineType}${b.slsaVerified ? ' · SLSA-3 Verified' : ''}`,
+            targetTab: 'WAVE9_STUDIO',
+            subTab: 'CLOUD_BUILD_GITHUB',
+          })),
+          ...triggers.slice(0, 2).map((tr) => ({
+            kind: 'Cloud Build Trigger',
+            name: tr.name,
+            meta: tr.repo,
+            targetTab: 'WAVE9_STUDIO',
+            subTab: 'CLOUD_BUILD_GITHUB',
+          })),
+          {
+            kind: 'GitHub -> Container Builder',
+            name: 'Build Any GitHub Repo via Dockerfile or Buildpacks',
+            meta: 'Open Cloud Build CI/CD & GitHub Builder Studio',
+            targetTab: 'WAVE9_STUDIO',
+            subTab: 'CLOUD_BUILD_GITHUB',
+          },
+          {
+            kind: 'SLSA-3 Release Pipeline YAML',
+            name: 'Inspect cloudbuild_release.yaml Blueprint',
+            meta: 'Click to view synthesized SLSA-3 Canary Cloud Build YAML',
+            targetTab: 'WAVE9_STUDIO',
+            openArtifactTab: 'CLOUDBUILD_YAML',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_2_ARTIFACT_REGISTRY_SBOM',
+        stepNumber: 2,
+        title: '2. Artifact Registry, SLSA-3 & Orphan Sweeper',
+        shortTitle: 'Artifact Registry & SBOM',
+        targetTab: 'WAVE9_STUDIO',
+        targetSubTab: 'SUPPLY_CHAIN_AR',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondarySubTab: 'SECRETS_KMS_WAF',
+        secondaryLabel: 'KMS & Binary Authz',
+        status: orphanDigestsCount > 0 ? 'ACTION_RECOMMENDED' : 'OPTIMAL',
+        metricBadge: `${arRepos.length} Repos · ${totalDigestsCount} Digests (${orphanDigestsCount} Orphans)`,
+        summary:
+          arRepos.length > 0
+            ? `${arRepos.length} Artifact Registry repository(s) (${arRepos.map((r) => `${r.name} [${r.location}]`).join(', ')}) storing ${totalDigestsCount} container digest(s)${
+                orphanDigestsCount > 0
+                  ? ` — ${orphanDigestsCount} untagged orphan digest(s) ready for 1-click sweep`
+                  : ' (0 untagged orphan digests)'
+              }.`
+            : `0 Artifact Registry repositories provisioned in "${projectId}" (API: ${artifactRegistryApiEnabled ? 'ENABLED' : 'READY'}). Create a SLSA-3 immutable Docker repository in Supply Chain Studio.`,
+        cliCmd: `gcloud artifacts repositories list --project=${projectId}`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          ...arRepos.slice(0, 3).map((r) => ({
+            kind: `Artifact Registry (${r.format})`,
+            name: `${r.name} (${r.location})`,
+            meta: r.immutableTags
+              ? 'Immutable Tags Enforced · SLSA-3 Ready'
+              : 'Mutable Tags · Recommend Immutable Lock',
+            targetTab: 'WAVE9_STUDIO',
+            subTab: 'SUPPLY_CHAIN_AR',
+          })),
+          {
+            kind:
+              orphanDigestsCount > 0
+                ? 'Action Recommended · Orphan Sweeper'
+                : 'Artifact Registry & SBOM Studio',
+            name:
+              orphanDigestsCount > 0
+                ? `Sweep ${orphanDigestsCount} Untagged Orphan Digest(s)`
+                : 'Manage Repositories, @sha256 Digests & Immutable Locks',
+            meta: 'Open Artifact Registry Supply Chain Studio',
+            targetTab: 'WAVE9_STUDIO',
+            subTab: 'SUPPLY_CHAIN_AR',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_3_CLOUD_RUN_CANARY',
+        stepNumber: 3,
+        title: '3. Cloud Run Revisions, Canary Traffic & Gen2 SSH',
+        shortTitle: 'Cloud Run & Canary',
+        targetTab: 'CLOUD_RUN',
+        secondaryTab: 'WAVE9_STUDIO',
+        secondarySubTab: 'CLOUD_BUILD_GITHUB',
+        secondaryLabel: 'Deploy GitHub Repo to Cloud Run',
+        status: 'OPTIMAL',
+        metricBadge: `${cloudRunSvcs.length} Cloud Run · Scale-to-Zero`,
+        summary:
+          cloudRunSvcs.length > 0
+            ? `${cloudRunSvcs.length} live Cloud Run service(s) (${cloudRunSvcs.map((s) => `${s.name} [${s.region}]`).join(', ')}) with Gen2 execution, revision traffic splitting, and interactive container SSH.`
+            : `0 Cloud Run services deployed in "${projectId}" ($0.00/hr serverless idle). Deploy a container from Artifact Registry or GitHub with 2M free requests/month.`,
+        cliCmd: `gcloud run services list --project=${projectId}`,
+        mermaidDsl: stage3MermaidDsl,
+        stageItems: [
+          ...cloudRunSvcs.slice(0, 3).map((s) => ({
+            kind: `Cloud Run (${s.gen2 ? 'Gen2' : 'Gen1'})`,
+            name: s.name,
+            meta: `${s.region} · Rev: ${s.latestReadyRevision} · minScale:${s.minScale}`,
+            targetTab: 'CLOUD_RUN',
+          })),
+          {
+            kind: 'Cloud Run Fleet & SSH Studio',
+            name:
+              cloudRunSvcs.length > 0
+                ? 'Manage Revisions, Canary Traffic & Live Container SSH'
+                : '+ Provision Scale-to-Zero Cloud Run Service',
+            meta: '2M requests + 360,000 vCPU-sec Always-Free per month',
+            targetTab: 'CLOUD_RUN',
+          },
+          {
+            kind: 'Canary Traffic & Rollback CLI',
+            name: 'Inspect canary_traffic_rollback.sh Runbook',
+            meta: 'Click to view Cloud Run revision split & rollback script',
+            targetTab: 'CLOUD_RUN',
+            openArtifactTab: 'CANARY_ROLLBACK_SH',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_4_FUNCTIONS_EVENTARC',
+        stepNumber: 4,
+        title: '4. Cloud Functions Gen2, Eventarc & Pub/Sub Triggers',
+        shortTitle: 'Functions & Eventarc',
+        targetTab: 'FUNCTIONS_STUDIO',
+        secondaryTab: 'CLOUD_STORAGE',
+        secondaryLabel: 'GCS Bucket Event Triggers',
+        status: 'OPTIMAL',
+        metricBadge: `${cloudFunctions.length} Functions · ${pubsubTopics.length} Pub/Sub Topics`,
+        summary:
+          cloudFunctions.length + pubsubTopics.length > 0
+            ? `${cloudFunctions.length} Cloud Function(s) and ${pubsubTopics.length} user Pub/Sub topic(s) active in ${projectId} for event-driven webhooks, Cloud Storage object triggers, and async pipelines.`
+            : `0 Cloud Functions and 0 user Pub/Sub topics in "${projectId}". Author Gen2 Eventarc functions triggered by Pub/Sub messages or GCS object uploads.`,
+        cliCmd: `gcloud functions list --project=${projectId}`,
+        mermaidDsl: stage4MermaidDsl,
+        stageItems: [
+          ...cloudFunctions.slice(0, 2).map((fn) => ({
+            kind: `Cloud Function (${fn.envGen})`,
+            name: fn.name,
+            meta: `${fn.runtime} · ${fn.region}${fn.hasEventTrigger ? ' · Eventarc' : ' · HTTPS'}`,
+            targetTab: 'FUNCTIONS_STUDIO',
+          })),
+          ...pubsubTopics.slice(0, 2).map((t) => ({
+            kind: 'Pub/Sub Event Topic',
+            name: t.name,
+            meta: 'Eventarc / Cloud Functions trigger bus',
+            targetTab: 'FUNCTIONS_STUDIO',
+          })),
+          {
+            kind: 'Cloud Functions & Eventarc Studio',
+            name: 'Inspect Gen2 Functions, Eventarc & Pub/Sub Triggers',
+            meta: 'Open Cloud Functions & Eventarc Studio',
+            targetTab: 'FUNCTIONS_STUDIO',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_5_GKE_AUTOPILOT_FLEET',
+        stepNumber: 5,
+        title: '5. GKE Autopilot, Workload Identity & Pod Right-Sizer',
+        shortTitle: 'GKE Autopilot & Fleet',
+        targetTab: 'GKE_STUDIO',
+        secondaryTab: 'INNOVATION_LAB',
+        secondarySubTab: 'FIVE_PERSONA_PLATFORM_K8S',
+        secondaryLabel: 'K8s Pod Right-Sizer & PDB Audit',
+        status: 'OPTIMAL',
+        metricBadge: `${gkeClusters.length} GKE Clusters · Workload Identity`,
+        summary:
+          gkeClusters.length > 0
+            ? `${gkeClusters.length} GKE cluster(s) (${gkeClusters.map((c) => `${c.name} [${c.autopilot ? 'Autopilot' : `${c.nodeCount} nodes`}]`).join(', ')}) running in ${projectId}.`
+            : `0 GKE clusters running in "${projectId}" ($0.00/hr Kubernetes cluster management or node burn). Provision GKE Autopilot or audit K8s manifests in GKE Fleet Studio.`,
+        cliCmd: `gcloud container clusters list --project=${projectId}`,
+        mermaidDsl: stage5MermaidDsl,
+        stageItems: [
+          ...gkeClusters.slice(0, 2).map((c) => ({
+            kind: `GKE Cluster (${c.autopilot ? 'Autopilot' : 'Standard'})`,
+            name: c.name,
+            meta: `${c.location} · ${c.status} · ${c.workloadIdentity ? 'Workload Identity' : 'Node IAM'}`,
+            targetTab: 'GKE_STUDIO',
+          })),
+          {
+            kind: 'GKE Kubernetes Fleet Studio',
+            name:
+              gkeClusters.length > 0
+                ? 'Manage GKE Clusters, Node Pools & kubeconfig'
+                : 'Open GKE Autopilot & Fleet Studio ($0 Idle)',
+            meta: 'Free cluster management fee for 1 zonal/Autopilot cluster',
+            targetTab: 'GKE_STUDIO',
+          },
+          {
+            kind: 'Platform K8s Persona Suite',
+            name: 'Pod OOM/CPU Right-Sizer, PDB Blocker & STRICT mTLS',
+            meta: 'Open Platform / K8s Engineer Studio',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'FIVE_PERSONA_PLATFORM_K8S',
+          },
+        ],
+      },
+      {
+        id: 'STAGE_6_REVERSE_TERRAFORM_ROLLBACK',
+        stepNumber: 6,
+        title: '6. Reverse-Terraform HCL & 14.4x SLO Rollback Gate',
+        shortTitle: 'Terraform & SLO Gate',
+        targetTab: 'INNOVATION_LAB',
+        targetSubTab: 'TERRAFORM',
+        openArtifactTab: 'OIDC_TERRAFORM',
+        secondaryTab: 'SRE_WAR_ROOM',
+        secondaryLabel: '14.4x SLO Burn Release Freeze Gate',
+        status: 'OPTIMAL',
+        metricBadge: `main.tf + OIDC WIF · 14.4x SLO Gate`,
+        summary: `Codifies ${projectId}'s Artifact Registry, GitHub OIDC Workload Identity Pool, Cloud Run services, and GKE clusters into Terraform 1.5+ HCL and enforces the 14.4x 1-hour SLO burn release gate.`,
+        cliCmd: `gcloud iam workload-identity-pools list --location=global --project=${projectId}`,
+        mermaidDsl: null,
+        stageItems: [
+          {
+            kind: 'Zero-Key GitHub OIDC Terraform',
+            name: 'github_oidc_release.tf (WIF Pool + Immutable AR)',
+            meta: 'Click to inspect synthesized Terraform HCL blueprint',
+            targetTab: 'WAVE9_STUDIO',
+            openArtifactTab: 'OIDC_TERRAFORM',
+          },
+          {
+            kind: 'Full Project Reverse-Terraform Studio',
+            name: 'Export Live Infrastructure into main.tf + imports.tf',
+            meta: 'Open Reverse-Terraform Exporter in Innovation Lab',
+            targetTab: 'INNOVATION_LAB',
+            subTab: 'TERRAFORM',
+          },
+          {
+            kind: 'SRE Release Freeze Gate',
+            name: '14.4x 1h / 6x 6h Multi-Window SLO Burn Gate',
+            meta: 'Auto-halt canary rollouts during error budget exhaustion',
+            targetTab: 'SRE_WAR_ROOM',
+          },
+        ],
+      },
+    ];
+
+    return res.json({
+      projectId,
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - startMs,
+      counts: {
+        builds: builds.length,
+        triggers: triggers.length,
+        arRepos: arRepos.length,
+        totalDigests: totalDigestsCount,
+        orphanDigests: orphanDigestsCount,
+        cloudRunSvcs: cloudRunSvcs.length,
+        cloudFunctions: cloudFunctions.length,
+        pubsubTopics: pubsubTopics.length,
+        gkeClusters: gkeClusters.length,
+        releaseApis: releaseApis.length,
+        enabledApis: enabledApis.length,
+      },
+      stages,
+      artifacts: {
+        cloudBuildReleaseYaml,
+        githubOidcReleaseTf,
+        canaryRollbackSh,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to synthesize Wave 6 GitOps, Cloud Build, Artifact Registry & Cloud Run Release Factory blueprint.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {

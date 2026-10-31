@@ -99,6 +99,7 @@ import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar'
 import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
+import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
 
 /**
@@ -3401,6 +3402,7 @@ function CloudPulseCockpit() {
   const [dataEngineerSubTab, setDataEngineerSubTab] =
     useState('ICEBERG_50_MATRIX');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
+  const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
   const [storageTargetBucket, setStorageTargetBucket] = useState('');
   const [storageTargetObject, setStorageTargetObject] = useState('');
@@ -3475,6 +3477,8 @@ function CloudPulseCockpit() {
       setDataEngineerSubTab(subTab);
     } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(subTab);
+    } else if (subTab && normalizedTab === 'WAVE9_STUDIO') {
+      setWave9SubTab(subTab);
     } else if (normalizedTab === 'RECYCLE_BIN') {
       setRecycleBinCategory(subTab || 'ALL');
     } else if (normalizedTab === 'CLOUD_STORAGE') {
@@ -5548,16 +5552,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE9_STUDIO' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
+                  <GitOpsReleaseFactoryPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
+                    activeSubTab={wave9SubTab}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
                   <Wave9AiGkeSqlSupplyChainStudio
                     projectId={selectedProjectId}
+                    initialSubTab={wave9SubTab}
+                    onSubTabChange={setWave9SubTab}
                     onTriggerToast={showToast}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -5724,11 +5729,9 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_RUN' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
+                  <GitOpsReleaseFactoryPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5791,11 +5794,9 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
+                  <GitOpsReleaseFactoryPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
@@ -5821,11 +5822,9 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GKE_STUDIO' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
+                  <GitOpsReleaseFactoryPipelineBar
                     projectId={selectedProjectId}
                     activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
                     onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />

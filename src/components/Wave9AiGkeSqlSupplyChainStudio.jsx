@@ -18,11 +18,37 @@ import {
 
 export default function Wave9AiGkeSqlSupplyChainStudio({
   projectId,
+  initialSubTab = 'CLOUD_BUILD_GITHUB',
+  onSubTabChange,
   onTriggerToast,
   onRefreshOverview,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('CLOUD_BUILD_GITHUB');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'CLOUD_BUILD_GITHUB'
+  );
   const [copiedText, setCopiedText] = useState('');
+
+  useEffect(() => {
+    if (
+      initialSubTab === 'CLOUD_BUILD_GITHUB' ||
+      initialSubTab === 'SUPPLY_CHAIN_AR'
+    ) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  useEffect(() => {
+    const handleWave9SubTab = (evt) => {
+      const subTab = evt?.detail?.subTab;
+      if (subTab === 'CLOUD_BUILD_GITHUB' || subTab === 'SUPPLY_CHAIN_AR') {
+        setActiveSubTab(subTab);
+        onSubTabChange?.(subTab);
+      }
+    };
+    window.addEventListener('cloudpulse:wave9-subtab', handleWave9SubTab);
+    return () =>
+      window.removeEventListener('cloudpulse:wave9-subtab', handleWave9SubTab);
+  }, [onSubTabChange]);
 
   // --- Sub-Tab 1: Cloud Build & GitHub-to-Container CI/CD State ---
   const [cbData, setCbData] = useState(null);
@@ -551,7 +577,10 @@ options:
                 type="button"
                 data-feature-id={tab.id}
                 title={tab.tip}
-                onClick={() => setActiveSubTab(tab.id)}
+                onClick={() => {
+                  setActiveSubTab(tab.id);
+                  onSubTabChange?.(tab.id);
+                }}
                 className={`w-full h-11 px-3.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                   active
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
