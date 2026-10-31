@@ -4751,7 +4751,7 @@ function CloudPulseCockpit() {
     const normalizedTab =
       tabId === 'DATA_ENGINEER'
         ? 'DATA_ENGINEER_STUDIO'
-        : tabId === 'BIGQUERY'
+        : tabId === 'BIGQUERY' || tabId === 'BIGQUERY_LAKEHOUSE'
         ? 'BIGQUERY_STUDIO'
         : tabId === 'BIGLAKE'
         ? 'BIGLAKE_STUDIO'
@@ -4759,16 +4759,18 @@ function CloudPulseCockpit() {
         ? 'CLOUD_SQL_STUDIO'
         : tabId === 'SPANNER'
         ? 'WAVE10_FRONTIER'
-        : tabId === 'VPC_FIREWALL' || tabId === 'VPC'
+        : tabId === 'VPC_FIREWALL' || tabId === 'VPC' || tabId === 'NETWORK_VPC_FIREWALL'
         ? 'VPC_NETWORKS'
-        : tabId === 'VM_FLEET' || tabId === 'VMS'
+        : tabId === 'VM_FLEET' || tabId === 'VMS' || tabId === 'COMPUTE_VM_FLEET'
         ? 'VM_SSH'
-        : tabId === 'STORAGE'
+        : tabId === 'STORAGE' || tabId === 'CLOUD_STORAGE_BUCKETS'
         ? 'CLOUD_STORAGE'
         : tabId === 'SOVEREIGN_IAM' || tabId === 'IAM_SECURITY'
         ? 'SOVEREIGN_STUDIO'
-        : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS'
+        : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS' || tabId === 'FINOPS_BILLING_RADAR'
         ? 'FINOPS'
+        : tabId === 'CLOUD_RUN_FLEET'
+        ? 'CLOUD_RUN'
         : tabId === 'VERTEX_AI'
         ? 'VERTEX_AI_STUDIO'
         : tabId === 'CLOUD_BUILD'
@@ -4817,17 +4819,21 @@ function CloudPulseCockpit() {
       targetTab: normalizedTab,
       targetSubTab: subTab || null,
       targetElementId: extraTarget?.targetElementId || null,
+      ruleName: extraTarget?.ruleName || null,
       targetLabel:
         extraTarget?.targetLabel ||
         (subTab
           ? `${studioTitle} → ${subTab}`
           : extraTarget?.bucketName
           ? `${studioTitle} → Bucket "${extraTarget.bucketName}"`
+          : extraTarget?.ruleName
+          ? `${studioTitle} → Firewall Rule "${extraTarget.ruleName}"`
           : studioTitle),
       badgeText:
         extraTarget?.badgeText ||
         subTab ||
         extraTarget?.bucketName ||
+        extraTarget?.ruleName ||
         studioTitle,
     });
   }, [selectedProjectId, triggerCrossUiSpotlight]);
@@ -4864,6 +4870,14 @@ function CloudPulseCockpit() {
         targetLabel: `Cloud Functions & Eventarc → ${section}`,
         badgeText: section,
       });
+    };
+    const handleCrossUiNavigate = (evt) => {
+      const studioId = evt?.detail?.studioId;
+      const subTab = evt?.detail?.subTab || null;
+      const extraTarget = evt?.detail?.extraTarget || null;
+      if (studioId) {
+        handleNavigateStudioTab(studioId, subTab, extraTarget);
+      }
     };
 
     // Delegated listener for in-Studio Sub-Tab / Pillar / Module selector buttons across all 22 Studios
@@ -4944,14 +4958,16 @@ function CloudPulseCockpit() {
     window.addEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
     window.addEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
     window.addEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
+    window.addEventListener('cloudpulse:cross-ui-navigate', handleCrossUiNavigate);
     document.addEventListener('click', handleWorkspaceSubTabClick);
     return () => {
       window.removeEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
       window.removeEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
       window.removeEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
+      window.removeEventListener('cloudpulse:cross-ui-navigate', handleCrossUiNavigate);
       document.removeEventListener('click', handleWorkspaceSubTabClick);
     };
-  }, [triggerCrossUiSpotlight]);
+  }, [triggerCrossUiSpotlight, handleNavigateStudioTab]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');

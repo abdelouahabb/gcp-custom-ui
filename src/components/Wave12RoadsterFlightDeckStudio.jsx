@@ -131,14 +131,54 @@ const TELEPORT_MODES = [
 ];
 
 const MANEUVER_STUDIO_JUMP_MAP = {
-  LOCK_FIREWALL_TO_IAP: { studioId: 'NETWORK_VPC_FIREWALL', label: 'VPC & Firewall Studio' },
-  ENABLE_FIREWALL_AUDIT_LOGGING: { studioId: 'NETWORK_VPC_FIREWALL', label: 'VPC & Firewall Studio' },
-  HARDEN_STORAGE_BUCKET: { studioId: 'CLOUD_STORAGE_BUCKETS', label: 'Cloud Storage Studio' },
-  RELEASE_IDLE_STATIC_IP: { studioId: 'FINOPS_BILLING_RADAR', label: 'FinOps & Waste Studio' },
-  DELETE_UNATTACHED_DISK: { studioId: 'FINOPS_BILLING_RADAR', label: 'FinOps & Waste Studio' },
-  SCALE_CLOUD_RUN_TO_ZERO: { studioId: 'CLOUD_RUN_FLEET', label: 'Cloud Run Studio' },
-  STOP_IDLE_COMPUTE_VM: { studioId: 'COMPUTE_VM_FLEET', label: 'Compute Engine Studio' },
-  CALIBRATE_AUTOPILOT_DATASET: { studioId: 'BIGQUERY_LAKEHOUSE', label: 'BigQuery Studio' },
+  LOCK_FIREWALL_TO_IAP: {
+    studioId: 'VPC_NETWORKS',
+    subTab: null,
+    targetElementId: 'live-vpc-firewall-rules-section',
+    label: 'VPC & Firewall Studio',
+  },
+  ENABLE_FIREWALL_AUDIT_LOGGING: {
+    studioId: 'VPC_NETWORKS',
+    subTab: null,
+    targetElementId: 'live-vpc-firewall-rules-section',
+    label: 'VPC & Firewall Studio',
+  },
+  HARDEN_STORAGE_BUCKET: {
+    studioId: 'CLOUD_STORAGE',
+    subTab: 'BUCKETS',
+    targetElementId: null,
+    label: 'Cloud Storage Studio',
+  },
+  RELEASE_IDLE_STATIC_IP: {
+    studioId: 'ZOMBIE_HUNTER',
+    subTab: null,
+    targetElementId: 'finops-zombie-reaper-section',
+    label: 'FinOps & Waste Studio',
+  },
+  DELETE_UNATTACHED_DISK: {
+    studioId: 'ZOMBIE_HUNTER',
+    subTab: null,
+    targetElementId: 'finops-zombie-reaper-section',
+    label: 'FinOps & Waste Studio',
+  },
+  SCALE_CLOUD_RUN_TO_ZERO: {
+    studioId: 'CLOUD_RUN',
+    subTab: null,
+    targetElementId: null,
+    label: 'Cloud Run Studio',
+  },
+  STOP_IDLE_COMPUTE_VM: {
+    studioId: 'VM_SSH',
+    subTab: null,
+    targetElementId: null,
+    label: 'Compute Engine Studio',
+  },
+  CALIBRATE_AUTOPILOT_DATASET: {
+    studioId: 'BIGQUERY_STUDIO',
+    subTab: 'TABLES_SQL',
+    targetElementId: null,
+    label: 'BigQuery Studio',
+  },
 };
 
 function renderInlineNodes(text, keyPrefix = 'inl') {
@@ -366,6 +406,8 @@ function RoadsterMarkdownView({ content, onCopy }) {
 
 export default function Wave12RoadsterFlightDeckStudio({
   projectId,
+  onSelectStudioTab,
+  onRunInShell,
   onShowToast,
   onRefreshOverview,
 }) {
@@ -418,15 +460,60 @@ export default function Wave12RoadsterFlightDeckStudio({
   );
 
   const handleCrossStudioJump = useCallback(
-    (studioId, label) => {
-      window.dispatchEvent(
-        new CustomEvent('cloudpulse:cross-ui-navigate', {
-          detail: { studioId },
-        })
+    (studioJumpOrId, labelOrManeuver) => {
+      const studioJump =
+        typeof studioJumpOrId === 'object' && studioJumpOrId !== null
+          ? studioJumpOrId
+          : { studioId: studioJumpOrId, subTab: null, label: labelOrManeuver };
+      const maneuver =
+        typeof labelOrManeuver === 'object' && labelOrManeuver !== null
+          ? labelOrManeuver
+          : null;
+      const studioId = studioJump.studioId;
+      const label = studioJump.label || studioId;
+      const ruleName =
+        maneuver?.payload?.ruleName ||
+        (studioId === 'VPC_NETWORKS' ? maneuver?.targetResource : null) ||
+        null;
+      const bucketName =
+        maneuver?.payload?.bucketName ||
+        (studioId === 'CLOUD_STORAGE'
+          ? String(maneuver?.targetResource || '').replace(/^gs:\/\//, '')
+          : null) ||
+        null;
+      const targetResource = maneuver?.targetResource || '';
+      const extraTarget = {
+        targetElementId:
+          ruleName && studioId === 'VPC_NETWORKS'
+            ? `vpc-fw-card-${ruleName}`
+            : studioJump.targetElementId || null,
+        ruleName,
+        bucketName,
+        targetLabel: targetResource
+          ? `${label} → ${targetResource}`
+          : label,
+        badgeText: targetResource || label,
+      };
+      if (onSelectStudioTab) {
+        onSelectStudioTab(studioId, studioJump.subTab || null, extraTarget);
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:cross-ui-navigate', {
+            detail: {
+              studioId,
+              subTab: studioJump.subTab || null,
+              extraTarget,
+            },
+          })
+        );
+      }
+      notify(
+        targetResource
+          ? `Cross-UI Spotlight: Jumping to ${label} (${targetResource})`
+          : `Cross-UI Spotlight: Jumping to ${label}`
       );
-      notify(`Cross-UI Spotlight: Jumping to ${label || studioId}`);
     },
-    [notify]
+    [notify, onSelectStudioTab]
   );
 
   const fetchAutopilotRadar = useCallback(async () => {
@@ -1077,15 +1164,22 @@ export default function Wave12RoadsterFlightDeckStudio({
                           <button
                             type="button"
                             onClick={() =>
-                              handleCrossStudioJump(
-                                studioJump.studioId,
-                                studioJump.label
-                              )
+                              handleCrossStudioJump(studioJump, man)
                             }
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-blue-500/30 bg-blue-500/10 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 cursor-pointer"
                           >
                             <ExternalLink className="w-3 h-3" />
                             <span>{studioJump.label}</span>
+                          </button>
+                        )}
+                        {onRunInShell && man.cliEquivalent && (
+                          <button
+                            type="button"
+                            onClick={() => onRunInShell(man.cliEquivalent)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 cursor-pointer"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>Run in Cloud Shell</span>
                           </button>
                         )}
                         <button
