@@ -5650,21 +5650,38 @@ function CloudPulseCockpit() {
   };
 
   const [logExplorerSeedSpec, setLogExplorerSeedSpec] = useState(null);
+  const [shellSeedNonce, setShellSeedNonce] = useState(0);
   const [globalMapXRaySeed, setGlobalMapXRaySeed] = useState(null);
   const [vpcStudioRuleSeed, setVpcStudioRuleSeed] = useState(null);
   const [cloudSocSeed, setCloudSocSeed] = useState(null);
 
+  const sanitizeExecutableCliForShell = (rawCmd) => {
+    const collapsed = String(rawCmd || '').replace(/\\\r?\n\s*/g, ' ');
+    const lines = collapsed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'))
+      .map((line) => line.replace(/^\$\s+/, '').trim());
+    const preferred =
+      lines.find((line) => /^(gcloud|bq|gsutil|kubectl)\b/i.test(line)) ||
+      lines[0] ||
+      '';
+    return preferred || String(rawCmd || '').trim();
+  };
+
   const handleRunInShell = (cmd) => {
     const prevTab = activeTabRef.current;
-    setShellSeedCommand(cmd);
+    const cleanCmd = sanitizeExecutableCliForShell(cmd);
+    setShellSeedCommand(cleanCmd);
+    setShellSeedNonce(Date.now());
     setActiveTab('LOGS_SHELL');
-    showToast(`Loaded command into Mobile Cloud Shell: ${cmd}`);
+    showToast(`Executing in Cloud Shell: ${cleanCmd}`);
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: 'LOGS_SHELL',
       isShellCommand: true,
       targetElementId: 'cloud-shell-terminal-card',
-      targetLabel: `Logs & Cloud Shell → "${String(cmd || '').slice(0, 44)}"`,
+      targetLabel: `Logs & Cloud Shell → "${String(cleanCmd || '').slice(0, 44)}"`,
       badgeText: 'Cloud Shell Terminal',
     });
   };
@@ -7959,6 +7976,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     account={contextData.account}
                     initialCommand={shellSeedCommand}
+                    initialCommandNonce={shellSeedNonce}
                     initialLogExplorerSpec={logExplorerSeedSpec}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}

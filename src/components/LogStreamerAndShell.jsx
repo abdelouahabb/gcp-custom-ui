@@ -73,11 +73,26 @@ const NL_INTENT_PRESETS = [
   },
 ];
 
+function sanitizeExecutableCliInput(rawCmd) {
+  const collapsed = String(rawCmd || '').replace(/\\\r?\n\s*/g, ' ');
+  const lines = collapsed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'))
+    .map((line) => line.replace(/^\$\s+/, '').trim());
+  const preferred =
+    lines.find((line) => /^(gcloud|bq|gsutil|kubectl)\b/i.test(line)) ||
+    lines[0] ||
+    '';
+  return preferred || String(rawCmd || '').trim();
+}
+
 export default function LogStreamerAndShell({
   logs = [],
   projectId,
   account = 'Authenticated Google Cloud Session',
   initialCommand = '',
+  initialCommandNonce = 0,
   initialLogExplorerSpec = null,
   onRefreshLogs,
   onAskCopilot,
@@ -92,9 +107,11 @@ export default function LogStreamerAndShell({
     initialLogExplorerSpec
   );
   const [shellInput, setShellInput] = useState(
-    initialLogExplorerSpec?.gcloudCommand ||
-      initialCommand ||
-      `gcloud storage buckets list --project=${projectId}`
+    sanitizeExecutableCliInput(
+      initialLogExplorerSpec?.gcloudCommand ||
+        initialCommand ||
+        `gcloud storage buckets list --project=${projectId}`
+    )
   );
   const [shellRunning, setShellRunning] = useState(false);
   const [shellHistory, setShellHistory] = useState([
@@ -864,44 +881,61 @@ export default function LogStreamerAndShell({
     return true;
   });
 
-  const executeShellCommand = async (cmdOverride) => {
-    const cmd = (cmdOverride || shellInput).trim();
-    if (!cmd || shellRunning) return;
-    setShellInput(cmd);
-    setShellHistoryCursor(-1);
-    setShellRunning(true);
-    try {
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/shell`,
-        { command: cmd }
-      );
-      setShellHistory((prev) => [
-        {
-          id: `cmd-${Date.now()}`,
-          command: res.data.command || cmd,
-          output: res.data.output,
-          durationMs: res.data.durationMs,
-          exitCode: res.data.exitCode ?? 0,
-          engine: res.data.engine || 'HYBRID_SHELL',
-        },
-        ...prev,
-      ]);
-    } catch (err) {
-      setShellHistory((prev) => [
-        {
-          id: `cmd-${Date.now()}`,
-          command: cmd,
-          output: err.response?.data?.error || err.message,
-          durationMs: 0,
-          exitCode: 1,
-          engine: 'ERROR',
-        },
-        ...prev,
-      ]);
-    } finally {
-      setShellRunning(false);
+  const executeShellCommand = useCallback(
+    async (cmdOverride) => {
+      const cmd = sanitizeExecutableCliInput(cmdOverride || shellInput);
+      if (!cmd || shellRunning) return;
+      setShellInput(cmd);
+      setShellHistoryCursor(-1);
+      setShellRunning(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/shell`,
+          { command: cmd }
+        );
+        setShellHistory((prev) => [
+          {
+            id: `cmd-${Date.now()}`,
+            command: res.data.command || cmd,
+            output: res.data.output,
+            durationMs: res.data.durationMs,
+            exitCode: res.data.exitCode ?? 0,
+            engine: res.data.engine || 'HYBRID_SHELL',
+          },
+          ...prev,
+        ]);
+      } catch (err) {
+        setShellHistory((prev) => [
+          {
+            id: `cmd-${Date.now()}`,
+            command: cmd,
+            output: err.response?.data?.error || err.message,
+            durationMs: 0,
+            exitCode: 1,
+            engine: 'ERROR',
+          },
+          ...prev,
+        ]);
+      } finally {
+        setShellRunning(false);
+      }
+    },
+    [projectId, shellInput, shellRunning]
+  );
+
+  const lastExecutedNonceRef = useRef(0);
+  useEffect(() => {
+    const cleanCmd = sanitizeExecutableCliInput(initialCommand);
+    if (!cleanCmd) return;
+    setShellInput(cleanCmd);
+    if (
+      initialCommandNonce &&
+      initialCommandNonce !== lastExecutedNonceRef.current
+    ) {
+      lastExecutedNonceRef.current = initialCommandNonce;
+      executeShellCommand(cleanCmd);
     }
-  };
+  }, [initialCommand, initialCommandNonce, executeShellCommand]);
 
   const cycleShellHistory = (direction) => {
     if (shellHistory.length === 0) return;

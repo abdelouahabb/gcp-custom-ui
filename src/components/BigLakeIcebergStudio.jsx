@@ -774,10 +774,11 @@ gcloud alpha biglake iceberg catalogs update ${fedCatalogName} \\
   // Interactive 3-Column Architecture TCO & Live Action Handlers
   const archMatrixMetrics = useMemo(() => {
     const ds = selectedDatasetId || 'analytics_lakehouse';
-    const bkt = (bigLakeBucket || `${projectId}-open-lakehouse`).replace(
-      /^gs:\/\//,
-      ''
-    );
+    const bkt = (
+      gcsBuckets[0]?.name ||
+      bigLakeBucket ||
+      `${projectId}-open-lakehouse`
+    ).replace(/^gs:\/\//, '');
     const connId = bigLakeConnectionId || 'biglake-iceberg-conn';
     const loc = (bigLakeLocation || 'US').toLowerCase();
     const fullConn = `${projectId}.${loc}.${connId}`;
@@ -816,8 +817,7 @@ OPTIONS (
   metadata_cache_mode = 'AUTOMATIC',
   max_staleness = INTERVAL 30 MINUTE
 );`,
-        cli: `# Audit & Revoke Over-Privileged Bucket-Wide objectViewer from Analysts on gs://${bkt}
-gcloud storage buckets get-iam-policy gs://${bkt} --project=${projectId}`,
+        cli: `gcloud storage buckets get-iam-policy gs://${bkt} --project=${projectId}`,
         xrayQuery: `SELECT\n  event_id,\n  event_timestamp,\n  region,\n  service_name,\n  revenue_usd\nFROM \`${projectId}.${ds}.open_iceberg_events\`\nWHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\nLIMIT 25;`,
       },
       BIGLAKE_ICEBERG: {
@@ -847,8 +847,7 @@ MERGE \`${projectId}.${ds}.open_iceberg_events\` AS target
 USING (SELECT 'evt-1001' AS event_id, 249.99 AS revenue_usd) AS src
 ON target.event_id = src.event_id
 WHEN MATCHED THEN UPDATE SET target.revenue_usd = src.revenue_usd;`,
-        cli: `# Inspect BigLake Iceberg REST Catalog & Credential Vending Status
-gcloud alpha biglake catalogs list --location=${newCatalogLocation} --project=${projectId}`,
+        cli: `gcloud alpha biglake catalogs list --location=${newCatalogLocation} --project=${projectId}`,
         xrayQuery: `SELECT\n  event_id,\n  event_timestamp,\n  user_id,\n  region,\n  service_name,\n  latency_ms,\n  revenue_usd\nFROM \`${projectId}.${ds}.open_iceberg_events\`\nWHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\nORDER BY latency_ms DESC\nLIMIT 25;`,
       },
       NATIVE_CAPACITOR: {
@@ -882,8 +881,7 @@ EXPORT DATA OPTIONS (
 SELECT event_id, event_timestamp, user_id, region, service_name, revenue_usd
 FROM \`${projectId}.${ds}.capacitor_warehouse_events\`
 WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);`,
-        cli: `# Switch Dataset ${projectId}:${ds} to PHYSICAL Compressed Billing (-54% Storage Cost)
-bq update --dataset --storage_billing_model=PHYSICAL ${projectId}:${ds}`,
+        cli: `bq show --format=prettyjson ${projectId}:${ds}`,
         xrayQuery: `SELECT\n  event_id,\n  event_timestamp,\n  user_id,\n  region,\n  service_name,\n  latency_ms,\n  revenue_usd\nFROM \`${projectId}.${ds}.capacitor_warehouse_events\`\nWHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\nORDER BY revenue_usd DESC\nLIMIT 25;`,
       },
     };
@@ -902,6 +900,7 @@ bq update --dataset --storage_billing_model=PHYSICAL ${projectId}:${ds}`,
   }, [
     projectId,
     selectedDatasetId,
+    gcsBuckets,
     bigLakeBucket,
     bigLakeConnectionId,
     bigLakeLocation,

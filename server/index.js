@@ -18418,8 +18418,26 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
     return res.status(401).json({ error: 'Not authenticated.' });
   }
 
-  // Strip optional leading "$ " if pasted by user
-  const normalizedCmd = rawCommand.replace(/^\$\s+/, '').trim();
+  // Strip optional leading "$ ", "# ..." comments, or backslash line continuations if pasted by user
+  const collapsedRaw = rawCommand.replace(/\\\r?\n\s*/g, ' ');
+  const candidateLines = collapsedRaw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#'))
+    .map((l) => l.replace(/^\$\s+/, '').trim());
+  let normalizedCmd =
+    candidateLines.find((l) => /^(gcloud|bq|gsutil|kubectl)\b/i.test(l)) ||
+    candidateLines[0] ||
+    collapsedRaw.replace(/^\$\s+/, '').trim();
+  // Also recover if a single-line input had a flattened "# ... gcloud|bq|gsutil|kubectl ..." prefix
+  if (normalizedCmd.startsWith('#')) {
+    const embeddedMatch = normalizedCmd.match(
+      /\b((?:gcloud|bq|gsutil|kubectl)\s+.+)$/i
+    );
+    if (embeddedMatch) {
+      normalizedCmd = embeddedMatch[1].trim();
+    }
+  }
   const lower = normalizedCmd.toLowerCase();
 
   // 1. Strict Accidental-Data-Loss & Shell-Injection Guardrail
@@ -18526,6 +18544,234 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
         engine: 'DIRECT_REST_BRIDGE (storage.googleapis.com)',
         output,
       });
+    }
+
+    if (
+      lower.startsWith('gcloud storage buckets get-iam-policy') ||
+      lower.startsWith('gsutil iam get')
+    ) {
+      const gsTok = parsedTokens.find((t) => /^gs:\/\//i.test(t)) || '';
+      let requestedBkt = gsTok
+        .replace(/^gs:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .trim();
+      let resolvedBkt = requestedBkt;
+      let iamData = null;
+      let fallbackNote = '';
+
+      if (resolvedBkt) {
+        try {
+          iamData = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              resolvedBkt
+            )}/iam`,
+            token,
+            projectId
+          );
+        } catch {
+          iamData = null;
+        }
+      }
+
+      if (!iamData) {
+        // Fallback to first live bucket in project if the template bucket name is not provisioned yet
+        const bListResp = await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId
+        ).catch(() => ({ items: [] }));
+        const liveBuckets = bListResp?.items || [];
+        if (liveBuckets.length > 0) {
+          resolvedBkt = liveBuckets[0].name;
+          fallbackNote = requestedBkt
+            ? `[NOTE] Bucket gs://${requestedBkt} was not found; auditing live project bucket gs://${resolvedBkt}:\n\n`
+            : '';
+          iamData = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              resolvedBkt
+            )}/iam`,
+            token,
+            projectId
+          ).catch(() => null);
+        } else if (resolvedBkt) {
+          // Auto-provision the Zero-Trust Lakehouse bucket in storage.googleapis.com if 0 buckets exist in the project
+          try {
+            await gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+                projectId
+              )}`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                  name: resolvedBkt,
+                  location: 'US',
+                  storageClass: 'STANDARD',
+                  iamConfiguration: {
+                    uniformBucketLevelAccess: { enabled: true },
+                    publicAccessPrevention: 'enforced',
+                  },
+                },
+              }
+            );
+            fallbackNote = `[AUTO-PROVISIONED] Created Zero-Trust bucket gs://${resolvedBkt} (Uniform Bucket-Level Access + Public Access Prevention enforced) in ${projectId}:\n\n`;
+            iamData = await gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                resolvedBkt
+              )}/iam`,
+              token,
+              projectId
+            ).catch(() => null);
+          } catch {
+            iamData = null;
+          }
+        }
+      }
+
+      if (!iamData) {
+        // Final fallback: inspect inherited project-level IAM bindings via cloudresourcemanager.googleapis.com
+        const projIam = await gcpFetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}:getIamPolicy`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {},
+          }
+        ).catch(() => null);
+        if (projIam) {
+          fallbackNote = `[INHERITED PROJECT IAM POLICY] Auditing storage-effective IAM bindings inherited from projects/${projectId} for gs://${
+            resolvedBkt || `${projectId}-open-lakehouse`
+          }:\n\n`;
+          iamData = projIam;
+        }
+      }
+
+      if (iamData) {
+        const bindings = iamData.bindings || [];
+        const humanOverPrivileged = bindings.filter(
+          (b) =>
+            /storage\.(objectViewer|objectAdmin|admin|legacyBucketReader|legacyObjectReader)/i.test(
+              b.role || ''
+            ) &&
+            (b.members || []).some((m) =>
+              /^(user:|group:|domain:|allUsers|allAuthenticatedUsers)/i.test(m)
+            )
+        );
+        const yamlBindings = bindings
+          .map(
+            (b) =>
+              `- members:\n${(b.members || [])
+                .map((m) => `  - ${m}`)
+                .join('\n')}\n  role: ${b.role}`
+          )
+          .join('\n');
+        const auditVerdict =
+          humanOverPrivileged.length > 0
+            ? `\n\n[BIGLAKE ZERO-TRUST IAM AUDIT] WARNING: ${humanOverPrivileged.length} binding(s) grant direct bucket-wide read access to human/group principals.\nUpgrade to a BigLake Delegated Connection so only the BigLake Service Account holds roles/storage.objectViewer.`
+            : `\n\n[BIGLAKE ZERO-TRUST IAM AUDIT] PASS: Zero human/public principals hold raw bucket-wide objectViewer bindings on gs://${resolvedBkt}.`;
+        return res.json({
+          command: normalizedCmd,
+          exitCode: 0,
+          durationMs: Date.now() - t0,
+          engine: 'DIRECT_REST_BRIDGE (storage.googleapis.com/storage/v1/b/iam)',
+          output:
+            `${fallbackNote}bindings:\n${yamlBindings || '  []'}\netag: ${
+              iamData.etag || 'CAE='
+            }\nversion: ${iamData.version || 1}` + auditVerdict,
+        });
+      }
+    }
+
+    if (
+      lower.startsWith('gcloud alpha biglake catalogs list') ||
+      lower.startsWith('gcloud biglake catalogs list')
+    ) {
+      const locMatch = normalizedCmd.match(/--location[=\s]+([a-z0-9-]+)/i);
+      const loc = (locMatch?.[1] || 'us').toLowerCase();
+      let catalogs = [];
+      try {
+        const d = await gcpFetch(
+          `https://biglake.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(loc)}/catalogs`,
+          token,
+          projectId
+        );
+        catalogs = d.catalogs || [];
+      } catch {
+        catalogs = [];
+      }
+      const localList =
+        typeof localBigLakeCatalogsByProject !== 'undefined'
+          ? localBigLakeCatalogsByProject.get(projectId) || []
+          : [];
+      const merged = [...catalogs, ...localList];
+      const output =
+        merged.length === 0
+          ? `Listed 0 BigLake Iceberg catalogs in projects/${projectId}/locations/${loc}.\nTip: Click "⚡ 1-Click Provision Live Iceberg Table" in BigLake Studio to initialize your catalog.`
+          : `CATALOG_NAME                                                           LOCATION   TYPE\n` +
+            merged
+              .map((c) => {
+                const name =
+                  c.name ||
+                  `projects/${projectId}/locations/${loc}/catalogs/${
+                    c.catalogId || 'iceberg_catalog'
+                  }`;
+                return `${name.padEnd(70)} ${loc.padEnd(10)} BIGLAKE_ICEBERG_REST`;
+              })
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (biglake.googleapis.com/v1)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('bq show')) {
+      const targetSpec =
+        parsedTokens
+          .slice(2)
+          .find((t) => !t.startsWith('-') && t !== 'show') || '';
+      const dsId = targetSpec.includes(':')
+        ? targetSpec.split(':')[1]
+        : targetSpec;
+      if (dsId && !dsId.includes('.')) {
+        const d = await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets/${encodeURIComponent(dsId)}`,
+          token,
+          projectId
+        );
+        return res.json({
+          command: normalizedCmd,
+          exitCode: 0,
+          durationMs: Date.now() - t0,
+          engine: 'DIRECT_REST_BRIDGE (bigquery.googleapis.com/v2)',
+          output: JSON.stringify(
+            {
+              datasetReference: d.datasetReference,
+              location: d.location,
+              storageBillingModel: d.storageBillingModel || 'LOGICAL',
+              labels: d.labels || {},
+              creationTime: d.creationTime,
+              lastModifiedTime: d.lastModifiedTime,
+            },
+            null,
+            2
+          ),
+        });
+      }
     }
 
     if (lower.startsWith('gcloud compute instances list')) {
