@@ -90,7 +90,7 @@ export default function ResourceProvisionModal({
   const [machineFamily, setMachineFamily] = useState('E2');
   const [machineType, setMachineType] = useState('e2-micro');
   const [vmCustomSizingMode, setVmCustomSizingMode] = useState(false);
-  const [vmCustomSeries, setVmCustomSeries] = useState('e2');
+  const [vmCustomSeries, setVmCustomSeries] = useState('n2');
   const [vmCustomVcpus, setVmCustomVcpus] = useState(4);
   const [vmCustomMemoryGb, setVmCustomMemoryGb] = useState(16);
   const [vmCustomExtendedMem, setVmCustomExtendedMem] = useState(false);
@@ -322,9 +322,131 @@ export default function ResourceProvisionModal({
     },
   };
 
+  const CUSTOM_SERIES_LIMITS = {
+    n2: {
+      label: 'N2 Intel Custom (2–128 vCPU · 1–8 GB/vCPU Std, up to 864 GB)',
+      maxVcpus: 128,
+      maxRamGb: 864,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 16,
+      supportsExt: true,
+    },
+    n2d: {
+      label: 'N2D AMD EPYC Custom (2–224 vCPU · 1–8 GB/vCPU Std, up to 896 GB)',
+      maxVcpus: 224,
+      maxRamGb: 896,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 16,
+      supportsExt: true,
+    },
+    c3: {
+      label: 'C3 Sapphire Rapids Custom (2–176 vCPU · 1–8 GB/vCPU · up to 1,408 GB)',
+      maxVcpus: 176,
+      maxRamGb: 1408,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 8,
+      supportsExt: false,
+    },
+    c3d: {
+      label: 'C3D AMD Genoa Custom (2–360 vCPU · 1–8 GB/vCPU · up to 2,880 GB)',
+      maxVcpus: 360,
+      maxRamGb: 2880,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 8,
+      supportsExt: false,
+    },
+    c4: {
+      label: 'C4 Emerald Rapids Custom (2–192 vCPU · 1–8 GB/vCPU · up to 1,488 GB)',
+      maxVcpus: 192,
+      maxRamGb: 1488,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 8,
+      supportsExt: false,
+    },
+    e2: {
+      label: 'E2 Cost-Saver Custom (2–32 vCPU · 1–8 GB/vCPU · up to 128 GB)',
+      maxVcpus: 32,
+      maxRamGb: 128,
+      minRamPerVcpu: 1,
+      stdMaxRamPerVcpu: 8,
+      extMaxRamPerVcpu: 8,
+      supportsExt: false,
+    },
+  };
+
+  const currentCustomSeriesSpec =
+    CUSTOM_SERIES_LIMITS[vmCustomSeries] || CUSTOM_SERIES_LIMITS.n2;
+  const customMaxPerVcpu =
+    vmCustomExtendedMem && currentCustomSeriesSpec.supportsExt
+      ? currentCustomSeriesSpec.extMaxRamPerVcpu
+      : currentCustomSeriesSpec.stdMaxRamPerVcpu;
+  const customMinRamGb = Math.max(
+    2,
+    vmCustomVcpus * currentCustomSeriesSpec.minRamPerVcpu
+  );
+  const customMaxRamGb = Math.min(
+    currentCustomSeriesSpec.maxRamGb,
+    vmCustomVcpus * customMaxPerVcpu
+  );
+  const clampedCustomMemoryGb = Math.min(
+    customMaxRamGb,
+    Math.max(customMinRamGb, vmCustomMemoryGb)
+  );
+
+  const handleChangeCustomSeries = (newSeries) => {
+    const spec = CUSTOM_SERIES_LIMITS[newSeries] || CUSTOM_SERIES_LIMITS.n2;
+    setVmCustomSeries(newSeries);
+    const nextExt = spec.supportsExt ? vmCustomExtendedMem : false;
+    if (!spec.supportsExt) setVmCustomExtendedMem(false);
+    const nextVcpus = Math.min(spec.maxVcpus, Math.max(2, vmCustomVcpus));
+    setVmCustomVcpus(nextVcpus);
+    const maxRatio = nextExt ? spec.extMaxRamPerVcpu : spec.stdMaxRamPerVcpu;
+    const minRam = Math.max(2, nextVcpus * spec.minRamPerVcpu);
+    const maxRam = Math.min(spec.maxRamGb, nextVcpus * maxRatio);
+    setVmCustomMemoryGb((prev) => Math.min(maxRam, Math.max(minRam, prev)));
+  };
+
+  const handleChangeCustomVcpus = (rawVcpus) => {
+    const spec = currentCustomSeriesSpec;
+    const nextVcpus = Math.min(spec.maxVcpus, Math.max(2, Number(rawVcpus) || 2));
+    const currentRatio = Math.max(
+      spec.minRamPerVcpu,
+      Math.min(
+        customMaxPerVcpu,
+        Math.round((clampedCustomMemoryGb / Math.max(2, vmCustomVcpus)) * 2) / 2 || 4
+      )
+    );
+    const minRam = Math.max(2, nextVcpus * spec.minRamPerVcpu);
+    const maxRam = Math.min(spec.maxRamGb, nextVcpus * customMaxPerVcpu);
+    const targetRam = Math.round((nextVcpus * currentRatio) / 2) * 2;
+    setVmCustomVcpus(nextVcpus);
+    setVmCustomMemoryGb(Math.min(maxRam, Math.max(minRam, targetRam)));
+  };
+
+  const handleToggleCustomExtendedMem = () => {
+    if (!currentCustomSeriesSpec.supportsExt) return;
+    const nextExt = !vmCustomExtendedMem;
+    setVmCustomExtendedMem(nextExt);
+    const maxRatio = nextExt
+      ? currentCustomSeriesSpec.extMaxRamPerVcpu
+      : currentCustomSeriesSpec.stdMaxRamPerVcpu;
+    const minRam = Math.max(2, vmCustomVcpus * currentCustomSeriesSpec.minRamPerVcpu);
+    const maxRam = Math.min(currentCustomSeriesSpec.maxRamGb, vmCustomVcpus * maxRatio);
+    setVmCustomMemoryGb((prev) => Math.min(maxRam, Math.max(minRam, prev)));
+  };
+
   const effectiveMachineType = vmCustomSizingMode
-    ? `${vmCustomSeries}-custom-${vmCustomVcpus}-${vmCustomMemoryGb * 1024}${
-        vmCustomExtendedMem ? '-ext' : ''
+    ? `${vmCustomSeries}-custom-${vmCustomVcpus}-${clampedCustomMemoryGb * 1024}${
+        vmCustomExtendedMem &&
+        currentCustomSeriesSpec.supportsExt &&
+        clampedCustomMemoryGb > vmCustomVcpus * currentCustomSeriesSpec.stdMaxRamPerVcpu
+          ? '-ext'
+          : ''
       }`
     : machineType;
 
@@ -1798,7 +1920,13 @@ export default function ResourceProvisionModal({
 
       const customMachineRate = vmCustomSizingMode
         ? Number(vmCustomVcpus || 2) * (vmCustomSeries === 'e2' ? 0.0218 : 0.0316) +
-          Number(vmCustomMemoryGb || 8) * (vmCustomSeries === 'e2' ? 0.0029 : 0.0042) * (vmCustomExtendedMem ? 1.25 : 1.0)
+          Number(clampedCustomMemoryGb || 8) *
+            (vmCustomSeries === 'e2' ? 0.0029 : 0.0042) *
+            (vmCustomExtendedMem &&
+            currentCustomSeriesSpec.supportsExt &&
+            clampedCustomMemoryGb > vmCustomVcpus * currentCustomSeriesSpec.stdMaxRamPerVcpu
+              ? 1.25
+              : 1.0)
         : 0;
 
       const baseMachine = isFreeTierVmCompute
@@ -3544,86 +3672,103 @@ export default function ResourceProvisionModal({
                           </label>
                           <select
                             value={vmCustomSeries}
-                            onChange={(e) => setVmCustomSeries(e.target.value)}
+                            onChange={(e) => handleChangeCustomSeries(e.target.value)}
                             className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           >
-                            <option value="n2">N2 Intel Custom (Up to 128 vCPU / 864 GB)</option>
-                            <option value="n2d">N2D AMD EPYC Custom (Up to 224 vCPU / 896 GB)</option>
-                            <option value="c3">C3 Sapphire Rapids Custom (Up to 176 vCPU / 1.4 TB)</option>
-                            <option value="c3d">C3D AMD Genoa Custom (Up to 360 vCPU / 2.88 TB)</option>
-                            <option value="c4">C4 Emerald Rapids Custom (Up to 192 vCPU / 1.48 TB)</option>
-                            <option value="e2">E2 Cost-Saver Custom (Up to 32 vCPU / 128 GB)</option>
+                            {Object.entries(CUSTOM_SERIES_LIMITS).map(([seriesKey, spec]) => (
+                              <option key={seriesKey} value={seriesKey}>
+                                {spec.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
                           <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Custom vCPUs: <strong>{vmCustomVcpus} vCPU</strong> (2 – 224)
+                            Custom vCPUs: <strong>{vmCustomVcpus} vCPU</strong> (2 – {currentCustomSeriesSpec.maxVcpus})
                           </label>
                           <input
                             type="range"
                             min={2}
-                            max={224}
+                            max={currentCustomSeriesSpec.maxVcpus}
                             step={2}
                             value={vmCustomVcpus}
-                            onChange={(e) => setVmCustomVcpus(Number(e.target.value))}
+                            onChange={(e) => handleChangeCustomVcpus(Number(e.target.value))}
                             className="w-full accent-blue-600 cursor-pointer"
                           />
+                          <div className="flex justify-between text-[10px] font-mono text-zinc-400 mt-0.5">
+                            <span>Min: 2 vCPU</span>
+                            <span>Max ({vmCustomSeries.toUpperCase()}): {currentCustomSeriesSpec.maxVcpus} vCPU</span>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Custom Memory: <strong>{vmCustomMemoryGb} GB ({(vmCustomMemoryGb * 1024).toLocaleString()} MB)</strong>
+                            Custom RAM: <strong>{clampedCustomMemoryGb} GB</strong> ({(clampedCustomMemoryGb / vmCustomVcpus).toFixed(1)} GB/vCPU)
                           </label>
                           <input
                             type="range"
-                            min={4}
-                            max={2048}
-                            step={4}
-                            value={vmCustomMemoryGb}
+                            min={customMinRamGb}
+                            max={customMaxRamGb}
+                            step={2}
+                            value={clampedCustomMemoryGb}
                             onChange={(e) => setVmCustomMemoryGb(Number(e.target.value))}
                             className="w-full accent-blue-600 cursor-pointer"
                           />
+                          <div className="flex justify-between text-[10px] font-mono text-zinc-400 mt-0.5">
+                            <span>Min (1GB/vCPU): {customMinRamGb} GB</span>
+                            <span>Max ({customMaxPerVcpu}GB/vCPU): {customMaxRamGb} GB</span>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Extended Memory (`--custom-extensions`)
+                            Memory-to-vCPU Ratio Mode
                           </label>
                           <button
                             type="button"
-                            onClick={() => setVmCustomExtendedMem((v) => !v)}
-                            className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border cursor-pointer ${
-                              vmCustomExtendedMem
-                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
-                                : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                            disabled={!currentCustomSeriesSpec.supportsExt}
+                            onClick={handleToggleCustomExtendedMem}
+                            className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border transition-colors ${
+                              !currentCustomSeriesSpec.supportsExt
+                                ? 'bg-zinc-100 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-400 cursor-not-allowed'
+                                : vmCustomExtendedMem
+                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300 cursor-pointer'
+                                : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 cursor-pointer'
                             }`}
                           >
-                            {vmCustomExtendedMem ? '✓ Extended RAM (>8GB/vCPU)' : 'Standard 8GB/vCPU Ratio'}
+                            {!currentCustomSeriesSpec.supportsExt
+                              ? 'Strict 1–8 GB/vCPU (No Ext)'
+                              : vmCustomExtendedMem
+                              ? '✓ Extended RAM (Up to 16 GB/vCPU)'
+                              : 'Standard 1–8 GB/vCPU Ratio'}
                           </button>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-200 dark:border-zinc-800">
                         <span className="text-[10px] font-mono text-zinc-500">
-                          Quick Custom RAM Presets:
+                          Hardware-Validated Custom Presets (Auto-Scales vCPU + RAM):
                         </span>
                         {[
-                          { vcpu: 4, ram: 32, label: '4 vCPU / 32 GB' },
-                          { vcpu: 8, ram: 64, label: '8 vCPU / 64 GB' },
-                          { vcpu: 16, ram: 128, label: '16 vCPU / 128 GB' },
-                          { vcpu: 32, ram: 256, label: '32 vCPU / 256 GB' },
-                          { vcpu: 64, ram: 512, label: '64 vCPU / 512 GB' },
-                          { vcpu: 128, ram: 1024, label: '128 vCPU / 1,024 GB (1 TB)' },
-                          { vcpu: 224, ram: 2048, label: '224 vCPU / 2,048 GB (2 TB)' },
+                          { series: 'e2', vcpu: 2, ram: 8, label: '2 vCPU / 8 GB (4GB/c)' },
+                          { series: 'n2', vcpu: 4, ram: 32, label: '4 vCPU / 32 GB (8GB/c)' },
+                          { series: 'n2', vcpu: 8, ram: 64, label: '8 vCPU / 64 GB (8GB/c)' },
+                          { series: 'n2', vcpu: 16, ram: 128, label: '16 vCPU / 128 GB (8GB/c)' },
+                          { series: 'n2', vcpu: 32, ram: 256, label: '32 vCPU / 256 GB (8GB/c)' },
+                          { series: 'n2', vcpu: 64, ram: 512, label: '64 vCPU / 512 GB (8GB/c)' },
+                          { series: 'c3', vcpu: 176, ram: 1408, label: '176 vCPU / 1,408 GB (C3 1.4 TB)' },
+                          { series: 'c3d', vcpu: 360, ram: 2880, label: '360 vCPU / 2,880 GB (C3D 2.88 TB)' },
                         ].map((p) => (
                           <button
                             key={p.label}
                             type="button"
                             onClick={() => {
+                              setVmCustomSeries(p.series);
                               setVmCustomVcpus(p.vcpu);
                               setVmCustomMemoryGb(p.ram);
-                              if (p.vcpu > 32 && vmCustomSeries === 'e2') {
-                                setVmCustomSeries('n2d');
-                              }
                             }}
-                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer transition-colors ${
+                              vmCustomVcpus === p.vcpu && clampedCustomMemoryGb === p.ram
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                            }`}
                           >
                             {p.label}
                           </button>

@@ -6164,8 +6164,8 @@ function CloudPulseCockpit() {
 
               <button
                 type="button"
-                onClick={() => handleOpenProvision('GCS_BUCKET')}
-                title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, GKE Cluster, or Cloud SQL / AlloyDB)"
+                onClick={() => handleOpenProvision('COMPUTE_VM')}
+                title="Provision a live GCP resource (1. Compute Engine VM [Default], 2. VPC Network, 3. Firewall Rule, 4. Cloud Run Service, 5. GKE Cluster, 6. Cloud SQL / AlloyDB, 7. Cloud Storage Bucket, or 8. BigQuery Dataset)"
                 className="inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-6 py-2.5 min-w-[200px] sm:min-w-[235px] text-xs sm:text-sm font-extrabold tracking-tight transition-all shadow-md cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" />
