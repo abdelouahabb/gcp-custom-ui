@@ -5801,59 +5801,116 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       });
     }
 
-    // C) Create Real Compute Engine VM (`compute.googleapis.com`) with Full 2026 Studio Options
+    // C) Create Real Compute Engine VM (`compute.googleapis.com`) with Full 2026 Enterprise Architect Options
     if (serviceType === 'COMPUTE_VM') {
       const machineType = config.machineType || 'e2-micro';
       const diskSizeGb = Math.max(10, Number(config.diskSizeGb || 10));
       const diskType = config.diskType || 'pd-balanced';
+      const bootDiskAutoDelete = config.bootDiskAutoDelete !== false;
+      const provisionedIops = Number(config.provisionedIops || 0);
+      const provisionedThroughput = Number(config.provisionedThroughput || 0);
+      const attachDataDisk = Boolean(config.attachDataDisk);
+      const dataDiskSizeGb = Math.max(10, Number(config.dataDiskSizeGb || 100));
+      const dataDiskType = config.dataDiskType || 'pd-ssd';
+      const localSsdCount = Math.max(0, Math.min(8, Number(config.localSsdCount || 0)));
       const spotInstance = Boolean(config.spotInstance);
       const terminationAction = config.terminationAction || 'STOP';
+      const maxRunDurationHours = Math.max(0, Number(config.maxRunDurationHours || 0));
+      const onHostMaintenancePref = config.onHostMaintenance || 'MIGRATE';
+      const automaticRestartPref = config.automaticRestart !== false;
       const vmNetwork = config.vmNetwork || 'default';
+      const vmSubnetwork = (config.vmSubnetwork || '').trim();
+      const networkTier = config.networkTier === 'STANDARD' ? 'STANDARD' : 'PREMIUM';
+      const nicType = config.nicType === 'GVNIC' ? 'GVNIC' : 'VIRTIO_NET';
+      const stackType = config.stackType === 'IPV4_IPV6' ? 'IPV4_IPV6' : 'IPV4_ONLY';
+      const canIpForward = Boolean(config.canIpForward);
       const externalIpEnabled = config.externalIpEnabled !== false;
       const allowHttp = Boolean(config.allowHttp);
       const allowHttps = Boolean(config.allowHttps);
+      const allowIapSsh = config.allowIapSsh !== false;
+      const allowLbHealthCheck = Boolean(config.allowLbHealthCheck);
       const shieldedSecureBoot = Boolean(config.shieldedSecureBoot);
       const shieldedVtpm = config.shieldedVtpm !== false;
+      const shieldedIntegrityMonitoring = config.shieldedIntegrityMonitoring !== false;
+      const confidentialComputeType = config.confidentialComputeType || 'NONE';
+      const enableOsLogin = Boolean(config.enableOsLogin);
+      const enableOsLogin2fa = Boolean(config.enableOsLogin2fa);
+      const blockProjectSshKeys = Boolean(config.blockProjectSshKeys);
+      const enableSerialPort = Boolean(config.enableSerialPort);
+      const installOpsAgent = Boolean(config.installOpsAgent);
+      const sshPublicKey = (config.sshPublicKey || '').trim();
+      const deployContainerImage = (config.deployContainerImage || '').trim();
+      const enableDisplayDevice = Boolean(config.enableDisplayDevice);
+      const enableNestedVirtualization = Boolean(config.enableNestedVirtualization);
       const deletionProtection = Boolean(config.deletionProtection);
       const startupScript = (config.startupScript || '').trim();
       const vmGpuType = config.vmGpuType || 'NONE';
       const vmGpuCount = Number(config.vmGpuCount || 0);
+      const isArmMachine =
+        machineType.startsWith('t2a-') || machineType.startsWith('c4a-');
 
       // Map OS Image choice to official Google Cloud image family URI
       const osImageMap = {
-        'Debian 12 Bookworm':
-          'projects/debian-cloud/global/images/family/debian-12',
-        'Ubuntu 24.04 LTS':
-          'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64',
-        'Ubuntu 22.04 LTS':
-          'projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts',
-        'Container-Optimized OS (COS)':
-          'projects/cos-cloud/global/images/family/cos-stable',
-        'Rocky Linux 9':
-          'projects/rocky-linux-cloud/global/images/family/rocky-linux-9',
+        'Debian 12 Bookworm': isArmMachine
+          ? 'projects/debian-cloud/global/images/family/debian-12-arm64'
+          : 'projects/debian-cloud/global/images/family/debian-12',
+        'Ubuntu 24.04 LTS': isArmMachine
+          ? 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-arm64'
+          : 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64',
+        'Ubuntu 22.04 LTS': isArmMachine
+          ? 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts-arm64'
+          : 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts',
+        'Container-Optimized OS (COS)': isArmMachine
+          ? 'projects/cos-cloud/global/images/family/cos-arm64-stable'
+          : 'projects/cos-cloud/global/images/family/cos-stable',
+        'Rocky Linux 9': isArmMachine
+          ? 'projects/rocky-linux-cloud/global/images/family/rocky-linux-9-optimized-gcp-arm64'
+          : 'projects/rocky-linux-cloud/global/images/family/rocky-linux-9',
+        'Red Hat Enterprise Linux 9 (RHEL 9)': isArmMachine
+          ? 'projects/rhel-cloud/global/images/family/rhel-9-arm64'
+          : 'projects/rhel-cloud/global/images/family/rhel-9',
         'Deep Learning VM (PyTorch + CUDA)':
           'projects/deeplearning-platform-release/global/images/family/common-cu124-debian-11',
+        'Windows Server 2022 Datacenter':
+          'projects/windows-cloud/global/images/family/windows-2022',
+        'SQL Server 2022 Standard on Windows':
+          'projects/windows-sql-cloud/global/images/family/sql-std-2022-win-2022',
       };
       const imageFamily =
         osImageMap[config.osImage] ||
         (config.osImage?.includes('Ubuntu')
-          ? 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64'
+          ? isArmMachine
+            ? 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-arm64'
+            : 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64'
+          : isArmMachine
+          ? 'projects/debian-cloud/global/images/family/debian-12-arm64'
           : 'projects/debian-cloud/global/images/family/debian-12');
 
       const tagsList = [];
       if (allowHttp) tagsList.push('http-server');
       if (allowHttps) tagsList.push('https-server');
-      if (Array.isArray(config.customTags)) {
-        config.customTags.forEach((t) => {
-          if (t && !tagsList.includes(t)) tagsList.push(t);
-        });
-      }
+      if (allowIapSsh) tagsList.push('iap-ssh');
+      if (allowLbHealthCheck) tagsList.push('lb-health-check');
+      const rawCustomTags = Array.isArray(config.customTags)
+        ? config.customTags
+        : typeof config.customTags === 'string'
+        ? config.customTags.split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+      rawCustomTags.forEach((t) => {
+        const cleanTag = String(t)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (cleanTag && !tagsList.includes(cleanTag)) tagsList.push(cleanTag);
+      });
 
       const hasVmGpu =
         (vmGpuType && vmGpuType !== 'NONE' && vmGpuCount > 0) ||
         machineType.startsWith('g2-') ||
         machineType.startsWith('a2-') ||
         machineType.startsWith('a3-');
+      const hasConfidential =
+        confidentialComputeType && confidentialComputeType !== 'NONE';
 
       const scheduling = spotInstance
         ? {
@@ -5862,52 +5919,158 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
             onHostMaintenance: 'TERMINATE',
             automaticRestart: false,
           }
-        : hasVmGpu
+        : hasVmGpu || hasConfidential || localSsdCount > 0
         ? {
             provisioningModel: 'STANDARD',
             onHostMaintenance: 'TERMINATE',
-            automaticRestart: true,
+            automaticRestart: automaticRestartPref,
           }
         : {
             provisioningModel: 'STANDARD',
-            onHostMaintenance: 'MIGRATE',
-            automaticRestart: true,
+            onHostMaintenance: onHostMaintenancePref === 'TERMINATE' ? 'TERMINATE' : 'MIGRATE',
+            automaticRestart: automaticRestartPref,
           };
+
+      if (maxRunDurationHours > 0) {
+        scheduling.maxRunDuration = {
+          seconds: String(Math.round(maxRunDurationHours * 3600)),
+        };
+        scheduling.instanceTerminationAction = terminationAction || 'STOP';
+      }
+
+      const bootDiskInit = {
+        diskSizeGb: String(diskSizeGb),
+        diskType: `zones/${zone}/diskTypes/${diskType}`,
+        sourceImage: imageFamily,
+      };
+      if (diskType.startsWith('hyperdisk-')) {
+        if (provisionedIops >= 1000) {
+          bootDiskInit.provisionedIops = String(provisionedIops);
+        }
+        if (provisionedThroughput >= 50) {
+          bootDiskInit.provisionedThroughput = String(provisionedThroughput);
+        }
+      }
+
+      const bootDiskObj = {
+        boot: true,
+        autoDelete: bootDiskAutoDelete,
+        initializeParams: bootDiskInit,
+      };
+      if (config.kmsKeyName && String(config.kmsKeyName).trim()) {
+        bootDiskObj.diskEncryptionKey = {
+          kmsKeyName: String(config.kmsKeyName).trim(),
+        };
+      }
+
+      const disksArray = [bootDiskObj];
+      if (attachDataDisk) {
+        disksArray.push({
+          boot: false,
+          mode: 'READ_WRITE',
+          autoDelete: config.dataDiskAutoDelete !== false,
+          deviceName: `${cleanName}-data`,
+          initializeParams: {
+            diskName: `${cleanName}-data`,
+            diskSizeGb: String(dataDiskSizeGb),
+            diskType: `zones/${zone}/diskTypes/${dataDiskType}`,
+          },
+        });
+      }
+      for (let i = 0; i < localSsdCount; i += 1) {
+        disksArray.push({
+          boot: false,
+          type: 'SCRATCH',
+          autoDelete: true,
+          interface: 'NVME',
+          initializeParams: {
+            diskType: `zones/${zone}/diskTypes/local-ssd`,
+          },
+        });
+      }
+
+      const netInterface = {
+        network: `global/networks/${vmNetwork}`,
+        nicType,
+        stackType,
+        accessConfigs: externalIpEnabled
+          ? [
+              {
+                type: 'ONE_TO_ONE_NAT',
+                name: 'External NAT',
+                networkTier,
+              },
+            ]
+          : [],
+      };
+      if (vmSubnetwork && vmSubnetwork !== 'auto' && vmSubnetwork !== 'default') {
+        const regFromZone = zone.split('-').slice(0, 2).join('-');
+        netInterface.subnetwork = vmSubnetwork.includes('/')
+          ? vmSubnetwork
+          : `regions/${regFromZone}/subnetworks/${vmSubnetwork}`;
+      }
+
+      const sanitizedLabels = {
+        managed_by: 'cloudpulse-2026',
+        provisioning_model: spotInstance ? 'spot' : 'standard',
+        network_tier: networkTier.toLowerCase(),
+      };
+      if (config.vmBlueprint && typeof config.vmBlueprint === 'string') {
+        sanitizedLabels.blueprint = config.vmBlueprint
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, '-')
+          .slice(0, 60);
+      }
+      if (config.customLabels && typeof config.customLabels === 'string') {
+        config.customLabels
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .forEach((pair) => {
+            const [rawK, rawV] = pair.split('=');
+            const k = String(rawK || '')
+              .toLowerCase()
+              .replace(/[^a-z0-9_-]/g, '_')
+              .slice(0, 60);
+            const v = String(rawV || 'true')
+              .toLowerCase()
+              .replace(/[^a-z0-9_-]/g, '-')
+              .slice(0, 60);
+            if (k) sanitizedLabels[k] = v;
+          });
+      }
 
       const body = {
         name: cleanName,
         machineType: `zones/${zone}/machineTypes/${machineType}`,
         deletionProtection,
-        disks: [
-          {
-            boot: true,
-            autoDelete: true,
-            initializeParams: {
-              diskSizeGb: String(diskSizeGb),
-              diskType: `zones/${zone}/diskTypes/${diskType}`,
-              sourceImage: imageFamily,
-            },
-          },
-        ],
-        networkInterfaces: [
-          {
-            network: `global/networks/${vmNetwork}`,
-            accessConfigs: externalIpEnabled
-              ? [{ type: 'ONE_TO_ONE_NAT', name: 'External NAT' }]
-              : [],
-          },
-        ],
+        canIpForward,
+        disks: disksArray,
+        networkInterfaces: [netInterface],
         scheduling,
         shieldedInstanceConfig: {
           enableSecureBoot: shieldedSecureBoot,
           enableVtpm: shieldedVtpm,
-          enableIntegrityMonitoring: shieldedVtpm,
+          enableIntegrityMonitoring: shieldedIntegrityMonitoring,
         },
-        labels: {
-          managed_by: 'cloudpulse-2026',
-          provisioning_model: spotInstance ? 'spot' : 'standard',
-        },
+        labels: sanitizedLabels,
       };
+
+      if (hasConfidential) {
+        body.confidentialInstanceConfig = {
+          enableConfidentialCompute: true,
+          confidentialInstanceType: confidentialComputeType,
+        };
+      }
+      if (enableDisplayDevice) {
+        body.displayDevice = { enableDisplay: true };
+      }
+      if (enableNestedVirtualization) {
+        body.advancedMachineFeatures = {
+          ...(body.advancedMachineFeatures || {}),
+          enableNestedVirtualization: true,
+        };
+      }
 
       if (tagsList.length > 0) {
         body.tags = { items: tagsList };
@@ -5918,7 +6081,8 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         vmGpuType !== 'NONE' &&
         vmGpuCount > 0 &&
         !machineType.startsWith('g2-') &&
-        !machineType.startsWith('a2-')
+        !machineType.startsWith('a2-') &&
+        !machineType.startsWith('a3-')
       ) {
         body.guestAccelerators = [
           {
@@ -5942,15 +6106,52 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         ];
       }
 
-      if (startupScript) {
-        body.metadata = {
-          items: [
-            {
-              key: 'startup-script',
-              value: startupScript,
-            },
-          ],
-        };
+      const metadataItems = [];
+      let effectiveStartupScript = startupScript;
+      if (installOpsAgent && !effectiveStartupScript.includes('add-google-cloud-ops-agent-repo.sh')) {
+        const opsAgentSnippet =
+          'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && bash add-google-cloud-ops-agent-repo.sh --also-install\n';
+        effectiveStartupScript = effectiveStartupScript
+          ? `${effectiveStartupScript}\n${opsAgentSnippet}`
+          : `#!/bin/bash\n${opsAgentSnippet}`;
+      }
+      if (effectiveStartupScript) {
+        const isWindows = String(config.osImage || '').includes('Windows');
+        metadataItems.push({
+          key: isWindows ? 'windows-startup-script-ps1' : 'startup-script',
+          value: effectiveStartupScript,
+        });
+      }
+      if (enableOsLogin) {
+        metadataItems.push({ key: 'enable-oslogin', value: 'TRUE' });
+      }
+      if (enableOsLogin2fa) {
+        metadataItems.push({ key: 'enable-oslogin-2fa', value: 'TRUE' });
+      }
+      if (blockProjectSshKeys) {
+        metadataItems.push({ key: 'block-project-ssh-keys', value: 'TRUE' });
+      }
+      if (enableSerialPort) {
+        metadataItems.push({ key: 'serial-port-enable', value: 'TRUE' });
+      }
+      if (installOpsAgent) {
+        metadataItems.push({ key: 'enable-guest-attributes', value: 'TRUE' });
+      }
+      if (sshPublicKey) {
+        metadataItems.push({
+          key: 'ssh-keys',
+          value: sshPublicKey.includes(':') ? sshPublicKey : `cloudpulse:${sshPublicKey}`,
+        });
+      }
+      if (deployContainerImage) {
+        metadataItems.push({ key: 'google-logging-enabled', value: 'TRUE' });
+        metadataItems.push({
+          key: 'gce-container-declaration',
+          value: `spec:\n  containers:\n    - name: ${cleanName}\n      image: ${deployContainerImage}\n      stdin: false\n      tty: false\n  restartPolicy: Always\n`,
+        });
+      }
+      if (metadataItems.length > 0) {
+        body.metadata = { items: metadataItems };
       }
 
       const op = await gcpFetch(
@@ -5971,8 +6172,12 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         ok: true,
         serviceAccount: runtimeServiceAccount || null,
         message: `Dispatched real Compute Engine VM creation for "${cleanName}" (${machineType}, ${diskSizeGb}GB ${diskType}${
+          attachDataDisk ? ` + ${dataDiskSizeGb}GB ${dataDiskType}` : ''
+        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''}${
           spotInstance ? ', Spot VM' : ''
-        }${runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''}) in ${zone}!`,
+        }${hasConfidential ? `, Confidential ${confidentialComputeType}` : ''}${
+          runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''
+        }) in ${zone}!`,
         operation: op,
       });
     }

@@ -83,25 +83,63 @@ export default function ResourceProvisionModal({
   const [region, setRegion] = useState('us-east1');
   const [zone, setZone] = useState('us-east1-b');
 
-  // Compute Engine VM specific (2026 Studio Options)
+  // Compute Engine VM specific (2026 Enterprise Architect Options)
+  const [vmBlueprint, setVmBlueprint] = useState('custom');
   const [vmRegion, setVmRegion] = useState('us-east1');
   const [machineFamily, setMachineFamily] = useState('E2');
   const [machineType, setMachineType] = useState('e2-micro');
+  const [vmCustomSizingMode, setVmCustomSizingMode] = useState(false);
+  const [vmCustomSeries, setVmCustomSeries] = useState('e2');
+  const [vmCustomVcpus, setVmCustomVcpus] = useState(4);
+  const [vmCustomMemoryGb, setVmCustomMemoryGb] = useState(16);
+  const [vmCustomExtendedMem, setVmCustomExtendedMem] = useState(false);
   const [osImage, setOsImage] = useState('Debian 12 Bookworm');
   const [diskSizeGb, setDiskSizeGb] = useState(20);
   const [diskType, setDiskType] = useState('pd-standard');
+  const [bootDiskAutoDelete, setBootDiskAutoDelete] = useState(true);
+  const [provisionedIops, setProvisionedIops] = useState(3600);
+  const [provisionedThroughput, setProvisionedThroughput] = useState(290);
+  const [attachDataDisk, setAttachDataDisk] = useState(false);
+  const [dataDiskSizeGb, setDataDiskSizeGb] = useState(100);
+  const [dataDiskType, setDataDiskType] = useState('pd-ssd');
+  const [localSsdCount, setLocalSsdCount] = useState(0);
+  const [vmDiskCmekKey, setVmDiskCmekKey] = useState('');
   const [spotInstance, setSpotInstance] = useState(false);
   const [terminationAction, setTerminationAction] = useState('STOP');
+  const [maxRunDurationHours, setMaxRunDurationHours] = useState(0);
+  const [onHostMaintenance, setOnHostMaintenance] = useState('MIGRATE');
+  const [automaticRestart, setAutomaticRestart] = useState(true);
   const [vmGpuType, setVmGpuType] = useState('NONE');
   const [vmGpuCount, setVmGpuCount] = useState(1);
   const [vmNetwork, setVmNetwork] = useState('default');
+  const [vmSubnetwork, setVmSubnetwork] = useState('auto');
+  const [networkTier, setNetworkTier] = useState('PREMIUM');
+  const [nicType, setNicType] = useState('GVNIC');
+  const [stackType, setStackType] = useState('IPV4_ONLY');
+  const [canIpForward, setCanIpForward] = useState(false);
   const [externalIpEnabled, setExternalIpEnabled] = useState(true);
   const [allowHttp, setAllowHttp] = useState(true);
   const [allowHttps, setAllowHttps] = useState(true);
+  const [allowIapSsh, setAllowIapSsh] = useState(true);
+  const [allowLbHealthCheck, setAllowLbHealthCheck] = useState(false);
+  const [vmCustomTags, setVmCustomTags] = useState('');
   const [shieldedSecureBoot, setShieldedSecureBoot] = useState(false);
   const [shieldedVtpm, setShieldedVtpm] = useState(true);
+  const [shieldedIntegrityMonitoring, setShieldedIntegrityMonitoring] = useState(true);
+  const [confidentialComputeType, setConfidentialComputeType] = useState('NONE');
+  const [enableOsLogin, setEnableOsLogin] = useState(true);
+  const [enableOsLogin2fa, setEnableOsLogin2fa] = useState(false);
+  const [blockProjectSshKeys, setBlockProjectSshKeys] = useState(false);
+  const [enableSerialPort, setEnableSerialPort] = useState(false);
+  const [installOpsAgent, setInstallOpsAgent] = useState(true);
+  const [sshPublicKey, setSshPublicKey] = useState('');
+  const [deployContainerImage, setDeployContainerImage] = useState('');
+  const [enableDisplayDevice, setEnableDisplayDevice] = useState(false);
+  const [enableNestedVirtualization, setEnableNestedVirtualization] = useState(false);
   const [deletionProtection, setDeletionProtection] = useState(false);
   const [startupScript, setStartupScript] = useState('');
+  const [vmCustomLabels, setVmCustomLabels] = useState('env=prod,cost_center=compute,managed_by=cloudpulse');
+  const [vmBlueprintCodeTab, setVmBlueprintCodeTab] = useState('GCLOUD_CLI');
 
   const GCP_REGION_ZONES = {
     'us-east1': {
@@ -109,7 +147,7 @@ export default function ResourceProvisionModal({
       zones: ['us-east1-b', 'us-east1-c', 'us-east1-d'],
     },
     'us-central1': {
-      label: 'us-central1 (Iowa, USA — Low Carbon)',
+      label: 'us-central1 (Iowa, USA — Low Carbon · Always Free)',
       zones: ['us-central1-a', 'us-central1-b', 'us-central1-c', 'us-central1-f'],
     },
     'us-east4': {
@@ -117,7 +155,7 @@ export default function ResourceProvisionModal({
       zones: ['us-east4-a', 'us-east4-b', 'us-east4-c'],
     },
     'us-west1': {
-      label: 'us-west1 (Oregon, USA — Low Carbon)',
+      label: 'us-west1 (Oregon, USA — 90% CFE · Always Free)',
       zones: ['us-west1-a', 'us-west1-b', 'us-west1-c'],
     },
     'us-west4': {
@@ -164,55 +202,77 @@ export default function ResourceProvisionModal({
 
   const VM_MACHINE_FAMILIES = {
     E2: {
-      badge: 'Cost-Optimized General Purpose',
+      badge: 'Cost-Optimized General Purpose (Up to 31% Sustained Savings)',
       types: [
-        { id: 'e2-micro', label: 'e2-micro (2 shared vCPU · 1 GB RAM · Free Tier)' },
-        { id: 'e2-small', label: 'e2-small (2 shared vCPU · 2 GB RAM)' },
-        { id: 'e2-medium', label: 'e2-medium (2 shared vCPU · 4 GB RAM)' },
-        { id: 'e2-standard-2', label: 'e2-standard-2 (2 vCPU · 8 GB RAM)' },
-        { id: 'e2-standard-4', label: 'e2-standard-4 (4 vCPU · 16 GB RAM)' },
-        { id: 'e2-standard-8', label: 'e2-standard-8 (8 vCPU · 32 GB RAM)' },
-        { id: 'e2-highmem-4', label: 'e2-highmem-4 (4 vCPU · 32 GB RAM)' },
+        { id: 'e2-micro', label: 'e2-micro (2 shared vCPU · 1 GB RAM · Always Free Tier)' },
+        { id: 'e2-small', label: 'e2-small (2 shared vCPU · 2 GB RAM · $12.23/mo)' },
+        { id: 'e2-medium', label: 'e2-medium (2 shared vCPU · 4 GB RAM · $24.46/mo)' },
+        { id: 'e2-standard-2', label: 'e2-standard-2 (2 vCPU · 8 GB RAM · $48.91/mo)' },
+        { id: 'e2-standard-4', label: 'e2-standard-4 (4 vCPU · 16 GB RAM · $97.82/mo)' },
+        { id: 'e2-standard-8', label: 'e2-standard-8 (8 vCPU · 32 GB RAM · $195.64/mo)' },
+        { id: 'e2-highmem-4', label: 'e2-highmem-4 (4 vCPU · 32 GB RAM · High-Memory)' },
+        { id: 'e2-highcpu-8', label: 'e2-highcpu-8 (8 vCPU · 8 GB RAM · High-CPU)' },
       ],
     },
     N2: {
-      badge: 'Balanced Intel Xeon / AMD EPYC',
+      badge: 'Balanced Intel Xeon / AMD EPYC (Up to 30% Sustained-Use Discount)',
       types: [
-        { id: 'n2-standard-2', label: 'n2-standard-2 (2 vCPU · 8 GB RAM)' },
-        { id: 'n2-standard-4', label: 'n2-standard-4 (4 vCPU · 16 GB RAM)' },
-        { id: 'n2-standard-8', label: 'n2-standard-8 (8 vCPU · 32 GB RAM)' },
-        { id: 'n2d-standard-4', label: 'n2d-standard-4 (4 vCPU AMD EPYC · 16 GB RAM)' },
+        { id: 'n2-standard-2', label: 'n2-standard-2 (2 vCPU Intel Cascade/Ice Lake · 8 GB)' },
+        { id: 'n2-standard-4', label: 'n2-standard-4 (4 vCPU Intel Ice Lake · 16 GB)' },
+        { id: 'n2-standard-8', label: 'n2-standard-8 (8 vCPU Intel Ice Lake · 32 GB)' },
+        { id: 'n2d-standard-4', label: 'n2d-standard-4 (4 vCPU AMD EPYC Milan · 16 GB · SEV Ready)' },
+        { id: 'n2d-standard-8', label: 'n2d-standard-8 (8 vCPU AMD EPYC Milan · 32 GB · SEV-SNP Ready)' },
         { id: 'n2-highmem-4', label: 'n2-highmem-4 (4 vCPU · 32 GB RAM)' },
       ],
     },
     C3_C4: {
-      badge: '2026 Gen-4/5 Compute-Optimized',
+      badge: '2026 Gen-4/5 Ultra-Low-Latency (Intel Emerald Rapids & AMD Genoa + 200Gbps gVNIC)',
       types: [
-        { id: 'c3-standard-4', label: 'c3-standard-4 (4 vCPU Sapphire Rapids · 16 GB)' },
-        { id: 'c3-standard-8', label: 'c3-standard-8 (8 vCPU Sapphire Rapids · 32 GB)' },
-        { id: 'c3d-standard-4', label: 'c3d-standard-4 (4 vCPU AMD Genoa · 16 GB)' },
-        { id: 'c4-standard-4', label: 'c4-standard-4 (4 vCPU Emerald Rapids · 15 GB)' },
+        { id: 'c3-standard-4', label: 'c3-standard-4 (4 vCPU Sapphire Rapids · 16 GB · Hyperdisk)' },
+        { id: 'c3-standard-8', label: 'c3-standard-8 (8 vCPU Sapphire Rapids · 32 GB · Tier-1 Net)' },
+        { id: 'c3d-standard-4', label: 'c3d-standard-4 (4 vCPU AMD EPYC Genoa · 16 GB · SEV-SNP)' },
+        { id: 'c3d-standard-8', label: 'c3d-standard-8 (8 vCPU AMD EPYC Genoa · 32 GB)' },
+        { id: 'c4-standard-4', label: 'c4-standard-4 (4 vCPU Intel Emerald Rapids · 15 GB · Intel TDX)' },
+        { id: 'c4-standard-8', label: 'c4-standard-8 (8 vCPU Intel Emerald Rapids · 30 GB · Titanium Offload)' },
       ],
     },
     T2A_ARM: {
-      badge: 'Ampere Altra Arm64 Cloud-Native',
+      badge: 'Google Axion C4A & Ampere Altra T2A Arm64 (Best Price-Performance & Carbon Efficiency)',
       types: [
-        { id: 't2a-standard-1', label: 't2a-standard-1 (1 Arm64 vCPU · 4 GB RAM)' },
-        { id: 't2a-standard-2', label: 't2a-standard-2 (2 Arm64 vCPU · 8 GB RAM)' },
-        { id: 't2a-standard-4', label: 't2a-standard-4 (4 Arm64 vCPU · 16 GB RAM)' },
+        { id: 't2a-standard-1', label: 't2a-standard-1 (1 Arm64 Ampere vCPU · 4 GB RAM)' },
+        { id: 't2a-standard-2', label: 't2a-standard-2 (2 Arm64 Ampere vCPU · 8 GB RAM)' },
+        { id: 't2a-standard-4', label: 't2a-standard-4 (4 Arm64 Ampere vCPU · 16 GB RAM)' },
+        { id: 'c4a-standard-4', label: 'c4a-standard-4 (4 Google Axion Arm64 vCPU · 16 GB · Hyperdisk)' },
+        { id: 'c4a-standard-8', label: 'c4a-standard-8 (8 Google Axion Arm64 vCPU · 32 GB · Hyperdisk)' },
+      ],
+    },
+    M3_MEM: {
+      badge: 'Memory-Optimized In-Memory DBs (Redis, Valkey, Memcached, SAP HANA)',
+      types: [
+        { id: 'm3-ultramem-32', label: 'm3-ultramem-32 (32 vCPU · 976 GB RAM · In-Memory DB)' },
+        { id: 'm3-megamem-64', label: 'm3-megamem-64 (64 vCPU · 976 GB RAM · High Bandwidth)' },
+        { id: 'n2-highmem-8', label: 'n2-highmem-8 (8 vCPU · 64 GB RAM · Redis / Valkey)' },
+        { id: 'n2-highmem-16', label: 'n2-highmem-16 (16 vCPU · 128 GB RAM · Analytical Cache)' },
       ],
     },
     G2_A2_GPU: {
-      badge: 'AI / CUDA GPU Accelerated VMs',
+      badge: 'AI / CUDA GPU Accelerated VMs (NVIDIA L4 24GB · A100 40/80GB · H100 80GB)',
       types: [
-        { id: 'g2-standard-4', label: 'g2-standard-4 (4 vCPU · 16 GB · 1x NVIDIA L4 24GB)' },
-        { id: 'g2-standard-8', label: 'g2-standard-8 (8 vCPU · 32 GB · 1x NVIDIA L4 24GB)' },
-        { id: 'g2-standard-12', label: 'g2-standard-12 (12 vCPU · 48 GB · 1x NVIDIA L4 24GB)' },
+        { id: 'g2-standard-4', label: 'g2-standard-4 (4 vCPU · 16 GB · 1x NVIDIA L4 24GB VRAM)' },
+        { id: 'g2-standard-8', label: 'g2-standard-8 (8 vCPU · 32 GB · 1x NVIDIA L4 24GB VRAM)' },
+        { id: 'g2-standard-12', label: 'g2-standard-12 (12 vCPU · 48 GB · 1x NVIDIA L4 24GB VRAM)' },
         { id: 'a2-highgpu-1g', label: 'a2-highgpu-1g (12 vCPU · 85 GB · 1x NVIDIA A100 40GB)' },
+        { id: 'a3-highgpu-8g', label: 'a3-highgpu-8g (208 vCPU · 1872 GB · 8x NVIDIA H100 80GB Mega)' },
         { id: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU · 15 GB + Custom T4/V100 GPU)' },
       ],
     },
   };
+
+  const effectiveMachineType = vmCustomSizingMode
+    ? `${vmCustomSeries}-custom-${vmCustomVcpus}-${vmCustomMemoryGb * 1024}${
+        vmCustomExtendedMem ? '-ext' : ''
+      }`
+    : machineType;
 
   const handleSelectVmRegion = (newReg) => {
     setVmRegion(newReg);
@@ -221,11 +281,161 @@ export default function ResourceProvisionModal({
   };
 
   const handleSelectMachineFamily = (fam) => {
+    setVmCustomSizingMode(false);
     setMachineFamily(fam);
     const firstType = VM_MACHINE_FAMILIES[fam]?.types?.[0]?.id || 'e2-micro';
     setMachineType(firstType);
     if (fam === 'G2_A2_GPU') {
       if (diskSizeGb < 50) setDiskSizeGb(50);
+      setOnHostMaintenance('TERMINATE');
+    } else if (fam === 'C3_C4') {
+      setNicType('GVNIC');
+    }
+  };
+
+  const applyVmBlueprint = (bpId) => {
+    setVmBlueprint(bpId);
+    setVmCustomSizingMode(false);
+    if (bpId === 'always-free-micro') {
+      setVmRegion('us-central1');
+      setZone('us-central1-a');
+      setMachineFamily('E2');
+      setMachineType('e2-micro');
+      setOsImage('Debian 12 Bookworm');
+      setDiskType('pd-standard');
+      setDiskSizeGb(30);
+      setAttachDataDisk(false);
+      setLocalSsdCount(0);
+      setSpotInstance(false);
+      setMaxRunDurationHours(0);
+      setVmGpuType('NONE');
+      setExternalIpEnabled(true);
+      setNetworkTier('STANDARD');
+      setAllowHttp(true);
+      setAllowHttps(true);
+      setAllowIapSsh(true);
+      setShieldedSecureBoot(true);
+      setShieldedVtpm(true);
+      setConfidentialComputeType('NONE');
+      setEnableOsLogin(true);
+      setInstallOpsAgent(false);
+      setDeployContainerImage('');
+      setDeletionProtection(false);
+    } else if (bpId === 'zero-trust-iap-bastion') {
+      setVmRegion('us-central1');
+      setZone('us-central1-a');
+      setMachineFamily('E2');
+      setMachineType('e2-medium');
+      setOsImage('Ubuntu 24.04 LTS');
+      setDiskType('pd-balanced');
+      setDiskSizeGb(25);
+      setAttachDataDisk(false);
+      setLocalSsdCount(0);
+      setSpotInstance(false);
+      setVmGpuType('NONE');
+      setExternalIpEnabled(false); // Zero Public IP — IAP Tunnel Only
+      setAllowHttp(false);
+      setAllowHttps(false);
+      setAllowIapSsh(true);
+      setShieldedSecureBoot(true);
+      setShieldedVtpm(true);
+      setShieldedIntegrityMonitoring(true);
+      setConfidentialComputeType('NONE');
+      setEnableOsLogin(true);
+      setEnableOsLogin2fa(true);
+      setBlockProjectSshKeys(true);
+      setInstallOpsAgent(true);
+      setDeployContainerImage('');
+      setDeletionProtection(true);
+    } else if (bpId === 'c4-gen5-low-latency') {
+      setVmRegion('us-east4');
+      setZone('us-east4-a');
+      setMachineFamily('C3_C4');
+      setMachineType('c4-standard-4');
+      setOsImage('Ubuntu 24.04 LTS');
+      setDiskType('hyperdisk-balanced');
+      setDiskSizeGb(100);
+      setProvisionedIops(12000);
+      setProvisionedThroughput(600);
+      setAttachDataDisk(true);
+      setDataDiskSizeGb(250);
+      setDataDiskType('hyperdisk-balanced');
+      setLocalSsdCount(0);
+      setSpotInstance(false);
+      setOnHostMaintenance('MIGRATE');
+      setNicType('GVNIC');
+      setNetworkTier('PREMIUM');
+      setExternalIpEnabled(true);
+      setShieldedSecureBoot(true);
+      setConfidentialComputeType('NONE');
+      setInstallOpsAgent(true);
+      setDeployContainerImage('');
+      setDeletionProtection(true);
+    } else if (bpId === 'confidential-sev-snp') {
+      setVmRegion('us-central1');
+      setZone('us-central1-a');
+      setMachineFamily('N2');
+      setMachineType('n2d-standard-4');
+      setOsImage('Ubuntu 24.04 LTS');
+      setDiskType('pd-ssd');
+      setDiskSizeGb(50);
+      setAttachDataDisk(false);
+      setLocalSsdCount(0);
+      setSpotInstance(false);
+      setOnHostMaintenance('TERMINATE');
+      setExternalIpEnabled(false);
+      setAllowHttp(false);
+      setAllowHttps(true);
+      setAllowIapSsh(true);
+      setConfidentialComputeType('SEV_SNP');
+      setShieldedSecureBoot(true);
+      setShieldedVtpm(true);
+      setShieldedIntegrityMonitoring(true);
+      setEnableOsLogin(true);
+      setBlockProjectSshKeys(true);
+      setInstallOpsAgent(true);
+      setDeployContainerImage('');
+      setDeletionProtection(true);
+    } else if (bpId === 'gpu-ai-inference-l4') {
+      setVmRegion('us-central1');
+      setZone('us-central1-a');
+      setMachineFamily('G2_A2_GPU');
+      setMachineType('g2-standard-8');
+      setOsImage('Deep Learning VM (PyTorch + CUDA)');
+      setDiskType('pd-ssd');
+      setDiskSizeGb(120);
+      setAttachDataDisk(false);
+      setLocalSsdCount(1); // 1x 375GB Local NVMe SSD scratch cache for weights
+      setSpotInstance(true);
+      setTerminationAction('STOP');
+      setOnHostMaintenance('TERMINATE');
+      setNicType('GVNIC');
+      setExternalIpEnabled(true);
+      setAllowHttps(true);
+      setAllowIapSsh(true);
+      setConfidentialComputeType('NONE');
+      setInstallOpsAgent(true);
+      setDeployContainerImage('');
+      setStartupScript(
+        '#!/bin/bash\n# Verify NVIDIA L4 GPU & launch vLLM OpenAI-compatible inference server\nnvidia-smi\ndocker run -d --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai:latest --model google/gemma-2-9b-it'
+      );
+    } else if (bpId === 'cos-container-appliance') {
+      setVmRegion('us-central1');
+      setZone('us-central1-a');
+      setMachineFamily('T2A_ARM');
+      setMachineType('t2a-standard-2');
+      setOsImage('Container-Optimized OS (COS)');
+      setDiskType('pd-balanced');
+      setDiskSizeGb(30);
+      setAttachDataDisk(false);
+      setLocalSsdCount(0);
+      setSpotInstance(true);
+      setExternalIpEnabled(true);
+      setAllowHttp(true);
+      setAllowHttps(true);
+      setShieldedSecureBoot(true);
+      setConfidentialComputeType('NONE');
+      setDeployContainerImage('us-docker.pkg.dev/cloudrun/container/hello:latest');
     }
   };
 
@@ -978,26 +1188,79 @@ export default function ResourceProvisionModal({
       return `gcloud container clusters create ${cleanGke} --project=${projectId} --location=${gkeLocation} --machine-type=${gkeNodeMachineType} --num-nodes=${gkeInitialNodeCount}${saFlag}${spotFlag}${gpuFlag}${shieldFlag} ${secFlags}`;
     }
     if (serviceType === 'COMPUTE_VM') {
+      const customTagsArr = vmCustomTags
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
       const tags = [
         ...(allowHttp ? ['http-server'] : []),
-        ...(allowHttps ? ['https-server'] : []),
-      ];
+        ...(allowHttps ? ['http-server', 'https-server'] : []),
+        ...(allowIapSsh ? ['iap-ssh'] : []),
+        ...(allowLbHealthCheck ? ['lb-health-check'] : []),
+        ...customTagsArr,
+      ].filter((v, idx, arr) => arr.indexOf(v) === idx);
       const tagFlag = tags.length > 0 ? ` --tags=${tags.join(',')}` : '';
       const spotFlag = spotInstance
         ? ` --provisioning-model=SPOT --instance-termination-action=${terminationAction}`
-        : ' --provisioning-model=STANDARD';
+        : ` --provisioning-model=STANDARD --maintenance-policy=${
+            confidentialComputeType !== 'NONE' ||
+            localSsdCount > 0 ||
+            effectiveMachineType.startsWith('g2-') ||
+            effectiveMachineType.startsWith('a2-') ||
+            effectiveMachineType.startsWith('a3-')
+              ? 'TERMINATE'
+              : onHostMaintenance
+          }`;
+      const maxDurFlag =
+        maxRunDurationHours > 0
+          ? ` --max-run-duration=${maxRunDurationHours}h --instance-termination-action=${terminationAction}`
+          : '';
       const gpuFlag =
         vmGpuType !== 'NONE' &&
-        !machineType.startsWith('g2-') &&
-        !machineType.startsWith('a2-')
-          ? ` --accelerator=type=${vmGpuType},count=${vmGpuCount} --maintenance-policy=TERMINATE`
+        !effectiveMachineType.startsWith('g2-') &&
+        !effectiveMachineType.startsWith('a2-') &&
+        !effectiveMachineType.startsWith('a3-')
+          ? ` --accelerator=type=${vmGpuType},count=${vmGpuCount}`
           : '';
+      const hyperdiskFlags = diskType.startsWith('hyperdisk-')
+        ? ` --provisioned-iops=${provisionedIops} --provisioned-throughput=${provisionedThroughput}`
+        : '';
+      const dataDiskFlag = attachDataDisk
+        ? ` --create-disk=name=${clean}-data,size=${dataDiskSizeGb}GB,type=${dataDiskType},auto-delete=yes`
+        : '';
+      const localSsdFlag =
+        localSsdCount > 0
+          ? Array.from({ length: localSsdCount })
+              .map(() => ' --local-ssd=interface=NVME')
+              .join('')
+          : '';
+      const cmekFlag = vmDiskCmekKey.trim()
+        ? ` --boot-disk-kms-key=${vmDiskCmekKey.trim()}`
+        : '';
       const netFlag = ` --network=${vmNetwork}${
+        vmSubnetwork && vmSubnetwork !== 'auto' ? ` --subnet=${vmSubnetwork}` : ''
+      } --network-tier=${networkTier} --nic-type=${nicType} --stack-type=${stackType}${
         !externalIpEnabled ? ' --no-address' : ''
-      }`;
-      const shieldFlag = shieldedSecureBoot ? ' --shielded-secure-boot' : '';
+      }${canIpForward ? ' --can-ip-forward' : ''}`;
+      const confFlag =
+        confidentialComputeType !== 'NONE'
+          ? ` --confidential-compute-type=${confidentialComputeType}`
+          : '';
+      const shieldFlag = `${shieldedSecureBoot ? ' --shielded-secure-boot' : ''} --shielded-vtpm --shielded-integrity-monitoring`;
+      const metaList = [
+        ...(enableOsLogin ? ['enable-oslogin=TRUE'] : []),
+        ...(enableOsLogin2fa ? ['enable-oslogin-2fa=TRUE'] : []),
+        ...(blockProjectSshKeys ? ['block-project-ssh-keys=TRUE'] : []),
+        ...(enableSerialPort ? ['serial-port-enable=TRUE'] : []),
+        ...(installOpsAgent ? ['enable-guest-attributes=TRUE'] : []),
+      ];
+      const metaFlag =
+        metaList.length > 0 ? ` --metadata=${metaList.join(',')}` : '';
+      const labelFlag = vmCustomLabels.trim()
+        ? ` --labels=${vmCustomLabels.trim().replace(/\s+/g, '')}`
+        : '';
       const delProtFlag = deletionProtection ? ' --deletion-protection' : '';
-      return `gcloud compute instances create ${clean} --project=${projectId} --zone=${zone} --machine-type=${machineType}${saFlag} --boot-disk-size=${diskSizeGb}GB --boot-disk-type=${diskType}${spotFlag}${gpuFlag}${netFlag}${tagFlag}${shieldFlag}${delProtFlag}`;
+      return `gcloud compute instances create ${clean} --project=${projectId} --zone=${zone} --machine-type=${effectiveMachineType}${saFlag} --boot-disk-size=${diskSizeGb}GB --boot-disk-type=${diskType}${hyperdiskFlags}${cmekFlag}${dataDiskFlag}${localSsdFlag}${spotFlag}${maxDurFlag}${gpuFlag}${netFlag}${tagFlag}${confFlag}${shieldFlag}${metaFlag}${labelFlag}${delProtFlag}`;
     }
     if (serviceType === 'VPC_NETWORK') {
       return `gcloud compute networks create ${clean} --project=${projectId} --subnet-mode=${
@@ -1201,18 +1464,43 @@ export default function ResourceProvisionModal({
     gkeGpuAcceleratorType,
     gkeGpuAcceleratorCount,
     zone,
+    effectiveMachineType,
     machineType,
     diskSizeGb,
     diskType,
+    provisionedIops,
+    provisionedThroughput,
+    attachDataDisk,
+    dataDiskSizeGb,
+    dataDiskType,
+    localSsdCount,
+    vmDiskCmekKey,
     spotInstance,
     terminationAction,
+    maxRunDurationHours,
+    onHostMaintenance,
     vmGpuType,
     vmGpuCount,
     vmNetwork,
+    vmSubnetwork,
+    networkTier,
+    nicType,
+    stackType,
+    canIpForward,
     externalIpEnabled,
     allowHttp,
     allowHttps,
+    allowIapSsh,
+    allowLbHealthCheck,
+    vmCustomTags,
+    confidentialComputeType,
     shieldedSecureBoot,
+    enableOsLogin,
+    enableOsLogin2fa,
+    blockProjectSshKeys,
+    enableSerialPort,
+    installOpsAgent,
+    vmCustomLabels,
     deletionProtection,
     autoCreateSubnetworks,
     routingMode,
@@ -1287,18 +1575,36 @@ export default function ResourceProvisionModal({
       'e2-standard-2': 0.067,
       'e2-standard-4': 0.134,
       'e2-standard-8': 0.268,
+      'e2-highmem-4': 0.1804,
+      'e2-highcpu-8': 0.198,
       'n2-standard-2': 0.0971,
       'n2-standard-4': 0.1942,
       'n2-standard-8': 0.3885,
       'n2d-standard-4': 0.1685,
+      'n2d-standard-8': 0.337,
+      'n2-highmem-4': 0.262,
+      'n2-highmem-8': 0.524,
+      'n2-highmem-16': 1.048,
       'c3-standard-4': 0.2088,
+      'c3-standard-8': 0.4176,
+      'c3d-standard-4': 0.186,
+      'c3d-standard-8': 0.372,
       'c3-highcpu-8': 0.3456,
       'c4-standard-4': 0.231,
+      'c4-standard-8': 0.462,
+      't2a-standard-1': 0.0385,
       't2a-standard-2': 0.077,
       't2a-standard-4': 0.154,
+      'c4a-standard-4': 0.172,
+      'c4a-standard-8': 0.344,
+      'm3-ultramem-32': 6.31,
+      'm3-megamem-64': 9.84,
       'g2-standard-4': 0.7068,
       'g2-standard-8': 0.853,
+      'g2-standard-12': 1.092,
       'a2-highgpu-1g': 3.673,
+      'a3-highgpu-8g': 88.49,
+      'n1-standard-4': 0.19,
     };
 
     if (serviceType === 'CLOUD_SQL') {
@@ -1368,25 +1674,36 @@ export default function ResourceProvisionModal({
         vmRegion
       );
       const isFreeTierVmCompute =
-        machineType === 'e2-micro' &&
+        !vmCustomSizingMode &&
+        effectiveMachineType === 'e2-micro' &&
         !spotInstance &&
         vmGpuType === 'NONE' &&
+        !attachDataDisk &&
+        localSsdCount === 0 &&
         isFreeTierRegion;
+
+      const customMachineRate = vmCustomSizingMode
+        ? Number(vmCustomVcpus || 2) * (vmCustomSeries === 'e2' ? 0.0218 : 0.0316) +
+          Number(vmCustomMemoryGb || 8) * (vmCustomSeries === 'e2' ? 0.0029 : 0.0042) * (vmCustomExtendedMem ? 1.25 : 1.0)
+        : 0;
 
       const baseMachine = isFreeTierVmCompute
         ? 0
-        : baseRates[machineType] || 0.067;
+        : vmCustomSizingMode
+        ? customMachineRate
+        : baseRates[effectiveMachineType] || 0.067;
       const extraGpuRate =
         vmGpuType !== 'NONE' &&
-        !machineType.startsWith('g2-') &&
-        !machineType.startsWith('a2-')
+        !effectiveMachineType.startsWith('g2-') &&
+        !effectiveMachineType.startsWith('a2-') &&
+        !effectiveMachineType.startsWith('a3-')
           ? (vmGpuType.includes('l4') ? 0.56 : vmGpuType.includes('v100') ? 2.48 : 0.35) *
             Number(vmGpuCount || 1)
           : 0;
       const computeRaw = baseMachine + extraGpuRate;
       const computeEffective = spotInstance ? computeRaw * 0.32 : computeRaw;
       const diskRatePerGbMonth =
-        diskType === 'pd-extreme' || diskType === 'hyperdisk-balanced'
+        diskType === 'pd-extreme' || diskType.startsWith('hyperdisk-')
           ? 0.125
           : diskType === 'pd-ssd'
           ? 0.17
@@ -1398,8 +1715,12 @@ export default function ResourceProvisionModal({
         isFreeTierVmCompute && diskType === 'pd-standard'
           ? Math.max(0, totalDiskGb - 30)
           : totalDiskGb;
-      const diskHourly = (billableDiskGb * diskRatePerGbMonth) / 730;
-      const hourly = computeEffective + diskHourly;
+      const bootDiskHourly = (billableDiskGb * diskRatePerGbMonth) / 730;
+      const extraDataDiskHourly = attachDataDisk
+        ? (Number(dataDiskSizeGb || 100) * (dataDiskType === 'pd-standard' ? 0.04 : 0.14)) / 730
+        : 0;
+      const localSsdHourly = Number(localSsdCount || 0) * ((375 * 0.08) / 730);
+      const hourly = computeEffective + bootDiskHourly + extraDataDiskHourly + localSsdHourly;
 
       if (isFreeTierVmCompute && diskType === 'pd-standard' && totalDiskGb <= 30) {
         return {
@@ -1416,16 +1737,30 @@ export default function ResourceProvisionModal({
           monthly: hourly * 730,
           badge: `FREE e2-micro COMPUTE + PAID DISK (${diskType})`,
           detail: `e2-micro compute in ${vmRegion} is $0.00/mo, but ${totalDiskGb}GB ${diskType} bills $${(
-            diskHourly * 730
+            bootDiskHourly * 730
           ).toFixed(2)}/mo — switch to ≤30GB pd-standard for $0.00/mo`,
         };
       }
 
+      const effectiveMonthly =
+        maxRunDurationHours > 0
+          ? hourly * Math.min(730, maxRunDurationHours)
+          : hourly * 730;
+
       return {
         hourly,
-        monthly: hourly * 730,
-        badge: spotInstance ? 'SPOT VM (-68% SAVED)' : 'ON-DEMAND VM',
-        detail: `${machineType} in ${vmRegion} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}`,
+        monthly: effectiveMonthly,
+        badge:
+          maxRunDurationHours > 0
+            ? `TIME-BOUNDED VM (AUTO-${terminationAction} AFTER ${maxRunDurationHours}h)`
+            : spotInstance
+            ? 'SPOT VM (-68% SAVED)'
+            : confidentialComputeType !== 'NONE'
+            ? `CONFIDENTIAL VM (${confidentialComputeType}) · ON-DEMAND`
+            : 'ON-DEMAND VM (UP TO 30% SUD)',
+        detail: `${effectiveMachineType} in ${zone} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}${
+          attachDataDisk ? ` + ${dataDiskSizeGb}GB ${dataDiskType}` : ''
+        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''}`,
       };
     }
 
@@ -1582,8 +1917,22 @@ export default function ResourceProvisionModal({
     gkeGpuAcceleratorType,
     gkeGpuAcceleratorCount,
     vmRegion,
+    zone,
     region,
+    effectiveMachineType,
     machineType,
+    vmCustomSizingMode,
+    vmCustomSeries,
+    vmCustomVcpus,
+    vmCustomMemoryGb,
+    vmCustomExtendedMem,
+    attachDataDisk,
+    dataDiskSizeGb,
+    dataDiskType,
+    localSsdCount,
+    maxRunDurationHours,
+    terminationAction,
+    confidentialComputeType,
     spotInstance,
     vmGpuType,
     vmGpuCount,
@@ -1683,22 +2032,53 @@ export default function ResourceProvisionModal({
             spotNodes: gkeSpotNodes,
             gpuAcceleratorType: gkeGpuAcceleratorType,
             gpuAcceleratorCount: Number(gkeGpuAcceleratorCount || 1),
-            machineType,
+            vmBlueprint,
+            machineType: effectiveMachineType,
             osImage,
             diskSizeGb,
             diskType,
+            bootDiskAutoDelete,
+            provisionedIops,
+            provisionedThroughput,
+            attachDataDisk,
+            dataDiskSizeGb,
+            dataDiskType,
+            localSsdCount,
             spotInstance,
             terminationAction,
+            maxRunDurationHours,
+            onHostMaintenance,
+            automaticRestart,
             vmGpuType,
             vmGpuCount,
             vmNetwork,
+            vmSubnetwork,
+            networkTier,
+            nicType,
+            stackType,
+            canIpForward,
             externalIpEnabled,
             allowHttp,
             allowHttps,
+            allowIapSsh,
+            allowLbHealthCheck,
+            customTags: vmCustomTags,
             shieldedSecureBoot,
             shieldedVtpm,
+            shieldedIntegrityMonitoring,
+            confidentialComputeType,
+            enableOsLogin,
+            enableOsLogin2fa,
+            blockProjectSshKeys,
+            enableSerialPort,
+            installOpsAgent,
+            sshPublicKey,
+            deployContainerImage,
+            enableDisplayDevice,
+            enableNestedVirtualization,
             deletionProtection,
             startupScript,
+            
             autoCreateSubnetworks,
             routingMode,
             mtu,
@@ -1738,7 +2118,9 @@ export default function ResourceProvisionModal({
             retentionPeriodSeconds: gcsRetentionSeconds,
             hierarchicalNamespaceEnabled: gcsHierarchicalNamespace,
             kmsKeyName:
-              serviceType === 'BIGQUERY_DATASET'
+              serviceType === 'COMPUTE_VM'
+                ? vmDiskCmekKey.trim()
+                : serviceType === 'BIGQUERY_DATASET'
                 ? bqEncryptionType === 'CMEK'
                   ? bqCmekKeyName.trim()
                   : ''
@@ -1755,7 +2137,9 @@ export default function ResourceProvisionModal({
             requesterPays: gcsRequesterPays,
             enableCors: gcsEnableCors,
             customLabels:
-              serviceType === 'BIGQUERY_DATASET'
+              serviceType === 'COMPUTE_VM'
+                ? vmCustomLabels
+                : serviceType === 'BIGQUERY_DATASET'
                 ? bqCustomLabels
                 : gcsCustomLabels,
             complianceRegime:
@@ -2607,278 +2991,1231 @@ export default function ResourceProvisionModal({
             </div>
           )}
 
-          {serviceType === 'COMPUTE_VM' && (
-            <div className="space-y-3.5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
-              {/* Machine Family Selector Pills */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-bold font-mono uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
-                    1. Compute Engine Machine Series (E2 · N2 · C3/C4 · Arm64 · GPU)
-                  </label>
-                  <span className="text-[10px] font-mono text-blue-500">
-                    {VM_MACHINE_FAMILIES[machineFamily]?.badge}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                  {[
-                    { id: 'E2', label: 'E2 Series', sub: 'Cost-Saver' },
-                    { id: 'N2', label: 'N2 / N2D', sub: 'Balanced' },
-                    { id: 'C3_C4', label: 'C3 / C4', sub: 'Gen-4/5 Fast' },
-                    { id: 'T2A_ARM', label: 'T2A Arm64', sub: 'Ampere Altra' },
-                    { id: 'G2_A2_GPU', label: 'G2 / A2 GPU', sub: 'L4 / A100 AI' },
-                  ].map((f) => {
-                    const active = machineFamily === f.id;
-                    return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => handleSelectMachineFamily(f.id)}
-                        className={`p-2 rounded-md border text-left transition-all ${
-                          active
-                            ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
-                            : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
-                        }`}
-                      >
-                        <div className="text-xs font-bold font-mono">{f.label}</div>
-                        <div className="text-[10px] text-zinc-500">{f.sub}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          {serviceType === 'COMPUTE_VM' && (() => {
+            const cleanVmName =
+              (name || `${projectId}-vm-01`)
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/^-+|-+$/g, '') || 'cloudpulse-vm-01';
+            const isArmArch =
+              !vmCustomSizingMode &&
+              (effectiveMachineType.startsWith('t2a-') ||
+                effectiveMachineType.startsWith('c4a-'));
+            const isHyperdisk = diskType.startsWith('hyperdisk-');
 
-              {/* Machine Type, OS Image, Provisioning Model */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Machine Type Preset
-                  </label>
-                  <select
-                    value={machineType}
-                    onChange={(e) => setMachineType(e.target.value)}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                  >
-                    {(VM_MACHINE_FAMILIES[machineFamily]?.types || []).map((mt) => (
-                      <option key={mt.id} value={mt.id}>
-                        {mt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            const vmRestPayloadPreview = {
+              name: cleanVmName,
+              machineType: `zones/${zone}/machineTypes/${effectiveMachineType}`,
+              deletionProtection,
+              canIpForward,
+              disks: [
+                {
+                  boot: true,
+                  autoDelete: bootDiskAutoDelete,
+                  initializeParams: {
+                    diskSizeGb: String(diskSizeGb),
+                    diskType: `zones/${zone}/diskTypes/${diskType}`,
+                    sourceImage: osImage,
+                    ...(isHyperdisk
+                      ? {
+                          provisionedIops: String(provisionedIops),
+                          provisionedThroughput: String(provisionedThroughput),
+                        }
+                      : {}),
+                  },
+                },
+                ...(attachDataDisk
+                  ? [
+                      {
+                        boot: false,
+                        mode: 'READ_WRITE',
+                        deviceName: `${cleanVmName}-data`,
+                        initializeParams: {
+                          diskName: `${cleanVmName}-data`,
+                          diskSizeGb: String(dataDiskSizeGb),
+                          diskType: `zones/${zone}/diskTypes/${dataDiskType}`,
+                        },
+                      },
+                    ]
+                  : []),
+                ...Array.from({ length: localSsdCount }).map(() => ({
+                  boot: false,
+                  type: 'SCRATCH',
+                  interface: 'NVME',
+                  initializeParams: {
+                    diskType: `zones/${zone}/diskTypes/local-ssd`,
+                  },
+                })),
+              ],
+              networkInterfaces: [
+                {
+                  network: `global/networks/${vmNetwork}`,
+                  nicType,
+                  stackType,
+                  accessConfigs: externalIpEnabled
+                    ? [{ type: 'ONE_TO_ONE_NAT', name: 'External NAT', networkTier }]
+                    : [],
+                },
+              ],
+              scheduling: {
+                provisioningModel: spotInstance ? 'SPOT' : 'STANDARD',
+                onHostMaintenance:
+                  spotInstance ||
+                  confidentialComputeType !== 'NONE' ||
+                  localSsdCount > 0 ||
+                  effectiveMachineType.startsWith('g2-') ||
+                  effectiveMachineType.startsWith('a2-') ||
+                  effectiveMachineType.startsWith('a3-')
+                    ? 'TERMINATE'
+                    : onHostMaintenance,
+                automaticRestart: spotInstance ? false : automaticRestart,
+                ...(spotInstance || maxRunDurationHours > 0
+                  ? { instanceTerminationAction: terminationAction }
+                  : {}),
+                ...(maxRunDurationHours > 0
+                  ? {
+                      maxRunDuration: {
+                        seconds: String(maxRunDurationHours * 3600),
+                      },
+                    }
+                  : {}),
+              },
+              shieldedInstanceConfig: {
+                enableSecureBoot: shieldedSecureBoot,
+                enableVtpm: shieldedVtpm,
+                enableIntegrityMonitoring: shieldedIntegrityMonitoring,
+              },
+              ...(confidentialComputeType !== 'NONE'
+                ? {
+                    confidentialInstanceConfig: {
+                      enableConfidentialCompute: true,
+                      confidentialInstanceType: confidentialComputeType,
+                    },
+                  }
+                : {}),
+            };
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Boot OS Image Family
-                  </label>
-                  <select
-                    value={osImage}
-                    onChange={(e) => setOsImage(e.target.value)}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs shadow-sm text-zinc-950 dark:text-zinc-100"
-                  >
-                    <option value="Debian 12 Bookworm">Debian 12 Bookworm (Default)</option>
-                    <option value="Ubuntu 24.04 LTS">Ubuntu 24.04 LTS Noble</option>
-                    <option value="Ubuntu 22.04 LTS">Ubuntu 22.04 LTS Jammy</option>
-                    <option value="Container-Optimized OS (COS)">
-                      Container-Optimized OS (Docker Ready)
-                    </option>
-                    <option value="Rocky Linux 9">Rocky Linux 9 Enterprise</option>
-                    <option value="Deep Learning VM (PyTorch + CUDA)">
-                      Deep Learning VM (PyTorch + CUDA 12.4)
-                    </option>
-                  </select>
-                </div>
+            const vmTerraformPreview = `resource "google_compute_instance" "${cleanVmName.replace(/-/g, '_')}" {
+  project                   = "${projectId}"
+  name                      = "${cleanVmName}"
+  machine_type              = "${effectiveMachineType}"
+  zone                      = "${zone}"
+  deletion_protection       = ${deletionProtection}
+  can_ip_forward            = ${canIpForward}
+  allow_stopping_for_update = true
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Provisioning Model
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setSpotInstance((s) => !s)}
-                    className={`w-full rounded-[8px] px-3 py-[8px] text-xs font-mono font-semibold border flex items-center justify-between transition-colors ${
-                      spotInstance
-                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    <span>
-                      {spotInstance
-                        ? 'Spot VM (Up to 91% Off)'
-                        : 'Standard VM (24/7 SLA)'}
+  boot_disk {
+    auto_delete = ${bootDiskAutoDelete}
+    initialize_params {
+      size  = ${diskSizeGb}
+      type  = "${diskType}"${
+        isHyperdisk
+          ? `\n      provisioned_iops       = ${provisionedIops}\n      provisioned_throughput = ${provisionedThroughput}`
+          : ''
+      }
+    }
+  }${
+    localSsdCount > 0
+      ? `\n\n  # ${localSsdCount}x 375 GB Local NVMe Scratch SSD\n  scratch_disk {\n    interface = "NVME"\n  }`
+      : ''
+  }
+
+  network_interface {
+    network    = "${vmNetwork}"
+    nic_type   = "${nicType}"
+    stack_type = "${stackType}"${
+      externalIpEnabled
+        ? `\n    access_config {\n      network_tier = "${networkTier}"\n    }`
+        : '\n    # Zero External IPv4 (--no-address) — Private IAP SSH Tunnel Only'
+    }
+  }
+
+  shielded_instance_config {
+    enable_secure_boot          = ${shieldedSecureBoot}
+    enable_vtpm                 = ${shieldedVtpm}
+    enable_integrity_monitoring = ${shieldedIntegrityMonitoring}
+  }${
+    confidentialComputeType !== 'NONE'
+      ? `\n\n  confidential_instance_config {\n    enable_confidential_compute = true\n    confidential_instance_type  = "${confidentialComputeType}"\n  }`
+      : ''
+  }
+
+  scheduling {
+    provisioning_model          = "${spotInstance ? 'SPOT' : 'STANDARD'}"
+    preemptible                 = ${spotInstance}
+    automatic_restart           = ${spotInstance ? false : automaticRestart}
+    on_host_maintenance         = "${
+      spotInstance || confidentialComputeType !== 'NONE' || localSsdCount > 0
+        ? 'TERMINATE'
+        : onHostMaintenance
+    }"${
+      spotInstance || maxRunDurationHours > 0
+        ? `\n    instance_termination_action = "${terminationAction}"`
+        : ''
+    }
+  }
+
+  metadata = {
+    enable-oslogin     = "${enableOsLogin ? 'TRUE' : 'FALSE'}"${
+      enableOsLogin2fa ? '\n    enable-oslogin-2fa = "TRUE"' : ''
+    }${
+      installOpsAgent ? '\n    enable-guest-attributes = "TRUE"' : ''
+    }
+  }
+}`;
+
+            return (
+              <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+                {/* 1-Tap Production GCE Workload & Compliance Blueprints */}
+                <div className="p-3 rounded-[10px] border border-blue-500/30 bg-blue-500/[0.05] space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                      1-Tap Google Compute Engine Production Blueprints (Instant Architecture Presets)
                     </span>
-                    <Zap className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Boot Disk Type, Disk Size, Optional Guest GPU & Spot Termination Action */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Boot Disk Type
-                  </label>
-                  <select
-                    value={diskType}
-                    onChange={(e) => setDiskType(e.target.value)}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                  >
-                    <option value="pd-standard">
-                      pd-standard (Standard HDD — Included in 30GB Always Free Tier)
-                    </option>
-                    <option value="pd-balanced">
-                      pd-balanced (SSD Balanced — Billed $/GB)
-                    </option>
-                    <option value="pd-ssd">
-                      pd-ssd (Extreme Low-Latency SSD — Billed $/GB)
-                    </option>
-                    <option value="hyperdisk-balanced">
-                      hyperdisk-balanced (2026 Gen-4/5 — Billed $/GB)
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Boot Disk Size (GB)
-                  </label>
-                  <input
-                    type="number"
-                    min={10}
-                    max={2000}
-                    value={diskSizeGb}
-                    onChange={(e) => setDiskSizeGb(Number(e.target.value))}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Attach Dedicated GPU
-                  </label>
-                  <select
-                    value={vmGpuType}
-                    onChange={(e) => setVmGpuType(e.target.value)}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                  >
-                    <option value="NONE">
-                      {machineType.startsWith('g2-')
-                        ? 'Built-in 1x NVIDIA L4'
-                        : machineType.startsWith('a2-')
-                        ? 'Built-in 1x NVIDIA A100'
-                        : 'No Extra GPU'}
-                    </option>
-                    <option value="nvidia-tesla-t4">1x NVIDIA T4 (16GB VRAM)</option>
-                    <option value="nvidia-l4">1x NVIDIA L4 (24GB VRAM)</option>
-                    <option value="nvidia-tesla-v100">1x NVIDIA V100 (16GB)</option>
-                    <option value="nvidia-tesla-a100">1x NVIDIA A100 (40GB)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    VPC Network & NAT
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setExternalIpEnabled((v) => !v)}
-                    className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono border text-left transition-colors ${
-                      externalIpEnabled
-                        ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
-                        : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
-                    }`}
-                  >
-                    {externalIpEnabled
-                      ? 'Public IPv4 + default VPC'
-                      : 'Internal IP Only (No NAT)'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Firewall Tags, Shielded VM, Deletion Protection & Spot Action */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAllowHttp((v) => !v)}
-                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
-                    allowHttp
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  {allowHttp ? '✓ Allow HTTP (Port 80)' : '○ Block HTTP'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAllowHttps((v) => !v)}
-                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
-                    allowHttps
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  {allowHttps ? '✓ Allow HTTPS (Port 443)' : '○ Block HTTPS'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShieldedSecureBoot((v) => !v)}
-                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
-                    shieldedSecureBoot
-                      ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  {shieldedSecureBoot
-                    ? '✓ Shielded Secure Boot'
-                    : '○ Standard vTPM Boot'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDeletionProtection((v) => !v)}
-                  className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors ${
-                    deletionProtection
-                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  {deletionProtection
-                    ? 'Deletion Protection ON'
-                    : 'Deletion Protection OFF'}
-                </button>
-              </div>
-
-              {/* Startup Script Metadata (Cloud-Init / Bash) */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-medium text-zinc-500">
-                    Boot Startup Script (`metadata.startup-script` — optional bash executed as root on boot)
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStartupScript(
-                          '#!/bin/bash\napt-get update && apt-get install -y nginx docker.io\nsystemctl enable --now nginx'
-                        )
-                      }
-                      className="text-[10px] font-mono text-blue-500 hover:underline"
-                    >
-                      + NGINX + Docker Preset
-                    </button>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                      Active Spec: {effectiveMachineType} · {zone} · {isArmArch ? 'Arm64' : 'x86_64'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-1.5">
+                    {[
+                      {
+                        id: 'always-free-micro',
+                        title: '$0.00/mo Always Free',
+                        desc: 'e2-micro · us-central1 · 30GB pd-standard HDD · OS Login',
+                      },
+                      {
+                        id: 'zero-trust-iap-bastion',
+                        title: 'Zero-IP IAP Bastion',
+                        desc: 'e2-medium · --no-address · IAP Tunnel · OS Login 2FA · Shielded',
+                      },
+                      {
+                        id: 'c4-gen5-low-latency',
+                        title: 'C4 Gen-5 + Hyperdisk',
+                        desc: 'c4-standard-4 Emerald Rapids · 12k IOPS Hyperdisk · 200G gVNIC',
+                      },
+                      {
+                        id: 'confidential-sev-snp',
+                        title: 'Confidential SEV-SNP',
+                        desc: 'n2d-standard-4 AMD EPYC · RAM Encryption · Zero Public IP',
+                      },
+                      {
+                        id: 'gpu-ai-inference-l4',
+                        title: 'NVIDIA L4 + NVMe AI',
+                        desc: 'g2-standard-8 (24GB L4) + 375GB Local NVMe + PyTorch/vLLM',
+                      },
+                      {
+                        id: 'cos-container-appliance',
+                        title: 'Arm64 COS Docker Box',
+                        desc: 't2a-standard-2 Ampere · Container-Optimized OS · Auto-Run Image',
+                      },
+                    ].map((bp) => {
+                      const active = vmBlueprint === bp.id;
+                      return (
+                        <button
+                          key={bp.id}
+                          type="button"
+                          onClick={() => applyVmBlueprint(bp.id)}
+                          className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
+                            active
+                              ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold flex items-center justify-between gap-1">
+                            <span className="truncate">{bp.title}</span>
+                            {active && (
+                              <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 shrink-0">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[9.5px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                            {bp.desc}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <textarea
-                  rows={2}
-                  value={startupScript}
-                  onChange={(e) => setStartupScript(e.target.value)}
-                  placeholder="#!/bin/bash&#10;apt-get update && apt-get install -y nginx"
-                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                />
+
+                {/* STEP 1: Machine Series, Predefined vs Custom vCPU/RAM Sizer & GPU Accelerators */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                        1. Machine Configuration, Silicon Architecture &amp; Custom vCPU/Memory Sizer
+                      </div>
+                      <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400">
+                        {VM_MACHINE_FAMILIES[machineFamily]?.badge}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setVmCustomSizingMode(false)}
+                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border cursor-pointer ${
+                          !vmCustomSizingMode
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'
+                        }`}
+                      >
+                        Predefined Presets
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVmCustomSizingMode(true)}
+                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border cursor-pointer ${
+                          vmCustomSizingMode
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'
+                        }`}
+                      >
+                        Custom vCPU / RAM Slider (`custom-N-M`)
+                      </button>
+                    </div>
+                  </div>
+
+                  {!vmCustomSizingMode ? (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+                        {[
+                          { id: 'E2', label: 'E2 Series', sub: 'Cost-Saver · Free Tier' },
+                          { id: 'N2', label: 'N2 / N2D', sub: 'Intel / AMD EPYC' },
+                          { id: 'C3_C4', label: 'C3 / C3D / C4', sub: 'Gen-4/5 Titanium' },
+                          { id: 'T2A_ARM', label: 'C4A Axion / T2A', sub: 'Arm64 Silicon' },
+                          { id: 'M3_MEM', label: 'M3 / High-Mem', sub: 'Up to 976 GB RAM' },
+                          { id: 'G2_A2_GPU', label: 'G2 / A2 / A3 GPU', sub: 'L4 · A100 · H100' },
+                        ].map((f) => {
+                          const active = machineFamily === f.id;
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => handleSelectMachineFamily(f.id)}
+                              className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
+                                active
+                                  ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
+                              }`}
+                            >
+                              <div className="text-xs font-bold font-mono">{f.label}</div>
+                              <div className="text-[10px] text-zinc-500">{f.sub}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Machine Type Shape
+                          </label>
+                          <select
+                            value={machineType}
+                            onChange={(e) => setMachineType(e.target.value)}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                          >
+                            {(VM_MACHINE_FAMILIES[machineFamily]?.types || []).map((mt) => (
+                              <option key={mt.id} value={mt.id}>
+                                {mt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Attach Dedicated Guest GPU (`guestAccelerators`)
+                          </label>
+                          <select
+                            value={vmGpuType}
+                            onChange={(e) => setVmGpuType(e.target.value)}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            <option value="NONE">
+                              {machineType.startsWith('g2-')
+                                ? 'Built-in 1x NVIDIA L4 (24GB VRAM)'
+                                : machineType.startsWith('a2-')
+                                ? 'Built-in 1x NVIDIA A100 (40GB VRAM)'
+                                : machineType.startsWith('a3-')
+                                ? 'Built-in 8x NVIDIA H100 (640GB VRAM)'
+                                : 'No Extra Guest GPU (CPU Only)'}
+                            </option>
+                            <option value="nvidia-tesla-t4">NVIDIA T4 (16GB GDDR6 · Inference)</option>
+                            <option value="nvidia-l4">NVIDIA L4 (24GB Ada Lovelace · GenAI)</option>
+                            <option value="nvidia-tesla-v100">NVIDIA V100 (16GB HBM2 · HPC)</option>
+                            <option value="nvidia-tesla-a100">NVIDIA A100 (40GB HBM2e · Training)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Advanced Hardware Virtualization
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEnableNestedVirtualization((v) => !v)}
+                              className={`px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
+                                enableNestedVirtualization
+                                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                              }`}
+                            >
+                              {enableNestedVirtualization ? '✓ Nested KVM ON' : '○ Nested KVM'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEnableDisplayDevice((v) => !v)}
+                              className={`px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
+                                enableDisplayDevice
+                                  ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                              }`}
+                            >
+                              {enableDisplayDevice ? '✓ Virtual Display' : '○ Headless GPU'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#131314] border border-blue-500/30 grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Custom Machine Series
+                        </label>
+                        <select
+                          value={vmCustomSeries}
+                          onChange={(e) => setVmCustomSeries(e.target.value)}
+                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value="e2">E2 Custom (e2-custom-*)</option>
+                          <option value="n2">N2 Intel Custom (n2-custom-*)</option>
+                          <option value="n2d">N2D AMD EPYC Custom (n2d-custom-*)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Custom vCPUs: <strong>{vmCustomVcpus} vCPU</strong>
+                        </label>
+                        <input
+                          type="range"
+                          min={2}
+                          max={32}
+                          step={2}
+                          value={vmCustomVcpus}
+                          onChange={(e) => setVmCustomVcpus(Number(e.target.value))}
+                          className="w-full accent-blue-600 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Custom Memory: <strong>{vmCustomMemoryGb} GB ({vmCustomMemoryGb * 1024} MB)</strong>
+                        </label>
+                        <input
+                          type="range"
+                          min={2}
+                          max={128}
+                          step={2}
+                          value={vmCustomMemoryGb}
+                          onChange={(e) => setVmCustomMemoryGb(Number(e.target.value))}
+                          className="w-full accent-blue-600 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Extended Memory (`-ext`)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setVmCustomExtendedMem((v) => !v)}
+                          className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border cursor-pointer ${
+                            vmCustomExtendedMem
+                              ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                              : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {vmCustomExtendedMem ? '✓ Extended RAM Enabled' : 'Standard 8GB/vCPU Ratio'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* STEP 2: Boot Disk, Hyperdisk Provisioned IOPS/Throughput, Data Disk & Local NVMe SSDs */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      2. Boot OS Image, Hyperdisk IOPS/Throughput, Secondary Data Disk &amp; Local NVMe Scratch SSDs
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {isArmArch
+                        ? 'Auto-selecting Arm64 (aarch64) image family'
+                        : 'Auto-selecting x86_64 (amd64) image family'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Operating System Image Family
+                      </label>
+                      <select
+                        value={osImage}
+                        onChange={(e) => setOsImage(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="Debian 12 Bookworm">Debian 12 Bookworm (Recommended)</option>
+                        <option value="Ubuntu 24.04 LTS">Ubuntu 24.04 LTS Noble Numbat</option>
+                        <option value="Ubuntu 22.04 LTS">Ubuntu 22.04 LTS Jammy Jellyfish</option>
+                        <option value="Container-Optimized OS (COS)">
+                          Container-Optimized OS (Google COS · Docker Ready)
+                        </option>
+                        <option value="Rocky Linux 9">Rocky Linux 9 (RHEL Binary Compatible)</option>
+                        <option value="Red Hat Enterprise Linux 9 (RHEL 9)">
+                          Red Hat Enterprise Linux 9 (RHEL 9 Enterprise)
+                        </option>
+                        <option value="Deep Learning VM (PyTorch + CUDA)">
+                          Deep Learning VM (PyTorch 2.4 + NVIDIA CUDA 12.4)
+                        </option>
+                        <option value="Windows Server 2022 Datacenter">
+                          Windows Server 2022 Datacenter (Desktop Experience)
+                        </option>
+                        <option value="SQL Server 2022 Standard on Windows">
+                          SQL Server 2022 Standard on Windows Server 2022
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Boot Disk Storage Tier
+                      </label>
+                      <select
+                        value={diskType}
+                        onChange={(e) => setDiskType(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="pd-standard">
+                          pd-standard (HDD · 30GB Always Free Eligible)
+                        </option>
+                        <option value="pd-balanced">
+                          pd-balanced (Balanced SSD · $0.10/GB-mo)
+                        </option>
+                        <option value="pd-ssd">
+                          pd-ssd (Performance SSD · $0.17/GB-mo)
+                        </option>
+                        <option value="hyperdisk-balanced">
+                          hyperdisk-balanced (2026 Gen-4/5 Programmable IOPS)
+                        </option>
+                        <option value="hyperdisk-extreme">
+                          hyperdisk-extreme (Sub-ms 160,000 IOPS Database Tier)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Boot Disk Capacity (GB)
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={65536}
+                        value={diskSizeGb}
+                        onChange={(e) => setDiskSizeGb(Number(e.target.value))}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Local NVMe Scratch SSDs (`375 GB` each)
+                      </label>
+                      <select
+                        value={localSsdCount}
+                        onChange={(e) => setLocalSsdCount(Number(e.target.value))}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value={0}>0 Local NVMe Scratch Disks</option>
+                        <option value={1}>1x 375 GB Local NVMe (375 GB · Cache/AI)</option>
+                        <option value={2}>2x 375 GB Local NVMe (750 GB RAID-0)</option>
+                        <option value={4}>4x 375 GB Local NVMe (1.5 TB Scratch)</option>
+                        <option value={8}>8x 375 GB Local NVMe (3.0 TB Scratch)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Programmable Hyperdisk IOPS & Throughput Sliders */}
+                  {isHyperdisk && (
+                    <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-blue-700 dark:text-blue-300 font-bold">
+                            Hyperdisk Provisioned IOPS (`--provisioned-iops`)
+                          </span>
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            {provisionedIops.toLocaleString()} IOPS
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={3000}
+                          max={160000}
+                          step={1000}
+                          value={provisionedIops}
+                          onChange={(e) => setProvisionedIops(Number(e.target.value))}
+                          className="w-full accent-blue-600 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-blue-700 dark:text-blue-300 font-bold">
+                            Hyperdisk Provisioned Throughput (`--provisioned-throughput`)
+                          </span>
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            {provisionedThroughput} MB/s
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={140}
+                          max={2400}
+                          step={20}
+                          value={provisionedThroughput}
+                          onChange={(e) => setProvisionedThroughput(Number(e.target.value))}
+                          className="w-full accent-blue-600 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Secondary Persistent Data Disk + Boot Disk Lifecycle & CMEK */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Secondary Data Disk (`--create-disk`)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setAttachDataDisk((v) => !v)}
+                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
+                          attachDataDisk
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        {attachDataDisk
+                          ? `✓ Attached (${dataDiskSizeGb}GB ${dataDiskType})`
+                          : '+ Attach Extra Data Disk'}
+                      </button>
+                    </div>
+
+                    {attachDataDisk ? (
+                      <>
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Data Disk Size (GB)
+                          </label>
+                          <input
+                            type="number"
+                            min={10}
+                            max={65536}
+                            value={dataDiskSizeGb}
+                            onChange={(e) => setDataDiskSizeGb(Number(e.target.value))}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Data Disk Type
+                          </label>
+                          <select
+                            value={dataDiskType}
+                            onChange={(e) => setDataDiskType(e.target.value)}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            <option value="pd-ssd">pd-ssd (Low-Latency SSD)</option>
+                            <option value="pd-balanced">pd-balanced (Balanced SSD)</option>
+                            <option value="hyperdisk-balanced">hyperdisk-balanced</option>
+                            <option value="pd-standard">pd-standard (Bulk HDD)</option>
+                          </select>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Cloud KMS CMEK Key (`--boot-disk-kms-key` — blank = Google-Managed AES-256)
+                        </label>
+                        <input
+                          type="text"
+                          value={vmDiskCmekKey}
+                          onChange={(e) => setVmDiskCmekKey(e.target.value)}
+                          placeholder="projects/my-proj/locations/us-central1/keyRings/ring/cryptoKeys/vm-key"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Boot Disk Retention on VM Delete
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setBootDiskAutoDelete((v) => !v)}
+                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
+                          bootDiskAutoDelete
+                            ? 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            : 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                        }`}
+                      >
+                        {bootDiskAutoDelete
+                          ? 'Auto-Delete Disk w/ VM'
+                          : 'Keep Boot Disk on Delete'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* STEP 3: VPC Networking, Subnetwork, Network Tier, gVNIC, Dual-Stack IPv6 & Firewall Tags */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      3. VPC Network Interface, Network Tier (`PREMIUM` vs `STANDARD`), gVNIC &amp; Firewall Rules
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                      {externalIpEnabled
+                        ? `External IPv4 (${networkTier} Tier) + Internal VPC IP`
+                        : 'Zero Public IPv4 (--no-address) · Private IAP SSH Tunnel Only'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        VPC Network / Subnetwork
+                      </label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <input
+                          type="text"
+                          value={vmNetwork}
+                          onChange={(e) => setVmNetwork(e.target.value)}
+                          placeholder="default"
+                          title="VPC Network name"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                        <input
+                          type="text"
+                          value={vmSubnetwork}
+                          onChange={(e) => setVmSubnetwork(e.target.value)}
+                          placeholder="auto"
+                          title="Subnetwork name (or auto)"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Public IPv4 / IAP Mode
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setExternalIpEnabled((v) => !v)}
+                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
+                          externalIpEnabled
+                            ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
+                            : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                        }`}
+                      >
+                        {externalIpEnabled
+                          ? 'Ephemeral Public IPv4'
+                          : '🔒 Zero Public IP (IAP)'}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Network Service Tier
+                      </label>
+                      <select
+                        value={networkTier}
+                        onChange={(e) => setNetworkTier(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="PREMIUM">PREMIUM (Google Global Fiber)</option>
+                        <option value="STANDARD">STANDARD (Regional ISP · -28% Egress)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Virtual NIC Driver (`nicType`)
+                      </label>
+                      <select
+                        value={nicType}
+                        onChange={(e) => setNicType(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="GVNIC">GVNIC (Google Virtual NIC · Up to 200Gbps)</option>
+                        <option value="VIRTIO_NET">VIRTIO_NET (Legacy VirtIO)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        IP Stack &amp; IP Forwarding
+                      </label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStackType((s) => (s === 'IPV4_ONLY' ? 'IPV4_IPV6' : 'IPV4_ONLY'))
+                          }
+                          className={`rounded-[8px] px-1.5 py-[8px] text-[10.5px] font-mono font-bold border cursor-pointer ${
+                            stackType === 'IPV4_IPV6'
+                              ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          {stackType === 'IPV4_IPV6' ? 'IPv4+IPv6' : 'IPv4 Only'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCanIpForward((v) => !v)}
+                          className={`rounded-[8px] px-1.5 py-[8px] text-[10.5px] font-mono font-bold border cursor-pointer ${
+                            canIpForward
+                              ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {canIpForward ? 'IP Fwd ON' : 'IP Fwd OFF'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Firewall Tag Toggles + Custom Tags Input */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center">
+                    <button
+                      type="button"
+                      onClick={() => setAllowHttp((v) => !v)}
+                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                        allowHttp
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {allowHttp ? '✓ http-server (TCP 80)' : '○ Block HTTP 80'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAllowHttps((v) => !v)}
+                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                        allowHttps
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {allowHttps ? '✓ https-server (TCP 443)' : '○ Block HTTPS 443'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAllowIapSsh((v) => !v)}
+                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                        allowIapSsh
+                          ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {allowIapSsh ? '✓ iap-ssh (35.235.240.0/20)' : '○ No IAP SSH Tag'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAllowLbHealthCheck((v) => !v)}
+                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                        allowLbHealthCheck
+                          ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 font-bold'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {allowLbHealthCheck ? '✓ lb-health-check' : '○ No GCLB Probe Tag'}
+                    </button>
+
+                    <input
+                      type="text"
+                      value={vmCustomTags}
+                      onChange={(e) => setVmCustomTags(e.target.value)}
+                      placeholder="Extra tags: k8s-node, wireguard"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-md px-2.5 py-2 text-[11px] font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                </div>
+
+                {/* STEP 4: Confidential Computing (SEV / SEV-SNP / TDX), Shielded VM, OS Login & SSH Keys */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      4. Confidential Computing (`SEV-SNP` / `TDX`), Shielded VM, IAM OS Login &amp; SSH Key Governance
+                    </div>
+                    <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
+                      {confidentialComputeType !== 'NONE'
+                        ? `🔒 Hardware Memory Encryption Active (${confidentialComputeType})`
+                        : 'Standard vTPM + Shielded Boot Integrity'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Confidential VM Enclave (`--confidential-compute-type`)
+                      </label>
+                      <select
+                        value={confidentialComputeType}
+                        onChange={(e) => setConfidentialComputeType(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="NONE">Disabled (Standard RAM)</option>
+                        <option value="SEV">AMD SEV (N2D / C2D RAM Encryption)</option>
+                        <option value="SEV_SNP">AMD SEV-SNP (N2D / C3D Secure Nested Paging)</option>
+                        <option value="TDX">Intel TDX (C3 / C4 Trust Domain Extensions)</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Shielded VM, OS Login, 2FA &amp; Deletion Safeguards
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShieldedSecureBoot((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            shieldedSecureBoot
+                              ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {shieldedSecureBoot ? '✓ Secure Boot' : '○ Secure Boot'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShieldedVtpm((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            shieldedVtpm
+                              ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {shieldedVtpm ? '✓ vTPM + Integrity' : '○ vTPM OFF'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnableOsLogin((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            enableOsLogin
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {enableOsLogin ? '✓ IAM OS Login' : '○ Legacy SSH Keys'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnableOsLogin2fa((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            enableOsLogin2fa
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {enableOsLogin2fa ? '✓ OS Login 2FA' : '○ 2FA Optional'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBlockProjectSshKeys((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            blockProjectSshKeys
+                              ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {blockProjectSshKeys ? '✓ Block Proj Keys' : '○ Allow Proj Keys'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletionProtection((v) => !v)}
+                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                            deletionProtection
+                              ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {deletionProtection ? '🔒 Delete Guard ON' : '○ Delete Guard OFF'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Optional SSH Public Key & Container-on-Boot Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Optional SSH Public Key (`metadata.ssh-keys` — `ssh-ed25519` or `ssh-rsa`)
+                      </label>
+                      <input
+                        type="text"
+                        value={sshPublicKey}
+                        onChange={(e) => setSshPublicKey(e.target.value)}
+                        placeholder="ubuntu:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... engineer@workstation"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[7px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Optional Container-on-Boot Image (`gce-container-declaration` for COS)
+                      </label>
+                      <input
+                        type="text"
+                        value={deployContainerImage}
+                        onChange={(e) => setDeployContainerImage(e.target.value)}
+                        placeholder="us-docker.pkg.dev/cloudrun/container/hello:latest or nginx:alpine"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[7px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* STEP 5: Availability Policy, Borg Live Migration, Time-Bounded Sandbox (--max-run-duration), Ops Agent & Startup Scripts */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      5. Availability Policy, Borg Live Host Migration, Auto-Stop Timer (`--max-run-duration`) &amp; Cloud-Init Automation
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                      {spotInstance
+                        ? `Spot VM (-68% to -91% Discount · On Preemption: ${terminationAction})`
+                        : maxRunDurationHours > 0
+                        ? `Time-Bounded Sandbox: Auto-${terminationAction} after ${maxRunDurationHours}h`
+                        : `Standard 24/7 SLA · Host Maintenance: ${onHostMaintenance}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Provisioning Model
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setSpotInstance((s) => !s)}
+                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border flex items-center justify-between cursor-pointer ${
+                          spotInstance
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                            : 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
+                        }`}
+                      >
+                        <span>{spotInstance ? 'Spot VM (-68%)' : 'Standard (24/7)'}</span>
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Borg Host Maintenance
+                      </label>
+                      <select
+                        value={
+                          spotInstance || confidentialComputeType !== 'NONE' || localSsdCount > 0
+                            ? 'TERMINATE'
+                            : onHostMaintenance
+                        }
+                        disabled={spotInstance || confidentialComputeType !== 'NONE' || localSsdCount > 0}
+                        onChange={(e) => setOnHostMaintenance(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                      >
+                        <option value="MIGRATE">MIGRATE (Zero-Reboot Live Migrate)</option>
+                        <option value="TERMINATE">TERMINATE (Stop on Host Event)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Auto-Stop Sandbox Timer (`--max-run-duration`)
+                      </label>
+                      <select
+                        value={maxRunDurationHours}
+                        onChange={(e) => setMaxRunDurationHours(Number(e.target.value))}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value={0}>No Time Limit (Run Until Stopped)</option>
+                        <option value={2}>Auto-Terminate After 2 Hours</option>
+                        <option value={4}>Auto-Terminate After 4 Hours</option>
+                        <option value={8}>Auto-Terminate After 8 Hours (Workday)</option>
+                        <option value={24}>Auto-Terminate After 24 Hours</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Preemption / Timer Action
+                      </label>
+                      <select
+                        value={terminationAction}
+                        onChange={(e) => setTerminationAction(e.target.value)}
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="STOP">STOP (Preserve Boot Disk)</option>
+                        <option value="DELETE">DELETE (Destroy Ephemeral VM)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Cloud Ops Agent &amp; Serial Log
+                      </label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setInstallOpsAgent((v) => !v)}
+                          className={`rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
+                            installOpsAgent
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {installOpsAgent ? '✓ Ops Agent' : '○ No Agent'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnableSerialPort((v) => !v)}
+                          className={`rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
+                            enableSerialPort
+                              ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          {enableSerialPort ? '✓ Serial TTY' : '○ Serial OFF'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Startup Script + 6 1-Click Production Cloud-Init Recipes */}
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
+                      <label className="text-[11px] font-medium text-zinc-500">
+                        Boot Startup Script (`metadata.startup-script` — bash / PowerShell executed as root on first boot)
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[
+                          {
+                            label: '+ NGINX + Docker',
+                            script:
+                              '#!/bin/bash\nset -e\napt-get update && apt-get install -y nginx docker.io docker-compose-v2\nsystemctl enable --now nginx docker',
+                          },
+                          {
+                            label: '+ Node.js 22 + PM2',
+                            script:
+                              '#!/bin/bash\nset -e\ncurl -fsSL https://deb.nodesource.com/setup_22.x | bash -\napt-get install -y nodejs git build-essential\nnpm install -g pm2',
+                          },
+                          {
+                            label: '+ Postgres 16 + pgvector',
+                            script:
+                              '#!/bin/bash\nset -e\napt-get update && apt-get install -y postgresql postgresql-contrib\nsystemctl enable --now postgresql',
+                          },
+                          {
+                            label: '+ vLLM CUDA Server',
+                            script:
+                              '#!/bin/bash\nnvidia-smi\ndocker run -d --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai:latest --model google/gemma-2-9b-it',
+                          },
+                          {
+                            label: '+ WireGuard / Tailscale',
+                            script:
+                              '#!/bin/bash\nset -e\ncurl -fsSL https://tailscale.com/install.sh | sh\nsysctl -w net.ipv4.ip_forward=1',
+                          },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setStartupScript(preset.script)}
+                            className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={startupScript}
+                      onChange={(e) => setStartupScript(e.target.value)}
+                      placeholder="#!/bin/bash&#10;apt-get update && apt-get install -y nginx docker.io"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  {/* FinOps Cost Attribution Labels */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      FinOps Cost Attribution Labels (`--labels` — key=value pairs billed to BigQuery Billing Export)
+                    </label>
+                    <input
+                      type="text"
+                      value={vmCustomLabels}
+                      onChange={(e) => setVmCustomLabels(e.target.value)}
+                      placeholder="env=prod,cost_center=compute,team=platform,owner=sre"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                </div>
+
+                {/* STEP 6: Interactive 3-Tab Live GCE Blueprint Inspector (gcloud CLI · REST v1 JSON · Terraform HCL) */}
+                <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-zinc-100 space-y-2.5 font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="font-extrabold text-white text-[11px] uppercase tracking-wider">
+                        6. Live Compute Engine Blueprint Synthesizer (CLI · REST API · Terraform HCL)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { id: 'GCLOUD_CLI', label: 'gcloud compute instances create' },
+                        { id: 'REST_JSON', label: 'compute.v1 REST JSON' },
+                        { id: 'TERRAFORM_HCL', label: 'Terraform HCL (.tf)' },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setVmBlueprintCodeTab(tab.id)}
+                          className={`px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                            vmBlueprintCodeTab === tab.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-emerald-400 max-h-44 overflow-auto whitespace-pre-wrap text-[10.5px] leading-relaxed">
+                    {vmBlueprintCodeTab === 'GCLOUD_CLI'
+                      ? gcloudCommand
+                      : vmBlueprintCodeTab === 'REST_JSON'
+                      ? JSON.stringify(vmRestPayloadPreview, null, 2)
+                      : vmTerraformPreview}
+                  </pre>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {serviceType === 'GCS_BUCKET' && (() => {
             const isGcsCustom = gcsComplianceRegime === 'custom';

@@ -48,21 +48,105 @@ const SSH_QUICK_CHIPS = [
 
 const QUICK_VM_TEMPLATES = [
   {
-    label: 'Free-Tier Spot Micro (us-east1-b · e2-micro)',
-    prefix: 'spot-micro',
-    region: 'us-east1',
-    zone: 'us-east1-b',
+    id: 'FREE_TIER',
+    badge: '$0.00/mo FREE',
+    label: 'Always-Free Micro (us-central1-a · e2-micro · 30GB HDD)',
+    desc: 'Qualifies for Google Cloud Always Free tier (1x e2-micro + 30GB pd-standard in us-central1/us-west1/us-east1)',
+    prefix: 'free-micro',
+    region: 'us-central1',
+    zone: 'us-central1-a',
     machineType: 'e2-micro',
     osImage: 'Debian 12 Bookworm',
-    diskSizeGb: 15,
-    diskType: 'pd-balanced',
-    spotInstance: true,
+    diskSizeGb: 30,
+    diskType: 'pd-standard',
+    spotInstance: false,
+    externalIpEnabled: true,
     allowHttp: true,
     allowHttps: true,
   },
   {
-    label: 'EU Web & Docker Host (europe-west1-b · e2-medium)',
-    prefix: 'eu-docker',
+    id: 'IAP_BASTION',
+    badge: 'ZERO-PUBLIC-IP',
+    label: 'Zero-IP IAP Bastion (us-central1-a · e2-small · OS Login)',
+    desc: 'No external IPv4 (--no-address) + Shielded Secure Boot + IAM OS Login for zero-trust TCP tunneling',
+    prefix: 'iap-bastion',
+    region: 'us-central1',
+    zone: 'us-central1-a',
+    machineType: 'e2-small',
+    osImage: 'Debian 12 Bookworm',
+    diskSizeGb: 20,
+    diskType: 'pd-balanced',
+    spotInstance: true,
+    externalIpEnabled: false,
+    allowHttp: false,
+    allowHttps: false,
+    shieldedSecureBoot: true,
+    enableOsLogin: true,
+    blockProjectSshKeys: true,
+  },
+  {
+    id: 'C4_HYPERDISK',
+    badge: '25K IOPS GEN-5',
+    label: 'C4 Emerald Rapids + Hyperdisk (us-central1-a · c4-standard-4)',
+    desc: '5th-Gen Xeon + 100GB hyperdisk-balanced (25,000 IOPS / 600 MB/s) + gVNIC Titanium NIC',
+    prefix: 'c4-hyper',
+    region: 'us-central1',
+    zone: 'us-central1-a',
+    machineType: 'c4-standard-4',
+    osImage: 'Ubuntu 24.04 LTS',
+    diskSizeGb: 100,
+    diskType: 'hyperdisk-balanced',
+    provisionedIops: 25000,
+    provisionedThroughputMb: 600,
+    nicType: 'GVNIC',
+    spotInstance: false,
+    externalIpEnabled: true,
+    allowHttp: true,
+    allowHttps: true,
+  },
+  {
+    id: 'CONFIDENTIAL_SEV',
+    badge: 'SEV-SNP RAM ENCRYPT',
+    label: 'Confidential Computing Node (us-central1-a · n2d-standard-2)',
+    desc: 'Hardware AMD EPYC SEV-SNP inline RAM encryption + Shielded vTPM + Secure Boot',
+    prefix: 'conf-sev',
+    region: 'us-central1',
+    zone: 'us-central1-a',
+    machineType: 'n2d-standard-2',
+    osImage: 'Ubuntu 24.04 LTS',
+    diskSizeGb: 50,
+    diskType: 'pd-ssd',
+    confidentialComputeType: 'SEV_SNP',
+    shieldedSecureBoot: true,
+    spotInstance: true,
+    externalIpEnabled: false,
+    allowHttp: false,
+    allowHttps: false,
+  },
+  {
+    id: 'ARM64_COS',
+    badge: 'ARM64 AXION/AMPERE',
+    label: 'Arm64 Container-Optimized Host (us-central1-a · t2a-standard-2)',
+    desc: 'Arm64 aarch64 architecture + Container-Optimized OS + auto-launched Nginx container on boot',
+    prefix: 'arm64-cos',
+    region: 'us-central1',
+    zone: 'us-central1-a',
+    machineType: 't2a-standard-2',
+    osImage: 'Container-Optimized OS (COS)',
+    diskSizeGb: 30,
+    diskType: 'pd-balanced',
+    containerDeployImage: 'docker.io/library/nginx:alpine',
+    spotInstance: true,
+    externalIpEnabled: true,
+    allowHttp: true,
+    allowHttps: true,
+  },
+  {
+    id: 'EU_DOCKER_SPOT',
+    badge: 'EU SPOT SANDBOX',
+    label: 'EU Spot Docker & Nginx Host (europe-west1-b · e2-medium · 8h TTL)',
+    desc: 'Up to 91% Spot discount + Cloud-Init Nginx bootstrap + 8h auto-stop sandbox timer',
+    prefix: 'eu-spot',
     region: 'europe-west1',
     zone: 'europe-west1-b',
     machineType: 'e2-medium',
@@ -70,23 +154,12 @@ const QUICK_VM_TEMPLATES = [
     diskSizeGb: 25,
     diskType: 'pd-ssd',
     spotInstance: true,
+    maxRunDurationHours: 8,
+    externalIpEnabled: true,
     allowHttp: true,
     allowHttps: true,
     startupScript:
       '#!/bin/bash\napt-get update && apt-get install -y nginx\nsystemctl enable --now nginx',
-  },
-  {
-    label: 'Arm64 Cloud-Native Node (us-central1-a · t2a-standard-1)',
-    prefix: 'arm64-node',
-    region: 'us-central1',
-    zone: 'us-central1-a',
-    machineType: 't2a-standard-1',
-    osImage: 'Ubuntu 24.04 LTS',
-    diskSizeGb: 20,
-    diskType: 'pd-balanced',
-    spotInstance: true,
-    allowHttp: true,
-    allowHttps: true,
   },
 ];
 
@@ -96,9 +169,17 @@ const RESIZE_MACHINE_TYPES = [
   'e2-medium',
   'e2-standard-2',
   'e2-standard-4',
+  'e2-standard-8',
   'n2-standard-2',
   'n2-standard-4',
+  'n2d-standard-2',
+  'n2d-standard-4',
   'c3-standard-4',
+  'c4-standard-4',
+  'c4a-standard-2',
+  't2a-standard-2',
+  'custom-2-8192',
+  'custom-4-16384',
 ];
 
 export default function VmFleetAndSsh({
@@ -303,17 +384,32 @@ export default function VmFleetAndSsh({
             osImage: tpl.osImage,
             diskSizeGb: tpl.diskSizeGb,
             diskType: tpl.diskType,
-            spotInstance: tpl.spotInstance,
+            provisionedIops: tpl.provisionedIops || 3000,
+            provisionedThroughputMb: tpl.provisionedThroughputMb || 140,
+            spotInstance: Boolean(tpl.spotInstance),
             terminationAction: 'STOP',
+            maxRunDurationHours: tpl.maxRunDurationHours || 0,
             vmNetwork: 'default',
-            externalIpEnabled: true,
-            allowHttp: tpl.allowHttp,
-            allowHttps: tpl.allowHttps,
+            nicType: tpl.nicType || 'GVNIC',
+            externalIpEnabled: tpl.externalIpEnabled !== false,
+            allowHttp: Boolean(tpl.allowHttp),
+            allowHttps: Boolean(tpl.allowHttps),
+            confidentialComputeType: tpl.confidentialComputeType || 'NONE',
+            shieldedSecureBoot: Boolean(tpl.shieldedSecureBoot),
             shieldedVtpm: true,
+            shieldedIntegrityMonitoring: true,
+            enableOsLogin: Boolean(tpl.enableOsLogin),
+            blockProjectSshKeys: Boolean(tpl.blockProjectSshKeys),
+            containerDeployImage: tpl.containerDeployImage || '',
             startupScript: tpl.startupScript || '',
           },
         }
       );
+      if (onShowToast) {
+        onShowToast(
+          `Provisioned ${vmName} (${tpl.machineType} · ${tpl.diskSizeGb}GB ${tpl.diskType}) in ${tpl.zone}`
+        );
+      }
       await fetchVms(false);
       if (onVmDeleted) onVmDeleted();
     } catch (err) {
@@ -979,8 +1075,77 @@ export default function VmFleetAndSsh({
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>+ Open Compute VM Studio</span>
+              <span>+ Open 6-Stage GCE VM Architect</span>
             </button>
+          </div>
+        </div>
+
+        {/* 1-Tap Production GCE Blueprints Quick-Provision Strip */}
+        <div className="pt-2.5 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+              ⚡ 1-Tap Production GCE Blueprints (Instant Live Provisioning or Customize in 6-Stage Architect)
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              Supports Custom vCPU/RAM · Hyperdisk 160K IOPS · Local NVMe · Confidential SEV-SNP/TDX · Arm64 · Spot TTL
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {QUICK_VM_TEMPLATES.map((tpl) => {
+              const isDeploying = quickDeployingLabel === tpl.label;
+              return (
+                <div
+                  key={tpl.id || tpl.label}
+                  className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 transition-colors flex flex-col justify-between gap-2"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        {tpl.label}
+                      </span>
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0">
+                        {tpl.badge}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                      {tpl.desc}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/80">
+                    <span className="text-[10px] font-mono text-zinc-500 truncate">
+                      {tpl.machineType} · {tpl.diskSizeGb}GB {tpl.diskType}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={onOpenProvisionVm}
+                        className="px-2 py-1 rounded text-[10px] font-mono font-semibold bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        Customize
+                      </button>
+                      <button
+                        type="button"
+                        disabled={Boolean(quickDeployingLabel)}
+                        onClick={() => handleQuickDeployVm(tpl)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 cursor-pointer"
+                      >
+                        {isDeploying ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Deploying...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3 h-3" />
+                            <span>1-Click Launch</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
