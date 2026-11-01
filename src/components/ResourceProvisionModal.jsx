@@ -23,51 +23,51 @@ import VisualCronScheduleBuilder, {
 const SERVICE_TABS = [
   {
     id: 'COMPUTE_VM',
-    label: '1. Compute VM',
+    label: '1. Compute VM (GCE)',
     icon: Server,
-    desc: 'E2/N2/C4/Arm64/GPU VMs, Hyperdisk & Confidential VM',
-  },
-  {
-    id: 'CLOUD_RUN',
-    label: '2. Cloud Run',
-    icon: Cpu,
-    desc: 'Serverless Containers & Jobs (Scale-to-$0 / L4 GPU)',
-  },
-  {
-    id: 'GKE_CLUSTER',
-    label: '3. GKE Cluster',
-    icon: Sparkles,
-    desc: 'Autopilot or Standard GPU Kubernetes Cluster',
-  },
-  {
-    id: 'CLOUD_SQL',
-    label: '4. Cloud SQL / AlloyDB',
-    icon: Database,
-    desc: 'PostgreSQL 16/17, MySQL 8.4 & AlloyDB Vector DB',
-  },
-  {
-    id: 'GCS_BUCKET',
-    label: '5. Cloud Storage',
-    icon: HardDrive,
-    desc: 'Object Storage Bucket (WORM / HNS / Autoclass)',
-  },
-  {
-    id: 'BIGQUERY_DATASET',
-    label: '6. BigQuery Dataset',
-    icon: Database,
-    desc: 'Analytical Data Warehouse & AI Lakehouse Dataset',
+    desc: '1 GB to 32 TB RAM · E2/N2/C4/Arm64/X4/GPU · Hyperdisk',
   },
   {
     id: 'VPC_NETWORK',
-    label: '7. VPC Network',
+    label: '2. VPC Network',
     icon: Network,
     desc: 'Global / Regional Virtual Private Cloud & Subnets',
   },
   {
     id: 'VPC_FIREWALL',
-    label: '8. Firewall Rule',
+    label: '3. Firewall Rule',
     icon: Shield,
     desc: 'Zero-Trust Ingress/Egress & IAP Perimeter Rule',
+  },
+  {
+    id: 'CLOUD_RUN',
+    label: '4. Cloud Run',
+    icon: Cpu,
+    desc: 'Serverless Containers & Jobs (Scale-to-$0 / L4 GPU)',
+  },
+  {
+    id: 'GKE_CLUSTER',
+    label: '5. GKE Cluster',
+    icon: Sparkles,
+    desc: 'Autopilot or Standard GPU Kubernetes Cluster',
+  },
+  {
+    id: 'CLOUD_SQL',
+    label: '6. Cloud SQL / AlloyDB',
+    icon: Database,
+    desc: 'PostgreSQL 16/17, MySQL 8.4 & AlloyDB Vector DB',
+  },
+  {
+    id: 'GCS_BUCKET',
+    label: '7. Cloud Storage',
+    icon: HardDrive,
+    desc: 'Object Storage Bucket (WORM / HNS / Autoclass)',
+  },
+  {
+    id: 'BIGQUERY_DATASET',
+    label: '8. BigQuery Dataset',
+    icon: Database,
+    desc: 'Analytical Data Warehouse & AI Lakehouse Dataset',
   },
 ];
 
@@ -203,7 +203,7 @@ export default function ResourceProvisionModal({
 
   const VM_MACHINE_FAMILIES = {
     E2: {
-      badge: 'Cost-Optimized General Purpose (Up to 31% Sustained Savings)',
+      badge: 'Cost-Optimized General Purpose (1 GB up to 128 GB RAM · 2 to 32 vCPUs)',
       types: [
         { id: 'e2-micro', label: 'e2-micro (2 shared vCPU · 1 GB RAM · Always Free Tier)' },
         { id: 'e2-small', label: 'e2-small (2 shared vCPU · 2 GB RAM · $12.23/mo)' },
@@ -211,60 +211,113 @@ export default function ResourceProvisionModal({
         { id: 'e2-standard-2', label: 'e2-standard-2 (2 vCPU · 8 GB RAM · $48.91/mo)' },
         { id: 'e2-standard-4', label: 'e2-standard-4 (4 vCPU · 16 GB RAM · $97.82/mo)' },
         { id: 'e2-standard-8', label: 'e2-standard-8 (8 vCPU · 32 GB RAM · $195.64/mo)' },
+        { id: 'e2-standard-16', label: 'e2-standard-16 (16 vCPU · 64 GB RAM · $391.28/mo)' },
+        { id: 'e2-standard-32', label: 'e2-standard-32 (32 vCPU · 128 GB RAM · $782.56/mo)' },
         { id: 'e2-highmem-4', label: 'e2-highmem-4 (4 vCPU · 32 GB RAM · High-Memory)' },
-        { id: 'e2-highcpu-8', label: 'e2-highcpu-8 (8 vCPU · 8 GB RAM · High-CPU)' },
+        { id: 'e2-highmem-8', label: 'e2-highmem-8 (8 vCPU · 64 GB RAM · High-Memory)' },
+        { id: 'e2-highmem-16', label: 'e2-highmem-16 (16 vCPU · 128 GB RAM · Max E2 High-Mem)' },
+        { id: 'e2-highcpu-16', label: 'e2-highcpu-16 (16 vCPU · 16 GB RAM · High-CPU)' },
+        { id: 'e2-highcpu-32', label: 'e2-highcpu-32 (32 vCPU · 32 GB RAM · Max E2 High-CPU)' },
       ],
     },
     N2: {
-      badge: 'Balanced Intel Xeon / AMD EPYC (Up to 30% Sustained-Use Discount)',
+      badge: 'Balanced Intel Xeon / AMD EPYC (8 GB up to 896 GB RAM · Up to 224 vCPUs)',
       types: [
-        { id: 'n2-standard-2', label: 'n2-standard-2 (2 vCPU Intel Cascade/Ice Lake · 8 GB)' },
-        { id: 'n2-standard-4', label: 'n2-standard-4 (4 vCPU Intel Ice Lake · 16 GB)' },
-        { id: 'n2-standard-8', label: 'n2-standard-8 (8 vCPU Intel Ice Lake · 32 GB)' },
-        { id: 'n2d-standard-4', label: 'n2d-standard-4 (4 vCPU AMD EPYC Milan · 16 GB · SEV Ready)' },
-        { id: 'n2d-standard-8', label: 'n2d-standard-8 (8 vCPU AMD EPYC Milan · 32 GB · SEV-SNP Ready)' },
-        { id: 'n2-highmem-4', label: 'n2-highmem-4 (4 vCPU · 32 GB RAM)' },
+        { id: 'n2-standard-2', label: 'n2-standard-2 (2 vCPU Intel Ice Lake · 8 GB RAM)' },
+        { id: 'n2-standard-4', label: 'n2-standard-4 (4 vCPU Intel Ice Lake · 16 GB RAM)' },
+        { id: 'n2-standard-8', label: 'n2-standard-8 (8 vCPU Intel Ice Lake · 32 GB RAM)' },
+        { id: 'n2-standard-16', label: 'n2-standard-16 (16 vCPU Intel Ice Lake · 64 GB RAM)' },
+        { id: 'n2-standard-32', label: 'n2-standard-32 (32 vCPU Intel Ice Lake · 128 GB RAM)' },
+        { id: 'n2-standard-64', label: 'n2-standard-64 (64 vCPU Intel Ice Lake · 256 GB RAM)' },
+        { id: 'n2-standard-128', label: 'n2-standard-128 (128 vCPU Intel Ice Lake · 512 GB RAM)' },
+        { id: 'n2-highmem-16', label: 'n2-highmem-16 (16 vCPU · 128 GB RAM)' },
+        { id: 'n2-highmem-32', label: 'n2-highmem-32 (32 vCPU · 256 GB RAM)' },
+        { id: 'n2-highmem-64', label: 'n2-highmem-64 (64 vCPU · 512 GB RAM)' },
+        { id: 'n2-highmem-128', label: 'n2-highmem-128 (128 vCPU · 864 GB RAM · Intel Max)' },
+        { id: 'n2d-standard-16', label: 'n2d-standard-16 (16 vCPU AMD EPYC · 64 GB RAM · SEV-SNP)' },
+        { id: 'n2d-standard-48', label: 'n2d-standard-48 (48 vCPU AMD EPYC · 192 GB RAM · SEV-SNP)' },
+        { id: 'n2d-standard-128', label: 'n2d-standard-128 (128 vCPU AMD EPYC · 512 GB RAM · SEV-SNP)' },
+        { id: 'n2d-standard-224', label: 'n2d-standard-224 (224 vCPU AMD EPYC · 896 GB RAM · 224-Core Beast)' },
+        { id: 'n2d-highmem-96', label: 'n2d-highmem-96 (96 vCPU AMD EPYC · 768 GB RAM · SEV-SNP)' },
       ],
     },
     C3_C4: {
-      badge: '2026 Gen-4/5 Ultra-Low-Latency (Intel Emerald Rapids & AMD Genoa + 200Gbps gVNIC)',
+      badge: '2026 Gen-4/5 Titanium Compute (16 GB up to 2,880 GB / 2.88 TB RAM · 200Gbps gVNIC)',
       types: [
-        { id: 'c3-standard-4', label: 'c3-standard-4 (4 vCPU Sapphire Rapids · 16 GB · Hyperdisk)' },
-        { id: 'c3-standard-8', label: 'c3-standard-8 (8 vCPU Sapphire Rapids · 32 GB · Tier-1 Net)' },
-        { id: 'c3d-standard-4', label: 'c3d-standard-4 (4 vCPU AMD EPYC Genoa · 16 GB · SEV-SNP)' },
-        { id: 'c3d-standard-8', label: 'c3d-standard-8 (8 vCPU AMD EPYC Genoa · 32 GB)' },
-        { id: 'c4-standard-4', label: 'c4-standard-4 (4 vCPU Intel Emerald Rapids · 15 GB · Intel TDX)' },
-        { id: 'c4-standard-8', label: 'c4-standard-8 (8 vCPU Intel Emerald Rapids · 30 GB · Titanium Offload)' },
+        { id: 'c3-standard-4', label: 'c3-standard-4 (4 vCPU Sapphire Rapids · 16 GB RAM)' },
+        { id: 'c3-standard-8', label: 'c3-standard-8 (8 vCPU Sapphire Rapids · 32 GB RAM)' },
+        { id: 'c3-standard-22', label: 'c3-standard-22 (22 vCPU Sapphire Rapids · 88 GB RAM)' },
+        { id: 'c3-standard-44', label: 'c3-standard-44 (44 vCPU Sapphire Rapids · 176 GB RAM)' },
+        { id: 'c3-standard-88', label: 'c3-standard-88 (88 vCPU Sapphire Rapids · 352 GB RAM)' },
+        { id: 'c3-standard-176', label: 'c3-standard-176 (176 vCPU Sapphire Rapids · 704 GB RAM)' },
+        { id: 'c3-highmem-88', label: 'c3-highmem-88 (88 vCPU · 704 GB RAM · High-Memory)' },
+        { id: 'c3-highmem-176', label: 'c3-highmem-176 (176 vCPU · 1,408 GB / 1.4 TB RAM)' },
+        { id: 'c3d-standard-16', label: 'c3d-standard-16 (16 vCPU AMD Genoa · 64 GB RAM · SEV-SNP)' },
+        { id: 'c3d-standard-60', label: 'c3d-standard-60 (60 vCPU AMD Genoa · 240 GB RAM)' },
+        { id: 'c3d-standard-180', label: 'c3d-standard-180 (180 vCPU AMD Genoa · 720 GB RAM)' },
+        { id: 'c3d-standard-360', label: 'c3d-standard-360 (360 vCPU AMD Genoa · 1,440 GB / 1.44 TB RAM)' },
+        { id: 'c3d-highmem-360', label: 'c3d-highmem-360 (360 vCPU AMD Genoa · 2,880 GB / 2.88 TB RAM)' },
+        { id: 'c4-standard-4', label: 'c4-standard-4 (4 vCPU Intel Emerald Rapids · 15 GB · TDX)' },
+        { id: 'c4-standard-16', label: 'c4-standard-16 (16 vCPU Intel Emerald Rapids · 60 GB · TDX)' },
+        { id: 'c4-standard-48', label: 'c4-standard-48 (48 vCPU Intel Emerald Rapids · 180 GB · TDX)' },
+        { id: 'c4-standard-96', label: 'c4-standard-96 (96 vCPU Intel Emerald Rapids · 360 GB · TDX)' },
+        { id: 'c4-standard-192', label: 'c4-standard-192 (192 vCPU Intel Emerald Rapids · 720 GB RAM)' },
+        { id: 'c4-highmem-192', label: 'c4-highmem-192 (192 vCPU Intel Emerald Rapids · 1,488 GB / 1.48 TB RAM)' },
       ],
     },
     T2A_ARM: {
-      badge: 'Google Axion C4A & Ampere Altra T2A Arm64 (Best Price-Performance & Carbon Efficiency)',
+      badge: 'Google Axion C4A & Ampere Altra T2A Arm64 (4 GB up to 576 GB RAM · Up to 72 Arm64 Cores)',
       types: [
         { id: 't2a-standard-1', label: 't2a-standard-1 (1 Arm64 Ampere vCPU · 4 GB RAM)' },
         { id: 't2a-standard-2', label: 't2a-standard-2 (2 Arm64 Ampere vCPU · 8 GB RAM)' },
         { id: 't2a-standard-4', label: 't2a-standard-4 (4 Arm64 Ampere vCPU · 16 GB RAM)' },
-        { id: 'c4a-standard-4', label: 'c4a-standard-4 (4 Google Axion Arm64 vCPU · 16 GB · Hyperdisk)' },
-        { id: 'c4a-standard-8', label: 'c4a-standard-8 (8 Google Axion Arm64 vCPU · 32 GB · Hyperdisk)' },
+        { id: 't2a-standard-8', label: 't2a-standard-8 (8 Arm64 Ampere vCPU · 32 GB RAM)' },
+        { id: 't2a-standard-16', label: 't2a-standard-16 (16 Arm64 Ampere vCPU · 64 GB RAM)' },
+        { id: 't2a-standard-32', label: 't2a-standard-32 (32 Arm64 Ampere vCPU · 128 GB RAM)' },
+        { id: 't2a-standard-48', label: 't2a-standard-48 (48 Arm64 Ampere vCPU · 192 GB RAM)' },
+        { id: 'c4a-standard-4', label: 'c4a-standard-4 (4 Google Axion Arm64 vCPU · 16 GB RAM)' },
+        { id: 'c4a-standard-8', label: 'c4a-standard-8 (8 Google Axion Arm64 vCPU · 32 GB RAM)' },
+        { id: 'c4a-standard-16', label: 'c4a-standard-16 (16 Google Axion Arm64 vCPU · 64 GB RAM)' },
+        { id: 'c4a-standard-32', label: 'c4a-standard-32 (32 Google Axion Arm64 vCPU · 128 GB RAM)' },
+        { id: 'c4a-standard-64', label: 'c4a-standard-64 (64 Google Axion Arm64 vCPU · 256 GB RAM)' },
+        { id: 'c4a-standard-72', label: 'c4a-standard-72 (72 Google Axion Arm64 vCPU · 288 GB RAM)' },
+        { id: 'c4a-highmem-32', label: 'c4a-highmem-32 (32 Google Axion Arm64 vCPU · 256 GB RAM)' },
+        { id: 'c4a-highmem-72', label: 'c4a-highmem-72 (72 Google Axion Arm64 vCPU · 576 GB RAM)' },
       ],
     },
     M3_MEM: {
-      badge: 'Memory-Optimized In-Memory DBs (Redis, Valkey, Memcached, SAP HANA)',
+      badge: 'Memory-Optimized Monster VMs (64 GB up to 32,768 GB / 32 TB RAM · Up to 1,920 vCPUs)',
       types: [
-        { id: 'm3-ultramem-32', label: 'm3-ultramem-32 (32 vCPU · 976 GB RAM · In-Memory DB)' },
-        { id: 'm3-megamem-64', label: 'm3-megamem-64 (64 vCPU · 976 GB RAM · High Bandwidth)' },
         { id: 'n2-highmem-8', label: 'n2-highmem-8 (8 vCPU · 64 GB RAM · Redis / Valkey)' },
         { id: 'n2-highmem-16', label: 'n2-highmem-16 (16 vCPU · 128 GB RAM · Analytical Cache)' },
+        { id: 'n2-highmem-32', label: 'n2-highmem-32 (32 vCPU · 256 GB RAM · In-Memory DB)' },
+        { id: 'n2-highmem-64', label: 'n2-highmem-64 (64 vCPU · 512 GB RAM · Half-Terabyte)' },
+        { id: 'm3-megamem-64', label: 'm3-megamem-64 (64 vCPU · 976 GB RAM · ~1 TB RAM)' },
+        { id: 'm1-megamem-96', label: 'm1-megamem-96 (96 vCPU · 1,433 GB / 1.4 TB RAM)' },
+        { id: 'm3-ultramem-64', label: 'm3-ultramem-64 (64 vCPU · 1,952 GB / ~2 TB RAM)' },
+        { id: 'm3-ultramem-128', label: 'm3-ultramem-128 (128 vCPU · 3,904 GB / ~4 TB RAM)' },
+        { id: 'm2-ultramem-208', label: 'm2-ultramem-208 (208 vCPU · 5,888 GB / ~6 TB RAM · SAP HANA)' },
+        { id: 'm2-ultramem-416', label: 'm2-ultramem-416 (416 vCPU · 11,776 GB / ~12 TB RAM · SAP HANA)' },
+        { id: 'x4-megamem-960', label: 'x4-megamem-960 (960 vCPU · 16,384 GB / 16 TB RAM · Exascale)' },
+        { id: 'x4-megamem-1440', label: 'x4-megamem-1440 (1,440 vCPU · 24,576 GB / 24 TB RAM · Exascale)' },
+        { id: 'x4-megamem-1920', label: 'x4-megamem-1920 (1,920 vCPU · 32,768 GB / 32 TB RAM · Max GCE Titan)' },
       ],
     },
     G2_A2_GPU: {
-      badge: 'AI / CUDA GPU Accelerated VMs (NVIDIA L4 24GB · A100 40/80GB · H100 80GB)',
+      badge: 'AI / CUDA GPU Supercomputers (16 GB up to 2,952 GB / 2.95 TB RAM · L4 / A100 / H100 / H200)',
       types: [
-        { id: 'g2-standard-4', label: 'g2-standard-4 (4 vCPU · 16 GB · 1x NVIDIA L4 24GB VRAM)' },
-        { id: 'g2-standard-8', label: 'g2-standard-8 (8 vCPU · 32 GB · 1x NVIDIA L4 24GB VRAM)' },
-        { id: 'g2-standard-12', label: 'g2-standard-12 (12 vCPU · 48 GB · 1x NVIDIA L4 24GB VRAM)' },
-        { id: 'a2-highgpu-1g', label: 'a2-highgpu-1g (12 vCPU · 85 GB · 1x NVIDIA A100 40GB)' },
-        { id: 'a3-highgpu-8g', label: 'a3-highgpu-8g (208 vCPU · 1872 GB · 8x NVIDIA H100 80GB Mega)' },
-        { id: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU · 15 GB + Custom T4/V100 GPU)' },
+        { id: 'g2-standard-4', label: 'g2-standard-4 (4 vCPU · 16 GB RAM · 1x NVIDIA L4 24GB)' },
+        { id: 'g2-standard-8', label: 'g2-standard-8 (8 vCPU · 32 GB RAM · 1x NVIDIA L4 24GB)' },
+        { id: 'g2-standard-16', label: 'g2-standard-16 (16 vCPU · 64 GB RAM · 1x NVIDIA L4 24GB)' },
+        { id: 'g2-standard-32', label: 'g2-standard-32 (32 vCPU · 128 GB RAM · 1x NVIDIA L4 24GB)' },
+        { id: 'g2-standard-48', label: 'g2-standard-48 (48 vCPU · 192 GB RAM · 4x NVIDIA L4 96GB)' },
+        { id: 'g2-standard-96', label: 'g2-standard-96 (96 vCPU · 384 GB RAM · 8x NVIDIA L4 192GB)' },
+        { id: 'a2-highgpu-1g', label: 'a2-highgpu-1g (12 vCPU · 85 GB RAM · 1x NVIDIA A100 40GB)' },
+        { id: 'a2-highgpu-4g', label: 'a2-highgpu-4g (48 vCPU · 340 GB RAM · 4x NVIDIA A100 160GB)' },
+        { id: 'a2-ultragpu-8g', label: 'a2-ultragpu-8g (96 vCPU · 1,360 GB / 1.36 TB RAM · 8x A100 640GB VRAM)' },
+        { id: 'a3-highgpu-8g', label: 'a3-highgpu-8g (208 vCPU · 1,872 GB / 1.87 TB RAM · 8x H100 640GB VRAM)' },
+        { id: 'a3-ultragpu-8g', label: 'a3-ultragpu-8g (224 vCPU · 2,952 GB / 2.95 TB RAM · 8x H200 1,128GB VRAM)' },
+        { id: 'n1-standard-16', label: 'n1-standard-16 (16 vCPU · 60 GB RAM + Custom T4/V100 GPUs)' },
       ],
     },
   };
@@ -1576,36 +1629,96 @@ export default function ResourceProvisionModal({
       'e2-standard-2': 0.067,
       'e2-standard-4': 0.134,
       'e2-standard-8': 0.268,
+      'e2-standard-16': 0.536,
+      'e2-standard-32': 1.072,
       'e2-highmem-4': 0.1804,
+      'e2-highmem-8': 0.3608,
+      'e2-highmem-16': 0.7216,
       'e2-highcpu-8': 0.198,
+      'e2-highcpu-16': 0.396,
+      'e2-highcpu-32': 0.792,
       'n2-standard-2': 0.0971,
       'n2-standard-4': 0.1942,
       'n2-standard-8': 0.3885,
+      'n2-standard-16': 0.777,
+      'n2-standard-32': 1.554,
+      'n2-standard-64': 3.108,
+      'n2-standard-128': 6.216,
       'n2d-standard-4': 0.1685,
       'n2d-standard-8': 0.337,
+      'n2d-standard-16': 0.674,
+      'n2d-standard-48': 2.022,
+      'n2d-standard-128': 5.392,
+      'n2d-standard-224': 9.436,
+      'n2d-highmem-96': 5.46,
       'n2-highmem-4': 0.262,
       'n2-highmem-8': 0.524,
       'n2-highmem-16': 1.048,
+      'n2-highmem-32': 2.096,
+      'n2-highmem-64': 4.192,
+      'n2-highmem-128': 8.384,
       'c3-standard-4': 0.2088,
       'c3-standard-8': 0.4176,
+      'c3-standard-22': 1.1484,
+      'c3-standard-44': 2.2968,
+      'c3-standard-88': 4.5936,
+      'c3-standard-176': 9.1872,
+      'c3-highmem-88': 6.18,
+      'c3-highmem-176': 12.36,
       'c3d-standard-4': 0.186,
       'c3d-standard-8': 0.372,
+      'c3d-standard-16': 0.744,
+      'c3d-standard-60': 2.79,
+      'c3d-standard-180': 8.37,
+      'c3d-standard-360': 16.74,
+      'c3d-highmem-360': 22.68,
       'c3-highcpu-8': 0.3456,
       'c4-standard-4': 0.231,
       'c4-standard-8': 0.462,
+      'c4-standard-16': 0.924,
+      'c4-standard-48': 2.772,
+      'c4-standard-96': 5.544,
+      'c4-standard-192': 11.088,
+      'c4-highmem-192': 15.12,
       't2a-standard-1': 0.0385,
       't2a-standard-2': 0.077,
       't2a-standard-4': 0.154,
+      't2a-standard-8': 0.308,
+      't2a-standard-16': 0.616,
+      't2a-standard-32': 1.232,
+      't2a-standard-48': 1.848,
       'c4a-standard-4': 0.172,
       'c4a-standard-8': 0.344,
+      'c4a-standard-16': 0.688,
+      'c4a-standard-32': 1.376,
+      'c4a-standard-64': 2.752,
+      'c4a-standard-72': 3.096,
+      'c4a-highmem-32': 1.88,
+      'c4a-highmem-72': 4.23,
       'm3-ultramem-32': 6.31,
       'm3-megamem-64': 9.84,
+      'm1-megamem-96': 10.67,
+      'm3-ultramem-64': 12.62,
+      'm3-ultramem-128': 25.24,
+      'm2-ultramem-208': 43.3,
+      'm2-ultramem-416': 86.6,
+      'x4-megamem-960': 142.8,
+      'x4-megamem-1440': 214.2,
+      'x4-megamem-1920': 285.6,
       'g2-standard-4': 0.7068,
       'g2-standard-8': 0.853,
       'g2-standard-12': 1.092,
+      'g2-standard-16': 1.32,
+      'g2-standard-32': 2.24,
+      'g2-standard-48': 4.38,
+      'g2-standard-96': 8.76,
       'a2-highgpu-1g': 3.673,
+      'a2-highgpu-4g': 14.69,
+      'a2-ultragpu-8g': 40.22,
       'a3-highgpu-8g': 88.49,
+      'a3-ultragpu-8g': 112.4,
       'n1-standard-4': 0.19,
+      'n1-standard-16': 0.76,
     };
 
     if (serviceType === 'CLOUD_SQL') {
@@ -3280,12 +3393,12 @@ export default function ResourceProvisionModal({
                     <>
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
                         {[
-                          { id: 'E2', label: 'E2 Series', sub: 'Cost-Saver · Free Tier' },
-                          { id: 'N2', label: 'N2 / N2D', sub: 'Intel / AMD EPYC' },
-                          { id: 'C3_C4', label: 'C3 / C3D / C4', sub: 'Gen-4/5 Titanium' },
-                          { id: 'T2A_ARM', label: 'C4A Axion / T2A', sub: 'Arm64 Silicon' },
-                          { id: 'M3_MEM', label: 'M3 / High-Mem', sub: 'Up to 976 GB RAM' },
-                          { id: 'G2_A2_GPU', label: 'G2 / A2 / A3 GPU', sub: 'L4 · A100 · H100' },
+                          { id: 'E2', label: 'E2 Series', sub: '1 GB – 128 GB RAM' },
+                          { id: 'N2', label: 'N2 / N2D', sub: '8 GB – 896 GB RAM' },
+                          { id: 'C3_C4', label: 'C3 / C3D / C4', sub: '16 GB – 2.88 TB RAM' },
+                          { id: 'T2A_ARM', label: 'C4A Axion / T2A', sub: '4 GB – 576 GB Arm64' },
+                          { id: 'M3_MEM', label: 'M3 / M2 / X4', sub: '64 GB – 32 TB RAM!' },
+                          { id: 'G2_A2_GPU', label: 'G2 / A2 / A3 GPU', sub: '16 GB – 2.95 TB + H200' },
                         ].map((f) => {
                           const active = machineFamily === f.id;
                           return (
@@ -3306,10 +3419,52 @@ export default function ResourceProvisionModal({
                         })}
                       </div>
 
+                      {/* 1-Click RAM Scale Quick-Jump Bar (From 1 GB Micro up to 32 TB Monster RAM) */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] font-mono font-bold uppercase text-zinc-500 mr-1">
+                          1-Click RAM Sizer:
+                        </span>
+                        {[
+                          { label: '1 GB (Free)', fam: 'E2', type: 'e2-micro' },
+                          { label: '16 GB', fam: 'E2', type: 'e2-standard-4' },
+                          { label: '64 GB', fam: 'N2', type: 'n2-standard-16' },
+                          { label: '128 GB', fam: 'N2', type: 'n2-standard-32' },
+                          { label: '256 GB', fam: 'N2', type: 'n2-standard-64' },
+                          { label: '512 GB', fam: 'N2', type: 'n2-standard-128' },
+                          { label: '896 GB (224 vCPU)', fam: 'N2', type: 'n2d-standard-224' },
+                          { label: '1.48 TB (C4 Gen-5)', fam: 'C3_C4', type: 'c4-highmem-192' },
+                          { label: '2.88 TB (C3D 360c)', fam: 'C3_C4', type: 'c3d-highmem-360' },
+                          { label: '4 TB (M3 Ultra)', fam: 'M3_MEM', type: 'm3-ultramem-128' },
+                          { label: '12 TB (M2 HANA)', fam: 'M3_MEM', type: 'm2-ultramem-416' },
+                          { label: '32 TB (X4 1920-vCPU)', fam: 'M3_MEM', type: 'x4-megamem-1920' },
+                        ].map((preset) => {
+                          const isSelected =
+                            !vmCustomSizingMode && machineType === preset.type;
+                          return (
+                            <button
+                              key={preset.type}
+                              type="button"
+                              onClick={() => {
+                                setVmCustomSizingMode(false);
+                                setMachineFamily(preset.fam);
+                                setMachineType(preset.type);
+                              }}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-blue-500/50'
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Machine Type Shape
+                            Machine Type Shape (Up to 1,920 vCPUs &amp; 32 TB RAM)
                           </label>
                           <select
                             value={machineType}
@@ -3335,11 +3490,11 @@ export default function ResourceProvisionModal({
                           >
                             <option value="NONE">
                               {machineType.startsWith('g2-')
-                                ? 'Built-in 1x NVIDIA L4 (24GB VRAM)'
+                                ? 'Built-in NVIDIA L4 (24GB–192GB VRAM)'
                                 : machineType.startsWith('a2-')
-                                ? 'Built-in 1x NVIDIA A100 (40GB VRAM)'
+                                ? 'Built-in NVIDIA A100 (40GB–640GB VRAM)'
                                 : machineType.startsWith('a3-')
-                                ? 'Built-in 8x NVIDIA H100 (640GB VRAM)'
+                                ? 'Built-in 8x NVIDIA H100/H200 (640GB–1,128GB VRAM)'
                                 : 'No Extra Guest GPU (CPU Only)'}
                             </option>
                             <option value="nvidia-tesla-t4">NVIDIA T4 (16GB GDDR6 · Inference)</option>
@@ -3381,64 +3536,98 @@ export default function ResourceProvisionModal({
                       </div>
                     </>
                   ) : (
-                    <div className="p-3 rounded-lg bg-white dark:bg-[#131314] border border-blue-500/30 grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Custom Machine Series
-                        </label>
-                        <select
-                          value={vmCustomSeries}
-                          onChange={(e) => setVmCustomSeries(e.target.value)}
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                        >
-                          <option value="e2">E2 Custom (e2-custom-*)</option>
-                          <option value="n2">N2 Intel Custom (n2-custom-*)</option>
-                          <option value="n2d">N2D AMD EPYC Custom (n2d-custom-*)</option>
-                        </select>
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#131314] border border-blue-500/30 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Custom Machine Series
+                          </label>
+                          <select
+                            value={vmCustomSeries}
+                            onChange={(e) => setVmCustomSeries(e.target.value)}
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            <option value="n2">N2 Intel Custom (Up to 128 vCPU / 864 GB)</option>
+                            <option value="n2d">N2D AMD EPYC Custom (Up to 224 vCPU / 896 GB)</option>
+                            <option value="c3">C3 Sapphire Rapids Custom (Up to 176 vCPU / 1.4 TB)</option>
+                            <option value="c3d">C3D AMD Genoa Custom (Up to 360 vCPU / 2.88 TB)</option>
+                            <option value="c4">C4 Emerald Rapids Custom (Up to 192 vCPU / 1.48 TB)</option>
+                            <option value="e2">E2 Cost-Saver Custom (Up to 32 vCPU / 128 GB)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Custom vCPUs: <strong>{vmCustomVcpus} vCPU</strong> (2 – 224)
+                          </label>
+                          <input
+                            type="range"
+                            min={2}
+                            max={224}
+                            step={2}
+                            value={vmCustomVcpus}
+                            onChange={(e) => setVmCustomVcpus(Number(e.target.value))}
+                            className="w-full accent-blue-600 cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Custom Memory: <strong>{vmCustomMemoryGb} GB ({(vmCustomMemoryGb * 1024).toLocaleString()} MB)</strong>
+                          </label>
+                          <input
+                            type="range"
+                            min={4}
+                            max={2048}
+                            step={4}
+                            value={vmCustomMemoryGb}
+                            onChange={(e) => setVmCustomMemoryGb(Number(e.target.value))}
+                            className="w-full accent-blue-600 cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                            Extended Memory (`--custom-extensions`)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setVmCustomExtendedMem((v) => !v)}
+                            className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border cursor-pointer ${
+                              vmCustomExtendedMem
+                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                                : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {vmCustomExtendedMem ? '✓ Extended RAM (>8GB/vCPU)' : 'Standard 8GB/vCPU Ratio'}
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Custom vCPUs: <strong>{vmCustomVcpus} vCPU</strong>
-                        </label>
-                        <input
-                          type="range"
-                          min={2}
-                          max={32}
-                          step={2}
-                          value={vmCustomVcpus}
-                          onChange={(e) => setVmCustomVcpus(Number(e.target.value))}
-                          className="w-full accent-blue-600 cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Custom Memory: <strong>{vmCustomMemoryGb} GB ({vmCustomMemoryGb * 1024} MB)</strong>
-                        </label>
-                        <input
-                          type="range"
-                          min={2}
-                          max={128}
-                          step={2}
-                          value={vmCustomMemoryGb}
-                          onChange={(e) => setVmCustomMemoryGb(Number(e.target.value))}
-                          className="w-full accent-blue-600 cursor-pointer"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Extended Memory (`-ext`)
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setVmCustomExtendedMem((v) => !v)}
-                          className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border cursor-pointer ${
-                            vmCustomExtendedMem
-                              ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
-                              : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                          }`}
-                        >
-                          {vmCustomExtendedMem ? '✓ Extended RAM Enabled' : 'Standard 8GB/vCPU Ratio'}
-                        </button>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          Quick Custom RAM Presets:
+                        </span>
+                        {[
+                          { vcpu: 4, ram: 32, label: '4 vCPU / 32 GB' },
+                          { vcpu: 8, ram: 64, label: '8 vCPU / 64 GB' },
+                          { vcpu: 16, ram: 128, label: '16 vCPU / 128 GB' },
+                          { vcpu: 32, ram: 256, label: '32 vCPU / 256 GB' },
+                          { vcpu: 64, ram: 512, label: '64 vCPU / 512 GB' },
+                          { vcpu: 128, ram: 1024, label: '128 vCPU / 1,024 GB (1 TB)' },
+                          { vcpu: 224, ram: 2048, label: '224 vCPU / 2,048 GB (2 TB)' },
+                        ].map((p) => (
+                          <button
+                            key={p.label}
+                            type="button"
+                            onClick={() => {
+                              setVmCustomVcpus(p.vcpu);
+                              setVmCustomMemoryGb(p.ram);
+                              if (p.vcpu > 32 && vmCustomSeries === 'e2') {
+                                setVmCustomSeries('n2d');
+                              }
+                            }}
+                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                          >
+                            {p.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}

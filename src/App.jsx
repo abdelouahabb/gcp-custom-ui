@@ -5766,13 +5766,20 @@ function CloudPulseCockpit() {
       icon: Globe,
     },
 
-    // II. Core Infrastructure, Compute & Serverless (Ordered logically starting with Compute VM)
+    // II. Core Infrastructure, Compute & VPC (Ordered logically starting with GCE VM #1 -> VPC #2)
     {
       id: 'VM_SSH',
       group: 'INFRA_COMPUTE',
-      label: 'VM',
-      tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
+      label: 'VM (GCE)',
+      tip: 'Compute Engine (GCE) VM Fleet & Browser Web-SSH Terminal: Provision 1 GB to 32 TB RAM VMs, start, stop, resize, or SSH directly into your Linux VMs',
       icon: Server,
+    },
+    {
+      id: 'VPC_NETWORKS',
+      group: 'INFRA_COMPUTE',
+      label: 'VPC',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
+      icon: Network,
     },
     {
       id: 'CLOUD_RUN',
@@ -5808,13 +5815,6 @@ function CloudPulseCockpit() {
       label: 'Cloud Storage',
       tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
       icon: HardDrive,
-    },
-    {
-      id: 'VPC_NETWORKS',
-      group: 'INFRA_COMPUTE',
-      label: 'VPC',
-      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
-      icon: Network,
     },
 
     // III. Databases, Data Engineering & Lakehouse
@@ -6732,14 +6732,14 @@ function CloudPulseCockpit() {
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '16 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
-                            { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
                           ],
                         },
                         {
-                          domain: 'II. Compute, Containers & Storage',
+                          domain: 'II. Compute (GCE), VPC, Containers & Storage',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'VM_SSH', label: 'VM', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
+                            { id: 'VM_SSH', label: 'VM (GCE)', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · 1GB–32TB RAM · SSH` },
+                            { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Firewall Rules` },
                             { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
                             { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot, Spot GPUs & K8s YAML' },
                             { id: 'FUNCTIONS_STUDIO', label: 'Functions', meta: 'v1/v2 + 90+ Eventarc Triggers' },

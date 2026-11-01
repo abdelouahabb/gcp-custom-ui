@@ -26,24 +26,24 @@ import {
 } from 'lucide-react';
 
 const CATEGORY_OPTIONS = [
-  { value: 'ALL', label: 'All Services (VM First)' },
-  { value: 'compute', label: '1. Compute VMs, Cloud Run & GKE' },
-  { value: 'storage', label: '2. Cloud Storage (GCS)' },
-  { value: 'data', label: '3. BigQuery & Databases' },
-  { value: 'network', label: '4. VPC Networks & Firewalls' },
+  { value: 'ALL', label: 'All Services (GCE -> VPC First)' },
+  { value: 'compute', label: '1. Compute Engine (GCE), Cloud Run & GKE' },
+  { value: 'network', label: '2. VPC Networks & Firewalls' },
+  { value: 'data', label: '3. Cloud SQL, AlloyDB & BigQuery' },
+  { value: 'storage', label: '4. Cloud Storage (GCS)' },
   { value: 'ai', label: '5. Vertex AI & Gemini' },
 ];
 
 function getResourceLogicalOrderRank(item) {
   const t = String(item?.type || '');
   if (t === 'Compute Engine VM') return 1;
-  if (t === 'Cloud Run Service') return 2;
-  if (t.includes('GKE')) return 3;
-  if (t.includes('Cloud SQL') || t.includes('AlloyDB')) return 4;
-  if (t === 'Cloud Storage Bucket') return 5;
-  if (t === 'BigQuery Dataset') return 6;
-  if (t === 'VPC Network') return 7;
-  if (t === 'VPC Firewall Rule') return 8;
+  if (t === 'VPC Network') return 2;
+  if (t === 'VPC Firewall Rule') return 3;
+  if (t === 'Cloud Run Service') return 4;
+  if (t.includes('GKE')) return 5;
+  if (t.includes('Cloud SQL') || t.includes('AlloyDB')) return 6;
+  if (t === 'Cloud Storage Bucket') return 7;
+  if (t === 'BigQuery Dataset') return 8;
   if (t === 'Enabled GCP Service API') return 9;
   return 10;
 }
