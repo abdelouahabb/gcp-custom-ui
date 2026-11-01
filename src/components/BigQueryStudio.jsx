@@ -230,12 +230,31 @@ export default function BigQueryStudio({
 
   // Time-Machine Rewind state
   const [rewindHoursAgo, setRewindHoursAgo] = useState(6);
+  const [rewindMinutesMode, setRewindMinutesMode] = useState(false); // When true, rewinds by 1 minute for newly created tables
   const [rewindTableTarget, setRewindTableTarget] = useState(
     'telemetry_events_2026'
   );
   const [rewindCloneName, setRewindCloneName] = useState(
     'telemetry_events_2026_restored'
   );
+  const [selectedSchemaCols, setSelectedSchemaCols] = useState([]);
+
+  // Helper to construct partition-filter-compliant WHERE clause for any table
+  const getTablePartitionWhereClause = useCallback((tblObj) => {
+    const partField = tblObj?.timePartitioning?.field;
+    if (!partField) return '';
+    const fieldSchema = (tblObj?.schemaFields || []).find(
+      (f) => f.name === partField
+    );
+    const fType = String(fieldSchema?.type || 'TIMESTAMP').toUpperCase();
+    if (fType === 'DATE') {
+      return `WHERE ${partField} >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)\n`;
+    }
+    if (fType === 'DATETIME') {
+      return `WHERE ${partField} >= DATETIME_SUB(CURRENT_DATETIME(), INTERVAL 30 DAY)\n`;
+    }
+    return `WHERE ${partField} >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\n`;
+  }, []);
 
   const copyText = (text, id) => {
     navigator.clipboard?.writeText(text);
@@ -335,7 +354,28 @@ export default function BigQueryStudio({
           `Streamed 10 live telemetry rows into ${selectedDatasetId}.${tableId}!`
       );
       await fetchTables(selectedDatasetId);
-      const seededSql = `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${tableId}\`\nWHERE user_id IN (\n  SELECT user_id\n  FROM \`${projectId}.${selectedDatasetId}.${tableId}\`\n  WHERE region = 'us-central1'\n)\nORDER BY latency_ms DESC\nLIMIT 15;`;
+      const tblMeta = tables.find((t) => t.tableId === tableId);
+      const partField =
+        res.data?.partitionField || tblMeta?.timePartitioning?.field || null;
+      const partPredicate = partField
+        ? `${partField} >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\n  AND `
+        : '';
+      const hasUserId =
+        !tblMeta?.schemaFields?.length ||
+        tblMeta.schemaFields.some((f) => f.name === 'user_id');
+      const hasLatency =
+        !tblMeta?.schemaFields?.length ||
+        tblMeta.schemaFields.some((f) => f.name === 'latency_ms');
+
+      const seededSql = hasUserId
+        ? `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${tableId}\`\nWHERE ${partPredicate}user_id IN (\n  SELECT user_id\n  FROM \`${projectId}.${selectedDatasetId}.${tableId}\`\n  WHERE ${partPredicate}region = 'us-central1'\n)${
+            hasLatency ? '\nORDER BY latency_ms DESC' : ''
+          }\nLIMIT 15;`
+        : `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${tableId}\`\n${
+            partField
+              ? `WHERE ${partField} >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\n`
+              : ''
+          }LIMIT 15;`;
       setSqlInput(seededSql);
       await handleExecuteQuery(false, seededSql);
     } catch (err) {
@@ -660,12 +700,29 @@ export default function BigQueryStudio({
     const ds = selectedDatasetId || 'analytics_lakehouse';
     const tbl = rewindTableTarget || 'telemetry_events_2026';
     const clone = rewindCloneName || `${tbl}_restored`;
+    const activeTblObj = tables.find((t) => t.tableId === tbl);
+    const partWhere = getTablePartitionWhereClause(activeTblObj);
+    const intervalExpr = rewindMinutesMode
+      ? 'INTERVAL 1 MINUTE'
+      : `INTERVAL ${rewindHoursAgo} HOUR`;
+    const diffWhere = partWhere
+      ? `${partWhere.replace(/^WHERE\s+/i, 'WHERE old_snap.')}  AND live_curr.event_id IS NULL`
+      : 'WHERE live_curr.event_id IS NULL';
     return {
-      selectAsOf: `SELECT *\nFROM \`${projectId}.${ds}.${tbl}\`\nFOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${rewindHoursAgo} HOUR)\nLIMIT 100;`,
-      zeroCopyClone: `CREATE OR REPLACE TABLE \`${projectId}.${ds}.${clone}\`\nCLONE \`${projectId}.${ds}.${tbl}\`\nFOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${rewindHoursAgo} HOUR);`,
-      diffDeletedRows: `SELECT old_snap.*\nFROM \`${projectId}.${ds}.${tbl}\` FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${rewindHoursAgo} HOUR) AS old_snap\nLEFT JOIN \`${projectId}.${ds}.${tbl}\` AS live_curr\n  USING (event_id)\nWHERE live_curr.event_id IS NULL;`,
+      selectAsOf: `SELECT *\nFROM \`${projectId}.${ds}.${tbl}\`\nFOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), ${intervalExpr})\n${partWhere}LIMIT 100;`,
+      zeroCopyClone: `CREATE OR REPLACE TABLE \`${projectId}.${ds}.${clone}\`\nCLONE \`${projectId}.${ds}.${tbl}\`\nFOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), ${intervalExpr});`,
+      diffDeletedRows: `SELECT old_snap.*\nFROM \`${projectId}.${ds}.${tbl}\` FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), ${intervalExpr}) AS old_snap\nLEFT JOIN \`${projectId}.${ds}.${tbl}\` AS live_curr\n  USING (event_id)\n${diffWhere};`,
     };
-  }, [projectId, selectedDatasetId, rewindTableTarget, rewindCloneName, rewindHoursAgo]);
+  }, [
+    projectId,
+    selectedDatasetId,
+    rewindTableTarget,
+    rewindCloneName,
+    rewindHoursAgo,
+    rewindMinutesMode,
+    tables,
+    getTablePartitionWhereClause,
+  ]);
 
   return (
     <div className="space-y-5">
@@ -1251,11 +1308,17 @@ export default function BigQueryStudio({
                           <div className="flex items-center justify-between gap-2">
                             <button
                               type="button"
-                              onClick={() =>
-                                setExpandedSchemaTableId(
-                                  isSchemaOpen ? null : t.tableId
-                                )
-                              }
+                              onClick={() => {
+                                const nextOpen = isSchemaOpen ? null : t.tableId;
+                                setExpandedSchemaTableId(nextOpen);
+                                if (nextOpen) {
+                                  setSelectedSchemaCols(
+                                    (t.schemaFields || [])
+                                      .slice(0, 4)
+                                      .map((f) => f.name)
+                                  );
+                                }
+                              }}
                               className="inline-flex items-center gap-1 font-bold text-zinc-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 truncate cursor-pointer"
                               title="Click to inspect live table schema and insert column pills"
                             >
@@ -1286,11 +1349,17 @@ export default function BigQueryStudio({
                           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                             <button
                               type="button"
-                              onClick={() =>
-                                setExpandedSchemaTableId(
-                                  isSchemaOpen ? null : t.tableId
-                                )
-                              }
+                              onClick={() => {
+                                const nextOpen = isSchemaOpen ? null : t.tableId;
+                                setExpandedSchemaTableId(nextOpen);
+                                if (nextOpen) {
+                                  setSelectedSchemaCols(
+                                    (t.schemaFields || [])
+                                      .slice(0, 4)
+                                      .map((f) => f.name)
+                                  );
+                                }
+                              }}
                               className="px-2 py-1 rounded bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                             >
                               {isSchemaOpen
@@ -1311,7 +1380,8 @@ export default function BigQueryStudio({
                             <button
                               type="button"
                               onClick={() => {
-                                const tblSql = `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\nLIMIT 25;`;
+                                const partWhere = getTablePartitionWhereClause(t);
+                                const tblSql = `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\n${partWhere}LIMIT 25;`;
                                 setSqlInput(tblSql);
                                 handleExecuteQuery(true, tblSql);
                               }}
@@ -1325,53 +1395,75 @@ export default function BigQueryStudio({
                           {isSchemaOpen && (
                             <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5">
                               <div className="text-[10px] text-zinc-500 flex items-center justify-between">
-                                <span>Click any column pill to build a pruned SELECT:</span>
+                                <span>
+                                  Click column pills to toggle ({selectedSchemaCols.length}{' '}
+                                  selected):
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const cols = (t.schemaFields || [])
-                                      .slice(0, 5)
-                                      .map((f) => f.name);
+                                    const cols =
+                                      selectedSchemaCols.length > 0
+                                        ? selectedSchemaCols
+                                        : (t.schemaFields || [])
+                                            .slice(0, 5)
+                                            .map((f) => f.name);
+                                    const partWhere =
+                                      getTablePartitionWhereClause(t);
                                     const prunedSql = `SELECT\n  ${
                                       cols.length > 0 ? cols.join(',\n  ') : '*'
-                                    }\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\nLIMIT 25;`;
+                                    }\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\n${partWhere}LIMIT 25;`;
                                     setSqlInput(prunedSql);
                                     handleExecuteQuery(true, prunedSql);
                                   }}
                                   className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
                                 >
-                                  Build Pruned SELECT →
+                                  Build Pruned SELECT ({selectedSchemaCols.length || 5} cols) →
                                 </button>
                               </div>
                               <div className="flex flex-wrap gap-1">
-                                {(t.schemaFields || []).map((f) => (
-                                  <button
-                                    key={f.name}
-                                    type="button"
-                                    onClick={() => {
-                                      setSqlInput((prev) =>
-                                        prev.includes(f.name)
-                                          ? prev
-                                          : prev.replace(
-                                              /SELECT\s+\*/i,
-                                              `SELECT\n  ${f.name}`
+                                {(t.schemaFields || []).map((f) => {
+                                  const isSelectedCol = selectedSchemaCols.includes(
+                                    f.name
+                                  );
+                                  return (
+                                    <button
+                                      key={f.name}
+                                      type="button"
+                                      onClick={() => {
+                                        const nextCols = isSelectedCol
+                                          ? selectedSchemaCols.filter(
+                                              (c) => c !== f.name
                                             )
-                                      );
-                                      onShowToast?.(
-                                        `Selected column "${f.name}" (${f.type})`
-                                      );
-                                    }}
-                                    title={f.description || `${f.name} (${f.type})`}
-                                    className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-[10px] inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                                      {f.name}
-                                    </span>
-                                    <span className="text-[9px] text-blue-600 dark:text-blue-400">
-                                      {f.type}
-                                    </span>
-                                  </button>
-                                ))}
+                                          : [...selectedSchemaCols, f.name];
+                                        setSelectedSchemaCols(nextCols);
+                                        const partWhere =
+                                          getTablePartitionWhereClause(t);
+                                        const nextSql = `SELECT\n  ${
+                                          nextCols.length > 0
+                                            ? nextCols.join(',\n  ')
+                                            : '*'
+                                        }\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\n${partWhere}LIMIT 25;`;
+                                        setSqlInput(nextSql);
+                                      }}
+                                      title={
+                                        f.description || `${f.name} (${f.type})`
+                                      }
+                                      className={`px-1.5 py-0.5 rounded border text-[10px] inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                                        isSelectedCol
+                                          ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                                          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                                      }`}
+                                    >
+                                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                        {f.name}
+                                      </span>
+                                      <span className="text-[9px] text-blue-600 dark:text-blue-400">
+                                        {f.type}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -2026,89 +2118,163 @@ export default function BigQueryStudio({
               No recent BigQuery jobs found in `{projectId}` — run a query in the SQL Pre-Crime X-Ray tab to generate live job telemetry.
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {jobsList.map((job) => (
-                <div
-                  key={job.jobId}
-                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          job.errorMessage
-                            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                        }`}
-                      >
-                        {job.errorMessage ? 'ERROR' : job.state}
-                      </span>
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {job.jobId}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px]">
-                        {job.location}
-                      </span>
-                      {job.cacheHit && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                          CACHE HIT ($0.00)
-                        </span>
-                      )}
-                      <span className="text-[11px] text-zinc-500">
-                        {job.userEmail}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                        Scanned: {formatBytes(job.totalBytesProcessed)}
-                      </span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                        ${Number(job.estimatedCostUsd || 0).toFixed(4)}
-                      </span>
-                      <span className="text-blue-600 dark:text-blue-400">
-                        Slot-ms: {Number(job.totalSlotMs || 0).toLocaleString()}
-                      </span>
-                      <span className="text-zinc-500">{job.durationMs}ms</span>
-                      {job.query && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSqlInput(job.query);
-                            setActiveSubTab('TABLES_SQL');
-                          }}
-                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
-                        >
-                          Open in SQL X-Ray →
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-4">
+              {/* 4 KPI Summary Strip for Live BigQuery Jobs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">
+                    Live Jobs Inspected
                   </div>
-
-                  {job.query && (
-                    <pre className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-700 dark:text-zinc-300 overflow-x-auto">
-                      {job.query}
-                    </pre>
-                  )}
-
-                  {Array.isArray(job.stages) && job.stages.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[10px] text-zinc-500">
-                        Execution Plan Stages:
-                      </span>
-                      {job.stages.map((st, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300"
-                        >
-                          {st.name}: {st.recordsRead.toLocaleString()} read →{' '}
-                          {st.recordsWritten.toLocaleString()} out ({st.slotMs} slot-ms)
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="text-base font-black font-mono text-zinc-900 dark:text-white mt-0.5">
+                    {jobsList.length}{' '}
+                    <span className="text-[10px] font-normal text-zinc-500">
+                      recent jobs
+                    </span>
+                  </div>
                 </div>
-              ))}
+
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">
+                    Total Bytes Scanned
+                  </div>
+                  <div className="text-base font-black font-mono text-blue-600 dark:text-blue-400 mt-0.5">
+                    {formatBytes(
+                      jobsList.reduce(
+                        (acc, j) => acc + Number(j.totalBytesProcessed || 0),
+                        0
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">
+                    Total Slot Time Consumed
+                  </div>
+                  <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {jobsList
+                      .reduce((acc, j) => acc + Number(j.totalSlotMs || 0), 0)
+                      .toLocaleString()}{' '}
+                    <span className="text-[10px] font-normal text-zinc-500">
+                      slot-ms
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">
+                    $0.00 Dry-Runs &amp; Cache Hits
+                  </div>
+                  <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {
+                      jobsList.filter(
+                        (j) => j.dryRun || j.cacheHit || j.errorMessage
+                      ).length
+                    }
+                    /{jobsList.length}{' '}
+                    <span className="text-[10px] font-normal text-zinc-500">
+                      zero-cost jobs
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {jobsList.map((job) => (
+                  <div
+                    key={job.jobId}
+                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            job.errorMessage
+                              ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                              : job.dryRun
+                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          {job.errorMessage
+                            ? 'BLOCKED / ERROR ($0.00)'
+                            : job.dryRun
+                            ? 'DRY-RUN ($0.00)'
+                            : job.state}
+                        </span>
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                          {job.jobId}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px]">
+                          {job.location}
+                        </span>
+                        {job.cacheHit && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                            CACHE HIT ($0.00)
+                          </span>
+                        )}
+                        <span className="text-[11px] text-zinc-500">
+                          {job.userEmail}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          Scanned: {formatBytes(job.totalBytesProcessed)}
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          ${Number(job.estimatedCostUsd || 0).toFixed(4)}
+                        </span>
+                        <span className="text-blue-600 dark:text-blue-400">
+                          Slot-ms: {Number(job.totalSlotMs || 0).toLocaleString()}
+                        </span>
+                        <span className="text-zinc-500">{job.durationMs}ms</span>
+                        {job.query && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSqlInput(job.query);
+                              setActiveSubTab('TABLES_SQL');
+                            }}
+                            className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            Open in SQL X-Ray →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {job.errorMessage && (
+                      <div className="text-[10.5px] text-amber-600 dark:text-amber-400">
+                        Notice: {job.errorMessage}
+                      </div>
+                    )}
+
+                    {job.query && (
+                      <pre className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-700 dark:text-zinc-300 overflow-x-auto">
+                        {job.query}
+                      </pre>
+                    )}
+
+                    {Array.isArray(job.stages) && job.stages.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-zinc-500">
+                          Execution Plan Stages:
+                        </span>
+                        {job.stages.map((st, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300"
+                          >
+                            {st.name}: {st.recordsRead.toLocaleString()} read →{' '}
+                            {st.recordsWritten.toLocaleString()} out ({st.slotMs} slot-ms)
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -2300,14 +2466,33 @@ export default function BigQueryStudio({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Source Table (`{selectedDatasetId || 'analytics_lakehouse'}`)
+                Dataset &amp; Source Table (`{selectedDatasetId || 'analytics_lakehouse'}`)
               </label>
-              <input
-                type="text"
-                value={rewindTableTarget}
-                onChange={(e) => setRewindTableTarget(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
-              />
+              <div className="flex gap-1.5">
+                {tables.length > 0 ? (
+                  <select
+                    value={rewindTableTarget}
+                    onChange={(e) => {
+                      setRewindTableTarget(e.target.value);
+                      setRewindCloneName(`${e.target.value}_restored`);
+                    }}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
+                  >
+                    {tables.map((t) => (
+                      <option key={t.tableId} value={t.tableId}>
+                        {t.tableId} ({t.numRows} rows)
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={rewindTableTarget}
+                    onChange={(e) => setRewindTableTarget(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
+                  />
+                )}
+              </div>
             </div>
 
             <div>
@@ -2323,16 +2508,77 @@ export default function BigQueryStudio({
             </div>
 
             <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Point-in-Time Rewind Slider (1h – 168h / 7 Days)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-mono text-zinc-500">
+                  Point-in-Time Rewind ({rewindMinutesMode ? '1 Minute Ago' : `${rewindHoursAgo}h Ago`})
+                </label>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setRewindMinutesMode(true)}
+                    title="Use 1 Minute Ago for tables created during a live demo so FOR SYSTEM_TIME AS OF is after table creationTime"
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold cursor-pointer ${
+                      rewindMinutesMode
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    1m (Demo Safe)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRewindMinutesMode(false);
+                      setRewindHoursAgo(6);
+                    }}
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold cursor-pointer ${
+                      !rewindMinutesMode && rewindHoursAgo === 6
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    6h
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRewindMinutesMode(false);
+                      setRewindHoursAgo(24);
+                    }}
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold cursor-pointer ${
+                      !rewindMinutesMode && rewindHoursAgo === 24
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    24h
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRewindMinutesMode(false);
+                      setRewindHoursAgo(168);
+                    }}
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold cursor-pointer ${
+                      !rewindMinutesMode && rewindHoursAgo === 168
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    168h
+                  </button>
+                </div>
+              </div>
               <input
                 type="range"
                 min={1}
                 max={168}
                 value={rewindHoursAgo}
-                onChange={(e) => setRewindHoursAgo(Number(e.target.value))}
-                className="w-full mt-2"
+                onChange={(e) => {
+                  setRewindMinutesMode(false);
+                  setRewindHoursAgo(Number(e.target.value));
+                }}
+                className="w-full mt-1"
               />
             </div>
           </div>

@@ -24988,6 +24988,8 @@ app.get('/api/project/:projectId/bigquery/datasets', async (req, res) => {
           // Compute Zero-Trust & FinOps Posture Score (0 - 100)
           let postureScore = 40;
           const findings = [];
+          const resolvedRoundingMode =
+            meta.defaultRoundingMode || 'ROUND_HALF_AWAY_FROM_ZERO';
           if (storageBillingModel === 'PHYSICAL') {
             postureScore += 20;
           } else {
@@ -25000,6 +25002,13 @@ app.get('/api/project/:projectId/bigquery/datasets', async (req, res) => {
           } else {
             findings.push(
               'No default Table/Partition Expiration — orphan staging tables will accumulate forever'
+            );
+          }
+          if (resolvedRoundingMode === 'ROUND_HALF_EVEN') {
+            postureScore += 10;
+          } else {
+            findings.push(
+              'Rounding mode is not ROUND_HALF_EVEN — enable IEEE 754 Banker Rounding for financial NUMERIC precision'
             );
           }
           if (labels && Object.keys(labels).length > 0) {
@@ -25030,8 +25039,7 @@ app.get('/api/project/:projectId/bigquery/datasets', async (req, res) => {
               : 0,
             isCaseInsensitive: Boolean(meta.isCaseInsensitive),
             defaultCollation: meta.defaultCollation || '',
-            defaultRoundingMode:
-              meta.defaultRoundingMode || 'ROUND_HALF_AWAY_FROM_ZERO',
+            defaultRoundingMode: resolvedRoundingMode,
             kmsKeyName,
             labels,
             creationTime: meta.creationTime
@@ -25434,26 +25442,30 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
     const { token } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
-    const buildQueryRequestBody = (queryText, isDry) => ({
-      query: queryText,
-      useLegacySql: false,
-      dryRun: Boolean(isDry),
-      ...(location ? { location } : {}),
-      ...(datasetId
-        ? {
-            defaultDataset: {
-              projectId,
-              datasetId,
-            },
-          }
-        : {}),
-      ...(!isDry && maximumBytesBilled
-        ? { maximumBytesBilled: String(maximumBytesBilled) }
-        : {}),
-      labels: {
-        datacloud: 'antigravity',
-      },
-    });
+    const buildQueryRequestBody = (queryText, isDry) => {
+      const isPublicDatasetQuery = /\bbigquery-public-data\b/i.test(queryText);
+      const resolvedLocation = isPublicDatasetQuery ? 'US' : location;
+      return {
+        query: queryText,
+        useLegacySql: false,
+        dryRun: Boolean(isDry),
+        ...(resolvedLocation ? { location: resolvedLocation } : {}),
+        ...(!isPublicDatasetQuery && datasetId
+          ? {
+              defaultDataset: {
+                projectId,
+                datasetId,
+              },
+            }
+          : {}),
+        ...(!isDry && maximumBytesBilled
+          ? { maximumBytesBilled: String(maximumBytesBilled) }
+          : {}),
+        labels: {
+          datacloud: 'antigravity',
+        },
+      };
+    };
 
     const queryUrl = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
       projectId
@@ -25683,6 +25695,31 @@ app.post(
       const { token } = await resolveRequestAuth(req);
       if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
+      // Inspect target table schema & partitioning so seed-rows works on any table schema
+      let tableSchemaFields = [];
+      let partitionField = null;
+      let requirePartitionFilter = false;
+      try {
+        const tableMeta = await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets/${encodeURIComponent(datasetId)}/tables/${encodeURIComponent(
+            tableId
+          )}`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        );
+        tableSchemaFields = tableMeta?.schema?.fields || [];
+        partitionField = tableMeta?.timePartitioning?.field || null;
+        requirePartitionFilter = Boolean(
+          tableMeta?.requirePartitionFilter ||
+            tableMeta?.timePartitioning?.requirePartitionFilter
+        );
+      } catch {
+        // Fallback to standard telemetry schema if metadata lookup fails
+      }
+
       const now = Date.now();
       const regions = ['us-central1', 'europe-west1', 'us-east4', 'asia-northeast1'];
       const services = [
@@ -25706,17 +25743,67 @@ app.post(
         const usr = users[idx % users.length];
         const latency = Number((18.4 + idx * 14.7).toFixed(2));
         const rev = Number((49.99 + idx * 125.5).toFixed(2));
+
+        const baseRow = {
+          event_id: `evt_${now}_${idx + 1}`,
+          event_timestamp: tsIso,
+          user_id: usr,
+          region,
+          service_name: svc,
+          latency_ms: latency,
+          revenue_usd: String(rev),
+        };
+
+        if (tableSchemaFields.length > 0) {
+          const schemaAlignedRow = {};
+          for (const f of tableSchemaFields) {
+            if (!f?.name || String(f.mode || '').toUpperCase() === 'REPEATED') {
+              continue;
+            }
+            const col = f.name;
+            const colLower = col.toLowerCase();
+            const fType = String(f.type || 'STRING').toUpperCase();
+            if (Object.prototype.hasOwnProperty.call(baseRow, col)) {
+              schemaAlignedRow[col] = baseRow[col];
+            } else if (fType === 'TIMESTAMP') {
+              schemaAlignedRow[col] = tsIso;
+            } else if (fType === 'DATE') {
+              schemaAlignedRow[col] = tsIso.slice(0, 10);
+            } else if (fType === 'DATETIME') {
+              schemaAlignedRow[col] = tsIso.replace('Z', '');
+            } else if (fType === 'INT64' || fType === 'INTEGER') {
+              schemaAlignedRow[col] = idx + 1;
+            } else if (fType === 'FLOAT64' || fType === 'FLOAT') {
+              schemaAlignedRow[col] = latency;
+            } else if (fType === 'NUMERIC' || fType === 'BIGNUMERIC') {
+              schemaAlignedRow[col] = String(rev);
+            } else if (fType === 'BOOL' || fType === 'BOOLEAN') {
+              schemaAlignedRow[col] = idx % 2 === 0;
+            } else if (fType === 'JSON') {
+              schemaAlignedRow[col] = JSON.stringify({
+                trace: `tr_${now}_${idx}`,
+                region,
+                service: svc,
+              });
+            } else if (colLower.includes('region')) {
+              schemaAlignedRow[col] = region;
+            } else if (colLower.includes('user')) {
+              schemaAlignedRow[col] = usr;
+            } else if (colLower.includes('service')) {
+              schemaAlignedRow[col] = svc;
+            } else if (fType === 'STRING') {
+              schemaAlignedRow[col] = `${col}_${idx + 1}`;
+            }
+          }
+          return {
+            insertId: `seed-${now}-${idx}`,
+            json: schemaAlignedRow,
+          };
+        }
+
         return {
           insertId: `seed-${now}-${idx}`,
-          json: {
-            event_id: `evt_${now}_${idx + 1}`,
-            event_timestamp: tsIso,
-            user_id: usr,
-            region,
-            service_name: svc,
-            latency_ms: latency,
-            revenue_usd: String(rev),
-          },
+          json: baseRow,
         };
       });
 
@@ -25754,6 +25841,8 @@ app.post(
       res.json({
         ok: true,
         insertedCount: rows.length,
+        partitionField,
+        requirePartitionFilter,
         message: `Streamed ${rows.length} live telemetry rows into ${projectId}.${datasetId}.${tableId} via tabledata.insertAll!`,
       });
     } catch (err) {
@@ -25788,6 +25877,9 @@ app.get('/api/project/:projectId/bigquery/jobs', async (req, res) => {
       const qStats = j.statistics?.query || {};
       const startMs = Number(j.statistics?.startTime || j.statistics?.creationTime || 0);
       const endMs = Number(j.statistics?.endTime || startMs);
+      const isDryRun = Boolean(j.configuration?.dryRun);
+      const isCacheHit = Boolean(qStats.cacheHit);
+      const errorMessage = j.status?.errorResult?.message || null;
       const totalBytesProcessed = Number(
         qStats.totalBytesProcessed || j.statistics?.totalBytesProcessed || 0
       );
@@ -25796,7 +25888,9 @@ app.get('/api/project/:projectId/bigquery/jobs', async (req, res) => {
         qStats.totalSlotMs || j.statistics?.totalSlotMs || 0
       );
       const billableBytes =
-        totalBytesBilled > 0
+        isDryRun || isCacheHit || errorMessage
+          ? 0
+          : totalBytesBilled > 0
           ? totalBytesBilled
           : totalBytesProcessed > 0
           ? Math.max(totalBytesProcessed, 10485760)
@@ -25818,15 +25912,15 @@ app.get('/api/project/:projectId/bigquery/jobs', async (req, res) => {
         userEmail: j.user_email || 'authenticated-principal',
         statementType: qStats.statementType || 'SELECT',
         query: j.configuration?.query?.query || '',
-        dryRun: Boolean(j.configuration?.dryRun),
-        cacheHit: Boolean(qStats.cacheHit),
+        dryRun: isDryRun,
+        cacheHit: isCacheHit,
         totalBytesProcessed,
         totalBytesBilled,
         totalSlotMs,
         estimatedCostUsd,
         durationMs: Math.max(0, endMs - startMs),
         creationTime: startMs ? new Date(startMs).toISOString() : null,
-        errorMessage: j.status?.errorResult?.message || null,
+        errorMessage,
         stages,
       };
     });
