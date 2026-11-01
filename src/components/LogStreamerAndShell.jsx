@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useTimezone } from '../context/TimezoneContext';
 import {
@@ -144,12 +144,23 @@ export default function LogStreamerAndShell({
 
   // --- Wave 2 Open-Source 2026 SRE Improvements ---
   const [showInfraOverlay, setShowInfraOverlay] = useState(true);
-  const [streamViewMode, setStreamViewMode] = useState('CARDS'); // 'CARDS' | 'COLUMN_TABLE'
+  const [streamViewMode, setStreamViewMode] = useState('CARDS'); // 'CARDS' | 'COMPACT_CARDS' | 'COLUMN_TABLE'
   const [grokPatternInput, setGrokPatternInput] = useState(
     '(?<method_name>[A-Za-z0-9_.]+)\\s+on\\s+(?<resource_target>[A-Za-z0-9_./:-]+)\\s*\\((?<status_detail>[^)]+)\\)'
   );
   const [activeSavedViewId, setActiveSavedViewId] = useState(null);
   const [showPostmortemModal, setShowPostmortemModal] = useState(false);
+
+  // --- UX/UI Progressive Disclosure & Query Results Focus State ---
+  const resultsAnchorRef = useRef(null);
+  const flashTimerRef = useRef(null);
+  const [resultsFlashActive, setResultsFlashActive] = useState(false);
+  const [lastQueryMeta, setLastQueryMeta] = useState(null);
+  const [showNlpParseDrawer, setShowNlpParseDrawer] = useState(false);
+  const [showSavedViewsDrawer, setShowSavedViewsDrawer] = useState(false);
+  const [showHistogramDrawer, setShowHistogramDrawer] = useState(false);
+  const [showAdvancedLabsTabs, setShowAdvancedLabsTabs] = useState(false);
+  const [showAuditTimelineSection, setShowAuditTimelineSection] = useState(true);
 
   // --- Wave 3 Real Live Execution State (Git Blame CLI, Cloud Logging Metric API, Live Network/Kernel Probe & entries:write) ---
   const [replayLoading, setReplayLoading] = useState(false);
@@ -179,10 +190,29 @@ export default function LogStreamerAndShell({
   const [expandedAuditId, setExpandedAuditId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  const focusResultsStream = useCallback(() => {
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    setResultsFlashActive(true);
+    flashTimerRef.current = setTimeout(() => {
+      setResultsFlashActive(false);
+    }, 2400);
+    setTimeout(() => {
+      resultsAnchorRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }, 60);
+  }, []);
+
   const fetchChronoLogs = useCallback(
     async (overrides = {}) => {
       if (!projectId) return;
+      const startedAt = Date.now();
       setLoadingChrono(true);
+      if (overrides.notifyUser && !overrides.preserveTab) {
+        setActiveChronoTab('SMART_STREAM');
+        focusResultsStream();
+      }
       try {
         const nl =
           overrides.naturalLanguage !== undefined
@@ -210,24 +240,37 @@ export default function LogStreamerAndShell({
             allowNeuralLlmTokens: Boolean(useLlmTokens),
           }
         );
+        const durationMs = Math.max(12, Date.now() - startedAt);
         setChronoData(res.data);
+        const effLql =
+          res.data?.compiledQuery?.effectiveLql || 'All Project Streams';
+        const matchedCount = Array.isArray(res.data?.entries)
+          ? res.data.entries.length
+          : 0;
+        const sigCount = res.data?.stats?.uniqueSignatures || 0;
+        setLastQueryMeta({
+          durationMs,
+          matchedCount,
+          sigCount,
+          effectiveLql: effLql,
+          naturalLanguage: nl,
+          executedAt: new Date().toLocaleTimeString(),
+        });
+
         if (res.data?.compiledQuery?.lqlSyntaxError && onShowError) {
           onShowError(
             `Cloud Logging LQL syntax rejected: ${res.data.compiledQuery.lqlSyntaxError}`
           );
         } else if (overrides.notifyUser && onShowToast) {
-          const effLql =
-            res.data?.compiledQuery?.effectiveLql || 'All Project Streams';
-          const matchedCount = Array.isArray(res.data?.entries)
-            ? res.data.entries.length
-            : 0;
-          const sigCount = res.data?.stats?.uniqueSignatures || 0;
           onShowToast(
-            `Compiled & Queried Cloud Logging: ${matchedCount} log entries matched (${sigCount} Drain3 signatures) · LQL: ${effLql.slice(
+            `Compiled & Queried Cloud Logging (${durationMs}ms): ${matchedCount} log entries matched (${sigCount} Drain3 signatures) · LQL: ${effLql.slice(
               0,
               90
             )}${effLql.length > 90 ? '…' : ''}`
           );
+        }
+        if (overrides.notifyUser) {
+          focusResultsStream();
         }
         if (
           !selectedTraceId &&
@@ -273,6 +316,7 @@ export default function LogStreamerAndShell({
       allowNeuralLlmTokens,
       onShowToast,
       onShowError,
+      focusResultsStream,
     ]
   );
 
@@ -663,13 +707,13 @@ export default function LogStreamerAndShell({
   const triggerTimeTravelPeek = (timestampIso) => {
     setTimeTravelAnchor(timestampIso);
     setActiveChronoTab('SMART_STREAM');
-    fetchChronoLogs({ aroundTimestamp: timestampIso });
+    fetchChronoLogs({ aroundTimestamp: timestampIso, notifyUser: true });
   };
 
   const clearTimeTravelPeek = () => {
     setTimeTravelAnchor(null);
     setSelectedHistogramBucket(null);
-    fetchChronoLogs({ aroundTimestamp: '' });
+    fetchChronoLogs({ aroundTimestamp: '', notifyUser: true });
   };
 
   const [shellHistoryCursor, setShellHistoryCursor] = useState(-1);
@@ -1250,10 +1294,11 @@ export default function LogStreamerAndShell({
                       onClick={() => {
                         setCustomLqlInput(item.lql);
                         setNlQueryInput(item.nl);
-                        setShowCompiledSqlModal(true);
+                        setShowLqlTutorialModal(false);
                         fetchChronoLogs({
                           naturalLanguage: item.nl,
                           lqlFilter: item.lql,
+                          notifyUser: true,
                         });
                       }}
                       className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
@@ -1279,8 +1324,8 @@ export default function LogStreamerAndShell({
             </div>
           )}
 
-          {/* Instant Intent Preset Chips */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Instant Intent Preset Chips + Progressive Disclosure Drawer Toggles */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono text-zinc-400">Intent Presets:</span>
               {NL_INTENT_PRESETS.map((preset) => (
@@ -1308,18 +1353,57 @@ export default function LogStreamerAndShell({
               ))}
             </div>
 
-            {chronoData?.compiledQuery?.effectiveLql && (
-              <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate max-w-md">
-                Compiled LQL:{' '}
-                <code className="text-blue-600 dark:text-blue-300 font-bold">
-                  {chronoData.compiledQuery.effectiveLql}
-                </code>
-              </div>
-            )}
+            {/* Compact Progressive Disclosure Toggles (Keep main workspace clean by default) */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowNlpParseDrawer((v) => !v)}
+                className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                  showNlpParseDrawer
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <Cpu className="w-3 h-3 text-blue-500" />
+                <span>{showNlpParseDrawer ? 'Hide NLP Parse Tree' : 'NLP Parse Tree & NER'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSavedViewsDrawer((v) => !v)}
+                className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                  showSavedViewsDrawer
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-emerald-500" />
+                <span>
+                  {showSavedViewsDrawer
+                    ? 'Hide Saved Views & Postmortem'
+                    : `Saved SRE Views & Postmortem (${chronoData?.savedSreViews?.length || 6})`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowHistogramDrawer((v) => !v)}
+                className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                  showHistogramDrawer
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <Clock className="w-3 h-3 text-blue-500" />
+                <span>
+                  {showHistogramDrawer ? 'Hide 24-Bucket Histogram' : 'Timeline Histogram (24 Buckets)'}
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Live 3-Layer NLP Parse Tree: Porter Stemmer, Named Entity Recognition (NER), TF-IDF Cosine Intent & BM25 Ranker */}
-          {chronoData?.compiledQuery?.nlpAnalysis && (() => {
+          {/* Collapsible 3-Layer NLP Parse Tree: Porter Stemmer, Named Entity Recognition (NER), TF-IDF Cosine Intent & BM25 Ranker */}
+          {showNlpParseDrawer && chronoData?.compiledQuery?.nlpAnalysis && (() => {
             const nlp = chronoData.compiledQuery.nlpAnalysis;
             const ent = nlp.entities || {};
             const tokGuard = nlp.tokenConsumptionGuard;
@@ -1516,163 +1600,165 @@ export default function LogStreamerAndShell({
         </div>
 
         {/* ===================================================================
-            WAVE 2 OPEN-SOURCE 2026: SAVED SRE VIEWS BAR, SHAREABLE PERMALINK
+            COLLAPSIBLE WAVE 2: SAVED SRE VIEWS BAR, SHAREABLE PERMALINK
             & 1-CLICK INCIDENT POSTMORTEM MARKDOWN / JSON BUNDLE EXPORTER
            =================================================================== */}
-        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                SAVED SRE VIEWS
-              </span>
-              {(chronoData?.savedSreViews || []).map((sv) => {
-                const isActive = activeSavedViewId === sv.id;
-                return (
-                  <button
-                    key={sv.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveSavedViewId(sv.id);
-                      setNlQueryInput(sv.nl);
-                      setCustomLqlInput(sv.lql);
-                      setSeverityFilter(sv.severity || 'ALL');
-                      fetchChronoLogs({
-                        naturalLanguage: sv.nl,
-                        lqlFilter: sv.lql,
-                        notifyUser: true,
-                      });
-                    }}
-                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
-                      isActive
-                        ? 'bg-emerald-600 text-white border-emerald-500'
-                        : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40'
-                    }`}
-                  >
-                    {sv.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleCopy(buildShareablePermalink(), 'copy-permalink')}
-                className="px-2.5 py-1 rounded-md bg-white dark:bg-[#202124] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-              >
-                {copiedId === 'copy-permalink' ? (
-                  <>
-                    <Check className="w-3 h-3 text-emerald-500" />
-                    <span>Permalink Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3 text-blue-500" />
-                    <span>Copy Investigation Permalink</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowPostmortemModal((v) => !v)}
-                className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1 ${
-                  showPostmortemModal
-                    ? 'bg-blue-600 text-white border-blue-500'
-                    : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/25'
-                }`}
-              >
-                <FileCode2 className="w-3 h-3" />
-                <span>
-                  {showPostmortemModal
-                    ? 'Hide Incident Postmortem Bundle'
-                    : '1-Click Export Incident Postmortem (.md / .json)'}
+        {showSavedViewsDrawer && (
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  SAVED SRE VIEWS
                 </span>
-              </button>
-            </div>
-          </div>
-
-          {showPostmortemModal && (
-            <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-blue-500/40 space-y-2.5 font-mono text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
-                <div>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
-                    INCIDENT POSTMORTEM &amp; FORENSIC BUNDLE EXPORTER
-                  </span>
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    Ready for GitHub Issue, PagerDuty, Slack or Google Docs Postmortem
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCopy(buildIncidentPostmortemMarkdown(), 'copy-postmortem-md')
-                    }
-                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedId === 'copy-postmortem-md' ? (
-                      <>
-                        <Check className="w-3 h-3" />
-                        <span>Copied Markdown (.md)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy Postmortem Markdown (.md)</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCopy(
-                        JSON.stringify(
-                          {
-                            projectId,
-                            exportedAt: new Date().toISOString(),
-                            effectiveLql: chronoData?.compiledQuery?.effectiveLql,
-                            anomalyBaselineDiff: chronoData?.anomalyBaselineDiff,
-                            logToMetricsByService: chronoData?.logToMetricsByService,
-                            pinnedEntries: (chronoData?.entries || []).filter((e) =>
-                              pinnedLogIds.includes(e.id)
-                            ),
-                          },
-                          null,
-                          2
-                        ),
-                        'copy-postmortem-json'
-                      )
-                    }
-                    className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedId === 'copy-postmortem-json' ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-500" />
-                        <span>Copied JSON Bundle</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy Forensic JSON (.json)</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                {(chronoData?.savedSreViews || []).map((sv) => {
+                  const isActive = activeSavedViewId === sv.id;
+                  return (
+                    <button
+                      key={sv.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveSavedViewId(sv.id);
+                        setNlQueryInput(sv.nl);
+                        setCustomLqlInput(sv.lql);
+                        setSeverityFilter(sv.severity || 'ALL');
+                        fetchChronoLogs({
+                          naturalLanguage: sv.nl,
+                          lqlFilter: sv.lql,
+                          notifyUser: true,
+                        });
+                      }}
+                      className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-emerald-600 text-white border-emerald-500'
+                          : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40'
+                      }`}
+                    >
+                      {sv.name}
+                    </button>
+                  );
+                })}
               </div>
-              <pre className="text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto max-h-56 p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap">
-                {buildIncidentPostmortemMarkdown()}
-              </pre>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleCopy(buildShareablePermalink(), 'copy-permalink')}
+                  className="px-2.5 py-1 rounded-md bg-white dark:bg-[#202124] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedId === 'copy-permalink' ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span>Permalink Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3 text-blue-500" />
+                      <span>Copy Investigation Permalink</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPostmortemModal((v) => !v)}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1 ${
+                    showPostmortemModal
+                      ? 'bg-blue-600 text-white border-blue-500'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/25'
+                  }`}
+                >
+                  <FileCode2 className="w-3 h-3" />
+                  <span>
+                    {showPostmortemModal
+                      ? 'Hide Incident Postmortem Bundle'
+                      : '1-Click Export Incident Postmortem (.md / .json)'}
+                  </span>
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+
+            {showPostmortemModal && (
+              <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-blue-500/40 space-y-2.5 font-mono text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                  <div>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold mr-2">
+                      INCIDENT POSTMORTEM &amp; FORENSIC BUNDLE EXPORTER
+                    </span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      Ready for GitHub Issue, PagerDuty, Slack or Google Docs Postmortem
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(buildIncidentPostmortemMarkdown(), 'copy-postmortem-md')
+                      }
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'copy-postmortem-md' ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>Copied Markdown (.md)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Postmortem Markdown (.md)</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          JSON.stringify(
+                            {
+                              projectId,
+                              exportedAt: new Date().toISOString(),
+                              effectiveLql: chronoData?.compiledQuery?.effectiveLql,
+                              anomalyBaselineDiff: chronoData?.anomalyBaselineDiff,
+                              logToMetricsByService: chronoData?.logToMetricsByService,
+                              pinnedEntries: (chronoData?.entries || []).filter((e) =>
+                                pinnedLogIds.includes(e.id)
+                              ),
+                            },
+                            null,
+                            2
+                          ),
+                          'copy-postmortem-json'
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'copy-postmortem-json' ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span>Copied JSON Bundle</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Forensic JSON (.json)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <pre className="text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto max-h-56 p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap">
+                  {buildIncidentPostmortemMarkdown()}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ===================================================================
-            OPEN-SOURCE 2026 FEATURE #1 + WAVE 2 CORRELATED INFRA OVERLAY:
+            COLLAPSIBLE OPEN-SOURCE 2026 FEATURE #1 + WAVE 2 INFRA OVERLAY:
             INTERACTIVE STACKED SEVERITY HISTOGRAM, CPU/RAM SPARKBARS &
             K8S / CLOUD RUN DEPLOYMENT & QUOTA EVENT MARKERS
            =================================================================== */}
-        {Array.isArray(chronoData?.histogramBuckets) && chronoData.histogramBuckets.length > 0 && (
+        {showHistogramDrawer && Array.isArray(chronoData?.histogramBuckets) && chronoData.histogramBuckets.length > 0 && (
           <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
@@ -1911,49 +1997,181 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* 12 Equal-Sized Bento Studio Navigation Tabs (4x3 Grid) + Open-Source SRE Workbench Toolbar */}
-        <div className="space-y-2.5 border-b border-zinc-200 dark:border-zinc-800 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            {[
+        {/* ===================================================================
+            LIVE QUERY RESULTS ANCHOR & VISUAL EXECUTION SPOTLIGHT BANNER
+            Auto-scrolled & highlighted whenever the user executes LQL or NL!
+           =================================================================== */}
+        <div
+          id="chrono-live-results-anchor"
+          ref={resultsAnchorRef}
+          className={`scroll-mt-20 rounded-xl border transition-all duration-300 overflow-hidden ${
+            resultsFlashActive
+              ? 'border-blue-500 ring-2 ring-blue-500/70 bg-blue-500/[0.06] dark:bg-blue-500/[0.12] shadow-lg shadow-blue-500/10'
+              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-[#16171a]'
+          }`}
+        >
+          {/* Indeterminate Blue Progress Bar when Querying Cloud Logging */}
+          {loadingChrono && (
+            <div className="w-full h-1 bg-blue-500/20 overflow-hidden">
+              <div className="h-full w-1/2 bg-blue-500 animate-pulse rounded-full" />
+            </div>
+          )}
+
+          <div className="px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold border ${
+                  loadingChrono
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : resultsFlashActive
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    loadingChrono
+                      ? 'bg-white animate-ping'
+                      : 'bg-emerald-400'
+                  }`}
+                />
+                <span>
+                  {loadingChrono
+                    ? 'QUERYING CLOUD LOGGING...'
+                    : 'LIVE QUERY RESULTS'}
+                </span>
+              </span>
+
+              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                {chronoEntries.length} Log {chronoEntries.length === 1 ? 'Entry' : 'Entries'} Matched
+              </span>
+              <span className="text-zinc-400">·</span>
+              <span className="text-zinc-600 dark:text-zinc-400">
+                {chronoData?.stats?.uniqueSignatures || 0} Drain3 Signatures
+              </span>
+              {lastQueryMeta?.durationMs && (
+                <>
+                  <span className="text-zinc-400">·</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">
+                    {lastQueryMeta.durationMs}ms
+                  </span>
+                </>
+              )}
+              <span className="text-zinc-400 hidden sm:inline">·</span>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 max-w-xl truncate">
+                <span className="text-[10px] text-zinc-400 shrink-0">Active LQL:</span>
+                <code
+                  className="text-[10.5px] text-blue-600 dark:text-blue-300 font-bold truncate"
+                  title={chronoData?.compiledQuery?.effectiveLql || 'All Project Logs (severity>=DEFAULT)'}
+                >
+                  {chronoData?.compiledQuery?.effectiveLql || 'All Project Logs (severity>=DEFAULT)'}
+                </code>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() =>
+                  handleCopy(
+                    chronoData?.compiledQuery?.effectiveLql || 'severity>=DEFAULT',
+                    'copy-results-lql'
+                  )
+                }
+                className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+              >
+                {copiedId === 'copy-results-lql' ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-500" />
+                    <span>Copied LQL</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy LQL</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowCompiledSqlModal((v) => !v)}
+                className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-blue-600 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-bold cursor-pointer"
+              >
+                {showCompiledSqlModal ? 'Hide LQL Editor' : 'Edit LQL / SQL'}
+              </button>
+
+              {(nlQueryInput || customLqlInput || severityFilter !== 'ALL' || timeTravelAnchor) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNlQueryInput('');
+                    setCustomLqlInput('');
+                    setSeverityFilter('ALL');
+                    setTimeTravelAnchor(null);
+                    setActiveSavedViewId(null);
+                    fetchChronoLogs({
+                      naturalLanguage: '',
+                      lqlFilter: '',
+                      aroundTimestamp: '',
+                      notifyUser: true,
+                    });
+                  }}
+                  className="px-2.5 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border border-red-500/30 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Reset Filter</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Streamlined Primary Studio Tabs (5 Core Tabs + Expandable 7 Advanced SRE Labs) + Workbench Toolbar */}
+        <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+          {(() => {
+            const primaryTabs = [
               {
                 id: 'SMART_STREAM',
-                label: `Faceted Stream & Table (${chronoEntries.length})`,
+                label: `Live Log Stream & Table (${chronoEntries.length})`,
                 icon: Zap,
               },
               {
+                id: 'DRAIN3_CLUSTERS',
+                label: `Drain3 Signatures (${chronoData?.drainClusters?.length || 0})`,
+                icon: Layers,
+              },
+              {
+                id: 'TRACE_WATERFALL',
+                label: `Trace Waterfalls (${chronoData?.traceWaterfalls?.length || 0})`,
+                icon: GitCommit,
+              },
+              {
+                id: 'FINOPS_DLP',
+                label: `Log FinOps & DLP (${chronoData?.dlpAlerts?.length || 0})`,
+                icon: DollarSign,
+              },
+              {
                 id: 'LOG_TO_METRICS',
-                label: `Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
+                label: `Log-to-Metrics (${chronoData?.logToMetricsByService?.length || 4})`,
                 icon: Cpu,
               },
+            ];
+            const advancedTabs = [
               {
                 id: 'GROK_EXTRACTOR',
                 label: `Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
                 icon: Terminal,
               },
               {
-                id: 'DRAIN3_CLUSTERS',
-                label: `Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
-                icon: Layers,
-              },
-              {
                 id: 'ANOMALY_DIFF',
-                label: `Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
+                label: `Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 0}%)`,
                 icon: AlertTriangle,
-              },
-              {
-                id: 'TRACE_WATERFALL',
-                label: `Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
-                icon: GitCommit,
               },
               {
                 id: 'QUERY_TRANSPILER',
                 label: `Polyglot Query Transpiler (6 Formats)`,
                 icon: FileCode2,
-              },
-              {
-                id: 'FINOPS_DLP',
-                label: `Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
-                icon: DollarSign,
               },
               {
                 id: 'SOURCE_BLAME',
@@ -1962,7 +2180,7 @@ export default function LogStreamerAndShell({
               },
               {
                 id: 'SLO_BURN_MATRIX',
-                label: `SLO Error-Budget Burn (18.6x Fast)`,
+                label: `SLO Error-Budget Burn`,
                 icon: AlertCircle,
               },
               {
@@ -1975,34 +2193,81 @@ export default function LogStreamerAndShell({
                 label: `Canary Log Replay & Alert Drill (${chronoData?.replayScenarios?.length || 3})`,
                 icon: Play,
               },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeChronoTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  data-feature-id={`LOGS_TAB_${tab.id}`}
-                  onClick={() => setActiveChronoTab(tab.id)}
-                  className={`w-full h-10 px-3 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center justify-between gap-2 ${
-                    active
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
-                      : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200'
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{tab.label}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+            ];
+            const isAdvancedActive = advancedTabs.some((t) => t.id === activeChronoTab);
+            return (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {primaryTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const active = activeChronoTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        data-feature-id={`LOGS_TAB_${tab.id}`}
+                        onClick={() => setActiveChronoTab(tab.id)}
+                        className={`h-9 px-3 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center gap-1.5 ${
+                          active
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                            : 'bg-zinc-100 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
 
-          {/* Open-Source SRE Workbench Toolbar: Cards vs Table View + Facet Sidebar + Regex Highlight + Live Tail + Pinned Bookmarks + JSON Diff */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedLabsTabs((v) => !v)}
+                    className={`h-9 px-3 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center gap-1.5 ml-auto ${
+                      showAdvancedLabsTabs || isAdvancedActive
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                        : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>
+                      {showAdvancedLabsTabs || isAdvancedActive
+                        ? 'Hide Advanced SRE Labs (7) ▴'
+                        : 'More SRE Forensics & Labs (7) ▾'}
+                    </span>
+                  </button>
+                </div>
+
+                {(showAdvancedLabsTabs || isAdvancedActive) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    {advancedTabs.map((tab) => {
+                      const Icon = tab.icon;
+                      const active = activeChronoTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          data-feature-id={`LOGS_TAB_${tab.id}`}
+                          onClick={() => setActiveChronoTab(tab.id)}
+                          className={`w-full h-8.5 px-2.5 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer border inline-flex items-center gap-1.5 ${
+                            active
+                              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                              : 'bg-white dark:bg-[#202124] text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                          }`}
+                        >
+                          <Icon className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Open-Source SRE Workbench Toolbar: Compact vs Detailed Cards vs Table View + Facet Sidebar + Regex Highlight + Live Tail + Pinned Bookmarks + JSON Diff */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              {/* Wave 2: Cards View vs High-Density Columnar Table View Toggle */}
+              {/* View Mode Switcher: Compact Cards vs Detailed Cards vs Columnar Table */}
               <div className="inline-flex items-center rounded-lg bg-zinc-100 dark:bg-[#131314] p-0.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
                 <button
                   type="button"
@@ -2199,7 +2464,7 @@ export default function LogStreamerAndShell({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             {/* Left 4 Columns: VictoriaLogs / OpenObserve Field Facet Explorer & Cardinality Sidebar */}
             {showFacetSidebar && Array.isArray(chronoData?.fieldFacets) && (
-              <div className="lg:col-span-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 max-h-[500px] overflow-y-auto">
+              <div className="lg:col-span-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 max-h-[600px] overflow-y-auto">
                 <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
                   <div>
                     <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
@@ -2214,7 +2479,7 @@ export default function LogStreamerAndShell({
                       type="button"
                       onClick={() => {
                         setCustomLqlInput('');
-                        fetchChronoLogs({ lqlFilter: '' });
+                        fetchChronoLogs({ lqlFilter: '', notifyUser: true });
                       }}
                       className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
                     >
@@ -2296,7 +2561,7 @@ export default function LogStreamerAndShell({
             )}
 
             {/* Right 8 (or 12) Columns: Either Flattened SRE Cards OR High-Density Columnar Table View */}
-            <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[500px] overflow-y-auto pr-1`}>
+            <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[600px] overflow-y-auto pr-1`}>
               {chronoEntries.filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id))).length === 0 ? (
                 <div className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] text-center space-y-3 font-mono">
                   <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -2474,6 +2739,9 @@ export default function LogStreamerAndShell({
                     const isPinned = pinnedLogIds.includes(entry.id);
                     const isDiffSelected = diffSelectionIds.includes(entry.id);
                     const grokGroups = extractVirtualGrokFields(entry.cleanMessage);
+                    const svcField = String(entry.serviceName || '').endsWith('.googleapis.com')
+                      ? 'protoPayload.serviceName'
+                      : 'resource.labels.service_name';
                     return (
                       <div
                         key={entry.id}
@@ -2487,15 +2755,15 @@ export default function LogStreamerAndShell({
                           onClick={() =>
                             setExpandedChronoEntryId(isOpen ? null : entry.id)
                           }
-                          className="p-3 cursor-pointer flex flex-wrap items-start justify-between gap-2"
+                          className="p-2.5 cursor-pointer flex flex-wrap items-start justify-between gap-2"
                         >
-                          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
                             {isOpen ? (
                               <ChevronDown className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
                             ) : (
                               <ChevronRight className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
                             )}
-                            <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="space-y-1 min-w-0 flex-1">
                               {/* Top Hoisted Metadata Row (Zero JSON Digging!) */}
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {getSeverityBadge(entry.severity)}
@@ -2510,17 +2778,48 @@ export default function LogStreamerAndShell({
                                 >
                                   {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
-                                  {entry.serviceName}
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span>{entry.serviceName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      applyFacetClauseToLql(`${svcField}="${entry.serviceName}"`)
+                                    }
+                                    title={`Filter + = ${svcField}="${entry.serviceName}"`}
+                                    className="text-emerald-600 dark:text-emerald-400 hover:underline text-[9.5px] font-extrabold cursor-pointer ml-0.5"
+                                  >
+                                    +=
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      applyFacetClauseToLql(`-${svcField}="${entry.serviceName}"`)
+                                    }
+                                    title={`Exclude - != ${svcField}="${entry.serviceName}"`}
+                                    className="text-red-600 dark:text-red-400 hover:underline text-[9.5px] font-extrabold cursor-pointer"
+                                  >
+                                    -=
+                                  </button>
                                 </span>
-                                <span className="text-[10.5px] font-mono text-zinc-500">
+                                <span className="text-[10.5px] font-mono text-zinc-500 truncate max-w-[200px]">
                                   ({entry.resourceTarget})
+                                </span>
+                                <span className="text-[10px] font-mono text-zinc-400 inline-flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  <span>{formatLogDate(entry.timestamp)}</span>
+                                </span>
+                                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1 truncate max-w-[180px]">
+                                  <UserCheck className="w-2.5 h-2.5 shrink-0" />
+                                  <span className="truncate">{entry.actor}</span>
                                 </span>
                                 {chronoData?.compiledQuery?.naturalLanguage &&
                                   typeof entry.nlpRelevancePct === 'number' && (
                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
                                       <Cpu className="w-2.5 h-2.5" />
-                                      <span>BM25 Match: {entry.nlpRelevancePct}%</span>
+                                      <span>BM25: {entry.nlpRelevancePct}%</span>
                                     </span>
                                   )}
                                 {entry.dlpFindings?.length > 0 && (
@@ -2553,55 +2852,6 @@ export default function LogStreamerAndShell({
                                   ))}
                                 </div>
                               )}
-
-                              {/* Wave 2: Interactive Flattened JSON Key-Value Pills (+ = / - !=) */}
-                              <div
-                                className="flex flex-wrap items-center gap-1 pt-0.5"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {getFlattenedKvPills(entry).map((pill) => (
-                                  <span
-                                    key={pill.key}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono"
-                                  >
-                                    <span className="text-zinc-400">{pill.key}:</span>
-                                    <span className="text-zinc-800 dark:text-zinc-200 font-semibold">
-                                      {pill.value}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => applyFacetClauseToLql(pill.includeClause)}
-                                      title={`Filter + = ${pill.includeClause}`}
-                                      className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
-                                    >
-                                      +=
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => applyFacetClauseToLql(pill.excludeClause)}
-                                      title={`Exclude - != ${pill.excludeClause}`}
-                                      className="text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
-                                    >
-                                      -=
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-
-                              {/* Actor + Timezone-Aware Timestamp + Trace ID */}
-                              <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                                <span className="inline-flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{formatLogDate(entry.timestamp)}</span>
-                                </span>
-                                <span>·</span>
-                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                  <UserCheck className="w-3 h-3" />
-                                  <span>{entry.actor}</span>
-                                </span>
-                                <span>·</span>
-                                <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
-                              </div>
                             </div>
                           </div>
 
@@ -2667,7 +2917,39 @@ export default function LogStreamerAndShell({
                         </div>
 
                         {isOpen && (
-                          <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
+                          <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2.5 font-mono text-[11px]">
+                            {/* Interactive Flattened JSON Key-Value Pills (+ = / - !=) inside expanded card */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] text-zinc-400">1-Click LQL Field Filters:</span>
+                              {getFlattenedKvPills(entry).map((pill) => (
+                                <span
+                                  key={pill.key}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono"
+                                >
+                                  <span className="text-zinc-400">{pill.key}:</span>
+                                  <span className="text-zinc-800 dark:text-zinc-200 font-semibold">
+                                    {pill.value}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => applyFacetClauseToLql(pill.includeClause)}
+                                    title={`Filter + = ${pill.includeClause}`}
+                                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                                  >
+                                    +=
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => applyFacetClauseToLql(pill.excludeClause)}
+                                    title={`Exclude - != ${pill.excludeClause}`}
+                                    className="text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
+                                  >
+                                    -=
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <span className="text-zinc-400">
                                 Drain3 Signature:{' '}
@@ -4091,11 +4373,31 @@ export default function LogStreamerAndShell({
                   : `Refresh Timeline (${filteredAuditEvents.length})`}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAuditTimelineSection((v) => !v)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
+            >
+              {showAuditTimelineSection ? (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  <span>Collapse</span>
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span>Expand ({filteredAuditEvents.length})</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Category & Actor Quick Filter Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+        {showAuditTimelineSection && (
+          <>
+            {/* Category & Actor Quick Filter Pills */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-mono text-zinc-400 inline-flex items-center gap-1">
               <Filter className="w-3 h-3" />
@@ -4366,6 +4668,8 @@ export default function LogStreamerAndShell({
             })
           )}
         </div>
+          </>
+        )}
       </div>
 
       {/* Bottom 2-Column Grid: Raw Cloud Logging Tail + Touch-Optimized Mobile Cloud Shell */}
