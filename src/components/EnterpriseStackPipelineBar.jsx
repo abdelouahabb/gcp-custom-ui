@@ -752,8 +752,21 @@ export default function EnterpriseStackPipelineBar({
 
   const stages = blueprint?.stages || [
     {
-      id: 'STAGE_1_PERIMETER_IAM',
+      id: 'STAGE_3_COMPUTE_SERVERLESS',
       stepNumber: 1,
+      shortTitle: 'VMs (GCE) & Cloud Run',
+      targetTab: 'VM_SSH',
+      secondaryTab: 'CLOUD_RUN',
+      secondaryLabel: 'Cloud Run Serverless Studio',
+      status: 'OPTIMAL',
+      metricBadge: 'Compute & Serverless',
+      summary: 'GCE VM Fleet (1 GB–32 TB RAM) & Cloud Run scale-to-zero containers.',
+      cliCmd: `gcloud compute instances list --project=${projectId}`,
+      mermaidDsl: null,
+    },
+    {
+      id: 'STAGE_1_PERIMETER_IAM',
+      stepNumber: 2,
       shortTitle: 'VPC & IAP Perimeter',
       targetTab: 'VPC_NETWORKS',
       secondaryTab: 'SOVEREIGN_STUDIO',
@@ -766,7 +779,7 @@ export default function EnterpriseStackPipelineBar({
     },
     {
       id: 'STAGE_2_STORAGE_LAKEHOUSE',
-      stepNumber: 2,
+      stepNumber: 3,
       shortTitle: 'Storage & Lakehouse',
       targetTab: 'CLOUD_STORAGE',
       secondaryTab: 'BIGQUERY_STUDIO',
@@ -775,19 +788,6 @@ export default function EnterpriseStackPipelineBar({
       metricBadge: 'GCS + BigQuery',
       summary: 'Stateful Cloud Storage buckets & BigQuery analytical datasets.',
       cliCmd: `gcloud storage buckets list --project=${projectId}`,
-      mermaidDsl: null,
-    },
-    {
-      id: 'STAGE_3_COMPUTE_SERVERLESS',
-      stepNumber: 3,
-      shortTitle: 'VMs & Cloud Run',
-      targetTab: 'VM_SSH',
-      secondaryTab: 'CLOUD_RUN',
-      secondaryLabel: 'Cloud Run Serverless Studio',
-      status: 'OPTIMAL',
-      metricBadge: 'Compute & Serverless',
-      summary: 'GCE VM Fleet & Cloud Run scale-to-zero containers.',
-      cliCmd: `gcloud run services list --project=${projectId}`,
       mermaidDsl: null,
     },
     {
@@ -893,7 +893,7 @@ export default function EnterpriseStackPipelineBar({
               </span>
             </div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              End-to-end enterprise workflow connecting Zero-Trust VPCs, Lakehouse Storage, Compute/Cloud Run, Cloud Build & Artifact Registry CI/CD, FinOps Quota Radar, and 30-Day Recycle Bin.
+              End-to-end enterprise workflow connecting Compute VMs (GCE) &amp; Cloud Run, Zero-Trust VPCs, Lakehouse Storage, Cloud Build &amp; Artifact Registry CI/CD, FinOps Quota Radar, and 30-Day Recycle Bin.
             </p>
           </div>
         </div>

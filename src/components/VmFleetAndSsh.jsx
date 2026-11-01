@@ -198,9 +198,10 @@ const RESIZE_MACHINE_TYPES = [
   'x4-megamem-1920',
   'a3-highgpu-8g',
   'a3-ultragpu-8g',
-  'custom-16-65536',
-  'custom-32-131072',
-  'custom-64-524288',
+  'n2-custom-16-65536',
+  'n2-custom-32-131072',
+  'n2-custom-64-524288',
+  'n2-custom-64-838860-ext',
 ];
 
 export default function VmFleetAndSsh({
@@ -406,6 +407,7 @@ export default function VmFleetAndSsh({
             diskSizeGb: tpl.diskSizeGb,
             diskType: tpl.diskType,
             provisionedIops: tpl.provisionedIops || 3000,
+            provisionedThroughput: tpl.provisionedThroughputMb || tpl.provisionedThroughput || 140,
             provisionedThroughputMb: tpl.provisionedThroughputMb || 140,
             spotInstance: Boolean(tpl.spotInstance),
             terminationAction: 'STOP',
@@ -421,6 +423,7 @@ export default function VmFleetAndSsh({
             shieldedIntegrityMonitoring: true,
             enableOsLogin: Boolean(tpl.enableOsLogin),
             blockProjectSshKeys: Boolean(tpl.blockProjectSshKeys),
+            deployContainerImage: tpl.containerDeployImage || tpl.deployContainerImage || '',
             containerDeployImage: tpl.containerDeployImage || '',
             startupScript: tpl.startupScript || '',
           },
@@ -604,10 +607,31 @@ export default function VmFleetAndSsh({
       cpu = '4';
       memory = '16Gi';
       estMonthlyVmUsd = 97.82;
-    } else if (mt.includes('-8')) {
+    } else if (
+      mt.includes('-8') ||
+      mt.includes('-16') ||
+      mt.includes('-32') ||
+      mt.includes('-44') ||
+      mt.includes('-64') ||
+      mt.includes('-72') ||
+      mt.includes('-96') ||
+      mt.includes('-128') ||
+      mt.includes('-176') ||
+      mt.includes('-192') ||
+      mt.includes('-224') ||
+      mt.includes('-360') ||
+      mt.includes('ultramem') ||
+      mt.includes('megamem') ||
+      mt.includes('custom-')
+    ) {
       cpu = '8';
       memory = '32Gi';
-      estMonthlyVmUsd = 195.64;
+      estMonthlyVmUsd =
+        mt.includes('ultramem') || mt.includes('megamem')
+          ? 2480.0
+          : mt.includes('-32') || mt.includes('-64') || mt.includes('-96') || mt.includes('-128')
+          ? 782.56
+          : 195.64;
     } else if (mt.includes('-2')) {
       cpu = '2';
       memory = '8Gi';

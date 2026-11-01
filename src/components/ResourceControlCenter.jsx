@@ -474,9 +474,17 @@ export default function ResourceControlCenter({
     return map;
   }, [resources, projectId]);
 
+  const orderedResources = useMemo(
+    () =>
+      [...resources].sort(
+        (a, b) => getResourceLogicalOrderRank(a) - getResourceLogicalOrderRank(b)
+      ),
+    [resources]
+  );
+
   const staleResources = useMemo(
-    () => resources.filter((r) => lineageById[r.id]?.isStale),
-    [resources, lineageById]
+    () => orderedResources.filter((r) => lineageById[r.id]?.isStale),
+    [orderedResources, lineageById]
   );
 
   // Filter without deleting raw data, ordered logically starting with Compute Engine VMs
@@ -685,7 +693,7 @@ export default function ResourceControlCenter({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(lineageDrawerTab === 'STALE' ? staleResources : resources).map(
+                {(lineageDrawerTab === 'STALE' ? staleResources : orderedResources).map(
                   (item) => {
                     const lin = lineageById[item.id] || {};
                     const isDeletingThis =

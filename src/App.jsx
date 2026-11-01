@@ -3072,13 +3072,21 @@ function classifyDestructiveAxiosConfig(config) {
         body.ruleName ||
         'new-gcp-resource';
       const loc =
-        body.location ||
-        cfg.location ||
-        body.region ||
-        cfg.region ||
-        body.zone ||
-        cfg.zone ||
-        (svcType === 'VPC_FIREWALL' || svcType === 'VPC_NETWORK' ? 'Global VPC Perimeter' : 'us-central1');
+        svcType === 'COMPUTE_VM'
+          ? body.zone || cfg.zone || body.region || cfg.region || 'us-central1-a'
+          : svcType === 'VPC_FIREWALL' || svcType === 'VPC_NETWORK'
+          ? 'Global VPC Perimeter'
+          : svcType === 'BIGQUERY_DATASET'
+          ? cfg.location || body.location || body.region || cfg.region || 'US'
+          : svcType === 'GCS_BUCKET'
+          ? cfg.locationType === 'MULTI_REGION'
+            ? cfg.multiRegion || 'US'
+            : cfg.locationType === 'DUAL_REGION'
+            ? cfg.dualRegionPreset === 'CUSTOM'
+              ? `${cfg.dualRegionA || 'us-central1'}+${cfg.dualRegionB || 'us-east1'}`
+              : cfg.dualRegionPreset || 'NAM4'
+            : body.region || cfg.region || body.location || 'us-central1'
+          : body.region || cfg.region || body.location || body.zone || cfg.zone || 'us-central1';
 
       // Detailed human-first inspection for VPC Firewall Rules (SSH :22 / RDP :3389 / HTTPS :443 / Custom)
       const fwNetwork = cfg.network || body.network || 'default';
@@ -3164,42 +3172,61 @@ function classifyDestructiveAxiosConfig(config) {
         };
       };
 
+      const vmNetName = cfg.vmNetwork || cfg.network || 'default';
+      const vmShape = cfg.machineType || 'e2-micro';
+      const vmBootDisk = `${cfg.diskSizeGb || 20} GB ${cfg.diskType || 'pd-balanced'}${
+        String(cfg.diskType || '').startsWith('hyperdisk-')
+          ? ` (${cfg.provisionedIops || 3000} IOPS · ${cfg.provisionedThroughput || cfg.provisionedThroughputMb || 140} MB/s)`
+          : ''
+      }`;
+      const vmStorageExtras = [
+        cfg.attachDataDisk
+          ? `+ ${cfg.dataDiskSizeGb || 100} GB ${cfg.dataDiskType || 'pd-ssd'} Data Disk`
+          : '',
+        Number(cfg.localSsdCount || 0) > 0
+          ? `+ ${cfg.localSsdCount}x 375 GB Local NVMe SSD`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      const vmSecPosture = [
+        cfg.confidentialComputeType && cfg.confidentialComputeType !== 'NONE'
+          ? `Confidential VM (${cfg.confidentialComputeType})`
+          : 'Shielded VM (vTPM + Integrity Monitoring)',
+        cfg.externalIpEnabled === false ? 'Private VPC IP Only (--no-address)' : 'Ephemeral External IPv4',
+        cfg.spotInstance ? 'Spot VM (-68%)' : 'On-Demand Standard',
+      ].join(' · ');
+
       const provSpecs = {
-        GCS_BUCKET: {
-          title: `Provision Cloud Storage Bucket "gs://${resName}" in ${loc}?`,
-          kind: `Cloud Storage Bucket (${cfg.storageClass || 'STANDARD'} · storage.googleapis.com/storage/v1)`,
-          what: `1. Creates Zero-Trust Cloud Storage Bucket "gs://${resName}" in ${loc}: Provisions the bucket with storageClass="${cfg.storageClass || 'STANDARD'}" in region "${loc}".\n2. Enforces Public Access Prevention & Uniform IAM: Automatically sets publicAccessPrevention="enforced" and uniformBucketLevelAccess=true so objects can never be accidentally exposed to anonymous internet users.\n3. Enables 1-Click Rollback & Lifecycle Tracking: Registers the bucket in your Cloud Storage Workbench and records a reversible receipt in the Flight Recorder.`,
-          cost: `ALWAYS-FREE TIER ELIGIBLE ($0.00 EMPTY): Empty buckets cost $0.00/mo. Standard storage in US-CENTRAL1/US-EAST1/US-WEST1 includes 5 GB-months Always Free ($0.020/GB-mo beyond Free Tier).`,
-          impact: `Creates live Cloud Storage bucket "gs://${resName}" in "${loc}" on project "${projectId}".`,
+        COMPUTE_VM: {
+          title: `Provision Compute Engine VM "${resName}" (${vmShape}) in ${loc}?`,
+          kind: `Compute Engine VM Instance (${vmShape} · ${cfg.osImage || 'Debian 12 Bookworm'} · compute.googleapis.com/v1)`,
+          what: `1. Boots Compute Engine VM "${resName}" in Zone ${loc}: Provisions a ${vmShape} virtual machine (${cfg.osImage || 'Debian 12 Bookworm'}) with a ${vmBootDisk} boot disk${vmStorageExtras ? ` (${vmStorageExtras})` : ''} attached to VPC "${vmNetName}" (${cfg.nicType || 'GVNIC'}).\n2. Enforces Security & Networking Posture (${vmSecPosture}): Configures ${cfg.confidentialComputeType && cfg.confidentialComputeType !== 'NONE' ? `Hardware Confidential Compute (${cfg.confidentialComputeType}) and ` : ''}Shielded VM controls and prepares the instance for Browser SSH / Cloud IAP tunneling.\n3. Polls Live Zone Operation to RUNNING State: Tracks the Compute Engine zone operation until the VM boots and registers it in the VM Fleet Studio.`,
+          cost: `CONTINUOUS VM & DISK BILLING NOTICE: Running a Compute Engine VM (${vmShape}) bills hourly for vCPU/RAM plus monthly for its ${vmBootDisk} disk. (Note: 1 non-Spot e2-micro instance in us-central1, us-west1, or us-east1 with up to 30 GB pd-standard disk is eligible for the Google Cloud Always-Free Tier.)`,
+          impact: `Provisions and starts live Compute Engine VM "${resName}" (${vmShape}) on VPC "${vmNetName}" in zone "${loc}".`,
         },
-        BIGQUERY_DATASET: {
-          title: `Provision BigQuery Dataset "${projectId}:${resName}" in ${loc}?`,
-          kind: `BigQuery Dataset (bigquery.googleapis.com/bigquery/v2)`,
-          what: `1. Creates BigQuery Analytics Dataset "${projectId}:${resName}" in ${loc}: Provisions the dataset container in "${loc}" ready for SQL tables, views, and Iceberg external tables.\n2. Configures Governance & Storage Billing Metadata: Applies default table expiration and storage billing model settings.\n3. Registers in BigQuery Studio & Flight Recorder: Makes the dataset immediately queryable in BigQuery Studio with a 1-click reversible creation receipt.`,
-          cost: `ZERO IDLE COST ($0.00/MO): Creating a BigQuery dataset container is 100% free ($0.00/mo). Google Cloud includes 10 GiB of active table storage and 1 TiB of SQL queries per month Always Free.`,
-          impact: `Creates live BigQuery dataset "${projectId}:${resName}" in "${loc}".`,
+        VPC_NETWORK: {
+          title: `Provision Custom VPC Network "${resName}" on "${projectId}"?`,
+          kind: `VPC Network (compute.googleapis.com/v1)`,
+          what: `1. Creates Isolated Global VPC Network "${resName}": Provisions a software-defined Andromeda virtual network with autoCreateSubnetworks=${Boolean(cfg.autoCreateSubnetworks)}.\n2. Initializes Global Routing Table: Sets up private internal routing across Google's global fiber backbone without exposing workloads to the public internet.\n3. Registers in VPC & Firewall Studio: Makes "${resName}" immediately available for subnets, firewall rules, and VM placement.`,
+          cost: `ZERO IDLE COST ($0.00/MO): Creating a VPC network and subnets incurs $0.00/mo in fixed charges (standard egress rates apply only to actual traffic).`,
+          impact: `Creates live VPC network "${resName}" in project "${projectId}".`,
         },
+        VPC_FIREWALL: buildFirewallSpec(),
         CLOUD_RUN: {
           title: `Deploy Cloud Run Gen2 Service "${resName}" in ${loc}?`,
           kind: `Cloud Run v2 Service (run.googleapis.com/v2)`,
-          what: `1. Deploys Serverless Container "${resName}" in ${loc}: Provisions a Cloud Run Gen2 service running image "${cfg.image || 'us-docker.pkg.dev/cloudrun/container/hello'}" with minInstanceCount=${cfg.minInstances ?? 0} and maxInstanceCount=${cfg.maxInstances ?? 10}.\n2. Provisions Dedicated *.run.app HTTPS Endpoint & TLS Certificate: Automatically configures Google Front End global load balancing and managed TLS 1.3 certificates.\n3. Applies Zero-Trust IAM Invoker Policy: Sets access control to ${cfg.allowUnauthenticated ? 'Public Internet (allUsers)' : 'Private IAM Authenticated Only'} and logs a reversible receipt.`,
+          what: `1. Deploys Serverless Container "${resName}" in ${loc}: Provisions a Cloud Run Gen2 service running image "${cfg.containerImage || cfg.image || 'us-docker.pkg.dev/cloudrun/container/hello'}" with minInstanceCount=${cfg.minInstances ?? 0} and maxInstanceCount=${cfg.maxInstances ?? 10}.\n2. Provisions Dedicated *.run.app HTTPS Endpoint & TLS Certificate: Automatically configures Google Front End global load balancing and managed TLS 1.3 certificates.\n3. Applies Zero-Trust IAM Invoker Policy: Sets access control to ${cfg.allowUnauthenticated ? 'Public Internet (allUsers)' : 'Private IAM Authenticated Only'} and logs a reversible receipt.`,
           cost:
             Number(cfg.minInstances || 0) > 0
               ? `WARM INSTANCE BILLING WARNING: Because minInstances=${cfg.minInstances} (> 0), this Cloud Run service will keep ${cfg.minInstances} container instance(s) warm 24/7 and bill continuously for vCPU and Memory.`
               : `SCALE-TO-ZERO ($0.00/HR IDLE): Configured with minInstanceCount=0 and request-only CPU billing (2 million requests/mo, 180,000 vCPU-sec/mo, and 360,000 GiB-sec/mo Always Free).`,
           impact: `Deploys live Cloud Run v2 service "${resName}" in "${loc}" on project "${projectId}".`,
         },
-        COMPUTE_VM: {
-          title: `Provision Compute Engine VM "${resName}" (${cfg.machineType || 'e2-micro'}) in ${loc}?`,
-          kind: `Compute Engine VM Instance (${cfg.machineType || 'e2-micro'} · compute.googleapis.com/v1)`,
-          what: `1. Boots Compute Engine VM "${resName}" in Zone ${loc}: Provisions a ${cfg.machineType || 'e2-micro'} virtual machine with a ${cfg.diskSizeGb || 10} GB ${cfg.diskType || 'pd-standard'} boot disk attached to VPC "${cfg.network || 'default'}".\n2. Hardens Instance Identity & Shielded VM Controls: Configures Shielded VM integrity monitoring and prepares the instance for Browser SSH / Cloud IAP tunneling.\n3. Polls Live Zone Operation to RUNNING State: Tracks the Compute Engine zone operation until the VM boots and registers it in the VM Fleet Studio.`,
-          cost: `CONTINUOUS VM & DISK BILLING NOTICE: Running a Compute Engine VM bills hourly for vCPU/RAM plus monthly for its Persistent Boot Disk. (Note: 1 e2-micro instance in us-central1, us-west1, or us-east1 with up to 30 GB pd-standard disk is eligible for the Google Cloud Always-Free Tier.)`,
-          impact: `Provisions and starts live Compute Engine VM "${resName}" in zone "${loc}".`,
-        },
         GKE_CLUSTER: {
           title: `Provision Google Kubernetes Engine (GKE) Cluster "${resName}" in ${loc}?`,
-          kind: `GKE Kubernetes Cluster (${cfg.autopilot !== false ? 'Autopilot' : 'Standard'} · container.googleapis.com/v1)`,
-          what: `1. Bootstraps Managed Kubernetes Control Plane "${resName}" in ${loc}: Provisions a GKE ${cfg.autopilot !== false ? 'Autopilot' : 'Standard'} cluster in "${loc}" with Workload Identity and private control-plane networking.\n2. Configures Auto-Scaling Node / Pod Compute Pool: Registers managed compute capacity and Kubernetes API server endpoints.\n3. Links to GKE Fleet Studio: Streams live cluster status and records a reversible creation receipt.`,
+          kind: `GKE Kubernetes Cluster (${cfg.gkeMode === 'STANDARD' || cfg.autopilot === false ? 'Standard' : 'Autopilot'} · container.googleapis.com/v1)`,
+          what: `1. Bootstraps Managed Kubernetes Control Plane "${resName}" in ${loc}: Provisions a GKE ${cfg.gkeMode === 'STANDARD' || cfg.autopilot === false ? 'Standard' : 'Autopilot'} cluster in "${loc}" with Workload Identity and private control-plane networking.\n2. Configures Auto-Scaling Node / Pod Compute Pool: Registers managed compute capacity and Kubernetes API server endpoints.\n3. Links to GKE Fleet Studio: Streams live cluster status and records a reversible creation receipt.`,
           cost: `GKE CLUSTER & NODE BILLING WARNING: GKE charges $0.10/hr (~$73.00/mo) per cluster management fee (after the 1 free zonal/Autopilot cluster tier per billing account) plus active worker node/pod vCPU, Memory, and Persistent Disk charges.`,
           impact: `Provisions live GKE Kubernetes cluster "${resName}" in "${loc}" on project "${projectId}".`,
         },
@@ -3210,14 +3237,20 @@ function classifyDestructiveAxiosConfig(config) {
           cost: `CONTINUOUS DATABASE BILLING WARNING: Cloud SQL instances do NOT scale to $0 when idle — they bill continuously per hour for instance vCPU/RAM tier (${cfg.tier || 'db-f1-micro'}) plus SSD/HDD storage ($0.09–$0.17/GB-mo) until stopped or deleted.`,
           impact: `Provisions live Cloud SQL instance "${resName}" in "${loc}" on project "${projectId}".`,
         },
-        VPC_NETWORK: {
-          title: `Provision Custom VPC Network "${resName}" on "${projectId}"?`,
-          kind: `VPC Network (compute.googleapis.com/v1)`,
-          what: `1. Creates Isolated Global VPC Network "${resName}": Provisions a software-defined Andromeda virtual network with autoCreateSubnetworks=${Boolean(cfg.autoCreateSubnetworks)}.\n2. Initializes Global Routing Table: Sets up private internal routing across Google's global fiber backbone without exposing workloads to the public internet.\n3. Registers in VPC & Firewall Studio: Makes "${resName}" immediately available for subnets, firewall rules, and VM placement.`,
-          cost: `ZERO IDLE COST ($0.00/MO): Creating a VPC network and subnets incurs $0.00/mo in fixed charges (standard egress rates apply only to actual traffic).`,
-          impact: `Creates live VPC network "${resName}" in project "${projectId}".`,
+        BIGQUERY_DATASET: {
+          title: `Provision BigQuery Dataset "${projectId}:${resName}" in ${loc}?`,
+          kind: `BigQuery Dataset (bigquery.googleapis.com/bigquery/v2)`,
+          what: `1. Creates BigQuery Analytics Dataset "${projectId}:${resName}" in ${loc}: Provisions the dataset container in "${loc}" ready for SQL tables, views, and Iceberg external tables.\n2. Configures Governance & Storage Billing Metadata: Applies default table expiration and storage billing model settings.\n3. Registers in BigQuery Studio & Flight Recorder: Makes the dataset immediately queryable in BigQuery Studio with a 1-click reversible creation receipt.`,
+          cost: `ZERO IDLE COST ($0.00/MO): Creating a BigQuery dataset container is 100% free ($0.00/mo). Google Cloud includes 10 GiB of active table storage and 1 TiB of SQL queries per month Always Free.`,
+          impact: `Creates live BigQuery dataset "${projectId}:${resName}" in "${loc}".`,
         },
-        VPC_FIREWALL: buildFirewallSpec(),
+        GCS_BUCKET: {
+          title: `Provision Cloud Storage Bucket "gs://${resName}" in ${loc}?`,
+          kind: `Cloud Storage Bucket (${cfg.storageClass || 'STANDARD'} · storage.googleapis.com/storage/v1)`,
+          what: `1. Creates Zero-Trust Cloud Storage Bucket "gs://${resName}" in ${loc}: Provisions the bucket with storageClass="${cfg.storageClass || 'STANDARD'}" in region "${loc}".\n2. Enforces Public Access Prevention & Uniform IAM: Automatically sets publicAccessPrevention="enforced" and uniformBucketLevelAccess=true so objects can never be accidentally exposed to anonymous internet users.\n3. Enables 1-Click Rollback & Lifecycle Tracking: Registers the bucket in your Cloud Storage Workbench and records a reversible receipt in the Flight Recorder.`,
+          cost: `ALWAYS-FREE TIER ELIGIBLE ($0.00 EMPTY): Empty buckets cost $0.00/mo. Standard storage in US-CENTRAL1/US-EAST1/US-WEST1 includes 5 GB-months Always Free ($0.020/GB-mo beyond Free Tier).`,
+          impact: `Creates live Cloud Storage bucket "gs://${resName}" in "${loc}" on project "${projectId}".`,
+        },
       };
       const spec = provSpecs[svcType] || {
         title: `Provision ${svcType} "${resName}" in ${loc}?`,

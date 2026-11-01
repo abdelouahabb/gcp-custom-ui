@@ -1803,58 +1803,80 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
       });
     });
 
-    // 2) Real Cloud Storage Buckets
-    liveBuckets.forEach((b) => {
+    // 2) Real VPC Networks (`compute.googleapis.com/compute/v1/projects/:id/global/networks`)
+    liveVpcs.forEach((vpc) => {
+      const subnetCount = (vpc.subnetworks || []).length;
+      const modeLabel = vpc.autoCreateSubnetworks
+        ? 'AUTO SUBNETS'
+        : 'CUSTOM SUBNETS';
+      const routingMode = vpc.routingConfig?.routingMode || 'REGIONAL';
       resources.push({
-        id: `gcs-${b.name}`,
-        name: b.name,
-        type: 'Cloud Storage Bucket',
-        category: 'storage',
-        region: (b.location || 'US').toLowerCase(),
+        id: `vpc-${vpc.name}`,
+        name: vpc.name,
+        type: 'VPC Network',
+        category: 'network',
+        region: `global (${routingMode.toLowerCase()})`,
         status: 'HEALTHY',
         source: 'LIVE_GCP',
-        createdAt: b.timeCreated || new Date().toISOString(),
-        storageClass: b.storageClass || 'STANDARD',
-        utilizationScore: 32,
-        monthlyCostUsd: 0.45,
-        requestsPerMin: 18,
-        p95LatencyMs: 19,
-        uri: `gs://${b.name}`,
+        createdAt: vpc.creationTimestamp || new Date().toISOString(),
+        storageClass: `${modeLabel} · ${subnetCount} subnets`,
+        utilizationScore: 30,
+        monthlyCostUsd: 0.0,
+        requestsPerMin: 95,
+        p95LatencyMs: 4,
+        uri:
+          vpc.selfLink ||
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${vpc.name}`,
         details: {
-          location: b.location,
-          locationType: b.locationType || 'region',
-          storageClass: b.storageClass || 'STANDARD',
-          publicAccessPrevention:
-            b.iamConfiguration?.publicAccessPrevention || 'inherited',
-          uniformBucketLevelAccess: Boolean(
-            b.iamConfiguration?.uniformBucketLevelAccess?.enabled
-          ),
+          subnetMode: modeLabel,
+          subnetsCount: subnetCount,
+          routingMode,
+          mtu: vpc.mtu || 1460,
+          description: vpc.description || 'Google Cloud VPC Network',
         },
       });
     });
 
-    // 3) Real BigQuery Datasets
-    liveDatasets.forEach((d) => {
-      const dsId = d.datasetReference?.datasetId;
+    // 3) Real VPC Firewall Rules (`compute.googleapis.com/compute/v1/projects/:id/global/firewalls`)
+    liveFirewalls.forEach((fw) => {
+      const netShort = fw.network?.split('/').pop() || 'default';
+      const isDeny = Array.isArray(fw.denied) && fw.denied.length > 0;
+      const actionVerb = isDeny ? 'DENY' : 'ALLOW';
+      const ruleSpecs = isDeny ? fw.denied : fw.allowed || [];
+      const protocols = ruleSpecs
+        .map(
+          (r) =>
+            `${r.IPProtocol}${r.ports?.length ? ':' + r.ports.join(',') : ''}`
+        )
+        .join(' ');
       resources.push({
-        id: `bq-${dsId}`,
-        name: dsId,
-        type: 'BigQuery Dataset',
-        category: 'data',
-        region: (d.location || 'US').toLowerCase(),
-        status: 'HEALTHY',
+        id: `fw-${fw.name}`,
+        name: fw.name,
+        type: 'VPC Firewall Rule',
+        category: 'network',
+        region: `vpc:${netShort}`,
+        status: fw.disabled ? 'DISABLED' : 'HEALTHY',
         source: 'LIVE_GCP',
-        createdAt: new Date().toISOString(),
-        storageClass: `Location: ${d.location || 'US'}`,
-        utilizationScore: 28,
+        createdAt: fw.creationTimestamp || new Date().toISOString(),
+        storageClass: `${actionVerb} ${fw.direction || 'INGRESS'} · ${protocols || 'all'}`,
+        utilizationScore: 22,
         monthlyCostUsd: 0.0,
-        requestsPerMin: 12,
-        p95LatencyMs: 210,
-        uri: `bq://${projectId}.${dsId}`,
+        requestsPerMin: 40,
+        p95LatencyMs: 2,
+        uri:
+          fw.selfLink ||
+          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fw.name}`,
         details: {
-          datasetId: dsId,
-          projectId,
-          location: d.location || 'US',
+          network: netShort,
+          action: actionVerb,
+          direction: fw.direction || 'INGRESS',
+          priority: fw.priority ?? 1000,
+          disabled: Boolean(fw.disabled),
+          protocols: protocols || 'all',
+          sourceRanges: (fw.sourceRanges || []).join(', ') || '—',
+          destinationRanges: (fw.destinationRanges || []).join(', ') || '—',
+          targetTags: (fw.targetTags || []).join(', ') || 'All instances',
+          logEnabled: Boolean(fw.logConfig?.enable),
         },
       });
     });
@@ -1912,80 +1934,58 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
       });
     });
 
-    // 5b) Real VPC Networks (`compute.googleapis.com/compute/v1/projects/:id/global/networks`)
-    liveVpcs.forEach((vpc) => {
-      const subnetCount = (vpc.subnetworks || []).length;
-      const modeLabel = vpc.autoCreateSubnetworks
-        ? 'AUTO SUBNETS'
-        : 'CUSTOM SUBNETS';
-      const routingMode = vpc.routingConfig?.routingMode || 'REGIONAL';
+    // 6) Real BigQuery Datasets
+    liveDatasets.forEach((d) => {
+      const dsId = d.datasetReference?.datasetId;
       resources.push({
-        id: `vpc-${vpc.name}`,
-        name: vpc.name,
-        type: 'VPC Network',
-        category: 'network',
-        region: `global (${routingMode.toLowerCase()})`,
+        id: `bq-${dsId}`,
+        name: dsId,
+        type: 'BigQuery Dataset',
+        category: 'data',
+        region: (d.location || 'US').toLowerCase(),
         status: 'HEALTHY',
         source: 'LIVE_GCP',
-        createdAt: vpc.creationTimestamp || new Date().toISOString(),
-        storageClass: `${modeLabel} · ${subnetCount} subnets`,
-        utilizationScore: 30,
+        createdAt: new Date().toISOString(),
+        storageClass: `Location: ${d.location || 'US'}`,
+        utilizationScore: 28,
         monthlyCostUsd: 0.0,
-        requestsPerMin: 95,
-        p95LatencyMs: 4,
-        uri:
-          vpc.selfLink ||
-          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${vpc.name}`,
+        requestsPerMin: 12,
+        p95LatencyMs: 210,
+        uri: `bq://${projectId}.${dsId}`,
         details: {
-          subnetMode: modeLabel,
-          subnetsCount: subnetCount,
-          routingMode,
-          mtu: vpc.mtu || 1460,
-          description: vpc.description || 'Google Cloud VPC Network',
+          datasetId: dsId,
+          projectId,
+          location: d.location || 'US',
         },
       });
     });
 
-    // 5c) Real VPC Firewall Rules (`compute.googleapis.com/compute/v1/projects/:id/global/firewalls`)
-    liveFirewalls.forEach((fw) => {
-      const netShort = fw.network?.split('/').pop() || 'default';
-      const isDeny = Array.isArray(fw.denied) && fw.denied.length > 0;
-      const actionVerb = isDeny ? 'DENY' : 'ALLOW';
-      const ruleSpecs = isDeny ? fw.denied : fw.allowed || [];
-      const protocols = ruleSpecs
-        .map(
-          (r) =>
-            `${r.IPProtocol}${r.ports?.length ? ':' + r.ports.join(',') : ''}`
-        )
-        .join(' ');
+    // 7) Real Cloud Storage Buckets
+    liveBuckets.forEach((b) => {
       resources.push({
-        id: `fw-${fw.name}`,
-        name: fw.name,
-        type: 'VPC Firewall Rule',
-        category: 'network',
-        region: `vpc:${netShort}`,
-        status: fw.disabled ? 'DISABLED' : 'HEALTHY',
+        id: `gcs-${b.name}`,
+        name: b.name,
+        type: 'Cloud Storage Bucket',
+        category: 'storage',
+        region: (b.location || 'US').toLowerCase(),
+        status: 'HEALTHY',
         source: 'LIVE_GCP',
-        createdAt: fw.creationTimestamp || new Date().toISOString(),
-        storageClass: `${actionVerb} ${fw.direction || 'INGRESS'} · ${protocols || 'all'}`,
-        utilizationScore: 22,
-        monthlyCostUsd: 0.0,
-        requestsPerMin: 40,
-        p95LatencyMs: 2,
-        uri:
-          fw.selfLink ||
-          `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fw.name}`,
+        createdAt: b.timeCreated || new Date().toISOString(),
+        storageClass: b.storageClass || 'STANDARD',
+        utilizationScore: 32,
+        monthlyCostUsd: 0.45,
+        requestsPerMin: 18,
+        p95LatencyMs: 19,
+        uri: `gs://${b.name}`,
         details: {
-          network: netShort,
-          action: actionVerb,
-          direction: fw.direction || 'INGRESS',
-          priority: fw.priority ?? 1000,
-          disabled: Boolean(fw.disabled),
-          protocols: protocols || 'all',
-          sourceRanges: (fw.sourceRanges || []).join(', ') || '—',
-          destinationRanges: (fw.destinationRanges || []).join(', ') || '—',
-          targetTags: (fw.targetTags || []).join(', ') || 'All instances',
-          logEnabled: Boolean(fw.logConfig?.enable),
+          location: b.location,
+          locationType: b.locationType || 'region',
+          storageClass: b.storageClass || 'STANDARD',
+          publicAccessPrevention:
+            b.iamConfiguration?.publicAccessPrevention || 'inherited',
+          uniformBucketLevelAccess: Boolean(
+            b.iamConfiguration?.uniformBucketLevelAccess?.enabled
+          ),
         },
       });
     });
@@ -5808,7 +5808,9 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       const diskType = config.diskType || 'pd-balanced';
       const bootDiskAutoDelete = config.bootDiskAutoDelete !== false;
       const provisionedIops = Number(config.provisionedIops || 0);
-      const provisionedThroughput = Number(config.provisionedThroughput || 0);
+      const provisionedThroughput = Number(
+        config.provisionedThroughput || config.provisionedThroughputMb || 0
+      );
       const attachDataDisk = Boolean(config.attachDataDisk);
       const dataDiskSizeGb = Math.max(10, Number(config.dataDiskSizeGb || 100));
       const dataDiskType = config.dataDiskType || 'pd-ssd';
@@ -5839,7 +5841,11 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       const enableSerialPort = Boolean(config.enableSerialPort);
       const installOpsAgent = Boolean(config.installOpsAgent);
       const sshPublicKey = (config.sshPublicKey || '').trim();
-      const deployContainerImage = (config.deployContainerImage || '').trim();
+      const deployContainerImage = (
+        config.deployContainerImage ||
+        config.containerDeployImage ||
+        ''
+      ).trim();
       const enableDisplayDevice = Boolean(config.enableDisplayDevice);
       const enableNestedVirtualization = Boolean(config.enableNestedVirtualization);
       const deletionProtection = Boolean(config.deletionProtection);
@@ -80091,110 +80097,10 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
 
     const stages = [
       {
-        id: 'STAGE_1_PERIMETER_IAM',
-        stepNumber: 1,
-        title: '1. Zero-Trust VPC & IAP Perimeter',
-        shortTitle: 'VPC & IAP Perimeter',
-        targetTab: 'VPC_NETWORKS',
-        secondaryTab: 'SOVEREIGN_STUDIO',
-        secondaryLabel: 'Sovereign IAM Studio',
-        status:
-          openPublicFw.length > 0 && iapFw.length === 0
-            ? 'ACTION_RECOMMENDED'
-            : vpcs.length > 0
-            ? 'OPTIMAL'
-            : 'READY',
-        metricBadge:
-          openPublicFw.length > 0
-            ? `${vpcs.length} VPC · ${firewalls.length} FW (${openPublicFw.length} Open 0.0.0.0/0)`
-            : `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
-        summary:
-          vpcs.length > 0
-            ? openPublicFw.length > 0 && iapFw.length === 0
-              ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} firewall rules — ${openPublicFw.length} rule(s) (${openPublicFw.map((f) => f.name).slice(0, 3).join(', ')}) allow public 0.0.0.0/0 ingress. Recommend locking SSH/RDP to Cloud IAP (35.235.240.0/20).`
-              : `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
-            : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
-        cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
-        mermaidDsl: stage1MermaidDsl,
-        stageItems: [
-          ...vpcs.slice(0, 2).map((v) => ({
-            kind: 'VPC Network',
-            name: v.name,
-            meta: v.storageClass || 'AUTO_SUBNETS',
-            targetTab: 'VPC_NETWORKS',
-          })),
-          ...firewalls.slice(0, 5).map((fw) => ({
-            kind: String(fw.details?.sourceRanges || '').includes('0.0.0.0/0')
-              ? 'Public Firewall (0.0.0.0/0)'
-              : 'Internal Firewall Rule',
-            name: fw.name,
-            meta: `${fw.details?.allowed || 'INGRESS'} · ${fw.details?.sourceRanges || '0.0.0.0/0'}`,
-            targetTab: 'VPC_NETWORKS',
-          })),
-          ...(openPublicFw.length > 0 && iapFw.length === 0
-            ? [
-                {
-                  kind: 'Zero-Trust Hardening',
-                  name: '+ Lock SSH to IAP Bastion (35.235.240.0/20)',
-                  meta: 'Replace 0.0.0.0/0 TCP:22 with Cloud IAP tunnel',
-                  targetTab: 'VPC_NETWORKS',
-                  provisionType: 'FIREWALL_RULE',
-                },
-              ]
-            : []),
-        ],
-      },
-      {
-        id: 'STAGE_2_STORAGE_LAKEHOUSE',
-        stepNumber: 2,
-        title: '2. Stateful Storage & BigQuery Lakehouse',
-        shortTitle: 'Storage & Lakehouse',
-        targetTab: 'CLOUD_STORAGE',
-        secondaryTab: 'BIGQUERY_STUDIO',
-        secondaryLabel: 'BigQuery Studio',
-        status: buckets.length + datasets.length > 0 ? 'OPTIMAL' : 'READY',
-        metricBadge: `${buckets.length} GCS · ${datasets.length} BQ Datasets`,
-        summary:
-          buckets.length + datasets.length > 0
-            ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s)${
-                datasets.length > 0
-                  ? ` and ${datasets.length} BigQuery analytical dataset(s)`
-                  : ' (0 BigQuery datasets provisioned — click below to create your first Lakehouse dataset)'
-              }.`
-            : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
-        cliCmd: `gcloud storage buckets list --project=${projectId}`,
-        mermaidDsl: stage2MermaidDsl,
-        stageItems: [
-          ...buckets.slice(0, 4).map((b) => ({
-            kind: 'GCS Bucket',
-            name: `gs://${b.name}`,
-            meta: `${b.region || 'US'} · ${b.storageClass || 'STANDARD'}`,
-            targetTab: 'CLOUD_STORAGE',
-          })),
-          ...datasets.slice(0, 4).map((d) => ({
-            kind: 'BigQuery Dataset',
-            name: `${projectId}:${d.name}`,
-            meta: `${d.region || 'US'} · 168h Time-Travel`,
-            targetTab: 'BIGQUERY_STUDIO',
-          })),
-          ...(datasets.length === 0
-            ? [
-                {
-                  kind: '0 BigQuery Datasets',
-                  name: '+ Create BigQuery Lakehouse Dataset',
-                  meta: '10 GiB Storage + 1 TiB/mo Queries Always-Free',
-                  targetTab: 'BIGQUERY_STUDIO',
-                  provisionType: 'BIGQUERY_DATASET',
-                },
-              ]
-            : []),
-        ],
-      },
-      {
         id: 'STAGE_3_COMPUTE_SERVERLESS',
-        stepNumber: 3,
-        title: '3. Compute Fleet, Persistent Disks, Serverless & Artifact Registry',
-        shortTitle: 'VMs & Cloud Run',
+        stepNumber: 1,
+        title: '1. Compute Fleet (GCE), Persistent Disks, Serverless & Artifact Registry',
+        shortTitle: 'VMs (GCE) & Cloud Run',
         targetTab: 'VM_SSH',
         secondaryTab: 'CLOUD_RUN',
         secondaryLabel: 'Cloud Run Serverless Studio',
@@ -80318,6 +80224,106 @@ app.get('/api/project/:projectId/enterprise-pipeline/blueprint', async (req, res
                   targetTab: 'WAVE9_STUDIO',
                 },
               ],
+      },
+      {
+        id: 'STAGE_1_PERIMETER_IAM',
+        stepNumber: 2,
+        title: '2. Zero-Trust VPC & IAP Perimeter',
+        shortTitle: 'VPC & IAP Perimeter',
+        targetTab: 'VPC_NETWORKS',
+        secondaryTab: 'SOVEREIGN_STUDIO',
+        secondaryLabel: 'Sovereign IAM Studio',
+        status:
+          openPublicFw.length > 0 && iapFw.length === 0
+            ? 'ACTION_RECOMMENDED'
+            : vpcs.length > 0
+            ? 'OPTIMAL'
+            : 'READY',
+        metricBadge:
+          openPublicFw.length > 0
+            ? `${vpcs.length} VPC · ${firewalls.length} FW (${openPublicFw.length} Open 0.0.0.0/0)`
+            : `${vpcs.length} VPC · ${firewalls.length} FW Rules`,
+        summary:
+          vpcs.length > 0
+            ? openPublicFw.length > 0 && iapFw.length === 0
+              ? `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} firewall rules — ${openPublicFw.length} rule(s) (${openPublicFw.map((f) => f.name).slice(0, 3).join(', ')}) allow public 0.0.0.0/0 ingress. Recommend locking SSH/RDP to Cloud IAP (35.235.240.0/20).`
+              : `Active network backbone (${vpcs.map((v) => v.name).slice(0, 2).join(', ')}) with ${firewalls.length} ingress/egress firewall rules and 35.235.240.0/20 IAP TCP-22 bastion protection.`
+            : 'Ready to provision Zero-Trust VPC network perimeter and IAP TCP-22 SSH bastion rule.',
+        cliCmd: `gcloud compute firewall-rules list --project=${projectId}`,
+        mermaidDsl: stage1MermaidDsl,
+        stageItems: [
+          ...vpcs.slice(0, 2).map((v) => ({
+            kind: 'VPC Network',
+            name: v.name,
+            meta: v.storageClass || 'AUTO_SUBNETS',
+            targetTab: 'VPC_NETWORKS',
+          })),
+          ...firewalls.slice(0, 5).map((fw) => ({
+            kind: String(fw.details?.sourceRanges || '').includes('0.0.0.0/0')
+              ? 'Public Firewall (0.0.0.0/0)'
+              : 'Internal Firewall Rule',
+            name: fw.name,
+            meta: `${fw.details?.allowed || 'INGRESS'} · ${fw.details?.sourceRanges || '0.0.0.0/0'}`,
+            targetTab: 'VPC_NETWORKS',
+          })),
+          ...(openPublicFw.length > 0 && iapFw.length === 0
+            ? [
+                {
+                  kind: 'Zero-Trust Hardening',
+                  name: '+ Lock SSH to IAP Bastion (35.235.240.0/20)',
+                  meta: 'Replace 0.0.0.0/0 TCP:22 with Cloud IAP tunnel',
+                  targetTab: 'VPC_NETWORKS',
+                  provisionType: 'FIREWALL_RULE',
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        id: 'STAGE_2_STORAGE_LAKEHOUSE',
+        stepNumber: 3,
+        title: '3. Stateful Storage & BigQuery Lakehouse',
+        shortTitle: 'Storage & Lakehouse',
+        targetTab: 'CLOUD_STORAGE',
+        secondaryTab: 'BIGQUERY_STUDIO',
+        secondaryLabel: 'BigQuery Studio',
+        status: buckets.length + datasets.length > 0 ? 'OPTIMAL' : 'READY',
+        metricBadge: `${buckets.length} GCS · ${datasets.length} BQ Datasets`,
+        summary:
+          buckets.length + datasets.length > 0
+            ? `Persistence layer online with ${buckets.length} Cloud Storage bucket(s)${
+                datasets.length > 0
+                  ? ` and ${datasets.length} BigQuery analytical dataset(s)`
+                  : ' (0 BigQuery datasets provisioned — click below to create your first Lakehouse dataset)'
+              }.`
+            : 'No buckets or datasets provisioned yet — launch Cloud Storage or BigQuery Studio to initialize stateful persistence.',
+        cliCmd: `gcloud storage buckets list --project=${projectId}`,
+        mermaidDsl: stage2MermaidDsl,
+        stageItems: [
+          ...buckets.slice(0, 4).map((b) => ({
+            kind: 'GCS Bucket',
+            name: `gs://${b.name}`,
+            meta: `${b.region || 'US'} · ${b.storageClass || 'STANDARD'}`,
+            targetTab: 'CLOUD_STORAGE',
+          })),
+          ...datasets.slice(0, 4).map((d) => ({
+            kind: 'BigQuery Dataset',
+            name: `${projectId}:${d.name}`,
+            meta: `${d.region || 'US'} · 168h Time-Travel`,
+            targetTab: 'BIGQUERY_STUDIO',
+          })),
+          ...(datasets.length === 0
+            ? [
+                {
+                  kind: '0 BigQuery Datasets',
+                  name: '+ Create BigQuery Lakehouse Dataset',
+                  meta: '10 GiB Storage + 1 TiB/mo Queries Always-Free',
+                  targetTab: 'BIGQUERY_STUDIO',
+                  provisionType: 'BIGQUERY_DATASET',
+                },
+              ]
+            : []),
+        ],
       },
       {
         id: 'STAGE_4_CICD_TERRAFORM',
