@@ -21,6 +21,7 @@ import {
   Download,
   BookOpen,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   const normalized = String(track || 'ALPHA').toUpperCase();
@@ -213,7 +214,8 @@ export default function GcloudAlphaBetaStudio({
   const [workbenchCommand, setWorkbenchCommand] = useState(
     'gcloud agent-registry skills list --location=global'
   );
-  const [showRawJson, setShowRawJson] = useState(true);
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [designCodeTab, setDesignCodeTab] = useState('DEPLOY_SH');
 
   // Form states for Wave 1 Alpha/Beta actions
   const [workerPoolName, setWorkerPoolName] = useState('cp-kafka-worker-pool');
@@ -1669,89 +1671,751 @@ export default function GcloudAlphaBetaStudio({
       {/* =====================================================================
           WAVE 2 TAB 7: [GA · 591.0.0] DEVELOPER KNOWLEDGE & APP TOPOLOGY GRAPH
          ===================================================================== */}
-      {activeSubTab === 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY' && (
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <ReleaseTrackBadge track="GA" />
-                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  WAVE 2 · developerknowledge.googleapis.com · apptopology ·
-                  designcenter [GA 591.0.0]
+      {activeSubTab === 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY' && (() => {
+        const activeGrounded = lastReceipt?.groundedAnswer || {
+          groundingSource:
+            'developerknowledge.googleapis.com · Google Cloud Official Docs Corpus (SDK 591.0.0 GA)',
+          synthesizedResponse: `Grounded Architecture Synthesis for "${devKnowledgeQuery}" (SDK 591.0.0 GA): (1) Cloud Run Worker Pools (gcloud beta run worker-pools) run continuous non-HTTP background pull consumers (Pub/Sub, Kafka, Redis Streams) without exposing an HTTP $PORT listener or paying ingress load-balancer overhead; (2) Cloud Run Services (gcloud run services, GA) expose auto-scaled HTTPS/gRPC endpoints with scale-to-zero request concurrency; (3) App Topology (gcloud app-topology, GA in 591.0.0) and Application Design Center (gcloud design-center, GA in 591.0.0) map and deploy multi-resource service dependencies across VPC, Secret Manager, and Cloud SQL.`,
+          architecturalPillars: [
+            {
+              title: '1. Cloud Run Worker Pools (Pull Consumers)',
+              verdict: 'BETA · ZERO HTTP PORT LISTENER',
+              rationale:
+                'Use Worker Pools for continuous background pull workers (Kafka, Pub/Sub, RabbitMQ) that do not serve HTTP requests.',
+              cliCommand: `gcloud beta run worker-pools list --project=${projectId} --region=${region}`,
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+            },
+            {
+              title: '2. Cloud Run Services (HTTPS / gRPC Ingress)',
+              verdict: 'GA · REQUEST-DRIVEN AUTOSCALING',
+              rationale:
+                'Use Cloud Run Services for synchronous web APIs, webhooks, and gRPC microservices with scale-to-zero concurrency.',
+              cliCommand: `gcloud run services list --project=${projectId} --region=${region}`,
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+            },
+            {
+              title: '3. App Topology & Application Design Center',
+              verdict: 'GA IN SDK 591.0.0 · DEPENDENCY GRAPH',
+              rationale:
+                'Discover upstream/downstream resource bindings and synthesize golden Terraform/AppHub templates across spaces.',
+              cliCommand: `gcloud app-topology domains list --project=${projectId} --location=${region}`,
+              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioLabel: 'App Hub Studio',
+            },
+          ],
+          extractedCliCommands: [
+            {
+              label: 'Grounded Developer Knowledge Query (GA 591.0.0)',
+              track: 'GA',
+              command: `gcloud developer-knowledge answer-query --query=${JSON.stringify(
+                devKnowledgeQuery
+              )} --project=${projectId} --format=json`,
+              ownerStudioTab: 'INNOVATION_LAB',
+              ownerStudioLabel: 'Alpha/Beta Lab',
+            },
+            {
+              label: 'Generate Live App Topology Resource Graph (GA 591.0.0)',
+              track: 'GA',
+              command: `gcloud app-topology resources-graph generate --project=${projectId} --location=${region} --format=json`,
+              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioLabel: 'App Hub Studio',
+            },
+            {
+              label: 'List Application Design Center Spaces (GA 591.0.0)',
+              track: 'GA',
+              command: `gcloud design-center spaces list --project=${projectId} --location=${region} --format=json`,
+              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioLabel: 'App Hub Studio',
+            },
+          ],
+          citations: [
+            'https://docs.cloud.google.com/run/docs/worker-pools',
+            'https://docs.cloud.google.com/application-design-center/docs/overview',
+            'https://cloud.google.com/sdk/docs/release-notes',
+          ],
+        };
+
+        const activeTopo = lastReceipt?.liveTopologyGraph || {
+          projectId,
+          region,
+          nodes: [
+            {
+              id: 'run-ingress',
+              name: `${projectId}-ingress-api`,
+              type: 'Cloud Run Service [GA]',
+              layer: 'INGRESS_AND_COMPUTE',
+              region,
+              status: 'READY',
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+              inspectCli: `gcloud run services list --region=${region} --project=${projectId}`,
+            },
+            {
+              id: 'worker-pool-bg',
+              name: `${projectId}-async-worker-pool`,
+              type: 'Cloud Run Worker Pool [BETA]',
+              layer: 'INGRESS_AND_COMPUTE',
+              region,
+              status: 'SYNTHESIZED_BLUEPRINT',
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+              inspectCli: `gcloud beta run worker-pools list --region=${region} --project=${projectId}`,
+            },
+            {
+              id: 'vpc-default',
+              name: 'default',
+              type: 'VPC Network Backbone',
+              layer: 'NETWORK_AND_IDENTITY',
+              region: 'global',
+              status: 'ACTIVE',
+              ownerStudioTab: 'VPC_NETWORKS',
+              ownerStudioLabel: 'VPC & Firewall Studio',
+              inspectCli: `gcloud compute networks list --project=${projectId}`,
+            },
+            {
+              id: 'topo-domain-primary',
+              name: `${projectId}-${region}-topology-domain`,
+              type: 'App Topology Domain [GA 591.0.0]',
+              layer: 'NETWORK_AND_IDENTITY',
+              region,
+              status: 'READY_TO_BIND',
+              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioLabel: 'App Hub Studio',
+              inspectCli: `gcloud app-topology domains list --location=${region} --project=${projectId}`,
+            },
+            {
+              id: `gcs-${projectId}-artifacts`,
+              name: `gs://${projectId}-design-artifacts`,
+              type: 'Cloud Storage Lakehouse',
+              layer: 'DATA_AND_STORAGE',
+              region: region.toUpperCase(),
+              status: 'PAP_ENFORCED',
+              ownerStudioTab: 'CLOUD_STORAGE',
+              ownerStudioLabel: 'Cloud Storage Studio',
+              inspectCli: `gcloud storage buckets list --project=${projectId}`,
+            },
+          ],
+          mermaidC4: [
+            'flowchart LR',
+            '  subgraph L1["Layer 1: Ingress & Compute (Cloud Run + Worker Pools)"]',
+            `    C0["${projectId}-ingress-api (Cloud Run Service)"]`,
+            `    C1["${projectId}-async-worker-pool (Worker Pool BETA)"]`,
+            '  end',
+            '  subgraph L2["Layer 2: Network, Identity & App Topology (SDK 591.0.0)"]',
+            '    N0["default (VPC Network Backbone)"]',
+            `    N1["${projectId}-${region}-topology-domain (App Topology GA)"]`,
+            '  end',
+            '  subgraph L3["Layer 3: Stateful Data & Storage Lakehouse"]',
+            `    D0["gs://${projectId}-design-artifacts (Cloud Storage)"]`,
+            '  end',
+            '  C0 -->|"Direct VPC Egress"| N0',
+            '  C1 -->|"Private Pull Stream"| N0',
+            '  N0 -->|"App Topology Graph"| N1',
+            '  N0 -->|"Private Google Access"| D0',
+          ].join('\n'),
+        };
+
+        const activeBlueprint = lastReceipt?.designCenterBlueprint || {
+          spaceId: `${projectId}-design-space`,
+          applicationTemplateId: `${projectId}-grounded-topology-app`,
+          estimatedMonthlyUsd: 47.0,
+          ed25519KeyFingerprint: 'spki-sha256:ready-on-scan',
+          components: [
+            {
+              name: `${projectId}-ingress-service`,
+              service: 'Cloud Run Service [GA]',
+              spec: 'Gen2 Execution · CPU Boost · Min=0 / Max=20',
+              monthlyUsd: 18.5,
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+              provisionCli: `gcloud run deploy ${projectId}-ingress-service --image=us-docker.pkg.dev/cloudrun/container/hello --region=${region} --execution-environment=gen2 --cpu-boost --project=${projectId}`,
+            },
+            {
+              name: `${projectId}-pull-worker-pool`,
+              service: 'Cloud Run Worker Pool [BETA]',
+              spec: 'Non-HTTP Continuous Background Consumer · 2 Instances',
+              monthlyUsd: 24.0,
+              ownerStudioTab: 'CLOUD_RUN',
+              ownerStudioLabel: 'Cloud Run Studio',
+              provisionCli: `gcloud beta run worker-pools deploy ${projectId}-pull-worker-pool --image=us-docker.pkg.dev/cloudrun/container/hello --region=${region} --instances=2 --project=${projectId}`,
+            },
+            {
+              name: `${projectId}-design-space`,
+              service: 'App Design Center Space [GA 591.0.0]',
+              spec: `Application Topology & Blueprint Space (${region})`,
+              monthlyUsd: 0.0,
+              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioLabel: 'App Hub Studio',
+              provisionCli: `gcloud design-center spaces create ${projectId}-design-space --location=${region} --project=${projectId}`,
+            },
+            {
+              name: `${projectId}-model-armor-guard`,
+              service: 'Vertex AI Model Armor [GA 591.0.0]',
+              spec: 'Prompt-Injection, Jailbreak & SDP Filter Template',
+              monthlyUsd: 4.5,
+              ownerStudioTab: 'WAVE9_STUDIO',
+              ownerStudioLabel: 'Vertex AI Studio',
+              provisionCli: `gcloud model-armor templates create ${projectId}-armor-guard --location=${region} --pi-and-jailbreak-filter-settings-enforcement=ENABLED --project=${projectId}`,
+            },
+          ],
+          designCenterDeploySh: [
+            '#!/usr/bin/env bash',
+            `# CloudPulse 2026 — Grounded Developer Knowledge & Application Design Center Runbook`,
+            `# Project: ${projectId} | Region: ${region} | SDK: 591.0.0 GA`,
+            'set -euo pipefail',
+            `gcloud developer-knowledge answer-query --query=${JSON.stringify(
+              devKnowledgeQuery
+            )} --project=${projectId} --format=json`,
+            `gcloud app-topology resources-graph generate --project=${projectId} --location=${region} --format=json`,
+            `gcloud design-center spaces create ${projectId}-design-space --location=${region} --project=${projectId}`,
+          ].join('\n'),
+          designCenterTerraformHcl: [
+            `# CloudPulse 2026 — Synthesized Application Design Center Terraform Blueprint`,
+            `resource "google_apphub_application" "design_center_app" {`,
+            `  project        = "${projectId}"`,
+            `  location       = "${region}"`,
+            `  application_id = "${projectId}-grounded-topology-app"`,
+            `  scope { type = "REGIONAL" }`,
+            `}`,
+          ].join('\n'),
+          topologyBigQuerySql: `-- CloudPulse 2026 — App Topology & Cloud Asset Dependency Graph Audit SQL\nSELECT asset_type, location, COUNT(*) AS resource_count\nFROM \`${projectId}.cloud_asset_inventory.assets_all\`\nGROUP BY 1, 2 ORDER BY resource_count DESC;`,
+        };
+
+        const activeCodeText =
+          designCodeTab === 'TERRAFORM_HCL'
+            ? activeBlueprint.designCenterTerraformHcl
+            : designCodeTab === 'BIGQUERY_SQL'
+            ? activeBlueprint.topologyBigQuerySql
+            : activeBlueprint.designCenterDeploySh;
+
+        return (
+          <div className="space-y-4">
+            {/* Top Query Bar + 5 Curated Architecture Question Presets */}
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ReleaseTrackBadge track="GA" />
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      WAVE 2 · developerknowledge.googleapis.com · apptopology ·
+                      designcenter [GA 591.0.0]
+                    </span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
+                    [GA · 591.0.0] Grounded Developer Knowledge CLI Engine + App Topology
+                    &amp; Design Center
+                  </h3>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                    Turns natural-language architecture queries and live{' '}
+                    <code className="font-mono">gcloud app-topology</code> /{' '}
+                    <code className="font-mono">gcloud design-center</code> probes
+                    into executable <code className="font-mono">gcloud</code>{' '}
+                    commands, a live 3-tier dependency graph, C4 Mermaid diagrams,
+                    and deployable Design Center blueprints.
+                  </p>
+                </div>
+              </div>
+
+              {/* 5 1-Click Architecture Query Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase text-zinc-400 mr-1">
+                  1-Click Architecture Presets:
+                </span>
+                {[
+                  {
+                    label: 'Worker Pools vs Services (Kafka/PubSub)',
+                    q: 'What is the architectural difference between Cloud Run Worker Pools and Cloud Run Services for Kafka consumers?',
+                  },
+                  {
+                    label: 'Zero-Trust IAP + PAM JIT + VPC-SC',
+                    q: 'How do I combine Identity-Aware Proxy (IAP), Privileged Access Manager (PAM JIT), and VPC Service Controls for zero-trust architecture?',
+                  },
+                  {
+                    label: 'Vertex AI RAG + Vector Search + Model Armor',
+                    q: 'How do I secure a Vertex AI Gemini RAG pipeline using Vector Search Collections and Model Armor prompt sanitization?',
+                  },
+                  {
+                    label: 'Multi-Region Cloud Run + Global Anycast CDN',
+                    q: 'How do I deploy active-active multi-region Cloud Run services behind a Global Application Load Balancer and Cloud CDN?',
+                  },
+                  {
+                    label: 'AI Hypercomputer Slurm + Managed Lustre HPC',
+                    q: 'How do I provision an A3 Mega H100 Slurm cluster using Cluster Director and mount Google Cloud Managed Lustre?',
+                  },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      setDevKnowledgeQuery(preset.q);
+                      executeAlphaBetaAction(
+                        'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY',
+                        { devKnowledgeQuery: preset.q }
+                      );
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                      devKnowledgeQuery === preset.q
+                        ? 'bg-emerald-600 text-white border-emerald-500'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
+                <div className="lg:col-span-2">
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Natural-Language Architecture Query (
+                    <code className="font-mono">--query</code>):
+                  </label>
+                  <input
+                    type="text"
+                    value={devKnowledgeQuery}
+                    onChange={(e) => setDevKnowledgeQuery(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-xs font-mono"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={
+                    actionRunning ===
+                    'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY'
+                  }
+                  onClick={() =>
+                    executeAlphaBetaAction(
+                      'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY',
+                      { devKnowledgeQuery }
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>
+                    {actionRunning ===
+                    'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY'
+                      ? 'Querying [GA 591.0.0] Corpus & Topology...'
+                      : '[GA 591.0.0] Run Grounded Query & Topology Scan'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* SECTION 1: GROUNDED ARCHITECTURE SYNTHESIS, DECISION PILLARS & ACTIONABLE CLI COMMANDS */}
+            <div className="rounded-2xl border border-blue-500/30 bg-white dark:bg-[#18181b] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-500" />
+                  <h4 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                    1. Grounded Architecture Answer, Decision Pillars &amp; Executable CLI Commands
+                  </h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300">
+                  {activeGrounded.groundingSource}
                 </span>
               </div>
-              <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
-                [GA · 591.0.0] Grounded Developer Knowledge CLI Engine + App Topology
-                &amp; Design Center
-              </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                Executes{' '}
-                <code className="font-mono">
-                  gcloud developer-knowledge answer-query
-                </code>{' '}
-                against Google Cloud&apos;s official documentation corpus and
-                queries{' '}
-                <code className="font-mono">
-                  gcloud app-topology domains / resources-graph
-                </code>{' '}
-                &amp;{' '}
-                <code className="font-mono">
-                  gcloud design-center spaces
-                </code>{' '}
-                (all promoted to GA in SDK 591.0.0).
-              </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
-            <div className="lg:col-span-2">
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Natural-Language Architecture Query (
-                <code className="font-mono">--query</code>):
-              </label>
-              <input
-                type="text"
-                value={devKnowledgeQuery}
-                onChange={(e) => setDevKnowledgeQuery(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-xs font-mono"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={
-                actionRunning ===
-                'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY'
-              }
-              onClick={() =>
-                executeAlphaBetaAction(
-                  'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY',
-                  { devKnowledgeQuery }
-                )
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Globe className="w-4 h-4" />
-              <span>
-                {actionRunning ===
-                'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY'
-                  ? 'Querying [GA 591.0.0] Corpus & Topology...'
-                  : '[GA 591.0.0] Run Grounded Query & Topology Scan'}
-              </span>
-            </button>
-          </div>
+              <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                {activeGrounded.synthesizedResponse ||
+                  activeGrounded.groundedSynthesis}
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
-              $ gcloud developer-knowledge answer-query --query=
-              {JSON.stringify(devKnowledgeQuery)} --project={projectId}
+              {/* 3 Architectural Decision Pillar Cards */}
+              {Array.isArray(activeGrounded.architecturalPillars) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {activeGrounded.architecturalPillars.map((pillar) => (
+                    <div
+                      key={pillar.title}
+                      className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-col justify-between space-y-2.5"
+                    >
+                      <div className="space-y-1.5">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9.5px] font-mono font-extrabold">
+                          {pillar.verdict}
+                        </span>
+                        <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                          {pillar.title}
+                        </div>
+                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                          {pillar.rationale}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                        <code className="block text-[10px] font-mono text-emerald-600 dark:text-emerald-400 break-all">
+                          $ {pillar.cliCommand}
+                        </code>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWorkbenchCommand(pillar.cliCommand);
+                              notify(
+                                `Loaded "${pillar.title}" into Live Probe Workbench`
+                              );
+                            }}
+                            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            Load in Workbench ↑
+                          </button>
+                          {typeof onOpenShellWithCommand === 'function' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onOpenShellWithCommand(pillar.cliCommand)
+                              }
+                              className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              $ Shell
+                            </button>
+                          )}
+                          {typeof onSelectStudioTab === 'function' &&
+                            pillar.ownerStudioTab && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onSelectStudioTab(pillar.ownerStudioTab)
+                                }
+                                className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                              >
+                                {pillar.ownerStudioLabel} →
+                              </button>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Official Documentation Citations */}
+              {Array.isArray(activeGrounded.citations) &&
+                activeGrounded.citations.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[10px] font-mono font-bold uppercase text-zinc-400">
+                      Grounded Citations:
+                    </span>
+                    {activeGrounded.citations.map((cite) => (
+                      <a
+                        key={cite}
+                        href={cite}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10.5px] font-mono text-blue-600 dark:text-blue-300 underline"
+                      >
+                        {cite} ↗
+                      </a>
+                    ))}
+                  </div>
+                )}
             </div>
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
-              $ gcloud app-topology resources-graph generate --project=
-              {projectId} --location={region}
+
+            {/* SECTION 2: LIVE 3-LAYER APP TOPOLOGY GRAPH & C4 MERMAID ARCHITECTURE DIAGRAM */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-[#18181b] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-500" />
+                    <span>
+                      2. Live 3-Layer Application Topology Graph &amp; C4 Mermaid Diagram ({activeTopo.nodes?.length || 0} Nodes)
+                    </span>
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Click any discovered or synthesized node below to inspect it in Cloud Shell or jump straight to its owning CloudPulse Studio.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {typeof onOpenShellWithCommand === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenShellWithCommand(
+                          `gcloud app-topology resources-graph generate --project=${projectId} --location=${region}`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>$ Generate Graph in Cloud Shell</span>
+                    </button>
+                  )}
+                  {typeof onSelectStudioTab === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectStudioTab('APPHUB_GDC')}
+                      className="px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Open App Hub &amp; Topology Studio →
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 3-Layer Interactive Node Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 font-mono">
+                {[
+                  {
+                    layerKey: 'INGRESS_AND_COMPUTE',
+                    title: 'Layer 1 · Ingress, Cloud Run & Worker Pools',
+                  },
+                  {
+                    layerKey: 'NETWORK_AND_IDENTITY',
+                    title: 'Layer 2 · VPC Backbone & App Topology Domains',
+                  },
+                  {
+                    layerKey: 'DATA_AND_STORAGE',
+                    title: 'Layer 3 · Stateful Storage & Data Lakehouse',
+                  },
+                ].map((col) => {
+                  const colNodes = (activeTopo.nodes || []).filter(
+                    (n) => n.layer === col.layerKey
+                  );
+                  return (
+                    <div
+                      key={col.layerKey}
+                      className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-2.5"
+                    >
+                      <div className="text-[10.5px] font-extrabold uppercase text-zinc-500 dark:text-zinc-400">
+                        {col.title} ({colNodes.length})
+                      </div>
+                      {colNodes.map((node) => (
+                        <div
+                          key={node.id}
+                          className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                              {node.name}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-bold shrink-0">
+                              {node.status}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {node.type} · {node.region}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            {typeof onOpenShellWithCommand === 'function' &&
+                              node.inspectCli && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpenShellWithCommand(node.inspectCli)
+                                  }
+                                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                                >
+                                  $ Inspect
+                                </button>
+                              )}
+                            {typeof onSelectStudioTab === 'function' &&
+                              node.ownerStudioTab && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onSelectStudioTab(node.ownerStudioTab)
+                                  }
+                                  className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                                >
+                                  {node.ownerStudioLabel} →
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Interactive Visual C4 Mermaid Architecture Graph */}
+              {activeTopo.mermaidC4 && (
+                <MermaidArchitectureDiagram
+                  code={activeTopo.mermaidC4}
+                  title={`Grounded App Topology & Design Center Graph — ${projectId} (${region})`}
+                  defaultMode="SPLIT"
+                />
+              )}
+            </div>
+
+            {/* SECTION 3: APPLICATION DESIGN CENTER BLUEPRINT COMPILER (BOM + DEPLOY.SH + MAIN.TF) */}
+            <div className="rounded-2xl border border-amber-500/30 bg-white dark:bg-[#18181b] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <FileCode2 className="w-4 h-4 text-amber-500" />
+                    <span>
+                      3. Application Design Center Blueprint Compiler — Space:{' '}
+                      <code className="text-emerald-600 dark:text-emerald-400">
+                        {activeBlueprint.spaceId}
+                      </code>
+                    </span>
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Synthesizes a deployable Bill of Materials,{' '}
+                    <code className="font-mono">gcloud design-center</code>{' '}
+                    automation script, and Terraform HCL from your grounded query.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
+                    Est. ${activeBlueprint.estimatedMonthlyUsd}/mo
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px]">
+                    Ed25519: {activeBlueprint.ed25519KeyFingerprint}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 font-mono text-xs">
+                {/* Left 5 Cols: Component Bill of Materials */}
+                <div className="lg:col-span-5 space-y-2">
+                  <div className="text-[10px] font-bold uppercase text-zinc-400">
+                    Design Center Component Bill of Materials ({activeBlueprint.components?.length || 0})
+                  </div>
+                  {(activeBlueprint.components || []).map((comp) => (
+                    <div
+                      key={comp.name}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          {comp.name}
+                        </span>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                          ${comp.monthlyUsd.toFixed(2)}/mo
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                        {comp.service}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">{comp.spec}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        {typeof onOpenShellWithCommand === 'function' && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenShellWithCommand(comp.provisionCli)
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            $ Deploy in Cloud Shell
+                          </button>
+                        )}
+                        {typeof onSelectStudioTab === 'function' &&
+                          comp.ownerStudioTab && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onSelectStudioTab(comp.ownerStudioTab)
+                              }
+                              className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                            >
+                              {comp.ownerStudioLabel} →
+                            </button>
+                          )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right 7 Cols: Tabbed Code Compiler (deploy.sh / main.tf / audit.sql) */}
+                <div className="lg:col-span-7 flex flex-col space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        {
+                          id: 'DEPLOY_SH',
+                          label: 'design-center-deploy.sh',
+                        },
+                        {
+                          id: 'TERRAFORM_HCL',
+                          label: 'design-center-main.tf',
+                        },
+                        {
+                          id: 'BIGQUERY_SQL',
+                          label: 'topology-audit.sql',
+                        },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setDesignCodeTab(tab.id)}
+                          className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold border cursor-pointer ${
+                            designCodeTab === tab.id
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {typeof onOpenShellWithCommand === 'function' && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenShellWithCommand(
+                              designCodeTab === 'TERRAFORM_HCL'
+                                ? `terraform init && terraform plan -var="project_id=${projectId}"`
+                                : activeBlueprint.designCenterDeploySh
+                            )
+                          }
+                          className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Terminal className="w-3 h-3" />
+                          <span>$ Run in Cloud Shell</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ext =
+                            designCodeTab === 'TERRAFORM_HCL'
+                              ? 'tf'
+                              : designCodeTab === 'BIGQUERY_SQL'
+                              ? 'sql'
+                              : 'sh';
+                          const blob = new Blob([activeCodeText], {
+                            type: 'text/plain;charset=utf-8',
+                          });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${projectId}-design-center.${ext}`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Download</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(activeCodeText, 'Design Center Blueprint')
+                        }
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <pre className="flex-1 p-3.5 rounded-xl bg-zinc-950 text-emerald-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-72 leading-relaxed">
+                    {activeCodeText}
+                  </pre>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =====================================================================
           WAVE 2 TAB 8: [GA + BETA · 591.0.0] CLOUD QUOTAS AUTONOMOUS ADJUSTER & PREFERENCES
@@ -2938,17 +3602,21 @@ export default function GcloudAlphaBetaStudio({
                 </span>
               </div>
               <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                {lastReceipt.groundedAnswer.synthesizedResponse}
+                {lastReceipt.groundedAnswer.synthesizedResponse ||
+                  lastReceipt.groundedAnswer.groundedSynthesis}
               </p>
               {Array.isArray(lastReceipt.groundedAnswer.citations) && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {lastReceipt.groundedAnswer.citations.map((cite) => (
-                    <span
+                    <a
                       key={cite}
-                      className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300"
+                      href={cite}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-0.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300 underline"
                     >
-                      {cite}
-                    </span>
+                      {cite} ↗
+                    </a>
                   ))}
                 </div>
               )}
@@ -3048,9 +3716,23 @@ export default function GcloudAlphaBetaStudio({
             </div>
           )}
 
-          <pre className="max-h-72 overflow-auto p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-            {JSON.stringify(lastReceipt, null, 2)}
-          </pre>
+          {/* Collapsible Raw CLI JSON Inspector */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowRawJson((v) => !v)}
+              className="px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+            >
+              {showRawJson
+                ? 'Hide Raw CLI JSON Receipt ▲'
+                : 'Inspect Raw CLI JSON Receipt (Advanced) ▼'}
+            </button>
+            {showRawJson && (
+              <pre className="mt-2 max-h-72 overflow-auto p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
+                {JSON.stringify(lastReceipt, null, 2)}
+              </pre>
+            )}
+          </div>
         </div>
       )}
     </div>
