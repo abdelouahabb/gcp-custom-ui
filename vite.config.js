@@ -166,7 +166,7 @@ export default defineConfig(({ mode }) => {
             }
             if (
               id.includes('src/components/FivePersonaCommandCenter') ||
-              id.includes('src/components/GcloudAlphaBetaFrontierStudio') ||
+              id.includes('src/components/GcloudAlphaBetaStudio') ||
               id.includes('src/components/Startup10xMentorStudio') ||
               id.includes('src/components/InnovationHoverExplainer')
             ) {
@@ -175,7 +175,11 @@ export default defineConfig(({ mode }) => {
             if (id.includes('src/components/AwsAzureEnvySuiteStudio')) {
               return 'studio-multi-cloud-parity';
             }
-            if (id.includes('src/components/GlobalNetworkWorldMap')) {
+            if (
+              id.includes('src/components/GlobalNetworkWorldMap') ||
+              id.includes('src/components/ZeroSniffingWebCryptoEnclaveBar') ||
+              id.includes('src/components/MermaidArchitectureDiagram')
+            ) {
               return 'studio-global-map';
             }
             if (id.includes('src/components/ResourceProvisionModal')) {

@@ -2053,15 +2053,27 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
               </div>
 
               {(playbookCliProbeLoading || playbookCliProbeResult) && (
-                <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-1.5 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2 font-mono text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
                         🔧 LIVE GCLOUD 591.0.0 LAKEHOUSE PROBE
                       </span>
                       {playbookCliProbeResult?.probeMode && (
                         <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
                           {playbookCliProbeResult.probeMode}
+                        </span>
+                      )}
+                      {playbookCliProbeResult?.authBridgeMode && (
+                        <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                          {playbookCliProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER'
+                            ? '🔑 Online Session OAuth Bridge'
+                            : '💻 Local ADC / gcloud Auth'}
+                        </span>
+                      )}
+                      {typeof playbookCliProbeResult?.durationMs === 'number' && (
+                        <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px]">
+                          {playbookCliProbeResult.durationMs} ms
                         </span>
                       )}
                       <span className="font-bold text-white">
@@ -2089,31 +2101,104 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       {playbookCliProbeResult.error}
                     </div>
                   ) : (
-                    <div className="space-y-1 text-[11px]">
-                      {playbookCliProbeResult?.explanation && (
-                        <div className="text-emerald-300">
-                          {playbookCliProbeResult.explanation}
-                        </div>
-                      )}
-                      <div className="text-zinc-400">
-                        Executed:{' '}
-                        <code className="text-blue-300">
-                          {playbookCliProbeResult?.executedCommand ||
-                            playbookCliProbeResult?.requestedCommand}
-                        </code>
-                      </div>
-                      {playbookCliProbeResult?.output !== undefined && (
-                        <pre className="p-2 rounded bg-black/70 border border-zinc-800 text-emerald-400 max-h-40 overflow-auto whitespace-pre-wrap text-[10px]">
-                          {typeof playbookCliProbeResult.output === 'string'
-                            ? playbookCliProbeResult.output
-                            : JSON.stringify(
-                                playbookCliProbeResult.output,
-                                null,
-                                2
+                    (() => {
+                      const rawStructured =
+                        playbookCliProbeResult?.parsedJson ??
+                        playbookCliProbeResult?.companionProbe?.parsedJson ??
+                        (typeof playbookCliProbeResult?.output === 'object'
+                          ? playbookCliProbeResult.output
+                          : null);
+                      const rows = Array.isArray(rawStructured)
+                        ? rawStructured
+                        : rawStructured && typeof rawStructured === 'object'
+                        ? [rawStructured]
+                        : null;
+                      return (
+                        <div className="space-y-2 text-[11px]">
+                          {playbookCliProbeResult?.explanation && (
+                            <div className="text-emerald-300 leading-relaxed">
+                              {playbookCliProbeResult.explanation}
+                            </div>
+                          )}
+                          <div className="text-zinc-400">
+                            Executed:{' '}
+                            <code className="text-blue-300">
+                              {playbookCliProbeResult?.executedCommand ||
+                                playbookCliProbeResult?.requestedCommand}
+                            </code>
+                          </div>
+                          {Array.isArray(rows) && (
+                            <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-2.5 space-y-1.5">
+                              <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                                <span className="font-bold uppercase text-blue-300">
+                                  Structured BigLake &amp; Iceberg Catalog Breakdown
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
+                                  {rows.length} {rows.length === 1 ? 'Asset' : 'Assets'} Discovered
+                                </span>
+                              </div>
+                              {rows.length === 0 ? (
+                                <div className="text-[11px] text-zinc-300 py-1">
+                                  ✓ Probe succeeded with 0 matching Iceberg catalog assets in project{' '}
+                                  <span className="text-blue-300 font-bold">{projectId}</span> (clean state verified).
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-40 overflow-auto">
+                                  {rows.slice(0, 8).map((item, idx) => {
+                                    const itemName =
+                                      item?.name ||
+                                      item?.id ||
+                                      item?.catalogId ||
+                                      item?.databaseId ||
+                                      item?.tableId ||
+                                      `Asset #${idx + 1}`;
+                                    const itemState =
+                                      item?.state ||
+                                      item?.status ||
+                                      item?.catalogType ||
+                                      'ACTIVE';
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="p-2 rounded bg-black/50 border border-zinc-800 flex items-center justify-between gap-2"
+                                      >
+                                        <div className="truncate">
+                                          <div className="font-bold text-white truncate">
+                                            {String(itemName).split('/').pop()}
+                                          </div>
+                                          <div className="text-[10px] text-zinc-400 truncate">
+                                            {Object.keys(item || {}).slice(0, 4).join(', ')}
+                                          </div>
+                                        </div>
+                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[9.5px] font-bold shrink-0">
+                                          {String(itemState)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               )}
-                        </pre>
-                      )}
-                    </div>
+                            </div>
+                          )}
+                          {playbookCliProbeResult?.output !== undefined && (
+                            <details className="rounded-lg bg-black/60 border border-zinc-800">
+                              <summary className="px-2.5 py-1.5 cursor-pointer text-[10px] font-bold text-zinc-300 hover:text-white select-none">
+                                Inspect CLI Output / Manpage Verification ({typeof playbookCliProbeResult.output === 'string' ? `${playbookCliProbeResult.output.length} chars` : 'JSON'})
+                              </summary>
+                              <pre className="p-2 border-t border-zinc-800 text-emerald-400 max-h-40 overflow-auto whitespace-pre-wrap text-[10px]">
+                                {typeof playbookCliProbeResult.output === 'string'
+                                  ? playbookCliProbeResult.output
+                                  : JSON.stringify(
+                                      playbookCliProbeResult.output,
+                                      null,
+                                      2
+                                    )}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}

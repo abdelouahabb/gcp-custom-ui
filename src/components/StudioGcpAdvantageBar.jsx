@@ -1810,15 +1810,27 @@ export default function StudioGcpAdvantageBar({
 
           {/* Universal Inline Live gcloud Probe Receipt Drawer */}
           {(liveGcloudProbeLoading || liveGcloudProbeResult) && (
-            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2 font-mono text-xs">
+            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2.5 font-mono text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold">
                     🔧 GCLOUD CLI 591.0.0 LIVE PROBE RECEIPT
                   </span>
                   {liveGcloudProbeResult?.probeMode && (
                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
                       {liveGcloudProbeResult.probeMode}
+                    </span>
+                  )}
+                  {liveGcloudProbeResult?.authBridgeMode && (
+                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                      {liveGcloudProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER'
+                        ? '🔑 Online Session OAuth Bridge'
+                        : '💻 Local ADC / gcloud Auth'}
+                    </span>
+                  )}
+                  {typeof liveGcloudProbeResult?.durationMs === 'number' && (
+                    <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-[10px]">
+                      {liveGcloudProbeResult.durationMs} ms
                     </span>
                   )}
                   <span className="font-bold text-white">
@@ -1845,27 +1857,106 @@ export default function StudioGcpAdvantageBar({
                   {liveGcloudProbeResult.error}
                 </div>
               ) : (
-                <div className="space-y-1.5 text-[11px]">
-                  {liveGcloudProbeResult?.explanation && (
-                    <div className="text-emerald-300">
-                      {liveGcloudProbeResult.explanation}
+                (() => {
+                  const rawStructured =
+                    liveGcloudProbeResult?.parsedJson ??
+                    liveGcloudProbeResult?.companionProbe?.parsedJson ??
+                    (typeof liveGcloudProbeResult?.output === 'object'
+                      ? liveGcloudProbeResult.output
+                      : null);
+                  const rows = Array.isArray(rawStructured)
+                    ? rawStructured
+                    : rawStructured && typeof rawStructured === 'object'
+                    ? [rawStructured]
+                    : null;
+                  return (
+                    <div className="space-y-2 text-[11px]">
+                      {liveGcloudProbeResult?.explanation && (
+                        <div className="text-emerald-300 leading-relaxed">
+                          {liveGcloudProbeResult.explanation}
+                        </div>
+                      )}
+                      <div className="text-zinc-400">
+                        Executed Probe Command:{' '}
+                        <code className="text-blue-300">
+                          {liveGcloudProbeResult?.executedCommand ||
+                            liveGcloudProbeResult?.requestedCommand}
+                        </code>
+                      </div>
+                      {Array.isArray(rows) && (
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                            <span className="font-bold uppercase text-blue-300">
+                              Structured Live Inventory Breakdown
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
+                              {rows.length} {rows.length === 1 ? 'Item' : 'Items'} Discovered
+                            </span>
+                          </div>
+                          {rows.length === 0 ? (
+                            <div className="text-[11px] text-zinc-300 py-1">
+                              ✓ Probe succeeded with 0 matching resources in project{' '}
+                              <span className="text-blue-300 font-bold">{projectId}</span> (clean state verified).
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-40 overflow-auto">
+                              {rows.slice(0, 8).map((item, idx) => {
+                                const itemName =
+                                  item?.name ||
+                                  item?.id ||
+                                  item?.serviceId ||
+                                  item?.catalogId ||
+                                  item?.displayName ||
+                                  `Resource #${idx + 1}`;
+                                const itemState =
+                                  item?.state ||
+                                  item?.status ||
+                                  item?.stage ||
+                                  item?.lifecycleState ||
+                                  'ACTIVE';
+                                const itemLoc =
+                                  item?.region ||
+                                  item?.zone ||
+                                  item?.location ||
+                                  'global';
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="p-2 rounded bg-black/50 border border-zinc-800 flex items-center justify-between gap-2"
+                                  >
+                                    <div className="truncate">
+                                      <div className="font-bold text-white truncate">
+                                        {String(itemName).split('/').pop()}
+                                      </div>
+                                      <div className="text-[10px] text-zinc-400 truncate">
+                                        {String(itemLoc).split('/').pop()} · {Object.keys(item || {}).slice(0, 4).join(', ')}
+                                      </div>
+                                    </div>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[9.5px] font-bold shrink-0">
+                                      {String(itemState)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {liveGcloudProbeResult?.output !== undefined && (
+                        <details className="rounded-lg bg-black/60 border border-zinc-800">
+                          <summary className="px-2.5 py-1.5 cursor-pointer text-[10px] font-bold text-zinc-300 hover:text-white select-none">
+                            Inspect CLI Output / Manpage Verification ({typeof liveGcloudProbeResult.output === 'string' ? `${liveGcloudProbeResult.output.length} chars` : 'JSON'})
+                          </summary>
+                          <pre className="p-2.5 border-t border-zinc-800 text-emerald-400 max-h-44 overflow-auto whitespace-pre-wrap text-[10.5px]">
+                            {typeof liveGcloudProbeResult.output === 'string'
+                              ? liveGcloudProbeResult.output
+                              : JSON.stringify(liveGcloudProbeResult.output, null, 2)}
+                          </pre>
+                        </details>
+                      )}
                     </div>
-                  )}
-                  <div className="text-zinc-400">
-                    Executed Probe Command:{' '}
-                    <code className="text-blue-300">
-                      {liveGcloudProbeResult?.executedCommand ||
-                        liveGcloudProbeResult?.requestedCommand}
-                    </code>
-                  </div>
-                  {liveGcloudProbeResult?.output !== undefined && (
-                    <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-emerald-400 max-h-48 overflow-auto whitespace-pre-wrap text-[10.5px]">
-                      {typeof liveGcloudProbeResult.output === 'string'
-                        ? liveGcloudProbeResult.output
-                        : JSON.stringify(liveGcloudProbeResult.output, null, 2)}
-                    </pre>
-                  )}
-                </div>
+                  );
+                })()
               )}
             </div>
           )}
