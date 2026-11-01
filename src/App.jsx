@@ -1198,9 +1198,15 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/sovereign/time-machine/snapshot') &&
         String(body.action || '').toUpperCase() !== 'HEAL_DRIFT') ||
       (rawUrl.includes('/quantum-nexus/action') &&
-        ['CAPTURE_SNAPSHOT', 'SIMULATE_BLAST'].includes(
-          String(body.action || '').toUpperCase()
-        )) ||
+        [
+          'CAPTURE_SNAPSHOT',
+          'SIMULATE_BLAST',
+          'SYNTHESIZE_BLAST_RADIUS_CONTAINMENT_BUNDLE',
+          'VERIFY_SNAPSHOT_INTEGRITY',
+          'SIMULATE_FINOPS_ARBITRAGE_BUNDLE',
+          'BENCHMARK_EPHEMERAL_PR_ENV',
+          'EXPORT_DECEPTION_FORENSICS_PACKAGE',
+        ].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/aws-azure-parity/action') &&
         ([
           'UPSERT_RESOURCE_GROUP',

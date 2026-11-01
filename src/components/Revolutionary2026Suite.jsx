@@ -1613,6 +1613,9 @@ export default function Revolutionary2026Suite({
         <Lab2026QuantumNexus
           projectId={projectId}
           onRefreshGlobal={onRefreshOverview}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onOpenFinOps={() =>
             onSelectStudioTab && onSelectStudioTab('FINOPS')
           }

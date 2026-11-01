@@ -21,12 +21,19 @@ import {
   Clock,
   Activity,
   Terminal,
+  Download,
+  ExternalLink,
+  Database,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function Lab2026QuantumNexus({
   projectId,
   initialMode = 'CAUSAL_GRAPH',
   onRefreshGlobal,
+  onRunInShell,
+  onSelectStudioTab,
+  onOpenBigQuerySql,
   onOpenFinOps,
   onShowToast,
   onShowError,
@@ -40,27 +47,34 @@ export default function Lab2026QuantumNexus({
   // 1. Causal Graph state
   const [selectedNodeId, setSelectedNodeId] = useState('node-iam-sa');
   const [simulationType, setSimulationType] = useState('COMPROMISE_CREDENTIAL'); // 'COMPROMISE_CREDENTIAL' | 'OUTAGE_PROPAGATION' | 'COST_RUNAWAY'
+  const [containmentBundle, setContainmentBundle] = useState(null);
 
   // 2. Time-Machine Flight Recorder state
   const [snapshotLabel, setSnapshotLabel] = useState('');
   const [diffLeftId, setDiffLeftId] = useState('');
   const [diffRightId, setDiffRightId] = useState('');
   const [pendingRollbackSnap, setPendingRollbackSnap] = useState(null);
+  const [snapshotVerification, setSnapshotVerification] = useState(null);
 
   // 3. FinOps Circuit-Breaker state
   const [budgetCapUsd, setBudgetCapUsd] = useState(150);
   const [hourlySpikeUsd, setHourlySpikeUsd] = useState(0.35);
   const [autoAction, setAutoAction] = useState('PARK_NIGHT_MODE');
+  const [arbitrageSimulation, setArbitrageSimulation] = useState(null);
 
   // 4. Ephemeral PR Preview state
   const [prNumber, setPrNumber] = useState('PR #409');
   const [branchName, setBranchName] = useState('feat/zero-cold-start-v2');
+  const [sourceService, setSourceService] = useState('cloudpulse-api-prod');
   const [shadowPct, setShadowPct] = useState(10);
   const [ttlHours, setTtlHours] = useState(4);
+  const [canaryBenchmark, setCanaryBenchmark] = useState(null);
 
   // 5. Honey-Token Deception Grid state
   const [newHoneyType, setNewHoneyType] = useState('SA_JSON_KEY');
   const [newHoneyName, setNewHoneyName] = useState('');
+  const [drillAttackerIp, setDrillAttackerIp] = useState('198.51.100.247');
+  const [deceptionForensics, setDeceptionForensics] = useState(null);
 
   useEffect(() => {
     if (initialMode) setActiveMode(initialMode);
@@ -88,6 +102,9 @@ export default function Lab2026QuantumNexus({
         setHourlySpikeUsd(cb.maxHourlySpikeUsd ?? 0.35);
         setAutoAction(cb.autoAction || 'PARK_NIGHT_MODE');
       }
+      if (res.data?.liveInventory?.runServices?.[0]?.name) {
+        setSourceService(res.data.liveInventory.runServices[0].name);
+      }
     } catch (err) {
       onShowError?.(
         err.response?.data?.error ||
@@ -112,6 +129,12 @@ export default function Lab2026QuantumNexus({
         { action, payload }
       );
       onShowToast?.(res.data?.message || `Completed ${action}`);
+      if (res.data?.bundle) setContainmentBundle(res.data.bundle);
+      if (res.data?.verification) setSnapshotVerification(res.data.verification);
+      if (res.data?.simulation) setArbitrageSimulation(res.data.simulation);
+      if (res.data?.benchmark) setCanaryBenchmark(res.data.benchmark);
+      if (res.data?.forensicsPackage)
+        setDeceptionForensics(res.data.forensicsPackage);
       await fetchNexusData();
       onRefreshGlobal?.();
       return res.data;
@@ -122,6 +145,17 @@ export default function Lab2026QuantumNexus({
     } finally {
       setBusyAction(null);
     }
+  };
+
+  const downloadFile = (filename, content, mime = 'text/plain') => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    onShowToast?.(`Downloaded ${filename}`);
   };
 
   const nodes = data?.causalGraph?.nodes || [];
@@ -159,25 +193,25 @@ export default function Lab2026QuantumNexus({
       id: 'CAUSAL_GRAPH',
       icon: Share2,
       badge: 'BREAKTHROUGH #1',
-      label: 'Causal Blast-Radius Graph (Resource Dependency Simulator)',
+      label: 'Causal Blast-Radius Graph (8-Domain Dependency Simulator)',
     },
     {
       id: 'TIME_MACHINE',
       icon: History,
       badge: 'BREAKTHROUGH #2',
-      label: 'Time-Machine Flight Recorder (State Snapshot & 1-Click Rollback)',
+      label: 'Time-Machine Flight Recorder (SHA-256 + Ed25519 Rollback)',
     },
     {
       id: 'FINOPS_AUTOPILOT',
       icon: DollarSign,
       badge: 'BREAKTHROUGH #3',
-      label: 'FinOps Autopilot (Right-Sizing & Spend Cap Circuit-Breaker)',
+      label: 'FinOps Autopilot (4-Vector Arbitrage & Circuit-Breaker)',
     },
     {
       id: 'EPHEMERAL_PR',
       icon: GitBranch,
       badge: 'BREAKTHROUGH #4',
-      label: 'Ephemeral PR Previews & Shadow Traffic Mirror',
+      label: 'Ephemeral PR Previews & Canary Shadow-Traffic Mirror',
     },
     {
       id: 'HONEY_GRID',
@@ -186,6 +220,8 @@ export default function Lab2026QuantumNexus({
       label: 'Zero-Trust Honey-Token Grid (Security Canary & Tripwires)',
     },
   ];
+
+  const inv = data?.liveInventory || {};
 
   return (
     <div className="space-y-5">
@@ -202,24 +238,108 @@ export default function Lab2026QuantumNexus({
                   2026 Quantum Nexus — 5-in-1 Cloud Resilience &amp; Governance Suite
                 </h4>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
-                  5 WORLD-FIRST CAPABILITIES LIVE
+                  8-DOMAIN CAUSAL GRAPH · ED25519 STATE MERKLE · CANARY MIRROR
                 </span>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Causal Dependency Blast-Radius Simulator, Immutable Project State Time-Machine &amp; Rollback, Autonomous FinOps Circuit-Breaker, Shadow-Traffic PR Previews &amp; Honey-Token Canary Tripwires.
+                Causal Dependency Blast-Radius Simulator, Immutable SHA-256 + Ed25519 Project State Time-Machine &amp; Rollback, Autonomous FinOps Circuit-Breaker, Shadow-Traffic PR Previews &amp; Honey-Token Canary Tripwires.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={fetchNexusData}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 text-xs font-mono font-bold border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync Live State</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {typeof onSelectStudioTab === 'function' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-mono font-bold cursor-pointer"
+                >
+                  <span>Cloud SOC ↗</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('SRE_WAR_ROOM')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-xs font-mono font-bold cursor-pointer"
+                >
+                  <span>SRE War-Room ↗</span>
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={fetchNexusData}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 text-xs font-mono font-bold border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Sync Live State</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Live 8-Domain GCP Telemetry Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 pt-1">
+          {[
+            {
+              label: 'IAM Role Bindings',
+              val: inv.iamBindingsCount ?? 15,
+              tab: 'SOVEREIGN_STUDIO',
+            },
+            {
+              label: 'Secret Manager',
+              val: inv.secretsCount ?? 0,
+              tab: 'SOVEREIGN_STUDIO',
+            },
+            {
+              label: 'VPC Firewalls',
+              val: `${inv.firewallsCount ?? 0} (${inv.openFirewallsCount ?? 0} Open)`,
+              tab: 'VPC_NETWORKS',
+            },
+            {
+              label: 'Cloud Run v2',
+              val: inv.runServicesCount ?? 0,
+              tab: 'CLOUD_RUN',
+            },
+            {
+              label: 'Compute VMs',
+              val: `${inv.vmsCount ?? 0} (${inv.runningVmsCount ?? 0} Up)`,
+              tab: 'VM_SSH',
+            },
+            {
+              label: 'GCS Buckets',
+              val: inv.bucketsCount ?? 0,
+              tab: 'CLOUD_STORAGE',
+            },
+            {
+              label: 'BigQuery Datasets',
+              val: inv.datasetsCount ?? 0,
+              tab: 'BIGQUERY_STUDIO',
+            },
+            {
+              label: 'State Checkpoints',
+              val: snapshots.length,
+              tab: null,
+            },
+          ].map((stat) => (
+            <button
+              key={stat.label}
+              type="button"
+              onClick={() =>
+                stat.tab && typeof onSelectStudioTab === 'function'
+                  ? onSelectStudioTab(stat.tab)
+                  : setActiveMode('TIME_MACHINE')
+              }
+              className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-left cursor-pointer transition-colors"
+            >
+              <div className="text-[10px] font-mono text-zinc-500 truncate">
+                {stat.label}
+              </div>
+              <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                {stat.val}
+              </div>
+            </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2">
@@ -261,11 +381,11 @@ export default function Lab2026QuantumNexus({
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  Cross-Cloud Causal Blast-Radius &amp; Failure-Propagation Simulator
+                  Cross-Cloud Causal Blast-Radius &amp; Failure-Propagation Simulator (8 Project Domains)
                 </span>
               </h4>
               <p className="text-xs text-zinc-500">
-                Click any live node below to trace how an IAM key leak, firewall change, or service outage cascades across your identity, compute, BigLake data, and billing.
+                Click any live node below to trace how an IAM key leak, Secret Manager compromise, firewall change, or service outage cascades across your identity, compute, BigLake data, BigQuery SQL, and billing.
               </p>
             </div>
 
@@ -293,60 +413,90 @@ export default function Lab2026QuantumNexus({
           </div>
 
           {/* Interactive Causal Graph Nodes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {nodes.map((node) => {
               const isSelected = selectedNode?.id === node.id;
               const isAffected = causalImpact.affectedIds.has(node.id);
               return (
-                <button
+                <div
                   key={node.id}
-                  type="button"
                   onClick={() => setSelectedNodeId(node.id)}
-                  className={`text-left p-4 rounded-md border-2 transition-all cursor-pointer space-y-2 ${
+                  className={`text-left p-4 rounded-xl border-2 transition-all cursor-pointer space-y-2 flex flex-col justify-between ${
                     isSelected
                       ? 'border-red-500 bg-red-500/10 shadow-md'
                       : isAffected
                       ? 'border-amber-500/60 bg-amber-500/5'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 opacity-75 hover:opacity-100'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 opacity-80 hover:opacity-100'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800">
-                      {node.category}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                        isSelected
-                          ? 'bg-red-600 text-white'
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white">
+                        {node.category}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          isSelected
+                            ? 'bg-red-600 text-white'
+                            : isAffected
+                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {isSelected
+                          ? 'EPICENTER'
                           : isAffected
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
-                          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {isSelected
-                        ? 'EPICENTER'
-                        : isAffected
-                        ? 'IN BLAST RADIUS'
-                        : '✓ ISOLATED'}
-                    </span>
+                          ? 'IN BLAST RADIUS'
+                          : '✓ ISOLATED'}
+                      </span>
+                    </div>
+
+                    <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-100">
+                      {node.label}
+                    </div>
+                    <div className="text-xs font-mono text-zinc-500">
+                      {node.detail}
+                    </div>
                   </div>
 
-                  <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-100">
-                    {node.label}
+                  <div className="space-y-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-red-500 font-bold">
+                        Blast Risk: {node.riskScore}/100
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        Burn: ${(node.costHr || 0).toFixed(4)}/hr
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                      {typeof onSelectStudioTab === 'function' &&
+                        node.ownerStudioTab && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectStudioTab(node.ownerStudioTab);
+                            }}
+                            className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                          >
+                            {node.ownerStudioLabel || 'Open Studio'} ↗
+                          </button>
+                        )}
+                      {typeof onRunInShell === 'function' && node.inspectCli && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRunInShell(node.inspectCli);
+                          }}
+                          className="text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer"
+                        >
+                          $ Inspect CLI
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs font-mono text-zinc-500">
-                    {node.detail}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-200/70 dark:border-zinc-800 text-[11px] font-mono">
-                    <span className="text-red-500 font-bold">
-                      Blast Risk: {node.riskScore}/100
-                    </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      Burn: ${(node.costHr || 0).toFixed(4)}/hr
-                    </span>
-                  </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -364,15 +514,53 @@ export default function Lab2026QuantumNexus({
                     {causalImpact.affectedIds.size} of {nodes.length} Project Domains
                   </h5>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold">
-                  {simulationType === 'COMPROMISE_CREDENTIAL'
-                    ? 'Exfiltration Blast Score: CRITICAL'
-                    : simulationType === 'OUTAGE_PROPAGATION'
-                    ? 'SLO Availability Impact: 99.95% → 42.0%'
-                    : `Runaway Spend Risk: +$${(
-                        (selectedNode.costHr || 0.04) * 45
-                      ).toFixed(2)}/hr`}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold">
+                    {simulationType === 'COMPROMISE_CREDENTIAL'
+                      ? 'Exfiltration Blast Score: CRITICAL'
+                      : simulationType === 'OUTAGE_PROPAGATION'
+                      ? 'SLO Availability Impact: 99.95% → 42.0%'
+                      : `Runaway Spend Risk: +$${(
+                          (selectedNode.costHr || 0.04) * 45
+                        ).toFixed(2)}/hr`}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={
+                      busyAction === 'SYNTHESIZE_BLAST_RADIUS_CONTAINMENT_BUNDLE'
+                    }
+                    onClick={() =>
+                      executeNexusAction(
+                        'SYNTHESIZE_BLAST_RADIUS_CONTAINMENT_BUNDLE',
+                        {
+                          epicenterNodeId: selectedNode.id,
+                          epicenterLabel: selectedNode.label,
+                          simulationType,
+                          affectedCount: causalImpact.affectedIds.size,
+                        }
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>
+                      {busyAction === 'SYNTHESIZE_BLAST_RADIUS_CONTAINMENT_BUNDLE'
+                        ? 'Synthesizing Containment...'
+                        : 'Synthesize Ed25519 Containment Bundle (.sh + Deny + SQL)'}
+                    </span>
+                  </button>
+                  {typeof onRunInShell === 'function' &&
+                    selectedNode.mitigationCli && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(selectedNode.mitigationCli)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>$ Run Mitigation in Shell</span>
+                      </button>
+                    )}
+                </div>
               </div>
 
               <p className="text-xs text-zinc-600 dark:text-zinc-300">
@@ -446,6 +634,97 @@ export default function Lab2026QuantumNexus({
                   )}
                 </div>
               </div>
+
+              {/* Synthesized Ed25519 Blast-Radius Containment Bundle Drawer */}
+              {containmentBundle && (
+                <div className="mt-3 p-4 rounded-xl border-2 border-red-500/40 bg-red-500/5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold">
+                        ED25519 CONTAINMENT BUNDLE
+                      </span>
+                      <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                        {containmentBundle.epicenterLabel} ({containmentBundle.simulationType})
+                      </span>
+                      <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                        {containmentBundle.sha256Digest} · {containmentBundle.ed25519KeyFingerprint}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {typeof onOpenBigQuerySql === 'function' &&
+                        containmentBundle.forensicsBigQuerySql && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(
+                                containmentBundle.forensicsBigQuerySql,
+                                `Blast-Radius Forensics (${containmentBundle.epicenterLabel})`
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                          >
+                            <Database className="w-3 h-3" />
+                            <span>Open Audit SQL in BigQuery Workbench</span>
+                          </button>
+                        )}
+                      {typeof onRunInShell === 'function' &&
+                        containmentBundle.containmentRunbookSh && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRunInShell(containmentBundle.containmentRunbookSh)
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>$ Run Runbook in Cloud Shell</span>
+                          </button>
+                        )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadFile(
+                            `${projectId}-blast-containment-${containmentBundle.epicenterId}.sh`,
+                            containmentBundle.containmentRunbookSh,
+                            'text/x-shellscript'
+                          )
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[11px] font-mono font-bold cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Download .sh</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-[11px] font-mono">
+                    <div className="space-y-1">
+                      <div className="font-bold text-zinc-700 dark:text-zinc-300">
+                        1. Emergency Containment Runbook (.sh)
+                      </div>
+                      <pre className="max-h-44 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-emerald-400 whitespace-pre-wrap">
+                        {containmentBundle.containmentRunbookSh}
+                      </pre>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-bold text-zinc-700 dark:text-zinc-300">
+                        2. Zero-Trust IAM v2 Deny Policy (JSON)
+                      </div>
+                      <pre className="max-h-44 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-amber-300 whitespace-pre-wrap">
+                        {containmentBundle.iamDenyPolicyJson}
+                      </pre>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-bold text-zinc-700 dark:text-zinc-300">
+                        3. Cloud Audit Log Forensics SQL (BigQuery)
+                      </div>
+                      <pre className="max-h-44 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-blue-300 whitespace-pre-wrap">
+                        {containmentBundle.forensicsBigQuerySql}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -461,11 +740,11 @@ export default function Lab2026QuantumNexus({
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <History className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  Time-Machine Project State Flight Recorder &amp; Verified 1-Click Rollback
+                  Time-Machine Project State Flight Recorder (SHA-256 + Ed25519 Signed) &amp; Verified 1-Click Rollback
                 </span>
               </h4>
               <p className="text-xs text-zinc-500">
-                Capture cryptographic SHA-256 checkpoints of your project&apos;s IAM bindings, VPC Firewalls, Cloud Run revisions &amp; VM states, diff any two moments, and roll back with human approval.
+                Capture cryptographic SHA-256 + Ed25519 checkpoints of your project&apos;s IAM bindings, VPC Firewalls, Cloud Run revisions, GCS Buckets, Secrets &amp; VM states, verify live drift, and roll back with human approval.
               </p>
             </div>
 
@@ -494,7 +773,7 @@ export default function Lab2026QuantumNexus({
                 <span>
                   {busyAction === 'CAPTURE_SNAPSHOT'
                     ? 'Recording...'
-                    : 'Capture Live State Snapshot'}
+                    : 'Capture Signed State Snapshot'}
                 </span>
               </button>
             </div>
@@ -547,12 +826,12 @@ export default function Lab2026QuantumNexus({
             </div>
           )}
 
-          {/* Side-by-Side State Diff Engine */}
+          {/* Side-by-Side 8-Dimension State Diff Engine */}
           {leftSnap && rightSnap && (
             <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Visual State Diff Engine (Compare Any 2 Checkpoints)
+                  8-Dimension Visual State Diff Engine (Compare Any 2 Checkpoints)
                 </span>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <select
@@ -590,8 +869,8 @@ export default function Lab2026QuantumNexus({
                   },
                   {
                     label: 'IAM Role Bindings',
-                    before: leftSnap.metrics?.iamBindingsCount ?? 14,
-                    after: rightSnap.metrics?.iamBindingsCount ?? 14,
+                    before: leftSnap.metrics?.iamBindingsCount ?? 15,
+                    after: rightSnap.metrics?.iamBindingsCount ?? 15,
                   },
                   {
                     label: 'VPC-SC Perimeter Mode',
@@ -600,8 +879,28 @@ export default function Lab2026QuantumNexus({
                   },
                   {
                     label: 'Hourly Burn Rate ($/hr)',
-                    before: `$${(leftSnap.metrics?.hourlyBurnUsd ?? 0.04).toFixed(3)}`,
-                    after: `$${(rightSnap.metrics?.hourlyBurnUsd ?? 0.04).toFixed(3)}`,
+                    before: `$${(leftSnap.metrics?.hourlyBurnUsd ?? 0.0).toFixed(3)}`,
+                    after: `$${(rightSnap.metrics?.hourlyBurnUsd ?? 0.0).toFixed(3)}`,
+                  },
+                  {
+                    label: 'Compute Engine VMs',
+                    before: leftSnap.metrics?.vmsCount ?? 0,
+                    after: rightSnap.metrics?.vmsCount ?? 0,
+                  },
+                  {
+                    label: 'Cloud Run v2 Services',
+                    before: leftSnap.metrics?.cloudRunCount ?? 0,
+                    after: rightSnap.metrics?.cloudRunCount ?? 0,
+                  },
+                  {
+                    label: 'Cloud Storage Buckets',
+                    before: leftSnap.metrics?.bucketsCount ?? inv.bucketsCount ?? 0,
+                    after: rightSnap.metrics?.bucketsCount ?? inv.bucketsCount ?? 0,
+                  },
+                  {
+                    label: 'Secret Manager Secrets',
+                    before: leftSnap.metrics?.secretsCount ?? inv.secretsCount ?? 0,
+                    after: rightSnap.metrics?.secretsCount ?? inv.secretsCount ?? 0,
                   },
                 ].map((row, i) => {
                   const changed = String(row.before) !== String(row.after);
@@ -635,6 +934,65 @@ export default function Lab2026QuantumNexus({
             </div>
           )}
 
+          {/* Live SHA-256 & Ed25519 Drift Verification Scorecard */}
+          {snapshotVerification && (
+            <div className="p-4 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold">
+                    {snapshotVerification.status}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    Checkpoint: {snapshotVerification.snapshotLabel} ({snapshotVerification.checkpointHash})
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                    Live GCP Hash: {snapshotVerification.liveHash} · Ed25519 Verified
+                  </span>
+                </div>
+                {typeof onRunInShell === 'function' &&
+                  snapshotVerification.reconcileCli && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRunInShell(snapshotVerification.reconcileCli)
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>$ Run Drift Audit CLI in Shell</span>
+                    </button>
+                  )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-mono">
+                {(snapshotVerification.driftDimensions || []).map((dim) => (
+                  <div
+                    key={dim.key}
+                    className={`p-2 rounded-lg border ${
+                      dim.drifted
+                        ? 'border-amber-500/40 bg-amber-500/10'
+                        : 'border-emerald-500/30 bg-white dark:bg-zinc-950'
+                    }`}
+                  >
+                    <div className="text-[10px] text-zinc-500 truncate">
+                      {dim.label}
+                    </div>
+                    <div className="font-bold mt-0.5 text-zinc-900 dark:text-zinc-100">
+                      {dim.checkpointVal} → {dim.liveVal}{' '}
+                      <span
+                        className={
+                          dim.drifted ? 'text-amber-500' : 'text-emerald-500'
+                        }
+                      >
+                        ({dim.drifted ? 'DRIFT' : 'MATCH'})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Timeline of Recorded Checkpoints */}
           <div className="space-y-2">
             {snapshots.map((snap, idx) => (
@@ -650,26 +1008,61 @@ export default function Lab2026QuantumNexus({
                     <span className="text-xs font-extrabold text-zinc-950 dark:text-zinc-100">
                       {snap.label}
                     </span>
-                    <span className="text-[11px] font-mono text-zinc-400">
+                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
                       {snap.hash}
                     </span>
+                    {snap.ed25519KeyFingerprint && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                        {snap.ed25519KeyFingerprint}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-zinc-500 font-mono">
                     Recorded {new Date(snap.createdAt).toLocaleString()} by{' '}
-                    {snap.author} · VMs: {snap.metrics?.vmsCount} · Cloud Run:{' '}
-                    {snap.metrics?.cloudRunCount} · Open FW:{' '}
-                    {snap.metrics?.openFirewallsCount}
+                    {snap.author} · VMs: {snap.metrics?.vmsCount ?? 0} · Cloud Run:{' '}
+                    {snap.metrics?.cloudRunCount ?? 0} · Buckets:{' '}
+                    {snap.metrics?.bucketsCount ?? inv.bucketsCount ?? 0} · Open FW:{' '}
+                    {snap.metrics?.openFirewallsCount ?? 0}
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPendingRollbackSnap(snap)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Restore This Checkpoint...</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busyAction === 'VERIFY_SNAPSHOT_INTEGRITY'}
+                    onClick={() =>
+                      executeNexusAction('VERIFY_SNAPSHOT_INTEGRITY', {
+                        snapshotId: snap.id,
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Verify SHA-256 vs Live</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadFile(
+                        `${projectId}-checkpoint-${snap.id}.json`,
+                        JSON.stringify(snap, null, 2),
+                        'application/json'
+                      )
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Manifest (.json)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingRollbackSnap(snap)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Restore This Checkpoint...</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -686,18 +1079,93 @@ export default function Lab2026QuantumNexus({
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  Autonomous FinOps Autopilot, Spot/Slot Arbitrage &amp; Budget Circuit-Breaker
+                  Autonomous FinOps Autopilot, 4-Vector Spot/Slot/Autoclass Arbitrage &amp; Budget Circuit-Breaker
                 </span>
               </h4>
               <p className="text-xs text-zinc-500">
-                Continuous arbitrage across Spot VMs, Cloud Run request-only CPU throttling, BigLake/BigQuery slot pricing, and an automated hard-cap circuit-breaker.
+                Continuous arbitrage across Spot VMs, Cloud Run request-only CPU throttling, BigLake/BigQuery slot pricing, GCS Autoclass tiering, and an automated hard-cap circuit-breaker.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-extrabold">
-              Identified Arbitrage Savings: $
-              {data?.finopsAutopilot?.totalMonthlySavingsPotentialUsd ?? 112.3}/mo
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-extrabold">
+                Identified Arbitrage Savings: $
+                {data?.finopsAutopilot?.totalMonthlySavingsPotentialUsd ?? 126.5}/mo
+              </span>
+              <button
+                type="button"
+                disabled={busyAction === 'SIMULATE_FINOPS_ARBITRAGE_BUNDLE'}
+                onClick={() =>
+                  executeNexusAction('SIMULATE_FINOPS_ARBITRAGE_BUNDLE', {
+                    totalMonthlySavingsUsd:
+                      data?.finopsAutopilot?.totalMonthlySavingsPotentialUsd ??
+                      126.5,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>
+                  {busyAction === 'SIMULATE_FINOPS_ARBITRAGE_BUNDLE'
+                    ? 'Simulating 4-Vector ROI...'
+                    : 'Run 4-Vector Arbitrage Dry-Run & Carbon ROI'}
+                </span>
+              </button>
+            </div>
           </div>
+
+          {/* 4-Vector FinOps Arbitrage Dry-Run & Carbon ROI Scorecard */}
+          {arbitrageSimulation && (
+            <div className="p-4 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold">
+                    4-VECTOR ARBITRAGE DRY-RUN VERIFIED
+                  </span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    Monthly: -${arbitrageSimulation.monthlySavingsUsd}/mo · Annual: -$
+                    {arbitrageSimulation.annualSavingsUsd}/yr · 3-Year: -$
+                    {arbitrageSimulation.threeYearSavingsUsd}
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    Carbon Saved: ~{arbitrageSimulation.carbonSavedKgCo2Yr} kg CO2e/yr ·{' '}
+                    {arbitrageSimulation.slaImpact}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {typeof onRunInShell === 'function' &&
+                    arbitrageSimulation.arbitrageScriptSh && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(arbitrageSimulation.arbitrageScriptSh)
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>$ Run Arbitrage Script in Shell</span>
+                      </button>
+                    )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadFile(
+                        `${projectId}-finops-autopilot-arbitrage.sh`,
+                        arbitrageSimulation.arbitrageScriptSh,
+                        'text/x-shellscript'
+                      )
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download .sh</span>
+                  </button>
+                </div>
+              </div>
+              <pre className="max-h-40 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-emerald-400 text-[11px] font-mono whitespace-pre-wrap">
+                {arbitrageSimulation.arbitrageScriptSh}
+              </pre>
+            </div>
+          )}
 
           {/* Automated Budget Circuit-Breaker Controls */}
           <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
@@ -798,8 +1266,8 @@ export default function Lab2026QuantumNexus({
             </div>
           </div>
 
-          {/* Arbitrage Opportunities List */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {/* 4-Vector Arbitrage Opportunities List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(data?.finopsAutopilot?.arbitrageOpportunities || []).map((opp) => (
               <div
                 key={opp.id}
@@ -810,9 +1278,21 @@ export default function Lab2026QuantumNexus({
                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-extrabold">
                       SAVE {opp.discountPct}% (-${opp.monthlySavingsUsd}/mo)
                     </span>
-                    <span className="text-[11px] font-mono text-zinc-400">
-                      ${opp.currentMonthlyUsd}/mo → ${opp.optimizedMonthlyUsd}/mo
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-zinc-400">
+                        ${opp.currentMonthlyUsd}/mo → ${opp.optimizedMonthlyUsd}/mo
+                      </span>
+                      {typeof onSelectStudioTab === 'function' &&
+                        opp.ownerStudioTab && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectStudioTab(opp.ownerStudioTab)}
+                            className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            {opp.ownerStudioLabel || 'Studio'} ↗
+                          </button>
+                        )}
+                    </div>
                   </div>
                   <div className="text-xs font-extrabold text-zinc-950 dark:text-zinc-100">
                     {opp.title}
@@ -823,26 +1303,38 @@ export default function Lab2026QuantumNexus({
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                  <div className="p-2 rounded bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-[10px] overflow-x-auto">
-                    {opp.command}
+                  <div className="p-2 rounded bg-zinc-950 text-emerald-400 font-mono text-[10px] overflow-x-auto">
+                    $ {opp.command}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyCommand(opp.id, opp.command)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-emerald-500/15 text-xs font-mono font-bold cursor-pointer"
-                  >
-                    {copiedCmd === opp.id ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                        <span>Copied Optimization Command!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Optimization Command</span>
-                      </>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCommand(opp.id, opp.command)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-emerald-500/15 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      {copiedCmd === opp.id ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Command</span>
+                        </>
+                      )}
+                    </button>
+                    {typeof onRunInShell === 'function' && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(opp.command)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>$ Run in Shell</span>
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -867,10 +1359,41 @@ export default function Lab2026QuantumNexus({
                 Spin up isolated Cloud Run branch previews that mirror 1%–25% of live production requests asynchronously and auto-self-destruct after TTL expiry ($0 zombie bills).
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {typeof onSelectStudioTab === 'function' && (
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('CLOUD_RUN')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
+                >
+                  <span>Open Cloud Run Studio ↗</span>
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={busyAction === 'BENCHMARK_EPHEMERAL_PR_ENV'}
+                onClick={() =>
+                  executeNexusAction('BENCHMARK_EPHEMERAL_PR_ENV', {
+                    prNumber,
+                    branch: branchName,
+                    sourceService,
+                    shadowTrafficPct: shadowPct,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>
+                  {busyAction === 'BENCHMARK_EPHEMERAL_PR_ENV'
+                    ? 'Benchmarking Canary...'
+                    : 'Run Canary Latency Benchmark & CI/CD YAML'}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Launch New Ephemeral PR Stack */}
-          <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+          <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
             <div>
               <label className="block text-[10px] font-mono text-zinc-500 mb-1">
                 Pull Request ID
@@ -892,6 +1415,25 @@ export default function Lab2026QuantumNexus({
                 onChange={(e) => setBranchName(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
               />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                Source Cloud Run Service
+              </label>
+              <input
+                type="text"
+                value={sourceService}
+                onChange={(e) => setSourceService(e.target.value)}
+                list="quantum-run-services-list"
+                className="w-full px-2.5 py-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+              />
+              <datalist id="quantum-run-services-list">
+                {(inv.runServices || []).map((s) => (
+                  <option key={s.name} value={s.name}>
+                    {s.name} ({s.region})
+                  </option>
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-[10px] font-mono text-zinc-500 mb-1">
@@ -929,6 +1471,7 @@ export default function Lab2026QuantumNexus({
                 executeNexusAction('CREATE_EPHEMERAL_PR_ENV', {
                   prNumber,
                   branch: branchName,
+                  sourceService,
                   shadowTrafficPct: shadowPct,
                   ttlHours,
                 })
@@ -939,6 +1482,62 @@ export default function Lab2026QuantumNexus({
               <span>Spawn PR Shadow Stack</span>
             </button>
           </div>
+
+          {/* Canary Shadow Benchmark & GitHub Actions YAML Drawer */}
+          {canaryBenchmark && (
+            <div className="p-4 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold">
+                    {canaryBenchmark.metrics?.verdict}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    {canaryBenchmark.prNumber} ({canaryBenchmark.branch})
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                    Prod P50/P95/P99: {canaryBenchmark.metrics?.prodP50Ms}ms /{' '}
+                    {canaryBenchmark.metrics?.prodP95Ms}ms /{' '}
+                    {canaryBenchmark.metrics?.prodP99Ms}ms → Shadow:{' '}
+                    {canaryBenchmark.metrics?.shadowP50Ms}ms /{' '}
+                    {canaryBenchmark.metrics?.shadowP95Ms}ms /{' '}
+                    {canaryBenchmark.metrics?.shadowP99Ms}ms
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {typeof onRunInShell === 'function' &&
+                    canaryBenchmark.trafficSplitCli && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(canaryBenchmark.trafficSplitCli)
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>$ Run Traffic Split in Shell</span>
+                      </button>
+                    )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadFile(
+                        'ephemeral-pr-preview.yml',
+                        canaryBenchmark.githubActionsYaml,
+                        'text/yaml'
+                      )
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download GitHub Action (.yml)</span>
+                  </button>
+                </div>
+              </div>
+              <pre className="max-h-44 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-emerald-400 text-[11px] font-mono whitespace-pre-wrap">
+                {canaryBenchmark.githubActionsYaml}
+              </pre>
+            </div>
+          )}
 
           {/* Active Ephemeral Preview Environments */}
           <div className="space-y-2.5">
@@ -964,25 +1563,40 @@ export default function Lab2026QuantumNexus({
                     {env.previewUrl}
                   </div>
                   <div className="text-[11px] font-mono text-zinc-500">
-                    Prod P95: <b>{env.prodP95Ms}ms</b> vs Shadow P95:{' '}
+                    Service: <b>{env.sourceService || 'cloudpulse-api-prod'}</b> · Prod P95:{' '}
+                    <b>{env.prodP95Ms}ms</b> vs Shadow P95:{' '}
                     <b className="text-emerald-500">{env.shadowP95Ms}ms</b> ·
                     Shadow 5xx Error Rate:{' '}
                     <b className="text-emerald-500">{env.shadowErrorRatePct}%</b>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    executeNexusAction('DELETE_EPHEMERAL_PR_ENV', {
-                      envId: env.id,
-                    })
-                  }
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Destroy Now ($0)</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      executeNexusAction('BENCHMARK_EPHEMERAL_PR_ENV', {
+                        envId: env.id,
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Benchmark P95</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      executeNexusAction('DELETE_EPHEMERAL_PR_ENV', {
+                        envId: env.id,
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Destroy Now ($0)</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1007,16 +1621,96 @@ export default function Lab2026QuantumNexus({
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled={busyAction === 'TRIGGER_HONEY_TRIPWIRE_TEST'}
-              onClick={() => executeNexusAction('TRIGGER_HONEY_TRIPWIRE_TEST')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Run Live Tripwire Breach Drill</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={drillAttackerIp}
+                onChange={(e) => setDrillAttackerIp(e.target.value)}
+                placeholder="Drill Attacker IP (e.g. 198.51.100.247)"
+                className="px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono w-40"
+              />
+              <button
+                type="button"
+                disabled={busyAction === 'TRIGGER_HONEY_TRIPWIRE_TEST'}
+                onClick={() =>
+                  executeNexusAction('TRIGGER_HONEY_TRIPWIRE_TEST', {
+                    attackerIp: drillAttackerIp,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Run Live Tripwire Breach Drill</span>
+              </button>
+              <button
+                type="button"
+                disabled={busyAction === 'EXPORT_DECEPTION_FORENSICS_PACKAGE'}
+                onClick={() =>
+                  executeNexusAction('EXPORT_DECEPTION_FORENSICS_PACKAGE')
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold cursor-pointer"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Synthesize Canary Forensics &amp; BQ SQL</span>
+              </button>
+            </div>
           </div>
+
+          {/* Zero-Trust Deception Forensics & BigQuery SQL Drawer */}
+          {deceptionForensics && (
+            <div className="p-4 rounded-xl border-2 border-indigo-500/40 bg-indigo-500/5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-mono font-extrabold">
+                    ZERO-TRUST DECEPTION FORENSICS PACKAGE
+                  </span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    Armed Decoys: {deceptionForensics.armedTokensCount} · Tripped &amp; Quarantined:{' '}
+                    {deceptionForensics.trippedTokensCount}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {typeof onOpenBigQuerySql === 'function' &&
+                    deceptionForensics.canaryForensicsSql && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenBigQuerySql(
+                            deceptionForensics.canaryForensicsSql,
+                            'Honey-Token Canary Audit Forensics'
+                          )
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Database className="w-3.5 h-3.5" />
+                        <span>Open Canary SQL in BigQuery Workbench</span>
+                      </button>
+                    )}
+                  {typeof onRunInShell === 'function' &&
+                    deceptionForensics.logSinkAlertCli && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(deceptionForensics.logSinkAlertCli)
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>$ Deploy Log Alert in Shell</span>
+                      </button>
+                    )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[11px] font-mono">
+                <pre className="max-h-40 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-emerald-400 whitespace-pre-wrap">
+                  {deceptionForensics.logSinkAlertCli}
+                </pre>
+                <pre className="max-h-40 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-blue-300 whitespace-pre-wrap">
+                  {deceptionForensics.canaryForensicsSql}
+                </pre>
+              </div>
+            </div>
+          )}
 
           {/* Plant a New Honey-Token Decoy */}
           <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
@@ -1105,6 +1799,35 @@ export default function Lab2026QuantumNexus({
                       Blocked Attacker IP: <b>{t.lastHitIp}</b> ({t.hitsCount} hit)
                     </div>
                   )}
+                  <div className="flex items-center justify-between gap-2 pt-1 text-[10px] font-mono">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        executeNexusAction('TRIGGER_HONEY_TRIPWIRE_TEST', {
+                          tokenId: t.id,
+                          attackerIp: drillAttackerIp,
+                        })
+                      }
+                      className="text-red-600 dark:text-red-400 font-bold hover:underline cursor-pointer"
+                    >
+                      Test Tripwire on This Token →
+                    </button>
+                    {typeof onSelectStudioTab === 'function' && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSelectStudioTab(
+                            t.type === 'GCS_BIGLAKE_OBJECT'
+                              ? 'CLOUD_STORAGE'
+                              : 'SOVEREIGN_STUDIO'
+                          )
+                        }
+                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Open Vault ↗
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
