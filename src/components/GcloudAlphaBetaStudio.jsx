@@ -3541,48 +3541,368 @@ export default function GcloudAlphaBetaStudio({
             )}
 
           {/* Model Armor Sanitization Verdict Scorecard */}
-          {lastReceipt.sanitizationEvaluation && (
-            <div className="p-3.5 rounded-xl border border-rose-500/30 bg-white dark:bg-[#18181b] space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-rose-500" />
-                  <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Model Armor Prompt Sanitization Verdict
+          {lastReceipt.sanitizationEvaluation && (() => {
+            const se = lastReceipt.sanitizationEvaluation;
+            const verdictLabel =
+              se.verdict || se.overallMatchState || 'EVALUATED';
+            const detArray = Array.isArray(se.detectors)
+              ? se.detectors
+              : [
+                  {
+                    detector: 'Prompt Injection & Jailbreak',
+                    status:
+                      se.detectors?.promptInjectionAndJailbreak || 'ALLOW',
+                    detail: 'Inline PI & Jailbreak filter evaluation',
+                  },
+                  {
+                    detector: 'Sensitive Data (SDP / Credentials)',
+                    status:
+                      se.detectors?.sensitiveDataProtection || 'ALLOW',
+                    detail: 'Inline SDP PII & credential filter evaluation',
+                  },
+                  {
+                    detector: 'Malicious URIs',
+                    status: se.detectors?.maliciousUris || 'ALLOW',
+                    detail: 'Inline Malicious URI filter evaluation',
+                  },
+                ];
+            return (
+              <div className="p-3.5 rounded-xl border border-rose-500/30 bg-white dark:bg-[#18181b] space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Model Armor Prompt Sanitization Verdict
+                    </span>
+                  </div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-extrabold border ${
+                      verdictLabel.includes('BLOCK') ||
+                      verdictLabel.includes('MATCH')
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                    }`}
+                  >
+                    {verdictLabel}
                   </span>
                 </div>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-extrabold border ${
-                    lastReceipt.sanitizationEvaluation.verdict?.includes('BLOCK')
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40'
-                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
-                  }`}
-                >
-                  {lastReceipt.sanitizationEvaluation.verdict}
-                </span>
+                {se.sanitizedPrompt && (
+                  <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-300 border border-zinc-800 text-xs font-mono">
+                    <div className="text-[10px] uppercase text-zinc-400 mb-0.5">
+                      Sanitized Prompt Output (Redacted Safe Payload):
+                    </div>
+                    {se.sanitizedPrompt}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+                  {detArray.map((d) => (
+                    <div
+                      key={d.detector}
+                      className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] text-zinc-500 truncate">
+                          {d.detector}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                            String(d.status).includes('MATCH')
+                              ? 'bg-rose-500/15 text-rose-500'
+                              : 'bg-emerald-500/15 text-emerald-500'
+                          }`}
+                        >
+                          {d.status}
+                        </span>
+                      </div>
+                      {d.detail && (
+                        <div className="text-[10px] text-zinc-600 dark:text-zinc-400">
+                          {d.detail}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {se.cliSanitizeRecipe && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <code className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 truncate max-w-2xl">
+                      $ {se.cliSanitizeRecipe}
+                    </code>
+                    <div className="flex items-center gap-1.5">
+                      {typeof onOpenShellWithCommand === 'function' && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenShellWithCommand(se.cliSanitizeRecipe)
+                          }
+                          className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          $ Run in Cloud Shell
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(se.cliSanitizeRecipe, 'Model Armor CLI')
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Copy CLI
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500">
-                    Prompt Injection &amp; Jailbreak
-                  </div>
-                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                    {lastReceipt.sanitizationEvaluation.detectors?.promptInjectionAndJailbreak || 'ALLOW'}
-                  </div>
+            );
+          })()}
+
+          {/* IAM Policy Troubleshooter & PAM JIT Elevation Scorecard */}
+          {(lastReceipt.accessState ||
+            lastReceipt.jitGrantRequestCli ||
+            lastReceipt.jitCreateCli) && (
+            <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-white dark:bg-[#18181b] space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  {lastReceipt.accessState
+                    ? `IAM Policy Troubleshooter Verdict: ${lastReceipt.accessState}`
+                    : 'Privileged Access Manager (PAM) JIT Entitlement & Grant'}
+                </span>
+                {typeof onSelectStudioTab === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('SOVEREIGN_STUDIO')}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Open IAM &amp; PAM Studio →
+                  </button>
+                )}
+              </div>
+              {lastReceipt.principal && (
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Principal: <strong>{lastReceipt.principal}</strong> · Permission:{' '}
+                  <strong>{lastReceipt.permission}</strong> · Resource:{' '}
+                  <code>{lastReceipt.fullResourceName}</code>
                 </div>
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500">
-                    Sensitive Data (SDP / Credentials)
-                  </div>
-                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                    {lastReceipt.sanitizationEvaluation.detectors?.sensitiveDataProtection || 'ALLOW'}
-                  </div>
+              )}
+              {(lastReceipt.jitCreateCli || lastReceipt.jitGrantRequestCli) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {[
+                    {
+                      label: '1. Create PAM JIT Entitlement',
+                      cmd: lastReceipt.jitCreateCli,
+                    },
+                    {
+                      label: '2. Request Time-Boxed JIT Elevation Grant',
+                      cmd: lastReceipt.jitGrantRequestCli,
+                    },
+                  ]
+                    .filter((item) => item.cmd)
+                    .map((item) => (
+                      <div
+                        key={item.label}
+                        className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                      >
+                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {item.label}
+                        </div>
+                        <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto whitespace-pre-wrap">
+                          {item.cmd}
+                        </pre>
+                        <div className="flex items-center gap-1.5">
+                          {typeof onOpenShellWithCommand === 'function' && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenShellWithCommand(item.cmd)}
+                              className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              $ Run in Cloud Shell
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => copyText(item.cmd, item.label)}
+                            className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                 </div>
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500">Malicious URIs</div>
-                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                    {lastReceipt.sanitizationEvaluation.detectors?.maliciousUris || 'ALLOW'}
-                  </div>
+              )}
+            </div>
+          )}
+
+          {/* Cloud Quotas Adjuster & QuotaPreferences Scorecard */}
+          {(lastReceipt.quotaAdjusterSettings ||
+            lastReceipt.quotaPreferenceCreateCli) && (
+            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-white dark:bg-[#18181b] space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Cloud Quotas Autonomous Adjuster &amp; QuotaPreferences Scorecard
+                </span>
+                <div className="flex items-center gap-2">
+                  {lastReceipt.quotaAdjusterSettings?.enablement && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[10px] font-bold">
+                      Adjuster: {lastReceipt.quotaAdjusterSettings.enablement}
+                    </span>
+                  )}
+                  {typeof onSelectStudioTab === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectStudioTab('FINOPS')}
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                    >
+                      Open FinOps &amp; Quotas Studio →
+                    </button>
+                  )}
                 </div>
+              </div>
+              {lastReceipt.quotaPreferenceCreateCli && (
+                <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-300 border border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                  <code className="text-[10.5px] break-all">
+                    $ {lastReceipt.quotaPreferenceCreateCli}
+                  </code>
+                  {typeof onOpenShellWithCommand === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenShellWithCommand(
+                          lastReceipt.quotaPreferenceCreateCli
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                    >
+                      $ Apply QuotaPreference in Cloud Shell
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Audit Manager, Compliance & Software Delivery Trust Scorecard */}
+          {(lastReceipt.trustPolicyCreateCli ||
+            Array.isArray(lastReceipt.auditScopes)) && (
+            <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-white dark:bg-[#18181b] space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Audit Manager &amp; Software Delivery Trust CEL Scorecard
+                </span>
+                {typeof onSelectStudioTab === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Open Cloud SOC Studio →
+                  </button>
+                )}
+              </div>
+              {lastReceipt.trustPolicyCreateCli && (
+                <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-300 border border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                  <code className="text-[10.5px] break-all">
+                    $ {lastReceipt.trustPolicyCreateCli}
+                  </code>
+                  {typeof onOpenShellWithCommand === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenShellWithCommand(lastReceipt.trustPolicyCreateCli)
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                    >
+                      $ Create CEL Trust Policy in Cloud Shell
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI Hypercomputer Cluster Director & Lustre HPC Scorecard */}
+          {(lastReceipt.quickstartCli ||
+            lastReceipt.lustreCreateCli ||
+            lastReceipt.acceleratorProfile) && (
+            <div className="p-3.5 rounded-xl border border-blue-500/30 bg-white dark:bg-[#18181b] space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  AI Hypercomputer Cluster Director &amp; Managed Lustre HPC Blueprint
+                </span>
+                {typeof onSelectStudioTab === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('WAVE9_STUDIO')}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Open Vertex AI &amp; GPU Studio →
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[
+                  {
+                    label: 'Cluster Director Slurm Quickstart CLI',
+                    cmd:
+                      lastReceipt.quickstartCli || lastReceipt.executedCommand,
+                  },
+                  {
+                    label: 'Managed Lustre 1000 MB/s/TiB Scratch CLI',
+                    cmd: lastReceipt.lustreCreateCli,
+                  },
+                ]
+                  .filter((i) => i.cmd)
+                  .map((item) => (
+                    <div
+                      key={item.label}
+                      className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                    >
+                      <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        {item.label}
+                      </div>
+                      <code className="block text-[10px] text-emerald-600 dark:text-emerald-400 break-all">
+                        $ {item.cmd}
+                      </code>
+                      {typeof onOpenShellWithCommand === 'function' && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenShellWithCommand(item.cmd)}
+                          className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          $ Run in Cloud Shell
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Platform Intelligence: Cloud Location Finder & Asset Types Scorecard */}
+          {Array.isArray(lastReceipt.declarableResourceTypesSample) && (
+            <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-white dark:bg-[#18181b] space-y-2 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Cloud Location Finder ({lastReceipt.cloudLocations?.length || 0} Locations) &amp; Cloud Asset Inventory ({lastReceipt.declarableResourceTypesCount || 0} Asset Types)
+                </span>
+                {typeof onSelectStudioTab === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('GLOBAL_MAP')}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Open 40-Region Global Map →
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {lastReceipt.declarableResourceTypesSample.map((t) => (
+                  <span
+                    key={t}
+                    className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-700 dark:text-zinc-300"
+                  >
+                    {t}
+                  </span>
+                ))}
               </div>
             </div>
           )}
