@@ -1178,6 +1178,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/chrono-logs/replay-canary') ||
       rawUrl.includes('/shell') ||
       rawUrl.includes('/benchmark') ||
+      rawUrl.includes('/cloudrun/teleport-plan') ||
       rawUrl.includes('/provision/preflight') ||
       rawUrl.includes('/tunnels/probe') ||
       rawUrl.includes('/tunnels/start') ||

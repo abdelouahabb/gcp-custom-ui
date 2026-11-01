@@ -25,6 +25,7 @@ import {
   ArrowRight,
   Terminal,
   Trash2,
+  Download,
 } from 'lucide-react';
 import {
   addOrSelectCustomGeminiModel,
@@ -156,6 +157,8 @@ export default function EngineerMoonshotsWave3({
   onOpenObjectInWorkbench,
   onRefreshGlobal,
   onRunInShell,
+  onSelectStudioTab,
+  onOpenBigQuerySql,
   onShowToast,
   onShowError,
 }) {
@@ -167,6 +170,18 @@ export default function EngineerMoonshotsWave3({
     navigator.clipboard?.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 1800);
+  };
+
+  const handleDownloadFile = (filename, content, mimeType = 'text/plain;charset=utf-8') => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // ==========================================================================
@@ -1593,28 +1608,66 @@ CMD ["server/index.js"]`;
           </div>
 
           <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-zinc-400">
               <span className="text-emerald-400 font-bold">
-                Synthesized Multi-Stage Distroless Container Diet Patch
+                Synthesized Multi-Stage Distroless Container Diet Patch &amp; Gen2 CPU Boost CLI
               </span>
-              <button
-                type="button"
-                onClick={() => handleCopy(dockerfilePatch, 'dockerfile')}
-                title="Copy this multi-stage Google Distroless Dockerfile to shrink container image size from ~980 MB to 48 MB (-78% cold-start pull time)"
-                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 cursor-pointer"
-              >
-                {copiedKey === 'dockerfile' ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Copied Dockerfile</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Distroless Dockerfile</span>
-                  </>
+              <div className="flex flex-wrap items-center gap-2">
+                {onRunInShell && activeService && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell(
+                        `gcloud run services update ${activeService.name} --region=${activeService.region || 'us-central1'} --cpu-boost --execution-environment=gen2 --project=${projectId}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span>$ Run CPU Boost + Gen2 in Cloud Shell</span>
+                  </button>
                 )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadFile(
+                      `Dockerfile.${activeService?.name || 'cloudrun'}.distroless`,
+                      dockerfilePatch
+                    )
+                  }
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download Dockerfile.distroless</span>
+                </button>
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('CLOUD_RUN')}
+                    className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    Open Cloud Run Studio →
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleCopy(dockerfilePatch, 'dockerfile')}
+                  title="Copy this multi-stage Google Distroless Dockerfile to shrink container image size from ~980 MB to 48 MB (-78% cold-start pull time)"
+                  className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 cursor-pointer"
+                >
+                  {copiedKey === 'dockerfile' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied Dockerfile</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Distroless Dockerfile</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <pre className="text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">
               {dockerfilePatch}
@@ -1629,6 +1682,47 @@ CMD ["server/index.js"]`;
   // RENDER X3: CROSS-SERVICE EGRESS & HIDDEN DATA-GRAVITY TOLLBOOTH
   // ==========================================================================
   if (activeTab === 'X3') {
+    const primaryTaxedLink =
+      dataGravityMatrix.links.find((l) => l.ratePerGb > 0) ||
+      dataGravityMatrix.links[0];
+    const targetColocateRegion =
+      primaryTaxedLink?.data?.region?.toLowerCase() || 'us-central1';
+    const zeroEgressRunbookSh = [
+      '#!/usr/bin/env bash',
+      `# CloudPulse Data-Gravity Tollbooth — Zero-Egress Co-Location & Private Google Access Runbook`,
+      `# Project: ${projectId} | Est. Annual Egress Savings: $${dataGravityMatrix.totalAnnualEgressTaxUsd}/yr`,
+      'set -euo pipefail',
+      '',
+      '# 1. Enable Private Google Access on primary subnet so Compute/Run reaches GCS & BigQuery over internal backbone ($0 egress)',
+      `gcloud compute networks subnets update default --region=${targetColocateRegion} --enable-private-ip-google-access --project=${projectId}`,
+      '',
+      ...dataGravityMatrix.links
+        .filter((l) => l.ratePerGb > 0)
+        .slice(0, 5)
+        .map((l) =>
+          l.compute.type === 'Cloud Run'
+            ? `# Co-locate Cloud Run service '${l.compute.name}' (${l.compute.region}) into '${l.data.region}' alongside ${l.data.type} '${l.data.name}' (-$${l.monthlyTollUsd}/mo)\ngcloud run services describe ${l.compute.name} --region=${l.compute.region} --project=${projectId} --format=export > /tmp/${l.compute.name}.yaml`
+            : `# Snapshot & migrate Compute VM '${l.compute.name}' (${l.compute.region}) into '${l.data.region}' alongside ${l.data.type} '${l.data.name}' (-$${l.monthlyTollUsd}/mo)\ngcloud compute disks list --filter="name~${l.compute.name}" --project=${projectId}`
+        ),
+    ].join('\n');
+
+    const egressAuditBigQuerySql = `-- CloudPulse Data-Gravity Tollbooth — BigQuery Cloud Billing Export Egress SKU Audit
+-- Identifies Inter-Region & Inter-Continental Network Egress SKUs across Compute Engine, Cloud Run, Cloud Storage, and BigQuery
+SELECT
+  service.description AS gcp_service,
+  sku.description AS egress_sku,
+  location.region AS source_region,
+  ROUND(SUM(usage.amount_in_pricing_units), 2) AS total_gb_transferred,
+  ROUND(SUM(cost), 2) AS total_egress_tax_usd
+FROM \`${projectId}.billing_export.gcp_billing_export_v1\`
+WHERE LOWER(sku.description) LIKE '%egress%'
+   OR LOWER(sku.description) LIKE '%network%inter%region%'
+   OR LOWER(sku.description) LIKE '%data transfer%'
+GROUP BY 1, 2, 3
+HAVING total_egress_tax_usd > 0
+ORDER BY total_egress_tax_usd DESC
+LIMIT 50;`;
+
     return (
       <div className="space-y-4">
         <LivePricingCatalogControlBar compact />
@@ -1652,7 +1746,7 @@ CMD ["server/index.js"]`;
               </p>
             </div>
 
-            <div className="flex items-center gap-3 font-mono text-xs">
+            <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
               <span>Monthly Data Transfer per Link:</span>
               <input
                 type="number"
@@ -1700,39 +1794,125 @@ CMD ["server/index.js"]`;
             </div>
           </div>
 
-          <div className="space-y-2">
-            {dataGravityMatrix.links.slice(0, 8).map((link) => (
-              <div
-                key={link.id}
-                className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
-                    {link.compute.type}: {link.compute.name} ({link.compute.region})
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
-                    {link.data.type}: {link.data.name} ({link.data.region})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      link.ratePerGb === 0
-                        ? 'bg-emerald-500/15 text-emerald-500'
-                        : link.tier === 'CROSS_CONTINENT_TRANSOCEANIC'
-                        ? 'bg-red-500/15 text-red-500'
-                        : 'bg-amber-500/15 text-amber-500'
-                    }`}
+          {/* 10X Zero-Egress Co-Location & Private Google Access Toolbar */}
+          <div className="p-3.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-amber-500/30 space-y-2.5 font-mono text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-amber-600 dark:text-amber-300 font-bold">
+                Zero-Egress Co-Location &amp; Private Google Access Remediation Runbook
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell(
+                        `gcloud compute networks subnets update default --region=${targetColocateRegion} --enable-private-ip-google-access --project=${projectId}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                   >
-                    {link.ratePerGb === 0
-                      ? '$0.00/GB (Co-Located)'
-                      : `$${link.ratePerGb}/GB · $${link.monthlyTollUsd}/mo Tax`}
-                  </span>
-                </div>
+                    <Terminal className="w-3 h-3" />
+                    <span>$ Enable Private Google Access in Cloud Shell</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadFile(
+                      `zero-egress-colocate-${projectId}.sh`,
+                      zeroEgressRunbookSh,
+                      'text/x-shellscript;charset=utf-8'
+                    )
+                  }
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download zero-egress-colocate.sh</span>
+                </button>
+                {onOpenBigQuerySql && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenBigQuerySql(egressAuditBigQuerySql)}
+                    className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                  >
+                    Query Egress SKUs in BigQuery Studio →
+                  </button>
+                )}
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('VPC_FIREWALL')}
+                    className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                  >
+                    Open VPC &amp; Subnets Studio →
+                  </button>
+                )}
               </div>
-            ))}
+            </div>
+            <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-36">
+              {zeroEgressRunbookSh}
+            </pre>
+          </div>
+
+          <div className="space-y-2">
+            {dataGravityMatrix.links.slice(0, 8).map((link) => {
+              const targetComputeStudio =
+                link.compute.type === 'Cloud Run' ? 'CLOUD_RUN' : 'VM_FLEET';
+              const targetDataStudio =
+                link.data.type === 'BigQuery'
+                  ? 'BIGQUERY_ANALYTICS'
+                  : 'STORAGE_DLP';
+              return (
+                <div
+                  key={link.id}
+                  className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                      {link.compute.type}: {link.compute.name} ({link.compute.region})
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                      {link.data.type}: {link.data.name} ({link.data.region})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        link.ratePerGb === 0
+                          ? 'bg-emerald-500/15 text-emerald-500'
+                          : link.tier === 'CROSS_CONTINENT_TRANSOCEANIC'
+                          ? 'bg-red-500/15 text-red-500'
+                          : 'bg-amber-500/15 text-amber-500'
+                      }`}
+                    >
+                      {link.ratePerGb === 0
+                        ? '$0.00/GB (Co-Located)'
+                        : `$${link.ratePerGb}/GB · $${link.monthlyTollUsd}/mo Tax`}
+                    </span>
+                    {onSelectStudioTab && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudioTab(targetComputeStudio)}
+                          className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        >
+                          {link.compute.type} →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudioTab(targetDataStudio)}
+                          className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        >
+                          {link.data.type} →
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1872,6 +2052,16 @@ CMD ["server/index.js"]`;
   // RENDER X5: GLOBAL ANYCAST USER-EXPERIENCE & EDGE LATENCY MATRIX
   // ==========================================================================
   if (activeTab === 'X5') {
+    const anycastCdnProvisionSh = [
+      '#!/usr/bin/env bash',
+      `# CloudPulse X5 Global Anycast Cloud CDN + Serverless NEG Provisioning Script`,
+      `# Origin Region: ${selectedOriginRegion} | Project: ${projectId}`,
+      'set -euo pipefail',
+      `gcloud compute network-endpoint-groups create cloudpulse-edge-neg-${selectedOriginRegion} --region=${selectedOriginRegion} --network-endpoint-type=serverless --cloud-run-service=${activeService?.name || 'cloudpulse-api'} --project=${projectId}`,
+      `gcloud compute backend-services create cloudpulse-anycast-backend --global --enable-cdn --cache-mode=CACHE_ALL_STATIC --project=${projectId}`,
+      `gcloud compute backend-services add-backend cloudpulse-anycast-backend --global --network-endpoint-group=cloudpulse-edge-neg-${selectedOriginRegion} --network-endpoint-group-region=${selectedOriginRegion} --project=${projectId}`,
+    ].join('\n');
+
     return (
       <div className="space-y-4">
         <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
@@ -1923,6 +2113,46 @@ CMD ["server/index.js"]`;
                   ? 'Global Anycast Edge CDN: ENABLED'
                   : 'Toggle Global Anycast Edge CDN'}
               </button>
+
+              {onRunInShell && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onRunInShell(
+                      `gcloud compute backend-services list --global --project=${projectId}`
+                    )
+                  }
+                  className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>$ Inspect Anycast CDN in Cloud Shell</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleDownloadFile(
+                    `anycast-cdn-${selectedOriginRegion}-${projectId}.sh`,
+                    anycastCdnProvisionSh,
+                    'text/x-shellscript;charset=utf-8'
+                  )
+                }
+                className="px-3 py-2 rounded-md bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download anycast-cdn.sh</span>
+              </button>
+
+              {onSelectStudioTab && (
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('GLOBAL_MAP')}
+                  className="px-3 py-2 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
+                >
+                  Open 40-Region Global Map →
+                </button>
+              )}
             </div>
           </div>
 

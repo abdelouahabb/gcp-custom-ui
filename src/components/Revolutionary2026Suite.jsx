@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Sparkles,
   Leaf,
+  Terminal,
 } from 'lucide-react';
 import EngineerWishlistWave2 from './EngineerWishlistWave2';
 import AutonomousCloudBrain from './AutonomousCloudBrain';
@@ -1635,7 +1636,7 @@ export default function Revolutionary2026Suite({
                   Live Multi-Layer Architecture & Exposure Graph — {projectId}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Public Internet Exposed (
@@ -1645,6 +1646,48 @@ export default function Revolutionary2026Suite({
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   IAM / VPC Protected ({vpcs.length + buckets.length})
                 </span>
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell(
+                        `gcloud asset search-all-resources --scope=projects/${projectId} --format="table(assetType,displayName,location,state)"`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span>$ Run 4-Layer Asset Discovery in Cloud Shell</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubTab('TERRAFORM');
+                    setIacFormat('MERMAID_C4');
+                  }}
+                  className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                >
+                  Export C4 Mermaid Diagram →
+                </button>
+                {onOpenBigQuerySql && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenBigQuerySql(`-- CloudPulse 4-Layer Cloud Topology — Cloud Asset Inventory Exposure Audit SQL
+SELECT
+  asset_type,
+  location,
+  COUNT(*) AS total_assets
+FROM \`${projectId}.cloud_asset_inventory.assets_all\`
+GROUP BY 1, 2
+ORDER BY total_assets DESC;`)
+                    }
+                    className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    Query Asset Inventory in BigQuery →
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2027,10 +2070,25 @@ export default function Revolutionary2026Suite({
                       TZ: {activeTimeZone} ({utcOffsetLabel})
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const schedulerCli = `# 1. Native Compute Engine Instance Schedule (Stops VMs at 20:00, Wakes at 08:00 Mon-Fri in ${activeTimeZone})
+                  <div className="flex items-center gap-1.5">
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(
+                            `gcloud compute resource-policies create instance-schedule night-finops-schedule --project=${projectId} --region=us-central1 --vm-start-schedule="0 8 * * 1-5" --vm-stop-schedule="0 20 * * 1-5" --timezone="${activeTimeZone}"`
+                          )
+                        }
+                        className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-semibold inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0 shadow-sm transition-colors cursor-pointer"
+                      >
+                        <Terminal className="w-3 h-3 shrink-0" />
+                        <span>$ Run Cron in Cloud Shell</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const schedulerCli = `# 1. Native Compute Engine Instance Schedule (Stops VMs at 20:00, Wakes at 08:00 Mon-Fri in ${activeTimeZone})
 gcloud compute resource-policies create instance-schedule night-finops-schedule \\
   --project=${projectId} \\
   --region=us-central1 \\
@@ -2047,24 +2105,25 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
   --uri="https://us-central1-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/${projectId}/services" \\
   --http-method=POST \\
   --oauth-service-account-email="${projectId}@appspot.gserviceaccount.com"`;
-                      navigator.clipboard?.writeText(schedulerCli);
-                      setCopiedType('CLOUD_SCHEDULER_CLI');
-                      setTimeout(() => setCopiedType(null), 1800);
-                    }}
-                    className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 shadow-sm transition-colors cursor-pointer"
-                  >
-                    {copiedType === 'CLOUD_SCHEDULER_CLI' ? (
-                      <>
-                        <Check className="w-3 h-3 shrink-0" />
-                        <span>Copied Cron CLI</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3 shrink-0" />
-                        <span>Copy Scheduler CLI</span>
-                      </>
-                    )}
-                  </button>
+                        navigator.clipboard?.writeText(schedulerCli);
+                        setCopiedType('CLOUD_SCHEDULER_CLI');
+                        setTimeout(() => setCopiedType(null), 1800);
+                      }}
+                      className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 shadow-sm transition-colors cursor-pointer"
+                    >
+                      {copiedType === 'CLOUD_SCHEDULER_CLI' ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>Copied Cron CLI</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3 shrink-0" />
+                          <span>Copy Scheduler CLI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                   Night-Mode supports both <strong>on-demand REST hibernation</strong> and <strong>timezone-aware 24/7 Google Cloud Scheduler cron automation ({activeTimeZone})</strong>:
@@ -2149,6 +2208,9 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 fetchExtraData();
                 if (onRefreshOverview) onRefreshOverview();
               }}
+              onRunInShell={onRunInShell}
+              onSelectStudioTab={onSelectStudioTab}
+              onOpenBigQuerySql={onOpenBigQuerySql}
               onShowToast={onShowToast}
               onShowError={onShowError}
             />
@@ -2324,6 +2386,28 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 <Download className="w-3.5 h-3.5" />
                 <span>Download</span>
               </button>
+
+              {onRunInShell && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onRunInShell(
+                      iacFormat === 'GCLOUD_SH'
+                        ? generatedGcloudScript
+                        : `terraform init && terraform plan -var="project_id=${projectId}"`
+                    )
+                  }
+                  title="Execute terraform plan or gcloud clone script directly inside Cloud Shell"
+                  className="inline-flex items-center gap-1.5 bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded-md cursor-pointer shrink-0"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>
+                    {iacFormat === 'GCLOUD_SH'
+                      ? '$ Run deploy.sh in Cloud Shell'
+                      : '$ Run terraform plan in Cloud Shell'}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -2569,6 +2653,9 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             fetchExtraData();
             if (onRefreshOverview) onRefreshOverview();
           }}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
@@ -2586,6 +2673,9 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           onOpenFinOps={() =>
             onSelectStudioTab && onSelectStudioTab('FINOPS')
           }
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
         />
       )}
@@ -2608,6 +2698,9 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             fetchExtraData();
             if (onRefreshOverview) onRefreshOverview();
           }}
+          onRunInShell={onRunInShell}
+          onSelectStudioTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />

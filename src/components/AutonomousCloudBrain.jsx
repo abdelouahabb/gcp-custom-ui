@@ -18,6 +18,7 @@ import {
   Layers,
   Activity,
   Lock,
+  Download,
 } from 'lucide-react';
 import {
   GCP_GLOBAL_REGIONS,
@@ -663,9 +664,28 @@ export default function AutonomousCloudBrain({
   onHibernateSleep,
   onOpenProvision,
   onOpenFinOps,
+  onRunInShell,
+  onSelectStudioTab,
+  onOpenBigQuerySql,
   onShowToast,
 }) {
   const { version: pricingVersion, unitPricing } = useLivePricingCatalog();
+
+  const handleDownloadFile = (
+    filename,
+    content,
+    mimeType = 'text/plain;charset=utf-8'
+  ) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // ==========================================================================
   // 1. PRE-CRIME 30-DAY BILLING & QUOTA TIME-CRYSTAL STATE
@@ -1695,25 +1715,58 @@ export default function AutonomousCloudBrain({
                 {activeScenario.mitigationCmd}
               </code>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                handleCopy(activeScenario.mitigationCmd, 'MITIGATION')
-              }
-              className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              {copiedCmd === 'MITIGATION' ? (
-                <>
-                  <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  <span>Copy Mitigation Command</span>
-                </>
+            <div className="flex flex-wrap items-center gap-2">
+              {onRunInShell && (
+                <button
+                  type="button"
+                  onClick={() => onRunInShell(activeScenario.mitigationCmd)}
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Terminal className="w-3 h-3" />
+                  <span>$ Run Mitigation in Cloud Shell</span>
+                </button>
               )}
-            </button>
+              {onOpenBigQuerySql && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenBigQuerySql(`-- CloudPulse Pre-Crime Billing Time-Crystal — Hourly SKU Burn Anomaly Detection Query
+SELECT
+  TIMESTAMP_TRUNC(usage_start_time, HOUR) AS usage_hour,
+  service.description AS gcp_service,
+  sku.description AS sku_description,
+  ROUND(SUM(cost), 4) AS hourly_cost_usd
+FROM \`${projectId}.billing_export.gcp_billing_export_v1\`
+WHERE usage_start_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+GROUP BY 1, 2, 3
+ORDER BY hourly_cost_usd DESC
+LIMIT 50;`)
+                  }
+                  className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                >
+                  Query Hourly Burn Anomaly in BigQuery Studio →
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  handleCopy(activeScenario.mitigationCmd, 'MITIGATION')
+                }
+                className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+              >
+                {copiedCmd === 'MITIGATION' ? (
+                  <>
+                    <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Mitigation Command</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1823,25 +1876,58 @@ export default function AutonomousCloudBrain({
                 <code className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate max-w-xl">
                   {blastCascade.remediation}
                 </code>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopy(blastCascade.remediation, 'BLAST_CMD')
-                  }
-                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
-                >
-                  {copiedCmd === 'BLAST_CMD' ? (
-                    <>
-                      <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>Copy Verification CLI</span>
-                    </>
+                <div className="flex flex-wrap items-center gap-2">
+                  {onRunInShell && (
+                    <button
+                      type="button"
+                      onClick={() => onRunInShell(blastCascade.remediation)}
+                      className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Terminal className="w-3 h-3" />
+                      <span>$ Run Verification CLI in Cloud Shell</span>
+                    </button>
                   )}
-                </button>
+                  {onSelectStudioTab && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectStudioTab(
+                          activeBlastNode.kind === 'CLOUD_RUN'
+                            ? 'CLOUD_RUN'
+                            : activeBlastNode.kind === 'COMPUTE_VM'
+                            ? 'VM_FLEET'
+                            : activeBlastNode.kind === 'GCS_BUCKET'
+                            ? 'STORAGE_DLP'
+                            : activeBlastNode.kind === 'BQ_DATASET'
+                            ? 'BIGQUERY_ANALYTICS'
+                            : 'IAM_SECURITY'
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                    >
+                      Open {activeBlastNode.kind} Studio →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(blastCascade.remediation, 'BLAST_CMD')
+                    }
+                    className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                  >
+                    {copiedCmd === 'BLAST_CMD' ? (
+                      <>
+                        <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Verification CLI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1965,29 +2051,55 @@ export default function AutonomousCloudBrain({
           </div>
 
           <div className="lg:col-span-7 flex flex-col">
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
               <span className="text-[10px] font-bold uppercase text-zinc-400">
                 Synthesized Multi-Resource Automation Script (gcloud + bq)
               </span>
-              <button
-                type="button"
-                onClick={() =>
-                  handleCopy(compiledBlueprint.script, 'BLUEPRINT_SH')
-                }
-                className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer flex items-center gap-1"
-              >
-                {copiedCmd === 'BLUEPRINT_SH' ? (
-                  <>
-                    <Check className="w-3 h-3" />
-                    <span>Copied Script!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3" />
-                    <span>Copy Full Stack Script</span>
-                  </>
+              <div className="flex flex-wrap items-center gap-2">
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() => onRunInShell(compiledBlueprint.script)}
+                    className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span>$ Run Stack Script in Cloud Shell</span>
+                  </button>
                 )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadFile(
+                      `dream-stack-${compiledBlueprint.arch.id.toLowerCase()}-${projectId}.sh`,
+                      compiledBlueprint.script,
+                      'text/x-shellscript;charset=utf-8'
+                    )
+                  }
+                  className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download dream-stack.sh</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(compiledBlueprint.script, 'BLUEPRINT_SH')
+                  }
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                >
+                  {copiedCmd === 'BLUEPRINT_SH' ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>Copied Script!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Full Stack Script</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <pre className="flex-1 p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-64">
               {compiledBlueprint.script}
