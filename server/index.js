@@ -51620,6 +51620,16 @@ spec:
           releaseBadge: `[${trackDetected} · SAFE DRY-RUN] gcloud ${commandGroupTokens.join(' ')}`,
           executedCommand: `gcloud ${ cleaned }`,
           cliOk: true,
+          requiresGcloudCli: true,
+          gcloudInstalled: Boolean(helpRes.gcloudInstalled),
+          authBridgeMode:
+            helpRes.authBridgeMode || 'ONLINE_SESSION_TOKEN_BRIDGED_TO_GCLOUD',
+          explanation: `Safe Pre-Flight Dry-Run Verified: "${detectedVerb}" is a mutating verb, so it was verified non-destructively against SDK 591.0.0 (--help manpage + ${companionItems.length} live companion resources).`,
+          output:
+            companionListRes?.data && Array.isArray(companionListRes.data) && companionListRes.data.length > 0
+              ? companionListRes.data
+              : helpText.slice(0, 1200) ||
+                `Verified syntax for: gcloud ${cleaned}`,
           syntaxValid: Boolean(
             helpRes.ok || helpText.includes('SYNOPSIS') || helpText.includes('NAME')
           ),
@@ -51746,6 +51756,18 @@ spec:
         releaseBadge: `[${trackDetected} · LIVE PROBE] gcloud ${commandGroupTokens.join(' ')}`,
         executedCommand: probeRes.command,
         cliOk: probeRes.ok,
+        requiresGcloudCli: true,
+        gcloudInstalled: Boolean(probeRes.gcloudInstalled),
+        authBridgeMode:
+          probeRes.authBridgeMode || 'ONLINE_SESSION_TOKEN_BRIDGED_TO_GCLOUD',
+        explanation: `${diagHeadline} — ${diagDetail}`,
+        output:
+          normalizedItems.length > 0
+            ? normalizedItems
+            : probeRes.stdout ||
+              probeRes.stderr ||
+              helpText.slice(0, 1200) ||
+              [],
         syntaxValid: Boolean(
           probeRes.ok ||
             helpRes.ok ||

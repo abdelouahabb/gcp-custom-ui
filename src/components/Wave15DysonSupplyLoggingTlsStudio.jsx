@@ -1947,7 +1947,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <span>
                   {runningTls
                     ? 'Executing Live TLS Handshakes...'
-                    : 'Probe Live TLS 1.3 & X.509 Chains'}
+                    : 'Probe Live TLS 1.3 & X.509 Chains (⚡ Socket · No gcloud)'}
                 </span>
               </button>
             </div>

@@ -1791,7 +1791,7 @@ serialPipeline:
                 <span>
                   {runningStressAudit
                     ? 'Probing All 24 Live GCP Studio Endpoints...'
-                    : 'Run Full 24-Studio Live Stress Audit ($0.00)'}
+                    : 'Run Full 24-Studio Live Stress Audit ($0.00 · ⚡ REST)'}
                 </span>
               </button>
             </div>

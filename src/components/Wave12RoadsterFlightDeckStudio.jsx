@@ -1546,8 +1546,13 @@ export default function Wave12RoadsterFlightDeckStudio({
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
-              <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
-                12 CONCURRENT OFFICIAL *.GOOGLEAPIS.COM/MCP LANES · JSON-RPC 2.0 INSPECTOR
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                  12 CONCURRENT OFFICIAL *.GOOGLEAPIS.COM/MCP LANES · JSON-RPC 2.0 INSPECTOR
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  ⚡ Direct HTTPS JSON-RPC 2.0 · No gcloud Required
+                </span>
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                 12-Service Parallel MCP Probe &amp; Latency Waterfall
