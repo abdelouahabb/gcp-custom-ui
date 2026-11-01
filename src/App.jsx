@@ -1220,10 +1220,11 @@ function classifyDestructiveAxiosConfig(config) {
             'DELETE_RESOURCE_GROUP' &&
             !body.deleteGcpResources))) ||
       (rawUrl.includes('/alpha-beta/action') &&
-        [
+        ([
           'INSPECT_BETA_RUN_INSTANCES',
           'SCAN_ALPHA_AGENT_REGISTRY',
           'TROUBLESHOOT_ALPHA_IAM_POLICY',
+          'CHECK_OR_CREATE_ALPHA_PAM_JIT',
           'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING',
           'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE',
           'SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE',
@@ -1231,7 +1232,15 @@ function classifyDestructiveAxiosConfig(config) {
           'SCAN_BETA_CLOUD_QUOTAS',
           'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST',
           'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
-        ].includes(String(body.action || '').toUpperCase())) ||
+          'SCAN_WAVE3_GCLOUD_590_FRONTIER',
+          'SCAN_WAVE4_GCLOUD_591_UPGRADES',
+          'VALIDATE_GCLOUD_COMMAND_SYNTAX',
+          'EXECUTE_READONLY_GCLOUD_PROBE',
+          'RUN_12_SUITE_SDK_AUDIT',
+        ].includes(String(body.action || '').toUpperCase()) ||
+          String(body.action || '').toUpperCase().startsWith('SCAN_') ||
+          String(body.action || '').toUpperCase().startsWith('INSPECT_') ||
+          String(body.action || '').toUpperCase().startsWith('VALIDATE_'))) ||
       rawUrl.includes('/data-engineer/iceberg-matrix/probe') ||
       (rawUrl.includes('/data-engineer/action') &&
         ['SEARCH_DATAPLEX_SEMANTIC_CATALOG', 'RUN_SPARK_LOG_RCA_DOCTOR'].includes(
@@ -1818,6 +1827,9 @@ function classifyDestructiveAxiosConfig(config) {
         act.startsWith('INSPECT_') ||
         act.startsWith('TROUBLESHOOT_') ||
         act.startsWith('QUERY_') ||
+        act.startsWith('VALIDATE_') ||
+        act === 'EXECUTE_READONLY_GCLOUD_PROBE' ||
+        act === 'RUN_12_SUITE_SDK_AUDIT' ||
         act === 'CHECK_OR_CREATE_ALPHA_PAM_JIT' ||
         act === 'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE'
       ) {
@@ -4775,9 +4787,7 @@ function CloudPulseCockpit() {
         ? 'FINOPS'
         : tabId === 'CLOUD_RUN_FLEET'
         ? 'CLOUD_RUN'
-        : tabId === 'VERTEX_AI'
-        ? 'VERTEX_AI_STUDIO'
-        : tabId === 'CLOUD_BUILD'
+        : tabId === 'VERTEX_AI' || tabId === 'VERTEX_AI_STUDIO' || tabId === 'CLOUD_BUILD'
         ? 'WAVE9_STUDIO'
         : tabId === 'CLOUD_FUNCTIONS' || tabId === 'FUNCTIONS'
         ? 'FUNCTIONS_STUDIO'
@@ -4876,7 +4886,7 @@ function CloudPulseCockpit() {
       });
     };
     const handleCrossUiNavigate = (evt) => {
-      const studioId = evt?.detail?.studioId;
+      const studioId = evt?.detail?.studioId || evt?.detail?.tabId;
       const subTab = evt?.detail?.subTab || null;
       const extraTarget = evt?.detail?.extraTarget || null;
       if (studioId) {

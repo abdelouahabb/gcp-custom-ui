@@ -18,6 +18,8 @@ import {
   Server,
   FileCode2,
   Sparkles,
+  Download,
+  BookOpen,
 } from 'lucide-react';
 
 export function ReleaseTrackBadge({ track = 'ALPHA' }) {
@@ -146,7 +148,7 @@ const STUDIO_TABS = [
     shortLabel: '[GA/BETA] Cloud Quotas Autonomous Adjuster & Caps',
     subtitle: 'gcloud quotas preferences & info [GA] · beta quotas adjuster [BETA]',
     icon: Activity,
-    ownerStudioTab: 'BILLING_CREDITS',
+    ownerStudioTab: 'FINOPS',
     ownerStudioLabel: 'Open FinOps & Quota Guardrails',
   },
   {
@@ -166,8 +168,8 @@ const STUDIO_TABS = [
     shortLabel: '[GA 591.0.0] AI Hypercomputer Cluster Director & Lustre',
     subtitle: 'gcloud cluster-director clusters [GA] · gcloud lustre [GA] · mldiagnostics',
     icon: Sparkles,
-    ownerStudioTab: 'VERTEX_AI',
-    ownerStudioLabel: 'Open Vertex AI & Hypercomputer Studio',
+    ownerStudioTab: 'WAVE9_STUDIO',
+    ownerStudioLabel: 'Open AI & Supply Chain Studio',
   },
   // 8-PILLAR OBSERVABILITY, ORCHESTRATION & AI
   {
@@ -177,7 +179,7 @@ const STUDIO_TABS = [
     shortLabel: '[SDK 590→591] 8-Pillar Observability, Orchestration & AI',
     subtitle: 'observability · orchestration-pipelines · compliance-manager · gemini · vector-search · IPAM',
     icon: Terminal,
-    ownerStudioTab: 'DATA_ENGINEER',
+    ownerStudioTab: 'DATA_ENGINEER_STUDIO',
     ownerStudioLabel: 'Open Data Engineering & Orchestration Studio',
   },
   // NEW WAVE 4: GOOGLE CLOUD SDK 591.0.0 (2026-10-27) 8 NEW GA/BETA UPGRADES
@@ -208,6 +210,10 @@ export default function GcloudAlphaBetaStudio({
   const [overview, setOverview] = useState(null);
   const [actionRunning, setActionRunning] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [workbenchCommand, setWorkbenchCommand] = useState(
+    'gcloud agent-registry skills list --location=global'
+  );
+  const [showRawJson, setShowRawJson] = useState(true);
 
   // Form states for Wave 1 Alpha/Beta actions
   const [workerPoolName, setWorkerPoolName] = useState('cp-kafka-worker-pool');
@@ -449,6 +455,172 @@ export default function GcloudAlphaBetaStudio({
               />
               <span>Refresh SDK {overview?.sdk?.coreVersion || '591.0.0'} Telemetry</span>
             </button>
+
+            <button
+              type="button"
+              disabled={actionRunning === 'RUN_12_SUITE_SDK_AUDIT'}
+              onClick={() => executeAlphaBetaAction('RUN_12_SUITE_SDK_AUDIT')}
+              title="Audit all 12 SDK 591.0.0 CLI Suites and verify live GCP API enablement across your project"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>
+                {actionRunning === 'RUN_12_SUITE_SDK_AUDIT'
+                  ? 'Auditing 12 Suites...'
+                  : '12-Suite API & CLI Audit'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const scriptLines = [
+                  '#!/usr/bin/env bash',
+                  `# CloudPulse 2026 — Google Cloud SDK ${overview?.sdk?.coreVersion || '591.0.0'} 12-Suite Frontier Runbook`,
+                  `# Project: ${projectId} | Region: ${region}`,
+                  'set -euo pipefail',
+                  '',
+                  `gcloud config set project ${projectId}`,
+                  `gcloud version`,
+                  `gcloud agent-registry mcp-servers list --project=${projectId} --location=global --format=json`,
+                  `gcloud agent-registry skills list --project=${projectId} --location=global --format=json`,
+                  `gcloud pam check-onboarding-status --project=${projectId} --location=global --format=json`,
+                  `gcloud service-health events list --project=${projectId} --location=global --format=json`,
+                  `gcloud cloudlocationfinder cloud-locations list --project=${projectId} --location=global --page-size=10 --format=json`,
+                  `gcloud model-armor templates list --project=${projectId} --location=${region} --format=json`,
+                  `gcloud quotas preferences list --project=${projectId} --format=json`,
+                  `gcloud compliance-manager frameworks list --project=${projectId} --location=global --format=json`,
+                  `gcloud observability scopes describe _Default --location=global --project=${projectId} --format=json`,
+                ];
+                const blob = new Blob([scriptLines.join('\n')], {
+                  type: 'text/x-shellscript',
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${projectId}-gcloud-591-12-suite-runbook.sh`;
+                a.click();
+                URL.revokeObjectURL(url);
+                notify(`Exported ${projectId}-gcloud-591-12-suite-runbook.sh!`);
+              }}
+              title="Download an executable 12-Suite gcloud 591.0.0 verification shell runbook (.sh)"
+              className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+            >
+              <FileCode2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export Runbook (.sh)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Interactive gcloud 591.0.0 Command Builder, Syntax Validator & Live Read-Only Probe Workbench */}
+        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+              Interactive SDK {overview?.sdk?.coreVersion || '591.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
+            </span>
+            <div className="flex flex-wrap items-center gap-1">
+              {[
+                {
+                  label: 'Agent Skills [GA]',
+                  cmd: 'gcloud agent-registry skills list --location=global',
+                },
+                {
+                  label: 'MCP Servers [GA]',
+                  cmd: 'gcloud agent-registry mcp-servers list --location=global',
+                },
+                {
+                  label: 'PAM Onboarding [GA]',
+                  cmd: 'gcloud pam check-onboarding-status --location=global',
+                },
+                {
+                  label: 'Service Health [GA]',
+                  cmd: 'gcloud service-health events list --location=global',
+                },
+                {
+                  label: 'Observability Scope [GA]',
+                  cmd: 'gcloud observability scopes describe _Default --location=global',
+                },
+                {
+                  label: 'Orchestration Types [BETA]',
+                  cmd: 'gcloud beta orchestration-pipelines resource-types list',
+                },
+                {
+                  label: 'Server TLS Policies [GA]',
+                  cmd: 'gcloud network-security server-tls-policies list --location=global',
+                },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setWorkbenchCommand(preset.cmd)}
+                  className="px-2 py-0.5 rounded bg-white/80 hover:bg-white dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300/80 dark:border-zinc-700 text-[10px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input
+              type="text"
+              value={workbenchCommand}
+              onChange={(e) => setWorkbenchCommand(e.target.value)}
+              placeholder="Enter any gcloud / gcloud beta / gcloud alpha command..."
+              className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+            />
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                disabled={actionRunning === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'}
+                onClick={() =>
+                  executeAlphaBetaAction('VALIDATE_GCLOUD_COMMAND_SYNTAX', {
+                    commandText: workbenchCommand,
+                  })
+                }
+                title="Run gcloud <group> --help against the installed SDK 591.0.0 binary to verify command group & flag syntax"
+                className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+              >
+                {actionRunning === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
+                  ? 'Validating...'
+                  : 'Validate Syntax (--help)'}
+              </button>
+
+              <button
+                type="button"
+                disabled={actionRunning === 'EXECUTE_READONLY_GCLOUD_PROBE'}
+                onClick={() =>
+                  executeAlphaBetaAction('EXECUTE_READONLY_GCLOUD_PROBE', {
+                    commandText: workbenchCommand,
+                  })
+                }
+                title="Execute this read-only gcloud command live against your project with --format=json"
+                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+              >
+                <Play className="w-3 h-3" />
+                <span>
+                  {actionRunning === 'EXECUTE_READONLY_GCLOUD_PROBE'
+                    ? 'Running Probe...'
+                    : 'Run Live Probe'}
+                </span>
+              </button>
+
+              {typeof onOpenShellWithCommand === 'function' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenShellWithCommand(
+                      `${workbenchCommand} --project=${projectId}`
+                    )
+                  }
+                  title="Send command to Cloud Shell"
+                  className="px-2.5 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Terminal className="w-3 h-3" />
+                  <span>$ Shell</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2057,7 +2229,7 @@ export default function GcloudAlphaBetaStudio({
                   title: 'Parameter Manager Centralized Config Store',
                   cmd: `gcloud parametermanager parameters list --project=${projectId} --location=global --format=json`,
                   desc: 'Single source of truth for typed application parameters and regional/global configuration templates.',
-                  ownerTab: 'SECRETS_KMS',
+                  ownerTab: 'SOVEREIGN_STUDIO',
                   ownerLabel: 'Secrets & KMS',
                 },
                 {
@@ -2065,7 +2237,7 @@ export default function GcloudAlphaBetaStudio({
                   title: 'Vector Search Data Collections',
                   cmd: `gcloud vector-search collections list --project=${projectId} --location=${region} --format=json`,
                   desc: 'Inspects managed Vector Search embedding collections and index operations.',
-                  ownerTab: 'VERTEX_AI',
+                  ownerTab: 'WAVE9_STUDIO',
                   ownerLabel: 'Vertex AI',
                 },
                 {
@@ -2073,7 +2245,7 @@ export default function GcloudAlphaBetaStudio({
                   title: 'Cloud Number Registry (CNR) Enterprise IPAM',
                   cmd: `gcloud alpha number-registry discovered-ranges list --project=${projectId} --location=global --format=json`,
                   desc: 'Discovers VPC/hybrid IP ranges, IPAM admin scopes, realms, and free CIDR allocations.',
-                  ownerTab: 'VPC_FIREWALL',
+                  ownerTab: 'VPC_NETWORKS',
                   ownerLabel: 'VPC Network',
                 },
                 {
@@ -2081,7 +2253,7 @@ export default function GcloudAlphaBetaStudio({
                   title: 'ML Diagnostics & XLA/GPU Profiler Sessions',
                   cmd: `gcloud alpha mldiagnostics machine-learning-run list --project=${projectId} --location=${region} --format=json`,
                   desc: 'Tracks AI training/inference runs, monitored hardware events, and XLA profiler targets.',
-                  ownerTab: 'VERTEX_AI',
+                  ownerTab: 'WAVE9_STUDIO',
                   ownerLabel: 'Vertex AI',
                 },
                 {
@@ -2097,7 +2269,7 @@ export default function GcloudAlphaBetaStudio({
                   title: 'Declarative Orchestration Pipelines Resource Schema Registry',
                   cmd: `gcloud beta orchestration-pipelines resource-types list --format=json`,
                   desc: 'Lists declarative resource schemas supported by Data Agent Kit & Cloud Composer deployment.yaml orchestration pipelines.',
-                  ownerTab: 'DATA_ENGINEER',
+                  ownerTab: 'DATA_ENGINEER_STUDIO',
                   ownerLabel: 'Data Engineering',
                 },
                 {
@@ -2336,7 +2508,7 @@ export default function GcloudAlphaBetaStudio({
                   title: '3. GKE Zero-Drain In-Place Node Updates (LIVE_UPDATE_WITHOUT_DRAIN)',
                   cmd: `gcloud container node-pools update default-pool --cluster=cp-autopilot --project=${projectId} --region=${region} --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN`,
                   desc: 'Applies node pool configuration updates in-place on running GKE VMs without VM recreation and without draining running workloads/pods.',
-                  ownerTab: 'GKE_KUBERNETES',
+                  ownerTab: 'GKE_STUDIO',
                   ownerLabel: 'GKE Studio',
                 },
                 {
@@ -2344,7 +2516,7 @@ export default function GcloudAlphaBetaStudio({
                   title: '4. Cloud Load Balancing Backend Service Circuit Breakers',
                   cmd: `gcloud compute backend-services update cp-api-backend --project=${projectId} --global --circuit-breakers-max-connections=1024 --circuit-breakers-max-pending-requests=256 --circuit-breakers-max-requests=2048 --circuit-breakers-max-retries=3`,
                   desc: 'Enforces Envoy-grade connection, pending-request, parallel-request, and retry circuit breakers directly on Cloud Load Balancing backend services.',
-                  ownerTab: 'VPC_FIREWALL',
+                  ownerTab: 'VPC_NETWORKS',
                   ownerLabel: 'VPC & LB Studio',
                 },
                 {
@@ -2492,18 +2664,29 @@ export default function GcloudAlphaBetaStudio({
       {lastReceipt && (
         <div className="rounded-2xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-[#141417] p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <ReleaseTrackBadge track={lastReceipt.releaseTrack || 'ALPHA'} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <ReleaseTrackBadge track={lastReceipt.releaseTrack || 'GA'} />
               <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
                 {lastReceipt.releaseBadge || lastReceipt.actionKey}
               </span>
+              {typeof lastReceipt.syntaxValid === 'boolean' && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                    lastReceipt.syntaxValid
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                  }`}
+                >
+                  {lastReceipt.syntaxValid ? 'SYNTAX_VALID' : 'SYNTAX_ERROR'}
+                </span>
+              )}
               <span className="text-[11px] font-mono text-zinc-500">
                 · {lastReceipt.durationMs || 0}ms · {lastReceipt.timestamp}
               </span>
             </div>
-            {lastReceipt.executedCommand && (
-              <div className="flex items-center gap-3">
-                {typeof onOpenShellWithCommand === 'function' && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {lastReceipt.executedCommand &&
+                typeof onOpenShellWithCommand === 'function' && (
                   <button
                     type="button"
                     onClick={() =>
@@ -2515,6 +2698,7 @@ export default function GcloudAlphaBetaStudio({
                     <span>Run in Cloud Shell</span>
                   </button>
                 )}
+              {lastReceipt.executedCommand && (
                 <button
                   type="button"
                   onClick={() =>
@@ -2528,8 +2712,29 @@ export default function GcloudAlphaBetaStudio({
                   <Copy className="w-3.5 h-3.5" />
                   <span>Copy Executed Command</span>
                 </button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify(lastReceipt, null, 2)], {
+                    type: 'application/json',
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${projectId}-gcloud-591-receipt-${
+                    lastReceipt.actionKey || 'audit'
+                  }.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  notify('Exported execution receipt (.json)');
+                }}
+                className="inline-flex items-center gap-1 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Receipt (.json)</span>
+              </button>
+            </div>
           </div>
 
           {lastReceipt.apiPreFlight && (
@@ -2561,8 +2766,285 @@ export default function GcloudAlphaBetaStudio({
           )}
 
           {lastReceipt.executedCommand && (
-            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-xs break-all">
+            <div className="p-2.5 rounded-xl bg-zinc-900 text-emerald-400 font-mono text-xs break-all">
               $ {lastReceipt.executedCommand}
+            </div>
+          )}
+
+          {/* 12-Suite API & CLI Readiness Matrix Card */}
+          {Array.isArray(lastReceipt.suiteReadinessMatrix) &&
+            lastReceipt.suiteReadinessMatrix.length > 0 && (
+              <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-white dark:bg-[#18181b] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                      12-Suite SDK 591.0.0 API &amp; CLI Readiness Matrix (
+                      {lastReceipt.suitesApiReadyCount ??
+                        lastReceipt.summary?.readySuitesCount ??
+                        0}
+                      /
+                      {lastReceipt.suiteReadinessMatrix.length || 12} Suites API-Ready)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-500">
+                    Active Account:{' '}
+                    {lastReceipt.activeConfig?.core?.account ||
+                      lastReceipt.summary?.activeAccount ||
+                      'ADC'}{' '}
+                    · Total Enabled APIs:{' '}
+                    {lastReceipt.enabledApisTotal ??
+                      lastReceipt.summary?.totalEnabledProjectApis ??
+                      0}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {lastReceipt.suiteReadinessMatrix.map((suite) => {
+                    const isReady = Boolean(suite.apiEnabled ?? suite.ready);
+                    const enableCli = suite.enableApiCli || suite.enableCommand;
+                    return (
+                      <div
+                        key={suite.suiteId}
+                        className={`p-2.5 rounded-xl border space-y-1.5 ${
+                          isReady
+                            ? 'border-emerald-500/30 bg-emerald-500/5'
+                            : 'border-amber-500/30 bg-amber-500/5'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {suite.title || suite.label}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <ReleaseTrackBadge track={suite.track || 'GA'} />
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                isReady
+                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                              }`}
+                            >
+                              {isReady ? 'READY' : 'API OFF'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-500 break-all">
+                          API:{' '}
+                          {suite.serviceApi ||
+                            (suite.requiredApis || []).join(', ')}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setActiveSubTab(suite.suiteId)}
+                            className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Open Suite Tab →
+                          </button>
+                          <div className="flex items-center gap-2">
+                            {!isReady &&
+                              enableCli &&
+                              typeof onOpenShellWithCommand === 'function' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpenShellWithCommand(enableCli)
+                                  }
+                                  className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                                >
+                                  Enable API ($ Shell)
+                                </button>
+                              )}
+                            {typeof onSelectStudioTab === 'function' &&
+                              suite.ownerStudioTab && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onSelectStudioTab(suite.ownerStudioTab)
+                                  }
+                                  className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                                >
+                                  Studio ↗
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          {/* Model Armor Sanitization Verdict Scorecard */}
+          {lastReceipt.sanitizationEvaluation && (
+            <div className="p-3.5 rounded-xl border border-rose-500/30 bg-white dark:bg-[#18181b] space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-500" />
+                  <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Model Armor Prompt Sanitization Verdict
+                  </span>
+                </div>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-extrabold border ${
+                    lastReceipt.sanitizationEvaluation.verdict?.includes('BLOCK')
+                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40'
+                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                  }`}
+                >
+                  {lastReceipt.sanitizationEvaluation.verdict}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">
+                    Prompt Injection &amp; Jailbreak
+                  </div>
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                    {lastReceipt.sanitizationEvaluation.detectors?.promptInjectionAndJailbreak || 'ALLOW'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">
+                    Sensitive Data (SDP / Credentials)
+                  </div>
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                    {lastReceipt.sanitizationEvaluation.detectors?.sensitiveDataProtection || 'ALLOW'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">Malicious URIs</div>
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                    {lastReceipt.sanitizationEvaluation.detectors?.maliciousUris || 'ALLOW'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Grounded Developer Knowledge Synthesis Card */}
+          {lastReceipt.groundedAnswer && (
+            <div className="p-3.5 rounded-xl border border-blue-500/30 bg-white dark:bg-[#18181b] space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Developer Knowledge Grounded Answer
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400">
+                  {lastReceipt.groundedAnswer.groundingSource}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                {lastReceipt.groundedAnswer.synthesizedResponse}
+              </p>
+              {Array.isArray(lastReceipt.groundedAnswer.citations) && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {lastReceipt.groundedAnswer.citations.map((cite) => (
+                    <span
+                      key={cite}
+                      className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300"
+                    >
+                      {cite}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Verified SDK 591.0.0 --help Manpage Excerpt Card */}
+          {lastReceipt.helpExcerpt && (
+            <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-white dark:bg-[#18181b] space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-emerald-700 dark:text-emerald-300">
+                  Verified SDK 591.0.0 CLI Manpage Excerpt (--help)
+                </span>
+                {Array.isArray(lastReceipt.commandGroupTokens) &&
+                  lastReceipt.commandGroupTokens.length > 0 && (
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Group: gcloud {lastReceipt.commandGroupTokens.join(' ')}
+                    </span>
+                  )}
+              </div>
+              <pre className="max-h-56 overflow-auto p-2.5 rounded-lg bg-zinc-950 text-emerald-300 text-[11px] font-mono whitespace-pre-wrap">
+                {lastReceipt.helpExcerpt}
+              </pre>
+            </div>
+          )}
+
+          {/* Multi-Probe Visual Scorecard Grid */}
+          {Array.isArray(lastReceipt.probes) && lastReceipt.probes.length > 0 && (
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Live Multi-Probe Execution Breakdown ({lastReceipt.probes.length} Probes)
+                </span>
+                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  {lastReceipt.probes.filter((p) => p.ok !== false).length}/
+                  {lastReceipt.probes.length} Succeeded
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {lastReceipt.probes.map((probe, idx) => (
+                  <div
+                    key={`${probe.name || probe.id || idx}`}
+                    className="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {probe.track && <ReleaseTrackBadge track={probe.track} />}
+                        <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                          {probe.name || probe.id || `Probe #${idx + 1}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono">
+                        {typeof probe.durationMs === 'number' && (
+                          <span className="text-zinc-500">{probe.durationMs}ms</span>
+                        )}
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold ${
+                            probe.ok !== false
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {probe.ok !== false ? 'OK' : 'CLI / API NOTE'}
+                        </span>
+                      </div>
+                    </div>
+                    {probe.command && (
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <code className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                          $ {probe.command}
+                        </code>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {typeof onOpenShellWithCommand === 'function' && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenShellWithCommand(probe.command)}
+                              className="text-[10px] font-mono text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                            >
+                              $ Shell
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyText(probe.command, probe.name || probe.id)
+                            }
+                            className="text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
