@@ -973,27 +973,6 @@ export default function FivePersonaCommandCenter({
         </div>
       </div>
 
-      {/* Live Execution Receipt Banner */}
-      {lastReceipt && (
-        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-2 text-xs font-mono">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
-              [{lastReceipt.persona}] LIVE ACTION RECEIPT · {lastReceipt.action}
-            </span>
-            <button
-              type="button"
-              onClick={() => setLastReceipt(null)}
-              className="text-[10px] text-zinc-500 hover:underline cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-          <div className="text-zinc-800 dark:text-zinc-200">
-            {lastReceipt.summary}
-          </div>
-        </div>
-      )}
-
       {/* =================================================================== */}
       {/* 10-PERSONA AUTONOMOUS LAUNCH COUNCIL & CROSS-DOMAIN SWARM ENGINE    */}
       {/* =================================================================== */}
@@ -2694,26 +2673,6 @@ export default function FivePersonaCommandCenter({
             })}
           </div>
         </div>
-
-        {lastReceipt && (
-          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-            <div className="space-y-0.5">
-              <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                [{lastReceipt.persona}] LIVE CONTROL-PLANE EXECUTION RECEIPT · {lastReceipt.action}
-              </div>
-              <div className="text-zinc-800 dark:text-zinc-200 text-[11px]">
-                {lastReceipt.summary}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setLastReceipt(null)}
-              className="px-2 py-1 rounded bg-zinc-200/80 dark:bg-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300 hover:underline cursor-pointer shrink-0"
-            >
-              Clear Receipt
-            </button>
-          </div>
-        )}
       </div>
 
       {/* =================================================================== */}

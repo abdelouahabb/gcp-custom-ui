@@ -190,6 +190,7 @@ export default function GeminiCopilotModal({
   onRefresh,
   onSelectTab,
   onShowToast,
+  onShowError,
 }) {
   const { meta: pricingMeta } = useLivePricingCatalog();
   const [activeSubTab, setActiveSubTab] = useState('POSTURE');
@@ -201,9 +202,20 @@ export default function GeminiCopilotModal({
   const [loadingFleet, setLoadingFleet] = useState(false);
   const [busyActionId, setBusyActionId] = useState(null);
   const [confirmCleanupId, setConfirmCleanupId] = useState(null);
-  const [actionBanner, setActionBanner] = useState('');
+  const [actionBanner, setRawActionBanner] = useState('');
   const [lastRunbookLog, setLastRunbookLog] = useState(null);
   const [gitOpsViewMode, setGitOpsViewMode] = useState('DIFF');
+
+  const setActionBanner = useCallback(
+    (msg) => {
+      const clean = String(msg || '').trim();
+      setRawActionBanner(clean);
+      if (clean && onShowToast) {
+        onShowToast(clean);
+      }
+    },
+    [onShowToast]
+  );
 
   const runLiveProjectAudit = useCallback(async () => {
     if (!projectId) return;
@@ -678,15 +690,15 @@ export default function GeminiCopilotModal({
 
         {/* Spacious Scrollable Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-zinc-50/40 dark:bg-[#131314]">
-          {actionBanner && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3">
+          {actionBanner && !onShowToast && (
+            <div className="fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl bg-zinc-950/95 border border-emerald-500/60 text-xs font-mono text-emerald-200 flex items-center justify-between gap-3 shadow-2xl">
               <span>{actionBanner}</span>
               <button
                 type="button"
-                onClick={() => setActionBanner('')}
-                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-2 font-bold cursor-pointer"
+                onClick={() => setRawActionBanner('')}
+                className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
               >
-                Dismiss
+                ✕ Dismiss
               </button>
             </div>
           )}

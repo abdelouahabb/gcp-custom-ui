@@ -85,6 +85,8 @@ export default function XtermWebSshTerminal({
   scpTargetVmName = '',
   activeViewMode,
   onViewModeChange,
+  onShowToast,
+  onShowError,
 }) {
   const isCloudRun = targetType === 'CLOUD_RUN';
   const containerRef = useRef(null);
@@ -209,7 +211,7 @@ export default function XtermWebSshTerminal({
   // GCP SSH Identity Mode (Standard Metadata SSH User vs IAM OS Login POSIX User)
   const [identityInfo, setIdentityInfo] = useState(null);
   const [identityBusy, setIdentityBusy] = useState(false);
-  const [identityToast, setIdentityToast] = useState('');
+  const [identityToast, setRawIdentityToast] = useState('');
 
   // Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor State
   const scpFileInputRef = useRef(null);
@@ -223,8 +225,41 @@ export default function XtermWebSshTerminal({
   const [scpCliDownload, setScpCliDownload] = useState('');
   const [scpLoading, setScpLoading] = useState(false);
   const [scpActionBusy, setScpActionBusy] = useState('');
-  const [scpError, setScpError] = useState('');
-  const [scpStatusMsg, setScpStatusMsg] = useState('');
+  const [scpError, setRawScpError] = useState('');
+  const [scpStatusMsg, setRawScpStatusMsg] = useState('');
+
+  const setIdentityToast = useCallback(
+    (msg) => {
+      const clean = String(msg || '').trim();
+      setRawIdentityToast(clean);
+      if (clean && onShowToast) {
+        onShowToast(clean);
+      }
+    },
+    [onShowToast]
+  );
+
+  const setScpStatusMsg = useCallback(
+    (msg) => {
+      const clean = String(msg || '').trim();
+      setRawScpStatusMsg(clean);
+      if (clean && onShowToast) {
+        onShowToast(clean);
+      }
+    },
+    [onShowToast]
+  );
+
+  const setScpError = useCallback(
+    (msg) => {
+      const clean = String(msg || '').trim();
+      setRawScpError(clean);
+      if (clean && onShowError) {
+        onShowError(clean);
+      }
+    },
+    [onShowError]
+  );
   const [scpFilter, setScpFilter] = useState('');
   const [scpDragOver, setScpDragOver] = useState(false);
   const [scpEditorFile, setScpEditorFile] = useState(null); // { path, fileName, content, isBinary, sizeBytes, isNew }
@@ -2317,12 +2352,6 @@ export default function XtermWebSshTerminal({
         </div>
       </div>
 
-      {identityToast && (
-        <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-3.5 py-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-          ✓ {identityToast}
-        </div>
-      )}
-
       {/* Optional Custom SSH Credentials Drawer (for VM SSH2) */}
       {!isCloudRun && showAuthModal && (
         <div className="bg-zinc-50 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
@@ -3187,24 +3216,43 @@ export default function XtermWebSshTerminal({
                 </div>
               )}
 
-              {scpStatusMsg && !scpTransferProgress && (
-                <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-[11px] font-bold">
-                  ✓ {scpStatusMsg}
-                </div>
-              )}
-
-              {scpError && (
-                <div className="p-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-300 text-[11px] flex items-center justify-between gap-2">
-                  <span>✕ {scpError}</span>
-                  {!isFocusedVmRunning && onVmPowerAction && focusedVm && (
+              {scpError && !isFocusedVmRunning && onVmPowerAction && focusedVm && (
+                <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-[11px] flex items-center justify-between gap-2">
+                  <span>
+                    VM &ldquo;{focusedVm.name}&rdquo; is currently stopped — start it to browse files via SCP/SFTP.
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleTriggerVmPower('START', false)}
-                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shrink-0 cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
                     >
                       Start VM Now
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setRawScpError('')}
+                      className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer"
+                    >
+                      ✕ Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!onShowToast && (identityToast || scpStatusMsg) && (
+                <div className="fixed bottom-5 right-5 z-[120] max-w-md bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
+                  <span>✓ {scpStatusMsg || identityToast}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRawIdentityToast('');
+                      setRawScpStatusMsg('');
+                    }}
+                    className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+                  >
+                    ✕ Dismiss
+                  </button>
                 </div>
               )}
 

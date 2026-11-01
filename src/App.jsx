@@ -4443,7 +4443,17 @@ function CloudPulseCockpit() {
     ) {
       return;
     }
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = null;
+    }
     setRawErrorBanner(msg);
+    if (msg) {
+      errorTimerRef.current = setTimeout(() => {
+        setRawErrorBanner(null);
+        errorTimerRef.current = null;
+      }, 12000);
+    }
   }, []);
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
@@ -5182,15 +5192,42 @@ function CloudPulseCockpit() {
   }, []);
 
   const toastTimerRef = useRef(null);
-  const showToast = useCallback((msg) => {
+  const errorTimerRef = useRef(null);
+
+  const showToast = useCallback((msg, durationMs = 8000) => {
+    if (!msg) {
+      setToastMessage(null);
+      return;
+    }
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
-    setToastMessage(msg);
+    const text =
+      typeof msg === 'string'
+        ? msg
+        : msg?.message || msg?.text || String(msg);
+    setToastMessage(text);
     toastTimerRef.current = setTimeout(() => {
       setToastMessage(null);
       toastTimerRef.current = null;
-    }, 4000);
+    }, durationMs);
+  }, []);
+
+  const pauseToastTimer = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
+
+  const resumeToastTimer = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+      toastTimerRef.current = null;
+    }, 4500);
   }, []);
 
   // Global Mandatory Delete & Destructive Action Confirmation Gatekeeper
@@ -6661,28 +6698,69 @@ function CloudPulseCockpit() {
             </div>
           )}
           {(toastMessage || errorBanner) && (
-            <div className="fixed bottom-5 right-5 z-[95] flex flex-col items-end gap-2.5 max-w-md pointer-events-none">
+            <div className="fixed bottom-5 right-5 z-[120] flex flex-col items-end gap-2.5 max-w-md w-[calc(100vw-2.5rem)] sm:w-auto pointer-events-none">
               {toastMessage && (
-                <div className="pointer-events-auto w-full bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{toastMessage}</span>
+                <div
+                  role="status"
+                  aria-live="polite"
+                  onMouseEnter={pauseToastTimer}
+                  onMouseLeave={resumeToastTimer}
+                  className="pointer-events-auto relative overflow-hidden w-full bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3.5 flex items-start justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed break-words">
+                      {toastMessage}
+                    </span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setToastMessage(null)}
+                    onClick={() => {
+                      pauseToastTimer();
+                      setToastMessage(null);
+                    }}
                     title="Dismiss notification"
-                    className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white text-[10px] font-extrabold cursor-pointer shrink-0 transition-colors"
                   >
-                    Dismiss
+                    ✕ Dismiss
                   </button>
                 </div>
               )}
 
               {errorBanner && (
-                <div className="pointer-events-auto w-full bg-zinc-950/95 border border-red-500/60 text-red-200 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs font-mono shadow-2xl backdrop-blur-md">
-                  <span>{errorBanner}</span>
-                  <div className="flex items-center justify-end gap-2.5">
+                <div
+                  role="alert"
+                  onMouseEnter={() => {
+                    if (errorTimerRef.current) {
+                      clearTimeout(errorTimerRef.current);
+                      errorTimerRef.current = null;
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (errorTimerRef.current) {
+                      clearTimeout(errorTimerRef.current);
+                    }
+                    errorTimerRef.current = setTimeout(() => {
+                      setRawErrorBanner(null);
+                      errorTimerRef.current = null;
+                    }, 6000);
+                  }}
+                  className="pointer-events-auto w-full bg-zinc-950/95 border border-red-500/60 text-red-200 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs font-mono shadow-2xl backdrop-blur-md"
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <span className="leading-relaxed break-words">
+                      {errorBanner}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setErrorBanner(null)}
+                      title="Dismiss error notification"
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-bold cursor-pointer shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
                     {(() => {
                       const primaryProj =
                         (contextData?.defaultProject &&
@@ -6729,9 +6807,9 @@ function CloudPulseCockpit() {
                       type="button"
                       onClick={() => setErrorBanner(null)}
                       title="Dismiss banner"
-                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      className="px-2.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-bold cursor-pointer"
                     >
-                      Dismiss
+                      ✕ Dismiss
                     </button>
                   </div>
                 </div>
@@ -8012,6 +8090,8 @@ function CloudPulseCockpit() {
                       fetchProjectOverview(selectedProjectId, { force: true });
                       setVmRefreshTrigger((c) => c + 1);
                     }}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                 </div>
               )}
@@ -8109,6 +8189,8 @@ function CloudPulseCockpit() {
           fetchProjectOverview(selectedProjectId);
           setVmRefreshTrigger((c) => c + 1);
         }}
+        onShowToast={showToast}
+        onShowError={setErrorBanner}
       />
 
       <ResourceProvisionModal
@@ -8146,6 +8228,7 @@ function CloudPulseCockpit() {
         }}
         onSelectTab={handleNavigateStudioTab}
         onShowToast={showToast}
+        onShowError={setErrorBanner}
       />
 
       <MandatoryDeleteConfirmationModal

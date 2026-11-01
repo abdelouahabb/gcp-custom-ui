@@ -100,7 +100,15 @@ export default function Wave16EnterpriseMoonshotStudio({
   const [blackoutRegion, setBlackoutRegion] = useState('us-central1');
   const [drDrillReceipt, setDrDrillReceipt] = useState(null);
   const [drVaultReceipt, setDrVaultReceipt] = useState(null);
-  const [inlineError, setInlineError] = useState('');
+  const [inlineError, setRawInlineError] = useState('');
+
+  const setInlineError = (msg) => {
+    const clean = String(msg || '').trim();
+    setRawInlineError(clean);
+    if (clean && onShowError) {
+      onShowError(clean);
+    }
+  };
 
   // IAM Least-Privilege Synthesizer state
   const [iamFilter, setIamFilter] = useState('ALL');
@@ -1015,15 +1023,15 @@ export default function Wave16EnterpriseMoonshotStudio({
                 </div>
               )}
 
-              {inlineError && (
-                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
+              {inlineError && !onShowError && (
+                <div className="fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl bg-zinc-950/95 border border-red-500/60 text-xs font-mono text-red-200 flex items-center justify-between gap-2 shadow-2xl">
                   <span>⚠ {inlineError}</span>
                   <button
                     type="button"
-                    onClick={() => setInlineError('')}
-                    className="underline text-[10px] cursor-pointer"
+                    onClick={() => setRawInlineError('')}
+                    className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer"
                   >
-                    Dismiss
+                    ✕ Dismiss
                   </button>
                 </div>
               )}

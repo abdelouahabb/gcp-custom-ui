@@ -8176,6 +8176,8 @@ services:
                       targetType="CLOUD_RUN"
                       cloudRunService={srv}
                       onDisconnect={() => toggleServiceDrawer(srv, 'SSH_TERMINAL')}
+                      onShowToast={onShowToast}
+                      onShowError={onShowError}
                     />
                   </div>
                 )}

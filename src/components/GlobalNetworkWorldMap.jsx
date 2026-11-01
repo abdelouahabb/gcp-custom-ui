@@ -1393,33 +1393,14 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
       </div>
 
       {statusBanner && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: '6px 10px',
-            borderRadius: 8,
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            fontSize: 11,
-            color: '#a7f3d0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span>{statusBanner}</span>
+        <div className="fixed bottom-5 right-5 z-[120] max-w-md bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
+          <span>✓ {statusBanner}</span>
           <button
             type="button"
             onClick={() => setStatusBanner('')}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              fontSize: 11,
-            }}
+            className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
           >
-            ✕
+            ✕ Dismiss
           </button>
         </div>
       )}

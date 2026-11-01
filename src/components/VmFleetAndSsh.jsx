@@ -3300,6 +3300,8 @@ export default function VmFleetAndSsh({
               scpTargetVmName={scpTargetVmName}
               activeViewMode={terminalViewMode}
               onViewModeChange={setTerminalViewMode}
+              onShowToast={onShowToast}
+              onShowError={onShowError}
             />
           </div>
           </div>

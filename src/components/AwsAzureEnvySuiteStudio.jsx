@@ -3743,28 +3743,6 @@ export default function AwsAzureEnvySuiteStudio({
                 </label>
               </div>
 
-              {/* Persistent Save / Update Confirmation Banner */}
-              {rgSavedBanner && (
-                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span className="truncate font-bold">
-                      {rgSavedBanner.message}
-                    </span>
-                    <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
-                      ({rgSavedBanner.timestamp})
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setRgSavedBanner(null)}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold hover:bg-emerald-500/20 cursor-pointer shrink-0"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              )}
-
               <div className="space-y-3">
                 {resourceGroups.map((grp) => {
                   const isDeleting = Boolean(deletingGroupSlugs[grp.slug]);

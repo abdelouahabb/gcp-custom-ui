@@ -17,15 +17,31 @@ export default function CommandPaletteModal({
   onOpenKillSwitch,
   onOpenCopilot,
   onToggleGdeMode,
-  onRefreshAll
+  onRefreshAll,
+  onShowToast,
+  onShowError,
 }) {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [executingId, setExecutingId] = useState(null);
-  const [toastMsg, setToastMsg] = useState(null);
+  const [toastMsg, setRawToastMsg] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  const setToastMsg = (msgObj) => {
+    if (!msgObj) {
+      setRawToastMsg(null);
+      return;
+    }
+    if (msgObj.type === 'error' && onShowError) {
+      onShowError(msgObj.text);
+    } else if (onShowToast) {
+      onShowToast(msgObj.text);
+    } else {
+      setRawToastMsg(msgObj);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -1110,23 +1126,25 @@ export default function CommandPaletteModal({
           ))}
         </div>
 
-        {/* Toast Feedback inside Palette */}
-        {toastMsg && (
+        {/* Fallback Bottom-Right Toast if rendered standalone */}
+        {toastMsg && !onShowToast && (
           <div
-            className={`mx-4 mt-3 p-3 rounded-xl border text-xs flex items-center justify-between ${
+            className={`fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md ${
               toastMsg.type === 'error'
-                ? 'bg-red-500/10 dark:bg-red-950/50 border-red-500/40 text-red-700 dark:text-red-200'
-                : toastMsg.type === 'warning'
-                ? 'bg-amber-500/10 dark:bg-amber-950/50 border-amber-500/40 text-amber-700 dark:text-amber-200'
-                : 'bg-emerald-500/10 dark:bg-emerald-950/50 border-emerald-500/40 text-emerald-700 dark:text-emerald-200'
+                ? 'bg-zinc-950/95 border-red-500/60 text-red-200'
+                : 'bg-zinc-950/95 border-emerald-500/60 text-emerald-200'
             }`}
           >
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
               {toastMsg.text}
             </span>
-            <button onClick={() => setToastMsg(null)} className="text-[11px] underline ml-3">
-              Dismiss
+            <button
+              type="button"
+              onClick={() => setRawToastMsg(null)}
+              className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+            >
+              ✕ Dismiss
             </button>
           </div>
         )}

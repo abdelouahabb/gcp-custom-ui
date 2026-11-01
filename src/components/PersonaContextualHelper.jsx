@@ -1355,24 +1355,6 @@ export default function PersonaContextualHelper({
               </div>
             </div>
           )}
-
-          {/* Live Action Receipt Banner when an inline tool runs */}
-          {actionResult && (
-            <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2 text-xs font-mono text-blue-800 dark:text-blue-200">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                <span className="font-bold">{actionResult.action}:</span>
-                <span>{actionResult.summary}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActionResult(null)}
-                className="text-[10px] font-mono underline text-blue-700 dark:text-blue-300 cursor-pointer"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>

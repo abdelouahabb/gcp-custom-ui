@@ -183,6 +183,8 @@ export default function AutonomousCloudSocStudio({
   onOpenHealthAndDrift,
   onNavigateTab,
   onRefreshGlobal,
+  onShowToast,
+  onShowError,
 }) {
   const [activePillar, setActivePillar] = useState('KILL_CHAINS');
   const [lookbackHours, setLookbackHours] = useState(72);
@@ -190,7 +192,36 @@ export default function AutonomousCloudSocStudio({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [actionBusy, setActionBusy] = useState('');
-  const [statusBanner, setStatusBanner] = useState(null);
+  const [statusBanner, setRawStatusBanner] = useState(null);
+  const statusBannerTimerRef = useRef(null);
+
+  const setStatusBanner = useCallback(
+    (bannerObj) => {
+      if (statusBannerTimerRef.current) {
+        clearTimeout(statusBannerTimerRef.current);
+        statusBannerTimerRef.current = null;
+      }
+      if (!bannerObj) {
+        setRawStatusBanner(null);
+        return;
+      }
+      const msg = bannerObj.message || String(bannerObj);
+      if (bannerObj.type === 'error' && onShowError) {
+        onShowError(msg);
+      } else if (onShowToast) {
+        const suffix = bannerObj.receipt?.signatureHex
+          ? ` [Ed25519: ${String(bannerObj.receipt.signatureHex).slice(0, 12)}…]`
+          : '';
+        onShowToast(`${msg}${suffix}`);
+      } else {
+        setRawStatusBanner(bannerObj);
+        statusBannerTimerRef.current = setTimeout(() => {
+          setRawStatusBanner(null);
+        }, 8000);
+      }
+    },
+    [onShowToast, onShowError]
+  );
   const [showGitOpsBridge, setShowGitOpsBridge] = useState(false);
   const [gitOpsTab, setGitOpsTab] = useState('DIFF');
   const [expandedChainIds, setExpandedChainIds] = useState({});
@@ -1643,13 +1674,13 @@ Format your response with clear Markdown headings:${
         </div>
       </div>
 
-      {/* Status / Receipt Banner */}
-      {statusBanner && (
+      {/* Fallback Bottom-Right Notification if rendered standalone without onShowToast */}
+      {statusBanner && !onShowToast && (
         <div
-          className={`p-3.5 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-2 ${
+          className={`fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md ${
             statusBanner.type === 'error'
-              ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-200'
-              : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-800 dark:text-emerald-200'
+              ? 'bg-zinc-950/95 border-red-500/60 text-red-200'
+              : 'bg-zinc-950/95 border-emerald-500/60 text-emerald-200'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -1659,18 +1690,13 @@ Format your response with clear Markdown headings:${
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             )}
             <span className="font-bold">{statusBanner.message}</span>
-            {statusBanner.receipt && (
-              <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-blue-300 font-mono text-[10px]">
-                Ed25519 Signed: {String(statusBanner.receipt.signatureHex || '').slice(0, 20)}...
-              </span>
-            )}
           </div>
           <button
             type="button"
             onClick={() => setStatusBanner(null)}
-            className="text-[11px] font-mono underline cursor-pointer"
+            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer shrink-0"
           >
-            Dismiss
+            ✕ Dismiss
           </button>
         </div>
       )}
