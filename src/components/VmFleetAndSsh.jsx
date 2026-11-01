@@ -1535,10 +1535,13 @@ export default function VmFleetAndSsh({
                   !pendingOp;
                 const isSshActive = activeSshVm?.name === vm.name && !isDeleting;
                 const isSshFocusedInTerminal =
-                  isSshActive && terminalViewMode === 'LIVE_SSH_PTY';
+                  isSshActive &&
+                  (terminalViewMode === 'LIVE_SSH_PTY' ||
+                    terminalViewMode === 'SPLIT_SSH_AND_SCP');
                 const isScpActiveForVm =
                   !isDeleting &&
-                  terminalViewMode === 'SCP_FILE_MANAGER' &&
+                  (terminalViewMode === 'SCP_FILE_MANAGER' ||
+                    terminalViewMode === 'SPLIT_SSH_AND_SCP') &&
                   (scpTargetVmName === vm.name ||
                     (!scpTargetVmName && activeSshVm?.name === vm.name));
                 const isBusy = powerBusyVm === vm.name || isTransitional;
@@ -1733,7 +1736,7 @@ export default function VmFleetAndSsh({
                         type="button"
                         disabled={isDeleting}
                         onClick={() => {
-                          if (isSshActive && terminalViewMode !== 'LIVE_SSH_PTY') {
+                          if (isSshActive && !isSshFocusedInTerminal) {
                             setTerminalViewMode('LIVE_SSH_PTY');
                             setOpenSshTrigger((n) => n + 1);
                           } else if (isSshActive) {
@@ -1746,14 +1749,14 @@ export default function VmFleetAndSsh({
                           }
                         }}
                         title={
-                          isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
-                            ? `SSH is connected to ${vm.name} — click to switch the right workspace back to the interactive SSH terminal`
+                          isSshActive && !isSshFocusedInTerminal
+                            ? `SSH is connected in the background to ${vm.name} — click to switch the right workspace back to the interactive SSH terminal`
                             : isSshFocusedInTerminal
                             ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
                             : `Click to connect live interactive SSH terminal to ${vm.name}`
                         }
                         className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                          isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
+                          isSshActive && !isSshFocusedInTerminal
                             ? 'bg-blue-600 hover:bg-blue-500 text-white ring-1 ring-blue-400/50'
                             : isSshFocusedInTerminal
                             ? 'bg-blue-600 hover:bg-red-600 text-white ring-1 ring-blue-400/50'
@@ -1764,7 +1767,7 @@ export default function VmFleetAndSsh({
                         <span className="truncate">
                           {isDeleting
                             ? 'Deprovisioning...'
-                            : isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
+                            : isSshActive && !isSshFocusedInTerminal
                             ? 'Switch to SSH PTY'
                             : isSshFocusedInTerminal
                             ? '● SSH Connected (Off)'

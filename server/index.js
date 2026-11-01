@@ -3118,7 +3118,17 @@ for name in os.listdir(abs_path):
         continue
 
 entries.sort(key=lambda x: (0 if x['type'] == 'dir' else 1, x['name'].lower()))
-print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_path), 'entries': entries}))
+disk_usage = None
+try:
+    sv = os.statvfs(abs_path)
+    total_b = int(sv.f_frsize * sv.f_blocks)
+    free_b = int(sv.f_frsize * sv.f_bavail)
+    used_b = max(0, total_b - int(sv.f_frsize * sv.f_bfree))
+    pct = round((used_b / total_b) * 100, 1) if total_b > 0 else 0
+    disk_usage = {'totalBytes': total_b, 'usedBytes': used_b, 'freeBytes': free_b, 'usedPercent': pct}
+except Exception:
+    disk_usage = None
+print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_path), 'entries': entries, 'diskUsage': disk_usage}))
 `;
 
     let payload = null;
@@ -3126,7 +3136,7 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
 
     if (target.tcp22Open && target.privateKey) {
       try {
-        payload = await withSftpSession(target, async (sftp, _conn, connectedUsername) => {
+        payload = await withSftpSession(target, async (sftp, conn, connectedUsername) => {
           const defaultHome = await new Promise((resolve) => {
             sftp.realpath('.', (err, abs) => {
               resolve(!err && abs ? abs : `/home/${connectedUsername || target.sshUser}`);
@@ -3189,9 +3199,38 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
             if (a.type !== 'dir' && b.type === 'dir') return 1;
             return a.name.localeCompare(b.name);
           });
+          let diskUsage = null;
+          if (conn && typeof conn.exec === 'function') {
+            diskUsage = await new Promise((resolve) => {
+              conn.exec(
+                `df -B1 --output=size,used,avail ${JSON.stringify(realPath)} 2>/dev/null | tail -n 1`,
+                (err, stream) => {
+                  if (err || !stream) return resolve(null);
+                  let out = '';
+                  stream.on('data', (d) => {
+                    out += d.toString();
+                  });
+                  stream.on('close', () => {
+                    const parts = out.trim().split(/\s+/).map(Number);
+                    if (parts.length >= 3 && parts[0] > 0) {
+                      const [totalBytes, usedBytes, freeBytes] = parts;
+                      resolve({
+                        totalBytes,
+                        usedBytes,
+                        freeBytes,
+                        usedPercent: Number(((usedBytes / totalBytes) * 100).toFixed(1)),
+                      });
+                    } else {
+                      resolve(null);
+                    }
+                  });
+                }
+              );
+            });
+          }
           const parentPath =
             realPath === '/' ? '/' : path.posix.dirname(realPath);
-          return { currentPath: realPath, parentPath, entries };
+          return { currentPath: realPath, parentPath, entries, diskUsage };
         });
       } catch {
         payload = null;
@@ -3230,6 +3269,7 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
       currentPath: payload.currentPath || `/home/${target.sshUser}`,
       parentPath: payload.parentPath || '/home',
       entries: payload.entries || [],
+      diskUsage: payload.diskUsage || null,
       cliUploadExample: `gcloud compute scp ./local-file.txt ${target.sshUser}@${vmName}:${
         payload.currentPath || `/home/${target.sshUser}`
       }/ --zone=${effectiveZone} --project=${projectId}${iapFlag}`,
@@ -3247,13 +3287,14 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
   }
 });
 
-// 2) GET /api/project/:projectId/vms/:vmName/scp/download -> Preview text file in UI or download raw attachment
+// 2) GET /api/project/:projectId/vms/:vmName/scp/download -> Preview text file, tail log file, download raw attachment, or stream .tar.gz directory archive
 app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => {
   const { projectId, vmName } = req.params;
   const zone = String(req.query.zone || '').trim();
   const remotePath = String(req.query.path || '').trim();
-  const mode = String(req.query.mode || 'preview').trim(); // 'preview' | 'raw'
+  const mode = String(req.query.mode || 'preview').trim(); // 'preview' | 'raw' | 'tar_gz' | 'tail'
   const rawUsername = req.query.username || '';
+  const tailLines = Math.min(2000, Math.max(20, Number(req.query.lines || 150)));
 
   if (!remotePath) {
     return res.status(400).json({ error: 'Missing remote file path.' });
@@ -3272,6 +3313,105 @@ app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => 
     });
     const effectiveZone = target.zone || zone;
 
+    // Special mode: 'tar_gz' -> Compress remote folder or multi-path selection on the VM into .tar.gz and stream back
+    if (mode === 'tar_gz') {
+      const pyTarScript = `
+import os, sys, io, tarfile, base64, json
+raw_arg = sys.argv[1]
+max_b = int(sys.argv[2])
+try:
+    paths = json.loads(raw_arg) if raw_arg.startswith('[') else [raw_arg]
+except Exception:
+    paths = [raw_arg]
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode='w:gz') as tf:
+    for p in paths:
+        ep = os.path.expanduser(p)
+        if os.path.exists(ep):
+            tf.add(ep, arcname=os.path.basename(ep.rstrip('/')) or 'root')
+data = buf.getvalue()
+if len(data) > max_b:
+    print(json.dumps({'error': f'Compressed .tar.gz archive ({len(data)} bytes) exceeds 25 MB transfer limit.'}))
+    sys.exit(0)
+print(json.dumps({'b64': base64.b64encode(data).decode('ascii'), 'size': len(data)}))
+`;
+      const maxTarBytes = 25 * 1024 * 1024;
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone: effectiveZone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyTarScript,
+        args: [remotePath, String(maxTarBytes)],
+        timeoutMs: 45000,
+      });
+      const lines = pyRes.stdout.trim().split('\n');
+      const parsed = JSON.parse(lines[lines.length - 1] || '{}');
+      if (parsed.error) {
+        return res.status(400).json({ error: parsed.error });
+      }
+      const tarBuffer = Buffer.from(parsed.b64 || '', 'base64');
+      const sha256Hex = crypto
+        .createHash('sha256')
+        .update(tarBuffer)
+        .digest('hex');
+      const baseLabel = remotePath.startsWith('[')
+        ? `${vmName}-bundle`
+        : path.posix.basename(remotePath.replace(/\/+$/, '')) || vmName;
+      const archiveFileName = `${baseLabel}.tar.gz`;
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${archiveFileName.replace(/"/g, '')}"`
+      );
+      res.setHeader('Content-Length', String(tarBuffer.length));
+      res.setHeader('X-Scp-Engine-Used', pyRes.engineUsed || 'SSH2_SFTP_DIRECT');
+      res.setHeader('X-Scp-Sha256', sha256Hex);
+      return res.send(tarBuffer);
+    }
+
+    // Special mode: 'tail' -> Read last N lines of any large log file on the VM
+    if (mode === 'tail') {
+      const pyTailScript = `
+import os, sys, json, hashlib
+p = os.path.expanduser(sys.argv[1])
+n_lines = int(sys.argv[2])
+st = os.stat(p)
+with open(p, 'rb') as f:
+    if st.st_size > 256 * 1024:
+        f.seek(max(0, st.st_size - 256 * 1024))
+    chunk = f.read()
+lines = chunk.decode('utf-8', errors='replace').splitlines()[-n_lines:]
+text = '\\n'.join(lines)
+sha = hashlib.sha256(chunk).hexdigest()
+print(json.dumps({'content': text, 'sizeBytes': int(st.st_size), 'sha256': sha, 'tailLines': len(lines)}))
+`;
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone: effectiveZone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyTailScript,
+        args: [remotePath, String(tailLines)],
+        timeoutMs: 25000,
+      });
+      const lines = pyRes.stdout.trim().split('\n');
+      const parsed = JSON.parse(lines[lines.length - 1] || '{}');
+      return res.json({
+        ok: true,
+        path: remotePath,
+        fileName: path.posix.basename(remotePath),
+        sizeBytes: parsed.sizeBytes || 0,
+        sha256: parsed.sha256 || '',
+        tailLines: parsed.tailLines || tailLines,
+        isBinary: false,
+        engineUsed: pyRes.engineUsed,
+        content: parsed.content || '',
+      });
+    }
+
     const maxBytes = mode === 'raw' ? 25 * 1024 * 1024 : 512 * 1024;
     let fileBuffer = null;
     let engineUsed = 'SSH2_SFTP_DIRECT';
@@ -3289,7 +3429,7 @@ app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => 
                       2
                     )} MB (exceeds ${
                       mode === 'raw' ? '25 MB' : '512 KB preview'
-                    } limit).`
+                    } limit — use Tail Log or Download to Laptop).`
                   )
                 );
               }
@@ -3338,6 +3478,10 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
       fileBuffer = Buffer.from(parsed.b64 || '', 'base64');
     }
 
+    const sha256Hex = crypto
+      .createHash('sha256')
+      .update(fileBuffer)
+      .digest('hex');
     const fileName = path.posix.basename(remotePath) || 'download.bin';
     if (mode === 'raw') {
       res.setHeader('Content-Type', 'application/octet-stream');
@@ -3347,6 +3491,7 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
       );
       res.setHeader('Content-Length', String(fileBuffer.length));
       res.setHeader('X-Scp-Engine-Used', engineUsed);
+      res.setHeader('X-Scp-Sha256', sha256Hex);
       return res.send(fileBuffer);
     }
 
@@ -3359,6 +3504,7 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
       path: remotePath,
       fileName,
       sizeBytes: fileBuffer.length,
+      sha256: sha256Hex,
       isBinary,
       engineUsed,
       content: isBinary
@@ -3402,6 +3548,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
     });
     const effectiveZone = target.zone || zone;
 
+    const batchHash = crypto.createHash('sha256');
     const sanitizedFiles = files.map((f) => {
       const cleanName = path.posix
         .basename(String(f.name || 'uploaded-file.txt').trim())
@@ -3409,8 +3556,16 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
       const buf = f.contentBase64
         ? Buffer.from(f.contentBase64, 'base64')
         : Buffer.from(String(f.contentText || ''), 'utf8');
-      return { name: cleanName, buffer: buf, sizeBytes: buf.length };
+      const fileSha256 = crypto.createHash('sha256').update(buf).digest('hex');
+      batchHash.update(buf);
+      return {
+        name: cleanName,
+        buffer: buf,
+        sizeBytes: buf.length,
+        sha256: fileSha256,
+      };
     });
+    const bundleSha256 = batchHash.digest('hex');
 
     let engineUsed = 'SSH2_SFTP_DIRECT';
     let uploadedPaths = [];
@@ -3439,6 +3594,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
               name: f.name,
               path: destPath,
               sizeBytes: f.sizeBytes,
+              sha256: f.sha256,
             });
           }
           return out;
@@ -3496,6 +3652,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
               ? `/${f.name}`
               : `${remoteDestDir}/${f.name}`,
           sizeBytes: f.sizeBytes,
+          sha256: f.sha256,
         }));
       } finally {
         try {
@@ -3509,9 +3666,10 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
     return res.json({
       ok: true,
       engineUsed,
+      sha256: bundleSha256,
       uploadedCount: uploadedPaths.length,
       uploadedFiles: uploadedPaths,
-      message: `Uploaded ${uploadedPaths.length} file(s) to ${target.sshUser}@${vmName}:${targetDir} via ${engineUsed}.`,
+      message: `Uploaded ${uploadedPaths.length} file(s) to ${target.sshUser}@${vmName}:${targetDir} via ${engineUsed} (SHA-256: ${bundleSha256.slice(0, 12)}…).`,
     });
   } catch (err) {
     return res.status(400).json({
@@ -3521,7 +3679,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
   }
 });
 
-// 4) POST /api/project/:projectId/vms/:vmName/scp/action -> MKDIR | WRITE_FILE | RENAME | CHMOD | DELETE
+// 4) POST /api/project/:projectId/vms/:vmName/scp/action -> MKDIR | WRITE_FILE | RENAME | CHMOD | DELETE | BATCH_DELETE | COMPRESS_TAR_GZ | EXTRACT_ARCHIVE | CHECKSUM_SHA256
 app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
   const { projectId, vmName } = req.params;
   const {
@@ -3529,12 +3687,13 @@ app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
     username = '',
     action = '',
     targetPath = '',
+    paths = [],
     newPath = '',
     content = '',
     modeOctal = '644',
   } = req.body || {};
 
-  if (!action || !targetPath) {
+  if (!action || (!targetPath && (!Array.isArray(paths) || paths.length === 0))) {
     return res
       .status(400)
       .json({ error: 'Missing SCP file action or targetPath.' });
@@ -3554,9 +3713,9 @@ app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
     const effectiveZone = target.zone || zone;
 
     const pyActionScript = `
-import os, sys, shutil, json
+import os, sys, shutil, json, hashlib, tarfile, zipfile
 act = sys.argv[1]
-p = os.path.expanduser(sys.argv[2])
+p = os.path.expanduser(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else ''
 arg3 = sys.argv[3] if len(sys.argv) > 3 else ''
 
 if act == 'MKDIR':
@@ -3568,20 +3727,70 @@ elif act == 'WRITE_FILE':
     os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
     with open(p, 'wb') as f:
         f.write(data)
-    print(json.dumps({'ok': True, 'message': f'Saved {len(data)} bytes to {p}'}))
+    sha = hashlib.sha256(data).hexdigest()
+    print(json.dumps({'ok': True, 'sha256': sha, 'message': f'Saved {len(data)} bytes to {p} (SHA-256: {sha[:12]}…)'}))
 elif act == 'RENAME':
     np = os.path.expanduser(arg3)
     os.rename(p, np)
-    print(json.dumps({'ok': True, 'message': f'Renamed {p} -> {np}'}))
+    print(json.dumps({'ok': True, 'message': f'Renamed {os.path.basename(p)} -> {os.path.basename(np)}'}))
 elif act == 'CHMOD':
     os.chmod(p, int(arg3, 8))
-    print(json.dumps({'ok': True, 'message': f'Updated permissions on {p} to {arg3}'}))
+    print(json.dumps({'ok': True, 'message': f'Updated permissions on {os.path.basename(p)} to {arg3}'}))
 elif act == 'DELETE':
     if os.path.isdir(p) and not os.path.islink(p):
         shutil.rmtree(p)
     else:
         os.remove(p)
     print(json.dumps({'ok': True, 'message': f'Deleted {p}'}))
+elif act == 'BATCH_DELETE':
+    items = json.loads(arg3) if arg3 else [p]
+    deleted = 0
+    for item in items:
+        ep = os.path.expanduser(item)
+        if os.path.exists(ep) or os.path.islink(ep):
+            if os.path.isdir(ep) and not os.path.islink(ep):
+                shutil.rmtree(ep)
+            else:
+                os.remove(ep)
+            deleted += 1
+    print(json.dumps({'ok': True, 'deletedCount': deleted, 'message': f'Deleted {deleted} item(s) from VM'}))
+elif act == 'COMPRESS_TAR_GZ':
+    items = json.loads(arg3) if arg3 and arg3.startswith('[') else [p]
+    base_dir = os.path.dirname(os.path.abspath(os.path.expanduser(items[0])))
+    out_name = p if p.endswith('.tar.gz') else (os.path.basename(p.rstrip('/')) + '.tar.gz')
+    out_path = out_name if out_name.startswith('/') else os.path.join(base_dir, out_name)
+    with tarfile.open(out_path, 'w:gz') as tf:
+        for item in items:
+            ep = os.path.expanduser(item)
+            if os.path.exists(ep):
+                tf.add(ep, arcname=os.path.basename(ep.rstrip('/')))
+    sz = os.path.getsize(out_path)
+    print(json.dumps({'ok': True, 'archivePath': out_path, 'sizeBytes': sz, 'message': f'Created archive {os.path.basename(out_path)} ({sz} bytes)'}))
+elif act == 'EXTRACT_ARCHIVE':
+    dest_dir = os.path.dirname(os.path.abspath(p))
+    if p.endswith('.zip'):
+        with zipfile.ZipFile(p, 'r') as zf:
+            zf.extractall(dest_dir)
+    else:
+        with tarfile.open(p, 'r:*') as tf:
+            tf.extractall(dest_dir)
+    print(json.dumps({'ok': True, 'destDir': dest_dir, 'message': f'Extracted {os.path.basename(p)} into {dest_dir}'}))
+elif act == 'CHECKSUM_SHA256':
+    h_sha = hashlib.sha256()
+    h_md5 = hashlib.md5()
+    lines_cnt = 0
+    sz = os.path.getsize(p)
+    with open(p, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            h_sha.update(chunk)
+            h_md5.update(chunk)
+            lines_cnt += chunk.count(b'\\n')
+    sha_hex = h_sha.hexdigest()
+    md5_hex = h_md5.hexdigest()
+    print(json.dumps({'ok': True, 'sha256': sha_hex, 'md5': md5_hex, 'sizeBytes': sz, 'lineCount': lines_cnt, 'message': f'SHA-256({os.path.basename(p)}) = {sha_hex}'}))
 else:
     print(json.dumps({'error': f'Unknown action {act}'}))
 `;
@@ -3593,20 +3802,28 @@ else:
         ? String(newPath || '')
         : action === 'CHMOD'
         ? String(modeOctal || '644')
+        : action === 'BATCH_DELETE' || action === 'COMPRESS_TAR_GZ'
+        ? JSON.stringify(Array.isArray(paths) && paths.length > 0 ? paths : [targetPath])
         : '';
 
     let engineUsed = 'SSH2_SFTP_DIRECT';
     let message = '';
+    let extraData = {};
 
     if (target.tcp22Open && target.privateKey && action === 'WRITE_FILE') {
       try {
         await withSftpSession(target, (sftp) => {
           return new Promise((resolve, reject) => {
             const buf = Buffer.from(String(content || ''), 'utf8');
+            const sha256Hex = crypto
+              .createHash('sha256')
+              .update(buf)
+              .digest('hex');
             const wstream = sftp.createWriteStream(targetPath);
             wstream.on('error', reject);
             wstream.on('close', () => {
-              message = `Saved ${buf.length} bytes to ${targetPath} via SSH2 SFTP.`;
+              extraData = { sha256: sha256Hex };
+              message = `Saved ${buf.length} bytes to ${targetPath} via SSH2 SFTP (SHA-256: ${sha256Hex.slice(0, 12)}…).`;
               resolve();
             });
             wstream.end(buf);
@@ -3625,7 +3842,7 @@ else:
         sshUser: target.sshUser,
         needIap: target.needIap,
         pythonCode: pyActionScript,
-        args: [action, targetPath, thirdArg],
+        args: [action, targetPath || (paths[0] || ''), thirdArg],
       });
       engineUsed = pyRes.engineUsed;
       const lines = pyRes.stdout.trim().split('\n');
@@ -3633,6 +3850,7 @@ else:
       if (parsed.error) {
         return res.status(400).json({ error: parsed.error });
       }
+      extraData = parsed;
       message = parsed.message || `Completed ${action} on ${targetPath}`;
     }
 
@@ -3641,6 +3859,7 @@ else:
       action,
       targetPath,
       engineUsed,
+      ...extraData,
       message,
     });
   } catch (err) {
