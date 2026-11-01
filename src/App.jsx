@@ -2219,7 +2219,9 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/why-gcp-wins/execute-action') &&
         [
           'PROVE_REACHABILITY',
+          'PROVE_VPC_REACHABILITY',
           'RUN_BQ_TIME_TRAVEL_QUERY',
+          'DRY_RUN_BQ_TIME_TRAVEL',
           'GENERATE_OIDC_FEDERATION_BUNDLE',
         ].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/cloudrun/compose') &&

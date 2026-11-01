@@ -800,6 +800,47 @@ export default function IcebergLakehousePlaybookMatrix({
   const [probing, setProbing] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [probeResult, setProbeResult] = useState(null);
+  const [playbookCliProbeLoading, setPlaybookCliProbeLoading] = useState(false);
+  const [playbookCliProbeResult, setPlaybookCliProbeResult] = useState(null);
+
+  const handleRunPlaybookGcloudProbe = async () => {
+    if (!projectId) return;
+    setPlaybookCliProbeLoading(true);
+    const probeCmd = `gcloud biglake iceberg catalogs list --project=${projectId}`;
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
+        {
+          action: 'EXECUTE_READONLY_GCLOUD_PROBE',
+          command: probeCmd,
+        }
+      );
+      setPlaybookCliProbeResult({
+        ...res.data,
+        playbookTitle: activePlaybook?.title,
+        requestedCommand: probeCmd,
+      });
+      if (onShowToast) {
+        onShowToast(
+          `Executed Live gcloud Probe for Playbook #${activePlaybook?.num}: ${res.data?.probeMode || 'PROBED'}`
+        );
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err.message ||
+        'Live gcloud probe failed';
+      setPlaybookCliProbeResult({
+        ok: false,
+        playbookTitle: activePlaybook?.title,
+        requestedCommand: probeCmd,
+        error: msg,
+      });
+      if (onShowError) onShowError(msg);
+    } finally {
+      setPlaybookCliProbeLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (projectId) {
@@ -1218,6 +1259,9 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-extrabold">
+              🔧 Hybrid: BQ/GCS Direct REST + gcloud 591.0.0 CLI (Online Token Bridged)
+            </span>
             <button
               type="button"
               onClick={() => handleProbeEstate(false)}
@@ -1240,31 +1284,31 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
         {probeResult?.liveEstate && (
           <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-zinc-500">BQ Datasets</div>
+              <div className="text-[10px] text-zinc-500">BQ Datasets (⚡ REST)</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.bigQueryDatasetsCount} Live
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-zinc-500">GCS Lake Buckets</div>
+              <div className="text-[10px] text-zinc-500">GCS Lake Buckets (⚡ REST)</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.gcsBucketsCount} Live
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Iceberg REST Catalogs</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Iceberg REST</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.icebergRestCatalogs?.length || 0} Discovered
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Managed Kafka</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Managed Kafka</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.managedKafkaClusters?.length || 0} Clusters
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0] Dataplex Lakes</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Dataplex Lakes</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.dataplexLakes?.length || 0} Lakes
               </div>
@@ -1916,8 +1960,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 </pre>
               </div>
 
-              {/* Equal-Sized 4-Column Action Bar (Copy + Open in BQ + Send to Shell + 1-Tap Cost Gatekeeper) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              {/* Equal-Sized 5-Column Action Bar (Copy + Open in BQ + Run Live Probe + Send to Shell + 1-Tap Cost Gatekeeper) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -1959,6 +2003,24 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
 
                 <button
                   type="button"
+                  disabled={playbookCliProbeLoading}
+                  onClick={handleRunPlaybookGcloudProbe}
+                  className="w-full h-11 px-3 rounded-md text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      playbookCliProbeLoading ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span className="truncate">
+                    {playbookCliProbeLoading
+                      ? 'Probing gcloud 591...'
+                      : 'Run Live Probe (🔧 gcloud)'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     if (onRunInShell) {
                       onRunInShell(synthesizedCode.cliCode);
@@ -1989,6 +2051,72 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   </span>
                 </button>
               </div>
+
+              {(playbookCliProbeLoading || playbookCliProbeResult) && (
+                <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-1.5 font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
+                        🔧 LIVE GCLOUD 591.0.0 LAKEHOUSE PROBE
+                      </span>
+                      {playbookCliProbeResult?.probeMode && (
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
+                          {playbookCliProbeResult.probeMode}
+                        </span>
+                      )}
+                      <span className="font-bold text-white">
+                        {playbookCliProbeResult?.playbookTitle ||
+                          activePlaybook?.title}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPlaybookCliProbeResult(null)}
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                  {playbookCliProbeLoading ? (
+                    <div className="text-blue-300 text-[11px] flex items-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>
+                        Running live read-only BigLake Iceberg REST catalog probe via gcloud 591.0.0...
+                      </span>
+                    </div>
+                  ) : playbookCliProbeResult?.error ? (
+                    <div className="text-red-400 text-[11px]">
+                      {playbookCliProbeResult.error}
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-[11px]">
+                      {playbookCliProbeResult?.explanation && (
+                        <div className="text-emerald-300">
+                          {playbookCliProbeResult.explanation}
+                        </div>
+                      )}
+                      <div className="text-zinc-400">
+                        Executed:{' '}
+                        <code className="text-blue-300">
+                          {playbookCliProbeResult?.executedCommand ||
+                            playbookCliProbeResult?.requestedCommand}
+                        </code>
+                      </div>
+                      {playbookCliProbeResult?.output !== undefined && (
+                        <pre className="p-2 rounded bg-black/70 border border-zinc-800 text-emerald-400 max-h-40 overflow-auto whitespace-pre-wrap text-[10px]">
+                          {typeof playbookCliProbeResult.output === 'string'
+                            ? playbookCliProbeResult.output
+                            : JSON.stringify(
+                                playbookCliProbeResult.output,
+                                null,
+                                2
+                              )}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Equal-Sized 4-Column Interactive Architecture Decision Simulators */}

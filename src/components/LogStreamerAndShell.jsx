@@ -790,7 +790,10 @@ export default function LogStreamerAndShell({
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                🔧 Requires gcloud CLI · Online Token Bridged
+              </span>
               {activeMapForensicSpec.gcloudCommand && (
                 <button
                   type="button"
@@ -3584,8 +3587,13 @@ export default function LogStreamerAndShell({
 
               {/* Interactive On-Demand Endpoint Network & TLS Probe */}
               <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs">
-                <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
-                  Run On-Demand Live DNS + TCP 3-Way Handshake + TLS 1.3 Probe Against Any Endpoint:
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                    Run On-Demand Live DNS + TCP 3-Way Handshake + TLS 1.3 Probe Against Any Endpoint:
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+                    ⚡ Direct Node.js DNS/TCP/TLS Socket · No gcloud Required
+                  </span>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input

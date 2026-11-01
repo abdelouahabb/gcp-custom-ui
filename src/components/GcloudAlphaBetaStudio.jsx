@@ -643,6 +643,9 @@ export default function GcloudAlphaBetaStudio({
               <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
                 Interactive SDK {overview?.sdk?.coreVersion || '591.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
               </span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-extrabold">
+                🔧 Requires gcloud CLI ≥ 591.0.0 · Online Session Token Bridged
+              </span>
               {workbenchHighlightLabel && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
                   🎯 LOADED &amp; PROBING: {workbenchHighlightLabel}
@@ -842,6 +845,9 @@ export default function GcloudAlphaBetaStudio({
                       {overview?.sdk?.coreVersion || '591.0.0'}]
                     </span>
                   )}
+                  <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold">
+                    🔧 {workbenchProbeReceipt.authBridgeMode || 'GCLOUD_CLI_BRIDGED'}
+                  </span>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
                       workbenchProbeReceipt.syntaxValid !== false

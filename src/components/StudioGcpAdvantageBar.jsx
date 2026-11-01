@@ -117,6 +117,50 @@ export default function StudioGcpAdvantageBar({
   const [gkeNodePoolTarget, setGkeNodePoolTarget] = useState('default-pool');
   const [gkeUpdateLocation, setGkeUpdateLocation] = useState('us-central1');
 
+  // Universal Live Read-Only gcloud Probe state (bridges Online Session Token -> gcloud CLI)
+  const [liveGcloudProbeLoading, setLiveGcloudProbeLoading] = useState(false);
+  const [liveGcloudProbeLabel, setLiveGcloudProbeLabel] = useState('');
+  const [liveGcloudProbeResult, setLiveGcloudProbeResult] = useState(null);
+
+  const handleRunLiveGcloudProbe = async (command, label = 'SDK 591.0.0 Live Probe') => {
+    if (!projectId || !command) return;
+    setLiveGcloudProbeLoading(true);
+    setLiveGcloudProbeLabel(label);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
+        {
+          action: 'EXECUTE_READONLY_GCLOUD_PROBE',
+          command,
+        }
+      );
+      setLiveGcloudProbeResult({
+        ...res.data,
+        label,
+        requestedCommand: command,
+      });
+      if (onShowToast) {
+        onShowToast(
+          `Live Probe Completed (${res.data?.probeMode || 'PROBED'}): ${label}`
+        );
+      }
+    } catch (err) {
+      const errMsg =
+        err?.response?.data?.error ||
+        err.message ||
+        'Live gcloud probe failed';
+      setLiveGcloudProbeResult({
+        ok: false,
+        label,
+        requestedCommand: command,
+        error: errMsg,
+      });
+      if (onShowError) onShowError(errMsg);
+    } finally {
+      setLiveGcloudProbeLoading(false);
+    }
+  };
+
   const fetchAudit = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -457,6 +501,9 @@ export default function StudioGcpAdvantageBar({
               <span className="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                 {meta.badge}
               </span>
+              <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                ⚡ Direct REST API + 🔧 gcloud 591.0.0 Live Probe (Online Token Bridged)
+              </span>
               <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                 {meta.title}
               </span>
@@ -752,9 +799,12 @@ export default function StudioGcpAdvantageBar({
               {activeVpcTool === 'LB_CIRCUIT_BREAKERS_591' && (
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
                         GA 591.0.0
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                        🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
                       </span>
                       <span className="font-bold text-zinc-900 dark:text-zinc-100">
                         Compute Backend Service Circuit Breakers &amp; WildFire Inline ML TLS Policies
@@ -819,6 +869,42 @@ export default function StudioGcpAdvantageBar({
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={liveGcloudProbeLoading}
+                      onClick={() =>
+                        handleRunLiveGcloudProbe(
+                          `gcloud compute backend-services update "${cbBackendName}" --global --circuit-breakers-max-connections=${cbMaxConnections} --circuit-breakers-max-pending-requests=${cbMaxPendingRequests} --circuit-breakers-max-requests=${cbMaxRequests} --circuit-breakers-max-retries=${cbMaxRetries} --project="${projectId}"`,
+                          'VPC Backend Circuit Breakers (gcloud 591.0.0)'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${
+                          liveGcloudProbeLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>Run Live Probe (Circuit Breakers)</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={liveGcloudProbeLoading}
+                      onClick={() =>
+                        handleRunLiveGcloudProbe(
+                          `gcloud network-security server-tls-policies list --location=global --project="${projectId}"`,
+                          'Network Security Server TLS Policies (gcloud 591.0.0)'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${
+                          liveGcloudProbeLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>Run Live Probe (Server TLS Policies)</span>
+                    </button>
                     {onRunInShell && (
                       <button
                         type="button"
@@ -850,23 +936,6 @@ export default function StudioGcpAdvantageBar({
                           : 'Copy Circuit Breaker CLI'}
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          `gcloud network-security server-tls-policies list --location=global --project="${projectId}"`,
-                          'vpc-tls-591'
-                        )
-                      }
-                      className="px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>
-                        {copiedKey === 'vpc-tls-591'
-                          ? 'Copied Server TLS CLI!'
-                          : 'Copy [GA 591.0.0] Server TLS Policy CLI'}
-                      </span>
-                    </button>
                   </div>
                 </div>
               )}
@@ -879,10 +948,15 @@ export default function StudioGcpAdvantageBar({
           {studioDomain === 'CLOUD_RUN' && (
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="space-y-0.5">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                  Live Fleet Audit: {runData?.servicesCount || 0} Cloud Run
-                  Services · {runData?.scaleToZeroCount || 0} at minInstances: 0
-                  ($0.00 Idle)
+                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-2">
+                  <span>
+                    Live Fleet Audit: {runData?.servicesCount || 0} Cloud Run
+                    Services · {runData?.scaleToZeroCount || 0} at minInstances: 0
+                    ($0.00 Idle)
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                    🔧 Requires gcloud CLI 591.0.0 for GPU Flag Verification
+                  </span>
                 </div>
                 <div className="text-[11px] text-zinc-500">
                   AWS EC2 g6.xlarge GPU costs ~$526.32/mo 24/7 even at 0
@@ -890,20 +964,40 @@ export default function StudioGcpAdvantageBar({
                   instances ($0.00/mo idle).
                 </div>
               </div>
-              {onRunInShell && (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  disabled={liveGcloudProbeLoading}
                   onClick={() =>
-                    onRunInShell(
-                      `gcloud beta run deploy llm-l4-serverless --image=us-docker.pkg.dev/cloudrun/container/hello --region=us-central1 --gpu=1 --gpu-type=nvidia-l4 --cpu=4 --memory=16Gi --no-gpu-zonal-redundancy --min-instances=0 --max-instances=3 --execution-environment=gen2 --project=${projectId}`
+                    handleRunLiveGcloudProbe(
+                      `gcloud beta run deploy llm-l4-serverless --image=us-docker.pkg.dev/cloudrun/container/hello --region=us-central1 --gpu=1 --gpu-type=nvidia-l4 --cpu=4 --memory=16Gi --no-gpu-zonal-redundancy --min-instances=0 --max-instances=3 --execution-environment=gen2 --project=${projectId}`,
+                      'Cloud Run Gen2 NVIDIA L4 GPU Flag Probe (gcloud 591.0.0)'
                     )
                   }
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer disabled:opacity-50"
                 >
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>Deploy Scale-to-$0 NVIDIA L4 GPU Service in Shell</span>
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      liveGcloudProbeLoading ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>Run Live Probe (L4 GPU Spec)</span>
                 </button>
-              )}
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell(
+                        `gcloud beta run deploy llm-l4-serverless --image=us-docker.pkg.dev/cloudrun/container/hello --region=us-central1 --gpu=1 --gpu-type=nvidia-l4 --cpu=4 --memory=16Gi --no-gpu-zonal-redundancy --min-instances=0 --max-instances=3 --execution-environment=gen2 --project=${projectId}`
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                  >
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Deploy Scale-to-$0 NVIDIA L4 GPU Service in Shell</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1081,9 +1175,12 @@ export default function StudioGcpAdvantageBar({
               {/* SDK 591.0.0 GA: VM Agent Identity & MIG In-Place Restart */}
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
                       GA 591.0.0
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
                       Compute VM Cryptographic Agent Identity (`--identity-type=AGENT_IDENTITY`) &amp; MIG In-Place Restart (`--allowed-actions=restart-in-place`)
@@ -1139,6 +1236,42 @@ export default function StudioGcpAdvantageBar({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <button
+                    type="button"
+                    disabled={liveGcloudProbeLoading}
+                    onClick={() =>
+                      handleRunLiveGcloudProbe(
+                        `gcloud compute instances update "${vmIdentityTarget}" --zone="${vmIdentityZone}" --identity-type=${vmIdentityType} --project="${projectId}"`,
+                        `VM --identity-type=${vmIdentityType} Flag Probe (gcloud 591.0.0)`
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        liveGcloudProbeLoading ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Run Live Probe (VM Agent Identity)</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={liveGcloudProbeLoading}
+                    onClick={() =>
+                      handleRunLiveGcloudProbe(
+                        `gcloud compute instance-groups managed set-autohealing "${migTargetName}" --zone="${vmIdentityZone}" --allowed-actions=restart-in-place --project="${projectId}"`,
+                        'MIG --allowed-actions=restart-in-place Probe (gcloud 591.0.0)'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        liveGcloudProbeLoading ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Run Live Probe (MIG restart-in-place)</span>
+                  </button>
                   {onRunInShell && (
                     <button
                       type="button"
@@ -1168,23 +1301,6 @@ export default function StudioGcpAdvantageBar({
                       {copiedKey === 'vm-id-591'
                         ? 'Copied Agent Identity CLI!'
                         : `Copy --identity-type=${vmIdentityType} CLI`}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCopy(
-                        `gcloud compute instance-groups managed set-autohealing "${migTargetName}" --zone="${vmIdentityZone}" --allowed-actions=restart-in-place --project="${projectId}"`,
-                        'mig-restart-591'
-                      )
-                    }
-                    className="px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>
-                      {copiedKey === 'mig-restart-591'
-                        ? 'Copied MIG restart-in-place!'
-                        : 'Copy [GA 591.0.0] MIG --allowed-actions=restart-in-place'}
                     </span>
                   </button>
                 </div>
@@ -1328,6 +1444,31 @@ export default function StudioGcpAdvantageBar({
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+                    </span>
+                    <button
+                      type="button"
+                      disabled={liveGcloudProbeLoading}
+                      onClick={() =>
+                        handleRunLiveGcloudProbe(
+                          `gcloud iam workload-identity-pools providers create-oidc "github-provider" --location="global" --workload-identity-pool="${wifPoolId}" --issuer-uri="https://token.actions.githubusercontent.com" --discovery-uri="${wifDiscoveryUri}"${
+                            wifActorProvider
+                              ? ` --actor-providers="${wifActorProvider}"`
+                              : ''
+                          } --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository=='${wifRepo}'" --project="${projectId}"`,
+                          'IAM Workload Identity OIDC + Actor Delegation Probe (gcloud 591.0.0)'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${
+                          liveGcloudProbeLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>Run Live Probe (OIDC &amp; --actor-providers)</span>
+                    </button>
                     {onRunInShell && (
                       <button
                         type="button"
@@ -1374,6 +1515,9 @@ export default function StudioGcpAdvantageBar({
                     <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-1.5">
                       BETA 591.0.0
                     </span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-1.5">
+                      🔧 Requires gcloud CLI 591.0.0
+                    </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
                       Google Workspace Client-Side Encryption Key Access (`gcloud beta workspace-key-access`):
                     </span>{' '}
@@ -1381,7 +1525,25 @@ export default function StudioGcpAdvantageBar({
                       Manage KACLS key access endpoints &amp; sovereign encryption configurations for Google Workspace.
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={liveGcloudProbeLoading}
+                      onClick={() =>
+                        handleRunLiveGcloudProbe(
+                          `gcloud beta workspace-key-access --help`,
+                          'Workspace Client-Side Encryption Key Access Probe (gcloud 591.0.0)'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${
+                          liveGcloudProbeLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>Run Live Probe (workspace-key-access)</span>
+                    </button>
                     {onRunInShell && (
                       <button
                         type="button"
@@ -1439,6 +1601,9 @@ export default function StudioGcpAdvantageBar({
                   <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold shrink-0">
                     GA 591.0.0
                   </span>
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold shrink-0">
+                    🔧 Requires gcloud CLI 591.0.0
+                  </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
                     Creation-Time FinOps Labels (`--labels`):
                   </span>
@@ -1449,23 +1614,43 @@ export default function StudioGcpAdvantageBar({
                     className="flex-1 min-w-[220px] px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopy(
-                      `gcloud storage buckets create "gs://${projectId}-labeled-bucket" --location="us-central1" --uniform-bucket-level-access --labels="${storageBucketLabels}" --project="${projectId}"`,
-                      'gcs-labels-591'
-                    )
-                  }
-                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>
-                    {copiedKey === 'gcs-labels-591'
-                      ? 'Copied Bucket --labels CLI!'
-                      : 'Copy [GA 591.0.0] Bucket --labels CLI'}
-                  </span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={liveGcloudProbeLoading}
+                    onClick={() =>
+                      handleRunLiveGcloudProbe(
+                        `gcloud storage buckets create "gs://${projectId}-labeled-bucket" --location="us-central1" --uniform-bucket-level-access --labels="${storageBucketLabels}" --project="${projectId}"`,
+                        'Cloud Storage Buckets --labels Probe (gcloud 591.0.0)'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        liveGcloudProbeLoading ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Run Live Probe (--labels)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        `gcloud storage buckets create "gs://${projectId}-labeled-bucket" --location="us-central1" --uniform-bucket-level-access --labels="${storageBucketLabels}" --project="${projectId}"`,
+                        'gcs-labels-591'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>
+                      {copiedKey === 'gcs-labels-591'
+                        ? 'Copied Bucket --labels CLI!'
+                        : 'Copy [GA 591.0.0] Bucket --labels CLI'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1521,9 +1706,12 @@ export default function StudioGcpAdvantageBar({
               {/* SDK 591.0.0 GA: Zero-Drain In-Place Node Config Updates */}
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
                       GA 591.0.0
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
                       GKE Zero-Drain In-Place Node Pool Live Update (`--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN`)
@@ -1566,6 +1754,24 @@ export default function StudioGcpAdvantageBar({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <button
+                    type="button"
+                    disabled={liveGcloudProbeLoading}
+                    onClick={() =>
+                      handleRunLiveGcloudProbe(
+                        `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`,
+                        'GKE LIVE_UPDATE_WITHOUT_DRAIN Probe (gcloud 591.0.0)'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        liveGcloudProbeLoading ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Run Live Probe (LIVE_UPDATE_WITHOUT_DRAIN)</span>
+                  </button>
                   {onRunInShell && (
                     <button
                       type="button"
@@ -1599,6 +1805,68 @@ export default function StudioGcpAdvantageBar({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Universal Inline Live gcloud Probe Receipt Drawer */}
+          {(liveGcloudProbeLoading || liveGcloudProbeResult) && (
+            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold">
+                    🔧 GCLOUD CLI 591.0.0 LIVE PROBE RECEIPT
+                  </span>
+                  {liveGcloudProbeResult?.probeMode && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
+                      {liveGcloudProbeResult.probeMode}
+                    </span>
+                  )}
+                  <span className="font-bold text-white">
+                    {liveGcloudProbeLabel || liveGcloudProbeResult?.label}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLiveGcloudProbeResult(null)}
+                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+              {liveGcloudProbeLoading ? (
+                <div className="text-blue-300 text-[11px] flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>
+                    Executing safe read-only gcloud probe with Online Session OAuth Token bridge...
+                  </span>
+                </div>
+              ) : liveGcloudProbeResult?.error ? (
+                <div className="text-red-400 text-[11px]">
+                  {liveGcloudProbeResult.error}
+                </div>
+              ) : (
+                <div className="space-y-1.5 text-[11px]">
+                  {liveGcloudProbeResult?.explanation && (
+                    <div className="text-emerald-300">
+                      {liveGcloudProbeResult.explanation}
+                    </div>
+                  )}
+                  <div className="text-zinc-400">
+                    Executed Probe Command:{' '}
+                    <code className="text-blue-300">
+                      {liveGcloudProbeResult?.executedCommand ||
+                        liveGcloudProbeResult?.requestedCommand}
+                    </code>
+                  </div>
+                  {liveGcloudProbeResult?.output !== undefined && (
+                    <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-emerald-400 max-h-48 overflow-auto whitespace-pre-wrap text-[10.5px]">
+                      {typeof liveGcloudProbeResult.output === 'string'
+                        ? liveGcloudProbeResult.output
+                        : JSON.stringify(liveGcloudProbeResult.output, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

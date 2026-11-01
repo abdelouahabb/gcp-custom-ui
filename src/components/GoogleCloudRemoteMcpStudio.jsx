@@ -1032,6 +1032,39 @@ export default function GoogleCloudRemoteMcpStudio({
 
   const [agentRegistryProbe, setAgentRegistryProbe] = useState(null);
   const [probingAgentRegistry, setProbingAgentRegistry] = useState(false);
+  const [liveCliProbeLoading, setLiveCliProbeLoading] = useState(false);
+  const [liveCliProbeResult, setLiveCliProbeResult] = useState(null);
+
+  const handleRunLiveAgentCliProbe = async (cliCommand, label) => {
+    if (!projectId || !cliCommand) return;
+    setLiveCliProbeLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
+        {
+          action: 'EXECUTE_READONLY_GCLOUD_PROBE',
+          command: cliCommand,
+        }
+      );
+      setLiveCliProbeResult({
+        ...res.data,
+        label,
+        requestedCommand: cliCommand,
+      });
+      notify(`Executed Live Probe (${res.data?.probeMode || 'PROBED'}): ${label}`);
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.message;
+      setLiveCliProbeResult({
+        ok: false,
+        label,
+        requestedCommand: cliCommand,
+        error: errMsg,
+      });
+      notify(`Live CLI probe error: ${errMsg}`);
+    } finally {
+      setLiveCliProbeLoading(false);
+    }
+  };
 
   const handleProbeGaAgentRegistry591 = async () => {
     if (!projectId) return;
@@ -1104,6 +1137,9 @@ export default function GoogleCloudRemoteMcpStudio({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+              ⚡ Direct HTTPS JSON-RPC 2.0 · No gcloud Required
+            </span>
             <button
               type="button"
               data-feature-id="MCP_REFRESH_CORE_PROBE"
@@ -1180,6 +1216,9 @@ export default function GoogleCloudRemoteMcpStudio({
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
                 GA 591.0.0 · 2026-10-27
               </span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+              </span>
               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                 Google Cloud Agent Registry (`mcp-servers`, `agents`, `skills`, `publishers`, `findings`) &amp; Cryptographic `AGENT_IDENTITY`
               </span>
@@ -1232,56 +1271,154 @@ export default function GoogleCloudRemoteMcpStudio({
                 cli: `gcloud compute instances update agent-vm-01 --zone=us-central1-a --identity-type=AGENT_IDENTITY --project=${projectId}`,
               },
             ].map((item) => (
-              <button
+              <div
                 key={item.label}
-                type="button"
-                onClick={() => copyToClipboard(item.cli, item.label)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 hover:bg-blue-500/10 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                className="inline-flex items-center rounded-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 overflow-hidden"
               >
-                <Copy className="w-3 h-3 text-blue-500" />
-                <span>{item.label}</span>
-              </button>
+                <button
+                  type="button"
+                  disabled={liveCliProbeLoading}
+                  onClick={() => handleRunLiveAgentCliProbe(item.cli, item.label)}
+                  title={`Run Live Read-Only Probe: ${item.cli}`}
+                  className="inline-flex items-center gap-1 px-2 py-1 hover:bg-blue-500/15 text-[10.5px] font-extrabold text-blue-600 dark:text-blue-400 cursor-pointer border-r border-zinc-200 dark:border-zinc-800"
+                >
+                  <Activity className="w-3 h-3" />
+                  <span>Probe: {item.label}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(item.cli, item.label)}
+                  title="Copy gcloud CLI command"
+                  className="px-1.5 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </div>
 
           {agentRegistryProbe && (
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 text-[11px]">
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">SDK Version</div>
-                <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                  {agentRegistryProbe.sdkVersion || '591.0.0'}
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[11px]">
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">SDK Version</div>
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                    {agentRegistryProbe.sdkVersion || '591.0.0'}
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">GA MCP Servers</div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {agentRegistryProbe.mcpServersCount ?? 0}
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">GA Agents</div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {agentRegistryProbe.agentsCount ?? 0}
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">GA Skills</div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {agentRegistryProbe.skillsCount ?? 0}
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">GA Publishers</div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {agentRegistryProbe.publishersCount ?? 0}
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">GA Findings</div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {agentRegistryProbe.findingsCount ?? 0}
+                  </div>
                 </div>
               </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">GA MCP Servers</div>
-                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {agentRegistryProbe.mcpServersCount ?? 0}
+              {(agentRegistryProbe.probes || []).length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[10.5px]">
+                  {agentRegistryProbe.probes.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                    >
+                      <code className="text-blue-600 dark:text-blue-400 truncate">
+                        {p.command}
+                      </code>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                          p.ok
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                        }`}
+                      >
+                        {p.ok
+                          ? `LIVE (${p.count ?? 0} items)`
+                          : p.authBridgeMode || 'CLI PROBED'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">GA Agents</div>
-                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {agentRegistryProbe.agentsCount ?? 0}
+              )}
+            </div>
+          )}
+
+          {(liveCliProbeLoading || liveCliProbeResult) && (
+            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-1.5 text-[11px]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
+                    🔧 LIVE GCLOUD 591.0.0 PROBE
+                  </span>
+                  {liveCliProbeResult?.probeMode && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
+                      {liveCliProbeResult.probeMode}
+                    </span>
+                  )}
+                  <span className="font-bold text-white">
+                    {liveCliProbeResult?.label || 'Executing...'}
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setLiveCliProbeResult(null)}
+                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] cursor-pointer"
+                >
+                  Dismiss
+                </button>
               </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">GA Skills</div>
-                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {agentRegistryProbe.skillsCount ?? 0}
+              {liveCliProbeLoading ? (
+                <div className="text-blue-300 flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Running live read-only gcloud probe...</span>
                 </div>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">GA Publishers</div>
-                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {agentRegistryProbe.publishersCount ?? 0}
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-500">GA Findings</div>
-                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {agentRegistryProbe.findingsCount ?? 0}
-                </div>
-              </div>
+              ) : liveCliProbeResult?.error ? (
+                <div className="text-red-400">{liveCliProbeResult.error}</div>
+              ) : (
+                <>
+                  {liveCliProbeResult?.explanation && (
+                    <div className="text-emerald-300">
+                      {liveCliProbeResult.explanation}
+                    </div>
+                  )}
+                  <div className="text-zinc-400">
+                    Executed:{' '}
+                    <code className="text-blue-300">
+                      {liveCliProbeResult?.executedCommand ||
+                        liveCliProbeResult?.requestedCommand}
+                    </code>
+                  </div>
+                  {liveCliProbeResult?.output !== undefined && (
+                    <pre className="p-2 rounded bg-black/70 border border-zinc-800 text-emerald-400 max-h-44 overflow-auto whitespace-pre-wrap text-[10px]">
+                      {typeof liveCliProbeResult.output === 'string'
+                        ? liveCliProbeResult.output
+                        : JSON.stringify(liveCliProbeResult.output, null, 2)}
+                    </pre>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

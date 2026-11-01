@@ -1040,6 +1040,9 @@ async function getLocalOrMetadataAccessToken(
 // Resolve token for the current HTTP request:
 // Priority 1: Local ADC / Metadata auto-refreshed token when localSessionConnected is active (never expires!)
 // Priority 2: Header `x-gcp-access-token` (stateless per-user browser session for any account!)
+let lastResolvedRequestToken = null;
+let lastResolvedAuthMode = 'DISCONNECTED';
+
 async function resolveRequestAuth(req) {
   const headerToken = req.headers['x-gcp-access-token'];
   const headerAccount = String(req.headers['x-gcp-account'] || '').trim();
@@ -1048,6 +1051,8 @@ async function resolveRequestAuth(req) {
     const { token: freshLocalToken, account: localAcct } =
       await getLocalOrMetadataAccessToken(headerAccount || undefined);
     if (freshLocalToken) {
+      lastResolvedRequestToken = freshLocalToken;
+      lastResolvedAuthMode = 'LOCAL_ADC_OR_CLOUD_RUN';
       return {
         token: freshLocalToken,
         account: localAcct || headerAccount,
@@ -1065,8 +1070,11 @@ async function resolveRequestAuth(req) {
         // ignore
       }
     }
+    const cleanHeaderTok = String(headerToken).trim();
+    lastResolvedRequestToken = cleanHeaderTok;
+    lastResolvedAuthMode = 'BROWSER_TOKEN';
     return {
-      token: String(headerToken).trim(),
+      token: cleanHeaderTok,
       account:
         headerAccount && !/^connected[\s_]*oauth[\s_]*user$/i.test(headerAccount)
           ? headerAccount
@@ -48142,10 +48150,12 @@ async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null)
   const targetProjectId = projArg ? String(projArg).split('=')[1].trim() : '';
   const hasBillingProjFlag = args.some((a) => String(a).startsWith('--billing-project='));
   const isVersionCmd = args[0] === 'version';
+  const isHelpCmd = args.includes('--help') || args.includes('-h');
+  const effectiveToken = token || lastResolvedRequestToken || null;
 
   const fullArgs = [
     ...args,
-    ...(targetProjectId && !hasBillingProjFlag && !isVersionCmd
+    ...(targetProjectId && !hasBillingProjFlag && !isVersionCmd && !isHelpCmd
       ? [`--billing-project=${targetProjectId}`]
       : []),
     '--quiet',
@@ -48159,6 +48169,11 @@ async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null)
         maxBuffer: 8 * 1024 * 1024,
         env: {
           ...process.env,
+          ...(effectiveToken && !isVersionCmd && !isHelpCmd
+            ? {
+                CLOUDSDK_AUTH_ACCESS_TOKEN: effectiveToken,
+              }
+            : {}),
           ...(targetProjectId
             ? {
                 CLOUDSDK_CORE_PROJECT: targetProjectId,
@@ -48181,6 +48196,11 @@ async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null)
       }
       return {
         ok: true,
+        requiresGcloudCli: true,
+        gcloudInstalled: true,
+        authBridgeMode: effectiveToken
+          ? `ONLINE_TOKEN_BRIDGED (${lastResolvedAuthMode})`
+          : 'LOCAL_GCLOUD_CREDENTIALS',
         durationMs: Date.now() - startedAt,
         command: `gcloud ${args.join(' ')}`,
         stdout: trimmed,
@@ -48188,12 +48208,19 @@ async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null)
         data: parsed,
       };
     } catch (err) {
+      const errText = String(err?.stderr || err?.message || '').trim();
+      const missingBinary = /ENOENT|not found|spawn gcloud/i.test(errText);
       return {
         ok: false,
+        requiresGcloudCli: true,
+        gcloudInstalled: !missingBinary,
+        authBridgeMode: effectiveToken
+          ? `ONLINE_TOKEN_BRIDGED (${lastResolvedAuthMode})`
+          : 'LOCAL_GCLOUD_CREDENTIALS',
         durationMs: Date.now() - startedAt,
         command: `gcloud ${args.join(' ')}`,
         stdout: String(err?.stdout || '').trim(),
-        stderr: String(err?.stderr || err?.message || '').trim(),
+        stderr: errText,
         data: null,
       };
     }
