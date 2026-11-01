@@ -5072,7 +5072,7 @@ function CloudPulseCockpit() {
 
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [provisionInitialService, setProvisionInitialService] =
-    useState('GCS_BUCKET');
+    useState('COMPUTE_VM');
   const [provisionInitialLocation, setProvisionInitialLocation] = useState(null);
   const [vmRefreshTrigger, setVmRefreshTrigger] = useState(0);
   const [cloudRunModalOpen, setCloudRunModalOpen] = useState(false);
@@ -5629,7 +5629,7 @@ function CloudPulseCockpit() {
     });
   };
 
-  const handleOpenProvision = (serviceType = 'GCS_BUCKET', locationSpec = null) => {
+  const handleOpenProvision = (serviceType = 'COMPUTE_VM', locationSpec = null) => {
     setProvisionInitialService(serviceType);
     setProvisionInitialLocation(locationSpec);
     setProvisionOpen(true);
@@ -5766,27 +5766,13 @@ function CloudPulseCockpit() {
       icon: Globe,
     },
 
-    // II. Core Infrastructure, Compute & Serverless
-    {
-      id: 'VPC_NETWORKS',
-      group: 'INFRA_COMPUTE',
-      label: 'VPC',
-      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
-      icon: Network,
-    },
+    // II. Core Infrastructure, Compute & Serverless (Ordered logically starting with Compute VM)
     {
       id: 'VM_SSH',
       group: 'INFRA_COMPUTE',
       label: 'VM',
       tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
       icon: Server,
-    },
-    {
-      id: 'CLOUD_STORAGE',
-      group: 'INFRA_COMPUTE',
-      label: 'Cloud Storage',
-      tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
-      icon: HardDrive,
     },
     {
       id: 'CLOUD_RUN',
@@ -5803,6 +5789,13 @@ function CloudPulseCockpit() {
       icon: Cpu,
     },
     {
+      id: 'FUNCTIONS_STUDIO',
+      group: 'INFRA_COMPUTE',
+      label: 'Functions',
+      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Eventarc Trigger Studio & Cloud Workflows / Messaging Decision Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows)',
+      icon: Zap,
+    },
+    {
       id: 'WAVE9_STUDIO',
       group: 'INFRA_COMPUTE',
       label: 'Cloud Build',
@@ -5810,11 +5803,18 @@ function CloudPulseCockpit() {
       icon: PackageCheck,
     },
     {
-      id: 'FUNCTIONS_STUDIO',
+      id: 'CLOUD_STORAGE',
       group: 'INFRA_COMPUTE',
-      label: 'Functions',
-      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Eventarc Trigger Studio & Cloud Workflows / Messaging Decision Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows)',
-      icon: Zap,
+      label: 'Cloud Storage',
+      tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
+      icon: HardDrive,
+    },
+    {
+      id: 'VPC_NETWORKS',
+      group: 'INFRA_COMPUTE',
+      label: 'VPC',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
+      icon: Network,
     },
 
     // III. Databases, Data Engineering & Lakehouse
@@ -6736,15 +6736,15 @@ function CloudPulseCockpit() {
                           ],
                         },
                         {
-                          domain: 'II. Compute, Containers & CI/CD',
+                          domain: 'II. Compute, Containers & Storage',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'VM_SSH', label: 'VM', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
-                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
                             { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
                             { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot, Spot GPUs & K8s YAML' },
-                            { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'GitHub CI/CD & SLSA-3 SBOM' },
                             { id: 'FUNCTIONS_STUDIO', label: 'Functions', meta: 'v1/v2 + 90+ Eventarc Triggers' },
+                            { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'GitHub CI/CD & SLSA-3 SBOM' },
+                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
                           ],
                         },
                         {
@@ -7981,19 +7981,19 @@ function CloudPulseCockpit() {
           handleNavigateStudioTab(tabId, subTab);
         }}
         onOpenCreateModal={(type) => {
-          if (type === 'CLOUD_RUN') handleOpenProvision('CLOUD_RUN');
+          if (type === 'VM' || type === 'COMPUTE_VM')
+            handleOpenProvision('COMPUTE_VM');
+          else if (type === 'CLOUD_RUN') handleOpenProvision('CLOUD_RUN');
           else if (type === 'GKE_CLUSTER') handleOpenProvision('GKE_CLUSTER');
           else if (type === 'CLOUD_SQL') handleOpenProvision('CLOUD_SQL');
-          else if (type === 'BIGQUERY_DATASET')
-            handleOpenProvision('BIGQUERY_DATASET');
-          else if (type === 'VM' || type === 'COMPUTE_VM')
-            handleOpenProvision('COMPUTE_VM');
-          else if (type === 'VPC_NETWORK') handleOpenProvision('VPC_NETWORK');
-          else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
           else if (type === 'BUCKET' || type === 'GCS_BUCKET')
             handleOpenProvision('GCS_BUCKET');
+          else if (type === 'BIGQUERY_DATASET')
+            handleOpenProvision('BIGQUERY_DATASET');
+          else if (type === 'VPC_NETWORK') handleOpenProvision('VPC_NETWORK');
+          else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
           else if (type === 'API') handleScrollToApisWithSpotlight();
-          else handleOpenProvision(type || 'GCS_BUCKET');
+          else handleOpenProvision(type || 'COMPUTE_VM');
         }}
         onOpenKillSwitch={handleScrollToApisWithSpotlight}
         onOpenCopilot={() => handleOpenCopilotWithPrompt('')}

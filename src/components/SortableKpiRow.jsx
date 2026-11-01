@@ -198,6 +198,32 @@ export default function SortableKpiRow({
 
   const initialCards = [
     {
+      id: 'kpi-compute',
+      title: 'Compute & Serverless',
+      value: `${vmsCount + runCount + clustersCount}`,
+      trendLabel: `${vmsCount} VMs · ${runCount} Run`,
+      subtitle: `${clustersCount} GKE Clusters · ${vpcsCount} VPCs`,
+      badge: 'LIVE_GCP',
+      icon: Server,
+      primaryTargetLabel: 'Open VM Fleet & Browser SSH',
+      clickHint: 'Click to open Compute VM Fleet, Cloud Run, or GKE Studio',
+      onPrimaryClick: () => navigate('VM_SSH'),
+      quickLinks: [
+        {
+          label: `VMs & SSH (${vmsCount})`,
+          onClick: () => navigate('VM_SSH'),
+        },
+        {
+          label: `Cloud Run (${runCount})`,
+          onClick: () => navigate('CLOUD_RUN'),
+        },
+        {
+          label: `GKE (${clustersCount})`,
+          onClick: () => navigate('GKE_STUDIO'),
+        },
+      ],
+    },
+    {
       id: 'kpi-storage',
       title: 'Storage & Datasets',
       value: `${bucketsCount + datasetsCount}`,
@@ -228,42 +254,6 @@ export default function SortableKpiRow({
         {
           label: 'BigLake',
           onClick: () => navigate('BIGLAKE_STUDIO'),
-        },
-      ],
-    },
-    {
-      id: 'kpi-compute',
-      title: 'Compute & Serverless',
-      value: `${vmsCount + runCount + clustersCount}`,
-      trendLabel: `${vmsCount} VMs · ${runCount} Run`,
-      subtitle: `${clustersCount} GKE Clusters · ${vpcsCount} VPCs`,
-      badge: 'LIVE_GCP',
-      icon: Server,
-      primaryTargetLabel:
-        vmsCount === 0 && runCount > 0
-          ? 'Open Cloud Run Fleet'
-          : 'Open VM Fleet & Browser SSH',
-      clickHint: 'Click to open Compute VM Fleet, Cloud Run, or GKE Studio',
-      onPrimaryClick: () =>
-        navigate(
-          vmsCount === 0 && runCount > 0
-            ? 'CLOUD_RUN'
-            : vmsCount === 0 && clustersCount > 0
-            ? 'GKE_STUDIO'
-            : 'VM_SSH'
-        ),
-      quickLinks: [
-        {
-          label: `VMs & SSH (${vmsCount})`,
-          onClick: () => navigate('VM_SSH'),
-        },
-        {
-          label: `Cloud Run (${runCount})`,
-          onClick: () => navigate('CLOUD_RUN'),
-        },
-        {
-          label: `GKE (${clustersCount})`,
-          onClick: () => navigate('GKE_STUDIO'),
         },
       ],
     },
@@ -330,11 +320,11 @@ export default function SortableKpiRow({
     },
   ];
 
-  const defaultOrder = ['kpi-storage', 'kpi-compute', 'kpi-apis', 'kpi-logs'];
+  const defaultOrder = ['kpi-compute', 'kpi-storage', 'kpi-apis', 'kpi-logs'];
   const [cardOrder, setCardOrder] = useState(() => {
     try {
       const saved = JSON.parse(
-        localStorage.getItem('cloudpulse_kpi_card_order_v1') || 'null'
+        localStorage.getItem('cloudpulse_kpi_card_order_v2') || 'null'
       );
       if (
         Array.isArray(saved) &&
@@ -369,7 +359,7 @@ export default function SortableKpiRow({
         const nextOrder = arrayMove(items, oldIndex, newIndex);
         try {
           localStorage.setItem(
-            'cloudpulse_kpi_card_order_v1',
+            'cloudpulse_kpi_card_order_v2',
             JSON.stringify(nextOrder)
           );
         } catch {
@@ -432,7 +422,7 @@ export default function SortableKpiRow({
               onClick={() => {
                 setCardOrder(defaultOrder);
                 try {
-                  localStorage.removeItem('cloudpulse_kpi_card_order_v1');
+                  localStorage.removeItem('cloudpulse_kpi_card_order_v2');
                 } catch {
                   // ignore
                 }

@@ -26,13 +26,27 @@ import {
 } from 'lucide-react';
 
 const CATEGORY_OPTIONS = [
-  { value: 'ALL', label: 'All Services' },
-  { value: 'network', label: 'VPC Networks & Firewalls' },
-  { value: 'compute', label: 'Compute VMs & Cloud Run' },
-  { value: 'storage', label: 'Cloud Storage (GCS)' },
-  { value: 'data', label: 'BigQuery & Data Cloud' },
-  { value: 'ai', label: 'Vertex AI & Gemini' },
+  { value: 'ALL', label: 'All Services (VM First)' },
+  { value: 'compute', label: '1. Compute VMs, Cloud Run & GKE' },
+  { value: 'storage', label: '2. Cloud Storage (GCS)' },
+  { value: 'data', label: '3. BigQuery & Databases' },
+  { value: 'network', label: '4. VPC Networks & Firewalls' },
+  { value: 'ai', label: '5. Vertex AI & Gemini' },
 ];
+
+function getResourceLogicalOrderRank(item) {
+  const t = String(item?.type || '');
+  if (t === 'Compute Engine VM') return 1;
+  if (t === 'Cloud Run Service') return 2;
+  if (t.includes('GKE')) return 3;
+  if (t.includes('Cloud SQL') || t.includes('AlloyDB')) return 4;
+  if (t === 'Cloud Storage Bucket') return 5;
+  if (t === 'BigQuery Dataset') return 6;
+  if (t === 'VPC Network') return 7;
+  if (t === 'VPC Firewall Rule') return 8;
+  if (t === 'Enabled GCP Service API') return 9;
+  return 10;
+}
 
 const SOURCE_OPTIONS = [
   { value: 'ALL', label: 'All (Live GCP + Telemetry)' },
@@ -465,31 +479,33 @@ export default function ResourceControlCenter({
     [resources, lineageById]
   );
 
-  // Filter without deleting raw data
+  // Filter without deleting raw data, ordered logically starting with Compute Engine VMs
   const filteredResources = useMemo(() => {
-    return resources.filter((item) => {
-      if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
-        return false;
-      }
-      if (selectedSource !== 'ALL' && item.source !== selectedSource) {
-        return false;
-      }
-      if (onlyStaleFilter && !lineageById[item.id]?.isStale) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const lin = lineageById[item.id];
-        return (
-          item.name.toLowerCase().includes(q) ||
-          item.type.toLowerCase().includes(q) ||
-          item.region.toLowerCase().includes(q) ||
-          (lin?.badgeLabel || '').toLowerCase().includes(q) ||
-          (lin?.originTitle || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
+    return resources
+      .filter((item) => {
+        if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
+          return false;
+        }
+        if (selectedSource !== 'ALL' && item.source !== selectedSource) {
+          return false;
+        }
+        if (onlyStaleFilter && !lineageById[item.id]?.isStale) {
+          return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const lin = lineageById[item.id];
+          return (
+            item.name.toLowerCase().includes(q) ||
+            item.type.toLowerCase().includes(q) ||
+            item.region.toLowerCase().includes(q) ||
+            (lin?.badgeLabel || '').toLowerCase().includes(q) ||
+            (lin?.originTitle || '').toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => getResourceLogicalOrderRank(a) - getResourceLogicalOrderRank(b));
   }, [resources, selectedCategory, selectedSource, onlyStaleFilter, searchQuery, lineageById]);
 
   const totalPages = Math.max(1, Math.ceil(filteredResources.length / pageSize));

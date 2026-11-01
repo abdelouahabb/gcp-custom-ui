@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Network,
   Shield,
+  Terminal,
 } from 'lucide-react';
 import VisualCronScheduleBuilder, {
   describeCronInPlainEnglish,
@@ -21,52 +22,52 @@ import VisualCronScheduleBuilder, {
 
 const SERVICE_TABS = [
   {
+    id: 'COMPUTE_VM',
+    label: '1. Compute VM',
+    icon: Server,
+    desc: 'E2/N2/C4/Arm64/GPU VMs, Hyperdisk & Confidential VM',
+  },
+  {
     id: 'CLOUD_RUN',
-    label: 'Cloud Run',
+    label: '2. Cloud Run',
     icon: Cpu,
-    desc: 'Deploy Cloud Run Service (run.googleapis.com)',
+    desc: 'Serverless Containers & Jobs (Scale-to-$0 / L4 GPU)',
   },
   {
     id: 'GKE_CLUSTER',
-    label: 'GKE Cluster',
+    label: '3. GKE Cluster',
     icon: Sparkles,
-    desc: 'Create GKE Autopilot or Standard GPU Cluster (container.googleapis.com)',
-  },
-  {
-    id: 'COMPUTE_VM',
-    label: 'Compute VM',
-    icon: Server,
-    desc: 'Create Compute Engine VM (compute.googleapis.com)',
-  },
-  {
-    id: 'VPC_NETWORK',
-    label: 'VPC Network',
-    icon: Network,
-    desc: 'Create VPC Network (global/networks)',
-  },
-  {
-    id: 'VPC_FIREWALL',
-    label: 'Firewall Rule',
-    icon: Shield,
-    desc: 'Create VPC Firewall Rule (global/firewalls)',
-  },
-  {
-    id: 'GCS_BUCKET',
-    label: 'Cloud Storage',
-    icon: HardDrive,
-    desc: 'Create Cloud Storage Bucket (storage.googleapis.com)',
-  },
-  {
-    id: 'BIGQUERY_DATASET',
-    label: 'BigQuery Dataset',
-    icon: Database,
-    desc: 'Create BigQuery Dataset (bigquery.googleapis.com)',
+    desc: 'Autopilot or Standard GPU Kubernetes Cluster',
   },
   {
     id: 'CLOUD_SQL',
-    label: 'Cloud SQL / AlloyDB',
+    label: '4. Cloud SQL / AlloyDB',
     icon: Database,
-    desc: 'Create MySQL 8.4 / Postgres 16 Cloud SQL or AlloyDB Cluster',
+    desc: 'PostgreSQL 16/17, MySQL 8.4 & AlloyDB Vector DB',
+  },
+  {
+    id: 'GCS_BUCKET',
+    label: '5. Cloud Storage',
+    icon: HardDrive,
+    desc: 'Object Storage Bucket (WORM / HNS / Autoclass)',
+  },
+  {
+    id: 'BIGQUERY_DATASET',
+    label: '6. BigQuery Dataset',
+    icon: Database,
+    desc: 'Analytical Data Warehouse & AI Lakehouse Dataset',
+  },
+  {
+    id: 'VPC_NETWORK',
+    label: '7. VPC Network',
+    icon: Network,
+    desc: 'Global / Regional Virtual Private Cloud & Subnets',
+  },
+  {
+    id: 'VPC_FIREWALL',
+    label: '8. Firewall Rule',
+    icon: Shield,
+    desc: 'Zero-Trust Ingress/Egress & IAP Perimeter Rule',
   },
 ];
 
@@ -74,7 +75,7 @@ export default function ResourceProvisionModal({
   isOpen,
   onClose,
   projectId,
-  initialServiceType = 'GCS_BUCKET',
+  initialServiceType = 'COMPUTE_VM',
   initialLocation = null,
   onProvisionSuccess,
 }) {
@@ -4207,7 +4208,7 @@ export default function ResourceProvisionModal({
                   </div>
                   <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-emerald-400 max-h-44 overflow-auto whitespace-pre-wrap text-[10.5px] leading-relaxed">
                     {vmBlueprintCodeTab === 'GCLOUD_CLI'
-                      ? gcloudCommand
+                      ? gcloudPreview
                       : vmBlueprintCodeTab === 'REST_JSON'
                       ? JSON.stringify(vmRestPayloadPreview, null, 2)
                       : vmTerraformPreview}
