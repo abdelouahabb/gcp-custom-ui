@@ -1556,9 +1556,7 @@ export default function VmFleetAndSsh({
                         ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
                         : isTransitional
                         ? 'border-amber-500/40 opacity-85'
-                        : isScpActiveForVm
-                        ? 'border-emerald-500 ring-1 ring-emerald-500/40'
-                        : isSshActive
+                        : isScpActiveForVm || isSshFocusedInTerminal
                         ? 'border-blue-500 ring-1 ring-blue-500/40'
                         : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
                     }`}
@@ -1755,12 +1753,10 @@ export default function VmFleetAndSsh({
                             ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
                             : `Click to connect live interactive SSH terminal to ${vm.name}`
                         }
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                          isSshActive && !isSshFocusedInTerminal
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white ring-1 ring-blue-400/50'
-                            : isSshFocusedInTerminal
-                            ? 'bg-blue-600 hover:bg-red-600 text-white ring-1 ring-blue-400/50'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          isSshFocusedInTerminal
+                            ? 'bg-blue-600 hover:bg-red-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
                         }`}
                       >
                         <Terminal className="w-3.5 h-3.5 shrink-0" />
@@ -1768,7 +1764,7 @@ export default function VmFleetAndSsh({
                           {isDeleting
                             ? 'Deprovisioning...'
                             : isSshActive && !isSshFocusedInTerminal
-                            ? 'Switch to SSH PTY'
+                            ? 'SSH / Console (Ready)'
                             : isSshFocusedInTerminal
                             ? '● SSH Connected (Off)'
                             : 'SSH / Console'}
@@ -1795,7 +1791,7 @@ export default function VmFleetAndSsh({
                         }
                         className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
                           isScpActiveForVm
-                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm ring-1 ring-emerald-400/50'
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
                             : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
                         }`}
                       >
@@ -1818,7 +1814,7 @@ export default function VmFleetAndSsh({
                         title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
                         className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
                           openTunnelVm === vm.name
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
                             : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
                         }`}
                       >
@@ -1833,7 +1829,7 @@ export default function VmFleetAndSsh({
                         title="Migrate this Compute Engine VM instance to a Scale-to-$0.00 Cloud Run Gen2 Serverless Service (run.googleapis.com/v2)"
                         className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
                           openMigrateCloudRunVm === vm.name
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
                             : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
                         }`}
                       >

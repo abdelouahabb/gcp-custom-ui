@@ -3347,16 +3347,105 @@ export default function XtermWebSshTerminal({
                           const isScript =
                             !isDir && /\.(sh|py|bash)$/i.test(entry.name);
 
+                          // Row-level active operation states
+                          const isRowDeleting =
+                            scpActionBusy === `del:${entry.path}` ||
+                            (scpActionBusy === 'batch-delete' && isChecked);
+                          const isRowHashing =
+                            scpActionBusy === `sha:${entry.path}`;
+                          const isRowDownloading =
+                            scpActionBusy === `download:${entry.path}`;
+                          const isRowArchiving =
+                            scpActionBusy === `tar:${entry.path}` ||
+                            ((scpActionBusy === 'batch-tar' ||
+                              scpActionBusy === 'compress') &&
+                              isChecked);
+                          const isRowExtracting =
+                            scpActionBusy === `extract:${entry.path}`;
+                          const isRowChmodding =
+                            scpActionBusy === `chmod:${entry.path}`;
+                          const isRowRenaming =
+                            scpActionBusy === `rename:${entry.path}`;
+                          const isRowReading =
+                            scpActionBusy === `preview:${entry.path}` ||
+                            scpActionBusy === `tail:${entry.path}`;
+                          const isRowBusy =
+                            isRowDeleting ||
+                            isRowHashing ||
+                            isRowDownloading ||
+                            isRowArchiving ||
+                            isRowExtracting ||
+                            isRowChmodding ||
+                            isRowRenaming ||
+                            isRowReading;
+                          const isPendingDeleteConfirm =
+                            scpConfirmDeletePath === entry.path &&
+                            !isRowDeleting;
+                          const hasVerifiedChecksum =
+                            scpChecksumResult?.path === entry.path &&
+                            !isRowHashing;
+
+                          const rowStatusLabel = isRowDeleting
+                            ? 'Deleting from VM...'
+                            : isRowHashing
+                            ? 'Computing SHA-256 & MD5...'
+                            : isRowExtracting
+                            ? 'Extracting archive...'
+                            : isRowArchiving
+                            ? 'Compressing .tar.gz...'
+                            : isRowDownloading
+                            ? `Downloading${
+                                scpTransferProgress?.percent
+                                  ? ` (${scpTransferProgress.percent}%)`
+                                  : '...'
+                              }`
+                            : isRowChmodding
+                            ? 'Applying chmod...'
+                            : isRowRenaming
+                            ? 'Renaming...'
+                            : isRowReading
+                            ? 'Reading file...'
+                            : '';
+
                           return (
                             <div
                               key={entry.path}
-                              className={`px-3 py-2 grid grid-cols-12 gap-2 items-center hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors text-xs ${
-                                isChecked ? 'bg-indigo-500/5' : ''
+                              aria-busy={isRowBusy}
+                              className={`relative overflow-hidden px-3 py-2 grid grid-cols-12 gap-2 items-center transition-all duration-200 text-xs ${
+                                isRowDeleting
+                                  ? 'bg-red-500/15 dark:bg-red-950/35 ring-1 ring-inset ring-red-500/40 opacity-65 select-none pointer-events-none'
+                                  : isRowHashing
+                                  ? 'bg-emerald-500/10 dark:bg-emerald-950/30 ring-1 ring-inset ring-emerald-500/40 opacity-80 select-none pointer-events-none'
+                                  : isRowBusy
+                                  ? 'bg-blue-500/10 dark:bg-blue-950/25 ring-1 ring-inset ring-blue-500/35 opacity-80 select-none pointer-events-none'
+                                  : isPendingDeleteConfirm
+                                  ? 'bg-red-500/10 dark:bg-red-950/25 ring-1 ring-inset ring-red-500/35'
+                                  : hasVerifiedChecksum
+                                  ? 'bg-emerald-500/5 ring-1 ring-inset ring-emerald-500/25 hover:bg-emerald-500/10'
+                                  : isChecked
+                                  ? 'bg-indigo-500/5 hover:bg-indigo-500/10'
+                                  : 'hover:bg-zinc-50 dark:hover:bg-zinc-900/60'
                               }`}
                             >
+                              {/* Animated Top Progress Strip when a file/folder operation is running on this row */}
+                              {isRowBusy && (
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                  <div
+                                    className={`h-full w-full animate-pulse ${
+                                      isRowDeleting
+                                        ? 'bg-gradient-to-r from-red-500 via-rose-400 to-amber-500'
+                                        : isRowHashing
+                                        ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400'
+                                        : 'bg-gradient-to-r from-blue-500 via-indigo-400 to-emerald-400'
+                                    }`}
+                                  />
+                                </div>
+                              )}
+
                               <div className="col-span-5 flex items-center gap-2 min-w-0">
                                 <input
                                   type="checkbox"
+                                  disabled={isRowBusy}
                                   checked={isChecked}
                                   onChange={(e) => {
                                     if (e.target.checked) {
@@ -3370,22 +3459,35 @@ export default function XtermWebSshTerminal({
                                       );
                                     }
                                   }}
-                                  className="rounded border-zinc-400 cursor-pointer shrink-0"
+                                  className="rounded border-zinc-400 cursor-pointer shrink-0 disabled:opacity-40"
                                 />
-                                {isDir ? (
+                                {isRowBusy ? (
+                                  <RefreshCw
+                                    className={`w-4 h-4 shrink-0 animate-spin ${
+                                      isRowDeleting
+                                        ? 'text-red-400'
+                                        : isRowHashing
+                                        ? 'text-emerald-400'
+                                        : 'text-blue-400'
+                                    }`}
+                                  />
+                                ) : isDir ? (
                                   <Folder className="w-4 h-4 text-amber-400 shrink-0 fill-amber-400/20" />
                                 ) : (
                                   <FileCode className="w-4 h-4 text-blue-400 shrink-0" />
                                 )}
                                 <button
                                   type="button"
+                                  disabled={isRowBusy}
                                   onClick={() =>
                                     isDir
                                       ? fetchScpDirectory(entry.path)
                                       : handleOpenScpFilePreview(entry)
                                   }
-                                  className={`truncate text-left font-bold hover:underline cursor-pointer ${
-                                    isDir
+                                  className={`truncate text-left font-bold hover:underline cursor-pointer disabled:no-underline ${
+                                    isRowDeleting
+                                      ? 'line-through text-red-500 dark:text-red-400'
+                                      : isDir
                                       ? 'text-amber-600 dark:text-amber-300'
                                       : 'text-zinc-900 dark:text-zinc-100'
                                   }`}
@@ -3394,6 +3496,46 @@ export default function XtermWebSshTerminal({
                                   {entry.name}
                                   {isDir ? '/' : ''}
                                 </button>
+
+                                {/* Inline Live Operation Status Badge on the File Row */}
+                                {rowStatusLabel && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 border animate-pulse ${
+                                      isRowDeleting
+                                        ? 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40'
+                                        : isRowHashing
+                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40'
+                                        : 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40'
+                                    }`}
+                                  >
+                                    {rowStatusLabel}
+                                  </span>
+                                )}
+
+                                {/* Pending Delete Confirmation Warning Pill */}
+                                {isPendingDeleteConfirm && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
+                                    ⚠️ Confirm delete?
+                                  </span>
+                                )}
+
+                                {/* Verified SHA-256 Digest Badge directly on the File Row */}
+                                {hasVerifiedChecksum &&
+                                  scpChecksumResult?.sha256 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        navigator.clipboard?.writeText(
+                                          scpChecksumResult.sha256
+                                        )
+                                      }
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-300 border border-emerald-500/35 cursor-pointer"
+                                      title={`Verified SHA-256: ${scpChecksumResult.sha256} (click to copy)`}
+                                    >
+                                      🔒 SHA-256:{' '}
+                                      {scpChecksumResult.sha256.slice(0, 8)}…
+                                    </button>
+                                  )}
                               </div>
 
                               <div className="col-span-2 text-[11px] text-zinc-500">
@@ -3403,6 +3545,7 @@ export default function XtermWebSshTerminal({
                               <div className="col-span-2 text-[10px] text-zinc-500 truncate">
                                 <button
                                   type="button"
+                                  disabled={isRowBusy}
                                   onClick={() =>
                                     setScpChmodTarget({
                                       path: entry.path,
@@ -3410,258 +3553,284 @@ export default function XtermWebSshTerminal({
                                       modeOctal: entry.modeOctal || '644',
                                     })
                                   }
-                                  className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 hover:text-amber-400 border border-zinc-200 dark:border-zinc-800 font-mono cursor-pointer"
+                                  className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 hover:text-amber-400 border border-zinc-200 dark:border-zinc-800 font-mono cursor-pointer disabled:opacity-40"
                                   title="Click to change permissions (chmod 644 / 755 / 600 / 777)"
                                 >
-                                  {entry.modeOctal || '644'} · {entry.owner}
+                                  {isRowChmodding
+                                    ? 'chmod...'
+                                    : `${entry.modeOctal || '644'} · ${
+                                        entry.owner
+                                      }`}
                                 </button>
                               </div>
 
                               <div className="col-span-3 flex items-center justify-end gap-1 flex-wrap">
-                                {isDir ? (
+                                {isPendingDeleteConfirm ? (
                                   <>
                                     <button
                                       type="button"
+                                      disabled={isRowDeleting}
                                       onClick={() =>
-                                        fetchScpDirectory(entry.path)
+                                        handleDeleteScpEntry(entry.path)
                                       }
-                                      className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                                      title={`Permanently delete ${entry.name} from VM`}
                                     >
-                                      Open
+                                      <Trash2 className="w-2.5 h-2.5" />
+                                      <span>Confirm Delete</span>
                                     </button>
                                     <button
                                       type="button"
-                                      disabled={
-                                        scpActionBusy === `tar:${entry.path}`
-                                      }
                                       onClick={() =>
-                                        handleDownloadScpTarGz(
-                                          entry.path,
-                                          `${entry.name}.tar.gz`
-                                        )
+                                        setScpConfirmDeletePath(null)
                                       }
-                                      className="px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-bold cursor-pointer"
-                                      title={`Compress folder "${entry.name}" on VM and download as .tar.gz with progress bar`}
+                                      className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                                     >
-                                      {scpActionBusy === `tar:${entry.path}`
-                                        ? `${
-                                            scpTransferProgress?.percent
-                                              ? `${scpTransferProgress.percent}%`
-                                              : '...'
-                                          }`
-                                        : '📦 .tar.gz'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (viewMode !== 'SPLIT_SSH_AND_SCP') {
-                                          setViewMode('LIVE_SSH_PTY');
-                                        }
-                                        if (
-                                          !isSessionEnabled &&
-                                          onSelectVm &&
-                                          focusedVm
-                                        ) {
-                                          onSelectVm(focusedVm);
-                                        }
-                                        setTimeout(
-                                          () =>
-                                            sendToPty(
-                                              `cd "${entry.path}" && ls -la\r`
-                                            ),
-                                          350
-                                        );
-                                      }}
-                                      className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
-                                      title="cd into this folder inside the live Xterm.js SSH terminal"
-                                    >
-                                      cd in SSH
+                                      Cancel
                                     </button>
                                   </>
+                                ) : isRowDeleting ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-red-600/80 text-white text-[10px] font-extrabold">
+                                    <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                                    <span>Deleting...</span>
+                                  </span>
                                 ) : (
                                   <>
+                                    {isDir ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() =>
+                                            fetchScpDirectory(entry.path)
+                                          }
+                                          className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                        >
+                                          Open
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() =>
+                                            handleDownloadScpTarGz(
+                                              entry.path,
+                                              `${entry.name}.tar.gz`
+                                            )
+                                          }
+                                          className="px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                          title={`Compress folder "${entry.name}" on VM and download as .tar.gz with progress bar`}
+                                        >
+                                          {isRowArchiving
+                                            ? `${
+                                                scpTransferProgress?.percent
+                                                  ? `${scpTransferProgress.percent}%`
+                                                  : 'Compressing...'
+                                              }`
+                                            : '📦 .tar.gz'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() => {
+                                            if (
+                                              viewMode !== 'SPLIT_SSH_AND_SCP'
+                                            ) {
+                                              setViewMode('LIVE_SSH_PTY');
+                                            }
+                                            if (
+                                              !isSessionEnabled &&
+                                              onSelectVm &&
+                                              focusedVm
+                                            ) {
+                                              onSelectVm(focusedVm);
+                                            }
+                                            setTimeout(
+                                              () =>
+                                                sendToPty(
+                                                  `cd "${entry.path}" && ls -la\r`
+                                                ),
+                                              350
+                                            );
+                                          }}
+                                          className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                          title="cd into this folder inside the live Xterm.js SSH terminal"
+                                        >
+                                          cd in SSH
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() =>
+                                            handleOpenScpFilePreview(entry)
+                                          }
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                          title="View or edit file in-place via SCP/SFTP"
+                                        >
+                                          <Edit3 className="w-2.5 h-2.5" />
+                                          <span>
+                                            {scpActionBusy ===
+                                            `preview:${entry.path}`
+                                              ? 'Opening...'
+                                              : 'Edit'}
+                                          </span>
+                                        </button>
+
+                                        {isLogOrText && (
+                                          <button
+                                            type="button"
+                                            disabled={isRowBusy}
+                                            onClick={() =>
+                                              handleTailScpLogFile(entry, 150)
+                                            }
+                                            className="px-1.5 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                            title="Tail last 150 lines of this log/text file"
+                                          >
+                                            {scpActionBusy ===
+                                            `tail:${entry.path}`
+                                              ? 'Tailing...'
+                                              : 'Tail'}
+                                          </button>
+                                        )}
+
+                                        {isArchive && (
+                                          <button
+                                            type="button"
+                                            disabled={isRowBusy}
+                                            onClick={() =>
+                                              handleExtractScpArchive(entry)
+                                            }
+                                            className="px-1.5 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                            title={`Extract archive "${entry.name}" directly on VM`}
+                                          >
+                                            {isRowExtracting
+                                              ? 'Extracting...'
+                                              : 'Extract'}
+                                          </button>
+                                        )}
+
+                                        {isScript && (
+                                          <button
+                                            type="button"
+                                            disabled={isRowBusy}
+                                            onClick={() => {
+                                              if (
+                                                viewMode !== 'SPLIT_SSH_AND_SCP'
+                                              ) {
+                                                setViewMode('LIVE_SSH_PTY');
+                                              }
+                                              if (
+                                                !isSessionEnabled &&
+                                                onSelectVm &&
+                                                focusedVm
+                                              ) {
+                                                onSelectVm(focusedVm);
+                                              }
+                                              const runner =
+                                                entry.name.endsWith('.py')
+                                                  ? 'python3'
+                                                  : 'bash';
+                                              setTimeout(
+                                                () =>
+                                                  sendToPty(
+                                                    `${runner} "${entry.path}"\r`
+                                                  ),
+                                                350
+                                              );
+                                            }}
+                                            className="px-1.5 py-0.5 rounded bg-teal-500/15 hover:bg-teal-500/25 text-teal-600 dark:text-teal-300 border border-teal-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                            title="Execute script inside the live SSH terminal"
+                                          >
+                                            ▶ Run
+                                          </button>
+                                        )}
+
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() =>
+                                            handleDownloadScpFileRaw(entry)
+                                          }
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-60"
+                                          title="Download file to your laptop via SCP/SFTP with live progress & SHA-256 verification"
+                                        >
+                                          <Download
+                                            className={`w-2.5 h-2.5 ${
+                                              isRowDownloading
+                                                ? 'animate-bounce'
+                                                : ''
+                                            }`}
+                                          />
+                                          <span>
+                                            {isRowDownloading
+                                              ? `${
+                                                  scpTransferProgress?.percent
+                                                    ? `${scpTransferProgress.percent}%`
+                                                    : '...'
+                                                }`
+                                              : 'Download'}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          disabled={isRowBusy}
+                                          onClick={() =>
+                                            handleInspectScpChecksum(entry)
+                                          }
+                                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold cursor-pointer disabled:opacity-70 ${
+                                            isRowHashing
+                                              ? 'bg-emerald-600 text-white'
+                                              : hasVerifiedChecksum
+                                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                                              : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-500/20 text-zinc-500 hover:text-emerald-400'
+                                          }`}
+                                          title="Verify remote SHA-256 & MD5 checksum on VM"
+                                        >
+                                          {isRowHashing ? (
+                                            <>
+                                              <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                                              <span>Hashing...</span>
+                                            </>
+                                          ) : hasVerifiedChecksum ? (
+                                            '✓ SHA'
+                                          ) : (
+                                            'SHA'
+                                          )}
+                                        </button>
+                                      </>
+                                    )}
+
                                     <button
                                       type="button"
-                                      disabled={
-                                        scpActionBusy ===
-                                        `preview:${entry.path}`
-                                      }
+                                      disabled={isRowBusy}
                                       onClick={() =>
-                                        handleOpenScpFilePreview(entry)
+                                        setScpRenameTarget({
+                                          path: entry.path,
+                                          name: entry.name,
+                                          newName: entry.name,
+                                        })
                                       }
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
-                                      title="View or edit file in-place via SCP/SFTP"
+                                      className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-500/20 text-zinc-500 hover:text-blue-400 text-[9px] font-bold cursor-pointer disabled:opacity-40"
+                                      title={`Rename ${entry.name}`}
                                     >
-                                      <Edit3 className="w-2.5 h-2.5" />
-                                      <span>
-                                        {scpActionBusy ===
-                                        `preview:${entry.path}`
-                                          ? '...'
-                                          : 'Edit'}
-                                      </span>
+                                      {isRowRenaming ? 'mv...' : 'mv'}
                                     </button>
 
-                                    {isLogOrText && (
-                                      <button
-                                        type="button"
-                                        disabled={
-                                          scpActionBusy === `tail:${entry.path}`
-                                        }
-                                        onClick={() =>
-                                          handleTailScpLogFile(entry, 150)
-                                        }
-                                        className="px-1.5 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
-                                        title="Tail last 150 lines of this log/text file"
-                                      >
-                                        {scpActionBusy === `tail:${entry.path}`
-                                          ? '...'
-                                          : 'Tail'}
-                                      </button>
-                                    )}
-
-                                    {isArchive && (
-                                      <button
-                                        type="button"
-                                        disabled={
-                                          scpActionBusy ===
-                                          `extract:${entry.path}`
-                                        }
-                                        onClick={() =>
-                                          handleExtractScpArchive(entry)
-                                        }
-                                        className="px-1.5 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold cursor-pointer"
-                                        title={`Extract archive "${entry.name}" directly on VM`}
-                                      >
-                                        {scpActionBusy ===
-                                        `extract:${entry.path}`
-                                          ? '...'
-                                          : 'Extract'}
-                                      </button>
-                                    )}
-
-                                    {isScript && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (
-                                            viewMode !== 'SPLIT_SSH_AND_SCP'
-                                          ) {
-                                            setViewMode('LIVE_SSH_PTY');
-                                          }
-                                          if (
-                                            !isSessionEnabled &&
-                                            onSelectVm &&
-                                            focusedVm
-                                          ) {
-                                            onSelectVm(focusedVm);
-                                          }
-                                          const runner = entry.name.endsWith(
-                                            '.py'
-                                          )
-                                            ? 'python3'
-                                            : 'bash';
-                                          setTimeout(
-                                            () =>
-                                              sendToPty(
-                                                `${runner} "${entry.path}"\r`
-                                              ),
-                                            350
-                                          );
-                                        }}
-                                        className="px-1.5 py-0.5 rounded bg-teal-500/15 hover:bg-teal-500/25 text-teal-600 dark:text-teal-300 border border-teal-500/30 text-[10px] font-bold cursor-pointer"
-                                        title="Execute script inside the live SSH terminal"
-                                      >
-                                        ▶ Run
-                                      </button>
-                                    )}
-
                                     <button
                                       type="button"
-                                      disabled={
-                                        scpActionBusy ===
-                                        `download:${entry.path}`
-                                      }
+                                      disabled={isRowBusy}
                                       onClick={() =>
-                                        handleDownloadScpFileRaw(entry)
+                                        setScpConfirmDeletePath(entry.path)
                                       }
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-60"
-                                      title="Download file to your laptop via SCP/SFTP with live progress & SHA-256 verification"
+                                      className="p-1 rounded hover:bg-red-500/20 text-zinc-400 hover:text-red-400 cursor-pointer disabled:opacity-40"
+                                      title={`Delete ${entry.name}`}
                                     >
-                                      <Download
-                                        className={`w-2.5 h-2.5 ${
-                                          scpActionBusy ===
-                                          `download:${entry.path}`
-                                            ? 'animate-bounce'
-                                            : ''
-                                        }`}
-                                      />
-                                      <span>
-                                        {scpActionBusy ===
-                                        `download:${entry.path}`
-                                          ? `${
-                                              scpTransferProgress?.percent
-                                                ? `${scpTransferProgress.percent}%`
-                                                : '...'
-                                            }`
-                                          : 'Download'}
-                                      </span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      disabled={
-                                        scpActionBusy === `sha:${entry.path}`
-                                      }
-                                      onClick={() =>
-                                        handleInspectScpChecksum(entry)
-                                      }
-                                      className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-500/20 text-zinc-500 hover:text-emerald-400 text-[9px] font-mono font-bold cursor-pointer"
-                                      title="Verify remote SHA-256 & MD5 checksum on VM"
-                                    >
-                                      SHA
+                                      <Trash2 className="w-3 h-3" />
                                     </button>
                                   </>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setScpRenameTarget({
-                                      path: entry.path,
-                                      name: entry.name,
-                                      newName: entry.name,
-                                    })
-                                  }
-                                  className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-500/20 text-zinc-500 hover:text-blue-400 text-[9px] font-bold cursor-pointer"
-                                  title={`Rename ${entry.name}`}
-                                >
-                                  mv
-                                </button>
-
-                                {scpConfirmDeletePath === entry.path ? (
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      scpActionBusy === `del:${entry.path}`
-                                    }
-                                    onClick={() =>
-                                      handleDeleteScpEntry(entry.path)
-                                    }
-                                    className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-extrabold cursor-pointer"
-                                  >
-                                    Confirm
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setScpConfirmDeletePath(entry.path)
-                                    }
-                                    className="p-1 rounded hover:bg-red-500/20 text-zinc-400 hover:text-red-400 cursor-pointer"
-                                    title={`Delete ${entry.name}`}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
                                 )}
                               </div>
                             </div>
