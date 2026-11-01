@@ -49625,7 +49625,7 @@ spec:
               rationale:
                 'Register MCP tool servers and autonomous agents with cryptographic identity bindings and security findings.',
               cliCommand: `gcloud agent-registry mcp-servers list --project=${projectId} --location=global`,
-              ownerStudioTab: 'REMOTE_MCP',
+              ownerStudioTab: 'MCP_HUB',
               ownerStudioLabel: 'Remote MCP Studio',
             },
           ]
@@ -49654,7 +49654,7 @@ spec:
               rationale:
                 'Discover upstream/downstream resource bindings and synthesize golden Terraform/AppHub templates across spaces.',
               cliCommand: `gcloud app-topology domains list --project=${projectId} --location=${region}`,
-              ownerStudioTab: 'APPHUB_GDC',
+              ownerStudioTab: 'TOPOLOGY',
               ownerStudioLabel: 'App Hub Studio',
             },
           ];
@@ -49673,14 +49673,14 @@ spec:
           label: 'Generate Live App Topology Resource Graph (GA 591.0.0)',
           track: 'GA',
           command: `gcloud app-topology resources-graph generate --project=${projectId} --location=${region} --format=json`,
-          ownerStudioTab: 'APPHUB_GDC',
+          ownerStudioTab: 'TOPOLOGY',
           ownerStudioLabel: 'App Hub Studio',
         },
         {
           label: 'List Application Design Center Spaces (GA 591.0.0)',
           track: 'GA',
           command: `gcloud design-center spaces list --project=${projectId} --location=${region} --format=json`,
-          ownerStudioTab: 'APPHUB_GDC',
+          ownerStudioTab: 'TOPOLOGY',
           ownerStudioLabel: 'App Hub Studio',
         },
         ...architecturalPillars.map((p) => ({
@@ -49771,7 +49771,7 @@ spec:
           layer: 'NETWORK_AND_IDENTITY',
           region,
           status: liveDomains.length > 0 ? 'DISCOVERED' : 'READY_TO_BIND',
-          ownerStudioTab: 'APPHUB_GDC',
+          ownerStudioTab: 'TOPOLOGY',
           ownerStudioLabel: 'App Hub Studio',
           inspectCli: `gcloud app-topology domains list --location=${region} --project=${projectId}`,
         },
@@ -49905,7 +49905,7 @@ spec:
           service: 'App Design Center Space [GA 591.0.0]',
           spec: `Application Topology & Blueprint Space (${region})`,
           monthlyUsd: 0.0,
-          ownerStudioTab: 'APPHUB_GDC',
+          ownerStudioTab: 'TOPOLOGY',
           ownerStudioLabel: 'App Hub Studio',
           provisionCli: `gcloud design-center spaces create ${projectId}-design-space --location=${region} --project=${projectId}`,
         },

@@ -4771,61 +4771,130 @@ function CloudPulseCockpit() {
       });
       return;
     }
-    const normalizedTab =
-      tabId === 'DATA_ENGINEER'
-        ? 'DATA_ENGINEER_STUDIO'
-        : tabId === 'BIGQUERY' || tabId === 'BIGQUERY_LAKEHOUSE'
-        ? 'BIGQUERY_STUDIO'
-        : tabId === 'BIGLAKE'
-        ? 'BIGLAKE_STUDIO'
-        : tabId === 'CLOUD_SQL'
-        ? 'CLOUD_SQL_STUDIO'
-        : tabId === 'SPANNER'
-        ? 'WAVE10_FRONTIER'
-        : tabId === 'VPC_FIREWALL' || tabId === 'VPC' || tabId === 'NETWORK_VPC_FIREWALL'
-        ? 'VPC_NETWORKS'
-        : tabId === 'VM_FLEET' || tabId === 'VMS' || tabId === 'COMPUTE_VM_FLEET'
-        ? 'VM_SSH'
-        : tabId === 'STORAGE' || tabId === 'CLOUD_STORAGE_BUCKETS'
-        ? 'CLOUD_STORAGE'
-        : tabId === 'SOVEREIGN_IAM' || tabId === 'IAM_SECURITY'
-        ? 'SOVEREIGN_STUDIO'
-        : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS' || tabId === 'FINOPS_BILLING_RADAR'
-        ? 'FINOPS'
-        : tabId === 'CLOUD_RUN_FLEET'
-        ? 'CLOUD_RUN'
-        : tabId === 'VERTEX_AI' || tabId === 'VERTEX_AI_STUDIO' || tabId === 'CLOUD_BUILD'
-        ? 'WAVE9_STUDIO'
-        : tabId === 'CLOUD_FUNCTIONS' || tabId === 'FUNCTIONS'
-        ? 'FUNCTIONS_STUDIO'
-        : tabId === 'GKE_KUBERNETES'
-        ? 'GKE_STUDIO'
-        : tabId;
+    const innovationSubTabAliases = {
+      APPHUB_GDC: 'TOPOLOGY',
+      APP_TOPOLOGY: 'TOPOLOGY',
+      DESIGN_CENTER: 'TOPOLOGY',
+      TOPOLOGY: 'TOPOLOGY',
+      WAVE11_MOONSHOT: 'WAVE11_MOONSHOT',
+      WAVE12_ROADSTER: 'WAVE12_ROADSTER',
+      WAVE13_STARLINK_NEURALINK: 'WAVE13_STARLINK_NEURALINK',
+      WAVE14_QUANTUM_DOCTOR: 'WAVE14_QUANTUM_DOCTOR',
+      WAVE15_DYSON_MOONSHOT: 'WAVE15_DYSON_MOONSHOT',
+      WAVE16_ENTERPRISE_MOONSHOT: 'WAVE16_ENTERPRISE_MOONSHOT',
+      FIVE_PERSONA_COUNCIL: 'FIVE_PERSONA_COUNCIL',
+      GCLOUD_ALPHA_BETA: 'GCLOUD_ALPHA_BETA',
+      QUANTUM_NEXUS: 'QUANTUM_NEXUS',
+      FINOPS_SLEEP: 'FINOPS_SLEEP',
+      TELEPORT_DIFF: 'TELEPORT_DIFF',
+      X3: 'X3',
+      BENCHMARK: 'BENCHMARK',
+      DREAM_BRAIN: 'DREAM_BRAIN',
+      TERRAFORM: 'TERRAFORM',
+      REVERSE_TERRAFORM: 'TERRAFORM',
+    };
+    const isDirectInnovationSubTab = Boolean(innovationSubTabAliases[tabId]);
+    const resolvedSubTab = isDirectInnovationSubTab
+      ? subTab || innovationSubTabAliases[tabId]
+      : subTab;
 
-    if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
-      setSovereignSubTab(subTab);
-    } else if (subTab && normalizedTab === 'INNOVATION_LAB') {
-      setInnovationSubTab(subTab);
-    } else if (subTab && normalizedTab === 'AWS_AZURE_PARITY') {
-      setAwsAzureSubTab(subTab);
-    } else if (subTab && normalizedTab === 'ALIBABA_HUAWEI_PARITY') {
-      setAlibabaHuaweiSubTab(subTab);
-    } else if (subTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
-      setDataEngineerSubTab(subTab);
-    } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
-      setBigLakeSubTab(subTab);
-    } else if (subTab && normalizedTab === 'BIGQUERY_STUDIO') {
-      setBigQuerySubTab(subTab);
-    } else if (subTab && normalizedTab === 'SRE_WAR_ROOM') {
-      setSreSubTab(subTab);
-    } else if (subTab && normalizedTab === 'WAVE9_STUDIO') {
-      setWave9SubTab(subTab);
-    } else if (subTab && normalizedTab === 'CLOUD_SOC') {
-      setCloudSocSeed({ targetPillar: subTab, nonce: Date.now() });
+    const rawNormalizedTab = isDirectInnovationSubTab
+      ? 'INNOVATION_LAB'
+      : tabId === 'DATA_ENGINEER'
+      ? 'DATA_ENGINEER_STUDIO'
+      : tabId === 'BIGQUERY' || tabId === 'BIGQUERY_LAKEHOUSE'
+      ? 'BIGQUERY_STUDIO'
+      : tabId === 'BIGLAKE'
+      ? 'BIGLAKE_STUDIO'
+      : tabId === 'CLOUD_SQL'
+      ? 'CLOUD_SQL_STUDIO'
+      : tabId === 'SPANNER' || tabId === 'WAVE10_STUDIO'
+      ? 'WAVE10_FRONTIER'
+      : tabId === 'VPC_FIREWALL' || tabId === 'VPC' || tabId === 'NETWORK_VPC_FIREWALL'
+      ? 'VPC_NETWORKS'
+      : tabId === 'VM_FLEET' || tabId === 'VMS' || tabId === 'COMPUTE_VM_FLEET'
+      ? 'VM_SSH'
+      : tabId === 'STORAGE' || tabId === 'CLOUD_STORAGE_BUCKETS'
+      ? 'CLOUD_STORAGE'
+      : tabId === 'SOVEREIGN_IAM' || tabId === 'IAM_SECURITY'
+      ? 'SOVEREIGN_STUDIO'
+      : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS' || tabId === 'FINOPS_BILLING_RADAR'
+      ? 'FINOPS'
+      : tabId === 'CLOUD_RUN_FLEET'
+      ? 'CLOUD_RUN'
+      : tabId === 'VERTEX_AI' || tabId === 'VERTEX_AI_STUDIO' || tabId === 'CLOUD_BUILD'
+      ? 'WAVE9_STUDIO'
+      : tabId === 'CLOUD_FUNCTIONS' || tabId === 'FUNCTIONS'
+      ? 'FUNCTIONS_STUDIO'
+      : tabId === 'GKE_KUBERNETES'
+      ? 'GKE_STUDIO'
+      : tabId === 'REMOTE_MCP' || tabId === 'MCP_SERVERS' || tabId === 'AGENT_MCP'
+      ? 'MCP_HUB'
+      : tabId;
+
+    const VALID_TOP_LEVEL_TABS = new Set([
+      'OVERVIEW',
+      'INNOVATION_LAB',
+      'STARTUP_10X',
+      'MCP_HUB',
+      'GLOBAL_MAP',
+      'VPC_NETWORKS',
+      'VM_SSH',
+      'CLOUD_STORAGE',
+      'CLOUD_RUN',
+      'GKE_STUDIO',
+      'WAVE9_STUDIO',
+      'FUNCTIONS_STUDIO',
+      'CLOUD_SQL_STUDIO',
+      'DATA_ENGINEER_STUDIO',
+      'BIGQUERY_STUDIO',
+      'BIGLAKE_STUDIO',
+      'WAVE10_FRONTIER',
+      'CLOUD_SOC',
+      'SOVEREIGN_STUDIO',
+      'AWS_AZURE_PARITY',
+      'ALIBABA_HUAWEI_PARITY',
+      'SRE_WAR_ROOM',
+      'FINOPS',
+      'LOGS_SHELL',
+      'RECYCLE_BIN',
+      'DOCS_GUIDE',
+    ]);
+    const normalizedTab = VALID_TOP_LEVEL_TABS.has(rawNormalizedTab)
+      ? rawNormalizedTab
+      : 'INNOVATION_LAB';
+
+    if (resolvedSubTab && normalizedTab === 'SOVEREIGN_STUDIO') {
+      setSovereignSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'INNOVATION_LAB') {
+      setInnovationSubTab(resolvedSubTab);
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:innovation-subtab', {
+            detail: { subTab: resolvedSubTab },
+          })
+        );
+      }, 30);
+    } else if (resolvedSubTab && normalizedTab === 'AWS_AZURE_PARITY') {
+      setAwsAzureSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'ALIBABA_HUAWEI_PARITY') {
+      setAlibabaHuaweiSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
+      setDataEngineerSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'BIGLAKE_STUDIO') {
+      setBigLakeSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'BIGQUERY_STUDIO') {
+      setBigQuerySubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'SRE_WAR_ROOM') {
+      setSreSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'WAVE9_STUDIO') {
+      setWave9SubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'CLOUD_SOC') {
+      setCloudSocSeed({ targetPillar: resolvedSubTab, nonce: Date.now() });
     } else if (normalizedTab === 'RECYCLE_BIN') {
-      setRecycleBinCategory(subTab || 'ALL');
+      setRecycleBinCategory(resolvedSubTab || 'ALL');
     } else if (normalizedTab === 'CLOUD_STORAGE') {
-      if (subTab) setStorageSubTab(subTab);
+      if (resolvedSubTab) setStorageSubTab(resolvedSubTab);
       if (extraTarget && typeof extraTarget === 'object') {
         if (extraTarget.bucketName) setStorageTargetBucket(extraTarget.bucketName);
         if (typeof extraTarget.objectName === 'string') {
@@ -4835,16 +4904,20 @@ function CloudPulseCockpit() {
     }
     setActiveTab(normalizedTab);
     const studioTitle = STUDIO_DISPLAY_NAMES[normalizedTab] || normalizedTab;
+    const displaySubTab =
+      tabId === 'APPHUB_GDC' || resolvedSubTab === 'TOPOLOGY'
+        ? 'App Hub & 4-Layer Cloud Topology Studio'
+        : resolvedSubTab;
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: normalizedTab,
-      targetSubTab: subTab || null,
+      targetSubTab: resolvedSubTab || null,
       targetElementId: extraTarget?.targetElementId || null,
       ruleName: extraTarget?.ruleName || null,
       targetLabel:
         extraTarget?.targetLabel ||
-        (subTab
-          ? `${studioTitle} → ${subTab}`
+        (displaySubTab
+          ? `${studioTitle} → ${displaySubTab}`
           : extraTarget?.bucketName
           ? `${studioTitle} → Bucket "${extraTarget.bucketName}"`
           : extraTarget?.ruleName
@@ -4852,7 +4925,7 @@ function CloudPulseCockpit() {
           : studioTitle),
       badgeText:
         extraTarget?.badgeText ||
-        subTab ||
+        displaySubTab ||
         extraTarget?.bucketName ||
         extraTarget?.ruleName ||
         studioTitle,

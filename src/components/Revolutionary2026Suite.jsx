@@ -221,9 +221,17 @@ export default function Revolutionary2026Suite({
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const terraformSectionRef = useRef(null);
   const zombieSectionRef = useRef(null);
+  const topologySectionRef = useRef(null);
   const normalizeSubTabId = (id) => {
     if (id === 'REVERSE_TERRAFORM') return 'TERRAFORM';
     if (id === 'ZOMBIE_HUNTER' || id === 'ZOMBIES') return 'FINOPS_SLEEP';
+    if (
+      id === 'APPHUB_GDC' ||
+      id === 'APP_TOPOLOGY' ||
+      id === 'DESIGN_CENTER'
+    ) {
+      return 'TOPOLOGY';
+    }
     return id;
   };
   const [subTab, setSubTab] = useState(
@@ -255,6 +263,14 @@ export default function Revolutionary2026Suite({
         });
         window.dispatchEvent(new CustomEvent('cloudpulse:scan-zombies'));
       }, 140);
+    } else if (normalized === 'TOPOLOGY') {
+      setLabCategory('ALL');
+      setTimeout(() => {
+        topologySectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 120);
     } else {
       setLabCategory('ALL');
     }
@@ -1627,16 +1643,33 @@ export default function Revolutionary2026Suite({
 
       {/* TAB 1: INTERACTIVE LIVE CLOUD TOPOLOGY & BLAST-RADIUS GRAPH */}
       {subTab === 'TOPOLOGY' && (
-        <div className="space-y-4">
+        <div ref={topologySectionRef} className="space-y-4 scroll-mt-24">
           <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 font-semibold flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>
-                  Live Multi-Layer Architecture & Exposure Graph — {projectId}
+                  App Hub &amp; Live Multi-Layer Architecture Exposure Graph — {projectId}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubTab('GCLOUD_ALPHA_BETA');
+                    onSubTabChange?.('GCLOUD_ALPHA_BETA');
+                    setTimeout(() => {
+                      window.dispatchEvent(
+                        new CustomEvent('cloudpulse:alpha-beta-subtab', {
+                          detail: { subTab: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY' },
+                        })
+                      );
+                    }, 40);
+                  }}
+                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                >
+                  ← Grounded Dev Knowledge &amp; Design Center [GA 591.0.0]
+                </button>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Public Internet Exposed (

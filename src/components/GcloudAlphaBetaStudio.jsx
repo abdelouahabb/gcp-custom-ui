@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Terminal,
@@ -214,8 +214,13 @@ export default function GcloudAlphaBetaStudio({
   const [workbenchCommand, setWorkbenchCommand] = useState(
     'gcloud agent-registry skills list --location=global'
   );
+  const [workbenchHighlightLabel, setWorkbenchHighlightLabel] = useState('');
+  const [workbenchProbeReceipt, setWorkbenchProbeReceipt] = useState(null);
   const [showRawJson, setShowRawJson] = useState(false);
   const [designCodeTab, setDesignCodeTab] = useState('DEPLOY_SH');
+  const workbenchSectionRef = useRef(null);
+  const workbenchInputRef = useRef(null);
+  const groundedSectionRef = useRef(null);
 
   // Form states for Wave 1 Alpha/Beta actions
   const [workerPoolName, setWorkerPoolName] = useState('cp-kafka-worker-pool');
@@ -316,6 +321,23 @@ export default function GcloudAlphaBetaStudio({
     fetchOverview();
   }, [fetchOverview]);
 
+  useEffect(() => {
+    const handleSelectSubTab = (evt) => {
+      const nextSub = evt?.detail?.subTab;
+      if (nextSub) {
+        setWaveFilter('ALL');
+        setTrackFilter('ALL');
+        setActiveSubTab(nextSub);
+      }
+    };
+    window.addEventListener('cloudpulse:alpha-beta-subtab', handleSelectSubTab);
+    return () =>
+      window.removeEventListener(
+        'cloudpulse:alpha-beta-subtab',
+        handleSelectSubTab
+      );
+  }, []);
+
   const executeAlphaBetaAction = async (actionKey, payload = {}) => {
     if (!projectId) return;
     setActionRunning(actionKey);
@@ -328,11 +350,27 @@ export default function GcloudAlphaBetaStudio({
           ...payload,
         }
       );
-      setLastReceipt({
+      const receiptObj = {
         actionKey,
         timestamp: new Date().toLocaleTimeString(),
         ...res.data,
-      });
+      };
+      setLastReceipt((prev) => ({
+        ...(prev?.groundedAnswer
+          ? {
+              groundedAnswer: prev.groundedAnswer,
+              liveTopologyGraph: prev.liveTopologyGraph,
+              designCenterBlueprint: prev.designCenterBlueprint,
+            }
+          : {}),
+        ...receiptObj,
+      }));
+      if (
+        actionKey === 'EXECUTE_READONLY_GCLOUD_PROBE' ||
+        actionKey === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
+      ) {
+        setWorkbenchProbeReceipt(receiptObj);
+      }
       notify(
         `${res.data?.releaseBadge || '[ALPHA/BETA]'} executed (${
           res.data?.durationMs || 0
@@ -347,6 +385,54 @@ export default function GcloudAlphaBetaStudio({
       );
     } finally {
       setActionRunning('');
+    }
+  };
+
+  const handleLoadInWorkbench = (cmdText, label = 'CLI Command') => {
+    const cleanCmd = String(cmdText || '').trim();
+    if (!cleanCmd) return;
+    setWorkbenchCommand(cleanCmd);
+    setWorkbenchHighlightLabel(label);
+    setTimeout(() => {
+      workbenchSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      workbenchInputRef.current?.focus();
+    }, 60);
+    setTimeout(() => {
+      setWorkbenchHighlightLabel((curr) => (curr === label ? '' : curr));
+    }, 5500);
+    executeAlphaBetaAction('EXECUTE_READONLY_GCLOUD_PROBE', {
+      commandText: cleanCmd,
+    });
+  };
+
+  const handleNavigateOwnerStudio = (studioTab, studioLabel = 'Studio') => {
+    if (!studioTab) return;
+    const normalized =
+      studioTab === 'APPHUB_GDC' || studioTab === 'APP_TOPOLOGY'
+        ? 'TOPOLOGY'
+        : studioTab === 'REMOTE_MCP'
+        ? 'MCP_HUB'
+        : studioTab;
+    if (typeof onSelectStudioTab === 'function') {
+      if (normalized === 'TOPOLOGY') {
+        onSelectStudioTab('INNOVATION_LAB', 'TOPOLOGY');
+      } else {
+        onSelectStudioTab(normalized);
+      }
+      notify(`Opened ${studioLabel} (${normalized})`);
+    } else {
+      window.dispatchEvent(
+        new CustomEvent('cloudpulse:cross-ui-navigate', {
+          detail: {
+            studioId: normalized === 'TOPOLOGY' ? 'INNOVATION_LAB' : normalized,
+            subTab: normalized === 'TOPOLOGY' ? 'TOPOLOGY' : null,
+          },
+        })
+      );
+      notify(`Opened ${studioLabel}`);
     }
   };
 
@@ -515,11 +601,25 @@ export default function GcloudAlphaBetaStudio({
         </div>
 
         {/* Interactive gcloud 591.0.0 Command Builder, Syntax Validator & Live Read-Only Probe Workbench */}
-        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 space-y-2">
+        <div
+          ref={workbenchSectionRef}
+          className={`mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 space-y-2 rounded-xl transition-all duration-300 ${
+            workbenchHighlightLabel
+              ? 'p-3 bg-emerald-500/10 ring-2 ring-emerald-500 shadow-lg'
+              : ''
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-              Interactive SDK {overview?.sdk?.coreVersion || '591.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                Interactive SDK {overview?.sdk?.coreVersion || '591.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
+              </span>
+              {workbenchHighlightLabel && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
+                  🎯 LOADED &amp; PROBING: {workbenchHighlightLabel}
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-1">
               {[
                 {
@@ -565,6 +665,7 @@ export default function GcloudAlphaBetaStudio({
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
+              ref={workbenchInputRef}
               type="text"
               value={workbenchCommand}
               onChange={(e) => setWorkbenchCommand(e.target.value)}
@@ -612,7 +713,9 @@ export default function GcloudAlphaBetaStudio({
                   type="button"
                   onClick={() =>
                     onOpenShellWithCommand(
-                      `${workbenchCommand} --project=${projectId}`
+                      workbenchCommand.includes('--project=')
+                        ? workbenchCommand
+                        : `${workbenchCommand} --project=${projectId}`
                     )
                   }
                   title="Send command to Cloud Shell"
@@ -624,6 +727,63 @@ export default function GcloudAlphaBetaStudio({
               )}
             </div>
           </div>
+
+          {/* Inline Live Workbench Probe Output Strip */}
+          {workbenchProbeReceipt && (
+            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-emerald-500/40 space-y-1.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="font-extrabold text-emerald-300">
+                    Live Workbench Probe Result ({workbenchProbeReceipt.durationMs || 0}ms)
+                  </span>
+                  <span className="text-[10px] text-zinc-400">
+                    {workbenchProbeReceipt.timestamp}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {activeSubTab === 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        groundedSectionRef.current?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        })
+                      }
+                      className="px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                    >
+                      ↓ Jump Back to Grounded Architecture Pillars
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setWorkbenchProbeReceipt(null)}
+                    className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <div className="text-[11px] text-emerald-400 break-all">
+                $ {workbenchProbeReceipt.executedCommand || workbenchCommand}
+              </div>
+              {workbenchProbeReceipt.helpExcerpt ? (
+                <pre className="max-h-40 overflow-auto p-2 rounded bg-black/70 text-[10.5px] text-emerald-200 whitespace-pre-wrap">
+                  {workbenchProbeReceipt.helpExcerpt}
+                </pre>
+              ) : (
+                <div className="text-[11px] text-zinc-300">
+                  {workbenchProbeReceipt.note ||
+                    `Probe completed (${
+                      Array.isArray(workbenchProbeReceipt.probeData)
+                        ? `${workbenchProbeReceipt.probeData.length} item(s) returned`
+                        : 'CLI verified'
+                    }).`}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Live Installed SDK 591.0.0 Component Matrix Strip */}
@@ -2005,7 +2165,10 @@ export default function GcloudAlphaBetaStudio({
             </div>
 
             {/* SECTION 1: GROUNDED ARCHITECTURE SYNTHESIS, DECISION PILLARS & ACTIONABLE CLI COMMANDS */}
-            <div className="rounded-2xl border border-blue-500/30 bg-white dark:bg-[#18181b] p-5 space-y-4">
+            <div
+              ref={groundedSectionRef}
+              className="rounded-2xl border border-blue-500/30 bg-white dark:bg-[#18181b] p-5 space-y-4 scroll-mt-24"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-blue-500" />
@@ -2050,12 +2213,13 @@ export default function GcloudAlphaBetaStudio({
                         <div className="flex flex-wrap items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              setWorkbenchCommand(pillar.cliCommand);
-                              notify(
-                                `Loaded "${pillar.title}" into Live Probe Workbench`
-                              );
-                            }}
+                            onClick={() =>
+                              handleLoadInWorkbench(
+                                pillar.cliCommand,
+                                pillar.title
+                              )
+                            }
+                            title="Scroll to the top Live Probe Workbench, load this command, and run the live read-only probe immediately"
                             className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                           >
                             Load in Workbench ↑
@@ -2071,24 +2235,89 @@ export default function GcloudAlphaBetaStudio({
                               $ Shell
                             </button>
                           )}
-                          {typeof onSelectStudioTab === 'function' &&
-                            pillar.ownerStudioTab && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onSelectStudioTab(pillar.ownerStudioTab)
-                                }
-                                className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
-                              >
-                                {pillar.ownerStudioLabel} →
-                              </button>
-                            )}
+                          {pillar.ownerStudioTab && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleNavigateOwnerStudio(
+                                  pillar.ownerStudioTab,
+                                  pillar.ownerStudioLabel
+                                )
+                              }
+                              className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              {pillar.ownerStudioLabel} →
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Extracted Executable CLI Commands Matrix */}
+              {Array.isArray(activeGrounded.extractedCliCommands) &&
+                activeGrounded.extractedCliCommands.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] font-mono font-extrabold uppercase text-zinc-400">
+                      Extracted Executable SDK 591.0.0 CLI Commands ({activeGrounded.extractedCliCommands.length})
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 font-mono text-xs">
+                      {activeGrounded.extractedCliCommands.slice(0, 3).map((item) => (
+                        <div
+                          key={item.label}
+                          className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10.5px] font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                              {item.label}
+                            </span>
+                            <ReleaseTrackBadge track={item.track || 'GA'} />
+                          </div>
+                          <code className="block text-[10px] text-emerald-600 dark:text-emerald-400 break-all">
+                            $ {item.command}
+                          </code>
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleLoadInWorkbench(item.command, item.label)
+                              }
+                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              Load in Workbench ↑
+                            </button>
+                            {typeof onOpenShellWithCommand === 'function' && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenShellWithCommand(item.command)}
+                                className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                              >
+                                $ Shell
+                              </button>
+                            )}
+                            {item.ownerStudioTab &&
+                              item.ownerStudioTab !== 'INNOVATION_LAB' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleNavigateOwnerStudio(
+                                      item.ownerStudioTab,
+                                      item.ownerStudioLabel
+                                    )
+                                  }
+                                  className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                                >
+                                  {item.ownerStudioLabel} →
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Official Documentation Citations */}
               {Array.isArray(activeGrounded.citations) &&
@@ -2141,15 +2370,18 @@ export default function GcloudAlphaBetaStudio({
                       <span>$ Generate Graph in Cloud Shell</span>
                     </button>
                   )}
-                  {typeof onSelectStudioTab === 'function' && (
-                    <button
-                      type="button"
-                      onClick={() => onSelectStudioTab('APPHUB_GDC')}
-                      className="px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
-                    >
-                      Open App Hub &amp; Topology Studio →
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleNavigateOwnerStudio(
+                        'APPHUB_GDC',
+                        'App Hub & Topology Studio'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Open App Hub &amp; Topology Studio →
+                  </button>
                 </div>
               </div>
 
@@ -2197,6 +2429,20 @@ export default function GcloudAlphaBetaStudio({
                             {node.type} · {node.region}
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            {node.inspectCli && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleLoadInWorkbench(
+                                    node.inspectCli,
+                                    node.name
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                              >
+                                Probe ↑
+                              </button>
+                            )}
                             {typeof onOpenShellWithCommand === 'function' &&
                               node.inspectCli && (
                                 <button
@@ -2209,18 +2455,20 @@ export default function GcloudAlphaBetaStudio({
                                   $ Inspect
                                 </button>
                               )}
-                            {typeof onSelectStudioTab === 'function' &&
-                              node.ownerStudioTab && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onSelectStudioTab(node.ownerStudioTab)
-                                  }
-                                  className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
-                                >
-                                  {node.ownerStudioLabel} →
-                                </button>
-                              )}
+                            {node.ownerStudioTab && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleNavigateOwnerStudio(
+                                    node.ownerStudioTab,
+                                    node.ownerStudioLabel
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                              >
+                                {node.ownerStudioLabel} →
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -2303,18 +2551,20 @@ export default function GcloudAlphaBetaStudio({
                             $ Deploy in Cloud Shell
                           </button>
                         )}
-                        {typeof onSelectStudioTab === 'function' &&
-                          comp.ownerStudioTab && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onSelectStudioTab(comp.ownerStudioTab)
-                              }
-                              className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
-                            >
-                              {comp.ownerStudioLabel} →
-                            </button>
-                          )}
+                        {comp.ownerStudioTab && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleNavigateOwnerStudio(
+                                comp.ownerStudioTab,
+                                comp.ownerStudioLabel
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                          >
+                            {comp.ownerStudioLabel} →
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
