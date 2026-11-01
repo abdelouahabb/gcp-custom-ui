@@ -24942,13 +24942,18 @@ app.get('/api/project/:projectId/bigquery/datasets', async (req, res) => {
     const listRes = await gcpFetch(
       `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
         projectId
-      )}/datasets?all=true&maxResults=100`,
+      )}/datasets?maxResults=100`,
       token,
       projectId,
       { timeout: 8000 }
     );
 
-    const rawDatasets = listRes?.datasets || [];
+    // Filter out BigQuery internal anonymous query-cache datasets (e.g., _c9efc471edab8c474bc1188fdd42764f29c37176)
+    const rawDatasets = (listRes?.datasets || []).filter((ds) => {
+      const dsId =
+        ds?.datasetReference?.datasetId || ds?.id?.split(':')?.[1] || '';
+      return dsId && !dsId.startsWith('_');
+    });
     const detailedDatasets = await Promise.all(
       rawDatasets.map(async (ds) => {
         const datasetId = ds?.datasetReference?.datasetId || ds?.id?.split(':')?.[1] || 'unknown';
@@ -25307,6 +25312,46 @@ app.post(
     try {
       const { token } = await resolveRequestAuth(req);
       if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      // Ensure dataset exists (auto-provision compliant analytics_lakehouse if not yet created)
+      try {
+        await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets/${encodeURIComponent(datasetId)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+      } catch {
+        await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              datasetReference: { projectId, datasetId },
+              location: 'US',
+              description:
+                'CloudPulse Zero-Trust Analytical Lakehouse (Physical Capacitor Billing · 90d TTL)',
+              storageBillingModel: 'PHYSICAL',
+              maxTimeTravelHours: '168',
+              defaultPartitionExpirationMs: String(90 * 86400000),
+              defaultRoundingMode: 'ROUND_HALF_EVEN',
+              labels: {
+                datacloud: 'antigravity',
+                finops_tier: 'physical_capacitor',
+                governance: 'zero_trust_hardened',
+              },
+            },
+            timeout: 8000,
+          }
+        );
+      }
 
       const resolvedSchema =
         Array.isArray(schemaFields) && schemaFields.length > 0

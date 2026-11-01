@@ -269,10 +269,17 @@ export default function BigQueryStudio({
       const res = await axios.get(
         `/api/project/${encodeURIComponent(projectId)}/bigquery/datasets`
       );
-      const list = res.data?.datasets || [];
+      const list = (res.data?.datasets || []).filter(
+        (d) => d?.datasetId && !String(d.datasetId).startsWith('_')
+      );
       setDatasets(list);
-      if (list.length > 0 && !selectedDatasetId) {
+      if (
+        list.length > 0 &&
+        (!selectedDatasetId || String(selectedDatasetId).startsWith('_'))
+      ) {
         setSelectedDatasetId(list[0].datasetId);
+      } else if (list.length === 0) {
+        setSelectedDatasetId('analytics_lakehouse');
       }
     } catch (err) {
       onShowError?.(
@@ -484,12 +491,7 @@ export default function BigQueryStudio({
   // Create Partitioned + Clustered Table
   const handleCreateTable = async (e) => {
     e.preventDefault();
-    if (!selectedDatasetId) {
-      onShowError?.(
-        'Create or select a BigQuery Dataset first before creating a Partitioned Table.'
-      );
-      return;
-    }
+    const targetDatasetId = selectedDatasetId || 'analytics_lakehouse';
     setCreatingTable(true);
     try {
       const clusterArr = newTableClusterCols
@@ -500,7 +502,7 @@ export default function BigQueryStudio({
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
-        )}/bigquery/datasets/${encodeURIComponent(selectedDatasetId)}/tables`,
+        )}/bigquery/datasets/${encodeURIComponent(targetDatasetId)}/tables`,
         {
           tableId: newTableName,
           partitionType: newTablePartitionType,
@@ -510,8 +512,9 @@ export default function BigQueryStudio({
         }
       );
       onShowToast?.(res.data?.message || 'Created Partitioned & Clustered table!');
-      await fetchTables(selectedDatasetId);
+      setSelectedDatasetId(targetDatasetId);
       await fetchDatasets();
+      await fetchTables(targetDatasetId);
     } catch (err) {
       onShowError?.(
         err.response?.data?.error || 'Failed to create BigQuery table.'
@@ -1194,12 +1197,14 @@ export default function BigQueryStudio({
                   <span>Partitioned & Clustered Table Designer</span>
                 </div>
                 <select
-                  value={selectedDatasetId}
+                  value={selectedDatasetId || 'analytics_lakehouse'}
                   onChange={(e) => setSelectedDatasetId(e.target.value)}
                   className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 >
                   {datasets.length === 0 && (
-                    <option value="">No dataset yet</option>
+                    <option value="analytics_lakehouse">
+                      analytics_lakehouse (US · Auto-Provision)
+                    </option>
                   )}
                   {datasets.map((d) => (
                     <option key={d.datasetId} value={d.datasetId}>
@@ -1270,14 +1275,14 @@ export default function BigQueryStudio({
 
                 <button
                   type="submit"
-                  disabled={creatingTable || !selectedDatasetId}
+                  disabled={creatingTable}
                   title="Create a real Partitioned + Clustered analytical table in the selected dataset with TIMESTAMP, NUMERIC, and JSON columns"
                   className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-md py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                 >
                   {creatingTable
                     ? 'Creating Partitioned Table...'
                     : `+ Create Partitioned & Clustered Table in ${
-                        selectedDatasetId || 'Dataset'
+                        selectedDatasetId || 'analytics_lakehouse'
                       }`}
                 </button>
               </form>
