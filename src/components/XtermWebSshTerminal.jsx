@@ -81,7 +81,10 @@ export default function XtermWebSshTerminal({
   onOpenMigrateVm,
   onSelectTab,
   openScpTrigger = 0,
+  openSshTrigger = 0,
   scpTargetVmName = '',
+  activeViewMode,
+  onViewModeChange,
 }) {
   const isCloudRun = targetType === 'CLOUD_RUN';
   const containerRef = useRef(null);
@@ -89,7 +92,23 @@ export default function XtermWebSshTerminal({
   const fitAddonRef = useRef(null);
   const wsRef = useRef(null);
 
-  const [viewMode, setViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SCP_FILE_MANAGER' | 'SERIAL_PORT_1'
+  const [viewMode, setViewModeState] = useState(
+    activeViewMode || 'LIVE_SSH_PTY'
+  ); // 'LIVE_SSH_PTY' | 'SCP_FILE_MANAGER' | 'SERIAL_PORT_1'
+
+  const setViewMode = useCallback(
+    (nextMode) => {
+      setViewModeState((prev) => {
+        const resolved =
+          typeof nextMode === 'function' ? nextMode(prev) : nextMode;
+        if (onViewModeChange) {
+          onViewModeChange(resolved);
+        }
+        return resolved;
+      });
+    },
+    [onViewModeChange]
+  );
 
   useEffect(() => {
     if (openScpTrigger > 0) {
@@ -98,7 +117,13 @@ export default function XtermWebSshTerminal({
       }
       setViewMode('SCP_FILE_MANAGER');
     }
-  }, [openScpTrigger, scpTargetVmName]);
+  }, [openScpTrigger, scpTargetVmName, setViewMode]);
+
+  useEffect(() => {
+    if (openSshTrigger > 0) {
+      setViewMode('LIVE_SSH_PTY');
+    }
+  }, [openSshTrigger, setViewMode]);
   const [sshEngine, setSshEngine] = useState(
     isCloudRun ? 'cloudrun_ssh' : 'auto'
   );
@@ -188,6 +213,7 @@ export default function XtermWebSshTerminal({
 
   // Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor State
   const scpFileInputRef = useRef(null);
+  const scpTransferTimerRef = useRef(null);
   const [scpPath, setScpPath] = useState('~');
   const [scpPathInput, setScpPathInput] = useState('~');
   const [scpParentPath, setScpParentPath] = useState('/home');
@@ -206,6 +232,19 @@ export default function XtermWebSshTerminal({
   const [scpNewFolderName, setScpNewFolderName] = useState('');
   const [scpConfirmDeletePath, setScpConfirmDeletePath] = useState(null);
   const [copiedScpCli, setCopiedScpCli] = useState('');
+  const [scpTransferProgress, setScpTransferProgress] = useState(null);
+
+  const clearScpTransferTimer = useCallback(() => {
+    if (scpTransferTimerRef.current) {
+      clearInterval(scpTransferTimerRef.current);
+      clearTimeout(scpTransferTimerRef.current);
+      scpTransferTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => clearScpTransferTimer();
+  }, [clearScpTransferTimer]);
 
   const isSessionEnabled = isCloudRun
     ? Boolean(cloudRunService)
@@ -409,8 +448,26 @@ export default function XtermWebSshTerminal({
   const handleOpenScpFilePreview = async (entry) => {
     const targetVm = activeVm || focusedVm;
     if (!targetVm || !entry?.path) return;
+    const expectedBytes = Number(entry.sizeBytes || 0);
+    const startedAt = Date.now();
     setScpActionBusy(`preview:${entry.path}`);
     setScpError('');
+    clearScpTransferTimer();
+
+    setScpTransferProgress({
+      active: true,
+      completed: false,
+      direction: 'PREVIEW',
+      fileName: entry.name || entry.path,
+      fileCount: 1,
+      loadedBytes: 0,
+      totalBytes: expectedBytes,
+      percent: 12,
+      speedBps: 0,
+      stage: `Reading "${entry.name}" from ${targetVm.name} into in-place editor...`,
+      engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+    });
+
     try {
       const res = await axios.get(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
@@ -423,8 +480,52 @@ export default function XtermWebSshTerminal({
             path: entry.path,
             mode: 'preview',
           },
+          onDownloadProgress: (progressEvent) => {
+            const total = Number(
+              progressEvent.total || expectedBytes || progressEvent.loaded || 0
+            );
+            const loaded = Number(progressEvent.loaded || 0);
+            const ratio = total > 0 ? Math.min(1, loaded / total) : 1;
+            const elapsedSec = Math.max(0.1, (Date.now() - startedAt) / 1000);
+            setScpTransferProgress((prev) => ({
+              ...(prev || {}),
+              active: true,
+              completed: false,
+              direction: 'PREVIEW',
+              fileName: entry.name || entry.path,
+              fileCount: 1,
+              loadedBytes: loaded,
+              totalBytes: total,
+              percent: Math.min(98, Math.max(25, Math.round(25 + ratio * 73))),
+              speedBps: Math.round(loaded / elapsedSec),
+              stage: `Streaming "${entry.name}" into editor...`,
+              engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+            }));
+          },
         }
       );
+      const finalBytes = Number(res.data?.sizeBytes ?? expectedBytes);
+      setScpTransferProgress({
+        active: true,
+        completed: true,
+        direction: 'PREVIEW',
+        fileName: res.data?.fileName || entry.name,
+        fileCount: 1,
+        loadedBytes: finalBytes,
+        totalBytes: finalBytes,
+        percent: 100,
+        speedBps: Math.round(
+          finalBytes / Math.max(0.12, (Date.now() - startedAt) / 1000)
+        ),
+        stage: `✓ Loaded "${res.data?.fileName || entry.name}" (${formatBytes(
+          finalBytes
+        )}) into editor`,
+        engine: res.data?.engineUsed || scpEngineUsed || 'SSH2_SFTP_DIRECT',
+      });
+      scpTransferTimerRef.current = setTimeout(() => {
+        setScpTransferProgress(null);
+      }, 1800);
+
       setScpEditorFile({
         path: res.data?.path || entry.path,
         fileName: res.data?.fileName || entry.name,
@@ -434,6 +535,8 @@ export default function XtermWebSshTerminal({
         isNew: false,
       });
     } catch (err) {
+      clearScpTransferTimer();
+      setScpTransferProgress(null);
       setScpError(
         err.response?.data?.error ||
           err.message ||
@@ -444,34 +547,222 @@ export default function XtermWebSshTerminal({
     }
   };
 
-  const handleDownloadScpFileRaw = (entry) => {
+  const handleDownloadScpFileRaw = async (entry) => {
     const targetVm = activeVm || focusedVm;
     if (!targetVm || !entry?.path) return;
-    const qs = new URLSearchParams({
-      zone: targetVm.zone || '',
-      username: customUsername || defaultUsername || 'ubuntu',
-      path: entry.path,
-      mode: 'raw',
+    const expectedBytes = Number(entry.sizeBytes || 0);
+    const fileName =
+      entry.name || entry.path.split('/').pop() || 'download.bin';
+    const startedAt = Date.now();
+    setScpActionBusy(`download:${entry.path}`);
+    setScpError('');
+    clearScpTransferTimer();
+
+    setScpTransferProgress({
+      active: true,
+      completed: false,
+      direction: 'DOWNLOAD',
+      fileName,
+      fileCount: 1,
+      loadedBytes: 0,
+      totalBytes: expectedBytes,
+      percent: 6,
+      speedBps: 0,
+      stage: `Stage 1/3 · Connecting to ${targetVm.name} & staging "${fileName}" over SCP/SFTP...`,
+      engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
     });
-    const url = `/api/project/${encodeURIComponent(
-      projectId
-    )}/vms/${encodeURIComponent(targetVm.name)}/scp/download?${qs.toString()}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+
+    let receivedFirstChunk = false;
+    scpTransferTimerRef.current = setInterval(() => {
+      if (receivedFirstChunk) return;
+      setScpTransferProgress((prev) => {
+        if (!prev || !prev.active || prev.completed || prev.percent >= 38) {
+          return prev;
+        }
+        const nextPct = Math.min(38, prev.percent + 4);
+        const nextLoaded =
+          expectedBytes > 0 ? Math.round((nextPct / 100) * expectedBytes) : 0;
+        return {
+          ...prev,
+          percent: nextPct,
+          loadedBytes: nextLoaded,
+          stage: `Stage 2/3 · Reading "${fileName}" from VM disk over SSH2 SFTP / IAP Tunnel...`,
+        };
+      });
+    }, 220);
+
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/download`,
+        {
+          params: {
+            zone: targetVm.zone || '',
+            username: customUsername || defaultUsername || 'ubuntu',
+            path: entry.path,
+            mode: 'raw',
+          },
+          responseType: 'blob',
+          onDownloadProgress: (progressEvent) => {
+            receivedFirstChunk = true;
+            clearScpTransferTimer();
+            const total = Number(
+              progressEvent.total || expectedBytes || progressEvent.loaded || 0
+            );
+            const loaded = Number(progressEvent.loaded || 0);
+            const ratio = total > 0 ? Math.min(1, loaded / total) : 1;
+            const elapsedSec = Math.max(0.12, (Date.now() - startedAt) / 1000);
+            const speedBps = Math.round(loaded / elapsedSec);
+            const pct = Math.min(99, Math.max(40, Math.round(40 + ratio * 59)));
+            setScpTransferProgress((prev) => ({
+              ...(prev || {}),
+              active: true,
+              completed: false,
+              direction: 'DOWNLOAD',
+              fileName,
+              fileCount: 1,
+              loadedBytes: loaded,
+              totalBytes: total,
+              percent: pct,
+              speedBps,
+              stage: `Stage 3/3 · Streaming "${fileName}" to browser (${formatBytes(
+                loaded
+              )} / ${formatBytes(total)})...`,
+              engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+            }));
+          },
+        }
+      );
+
+      clearScpTransferTimer();
+      const blob =
+        res.data instanceof Blob ? res.data : new Blob([res.data || '']);
+      const finalBytes = blob.size || expectedBytes;
+      const engineHeader =
+        res.headers?.['x-scp-engine-used'] ||
+        scpEngineUsed ||
+        'SSH2_SFTP_DIRECT';
+      const elapsedSec = Math.max(0.15, (Date.now() - startedAt) / 1000);
+      const finalSpeed = Math.round(finalBytes / elapsedSec);
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+
+      setScpTransferProgress({
+        active: true,
+        completed: true,
+        direction: 'DOWNLOAD',
+        fileName,
+        fileCount: 1,
+        loadedBytes: finalBytes,
+        totalBytes: finalBytes,
+        percent: 100,
+        speedBps: finalSpeed,
+        stage: `✓ Downloaded "${fileName}" (${formatBytes(
+          finalBytes
+        )}) to your laptop!`,
+        engine: engineHeader,
+      });
+      setScpStatusMsg(
+        `Downloaded "${fileName}" (${formatBytes(finalBytes)}) via SCP/SFTP.`
+      );
+      setTimeout(() => setScpStatusMsg(''), 5000);
+      scpTransferTimerRef.current = setTimeout(() => {
+        setScpTransferProgress(null);
+      }, 3200);
+    } catch (err) {
+      clearScpTransferTimer();
+      setScpTransferProgress(null);
+      let errMsg =
+        err.message || `Failed to download ${fileName} via SCP/SFTP.`;
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed?.error) errMsg = parsed.error;
+        } catch {
+          // ignore
+        }
+      } else if (err.response?.data?.error) {
+        errMsg = err.response.data.error;
+      }
+      setScpError(errMsg);
+    } finally {
+      setScpActionBusy('');
+    }
   };
 
   const handleUploadScpFiles = async (fileList) => {
     const targetVm = activeVm || focusedVm;
     if (!targetVm || !fileList || fileList.length === 0) return;
+    const filesArr = Array.from(fileList);
+    const totalRawBytes = filesArr.reduce(
+      (sum, f) => sum + Number(f.size || 0),
+      0
+    );
+    const labelName =
+      filesArr.length === 1
+        ? filesArr[0].name
+        : `${filesArr[0].name} + ${filesArr.length - 1} more (${
+            filesArr.length
+          } files)`;
+    const startedAt = Date.now();
+
     setScpActionBusy('upload');
     setScpError('');
-    setScpStatusMsg(`Uploading ${fileList.length} file(s) via SCP/SFTP...`);
+    setScpStatusMsg('');
+    clearScpTransferTimer();
+
+    setScpTransferProgress({
+      active: true,
+      completed: false,
+      direction: 'UPLOAD',
+      fileName: labelName,
+      fileCount: filesArr.length,
+      loadedBytes: 0,
+      totalBytes: totalRawBytes,
+      percent: 3,
+      speedBps: 0,
+      stage: `Stage 1/3 · Reading & Base64-encoding ${filesArr.length} local file(s)...`,
+      engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+    });
+
     try {
+      const perFileLoaded = new Array(filesArr.length).fill(0);
       const encodedFiles = await Promise.all(
-        Array.from(fileList).map(
-          (file) =>
+        filesArr.map(
+          (file, idx) =>
             new Promise((resolve, reject) => {
               const reader = new FileReader();
+              reader.onprogress = (ev) => {
+                if (ev.lengthComputable && totalRawBytes > 0) {
+                  perFileLoaded[idx] = ev.loaded;
+                  const readSum = perFileLoaded.reduce((a, b) => a + b, 0);
+                  const readRatio = Math.min(1, readSum / totalRawBytes);
+                  const pct = Math.max(4, Math.round(readRatio * 24));
+                  setScpTransferProgress((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          loadedBytes: Math.round(readSum * 0.25),
+                          percent: pct,
+                          stage: `Stage 1/3 · Reading local file(s) (${Math.round(
+                            readRatio * 100
+                          )}%)...`,
+                        }
+                      : prev
+                  );
+                }
+              };
               reader.onload = () => {
+                perFileLoaded[idx] = file.size || 0;
                 const resultStr = String(reader.result || '');
                 const base64 = resultStr.includes(',')
                   ? resultStr.split(',')[1]
@@ -488,6 +779,7 @@ export default function XtermWebSshTerminal({
         )
       );
 
+      let startedRemoteWriteTimer = false;
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
           targetVm.name
@@ -497,12 +789,101 @@ export default function XtermWebSshTerminal({
           username: customUsername || defaultUsername || 'ubuntu',
           targetDir: scpPath || '~',
           files: encodedFiles,
+        },
+        {
+          onUploadProgress: (progressEvent) => {
+            const total = Number(
+              progressEvent.total || progressEvent.loaded || 1
+            );
+            const ratio = Math.min(1, Number(progressEvent.loaded || 0) / total);
+            const elapsedSec = Math.max(0.12, (Date.now() - startedAt) / 1000);
+            const effectiveBytes = Math.min(
+              totalRawBytes,
+              Math.round(totalRawBytes * (0.25 + ratio * 0.57))
+            );
+            const speedBps = Math.round(effectiveBytes / elapsedSec);
+            const pct = Math.min(82, Math.max(25, Math.round(25 + ratio * 57)));
+
+            setScpTransferProgress((prev) => ({
+              ...(prev || {}),
+              active: true,
+              completed: false,
+              direction: 'UPLOAD',
+              fileName: labelName,
+              fileCount: filesArr.length,
+              loadedBytes: effectiveBytes,
+              totalBytes: totalRawBytes,
+              percent: pct,
+              speedBps,
+              stage:
+                ratio < 1
+                  ? `Stage 2/3 · Streaming SFTP payload (${formatBytes(
+                      effectiveBytes
+                    )} / ${formatBytes(totalRawBytes)})...`
+                  : `Stage 3/3 · Writing ${filesArr.length} file(s) to ${targetVm.name}:${
+                      scpPath || '~'
+                    } over SFTP / IAP...`,
+              engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+            }));
+
+            if (ratio >= 1 && !startedRemoteWriteTimer) {
+              startedRemoteWriteTimer = true;
+              clearScpTransferTimer();
+              scpTransferTimerRef.current = setInterval(() => {
+                setScpTransferProgress((prev) => {
+                  if (
+                    !prev ||
+                    !prev.active ||
+                    prev.completed ||
+                    prev.percent >= 97
+                  ) {
+                    return prev;
+                  }
+                  const nextPct = Math.min(97, prev.percent + 2);
+                  return {
+                    ...prev,
+                    percent: nextPct,
+                    loadedBytes: Math.round((nextPct / 100) * totalRawBytes),
+                    stage: `Stage 3/3 · Writing blocks to ${targetVm.name} disk over SSH2 SFTP / IAP Tunnel...`,
+                  };
+                });
+              }, 240);
+            }
+          },
         }
       );
+
+      clearScpTransferTimer();
+      const elapsedSec = Math.max(0.15, (Date.now() - startedAt) / 1000);
+      const finalEngine =
+        res.data?.engineUsed || scpEngineUsed || 'SSH2_SFTP_DIRECT';
+
+      setScpTransferProgress({
+        active: true,
+        completed: true,
+        direction: 'UPLOAD',
+        fileName: labelName,
+        fileCount: filesArr.length,
+        loadedBytes: totalRawBytes,
+        totalBytes: totalRawBytes,
+        percent: 100,
+        speedBps: Math.round(totalRawBytes / elapsedSec),
+        stage:
+          res.data?.message ||
+          `✓ Uploaded ${filesArr.length} file(s) (${formatBytes(
+            totalRawBytes
+          )}) to ${scpPath || '~'}!`,
+        engine: finalEngine,
+      });
       setScpStatusMsg(res.data?.message || 'SCP upload complete!');
       setTimeout(() => setScpStatusMsg(''), 5000);
+      scpTransferTimerRef.current = setTimeout(() => {
+        setScpTransferProgress(null);
+      }, 3400);
       await fetchScpDirectory(scpPath);
     } catch (err) {
+      clearScpTransferTimer();
+      setScpTransferProgress(null);
       setScpStatusMsg('');
       setScpError(
         err.response?.data?.error ||
@@ -520,8 +901,28 @@ export default function XtermWebSshTerminal({
   const handleSaveScpEditorFile = async () => {
     const targetVm = activeVm || focusedVm;
     if (!targetVm || !scpEditorFile?.path) return;
+    const contentBytes = new Blob([String(scpEditorFile.content || '')]).size;
+    const startedAt = Date.now();
     setScpActionBusy('save-file');
     setScpError('');
+    clearScpTransferTimer();
+
+    setScpTransferProgress({
+      active: true,
+      completed: false,
+      direction: 'SAVE',
+      fileName: scpEditorFile.fileName || scpEditorFile.path,
+      fileCount: 1,
+      loadedBytes: Math.round(contentBytes * 0.35),
+      totalBytes: contentBytes,
+      percent: 35,
+      speedBps: 0,
+      stage: `Writing "${
+        scpEditorFile.fileName || scpEditorFile.path
+      }" to ${targetVm.name} via SCP/SFTP...`,
+      engine: scpEngineUsed || 'SSH2_SFTP_DIRECT',
+    });
+
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
@@ -535,6 +936,28 @@ export default function XtermWebSshTerminal({
           content: scpEditorFile.content,
         }
       );
+      const elapsedSec = Math.max(0.12, (Date.now() - startedAt) / 1000);
+      setScpTransferProgress({
+        active: true,
+        completed: true,
+        direction: 'SAVE',
+        fileName: scpEditorFile.fileName || scpEditorFile.path,
+        fileCount: 1,
+        loadedBytes: contentBytes,
+        totalBytes: contentBytes,
+        percent: 100,
+        speedBps: Math.round(contentBytes / elapsedSec),
+        stage:
+          res.data?.message ||
+          `✓ Saved "${scpEditorFile.fileName}" (${formatBytes(
+            contentBytes
+          )}) to VM!`,
+        engine: res.data?.engineUsed || scpEngineUsed || 'SSH2_SFTP_DIRECT',
+      });
+      scpTransferTimerRef.current = setTimeout(() => {
+        setScpTransferProgress(null);
+      }, 2800);
+
       setScpStatusMsg(
         res.data?.message || `Saved ${scpEditorFile.fileName} to VM!`
       );
@@ -542,6 +965,8 @@ export default function XtermWebSshTerminal({
       setScpEditorFile(null);
       await fetchScpDirectory(scpPath);
     } catch (err) {
+      clearScpTransferTimer();
+      setScpTransferProgress(null);
       setScpError(
         err.response?.data?.error ||
           err.message ||
@@ -1219,32 +1644,71 @@ export default function XtermWebSshTerminal({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          {!isCloudRun && focusedVm && (
-            <button
-              type="button"
-              onClick={() => {
-                if (viewMode === 'SCP_FILE_MANAGER') {
-                  setViewMode('LIVE_SSH_PTY');
-                } else {
-                  setViewMode('SCP_FILE_MANAGER');
-                }
-              }}
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-colors cursor-pointer border ${
-                viewMode === 'SCP_FILE_MANAGER'
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-              }`}
-              title={`Open Visual SCP / SFTP File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor for ${
-                (activeVm || focusedVm).name
-              }`}
+          {!isCloudRun && (
+            <div
+              className="inline-flex items-center rounded-lg bg-zinc-200/80 dark:bg-zinc-900 p-0.5 border border-zinc-300 dark:border-zinc-800"
+              role="tablist"
+              aria-label="VM Workspace Mode Switcher"
             >
-              <FolderOpen className="w-3 h-3" />
-              <span>
-                {viewMode === 'SCP_FILE_MANAGER'
-                  ? 'Back to SSH PTY'
-                  : 'SCP / SFTP Files'}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('LIVE_SSH_PTY')}
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                  viewMode === 'LIVE_SSH_PTY'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+                title="Interactive Xterm.js Web-SSH PTY Terminal"
+              >
+                <Terminal className="w-3 h-3" />
+                <span>SSH Console</span>
+                {isSessionEnabled && connStatus.status === 'CONNECTED' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                )}
+              </button>
+
+              {focusedVm && (
+                <button
+                  type="button"
+                  onClick={() => setViewMode('SCP_FILE_MANAGER')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                    viewMode === 'SCP_FILE_MANAGER'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                  title={`Visual SCP / SFTP File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor for ${
+                    (activeVm || focusedVm).name
+                  }`}
+                >
+                  <FolderOpen className="w-3 h-3" />
+                  <span>SCP / SFTP Files</span>
+                  {scpTransferProgress?.active && !scpTransferProgress.completed && (
+                    <span className="px-1 rounded bg-white/20 text-[9px] font-mono">
+                      {scpTransferProgress.percent}%
+                    </span>
+                  )}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('SERIAL_PORT_1');
+                  if (focusedVm && onFetchSerialConsole) {
+                    onFetchSerialConsole(focusedVm);
+                  }
+                }}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  viewMode === 'SERIAL_PORT_1'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+                title="Compute Engine Serial Port 1 boot & kernel console logs"
+              >
+                <FileText className="w-3 h-3" />
+                <span>Serial Port 1</span>
+              </button>
+            </div>
           )}
 
           {!isCloudRun && focusedVm && onOpenMigrateVm && (
@@ -1268,33 +1732,6 @@ export default function XtermWebSshTerminal({
             >
               <Shield className="w-3 h-3 text-emerald-500" />
               <span>Firewall / IAP</span>
-            </button>
-          )}
-
-          {!isCloudRun && (
-            <button
-              type="button"
-              onClick={() => {
-                if (viewMode === 'SERIAL_PORT_1') {
-                  setViewMode('LIVE_SSH_PTY');
-                } else {
-                  setViewMode('SERIAL_PORT_1');
-                  if (focusedVm && onFetchSerialConsole) {
-                    onFetchSerialConsole(focusedVm);
-                  }
-                }
-              }}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 border ${
-                viewMode === 'SERIAL_PORT_1'
-                  ? 'bg-blue-600 text-white border-blue-500'
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border-zinc-200 dark:border-zinc-800'
-              }`}
-              title="Toggle Compute Engine Serial Port 1 boot console logs"
-            >
-              <FileText className="w-3 h-3" />
-              <span>
-                {viewMode === 'SERIAL_PORT_1' ? 'Back to SSH PTY' : 'Serial Port 1'}
-              </span>
             </button>
           )}
 
@@ -1501,6 +1938,16 @@ export default function XtermWebSshTerminal({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
+                  onClick={() => setViewMode('LIVE_SSH_PTY')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600/15 hover:bg-blue-600/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer"
+                  title="Switch back to the interactive Xterm.js SSH terminal"
+                >
+                  <Terminal className="w-3 h-3" />
+                  <span>SSH Console</span>
+                </button>
+
+                <button
+                  type="button"
                   disabled={Boolean(scpActionBusy)}
                   onClick={() => scpFileInputRef.current?.click()}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
@@ -1509,7 +1956,11 @@ export default function XtermWebSshTerminal({
                   <Upload className="w-3 h-3" />
                   <span>
                     {scpActionBusy === 'upload'
-                      ? 'Uploading...'
+                      ? `Uploading ${
+                          scpTransferProgress?.percent
+                            ? `${scpTransferProgress.percent}%`
+                            : '...'
+                        }`
                       : '+ Upload File(s)'}
                   </span>
                 </button>
@@ -1651,7 +2102,155 @@ export default function XtermWebSshTerminal({
             )}
           </div>
 
-          {scpStatusMsg && (
+          {/* Live Multi-Stage SCP / SFTP Upload & Download Progress Bar */}
+          {scpTransferProgress && (
+            <div
+              className={`rounded-xl border p-3 space-y-2 transition-all shadow-sm ${
+                scpTransferProgress.completed
+                  ? 'bg-emerald-500/10 border-emerald-500/40'
+                  : scpTransferProgress.direction === 'DOWNLOAD'
+                  ? 'bg-blue-500/10 border-blue-500/40'
+                  : 'bg-emerald-500/10 border-emerald-500/40'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${
+                      scpTransferProgress.completed
+                        ? 'bg-emerald-600 text-white border-emerald-500'
+                        : scpTransferProgress.direction === 'DOWNLOAD'
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-emerald-600 text-white border-emerald-500'
+                    }`}
+                  >
+                    {scpTransferProgress.direction === 'DOWNLOAD' ? (
+                      <Download
+                        className={`w-3 h-3 ${
+                          !scpTransferProgress.completed ? 'animate-bounce' : ''
+                        }`}
+                      />
+                    ) : (
+                      <Upload
+                        className={`w-3 h-3 ${
+                          !scpTransferProgress.completed ? 'animate-bounce' : ''
+                        }`}
+                      />
+                    )}
+                    <span>
+                      {scpTransferProgress.direction === 'DOWNLOAD'
+                        ? 'SCP / SFTP Download'
+                        : scpTransferProgress.direction === 'UPLOAD'
+                        ? 'SCP / SFTP Upload'
+                        : scpTransferProgress.direction === 'SAVE'
+                        ? 'SCP Remote Write'
+                        : 'SCP Remote Read'}
+                    </span>
+                  </span>
+
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-white truncate max-w-[260px] sm:max-w-[360px]">
+                    {scpTransferProgress.fileName}
+                  </span>
+
+                  {scpTransferProgress.engine && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-900/10 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
+                      {scpTransferProgress.engine === 'SSH2_SFTP_DIRECT'
+                        ? 'SSH2 SFTP (:22)'
+                        : String(scpTransferProgress.engine).includes('IAP')
+                        ? 'gcloud SCP / IAP Tunnel'
+                        : 'gcloud compute scp'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2.5 text-[11px] font-mono">
+                  {scpTransferProgress.totalBytes > 0 && (
+                    <span className="text-zinc-600 dark:text-zinc-300 font-bold">
+                      {formatBytes(scpTransferProgress.loadedBytes)} /{' '}
+                      {formatBytes(scpTransferProgress.totalBytes)}
+                    </span>
+                  )}
+                  {scpTransferProgress.speedBps > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-900/10 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 font-bold text-[10px]">
+                      {formatBytes(scpTransferProgress.speedBps)}/s
+                    </span>
+                  )}
+                  <span
+                    className={`text-sm font-extrabold ${
+                      scpTransferProgress.completed
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : scpTransferProgress.direction === 'DOWNLOAD'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    {scpTransferProgress.percent}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar Track */}
+              <div className="w-full h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden p-0.5">
+                <div
+                  className={`h-full rounded-full transition-all duration-200 ${
+                    scpTransferProgress.completed
+                      ? 'bg-emerald-500'
+                      : scpTransferProgress.direction === 'DOWNLOAD'
+                      ? 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 animate-pulse'
+                      : 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 animate-pulse'
+                  }`}
+                  style={{
+                    width: `${Math.max(
+                      4,
+                      Math.min(100, Number(scpTransferProgress.percent || 0))
+                    )}%`,
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-600 dark:text-zinc-400">
+                <span className="font-bold truncate">
+                  {scpTransferProgress.stage}
+                </span>
+                <div className="flex items-center gap-2 font-mono text-[9px]">
+                  <span
+                    className={
+                      scpTransferProgress.percent >= 5
+                        ? 'text-emerald-500 font-bold'
+                        : 'opacity-50'
+                    }
+                  >
+                    ● 1. Buffer
+                  </span>
+                  <span>→</span>
+                  <span
+                    className={
+                      scpTransferProgress.percent >= 35
+                        ? 'text-emerald-500 font-bold'
+                        : 'opacity-50'
+                    }
+                  >
+                    ● 2. SFTP/IAP Stream
+                  </span>
+                  <span>→</span>
+                  <span
+                    className={
+                      scpTransferProgress.percent >= 90
+                        ? 'text-emerald-500 font-bold'
+                        : 'opacity-50'
+                    }
+                  >
+                    ● 3.{' '}
+                    {scpTransferProgress.direction === 'DOWNLOAD'
+                      ? 'Browser Save'
+                      : 'VM Disk Write'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {scpStatusMsg && !scpTransferProgress && (
             <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-[11px] font-bold">
               ✓ {scpStatusMsg}
             </div>
@@ -1868,12 +2467,29 @@ export default function XtermWebSshTerminal({
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={
+                                    scpActionBusy === `download:${entry.path}`
+                                  }
                                   onClick={() => handleDownloadScpFileRaw(entry)}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
-                                  title="Download file to your laptop via SCP/SFTP"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-60"
+                                  title="Download file to your laptop via SCP/SFTP with live progress tracking"
                                 >
-                                  <Download className="w-2.5 h-2.5" />
-                                  <span>Download</span>
+                                  <Download
+                                    className={`w-2.5 h-2.5 ${
+                                      scpActionBusy === `download:${entry.path}`
+                                        ? 'animate-bounce'
+                                        : ''
+                                    }`}
+                                  />
+                                  <span>
+                                    {scpActionBusy === `download:${entry.path}`
+                                      ? `${
+                                          scpTransferProgress?.percent
+                                            ? `${scpTransferProgress.percent}%`
+                                            : '...'
+                                        }`
+                                      : 'Download'}
+                                  </span>
                                 </button>
                               </>
                             )}

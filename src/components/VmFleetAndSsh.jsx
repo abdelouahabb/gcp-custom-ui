@@ -243,7 +243,9 @@ export default function VmFleetAndSsh({
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
   const [openTunnelVm, setOpenTunnelVm] = useState(null);
   const [openScpTrigger, setOpenScpTrigger] = useState(0);
+  const [openSshTrigger, setOpenSshTrigger] = useState(0);
   const [scpTargetVmName, setScpTargetVmName] = useState('');
+  const [terminalViewMode, setTerminalViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SCP_FILE_MANAGER' | 'SERIAL_PORT_1'
 
   // Live VM -> Cloud Run v2 Serverless Migrator state
   const [openMigrateCloudRunVm, setOpenMigrateCloudRunVm] = useState(null);
@@ -1532,6 +1534,13 @@ export default function VmFleetAndSsh({
                   !isDeleting &&
                   !pendingOp;
                 const isSshActive = activeSshVm?.name === vm.name && !isDeleting;
+                const isSshFocusedInTerminal =
+                  isSshActive && terminalViewMode === 'LIVE_SSH_PTY';
+                const isScpActiveForVm =
+                  !isDeleting &&
+                  terminalViewMode === 'SCP_FILE_MANAGER' &&
+                  (scpTargetVmName === vm.name ||
+                    (!scpTargetVmName && activeSshVm?.name === vm.name));
                 const isBusy = powerBusyVm === vm.name || isTransitional;
                 const vmReg =
                   vm.region || vm.zone.split('-').slice(0, 2).join('-');
@@ -1544,6 +1553,8 @@ export default function VmFleetAndSsh({
                         ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
                         : isTransitional
                         ? 'border-amber-500/40 opacity-85'
+                        : isScpActiveForVm
+                        ? 'border-emerald-500 ring-1 ring-emerald-500/40'
                         : isSshActive
                         ? 'border-blue-500 ring-1 ring-blue-500/40'
                         : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
@@ -1721,19 +1732,31 @@ export default function VmFleetAndSsh({
                       <button
                         type="button"
                         disabled={isDeleting}
-                        onClick={() =>
-                          setActiveSshVm((prev) =>
-                            prev?.name === vm.name ? null : vm
-                          )
-                        }
+                        onClick={() => {
+                          if (isSshActive && terminalViewMode !== 'LIVE_SSH_PTY') {
+                            setTerminalViewMode('LIVE_SSH_PTY');
+                            setOpenSshTrigger((n) => n + 1);
+                          } else if (isSshActive) {
+                            setActiveSshVm(null);
+                          } else {
+                            setActiveSshVm(vm);
+                            setScpTargetVmName(vm.name);
+                            setTerminalViewMode('LIVE_SSH_PTY');
+                            setOpenSshTrigger((n) => n + 1);
+                          }
+                        }}
                         title={
-                          isSshActive
+                          isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
+                            ? `SSH is connected to ${vm.name} — click to switch the right workspace back to the interactive SSH terminal`
+                            : isSshFocusedInTerminal
                             ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
-                            : `Click to enable & connect live interactive SSH to ${vm.name}`
+                            : `Click to connect live interactive SSH terminal to ${vm.name}`
                         }
                         className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                          isSshActive
-                            ? 'bg-blue-600 hover:bg-red-600 text-white'
+                          isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white ring-1 ring-blue-400/50'
+                            : isSshFocusedInTerminal
+                            ? 'bg-blue-600 hover:bg-red-600 text-white ring-1 ring-blue-400/50'
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                       >
@@ -1741,8 +1764,10 @@ export default function VmFleetAndSsh({
                         <span className="truncate">
                           {isDeleting
                             ? 'Deprovisioning...'
-                            : isSshActive
-                            ? 'SSH Active (Off)'
+                            : isSshActive && terminalViewMode !== 'LIVE_SSH_PTY'
+                            ? 'Switch to SSH PTY'
+                            : isSshFocusedInTerminal
+                            ? '● SSH Connected (Off)'
                             : 'SSH / Console'}
                         </span>
                       </button>
@@ -1751,14 +1776,32 @@ export default function VmFleetAndSsh({
                         type="button"
                         disabled={isDeleting}
                         onClick={() => {
-                          setScpTargetVmName(vm.name);
-                          setOpenScpTrigger((n) => n + 1);
+                          if (isScpActiveForVm) {
+                            setTerminalViewMode('LIVE_SSH_PTY');
+                            setOpenSshTrigger((n) => n + 1);
+                          } else {
+                            setScpTargetVmName(vm.name);
+                            setTerminalViewMode('SCP_FILE_MANAGER');
+                            setOpenScpTrigger((n) => n + 1);
+                          }
                         }}
-                        title={`Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 transition-colors cursor-pointer disabled:opacity-40"
+                        title={
+                          isScpActiveForVm
+                            ? `SCP / SFTP Studio is currently open for ${vm.name} — click to switch back to SSH / Console`
+                            : `Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`
+                        }
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                          isScpActiveForVm
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm ring-1 ring-emerald-400/50'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                        }`}
                       >
                         <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">SCP / SFTP Files</span>
+                        <span className="truncate">
+                          {isScpActiveForVm
+                            ? '● SCP / SFTP Open'
+                            : 'SCP / SFTP Files'}
+                        </span>
                       </button>
 
                       <button
@@ -3254,7 +3297,10 @@ export default function VmFleetAndSsh({
               serialConsoleOutput={serialConsoleOutput}
               serialLoading={serialLoading}
               openScpTrigger={openScpTrigger}
+              openSshTrigger={openSshTrigger}
               scpTargetVmName={scpTargetVmName}
+              activeViewMode={terminalViewMode}
+              onViewModeChange={setTerminalViewMode}
             />
           </div>
           </div>

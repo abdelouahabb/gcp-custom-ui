@@ -3346,6 +3346,7 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
         `attachment; filename="${fileName.replace(/"/g, '')}"`
       );
       res.setHeader('Content-Length', String(fileBuffer.length));
+      res.setHeader('X-Scp-Engine-Used', engineUsed);
       return res.send(fileBuffer);
     }
 
