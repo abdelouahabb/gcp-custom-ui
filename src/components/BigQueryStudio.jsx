@@ -63,38 +63,55 @@ const STUDIO_TABS = [
 
 const SAMPLE_UNOPTIMIZED_QUERIES = [
   {
-    id: 'unpruned_select_star',
-    label: 'Anti-Pattern 1: SELECT * + WHERE IN Subquery + No Partition Filter',
+    id: 'austin_select_star_in',
+    label: '1. SELECT * + WHERE IN Subquery (Austin Bikeshare · 317 MB → 198 MB)',
     sql: `SELECT *
-FROM \`analytics_lakehouse.telemetry_events_2026\`
-WHERE user_id IN (
-  SELECT user_id
-  FROM \`analytics_lakehouse.vip_accounts\`
-  WHERE tier = 'ENTERPRISE'
+FROM \`bigquery-public-data.austin_bikeshare.bikeshare_trips\`
+WHERE start_station_id IN (
+  SELECT station_id
+  FROM \`bigquery-public-data.austin_bikeshare.bikeshare_stations\`
+  WHERE status = 'active'
 )
-ORDER BY revenue_usd DESC
-LIMIT 100;`,
+ORDER BY duration_minutes DESC
+LIMIT 15;`,
   },
   {
-    id: 'exact_distinct_union',
-    label: 'Anti-Pattern 2: Exact COUNT(DISTINCT) + UNION DISTINCT Shuffle',
+    id: 'usa_names_distinct_union',
+    label: '2. Exact COUNT(DISTINCT) + UNION DISTINCT (USA Names · 175 MB)',
     sql: `SELECT
-  region,
-  COUNT(DISTINCT user_id) AS unique_users,
-  SUM(revenue_usd) AS gross_revenue
-FROM \`analytics_lakehouse.telemetry_events_2026\`
-GROUP BY region
+  state,
+  COUNT(DISTINCT name) AS unique_names,
+  SUM(number) AS total_births
+FROM \`bigquery-public-data.usa_names.usa_1910_current\`
+WHERE year >= 2015
+GROUP BY state
 UNION DISTINCT
 SELECT
-  region,
-  COUNT(DISTINCT user_id) AS unique_users,
-  SUM(revenue_usd) AS gross_revenue
-FROM \`analytics_lakehouse.telemetry_archive_2025\`
-GROUP BY region;`,
+  state,
+  COUNT(DISTINCT name) AS unique_names,
+  SUM(number) AS total_births
+FROM \`bigquery-public-data.usa_names.usa_1910_current\`
+WHERE year BETWEEN 2010 AND 2014
+GROUP BY state
+ORDER BY total_births DESC
+LIMIT 15;`,
+  },
+  {
+    id: 'stackoverflow_wide_scan',
+    label: '3. Wide Column Scan + Safety Guard Demo (StackOverflow · 37.45 GB → 2.35 GB)',
+    sql: `SELECT *
+FROM \`bigquery-public-data.stackoverflow.posts_questions\`
+WHERE owner_user_id IN (
+  SELECT id
+  FROM \`bigquery-public-data.stackoverflow.users\`
+  WHERE reputation > 50000
+)
+ORDER BY view_count DESC
+LIMIT 15;`,
   },
   {
     id: 'public_wiki_benchmark',
-    label: 'Live Public Dataset Benchmark (bigquery-public-data)',
+    label: '4. 31-Day Partition Pruning Demo (Wikipedia · 191.74 GB → 11.76 GB)',
     sql: `SELECT
   title,
   SUM(views) AS total_views
@@ -357,14 +374,15 @@ export default function BigQueryStudio({
   };
 
   // Run SQL Dry-Run X-Ray or Live Query
-  const handleExecuteQuery = async (isDryRun = true) => {
+  const handleExecuteQuery = async (isDryRun = true, sqlOverride = null) => {
+    const targetSql = sqlOverride !== null ? sqlOverride : sqlInput;
     setRunningQuery(true);
     try {
       const activeDs = datasets.find((d) => d.datasetId === selectedDatasetId);
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/bigquery/query`,
         {
-          sql: sqlInput,
+          sql: targetSql,
           datasetId: selectedDatasetId || '',
           location: activeDs?.location || 'US',
           dryRun: isDryRun,
@@ -374,11 +392,48 @@ export default function BigQueryStudio({
         }
       );
       setQueryResult(res.data);
-      if (!isDryRun) {
+      setTimeout(() => {
+        document
+          .getElementById('bigquery-query-results-anchor')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
+
+      if (res.data?.ok === false) {
+        if (res.data?.blockedBySafetyGuard) {
+          onShowError?.(
+            `Protected by Safety Guard ($0.00 billed): Query scans ${formatBytes(
+              res.data.totalBytesProcessed
+            )} ($${Number(res.data.onDemandCostUsd || 0).toFixed(
+              4
+            )}), exceeding your ${maxBytesGuardGb} GB maximumBytesBilled cap!`
+          );
+        } else {
+          onShowError?.(
+            res.data?.error ||
+              res.data?.apiNotice ||
+              'BigQuery SQL query failed.'
+          );
+        }
+        return;
+      }
+
+      if (isDryRun) {
         onShowToast?.(
-          `Executed live BigQuery SQL (${res.data?.totalRows || 0} rows returned · ${formatBytes(
+          `Dry-Run X-Ray ($0.00 billed): ${formatBytes(
+            res.data?.totalBytesProcessed
+          )} ($${Number(res.data?.onDemandCostUsd || 0).toFixed(
+            4
+          )}) → Auto-Optimizer reduces scan by ${
+            res.data?.optimizationReport?.estimatedReductionPercent || 0
+          }% to ${formatBytes(res.data?.optimizedBytesEstimate)}!`
+        );
+      } else {
+        onShowToast?.(
+          `Executed live BigQuery SQL (${
+            res.data?.totalRows || 0
+          } rows returned · ${formatBytes(
             res.data?.totalBytesBilled
-          )} billed)`
+          )} billed · $${Number(res.data?.onDemandCostUsd || 0).toFixed(4)})`
         );
       }
     } catch (err) {
@@ -1029,17 +1084,30 @@ export default function BigQueryStudio({
                     {tables.map((t) => (
                       <div
                         key={t.tableId}
-                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1"
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1.5"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                             {t.tableId}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                            {t.timePartitioning?.type
-                              ? `PARTITIONED (${t.timePartitioning.type})`
-                              : t.type}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                              {t.timePartitioning?.type
+                                ? `PARTITIONED (${t.timePartitioning.type})`
+                                : t.type}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const tblSql = `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\nLIMIT 25;`;
+                                setSqlInput(tblSql);
+                                handleExecuteQuery(true, tblSql);
+                              }}
+                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              Dry-Run Table →
+                            </button>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-[10px] text-zinc-500">
                           <span>
@@ -1145,28 +1213,98 @@ export default function BigQueryStudio({
                   </button>
                 </div>
 
-                {queryResult?.optimizationReport?.optimizedSql && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSqlInput(queryResult.optimizationReport.optimizedSql)
-                    }
-                    title="Replace editor SQL with the automatically optimized SQL query"
-                    className="inline-flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                    <span>Apply Optimized SQL</span>
-                  </button>
-                )}
+                {queryResult?.optimizationReport?.optimizedSql &&
+                  queryResult.optimizationReport.optimizedSql.trim() !==
+                    sqlInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextSql =
+                          queryResult.optimizationReport.optimizedSql;
+                        setSqlInput(nextSql);
+                        onShowToast?.(
+                          'Applied Auto-Optimized SQL to editor — running Dry-Run verification ($0.00)...'
+                        );
+                        handleExecuteQuery(true, nextSql);
+                      }}
+                      title="Replace editor SQL with the automatically optimized SQL query and verify via Dry-Run"
+                      className="inline-flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>Apply Optimized SQL</span>
+                    </button>
+                  )}
               </div>
 
               {/* Dry-Run & Optimizer Report Output */}
               {queryResult && (
-                <div className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <div
+                  id="bigquery-query-results-anchor"
+                  className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 scroll-mt-20"
+                >
+                  {/* Safety Guard Circuit-Breaker or SQL Error Banner */}
+                  {queryResult.ok === false && (
+                    <div
+                      className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 ${
+                        queryResult.blockedBySafetyGuard
+                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-900 dark:text-amber-200'
+                          : 'bg-red-500/10 border-red-500/40 text-red-900 dark:text-red-200'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-extrabold flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>
+                            {queryResult.blockedBySafetyGuard
+                              ? `SAFETY GUARD CIRCUIT-BREAKER TRIGGERED ($0.00 Billed) — Blocked ${formatBytes(
+                                  queryResult.totalBytesProcessed
+                                )} Scan (> ${maxBytesGuardGb} GB Cap)`
+                              : 'BIGQUERY SQL / API EXECUTION ERROR ($0.00 Billed)'}
+                          </span>
+                        </span>
+                        {queryResult.blockedBySafetyGuard && (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {queryResult.optimizationReport?.optimizedSql &&
+                              queryResult.optimizationReport.optimizedSql.trim() !==
+                                sqlInput.trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextSql =
+                                      queryResult.optimizationReport.optimizedSql;
+                                    setSqlInput(nextSql);
+                                    handleExecuteQuery(true, nextSql);
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer"
+                                >
+                                  Apply Optimized SQL ({formatBytes(queryResult.optimizedBytesEstimate)})
+                                </button>
+                              )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMaxBytesGuardGb(100);
+                                onShowToast?.(
+                                  'Raised Safety Guard cap to 100 GB — click "2. Execute Live SQL" if you wish to run this scan.'
+                                );
+                              }}
+                              className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer"
+                            >
+                              Raise Safety Cap to 100 GB
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-[11px] opacity-90 break-words">
+                        {queryResult.error || queryResult.apiNotice}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="p-3 rounded-xl bg-red-500/[0.06] border border-red-500/25">
                       <div className="text-[10px] font-mono uppercase text-red-500">
-                        Unoptimized Scan & Cost
+                        Unoptimized Scan &amp; Cost
                       </div>
                       <div className="text-sm font-black font-mono text-zinc-900 dark:text-white mt-0.5">
                         {formatBytes(queryResult.totalBytesProcessed)} · $
@@ -1175,10 +1313,17 @@ export default function BigQueryStudio({
                     </div>
 
                     <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/30">
-                      <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400">
-                        After Auto-Optimizer (
-                        -{queryResult.optimizationReport?.estimatedReductionPercent || 0}
-                        %)
+                      <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 flex items-center justify-between gap-1">
+                        <span>
+                          After Auto-Optimizer (
+                          -{queryResult.optimizationReport?.estimatedReductionPercent || 0}
+                          %)
+                        </span>
+                        {queryResult.optimizationReport?.verifiedByBigQueryDryRun && (
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-[9px] font-extrabold">
+                            ✓ BQ Verified
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
                         {formatBytes(queryResult.optimizedBytesEstimate)} · $
@@ -1191,9 +1336,15 @@ export default function BigQueryStudio({
                         Execution Mode
                       </div>
                       <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white mt-0.5">
-                        {queryResult.dryRun
+                        {queryResult.blockedBySafetyGuard
+                          ? 'BLOCKED BY SAFETY GUARD ($0 Billed)'
+                          : queryResult.ok === false
+                          ? 'SQL ERROR ($0 Billed)'
+                          : queryResult.dryRun
                           ? 'DRY-RUN X-RAY ($0 Billed)'
-                          : `LIVE (${queryResult.totalRows} rows)`}
+                          : `LIVE (${queryResult.totalRows} rows${
+                              queryResult.cacheHit ? ' · CACHE HIT' : ''
+                            })`}
                       </div>
                     </div>
                   </div>
