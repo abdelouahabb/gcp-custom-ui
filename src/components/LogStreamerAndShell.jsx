@@ -48,6 +48,14 @@ const NL_INTENT_PRESETS = [
     nl: 'show me 5xx timeouts on cloud run in iowa slower than 1500ms in the last 2 hours excluding healthchecks',
   },
   {
+    label: 'BigQuery & Dataset Activity',
+    nl: 'bigquery dataset and query logs',
+  },
+  {
+    label: 'Compute VMs & VPC Firewalls',
+    nl: 'compute vm and vpc firewall activity',
+  },
+  {
     label: 'Vertex AI 429 Quota Exhaustion',
     nl: '429 rate limit quota exhausted on vertex ai over 1s',
   },
@@ -74,6 +82,8 @@ export default function LogStreamerAndShell({
   onRefreshLogs,
   onAskCopilot,
   onOpenRecycleBin,
+  onShowToast,
+  onShowError,
 }) {
   const { activeTimeZone, utcOffsetLabel, formatDateTime } = useTimezone();
   const [severityFilter, setSeverityFilter] = useState('ALL');
@@ -201,6 +211,24 @@ export default function LogStreamerAndShell({
           }
         );
         setChronoData(res.data);
+        if (res.data?.compiledQuery?.lqlSyntaxError && onShowError) {
+          onShowError(
+            `Cloud Logging LQL syntax rejected: ${res.data.compiledQuery.lqlSyntaxError}`
+          );
+        } else if (overrides.notifyUser && onShowToast) {
+          const effLql =
+            res.data?.compiledQuery?.effectiveLql || 'All Project Streams';
+          const matchedCount = Array.isArray(res.data?.entries)
+            ? res.data.entries.length
+            : 0;
+          const sigCount = res.data?.stats?.uniqueSignatures || 0;
+          onShowToast(
+            `Compiled & Queried Cloud Logging: ${matchedCount} log entries matched (${sigCount} Drain3 signatures) · LQL: ${effLql.slice(
+              0,
+              90
+            )}${effLql.length > 90 ? '…' : ''}`
+          );
+        }
         if (
           !selectedTraceId &&
           Array.isArray(res.data?.traceWaterfalls) &&
@@ -222,8 +250,14 @@ export default function LogStreamerAndShell({
         ) {
           setDiffSelectionIds([res.data.entries[0].id, res.data.entries[1].id]);
         }
-      } catch {
-        // ignore silent errors
+      } catch (err) {
+        if (overrides.notifyUser && onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to compile and query Cloud Logging.'
+          );
+        }
       } finally {
         setLoadingChrono(false);
       }
@@ -237,6 +271,8 @@ export default function LogStreamerAndShell({
       selectedSloService,
       diffSelectionIds.length,
       allowNeuralLlmTokens,
+      onShowToast,
+      onShowError,
     ]
   );
 
@@ -307,7 +343,7 @@ export default function LogStreamerAndShell({
     const nextLql = base ? `${base} AND ${clause}` : clause;
     setCustomLqlInput(nextLql);
     setShowCompiledSqlModal(true);
-    fetchChronoLogs({ lqlFilter: nextLql });
+    fetchChronoLogs({ lqlFilter: nextLql, notifyUser: true });
   };
 
   const togglePinLog = (logId) => {
@@ -366,38 +402,46 @@ export default function LogStreamerAndShell({
   };
 
   // Wave 2 Helper #2: Flattened Key-Value Pills for 1-Click LQL (+ = / - !=)
-  const getFlattenedKvPills = (entry) => [
-    {
-      key: 'service_name',
-      value: entry.serviceName,
-      includeClause: `resource.labels.service_name="${entry.serviceName}"`,
-      excludeClause: `-resource.labels.service_name="${entry.serviceName}"`,
-    },
-    {
-      key: 'httpRequest.status',
-      value: String(entry.httpStatus),
-      includeClause: `httpRequest.status=${entry.httpStatus}`,
-      excludeClause: `httpRequest.status!=${entry.httpStatus}`,
-    },
-    {
-      key: 'resource.type',
-      value: entry.resourceType,
-      includeClause: `resource.type="${entry.resourceType}"`,
-      excludeClause: `-resource.type="${entry.resourceType}"`,
-    },
-    {
-      key: 'location',
-      value: entry.region,
-      includeClause: `resource.labels.location="${entry.region}"`,
-      excludeClause: `-resource.labels.location="${entry.region}"`,
-    },
-    {
-      key: 'principalEmail',
-      value: entry.actor,
-      includeClause: `protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
-      excludeClause: `-protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
-    },
-  ];
+  const getFlattenedKvPills = (entry) => {
+    const svcField = String(entry.serviceName || '').endsWith('.googleapis.com')
+      ? 'protoPayload.serviceName'
+      : 'resource.labels.service_name';
+    return [
+      {
+        key: 'service_name',
+        value: entry.serviceName,
+        includeClause: `${svcField}="${entry.serviceName}"`,
+        excludeClause: `-${svcField}="${entry.serviceName}"`,
+      },
+      {
+        key: 'httpRequest.status',
+        value: String(entry.httpStatus),
+        includeClause:
+          entry.httpStatus === 200
+            ? `(httpRequest.status=200 OR severity<="NOTICE")`
+            : `httpRequest.status=${entry.httpStatus}`,
+        excludeClause: `-httpRequest.status=${entry.httpStatus}`,
+      },
+      {
+        key: 'resource.type',
+        value: entry.resourceType,
+        includeClause: `resource.type="${entry.resourceType}"`,
+        excludeClause: `-resource.type="${entry.resourceType}"`,
+      },
+      {
+        key: 'location',
+        value: entry.region,
+        includeClause: `resource.labels.location="${entry.region}"`,
+        excludeClause: `-resource.labels.location="${entry.region}"`,
+      },
+      {
+        key: 'principalEmail',
+        value: entry.actor,
+        includeClause: `protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
+        excludeClause: `-protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
+      },
+    ];
+  };
 
   // Wave 2 Helper #3: Shareable Permalink & 1-Click Incident Postmortem Markdown Generator
   const buildShareablePermalink = () => {
@@ -462,10 +506,21 @@ export default function LogStreamerAndShell({
         }
       );
       setReplayResult(res.data);
+      if (onShowToast) {
+        onShowToast(
+          `Wrote ${res.data?.writtenEntriesCount || 1} live canary log entries to projects/${projectId}/logs/cloudpulse-sre-canary via logging.googleapis.com/v2/entries:write.`
+        );
+      }
       // Immediately refresh live Cloud Logging stream so the written entries appear
       await fetchChronoLogs();
-    } catch {
-      // ignore
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to write canary log entries.'
+        );
+      }
     } finally {
       setReplayLoading(false);
     }
@@ -520,13 +575,22 @@ export default function LogStreamerAndShell({
         filter,
         status: res.data?.updated ? 'UPDATED_IN_GCP' : 'CREATED_IN_GCP',
       });
+      if (onShowToast) {
+        onShowToast(
+          `Cloud Logging Metric "${metricName}" ${
+            res.data?.updated ? 'updated' : 'created'
+          } in project ${projectId}.`
+        );
+      }
       await fetchChronoLogs();
     } catch (err) {
+      const errMsg = err.response?.data?.error || err.message;
       setCreatedMetricBanner({
         metricName,
         filter,
-        error: err.response?.data?.error || err.message,
+        error: errMsg,
       });
+      if (onShowError) onShowError(errMsg);
     } finally {
       setCreatingMetricId(null);
     }
@@ -575,9 +639,22 @@ export default function LogStreamerAndShell({
         gcloudCli: res.data?.gcloudCli,
         savingsUsd: rec.monthlyCostUsd,
       });
+      if (onShowToast) {
+        onShowToast(
+          `_Default Sink Exclusion "${rec.exclusionName}" applied for project ${projectId} (Estimated savings: $${Number(
+            rec.monthlyCostUsd || 0
+          ).toFixed(2)}/mo).`
+        );
+      }
       await fetchChronoLogs();
-    } catch {
-      // ignore
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to apply _Default sink exclusion rule.'
+        );
+      }
     } finally {
       setApplyingExclusionId(null);
     }
@@ -928,7 +1005,9 @@ export default function LogStreamerAndShell({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              fetchChronoLogs();
+              setCustomLqlInput('');
+              setActiveSavedViewId(null);
+              fetchChronoLogs({ lqlFilter: '', notifyUser: true });
             }}
             className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2"
           >
@@ -938,9 +1017,28 @@ export default function LogStreamerAndShell({
                 type="text"
                 value={nlQueryInput}
                 onChange={(e) => setNlQueryInput(e.target.value)}
-                placeholder='Ask in plain English: e.g. "5xx timeouts on cloud run over 1s" or "429 quota errors"...'
-                className="w-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500"
+                placeholder='Ask in plain English or LQL: e.g. "bigquery dataset logs", "5xx timeouts on cloud run", or resource.type="bigquery_resource"...'
+                className="w-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-8 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500"
               />
+              {(nlQueryInput || customLqlInput) && (
+                <button
+                  type="button"
+                  title="Clear search & reset to all project logs"
+                  onClick={() => {
+                    setNlQueryInput('');
+                    setCustomLqlInput('');
+                    setActiveSavedViewId(null);
+                    fetchChronoLogs({
+                      naturalLanguage: '',
+                      lqlFilter: '',
+                      notifyUser: true,
+                    });
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -1191,7 +1289,13 @@ export default function LogStreamerAndShell({
                   type="button"
                   onClick={() => {
                     setNlQueryInput(preset.nl);
-                    fetchChronoLogs({ naturalLanguage: preset.nl });
+                    setCustomLqlInput('');
+                    setActiveSavedViewId(null);
+                    fetchChronoLogs({
+                      naturalLanguage: preset.nl,
+                      lqlFilter: '',
+                      notifyUser: true,
+                    });
                   }}
                   className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono transition-colors cursor-pointer border ${
                     nlQueryInput === preset.nl
@@ -1343,13 +1447,39 @@ export default function LogStreamerAndShell({
                     )}
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={customLqlInput || chronoData.compiledQuery.effectiveLql || ''}
-                  onChange={(e) => setCustomLqlInput(e.target.value)}
-                  placeholder='resource.type="cloud_run_revision" AND severity>=ERROR'
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-300"
-                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={customLqlInput || chronoData.compiledQuery.effectiveLql || ''}
+                    onChange={(e) => setCustomLqlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        fetchChronoLogs({
+                          lqlFilter: customLqlInput,
+                          notifyUser: true,
+                        });
+                      }
+                    }}
+                    placeholder='resource.type="cloud_run_revision" AND severity>=ERROR'
+                    className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      fetchChronoLogs({
+                        lqlFilter:
+                          customLqlInput ||
+                          chronoData.compiledQuery.effectiveLql ||
+                          '',
+                        notifyUser: true,
+                      })
+                    }
+                    className="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-bold cursor-pointer shrink-0"
+                  >
+                    Run LQL
+                  </button>
+                </div>
               </div>
 
               <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
@@ -1406,7 +1536,11 @@ export default function LogStreamerAndShell({
                       setNlQueryInput(sv.nl);
                       setCustomLqlInput(sv.lql);
                       setSeverityFilter(sv.severity || 'ALL');
-                      fetchChronoLogs({ naturalLanguage: sv.nl, lqlFilter: sv.lql });
+                      fetchChronoLogs({
+                        naturalLanguage: sv.nl,
+                        lqlFilter: sv.lql,
+                        notifyUser: true,
+                      });
                     }}
                     className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
                       isActive
@@ -2163,7 +2297,51 @@ export default function LogStreamerAndShell({
 
             {/* Right 8 (or 12) Columns: Either Flattened SRE Cards OR High-Density Columnar Table View */}
             <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[500px] overflow-y-auto pr-1`}>
-              {streamViewMode === 'COLUMN_TABLE' ? (
+              {chronoEntries.filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id))).length === 0 ? (
+                <div className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] text-center space-y-3 font-mono">
+                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    0 Log Entries Matched Current Query in <span className="text-blue-500">{projectId}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
+                    Compiled LQL executed on <code className="text-blue-600 dark:text-blue-400">logging.googleapis.com/v2/entries:list</code>:{' '}
+                    <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 font-bold">
+                      {chronoData?.compiledQuery?.effectiveLql || 'severity>=DEFAULT'}
+                    </code>
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNlQueryInput('');
+                        setCustomLqlInput('');
+                        setSeverityFilter('ALL');
+                        setShowPinnedOnly(false);
+                        setTimeTravelAnchor(null);
+                        setActiveSavedViewId(null);
+                        fetchChronoLogs({
+                          naturalLanguage: '',
+                          lqlFilter: '',
+                          aroundTimestamp: '',
+                          notifyUser: true,
+                        });
+                      }}
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                    >
+                      Reset Filter to All Live Project Logs
+                    </button>
+                    <button
+                      type="button"
+                      disabled={replayLoading}
+                      onClick={() => handleReplayCanaryScenario('CLOUD_RUN_504_POOL_EXHAUSTION')}
+                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {replayLoading
+                        ? 'Writing Canary Logs...'
+                        : 'Write & Ingest Live Canary Logs (entries:write)'}
+                    </button>
+                  </div>
+                </div>
+              ) : streamViewMode === 'COLUMN_TABLE' ? (
                 <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] overflow-x-auto">
                   <table className="w-full text-left border-collapse font-mono text-[11px]">
                     <thead>
@@ -2205,7 +2383,9 @@ export default function LogStreamerAndShell({
                                     type="button"
                                     onClick={() =>
                                       applyFacetClauseToLql(
-                                        `resource.labels.service_name="${entry.serviceName}"`
+                                        String(entry.serviceName || '').endsWith('.googleapis.com')
+                                          ? `protoPayload.serviceName="${entry.serviceName}"`
+                                          : `resource.labels.service_name="${entry.serviceName}"`
                                       )
                                     }
                                     className="px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold cursor-pointer"
@@ -2217,7 +2397,9 @@ export default function LogStreamerAndShell({
                                     type="button"
                                     onClick={() =>
                                       applyFacetClauseToLql(
-                                        `-resource.labels.service_name="${entry.serviceName}"`
+                                        String(entry.serviceName || '').endsWith('.googleapis.com')
+                                          ? `-protoPayload.serviceName="${entry.serviceName}"`
+                                          : `-resource.labels.service_name="${entry.serviceName}"`
                                       )
                                     }
                                     className="px-1 py-0.2 rounded bg-red-500/15 text-red-700 dark:text-red-300 text-[9px] font-bold cursor-pointer"

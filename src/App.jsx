@@ -7963,6 +7963,8 @@ function CloudPulseCockpit() {
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
                     onOpenRecycleBin={() => handleNavigateStudioTab('RECYCLE_BIN')}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                   <PersonaContextualHelper
                     persona="SRE_ONCALL"

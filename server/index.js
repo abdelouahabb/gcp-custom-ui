@@ -14955,7 +14955,7 @@ app.get('/api/project/:projectId/audit-timeline', async (req, res) => {
 const customSinkExclusionsByProject = new Map();
 
 const NLP_STOP_WORDS = new Set([
-  'a', 'an', 'the', 'show', 'me', 'find', 'search', 'list', 'get', 'all',
+  'a', 'an', 'the', 'and', 'or', 'show', 'me', 'find', 'search', 'list', 'get', 'all',
   'logs', 'log', 'entries', 'entry', 'events', 'event', 'where', 'when',
   'that', 'which', 'have', 'has', 'had', 'in', 'on', 'at', 'from', 'for',
   'with', 'by', 'to', 'of', 'is', 'are', 'was', 'were', 'be', 'been',
@@ -15246,53 +15246,161 @@ function extractNlpEntities(rawText = '') {
     entities.httpStatuses.push(403);
   }
 
-  // 5. GCP Service & Resource Type NER
-  if (/cloud\s*run|revision|api-gateway|webhook-ingestor/.test(lower)) {
+  // 5. Comprehensive GCP Service & Resource Type NER (Data-Plane + Cloud Audit Control-Plane)
+  // First extract explicit hyphenated workload/resource identifiers (e.g. cloudpulse-iap-demo, worker-run-993)
+  // excluding GCP regions (us-central1, europe-west1, etc.) and reserved phrases
+  const regionRegex = /^(?:us|europe|asia|australia|southamerica|northamerica|me|africa)-[a-z]+\d(?:-[a-z])?$/;
+  const reservedHyphenTokens = new Set(['api-gateway', 'webhook-ingestor', 'cloudpulse-sre-canary', 'cloud-run', 'cloud-sql', 'cloud-build', 'cloud-function', 'cloud-functions', 'secret-manager', 'resource-manager', 'load-balancer', 'service-usage']);
+  const hyphenatedWorkloadMatches = (lower.match(/\b[a-z0-9]+(?:-[a-z0-9]+)+\b/g) || []).filter(
+    (tok) => !regionRegex.test(tok) && !reservedHyphenTokens.has(tok)
+  );
+  for (const wid of Array.from(new Set(hyphenatedWorkloadMatches))) {
     entities.services.push({
-      label: 'Cloud Run (cloud_run_revision)',
+      label: `Workload / Resource (${wid})`,
+      resourceType: wid,
+      matchTokens: [wid],
+      lql: `(resource.labels.service_name="${wid}" OR protoPayload.resourceName:"${wid}" OR textPayload:"${wid}")`,
+      sql: `(resource.labels.service_name = '${wid}' OR proto_payload.audit_log.resource_name LIKE '%${wid}%')`,
+    });
+  }
+  const lowerForGenericServices = hyphenatedWorkloadMatches.reduce(
+    (acc, wid) => acc.replace(new RegExp(wid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), ' '),
+    lower
+  );
+
+  if (/cloud\s*run|cloud-run|revision|api-gateway|webhook-ingestor|run\.googleapis\.com/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Cloud Run (cloud_run_revision + run.googleapis.com)',
       resourceType: 'cloud_run_revision',
-      lql: 'resource.type="cloud_run_revision"',
-      sql: `resource.type = 'cloud_run_revision'`,
+      matchTokens: ['cloud_run_revision', 'cloud_run_job', 'run.googleapis.com'],
+      lql: '(resource.type="cloud_run_revision" OR resource.type="cloud_run_job" OR protoPayload.serviceName="run.googleapis.com")',
+      sql: `(resource.type IN ('cloud_run_revision', 'cloud_run_job') OR proto_payload.audit_log.service_name = 'run.googleapis.com')`,
     });
   }
-  if (/\bgke\b|kubernetes|\bk8s\b|kubelet|pod/.test(lower)) {
+  if (/\bgke\b|kubernetes|\bk8s\b|kubelet|\bpod\b|\bpods\b|container\.googleapis\.com/.test(lowerForGenericServices)) {
     entities.services.push({
-      label: 'GKE Kubernetes (k8s_container)',
+      label: 'GKE Kubernetes (k8s_container + container.googleapis.com)',
       resourceType: 'k8s_container',
-      lql: 'resource.type="k8s_container"',
-      sql: `resource.type = 'k8s_container'`,
+      matchTokens: ['k8s_container', 'k8s_cluster', 'k8s_node', 'k8s_pod', 'container.googleapis.com'],
+      lql: '(resource.type="k8s_container" OR resource.type="k8s_cluster" OR resource.type="k8s_node" OR resource.type="k8s_pod" OR protoPayload.serviceName="container.googleapis.com")',
+      sql: `(resource.type LIKE 'k8s_%' OR proto_payload.audit_log.service_name = 'container.googleapis.com')`,
     });
   }
-  if (/vertex|gemini|aiplatform/.test(lower)) {
+  if (/vertex|gemini|aiplatform/.test(lowerForGenericServices)) {
     entities.services.push({
       label: 'Vertex AI (aiplatform.googleapis.com)',
       resourceType: 'aiplatform.googleapis.com',
+      matchTokens: ['aiplatform.googleapis.com', 'vertex', 'gemini'],
       lql: '(resource.type="aiplatform.googleapis.com" OR protoPayload.serviceName="aiplatform.googleapis.com")',
       sql: `proto_payload.audit_log.service_name = 'aiplatform.googleapis.com'`,
     });
   }
-  if (/alloydb|cloud\s*sql|postgres|mysql|database/.test(lower)) {
+  if (/alloydb|cloud\s*sql|cloud-sql|postgres|mysql|database|sqladmin|spanner/.test(lowerForGenericServices)) {
     entities.services.push({
-      label: 'Cloud SQL / AlloyDB (cloudsql_database)',
+      label: 'Cloud SQL / AlloyDB / Spanner',
       resourceType: 'cloudsql_database',
-      lql: 'resource.type="cloudsql_database"',
-      sql: `resource.type = 'cloudsql_database'`,
+      matchTokens: ['cloudsql_database', 'sqladmin.googleapis.com', 'alloydb.googleapis.com', 'spanner.googleapis.com'],
+      lql: '(resource.type="cloudsql_database" OR protoPayload.serviceName="sqladmin.googleapis.com" OR protoPayload.serviceName="alloydb.googleapis.com" OR protoPayload.serviceName="spanner.googleapis.com")',
+      sql: `(resource.type = 'cloudsql_database' OR proto_payload.audit_log.service_name IN ('sqladmin.googleapis.com', 'alloydb.googleapis.com', 'spanner.googleapis.com'))`,
     });
   }
-  if (/secret\s*manager|\biam\b|secret|permission/.test(lower)) {
+  if (/secret\s*manager|secret-manager|\biam\b|secret|permission|\biap\b|serviceaccount/.test(lowerForGenericServices)) {
     entities.services.push({
-      label: 'Secret Manager & IAM',
+      label: 'IAM, Secret Manager & Cloud IAP',
       resourceType: 'secretmanager.googleapis.com',
-      lql: '(protoPayload.serviceName="secretmanager.googleapis.com" OR protoPayload.serviceName="iam.googleapis.com")',
-      sql: `proto_payload.audit_log.service_name IN ('secretmanager.googleapis.com', 'iam.googleapis.com')`,
+      matchTokens: ['secretmanager.googleapis.com', 'iam.googleapis.com', 'iap.googleapis.com'],
+      lql: '(protoPayload.serviceName="secretmanager.googleapis.com" OR protoPayload.serviceName="iam.googleapis.com" OR protoPayload.serviceName="iap.googleapis.com")',
+      sql: `proto_payload.audit_log.service_name IN ('secretmanager.googleapis.com', 'iam.googleapis.com', 'iap.googleapis.com')`,
     });
   }
-  if (/load\s*balancer|envoy|edge|cdn/.test(lower)) {
+  if (/bigquery|\bbq\b|bigquery\.googleapis\.com|dataset/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'BigQuery (bigquery_resource + bigquery.googleapis.com)',
+      resourceType: 'bigquery_resource',
+      matchTokens: ['bigquery_resource', 'bigquery_dataset', 'bigquery_project', 'bigquery.googleapis.com'],
+      lql: '(resource.type="bigquery_resource" OR resource.type="bigquery_dataset" OR resource.type="bigquery_project" OR protoPayload.serviceName="bigquery.googleapis.com")',
+      sql: `(resource.type LIKE 'bigquery%' OR proto_payload.audit_log.service_name = 'bigquery.googleapis.com')`,
+    });
+  }
+  if (/\bcompute\b|\bgce\b|\bvm\b|\bvms\b|gce_instance|compute\.googleapis\.com/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Compute Engine VM (gce_instance + compute.googleapis.com)',
+      resourceType: 'gce_instance',
+      matchTokens: ['gce_instance', 'compute.googleapis.com'],
+      lql: '(resource.type="gce_instance" OR protoPayload.serviceName="compute.googleapis.com")',
+      sql: `(resource.type = 'gce_instance' OR proto_payload.audit_log.service_name = 'compute.googleapis.com')`,
+    });
+  }
+  if (/\bvpc\b|\bsubnet\b|\bsubnetwork\b|\bfirewall\b|gce_network|gce_subnetwork|gce_firewall_rule/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'VPC Network, Subnets & Firewalls',
+      resourceType: 'gce_subnetwork',
+      matchTokens: ['gce_subnetwork', 'gce_network', 'gce_firewall_rule', 'compute.googleapis.com'],
+      lql: '(resource.type="gce_subnetwork" OR resource.type="gce_network" OR resource.type="gce_firewall_rule" OR protoPayload.serviceName="compute.googleapis.com")',
+      sql: `(resource.type IN ('gce_subnetwork', 'gce_network', 'gce_firewall_rule') OR proto_payload.audit_log.service_name = 'compute.googleapis.com')`,
+    });
+  }
+  if (/\bstorage\b|\bbucket\b|\bbuckets\b|\bgcs\b|gcs_bucket|storage\.googleapis\.com/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Cloud Storage (gcs_bucket + storage.googleapis.com)',
+      resourceType: 'gcs_bucket',
+      matchTokens: ['gcs_bucket', 'storage.googleapis.com'],
+      lql: '(resource.type="gcs_bucket" OR protoPayload.serviceName="storage.googleapis.com")',
+      sql: `(resource.type = 'gcs_bucket' OR proto_payload.audit_log.service_name = 'storage.googleapis.com')`,
+    });
+  }
+  if (/serviceusage|service\s*usage|service-usage|enable\s*api|disable\s*api/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Service Usage API (serviceusage.googleapis.com)',
+      resourceType: 'audited_resource',
+      matchTokens: ['serviceusage.googleapis.com', 'daily-serviceusage.sandbox.googleapis.com'],
+      lql: '(protoPayload.serviceName="serviceusage.googleapis.com" OR protoPayload.serviceName="daily-serviceusage.sandbox.googleapis.com")',
+      sql: `proto_payload.audit_log.service_name LIKE '%serviceusage%'`,
+    });
+  }
+  if (/resourcemanager|resource\s*manager|resource-manager|setiampolicy/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Cloud Resource Manager (cloudresourcemanager.googleapis.com)',
+      resourceType: 'project',
+      matchTokens: ['project', 'cloudresourcemanager.googleapis.com'],
+      lql: '(resource.type="project" OR protoPayload.serviceName="cloudresourcemanager.googleapis.com")',
+      sql: `(resource.type = 'project' OR proto_payload.audit_log.service_name = 'cloudresourcemanager.googleapis.com')`,
+    });
+  }
+  if (/cloud\s*function|cloud-function|cloudfunctions|cloud\s*build|cloud-build|cloudbuild|pubsub/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Cloud Functions / Cloud Build / PubSub',
+      resourceType: 'cloud_function',
+      matchTokens: ['cloud_function', 'cloudfunctions.googleapis.com', 'cloudbuild.googleapis.com', 'pubsub.googleapis.com'],
+      lql: '(resource.type="cloud_function" OR protoPayload.serviceName="cloudfunctions.googleapis.com" OR protoPayload.serviceName="cloudbuild.googleapis.com" OR protoPayload.serviceName="pubsub.googleapis.com")',
+      sql: `proto_payload.audit_log.service_name IN ('cloudfunctions.googleapis.com', 'cloudbuild.googleapis.com', 'pubsub.googleapis.com')`,
+    });
+  }
+  if (/load\s*balancer|load-balancer|envoy|edge|cdn/.test(lowerForGenericServices)) {
     entities.services.push({
       label: 'Cloud Load Balancing (http_load_balancer)',
       resourceType: 'http_load_balancer',
+      matchTokens: ['http_load_balancer'],
       lql: 'resource.type="http_load_balancer"',
       sql: `resource.type = 'http_load_balancer'`,
+    });
+  }
+  if (/\baudit\b|cloudaudit|admin\s+activity|who\s+changed/.test(lowerForGenericServices)) {
+    entities.services.push({
+      label: 'Cloud Audit Activity (cloudaudit.googleapis.com)',
+      resourceType: 'audited_resource',
+      matchTokens: ['audited_resource', 'activity', 'data_access', 'system_event'],
+      lql: 'logName:"cloudaudit.googleapis.com"',
+      sql: `log_id LIKE '%cloudaudit.googleapis.com%'`,
+    });
+  }
+  if (/\bcanary\b|cloudpulse-sre-canary|\breplay\b/.test(lower)) {
+    entities.services.push({
+      label: 'SRE Canary Log Stream (cloudpulse-sre-canary)',
+      resourceType: 'global',
+      matchTokens: ['cloudpulse-sre-canary'],
+      lql: 'logName:"cloudpulse-sre-canary"',
+      sql: `log_id LIKE '%cloudpulse-sre-canary%'`,
     });
   }
 
@@ -15325,17 +15433,95 @@ function extractNlpEntities(rawText = '') {
   return entities;
 }
 
+function isDirectLqlSyntax(str = '') {
+  const s = String(str || '').trim();
+  if (!s) return false;
+  return /\b(?:resource\.type|resource\.labels\.[a-zA-Z0-9_]+|severity|logName|httpRequest\.[a-zA-Z0-9_]+|protoPayload\.[a-zA-Z0-9_.]+|jsonPayload\.[a-zA-Z0-9_.]+|textPayload|timestamp|insertId|trace|spanId|operation\.[a-zA-Z0-9_]+)\s*(?:=|!=|>=|<=|>|<|:|=~|!~)|\bsample\s*\(/i.test(
+    s
+  );
+}
+
+const STRUCTURAL_NLP_VOCAB = new Set([
+  'cloud', 'run', 'cloudrun', 'revision', 'api-gateway', 'webhook-ingestor', 'run.googleapis.com',
+  'gke', 'kubernetes', 'k8s', 'kubelet', 'pod', 'pods', 'container.googleapis.com',
+  'vertex', 'gemini', 'aiplatform', 'aiplatform.googleapis.com', 'ai',
+  'alloydb', 'sql', 'cloudsql', 'postgres', 'mysql', 'database', 'sqladmin', 'spanner',
+  'secret', 'manager', 'secretmanager', 'iam', 'permission', 'permissions', 'denied', 'forbidden', 'unauthorized', 'untrusted', 'access', 'iap', 'serviceaccount',
+  'bigquery', 'bq', 'dataset', 'bigquery.googleapis.com',
+  'compute', 'gce', 'vm', 'vms', 'gce_instance', 'compute.googleapis.com',
+  'vpc', 'subnet', 'subnetwork', 'firewall', 'gce_network', 'gce_subnetwork', 'gce_firewall_rule',
+  'storage', 'bucket', 'buckets', 'gcs', 'gcs_bucket', 'storage.googleapis.com',
+  'serviceusage', 'usage', 'enable', 'disable', 'api', 'service', 'services',
+  'resourcemanager', 'setiampolicy',
+  'function', 'functions', 'cloudfunctions', 'build', 'cloudbuild', 'pubsub',
+  'load', 'balancer', 'envoy', 'edge', 'cdn',
+  'audit', 'cloudaudit', 'admin', 'activity', 'changed',
+  'canary', 'cloudpulse-sre-canary', 'replay',
+  'critical', 'emergency', 'error', 'errors', 'fail', 'failed', 'crash', 'exception', 'warn', 'warning', 'warnings', 'info', 'debug',
+  'timeout', 'timeouts', 'deadline', 'exceeded', 'slow', 'slower', 'faster', 'high', 'latency',
+  'over', 'above', 'longer', 'more', 'taking', 'under', 'below', 'than',
+  'last', 'past', 'since', 'within', 'm', 'min', 'mins', 'minute', 'minutes', 'h', 'hr', 'hrs', 'hour', 'hours', 'd', 'day', 'days', 'ago',
+  'excluding', 'exclude', 'without', 'except', 'ignore', 'not',
+  'healthchecks', 'healthcheck', 'health', 'healthz', 'readyz', 'probe', 'probes', 'ok',
+  '5xx', '4xx', '200', '400', '401', '403', '404', '409', '429', '500', '502', '503', '504',
+  'quota', 'rate', 'limit', 'exhausted', 'resourceexhausted',
+  'dlp', 'pii', 'leak', 'leaks', 'detect', 'unmasked', 'bearer', 'jwt', 'token', 'tokens', 'aiza', 'key', 'keys',
+  'server', 'status', 'code', 'project', 'telemetry', 'stream', 'streams', 'live',
+  ...Object.keys(CITY_TO_GCP_REGION),
+  ...Object.values(CITY_TO_GCP_REGION),
+]);
+
 function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql = '') {
   const rawQuery = String(nlQuery || '').trim();
+  const cleanExplicit = String(explicitLql || '').trim();
+
+  // Case 1: User typed native LQL directly into the main search bar
+  if (isDirectLqlSyntax(rawQuery)) {
+    const mergedDirectLql =
+      cleanExplicit && cleanExplicit !== rawQuery && !cleanExplicit.includes(rawQuery)
+        ? `(${rawQuery}) AND (${cleanExplicit})`
+        : cleanExplicit || rawQuery;
+    return {
+      lql: mergedDirectLql,
+      sql: `SELECT\n  timestamp,\n  severity,\n  resource.type AS resource_type,\n  http_request.status AS http_status,\n  http_request.latency AS latency,\n  COALESCE(text_payload, JSON_VALUE(json_payload, '$.message'), proto_payload.audit_log.method_name) AS message,\n  trace\nFROM \`${projectId}.global._Default._AllLogs\`\nWHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)\n  -- Direct LQL Filter: ${mergedDirectLql}\nORDER BY timestamp DESC\nLIMIT 250;`,
+      explanation: `Direct Native LQL AST Executed: ${mergedDirectLql}`,
+      nlpAnalysis: {
+        engine: 'NATIVE_LQL_DIRECT_AST',
+        tokens: [rawQuery],
+        stems: [],
+        entities: extractNlpEntities(''),
+        intent: {
+          topIntentId: 'DIRECT_LQL_EXECUTION',
+          topIntentLabel: 'Direct Cloud Logging LQL Filter',
+          cosineSimilarity: 1.0,
+          rankedIntents: [],
+        },
+      },
+    };
+  }
+
   const tokenized = nlpTokenizeAndStem(rawQuery);
   const entities = extractNlpEntities(rawQuery);
   const intentClassification = computeTfIdfCosineIntent(tokenized.stems);
 
-  if (explicitLql && !rawQuery) {
+  // Extract free-text keywords that were not consumed by structured NER vocabulary
+  const freeTextKeywords = tokenized.meaningfulTokens.filter((tok) => {
+    if (tok.length < 2) return false;
+    if (/^\d+(?:ms|s|m|h|d)?$/.test(tok)) return false;
+    if (STRUCTURAL_NLP_VOCAB.has(tok)) return false;
+    if (entities.regions.includes(tok)) return false;
+    if (entities.ips.includes(tok)) return false;
+    if (entities.principals.includes(tok)) return false;
+    if (entities.negations.some((n) => n.term === tok)) return false;
+    return true;
+  });
+  entities.keywords = freeTextKeywords;
+
+  if (cleanExplicit && !rawQuery) {
     return {
-      lql: explicitLql.trim(),
-      sql: `SELECT\n  timestamp,\n  severity,\n  resource.type AS resource_type,\n  http_request.status AS http_status,\n  http_request.latency AS latency,\n  COALESCE(text_payload, JSON_VALUE(json_payload, '$.message'), proto_payload.audit_log.method_name) AS message,\n  trace\nFROM \`${projectId}.global._Default._AllLogs\`\nWHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)\n  -- Explicit LQL: ${explicitLql.trim()}\nORDER BY timestamp DESC\nLIMIT 200;`,
-      explanation: 'Explicit LQL AST active',
+      lql: cleanExplicit,
+      sql: `SELECT\n  timestamp,\n  severity,\n  resource.type AS resource_type,\n  http_request.status AS http_status,\n  http_request.latency AS latency,\n  COALESCE(text_payload, JSON_VALUE(json_payload, '$.message'), proto_payload.audit_log.method_name) AS message,\n  trace\nFROM \`${projectId}.global._Default._AllLogs\`\nWHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)\n  -- Explicit LQL: ${cleanExplicit}\nORDER BY timestamp DESC\nLIMIT 200;`,
+      explanation: `Explicit LQL AST active: ${cleanExplicit}`,
       nlpAnalysis: {
         engine: 'EXPLICIT_LQL_PASSTHROUGH',
         tokens: [],
@@ -15370,28 +15556,34 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
   }
 
   if (entities.httpStatuses.length > 0) {
-    if (entities.httpStatuses.length === 1) {
-      const code = entities.httpStatuses[0];
-      lqlParts.push(`httpRequest.status=${code}`);
-      sqlWhere.push(`http_request.status = ${code}`);
-    } else {
-      lqlParts.push(
-        `(${entities.httpStatuses.map((c) => `httpRequest.status=${c}`).join(' OR ')})`
-      );
-      sqlWhere.push(`http_request.status IN (${entities.httpStatuses.join(', ')})`);
-    }
+    const statusClauses = entities.httpStatuses.map((code) => {
+      if (code === 403) {
+        return `(httpRequest.status=403 OR protoPayload.status.code=7 OR textPayload:"403" OR textPayload:"PERMISSION_DENIED")`;
+      }
+      if (code === 429) {
+        return `(httpRequest.status=429 OR protoPayload.status.code=8 OR textPayload:"429" OR textPayload:"RESOURCE_EXHAUSTED")`;
+      }
+      if (code >= 500) {
+        return `(httpRequest.status=${code} OR severity>=ERROR)`;
+      }
+      return `httpRequest.status=${code}`;
+    });
+    lqlParts.push(
+      statusClauses.length === 1 ? statusClauses[0] : `(${statusClauses.join(' OR ')})`
+    );
+    sqlWhere.push(`http_request.status IN (${entities.httpStatuses.join(', ')})`);
     notes.push(`HTTP Status: ${entities.httpStatuses.join(', ')}`);
   } else if (entities.statusClass === '5XX') {
-    lqlParts.push('httpRequest.status>=500');
-    sqlWhere.push(`http_request.status >= 500`);
-    notes.push('HTTP 5xx Server Faults');
+    lqlParts.push('(httpRequest.status>=500 OR severity>=ERROR)');
+    sqlWhere.push(`(http_request.status >= 500 OR severity IN ('ERROR', 'CRITICAL'))`);
+    notes.push('HTTP 5xx / Server Errors');
   } else if (entities.statusClass === '4XX') {
-    lqlParts.push('(httpRequest.status>=400 AND httpRequest.status<500)');
+    lqlParts.push('((httpRequest.status>=400 AND httpRequest.status<500) OR severity=WARNING)');
     sqlWhere.push(`http_request.status BETWEEN 400 AND 499`);
     notes.push('HTTP 4xx Client/Auth Errors');
   }
 
-  if (entities.severities.length > 0 && entities.httpStatuses.length === 0) {
+  if (entities.severities.length > 0 && entities.httpStatuses.length === 0 && !entities.statusClass) {
     const sev = entities.severities[0];
     lqlParts.push(`severity>=${sev}`);
     sqlWhere.push(`severity IN ('${sev}', 'ERROR', 'CRITICAL')`);
@@ -15399,9 +15591,6 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
   }
 
   if (entities.latency) {
-    lqlParts.push(
-      `httpRequest.latency${entities.latency.operator}"${entities.latency.thresholdSec}s"`
-    );
     sqlWhere.push(
       `CAST(REPLACE(http_request.latency, 's', '') AS FLOAT64) ${entities.latency.operator} ${entities.latency.thresholdSec}`
     );
@@ -15412,7 +15601,10 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
 
   if (entities.regions.length > 0) {
     const regFilter = entities.regions
-      .map((r) => `resource.labels.location="${r}"`)
+      .map(
+        (r) =>
+          `(resource.labels.location="${r}" OR resource.labels.zone:"${r}" OR resource.labels.region="${r}")`
+      )
       .join(' OR ');
     lqlParts.push(entities.regions.length > 1 ? `(${regFilter})` : regFilter);
     sqlWhere.push(
@@ -15448,7 +15640,7 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
     /\bdlp\b|\bpii\b|\bleak|\bbearer\b|\baiza/i.test(rawQuery)
   ) {
     lqlParts.push(
-      '(textPayload:"Bearer " OR textPayload:"AIza" OR jsonPayload.message:"token")'
+      '(textPayload:"Bearer " OR textPayload:"AIza" OR jsonPayload.message:"token" OR logName:"cloudpulse-sre-canary")'
     );
     sqlWhere.push(
       `REGEXP_CONTAINS(COALESCE(text_payload, TO_JSON_STRING(json_payload)), r'(Bearer eyJ|AIza[0-9A-Za-z_-]{20,}|PRIVATE KEY)')`
@@ -15462,7 +15654,29 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
     notes.push(neg.label);
   }
 
-  const finalLql = lqlParts.length > 0 ? lqlParts.join(' AND ') : explicitLql || '';
+  // Push down free-text keywords into LQL & BigQuery SQL when no structured NER clauses matched
+  if (lqlParts.length === 0 && freeTextKeywords.length > 0) {
+    for (const kw of freeTextKeywords.slice(0, 4)) {
+      const safeKw = kw.replace(/"/g, '');
+      lqlParts.push(
+        `(textPayload:"${safeKw}" OR protoPayload.methodName:"${safeKw}" OR protoPayload.resourceName:"${safeKw}" OR protoPayload.serviceName:"${safeKw}" OR jsonPayload.message:"${safeKw}" OR resource.labels.service_name:"${safeKw}")`
+      );
+      sqlWhere.push(
+        `STRPOS(LOWER(COALESCE(text_payload, TO_JSON_STRING(json_payload), proto_payload.audit_log.method_name, '')), '${safeKw.replace(/'/g, '')}') > 0`
+      );
+    }
+    notes.push(`Keywords: ${freeTextKeywords.slice(0, 4).join(', ')}`);
+  }
+
+  const compiledNlLql = lqlParts.join(' AND ');
+  let finalLql = compiledNlLql;
+  if (cleanExplicit) {
+    if (!compiledNlLql || cleanExplicit.includes(compiledNlLql)) {
+      finalLql = cleanExplicit;
+    } else if (!compiledNlLql.includes(cleanExplicit)) {
+      finalLql = `(${compiledNlLql}) AND (${cleanExplicit})`;
+    }
+  }
   const finalSql = [
     `SELECT`,
     `  timestamp,`,
@@ -15682,6 +15896,18 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
 
 // BM25 + NER Semantic Document Scorer over log entries
 function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) {
+  if (
+    nlpAnalysis?.engine === 'NATIVE_LQL_DIRECT_AST' ||
+    nlpAnalysis?.engine === 'EXPLICIT_LQL_PASSTHROUGH'
+  ) {
+    return entries.map((entry) => ({
+      ...entry,
+      nlpRelevancePct: 100,
+      matchedStems: [],
+      _hardFilterPass: true,
+    }));
+  }
+
   const { stems = [], entities = {} } = nlpAnalysis || {};
   const hasActiveQuery =
     stems.length > 0 ||
@@ -15690,10 +15916,11 @@ function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) 
     (entities.httpStatuses && entities.httpStatuses.length > 0) ||
     Boolean(entities.statusClass) ||
     Boolean(entities.latency) ||
-    (entities.negations && entities.negations.length > 0);
+    (entities.negations && entities.negations.length > 0) ||
+    (entities.keywords && entities.keywords.length > 0);
 
   const scored = entries.map((entry) => {
-    const docText = `${entry.serviceName} ${entry.resourceType} ${entry.resourceTarget} ${entry.region} ${entry.actor} ${entry.httpMethod} ${entry.httpStatus} ${entry.cleanMessage}`.toLowerCase();
+    const docText = `${entry.serviceName} ${entry.resourceType} ${entry.resourceTarget} ${entry.region} ${entry.actor} ${entry.httpMethod} ${entry.httpStatus} ${entry.logName} ${entry.cleanMessage}`.toLowerCase();
     const docTokens = nlpTokenizeAndStem(docText);
     const matchedStems = stems.filter((st) =>
       docTokens.stems.some((dt) => dt.includes(st) || st.includes(dt))
@@ -15723,13 +15950,21 @@ function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) 
       }
     }
 
-    // Service NER check
+    // Service NER check (matches resourceType, serviceName, logName, or matchTokens)
     if (entities.services?.length > 0) {
-      const srvMatch = entities.services.some(
-        (s) =>
-          entry.resourceType === s.resourceType ||
-          entry.serviceName.includes(s.resourceType.split('.')[0])
-      );
+      const srvMatch = entities.services.some((s) => {
+        if (entry.resourceType === s.resourceType) return true;
+        if (entry.serviceName.toLowerCase().includes(s.resourceType.split('.')[0].toLowerCase())) return true;
+        if (Array.isArray(s.matchTokens)) {
+          return s.matchTokens.some(
+            (mt) =>
+              entry.resourceType.toLowerCase().includes(mt.toLowerCase()) ||
+              entry.serviceName.toLowerCase().includes(mt.toLowerCase()) ||
+              String(entry.logName || '').toLowerCase().includes(mt.toLowerCase())
+          );
+        }
+        return false;
+      });
       if (srvMatch) score += 25;
       else hardFilterPass = false;
     }
@@ -15739,10 +15974,10 @@ function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) 
       if (entities.httpStatuses.includes(entry.httpStatus)) score += 25;
       else hardFilterPass = false;
     } else if (entities.statusClass === '5XX') {
-      if (entry.httpStatus >= 500) score += 25;
+      if (entry.httpStatus >= 500 || entry.severity === 'ERROR' || entry.severity === 'CRITICAL') score += 25;
       else hardFilterPass = false;
     } else if (entities.statusClass === '4XX') {
-      if (entry.httpStatus >= 400 && entry.httpStatus < 500) score += 25;
+      if ((entry.httpStatus >= 400 && entry.httpStatus < 500) || entry.severity === 'WARNING') score += 25;
       else hardFilterPass = false;
     }
 
@@ -15780,24 +16015,32 @@ function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) 
       hardFilterPass = false;
     }
 
-    // If free-text query had no structured NER slots, require at least 1 stem match
+    // Check whether structured NER slots matched
     const hasStructuredSlots =
       (entities.services?.length || 0) +
         (entities.httpStatuses?.length || 0) +
         (entities.regions?.length || 0) +
         (entities.ips?.length || 0) +
-        (entities.negations?.length || 0) >
+        (entities.negations?.length || 0) +
+        (entities.severities?.length || 0) >
         0 ||
       Boolean(entities.statusClass) ||
       Boolean(entities.latency) ||
       nlpAnalysis?.intent?.topIntentId === 'DLP_CREDENTIAL_PII_LEAK';
+
+    // Free-text keyword match check
+    if (entities.keywords?.length > 0) {
+      const kwMatch = entities.keywords.some((kw) => docText.includes(kw.toLowerCase()));
+      if (kwMatch) score += 25;
+      else if (!hasStructuredSlots && matchedStems.length === 0) hardFilterPass = false;
+    }
 
     if (!hasStructuredSlots && stems.length > 0 && matchedStems.length === 0) {
       hardFilterPass = false;
     }
 
     const nlpRelevancePct = hasActiveQuery
-      ? Math.min(99, Math.max(12, Math.round(score)))
+      ? Math.min(99, Math.max(15, Math.round(score)))
       : 100;
 
     return {
@@ -15809,10 +16052,9 @@ function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) 
   });
 
   if (!hasActiveQuery) return scored;
-  const matched = scored
+  return scored
     .filter((e) => e._hardFilterPass)
     .sort((a, b) => b.nlpRelevancePct - a.nlpRelevancePct);
-  return matched.length > 0 ? matched : scored.slice(0, 4);
 }
 
 function tokenizeDrain3Signature(message = '') {
@@ -16345,6 +16587,11 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         ),
       ]);
 
+    const lqlSyntaxError =
+      entriesResult.status === 'rejected'
+        ? entriesResult.reason?.message || 'Cloud Logging LQL syntax error'
+        : null;
+
     const rawEntries =
       entriesResult.status === 'fulfilled' &&
       Array.isArray(entriesResult.value?.entries)
@@ -16804,19 +17051,44 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       }
       const total = Math.max(1, allEntries.length);
       const values = Array.from(counts.entries())
-        .map(([value, count]) => ({
-          value,
-          count,
-          pct: Math.round((count / total) * 100),
-          includeClause:
-            typeof extractor(allEntries[0] || {}) === 'number' && !lqlField.includes('labels')
-              ? `${lqlField}=${value}`
-              : `${lqlField}="${value}"`,
-          excludeClause:
-            typeof extractor(allEntries[0] || {}) === 'number' && !lqlField.includes('labels')
-              ? `${lqlField}!=${value}`
-              : `-${lqlField}="${value}"`,
-        }))
+        .map(([value, count]) => {
+          let includeClause = `${lqlField}="${value}"`;
+          let excludeClause = `-${lqlField}="${value}"`;
+          if (fieldKey === 'serviceName') {
+            if (value.endsWith('.googleapis.com')) {
+              includeClause = `protoPayload.serviceName="${value}"`;
+              excludeClause = `-protoPayload.serviceName="${value}"`;
+            } else if (value === 'audited_resource' || value === 'project' || value === 'bigquery_resource') {
+              includeClause = `resource.type="${value}"`;
+              excludeClause = `-resource.type="${value}"`;
+            } else {
+              includeClause = `resource.labels.service_name="${value}"`;
+              excludeClause = `-resource.labels.service_name="${value}"`;
+            }
+          } else if (fieldKey === 'httpStatus') {
+            const codeNum = Number(value);
+            if (codeNum === 200) {
+              includeClause = `(httpRequest.status=200 OR severity<="NOTICE")`;
+              excludeClause = `-httpRequest.status=200`;
+            } else if (codeNum >= 500) {
+              includeClause = `(httpRequest.status=${codeNum} OR severity>="ERROR")`;
+              excludeClause = `-httpRequest.status=${codeNum}`;
+            } else {
+              includeClause = `httpRequest.status=${codeNum}`;
+              excludeClause = `httpRequest.status!=${codeNum}`;
+            }
+          } else if (typeof extractor(allEntries[0] || {}) === 'number' && !lqlField.includes('labels')) {
+            includeClause = `${lqlField}=${value}`;
+            excludeClause = `${lqlField}!=${value}`;
+          }
+          return {
+            value,
+            count,
+            pct: Math.round((count / total) * 100),
+            includeClause,
+            excludeClause,
+          };
+        })
         .sort((a, b) => b.count - a.count)
         .slice(0, 6);
       return {
@@ -17186,6 +17458,7 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         bigQuerySql: compiled.sql,
         explanation: compiled.explanation,
         nlpAnalysis: compiled.nlpAnalysis,
+        lqlSyntaxError,
       },
       timeTravelWindow,
       stats: {
