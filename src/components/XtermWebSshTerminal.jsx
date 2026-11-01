@@ -112,6 +112,15 @@ export default function XtermWebSshTerminal({
     [onViewModeChange]
   );
 
+  const [sshEngine, setSshEngine] = useState(
+    isCloudRun ? 'cloudrun_ssh' : 'auto'
+  );
+  const [selectedRevision, setSelectedRevision] = useState('LATEST');
+  const [selectedContainer, setSelectedContainer] = useState('');
+  const [selectedInstanceId, setSelectedInstanceId] = useState('');
+  const [selectedVmName, setSelectedVmName] = useState('');
+  const [autoConnectOnRunning, setAutoConnectOnRunning] = useState(false);
+
   useEffect(() => {
     if (openScpTrigger > 0) {
       if (scpTargetVmName) {
@@ -126,14 +135,6 @@ export default function XtermWebSshTerminal({
       setViewMode('LIVE_SSH_PTY');
     }
   }, [openSshTrigger, setViewMode]);
-  const [sshEngine, setSshEngine] = useState(
-    isCloudRun ? 'cloudrun_ssh' : 'auto'
-  );
-  const [selectedRevision, setSelectedRevision] = useState('LATEST');
-  const [selectedContainer, setSelectedContainer] = useState('');
-  const [selectedInstanceId, setSelectedInstanceId] = useState('');
-  const [selectedVmName, setSelectedVmName] = useState('');
-  const [autoConnectOnRunning, setAutoConnectOnRunning] = useState(false);
 
   // Sync selectedVmName when activeVm or vms list changes
   useEffect(() => {
@@ -444,6 +445,14 @@ export default function XtermWebSshTerminal({
     async (targetPath = scpPath, options = {}) => {
       const targetVm = activeVm || focusedVm;
       if (isCloudRun || !projectId || !targetVm?.name) return;
+      if (
+        targetVm.status &&
+        String(targetVm.status).toUpperCase() !== 'RUNNING'
+      ) {
+        setRawScpError('VM is stopped.');
+        setScpEntries([]);
+        return;
+      }
       const isSilent = Boolean(options?.silent);
       if (!isSilent) {
         setScpLoading(true);

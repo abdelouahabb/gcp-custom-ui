@@ -4433,6 +4433,8 @@ function CloudPulseCockpit() {
   const [errorBanner, setRawErrorBanner] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [pendingDeleteQueue, setPendingDeleteQueue] = useState([]);
+  const toastTimerRef = useRef(null);
+  const errorTimerRef = useRef(null);
 
   const setErrorBanner = useCallback((msg) => {
     if (
@@ -5190,9 +5192,6 @@ function CloudPulseCockpit() {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
-
-  const toastTimerRef = useRef(null);
-  const errorTimerRef = useRef(null);
 
   const showToast = useCallback((msg, durationMs = 8000) => {
     if (!msg) {
@@ -7764,6 +7763,7 @@ function CloudPulseCockpit() {
                     onRunInShell={handleRunInShell}
                     onSelectTab={handleNavigateStudioTab}
                     onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}

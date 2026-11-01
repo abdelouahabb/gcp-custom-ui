@@ -212,6 +212,7 @@ export default function VmFleetAndSsh({
   onRunInShell,
   onSelectTab,
   onShowToast,
+  onShowError,
   refreshTrigger = 0,
 }) {
   const [vms, setVms] = useState([]);
@@ -220,7 +221,17 @@ export default function VmFleetAndSsh({
   const [powerBusyVm, setPowerBusyVm] = useState(null);
   const [confirmDeleteVm, setConfirmDeleteVm] = useState(null);
   const [pendingOps, setPendingOps] = useState({});
-  const [powerError, setPowerError] = useState(null);
+  const [powerError, setRawPowerError] = useState(null);
+
+  const setPowerError = useCallback(
+    (msg) => {
+      setRawPowerError(msg);
+      if (msg && onShowError) {
+        onShowError(String(msg));
+      }
+    },
+    [onShowError]
+  );
   const [activeSshVm, setActiveSshVm] = useState(null);
   const [sshCommandInput, setSshCommandInput] = useState('uname -a');
   const [sshRunning, setSshRunning] = useState(false);
@@ -1407,9 +1418,16 @@ export default function VmFleetAndSsh({
         )}
       </div>
 
-      {powerError && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500">
-          {powerError}
+      {powerError && !onShowError && (
+        <div className="fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl bg-zinc-950/95 border border-red-500/60 text-xs font-mono text-red-200 flex items-center justify-between gap-3 shadow-2xl">
+          <span>⚠ {powerError}</span>
+          <button
+            type="button"
+            onClick={() => setRawPowerError(null)}
+            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer shrink-0"
+          >
+            ✕ Dismiss
+          </button>
         </div>
       )}
 
