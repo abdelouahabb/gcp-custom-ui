@@ -2418,6 +2418,82 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
       });
     }
 
+    if (action === 'DETACH_PUBLIC_IP') {
+      const instRes = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      const nic0 = instRes.data?.networkInterfaces?.[0] || {};
+      const nicName = nic0.name || 'nic0';
+      const accessCfgName = nic0.accessConfigs?.[0]?.name || 'External NAT';
+
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}/deleteAccessConfig?networkInterface=${encodeURIComponent(
+          nicName
+        )}&accessConfig=${encodeURIComponent(accessCfgName)}`,
+        token,
+        projectId,
+        { method: 'POST', timeout: 6000 }
+      );
+      return res.json({
+        ok: true,
+        message: `Detached Public IPv4 (${accessCfgName}) from ${vmName} (${zone}) — VM is now Private VPC / Cloud IAP Only (--no-address · saves $3.65/mo).`,
+      });
+    }
+
+    if (action === 'ATTACH_PUBLIC_IP') {
+      const instRes = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      const nic0 = instRes.data?.networkInterfaces?.[0] || {};
+      const nicName = nic0.name || 'nic0';
+      const networkTier =
+        req.body?.networkTier === 'STANDARD' ? 'STANDARD' : 'PREMIUM';
+      const natIP = (req.body?.natIP || '').trim();
+
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}/addAccessConfig?networkInterface=${encodeURIComponent(nicName)}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            type: 'ONE_TO_ONE_NAT',
+            name: 'External NAT',
+            networkTier,
+            ...(natIP ? { natIP } : {}),
+          },
+          timeout: 6000,
+        }
+      );
+      return res.json({
+        ok: true,
+        message: `Attached ${natIP ? `Static Public IPv4 (${natIP})` : 'Ephemeral Public IPv4'} to ${vmName} (${zone}).`,
+      });
+    }
+
     const verbMap = {
       START: 'start',
       STOP: 'stop',
@@ -5826,7 +5902,12 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       const nicType = config.nicType === 'GVNIC' ? 'GVNIC' : 'VIRTIO_NET';
       const stackType = config.stackType === 'IPV4_IPV6' ? 'IPV4_IPV6' : 'IPV4_ONLY';
       const canIpForward = Boolean(config.canIpForward);
-      const externalIpEnabled = config.externalIpEnabled !== false;
+      const externalIpMode = String(config.externalIpMode || '').toUpperCase();
+      const staticExternalIp = String(config.staticExternalIp || '').trim();
+      const externalIpEnabled =
+        externalIpMode === 'NONE'
+          ? false
+          : config.externalIpEnabled !== false;
       const allowHttp = Boolean(config.allowHttp);
       const allowHttps = Boolean(config.allowHttps);
       const allowIapSsh = config.allowIapSsh !== false;
@@ -6005,6 +6086,9 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
                 type: 'ONE_TO_ONE_NAT',
                 name: 'External NAT',
                 networkTier,
+                ...(externalIpMode === 'STATIC' && staticExternalIp
+                  ? { natIP: staticExternalIp }
+                  : {}),
               },
             ]
           : [],

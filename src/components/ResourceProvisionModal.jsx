@@ -119,6 +119,15 @@ export default function ResourceProvisionModal({
   const [stackType, setStackType] = useState('IPV4_ONLY');
   const [canIpForward, setCanIpForward] = useState(false);
   const [externalIpEnabled, setExternalIpEnabled] = useState(true);
+  const [externalIpMode, setExternalIpMode] = useState('EPHEMERAL'); // 'NONE' | 'EPHEMERAL' | 'STATIC'
+  const [staticExternalIp, setStaticExternalIp] = useState('');
+  const handleSelectExternalIpMode = (mode) => {
+    setExternalIpMode(mode);
+    setExternalIpEnabled(mode !== 'NONE');
+    if (mode === 'NONE') {
+      setAllowIapSsh(true);
+    }
+  };
   const [allowHttp, setAllowHttp] = useState(true);
   const [allowHttps, setAllowHttps] = useState(true);
   const [allowIapSsh, setAllowIapSsh] = useState(true);
@@ -486,6 +495,7 @@ export default function ResourceProvisionModal({
       setMaxRunDurationHours(0);
       setVmGpuType('NONE');
       setExternalIpEnabled(true);
+      setExternalIpMode('EPHEMERAL');
       setNetworkTier('STANDARD');
       setAllowHttp(true);
       setAllowHttps(true);
@@ -510,6 +520,7 @@ export default function ResourceProvisionModal({
       setSpotInstance(false);
       setVmGpuType('NONE');
       setExternalIpEnabled(false); // Zero Public IP — IAP Tunnel Only
+      setExternalIpMode('NONE');
       setAllowHttp(false);
       setAllowHttps(false);
       setAllowIapSsh(true);
@@ -542,6 +553,7 @@ export default function ResourceProvisionModal({
       setNicType('GVNIC');
       setNetworkTier('PREMIUM');
       setExternalIpEnabled(true);
+      setExternalIpMode('EPHEMERAL');
       setShieldedSecureBoot(true);
       setConfidentialComputeType('NONE');
       setInstallOpsAgent(true);
@@ -560,6 +572,7 @@ export default function ResourceProvisionModal({
       setSpotInstance(false);
       setOnHostMaintenance('TERMINATE');
       setExternalIpEnabled(false);
+      setExternalIpMode('NONE');
       setAllowHttp(false);
       setAllowHttps(true);
       setAllowIapSsh(true);
@@ -587,6 +600,7 @@ export default function ResourceProvisionModal({
       setOnHostMaintenance('TERMINATE');
       setNicType('GVNIC');
       setExternalIpEnabled(true);
+      setExternalIpMode('EPHEMERAL');
       setAllowHttps(true);
       setAllowIapSsh(true);
       setConfidentialComputeType('NONE');
@@ -607,6 +621,7 @@ export default function ResourceProvisionModal({
       setLocalSsdCount(0);
       setSpotInstance(true);
       setExternalIpEnabled(true);
+      setExternalIpMode('EPHEMERAL');
       setAllowHttp(true);
       setAllowHttps(true);
       setShieldedSecureBoot(true);
@@ -1416,7 +1431,11 @@ export default function ResourceProvisionModal({
       const netFlag = ` --network=${vmNetwork}${
         vmSubnetwork && vmSubnetwork !== 'auto' ? ` --subnet=${vmSubnetwork}` : ''
       } --network-tier=${networkTier} --nic-type=${nicType} --stack-type=${stackType}${
-        !externalIpEnabled ? ' --no-address' : ''
+        !externalIpEnabled || externalIpMode === 'NONE'
+          ? ' --no-address'
+          : externalIpMode === 'STATIC' && staticExternalIp.trim()
+          ? ` --address=${staticExternalIp.trim()}`
+          : ''
       }${canIpForward ? ' --can-ip-forward' : ''}`;
       const confFlag =
         confidentialComputeType !== 'NONE'
@@ -1962,14 +1981,27 @@ export default function ResourceProvisionModal({
         ? (Number(dataDiskSizeGb || 100) * (dataDiskType === 'pd-standard' ? 0.04 : 0.14)) / 730
         : 0;
       const localSsdHourly = Number(localSsdCount || 0) * ((375 * 0.08) / 730);
-      const hourly = computeEffective + bootDiskHourly + extraDataDiskHourly + localSsdHourly;
+      const publicIpHourly =
+        !externalIpEnabled || externalIpMode === 'NONE' || isFreeTierVmCompute
+          ? 0
+          : 0.005; // $3.65/mo Google Cloud Public IPv4 fee when attached
+      const hourly =
+        computeEffective +
+        bootDiskHourly +
+        extraDataDiskHourly +
+        localSsdHourly +
+        publicIpHourly;
 
       if (isFreeTierVmCompute && diskType === 'pd-standard' && totalDiskGb <= 30) {
         return {
           hourly: 0,
           monthly: 0,
           badge: 'ALWAYS FREE TIER ($0.00/MO · 1st e2-micro + ≤30GB pd-standard)',
-          detail: `$0.00/mo under Google Cloud Always Free Tier (1st non-preemptible e2-micro in ${vmRegion} + ${totalDiskGb}GB pd-standard · $7.33/mo standard list price waived)`,
+          detail: `$0.00/mo under Google Cloud Always Free Tier (1st non-preemptible e2-micro in ${vmRegion} + ${totalDiskGb}GB pd-standard · ${
+            !externalIpEnabled || externalIpMode === 'NONE'
+              ? '🔒 --no-address Private VPC/IAP'
+              : 'Ephemeral IPv4 included'
+          } · $7.33/mo list price waived)`,
         };
       }
 
@@ -1999,10 +2031,18 @@ export default function ResourceProvisionModal({
             ? 'SPOT VM (-68% SAVED)'
             : confidentialComputeType !== 'NONE'
             ? `CONFIDENTIAL VM (${confidentialComputeType}) · ON-DEMAND`
+            : !externalIpEnabled || externalIpMode === 'NONE'
+            ? 'PRIVATE VM (--no-address · -$3.65/MO IP SAVED)'
             : 'ON-DEMAND VM (UP TO 30% SUD)',
         detail: `${effectiveMachineType} in ${zone} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}${
           attachDataDisk ? ` + ${dataDiskSizeGb}GB ${dataDiskType}` : ''
-        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''}`,
+        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''} · ${
+          !externalIpEnabled || externalIpMode === 'NONE'
+            ? '🔒 Zero Public IP (--no-address · -$3.65/mo saved)'
+            : externalIpMode === 'STATIC'
+            ? `📌 Static IPv4 (${staticExternalIp || 'reserved'} · +$3.65/mo)`
+            : '🌐 Ephemeral Public IPv4 (+$3.65/mo)'
+        }`,
       };
     }
 
@@ -2299,7 +2339,9 @@ export default function ResourceProvisionModal({
             nicType,
             stackType,
             canIpForward,
-            externalIpEnabled,
+            externalIpEnabled: externalIpMode !== 'NONE' && externalIpEnabled,
+            externalIpMode,
+            staticExternalIp: externalIpMode === 'STATIC' ? staticExternalIp.trim() : '',
             allowHttp,
             allowHttps,
             allowIapSsh,
@@ -3294,9 +3336,19 @@ export default function ResourceProvisionModal({
                   network: `global/networks/${vmNetwork}`,
                   nicType,
                   stackType,
-                  accessConfigs: externalIpEnabled
-                    ? [{ type: 'ONE_TO_ONE_NAT', name: 'External NAT', networkTier }]
-                    : [],
+                  accessConfigs:
+                    externalIpEnabled && externalIpMode !== 'NONE'
+                      ? [
+                          {
+                            type: 'ONE_TO_ONE_NAT',
+                            name: 'External NAT',
+                            networkTier,
+                            ...(externalIpMode === 'STATIC' && staticExternalIp.trim()
+                              ? { natIP: staticExternalIp.trim() }
+                              : {}),
+                          },
+                        ]
+                      : [],
                 },
               ],
               scheduling: {
@@ -3366,9 +3418,13 @@ export default function ResourceProvisionModal({
     network    = "${vmNetwork}"
     nic_type   = "${nicType}"
     stack_type = "${stackType}"${
-      externalIpEnabled
-        ? `\n    access_config {\n      network_tier = "${networkTier}"\n    }`
-        : '\n    # Zero External IPv4 (--no-address) — Private IAP SSH Tunnel Only'
+      externalIpEnabled && externalIpMode !== 'NONE'
+        ? `\n    access_config {\n      network_tier = "${networkTier}"${
+            externalIpMode === 'STATIC' && staticExternalIp.trim()
+              ? `\n      nat_ip       = "${staticExternalIp.trim()}"`
+              : ''
+          }\n    }`
+        : '\n    # Zero External IPv4 (--no-address) — Private VPC / Cloud IAP Tunnel Only'
     }
   }
 
@@ -3477,6 +3533,62 @@ export default function ResourceProvisionModal({
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* Quick External IPv4 Address Policy Bar (None --no-address | Ephemeral | Reserved Static) */}
+                  <div className="pt-2 border-t border-blue-500/20 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10.5px] font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                        External IPv4 Address Policy:
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                        {externalIpMode === 'NONE' || !externalIpEnabled
+                          ? '🔒 Zero Public IP (--no-address · Private VPC + Cloud IAP SSH · Saves $3.65/mo)'
+                          : externalIpMode === 'STATIC'
+                          ? `📌 Static Reserved IPv4 (${staticExternalIp || 'enter IP or address name'} · $3.65/mo)`
+                          : '🌐 Ephemeral Public IPv4 (ONE_TO_ONE_NAT · $3.65/mo)'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        {
+                          mode: 'NONE',
+                          label: '🔒 None (--no-address · $0 IP)',
+                          activeCls:
+                            'bg-emerald-600 border-emerald-600 text-white shadow-sm',
+                        },
+                        {
+                          mode: 'EPHEMERAL',
+                          label: '🌐 Ephemeral Public IPv4',
+                          activeCls:
+                            'bg-blue-600 border-blue-600 text-white shadow-sm',
+                        },
+                        {
+                          mode: 'STATIC',
+                          label: '📌 Static Reserved IPv4',
+                          activeCls:
+                            'bg-violet-600 border-violet-600 text-white shadow-sm',
+                        },
+                      ].map((opt) => {
+                        const isSelected =
+                          (opt.mode === 'NONE' && (!externalIpEnabled || externalIpMode === 'NONE')) ||
+                          (opt.mode !== 'NONE' && externalIpEnabled && externalIpMode === opt.mode);
+                        return (
+                          <button
+                            key={opt.mode}
+                            type="button"
+                            onClick={() => handleSelectExternalIpMode(opt.mode)}
+                            className={`px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-all cursor-pointer ${
+                              isSelected
+                                ? opt.activeCls
+                                : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -4018,16 +4130,102 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                      3. VPC Network Interface, Network Tier (`PREMIUM` vs `STANDARD`), gVNIC &amp; Firewall Rules
+                      3. VPC Network Interface, External IPv4 (`None` / `Ephemeral` / `Static`), gVNIC &amp; Firewall Rules
                     </div>
                     <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-                      {externalIpEnabled
-                        ? `External IPv4 (${networkTier} Tier) + Internal VPC IP`
-                        : 'Zero Public IPv4 (--no-address) · Private IAP SSH Tunnel Only'}
+                      {!externalIpEnabled || externalIpMode === 'NONE'
+                        ? '🔒 Zero Public IPv4 (--no-address) · Private VPC + Cloud IAP Tunnel + Cloud NAT (-$3.65/mo saved)'
+                        : externalIpMode === 'STATIC'
+                        ? `📌 Static External IPv4 (${staticExternalIp || 'reserved'} · ${networkTier} Tier) + Internal VPC IP`
+                        : `🌐 Ephemeral External IPv4 (${networkTier} Tier) + Internal VPC IP`}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  {/* External IPv4 Address Policy Selector (Standard GCP Parity + Zero-Trust IAP Advisories) */}
+                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                        External IPv4 Address (`nic0` Access Configuration)
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        {!externalIpEnabled || externalIpMode === 'NONE'
+                          ? 'accessConfigs: [] (--no-address · $0.00/mo IP fee)'
+                          : externalIpMode === 'STATIC'
+                          ? `accessConfigs: [{ type: "ONE_TO_ONE_NAT", natIP: "${staticExternalIp || '<STATIC_IP>'}" }] ($0.005/hr)`
+                          : 'accessConfigs: [{ type: "ONE_TO_ONE_NAT" }] ($0.005/hr · $3.65/mo)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        {
+                          mode: 'NONE',
+                          title: '🔒 None (--no-address)',
+                          sub: 'No public IPv4 · SSH via Cloud IAP (35.235.240.0/20) · Outbound via Cloud NAT · Saves $3.65/mo',
+                          activeCls:
+                            'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300',
+                        },
+                        {
+                          mode: 'EPHEMERAL',
+                          title: '🌐 Ephemeral Public IPv4',
+                          sub: 'Dynamic Google Cloud external IPv4 (ONE_TO_ONE_NAT) · Released if VM is stopped · $3.65/mo',
+                          activeCls:
+                            'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300',
+                        },
+                        {
+                          mode: 'STATIC',
+                          title: '📌 Static Reserved IPv4',
+                          sub: 'Bind a permanent regional reserved external IPv4 (--address) for DNS / allowlists · $3.65/mo',
+                          activeCls:
+                            'bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-300',
+                        },
+                      ].map((ipOpt) => {
+                        const active =
+                          (ipOpt.mode === 'NONE' && (!externalIpEnabled || externalIpMode === 'NONE')) ||
+                          (ipOpt.mode !== 'NONE' && externalIpEnabled && externalIpMode === ipOpt.mode);
+                        return (
+                          <button
+                            key={ipOpt.mode}
+                            type="button"
+                            onClick={() => handleSelectExternalIpMode(ipOpt.mode)}
+                            className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
+                              active
+                                ? ipOpt.activeCls
+                                : 'bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
+                            }`}
+                          >
+                            <div className="text-[11px] font-mono font-bold flex items-center justify-between">
+                              <span>{ipOpt.title}</span>
+                              {active && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 uppercase">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[9.5px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
+                              {ipOpt.sub}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {externalIpEnabled && externalIpMode === 'STATIC' && (
+                      <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label className="text-[10.5px] font-mono text-violet-600 dark:text-violet-400 shrink-0">
+                          Reserved Static IPv4 or Address Name (`--address`):
+                        </label>
+                        <input
+                          type="text"
+                          value={staticExternalIp}
+                          onChange={(e) => setStaticExternalIp(e.target.value)}
+                          placeholder="e.g. 34.120.55.10 or prod-ingress-ip"
+                          className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-violet-500/40 rounded-[7px] px-2.5 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
                         VPC Network / Subnetwork
@@ -4050,25 +4248,6 @@ export default function ResourceProvisionModal({
                           className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Public IPv4 / IAP Mode
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setExternalIpEnabled((v) => !v)}
-                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
-                          externalIpEnabled
-                            ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
-                            : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
-                        }`}
-                      >
-                        {externalIpEnabled
-                          ? 'Ephemeral Public IPv4'
-                          : '🔒 Zero Public IP (IAP)'}
-                      </button>
                     </div>
 
                     <div>

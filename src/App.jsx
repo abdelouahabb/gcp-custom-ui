@@ -529,7 +529,7 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // Compute Engine VM Power -> DELETE
+    // Compute Engine VM Power -> DELETE, DETACH_PUBLIC_IP, ATTACH_PUBLIC_IP
     const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/power/);
     if (vmPowerMatch && String(body.action || '').toUpperCase() === 'DELETE') {
       const vmName = decodeURIComponent(vmPowerMatch[1]);
@@ -543,6 +543,58 @@ function classifyDestructiveAxiosConfig(config) {
         method: 'POST (DELETE VM)',
         endpoint: rawUrl,
         impactWarning: `This will permanently terminate and delete Compute Engine VM "${vmName}" in zone "${zone}", including its auto-delete boot persistent disk.`,
+      };
+    }
+    if (
+      vmPowerMatch &&
+      String(body.action || '').toUpperCase() === 'DETACH_PUBLIC_IP'
+    ) {
+      const vmName = decodeURIComponent(vmPowerMatch[1]);
+      const zone = body.zone || 'gcp-zone';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Detach Public IPv4 (--no-address) from VM "${vmName}" (${zone})?`,
+        headerBadge: 'Compute Engine Zero-Trust Private VPC / IAP Gatekeeper',
+        targetLabel: 'Target Compute Engine VM Network Interface (nic0)',
+        resourceKind: 'Compute Engine deleteAccessConfig (compute.googleapis.com/v1)',
+        targetName: `${vmName} (nic0 · External NAT → --no-address)`,
+        location: zone,
+        projectId,
+        method: 'DETACH PUBLIC IPv4',
+        endpoint: rawUrl,
+        confirmLabel: `Detach Public IPv4 from "${vmName}" (-$3.65/mo Saved)`,
+        cancelToast: `Public IPv4 detachment on "${vmName}" cancelled.`,
+        laymanSummary: `In Plain English: Removes the external public internet IPv4 address from VM "${vmName}" without restarting or recreating the VM. Your VM stays online on its private VPC IP, remains reachable via Browser SSH / Cloud IAP (--tunnel-through-iap), and stops billing the $3.65/month ($0.005/hr) Google Cloud Public IPv4 fee.`,
+        whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/deleteAccessConfig?networkInterface=nic0&accessConfig=External+NAT.\n2. Strips the public NAT IPv4 address in-place while preserving internal VPC connectivity and Cloud IAP SSH.\n3. Updates the VM Fleet card to "🔒 None (--no-address · IAP)".`,
+        costWarning: `FINOPS SAVINGS (-$3.65/MO): Removing an in-use External IPv4 address saves $0.005/hr ($3.65/mo).`,
+        impactWarning: `Direct public internet connections to "${vmName}"'s external IPv4 will close; SSH via Cloud IAP (35.235.240.0/20) and internal VPC traffic continue uninterrupted.`,
+      };
+    }
+    if (
+      vmPowerMatch &&
+      String(body.action || '').toUpperCase() === 'ATTACH_PUBLIC_IP'
+    ) {
+      const vmName = decodeURIComponent(vmPowerMatch[1]);
+      const zone = body.zone || 'gcp-zone';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Attach Ephemeral Public IPv4 to VM "${vmName}" (${zone})?`,
+        headerBadge: 'Compute Engine External NAT IPv4 Gatekeeper',
+        targetLabel: 'Target Compute Engine VM Network Interface (nic0)',
+        resourceKind: 'Compute Engine addAccessConfig (compute.googleapis.com/v1)',
+        targetName: `${vmName} (nic0 · ONE_TO_ONE_NAT)`,
+        location: zone,
+        projectId,
+        method: 'ATTACH PUBLIC IPv4',
+        endpoint: rawUrl,
+        confirmLabel: `Attach Ephemeral Public IPv4 to "${vmName}"`,
+        cancelToast: `Public IPv4 attachment on "${vmName}" cancelled.`,
+        laymanSummary: `In Plain English: Assigns a live Google Cloud External IPv4 address (ONE_TO_ONE_NAT) to VM "${vmName}" in "${zone}" without rebooting the VM.`,
+        whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/addAccessConfig?networkInterface=nic0 with { type: "ONE_TO_ONE_NAT", name: "External NAT", networkTier: "PREMIUM" }.\n2. Immediately allocates an external IPv4 address and updates the VM card.`,
+        costWarning: `PUBLIC IPv4 PRICING NOTICE: Google Cloud bills $0.005/hr (~$3.65/month) for an attached standard/ephemeral external IPv4 address (waived for 1 Always-Free e2-micro instance).`,
+        impactWarning: `Assigns a public internet IPv4 address to "${vmName}" (${zone}), subject to your VPC firewall rules.`,
       };
     }
 
@@ -3193,7 +3245,11 @@ function classifyDestructiveAxiosConfig(config) {
         cfg.confidentialComputeType && cfg.confidentialComputeType !== 'NONE'
           ? `Confidential VM (${cfg.confidentialComputeType})`
           : 'Shielded VM (vTPM + Integrity Monitoring)',
-        cfg.externalIpEnabled === false ? 'Private VPC IP Only (--no-address)' : 'Ephemeral External IPv4',
+        cfg.externalIpEnabled === false || String(cfg.externalIpMode || '').toUpperCase() === 'NONE'
+          ? 'Zero Public IP (--no-address · Private VPC / Cloud IAP Only · -$3.65/mo saved)'
+          : String(cfg.externalIpMode || '').toUpperCase() === 'STATIC' && cfg.staticExternalIp
+          ? `Static External IPv4 (${cfg.staticExternalIp})`
+          : 'Ephemeral External IPv4',
         cfg.spotInstance ? 'Spot VM (-68%)' : 'On-Demand Standard',
       ].join(' · ');
 

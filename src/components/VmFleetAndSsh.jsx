@@ -238,6 +238,7 @@ export default function VmFleetAndSsh({
   const [vmDiskModelFilter, setVmDiskModelFilter] = useState('ALL');
   const [vmMetadataTagFilter, setVmMetadataTagFilter] = useState('ALL');
   const [quickDeployingLabel, setQuickDeployingLabel] = useState(null);
+  const [quickDeployIpMode, setQuickDeployIpMode] = useState('DEFAULT'); // 'DEFAULT' | 'NO_PUBLIC_IP' | 'EPHEMERAL_PUBLIC_IP'
   const [openResizeVm, setOpenResizeVm] = useState(null);
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
   const [openTunnelVm, setOpenTunnelVm] = useState(null);
@@ -391,6 +392,12 @@ export default function VmFleetAndSsh({
     if (quickDeployingLabel) return;
     const suffix = Math.floor(100 + Math.random() * 899);
     const vmName = `${tpl.prefix}-${suffix}`;
+    const effectiveExternalIp =
+      quickDeployIpMode === 'NO_PUBLIC_IP'
+        ? false
+        : quickDeployIpMode === 'EPHEMERAL_PUBLIC_IP'
+        ? true
+        : tpl.externalIpEnabled !== false;
     setQuickDeployingLabel(tpl.label);
     setPowerError(null);
     try {
@@ -414,9 +421,11 @@ export default function VmFleetAndSsh({
             maxRunDurationHours: tpl.maxRunDurationHours || 0,
             vmNetwork: 'default',
             nicType: tpl.nicType || 'GVNIC',
-            externalIpEnabled: tpl.externalIpEnabled !== false,
+            externalIpEnabled: effectiveExternalIp,
+            externalIpMode: effectiveExternalIp ? 'EPHEMERAL' : 'NONE',
             allowHttp: Boolean(tpl.allowHttp),
             allowHttps: Boolean(tpl.allowHttps),
+            allowIapSsh: true,
             confidentialComputeType: tpl.confidentialComputeType || 'NONE',
             shieldedSecureBoot: Boolean(tpl.shieldedSecureBoot),
             shieldedVtpm: true,
@@ -431,7 +440,9 @@ export default function VmFleetAndSsh({
       );
       if (onShowToast) {
         onShowToast(
-          `Provisioned ${vmName} (${tpl.machineType} · ${tpl.diskSizeGb}GB ${tpl.diskType}) in ${tpl.zone}`
+          `Provisioned ${vmName} (${tpl.machineType} · ${tpl.diskSizeGb}GB ${tpl.diskType} · ${
+            effectiveExternalIp ? 'Public IPv4' : '--no-address Private IAP'
+          }) in ${tpl.zone}`
         );
       }
       await fetchVms(false);
@@ -459,6 +470,8 @@ export default function VmFleetAndSsh({
       RESUME: 'RESUMING',
       SET_MACHINE_TYPE: 'RESIZING',
       SET_DELETION_PROTECTION: 'UPDATING',
+      DETACH_PUBLIC_IP: 'DETACHING IP',
+      ATTACH_PUBLIC_IP: 'ATTACHING IP',
     };
 
     try {
@@ -1131,13 +1144,41 @@ export default function VmFleetAndSsh({
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               ⚡ 1-Tap Production GCE Blueprints (Instant Live Provisioning or Customize in 6-Stage Architect)
             </span>
-            <span className="text-[10px] font-mono text-zinc-500">
-              Supports Custom vCPU/RAM · Hyperdisk 160K IOPS · Local NVMe · Confidential SEV-SNP/TDX · Arm64 · Spot TTL
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-mono text-zinc-500">
+                Public IPv4 Mode:
+              </span>
+              {[
+                { id: 'DEFAULT', label: 'Blueprint Default' },
+                { id: 'NO_PUBLIC_IP', label: '🔒 No Public IP (--no-address)' },
+                { id: 'EPHEMERAL_PUBLIC_IP', label: '🌐 Ephemeral Public IP' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setQuickDeployIpMode(m.id)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                    quickDeployIpMode === m.id
+                      ? m.id === 'NO_PUBLIC_IP'
+                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        : 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {QUICK_VM_TEMPLATES.map((tpl) => {
               const isDeploying = quickDeployingLabel === tpl.label;
+              const effectiveTplPublicIp =
+                quickDeployIpMode === 'NO_PUBLIC_IP'
+                  ? false
+                  : quickDeployIpMode === 'EPHEMERAL_PUBLIC_IP'
+                  ? true
+                  : tpl.externalIpEnabled !== false;
               return (
                 <div
                   key={tpl.id || tpl.label}
@@ -1158,7 +1199,16 @@ export default function VmFleetAndSsh({
                   </div>
                   <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/80">
                     <span className="text-[10px] font-mono text-zinc-500 truncate">
-                      {tpl.machineType} · {tpl.diskSizeGb}GB {tpl.diskType}
+                      {tpl.machineType} · {tpl.diskSizeGb}GB ·{' '}
+                      <span
+                        className={
+                          effectiveTplPublicIp
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-emerald-600 dark:text-emerald-400 font-bold'
+                        }
+                      >
+                        {effectiveTplPublicIp ? '🌐 Public IP' : '🔒 --no-address'}
+                      </span>
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
@@ -1763,11 +1813,48 @@ export default function VmFleetAndSsh({
                       </div>
                     </div>
                     <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
-                      <div className="text-[10px] uppercase text-zinc-500">
-                        External NAT IP
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="text-[10px] uppercase text-zinc-500">
+                          External NAT IP
+                        </div>
+                        {vm.externalIp &&
+                        vm.externalIp !== 'None (Internal Only)' &&
+                        vm.externalIp !== 'None' ? (
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handlePowerAction(vm, 'DETACH_PUBLIC_IP')}
+                            title="Detach External IPv4 (--no-address · deleteAccessConfig on nic0) — switch VM to private VPC + Cloud IAP SSH and save $3.65/mo"
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                          >
+                            🔒 Detach IP
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handlePowerAction(vm, 'ATTACH_PUBLIC_IP')}
+                            title="Attach Ephemeral External IPv4 (addAccessConfig ONE_TO_ONE_NAT on nic0)"
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer disabled:opacity-50"
+                          >
+                            + Attach Public IP
+                          </button>
+                        )}
                       </div>
-                      <div className="text-xs font-mono font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
-                        {vm.externalIp}
+                      <div
+                        className={`text-xs font-mono font-semibold mt-0.5 ${
+                          vm.externalIp &&
+                          vm.externalIp !== 'None (Internal Only)' &&
+                          vm.externalIp !== 'None'
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {vm.externalIp &&
+                        vm.externalIp !== 'None (Internal Only)' &&
+                        vm.externalIp !== 'None'
+                          ? vm.externalIp
+                          : '🔒 None (--no-address · IAP)'}
                       </div>
                     </div>
                     <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
