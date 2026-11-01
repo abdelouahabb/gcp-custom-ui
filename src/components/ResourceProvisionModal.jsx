@@ -661,7 +661,30 @@ export default function ResourceProvisionModal({
   const [vpcBootstrapInternalRule, setVpcBootstrapInternalRule] = useState(true);
   const [vpcBootstrapHealthCheckRule, setVpcBootstrapHealthCheckRule] = useState(false);
   const [vpcBootstrapDenyEgressC2, setVpcBootstrapDenyEgressC2] = useState(false);
+  const [vpcBootstrapCloudNat, setVpcBootstrapCloudNat] = useState(false);
   const [vpcBlueprintCodeTab, setVpcBlueprintCodeTab] = useState('GCLOUD_CLI');
+  const [projectVpcCatalog, setProjectVpcCatalog] = useState([]);
+
+  const handleSelectVmVpc = (vpcName, targetReg = vmRegion) => {
+    setVmNetwork(vpcName);
+    const found = projectVpcCatalog.find((v) => v.name === vpcName);
+    if (!found) {
+      setVmSubnetwork(vpcName === 'default' ? 'default' : 'auto');
+      return;
+    }
+    if (found.autoCreateSubnetworks) {
+      setVmSubnetwork('default');
+      return;
+    }
+    const regSub = (found.subnetworks || []).find((s) => s.region === targetReg);
+    if (regSub?.name) {
+      setVmSubnetwork(regSub.name);
+    } else if (found.subnetworks?.length > 0) {
+      setVmSubnetwork('auto');
+    } else {
+      setVmSubnetwork('auto');
+    }
+  };
 
   const applyVpcBlueprint = (bpId) => {
     setVpcBlueprint(bpId);
@@ -677,6 +700,7 @@ export default function ResourceProvisionModal({
       setVpcBootstrapInternalRule(true);
       setVpcBootstrapHealthCheckRule(false);
       setVpcBootstrapDenyEgressC2(false);
+      setVpcBootstrapCloudNat(false);
       setVpcDescription('Global Auto-Mode VPC Network ($0.00/mo control plane + IAP SSH shield)');
     } else if (bpId === 'zero-trust-custom-iap') {
       setAutoCreateSubnetworks(false);
@@ -697,7 +721,8 @@ export default function ResourceProvisionModal({
       setVpcBootstrapInternalRule(true);
       setVpcBootstrapHealthCheckRule(true);
       setVpcBootstrapDenyEgressC2(true);
-      setVpcDescription('Zero-Trust Custom Subnet VPC with Private Google Access, 5s Flow Logs & IAP Perimeter');
+      setVpcBootstrapCloudNat(true);
+      setVpcDescription('Zero-Trust Custom Subnet VPC with Private Google Access, Cloud NAT, 5s Flow Logs & IAP Perimeter');
     } else if (bpId === 'gke-kubernetes-aliases') {
       setAutoCreateSubnetworks(false);
       setRoutingMode('GLOBAL');
@@ -717,7 +742,8 @@ export default function ResourceProvisionModal({
       setVpcBootstrapInternalRule(true);
       setVpcBootstrapHealthCheckRule(true);
       setVpcBootstrapDenyEgressC2(false);
-      setVpcDescription('VPC-Native GKE Kubernetes Network with /14 Pod & /20 Service Secondary IP Alias Ranges');
+      setVpcBootstrapCloudNat(true);
+      setVpcDescription('VPC-Native GKE Kubernetes Network with /14 Pod & /20 Service Secondary IP Alias Ranges + Cloud NAT');
     } else if (bpId === 'ai-hpc-jumbo-8896') {
       setAutoCreateSubnetworks(false);
       setRoutingMode('GLOBAL');
@@ -734,6 +760,7 @@ export default function ResourceProvisionModal({
       setVpcBootstrapInternalRule(true);
       setVpcBootstrapHealthCheckRule(false);
       setVpcBootstrapDenyEgressC2(true);
+      setVpcBootstrapCloudNat(false);
       setVpcDescription('AI/HPC 8896-Byte Jumbo Frame GPU Fabric VPC with Global BGP & Dual-Stack ULA IPv6');
     } else if (bpId === 'sovereign-pci-isolated') {
       setAutoCreateSubnetworks(false);
@@ -752,6 +779,7 @@ export default function ResourceProvisionModal({
       setVpcBootstrapInternalRule(false);
       setVpcBootstrapHealthCheckRule(false);
       setVpcBootstrapDenyEgressC2(true);
+      setVpcBootstrapCloudNat(false);
       setVpcDescription('PCI-DSS / Sovereign Isolated Enclave VPC (100% Flow Log Sampling + Strict Egress Kill-Switch)');
     }
   };
@@ -1458,6 +1486,17 @@ export default function ResourceProvisionModal({
             }
           })
           .catch(() => {});
+
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/vpc-firewalls`)
+          .then((res) => {
+            const vpcsList = Array.isArray(res.data?.vpcs) ? res.data.vpcs : [];
+            if (vpcsList.length > 0) {
+              setProjectVpcCatalog(vpcsList);
+              setProjectVpcs(vpcsList.map((v) => v.name).filter(Boolean));
+            }
+          })
+          .catch(() => {});
       }
     }
   }, [isOpen, initialServiceType, initialLocation, projectId]);
@@ -1603,9 +1642,23 @@ export default function ResourceProvisionModal({
           }`
         : '';
       const iapFwCmd = vpcBootstrapIapSshRule
-        ? ` && gcloud compute firewall-rules create ${clean}-allow-iap-ssh --project=${projectId} --network=${clean} --direction=INGRESS --priority=1000 --allow=tcp:22,tcp:3389 --source-ranges=35.235.240.0/20`
+        ? ` && gcloud compute firewall-rules create ${clean}-allow-iap-ssh --project=${projectId} --network=${clean} --direction=INGRESS --priority=1000 --action=ALLOW --rules=tcp:22,tcp:3389 --source-ranges=35.235.240.0/20`
         : '';
-      return `${baseNetCmd}${subCmd}${iapFwCmd}`;
+      const internalFwCmd = vpcBootstrapInternalRule
+        ? ` && gcloud compute firewall-rules create ${clean}-allow-internal --project=${projectId} --network=${clean} --direction=INGRESS --priority=1000 --action=ALLOW --rules=tcp,udp,icmp --source-ranges=${
+            autoCreateSubnetworks ? '10.128.0.0/9' : vpcPrimarySubnetCidr
+          }`
+        : '';
+      const hcFwCmd = vpcBootstrapHealthCheckRule
+        ? ` && gcloud compute firewall-rules create ${clean}-allow-lb-hc --project=${projectId} --network=${clean} --direction=INGRESS --priority=1000 --action=ALLOW --rules=tcp:80,tcp:443,tcp:8080 --source-ranges=130.211.0.0/22,35.191.0.0/16`
+        : '';
+      const c2FwCmd = vpcBootstrapDenyEgressC2
+        ? ` && gcloud compute firewall-rules create ${clean}-deny-egress-c2 --project=${projectId} --network=${clean} --direction=EGRESS --priority=110 --action=DENY --rules=tcp:1389,tcp:3333,tcp:4444,tcp:5555,tcp:6667,tcp:14444,tcp:45560 --destination-ranges=0.0.0.0/0`
+        : '';
+      const natCmd = vpcBootstrapCloudNat
+        ? ` && gcloud compute routers create ${clean}-nat-router --project=${projectId} --network=${clean} --region=${vpcPrimarySubnetRegion} && gcloud compute routers nats create ${clean}-cloud-nat --project=${projectId} --router=${clean}-nat-router --region=${vpcPrimarySubnetRegion} --auto-allocate-nat-external-ips --nat-all-subnet-ip-ranges`
+        : '';
+      return `${baseNetCmd}${subCmd}${iapFwCmd}${internalFwCmd}${hcFwCmd}${c2FwCmd}${natCmd}`;
     }
     if (serviceType === 'VPC_FIREWALL') {
       return `gcloud compute firewall-rules create ${clean} --project=${projectId} --network=${firewallNetwork} --allow=${firewallProtocol}${
@@ -2328,15 +2381,27 @@ export default function ResourceProvisionModal({
         vpcBootstrapHealthCheckRule,
         vpcBootstrapDenyEgressC2,
       ].filter(Boolean).length;
+      const natHourly = vpcBootstrapCloudNat ? 0.044 : 0;
+      const natMonthly = vpcBootstrapCloudNat ? 32.12 : 0;
       return {
-        hourly: 0,
-        monthly: 0,
-        badge: `ALWAYS FREE VPC CONTROL PLANE ($0.00/MO · ${routingMode} BGP · ${mtu} MTU)`,
+        hourly: natHourly,
+        monthly: natMonthly,
+        badge: vpcBootstrapCloudNat
+          ? `VPC ($0.00) + CLOUD NAT GATEWAY ($32.12/MO · ${routingMode} BGP · ${mtu} MTU)`
+          : `ALWAYS FREE VPC CONTROL PLANE ($0.00/MO · ${routingMode} BGP · ${mtu} MTU)`,
         detail: autoCreateSubnetworks
-          ? `$0.00/mo fixed charge · Auto-creates regional subnets across 40 GCP regions (10.128.0.0/9)${
+          ? `${
+              vpcBootstrapCloudNat
+                ? 'Est. $32.12/mo for Cloud Router + Cloud NAT gateway ($0.00 VPC & Firewalls)'
+                : '$0.00/mo fixed charge'
+            } · Auto-creates regional subnets across 40 GCP regions (10.128.0.0/9)${
               fwCount > 0 ? ` + ${fwCount} Zero-Trust Firewall rule(s)` : ''
             }`
-          : `$0.00/mo fixed charge · Custom Subnet ${vpcPrimarySubnetName} (${vpcPrimarySubnetCidr} in ${vpcPrimarySubnetRegion})${
+          : `${
+              vpcBootstrapCloudNat
+                ? 'Est. $32.12/mo for Cloud Router + Cloud NAT gateway ($0.00 VPC & Subnets)'
+                : '$0.00/mo fixed charge'
+            } · Custom Subnet ${vpcPrimarySubnetName} (${vpcPrimarySubnetCidr} in ${vpcPrimarySubnetRegion})${
               vpcEnablePrivateGoogleAccess ? ' · Private Google Access ON' : ''
             }${vpcEnableSecondaryRanges ? ' · GKE Pod/Svc Alias Ranges' : ''}${
               vpcEnableFlowLogs ? ' · VPC Flow Logs ($0.50/GB ingested)' : ''
@@ -2365,6 +2430,7 @@ export default function ResourceProvisionModal({
     vpcBootstrapInternalRule,
     vpcBootstrapHealthCheckRule,
     vpcBootstrapDenyEgressC2,
+    vpcBootstrapCloudNat,
     sqlArchitecture,
     sqlEdition,
     sqlDatabaseVersion,
@@ -2582,6 +2648,7 @@ export default function ResourceProvisionModal({
             bootstrapInternalRule: vpcBootstrapInternalRule,
             bootstrapHealthCheckRule: vpcBootstrapHealthCheckRule,
             bootstrapDenyEgressC2: vpcBootstrapDenyEgressC2,
+            bootstrapCloudNat: vpcBootstrapCloudNat,
             network:
               serviceType === 'GKE_CLUSTER' ? gkeNetwork : firewallNetwork,
             action: firewallAction,
@@ -2709,6 +2776,40 @@ export default function ResourceProvisionModal({
           },
         }
       );
+      if (serviceType === 'VPC_NETWORK') {
+        const cleanVpc = name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '');
+        setProjectVpcs((prev) =>
+          prev.includes(cleanVpc) ? prev : [...prev, cleanVpc]
+        );
+        setProjectVpcCatalog((prev) => [
+          ...prev.filter((v) => v.name !== cleanVpc),
+          {
+            name: cleanVpc,
+            autoCreateSubnetworks,
+            routingMode,
+            mtu,
+            subnetworks: !autoCreateSubnetworks
+              ? [
+                  {
+                    name: vpcPrimarySubnetName || `${cleanVpc}-subnet-01`,
+                    region: vpcPrimarySubnetRegion,
+                  },
+                ]
+              : [],
+          },
+        ]);
+        setVmNetwork(cleanVpc);
+        setVmSubnetwork(
+          autoCreateSubnetworks
+            ? 'default'
+            : vpcPrimarySubnetName || `${cleanVpc}-subnet-01`
+        );
+        setFirewallNetwork(cleanVpc);
+      }
       onProvisionSuccess(res.data, serviceType);
       onClose();
     } catch (err) {
@@ -2960,9 +3061,29 @@ export default function ResourceProvisionModal({
 
             {serviceType === 'VPC_FIREWALL' && (
               <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Target VPC Network
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-zinc-500">
+                    Target VPC Network
+                  </label>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(projectVpcs.length > 0 ? projectVpcs : ['default'])
+                      .slice(0, 4)
+                      .map((vName) => (
+                        <button
+                          key={vName}
+                          type="button"
+                          onClick={() => setFirewallNetwork(vName)}
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono border cursor-pointer ${
+                            firewallNetwork === vName
+                              ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 font-bold'
+                              : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400'
+                          }`}
+                        >
+                          {vName}
+                        </button>
+                      ))}
+                  </div>
+                </div>
                 <input
                   type="text"
                   value={firewallNetwork}
@@ -3732,17 +3853,17 @@ export default function ResourceProvisionModal({
                 )}
               </div>
 
-              {/* STEP 4: Zero-Trust Perimeter Firewall Auto-Bootstrap Suite ($0.00/mo) */}
+              {/* STEP 4: Zero-Trust Perimeter Firewall & Cloud NAT Outbound Auto-Bootstrap Suite */}
               <div className="p-3 rounded-lg border border-emerald-500/25 bg-emerald-500/5 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-emerald-500" />
                     <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                      4. Zero-Trust Perimeter Firewall Auto-Bootstrap Suite ($0.00/mo)
+                      4. Zero-Trust Perimeter Firewall &amp; Cloud NAT Outbound Suite
                     </span>
                   </div>
                   <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
-                    New GCP VPCs have 0 ingress rules by default — auto-provision hardened baseline rules
+                    New GCP VPCs have 0 ingress rules by default — auto-provision hardened baseline rules &amp; Cloud NAT
                   </span>
                 </div>
 
@@ -3753,7 +3874,7 @@ export default function ResourceProvisionModal({
                       toggle: () => setVpcBootstrapIapSshRule((v) => !v),
                       title: 'Allow Cloud IAP Zero-Trust Tunnel (SSH 22 & RDP 3389)',
                       sub: 'Source 35.235.240.0/20 ONLY · Enables Browser SSH to --no-address VMs without public IPs',
-                      badge: 'RECOMMENDED · PRIORITY 1000',
+                      badge: 'RECOMMENDED · $0.00/MO',
                     },
                     {
                       checked: vpcBootstrapInternalRule,
@@ -3762,14 +3883,14 @@ export default function ResourceProvisionModal({
                         autoCreateSubnetworks ? '10.128.0.0/9' : vpcPrimarySubnetCidr
                       })`,
                       sub: 'Allows private TCP, UDP & ICMP communication strictly between VMs inside this VPC',
-                      badge: 'INTERNAL MESH · PRIORITY 1000',
+                      badge: 'INTERNAL MESH · $0.00/MO',
                     },
                     {
                       checked: vpcBootstrapHealthCheckRule,
                       toggle: () => setVpcBootstrapHealthCheckRule((v) => !v),
                       title: 'Allow Google Cloud Load Balancer Health Checks',
                       sub: 'Sources 130.211.0.0/22 & 35.191.0.0/16 -> TCP 80, 443, 8080 for GFE/GCLB backends',
-                      badge: 'GCLB PROBES · PRIORITY 1000',
+                      badge: 'GCLB PROBES · $0.00/MO',
                     },
                     {
                       checked: vpcBootstrapDenyEgressC2,
@@ -3811,6 +3932,39 @@ export default function ResourceProvisionModal({
                     </button>
                   ))}
                 </div>
+
+                {/* 5th Card: Cloud Router + Cloud NAT Outbound Gateway for Private `--no-address` VMs */}
+                <button
+                  type="button"
+                  onClick={() => setVpcBootstrapCloudNat((v) => !v)}
+                  className={`w-full text-left p-2.5 rounded-lg border transition-all cursor-pointer flex items-start gap-2.5 ${
+                    vpcBootstrapCloudNat
+                      ? 'bg-blue-500/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
+                      : 'bg-white/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={vpcBootstrapCloudNat}
+                    onChange={() => {}}
+                    className="mt-0.5 accent-blue-600 cursor-pointer"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-1">
+                      <span className="text-[11px] font-mono font-bold">
+                        Provision Cloud Router + Cloud NAT Outbound Gateway (for `--no-address` Private VMs)
+                      </span>
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
+                        {vpcBootstrapCloudNat
+                          ? `ACTIVE IN ${vpcPrimarySubnetRegion.toUpperCase()} (~$32.12/MO)`
+                          : 'OPTIONAL · OUTBOUND INTERNET NAT'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] opacity-85 leading-snug mt-0.5">
+                      Automatically creates `{name || 'vpc'}-nat-router` + `{name || 'vpc'}-cloud-nat` (`AUTO_ONLY`, `ALL_SUBNETWORKS_ALL_IP_RANGES`) in `{vpcPrimarySubnetRegion}` so VMs with `🔒 None (--no-address)` can pull `apt`, `pip`, Docker Hub, and GitHub packages without exposing any inbound public IPv4!
+                    </p>
+                  </div>
+                </button>
               </div>
 
               {/* STEP 5: Live 3-Tab VPC Blueprint Synthesizer (gcloud CLI / REST JSON / Terraform HCL) */}
@@ -3884,17 +4038,29 @@ export default function ResourceProvisionModal({
                                 },
                               }
                             : {}),
+                          ...(vpcBootstrapCloudNat
+                            ? {
+                                cloudRouterNat: {
+                                  routerName: `${name || 'vpc'}-nat-router`,
+                                  natName: `${name || 'vpc'}-cloud-nat`,
+                                  region: vpcPrimarySubnetRegion,
+                                  natIpAllocateOption: 'AUTO_ONLY',
+                                  sourceSubnetworkIpRangesToNat:
+                                    'ALL_SUBNETWORKS_ALL_IP_RANGES',
+                                },
+                              }
+                            : {}),
                         },
                         null,
                         2
                       )
                     : `resource "google_compute_network" "${(name || 'vpc_prod').replace(/[^a-zA-Z0-9_]/g, '_')}" {
-  project                               = "${projectId}"
-  name                                  = "${name || 'vpc-production-01'}"
-  auto_create_subnetworks               = ${autoCreateSubnetworks}
-  routing_mode                          = "${routingMode}"
-  mtu                                   = ${mtu}
-  enable_ula_internal_ipv6              = ${vpcEnableUlaInternalIpv6}
+  project                                   = "${projectId}"
+  name                                      = "${name || 'vpc-production-01'}"
+  auto_create_subnetworks                   = ${autoCreateSubnetworks}
+  routing_mode                              = "${routingMode}"
+  mtu                                       = ${mtu}
+  enable_ula_internal_ipv6                  = ${vpcEnableUlaInternalIpv6}
   network_firewall_policy_enforcement_order = "${vpcFirewallPolicyOrder}"
 }${
                         !autoCreateSubnetworks
@@ -3905,7 +4071,48 @@ export default function ResourceProvisionModal({
   region                   = "${vpcPrimarySubnetRegion}"
   ip_cidr_range            = "${vpcPrimarySubnetCidr}"
   private_ip_google_access = ${vpcEnablePrivateGoogleAccess}
-  stack_type               = "${vpcSubnetStackType}"
+  stack_type               = "${vpcSubnetStackType}"${
+                              vpcEnableSecondaryRanges
+                                ? `\n  secondary_ip_range {\n    range_name    = "${vpcSecondaryPodRangeName}"\n    ip_cidr_range = "${vpcSecondaryPodCidr}"\n  }\n  secondary_ip_range {\n    range_name    = "${vpcSecondarySvcRangeName}"\n    ip_cidr_range = "${vpcSecondarySvcCidr}"\n  }`
+                                : ''
+                            }${
+                              vpcEnableFlowLogs
+                                ? `\n  log_config {\n    aggregation_interval = "${vpcFlowLogsInterval}"\n    flow_sampling        = ${vpcFlowLogsSampling}\n    metadata             = "INCLUDE_ALL_METADATA"\n  }`
+                                : ''
+                            }
+}`
+                          : ''
+                      }${
+                        vpcBootstrapIapSshRule
+                          ? `\n\nresource "google_compute_firewall" "allow_iap_ssh" {
+  project       = "${projectId}"
+  name          = "${name || 'vpc'}-allow-iap-ssh"
+  network       = google_compute_network.${(name || 'vpc_prod').replace(/[^a-zA-Z0-9_]/g, '_')}.name
+  direction     = "INGRESS"
+  priority      = 1000
+  source_ranges = ["35.235.240.0/20"]
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "3389"]
+  }
+}`
+                          : ''
+                      }${
+                        vpcBootstrapCloudNat
+                          ? `\n\nresource "google_compute_router" "nat_router" {
+  project = "${projectId}"
+  name    = "${name || 'vpc'}-nat-router"
+  network = google_compute_network.${(name || 'vpc_prod').replace(/[^a-zA-Z0-9_]/g, '_')}.id
+  region  = "${vpcPrimarySubnetRegion}"
+}
+
+resource "google_compute_router_nat" "cloud_nat" {
+  project                            = "${projectId}"
+  name                               = "${name || 'vpc'}-cloud-nat"
+  router                             = google_compute_router.nat_router.name
+  region                             = "${vpcPrimarySubnetRegion}"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }`
                           : ''
                       }`}
@@ -5053,6 +5260,66 @@ export default function ResourceProvisionModal({
                     )}
                   </div>
 
+                  {/* Live Project VPC & Regional Subnet Selector + 1-Click "+ Architect New VPC" Bridge */}
+                  <div className="p-2.5 rounded-[8px] border border-blue-500/20 bg-blue-500/5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                        Live Project VPCs ({projectVpcs.length}):
+                      </span>
+                      {(projectVpcs.length > 0 ? projectVpcs : ['default']).map(
+                        (vName) => {
+                          const cat = projectVpcCatalog.find(
+                            (v) => v.name === vName
+                          );
+                          const isCustom = cat && cat.autoCreateSubnetworks === false;
+                          const regSub = (cat?.subnetworks || []).find(
+                            (s) => s.region === vmRegion
+                          );
+                          const active = vmNetwork === vName;
+                          return (
+                            <button
+                              key={vName}
+                              type="button"
+                              onClick={() => handleSelectVmVpc(vName, vmRegion)}
+                              className={`px-2 py-1 rounded-md border text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                                active
+                                  ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-sm'
+                                  : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
+                              }`}
+                            >
+                              <span>{vName}</span>
+                              <span
+                                className={`text-[8.5px] px-1 py-0.2 rounded ${
+                                  active
+                                    ? 'bg-white/20 text-white'
+                                    : isCustom
+                                    ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300'
+                                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+                                }`}
+                              >
+                                {isCustom
+                                  ? regSub
+                                    ? `CUSTOM · ${regSub.name}`
+                                    : 'CUSTOM · AUTO-SUBNET'
+                                  : 'AUTO 40-REG'}
+                              </span>
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVpcPrimarySubnetRegion(vmRegion);
+                        handleTabSwitch('VPC_NETWORK');
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-bold cursor-pointer shrink-0"
+                    >
+                      + Architect Custom VPC in {vmRegion} →
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
@@ -5062,7 +5329,7 @@ export default function ResourceProvisionModal({
                         <input
                           type="text"
                           value={vmNetwork}
-                          onChange={(e) => setVmNetwork(e.target.value)}
+                          onChange={(e) => handleSelectVmVpc(e.target.value, vmRegion)}
                           placeholder="default"
                           title="VPC Network name"
                           className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
@@ -5072,7 +5339,7 @@ export default function ResourceProvisionModal({
                           value={vmSubnetwork}
                           onChange={(e) => setVmSubnetwork(e.target.value)}
                           placeholder="auto"
-                          title="Subnetwork name (or auto)"
+                          title="Subnetwork name (or auto — backend auto-resolves/creates regional subnet for custom VPCs)"
                           className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>

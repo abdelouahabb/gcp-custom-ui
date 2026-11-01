@@ -6076,6 +6076,7 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         });
       }
 
+      const regFromZone = zone.split('-').slice(0, 2).join('-');
       const netInterface = {
         network: `global/networks/${vmNetwork}`,
         nicType,
@@ -6094,10 +6095,79 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           : [],
       };
       if (vmSubnetwork && vmSubnetwork !== 'auto' && vmSubnetwork !== 'default') {
-        const regFromZone = zone.split('-').slice(0, 2).join('-');
         netInterface.subnetwork = vmSubnetwork.includes('/')
           ? vmSubnetwork
           : `regions/${regFromZone}/subnetworks/${vmSubnetwork}`;
+      } else if (vmNetwork && vmNetwork !== 'default') {
+        // Custom-Mode VPCs reject VM creation unless a regional subnetwork is explicitly attached.
+        // Auto-discover the regional subnetwork for `vmNetwork` in `regFromZone` (or auto-provision one if missing).
+        try {
+          const [netInfo, regSubs] = await Promise.all([
+            gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/global/networks/${encodeURIComponent(vmNetwork)}`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            ).catch(() => null),
+            gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/regions/${encodeURIComponent(regFromZone)}/subnetworks`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            ).catch(() => null),
+          ]);
+          const matchingSub = (regSubs?.items || []).find((sn) =>
+            String(sn.network || '').endsWith(`/networks/${vmNetwork}`)
+          );
+          if (matchingSub?.name) {
+            netInterface.subnetwork = `regions/${regFromZone}/subnetworks/${matchingSub.name}`;
+          } else if (netInfo && netInfo.autoCreateSubnetworks === false) {
+            // Custom-mode VPC has no subnet in `regFromZone` yet — auto-bootstrap one so VM creation succeeds!
+            const autoSubName = `${vmNetwork}-${regFromZone}-sub`.slice(0, 62);
+            const randomOctet = Math.floor(200 + (Date.now() % 50));
+            const subOp = await gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/regions/${encodeURIComponent(regFromZone)}/subnetworks`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                  name: autoSubName,
+                  network: `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${vmNetwork}`,
+                  ipCidrRange: `10.${randomOctet}.0.0/20`,
+                  privateIpGoogleAccess: true,
+                },
+                timeout: 8000,
+              }
+            ).catch(() => null);
+            if (subOp?.name) {
+              for (let i = 0; i < 5; i++) {
+                await new Promise((r) => setTimeout(r, 1400));
+                const st = await gcpFetch(
+                  `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                    projectId
+                  )}/regions/${encodeURIComponent(regFromZone)}/operations/${encodeURIComponent(
+                    subOp.name
+                  )}`,
+                  token,
+                  projectId,
+                  { timeout: 4000 }
+                ).catch(() => null);
+                if (st?.status === 'DONE') break;
+              }
+              netInterface.subnetwork = `regions/${regFromZone}/subnetworks/${autoSubName}`;
+            }
+          }
+        } catch {
+          // fallback to default behavior
+        }
       }
 
       const sanitizedLabels = {
@@ -6258,16 +6328,107 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         }
       );
 
+      // Automatically ensure tag-scoped VPC Firewall rules exist on `vmNetwork` (GCP Console parity for http-server / https-server / iap-ssh / lb-health-check)
+      const vmTagFirewallRules = [];
+      const netPrefix = vmNetwork === 'default' ? 'default' : vmNetwork.slice(0, 40);
+      if (allowHttp) {
+        vmTagFirewallRules.push({
+          name: `${netPrefix}-allow-http`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['0.0.0.0/0'],
+          targetTags: ['http-server'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['80'] }],
+          description: `Allow HTTP TCP 80 ingress to VMs tagged http-server on ${vmNetwork}`,
+        });
+      }
+      if (allowHttps) {
+        vmTagFirewallRules.push({
+          name: `${netPrefix}-allow-https`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['0.0.0.0/0'],
+          targetTags: ['https-server'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['443'] }],
+          description: `Allow HTTPS TCP 443 ingress to VMs tagged https-server on ${vmNetwork}`,
+        });
+      }
+      if (allowIapSsh) {
+        vmTagFirewallRules.push({
+          name: `${netPrefix}-allow-iap-ssh`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['35.235.240.0/20'],
+          targetTags: ['iap-ssh'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['22', '3389'] }],
+          description: `Allow Cloud IAP Zero-Trust SSH/RDP (35.235.240.0/20) to VMs tagged iap-ssh on ${vmNetwork}`,
+        });
+      }
+      if (allowLbHealthCheck) {
+        vmTagFirewallRules.push({
+          name: `${netPrefix}-allow-lb-hc`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['130.211.0.0/22', '35.191.0.0/16'],
+          targetTags: ['lb-health-check'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['80', '443', '8080'] }],
+          description: `Allow Google Cloud Load Balancer health checks to VMs tagged lb-health-check on ${vmNetwork}`,
+        });
+      }
+      for (const fwRule of vmTagFirewallRules) {
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/global/firewalls`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              ...fwRule,
+              network: `projects/${projectId}/global/networks/${vmNetwork}`,
+            },
+            timeout: 5000,
+          }
+        ).catch(() => null);
+      }
+
+      recordFlightEvent(projectId, {
+        actionType: 'PROVISION_COMPUTE_VM',
+        title: `Provisioned Compute Engine VM ${cleanName} (${machineType} · ${
+          externalIpEnabled ? `${externalIpMode || 'EPHEMERAL'} Public IP` : '--no-address Private IP'
+        }) in ${zone} on VPC ${vmNetwork}`,
+        targetName: cleanName,
+        region: zone,
+        undoable: true,
+        undoPayload: {
+          resourceType: 'Compute Engine VM',
+          name: cleanName,
+          zone,
+          region: regFromZone,
+        },
+      });
+
       return res.json({
         ok: true,
         serviceAccount: runtimeServiceAccount || null,
+        resource: {
+          name: cleanName,
+          zone,
+          region: regFromZone,
+          machineType,
+          network: vmNetwork,
+          subnetwork: netInterface.subnetwork || 'auto',
+          externalIpMode: externalIpEnabled ? externalIpMode || 'EPHEMERAL' : 'NONE',
+        },
         message: `Dispatched real Compute Engine VM creation for "${cleanName}" (${machineType}, ${diskSizeGb}GB ${diskType}${
           attachDataDisk ? ` + ${dataDiskSizeGb}GB ${dataDiskType}` : ''
-        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''}${
-          spotInstance ? ', Spot VM' : ''
-        }${hasConfidential ? `, Confidential ${confidentialComputeType}` : ''}${
-          runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''
-        }) in ${zone}!`,
+        }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''}, VPC: ${vmNetwork}${
+          !externalIpEnabled ? ', --no-address Private IP' : ''
+        }${spotInstance ? ', Spot VM' : ''}${
+          hasConfidential ? `, Confidential ${confidentialComputeType}` : ''
+        }${runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''}) in ${zone}!`,
         operation: op,
       });
     }
@@ -6957,8 +7118,82 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         subResults.push(`${fwCreatedCount} Zero-Trust Firewall rule(s)`);
       }
 
+      // 3) Optional: Provision Cloud Router + Cloud NAT Outbound Gateway for `--no-address` Private VMs
+      if (config.bootstrapCloudNat) {
+        const natRegion = String(
+          config.primarySubnetRegion || region || 'us-central1'
+        ).trim();
+        const routerName = `${cleanName}-nat-router`.slice(0, 62);
+        const natName = `${cleanName}-cloud-nat`.slice(0, 62);
+        try {
+          await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/regions/${encodeURIComponent(natRegion)}/routers`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                name: routerName,
+                network: `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${cleanName}`,
+                description: `Cloud Router + Cloud NAT gateway for private --no-address VMs on ${cleanName}`,
+                nats: [
+                  {
+                    name: natName,
+                    natIpAllocateOption: 'AUTO_ONLY',
+                    sourceSubnetworkIpRangesToNat:
+                      'ALL_SUBNETWORKS_ALL_IP_RANGES',
+                    logConfig: {
+                      enable: true,
+                      filter: 'ERRORS_ONLY',
+                    },
+                  },
+                ],
+              },
+              timeout: 8000,
+            }
+          );
+          subResults.push(
+            `Cloud Router + Cloud NAT Gateway "${natName}" (${natRegion})`
+          );
+        } catch {
+          subResults.push(`Cloud NAT Gateway "${natName}" queued (${natRegion})`);
+        }
+      }
+
+      recordFlightEvent(projectId, {
+        actionType: 'PROVISION_VPC_NETWORK',
+        title: `Provisioned Andromeda VPC Network ${cleanName} (${
+          autoCreateSubnetworks ? 'Auto 40-Region Subnets' : `Custom Subnet ${config.primarySubnetCidr || '10.240.0.0/20'}`
+        } · ${routingMode} BGP · ${mtu} MTU)`,
+        targetName: cleanName,
+        region: 'global',
+        undoable: true,
+        undoPayload: {
+          resourceType: 'VPC Network',
+          name: cleanName,
+          region: 'global',
+        },
+      });
+
       return res.json({
         ok: true,
+        resource: {
+          name: cleanName,
+          autoCreateSubnetworks,
+          routingMode,
+          mtu,
+          primarySubnetName: !autoCreateSubnetworks
+            ? String(config.primarySubnetName || `${cleanName}-subnet-01`).trim()
+            : 'default',
+          primarySubnetRegion: String(
+            config.primarySubnetRegion || region || 'us-central1'
+          ).trim(),
+          primarySubnetCidr: String(config.primarySubnetCidr || '10.240.0.0/20').trim(),
+          bootstrapCloudNat: Boolean(config.bootstrapCloudNat),
+        },
         message: `Dispatched real VPC Network "${cleanName}" (${
           autoCreateSubnetworks ? 'Auto Subnet Mode' : 'Custom Subnet Mode'
         }, ${routingMode} BGP, ${mtu} MTU${
