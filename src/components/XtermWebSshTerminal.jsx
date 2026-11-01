@@ -240,6 +240,7 @@ export default function XtermWebSshTerminal({
   const [scpChmodTarget, setScpChmodTarget] = useState(null); // { path, name, modeOctal }
   const [scpRenameTarget, setScpRenameTarget] = useState(null); // { path, name, newName }
   const [scpChecksumResult, setScpChecksumResult] = useState(null); // { path, name, sha256, md5, sizeBytes, lineCount }
+  const [copiedShaPath, setCopiedShaPath] = useState('');
 
   const appendTransferHistory = useCallback((item) => {
     setScpTransferHistory((prev) =>
@@ -405,10 +406,16 @@ export default function XtermWebSshTerminal({
   };
 
   const fetchScpDirectory = useCallback(
-    async (targetPath = scpPath) => {
+    async (targetPath = scpPath, options = {}) => {
       const targetVm = activeVm || focusedVm;
       if (isCloudRun || !projectId || !targetVm?.name) return;
-      setScpLoading(true);
+      const isSilent = Boolean(options?.silent);
+      if (!isSilent) {
+        setScpLoading(true);
+        setScpConfirmDeletePath(null);
+        setScpChmodTarget(null);
+        setScpRenameTarget(null);
+      }
       setScpError('');
       try {
         const res = await axios.get(
@@ -441,7 +448,9 @@ export default function XtermWebSshTerminal({
             'Failed to list remote directory via SCP/SFTP.'
         );
       } finally {
-        setScpLoading(false);
+        if (!isSilent) {
+          setScpLoading(false);
+        }
       }
     },
     [
@@ -928,7 +937,7 @@ export default function XtermWebSshTerminal({
       scpTransferTimerRef.current = setTimeout(() => {
         setScpTransferProgress(null);
       }, 3400);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       clearScpTransferTimer();
       setScpTransferProgress(null);
@@ -1022,7 +1031,7 @@ export default function XtermWebSshTerminal({
       );
       setTimeout(() => setScpStatusMsg(''), 4500);
       setScpEditorFile(null);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       clearScpTransferTimer();
       setScpTransferProgress(null);
@@ -1060,7 +1069,7 @@ export default function XtermWebSshTerminal({
       setScpNewFolderPrompt(false);
       setScpStatusMsg(res.data?.message || `Created folder ${cleanName}`);
       setTimeout(() => setScpStatusMsg(''), 4000);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error || err.message || 'Failed to create folder.'
@@ -1088,9 +1097,18 @@ export default function XtermWebSshTerminal({
         }
       );
       setScpConfirmDeletePath(null);
+      if (scpChecksumResult?.path === entryPath) {
+        setScpChecksumResult(null);
+      }
+      if (scpChmodTarget?.path === entryPath) {
+        setScpChmodTarget(null);
+      }
+      if (scpRenameTarget?.path === entryPath) {
+        setScpRenameTarget(null);
+      }
       setScpStatusMsg(res.data?.message || `Deleted ${entryPath}`);
       setTimeout(() => setScpStatusMsg(''), 4000);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error || err.message || 'Failed to delete item.'
@@ -1327,7 +1345,7 @@ export default function XtermWebSshTerminal({
       );
       setScpStatusMsg(res.data?.message || `Extracted ${entry.name}!`);
       setTimeout(() => setScpStatusMsg(''), 4500);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error ||
@@ -1365,7 +1383,7 @@ export default function XtermWebSshTerminal({
       setScpStatusMsg(res.data?.message || `Created ${outName} on VM!`);
       setTimeout(() => setScpStatusMsg(''), 4500);
       setScpSelectedPaths([]);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error ||
@@ -1398,7 +1416,7 @@ export default function XtermWebSshTerminal({
       setScpChmodTarget(null);
       setScpStatusMsg(res.data?.message || `chmod ${nextModeOctal} applied!`);
       setTimeout(() => setScpStatusMsg(''), 4000);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error || err.message || 'Failed to chmod item.'
@@ -1432,10 +1450,15 @@ export default function XtermWebSshTerminal({
           newPath: fullNewPath,
         }
       );
+      if (scpChecksumResult?.path === scpRenameTarget.path) {
+        setScpChecksumResult((prev) =>
+          prev ? { ...prev, path: fullNewPath, name: cleanNew } : null
+        );
+      }
       setScpRenameTarget(null);
       setScpStatusMsg(res.data?.message || `Renamed to ${cleanNew}`);
       setTimeout(() => setScpStatusMsg(''), 4000);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error || err.message || 'Failed to rename item.'
@@ -1499,12 +1522,18 @@ export default function XtermWebSshTerminal({
           paths: scpSelectedPaths,
         }
       );
+      if (
+        scpChecksumResult?.path &&
+        scpSelectedPaths.includes(scpChecksumResult.path)
+      ) {
+        setScpChecksumResult(null);
+      }
       setScpSelectedPaths([]);
       setScpStatusMsg(
         res.data?.message || `Deleted ${scpSelectedPaths.length} item(s).`
       );
       setTimeout(() => setScpStatusMsg(''), 4000);
-      await fetchScpDirectory(scpPath);
+      await fetchScpDirectory(scpPath, { silent: true });
     } catch (err) {
       setScpError(
         err.response?.data?.error ||
@@ -2162,7 +2191,7 @@ export default function XtermWebSshTerminal({
                     onClick={() => setViewMode('SCP_FILE_MANAGER')}
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
                       viewMode === 'SCP_FILE_MANAGER'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                     }`}
                     title={`Visual SCP / SFTP File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor for ${
@@ -2189,7 +2218,7 @@ export default function XtermWebSshTerminal({
                     }}
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
                       viewMode === 'SPLIT_SSH_AND_SCP'
-                        ? 'bg-teal-600 text-white shadow-sm'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                     }`}
                     title="Dual Split-Screen Workbench: Live Xterm.js SSH Terminal + Visual SCP/SFTP File Studio side-by-side"
@@ -2210,7 +2239,7 @@ export default function XtermWebSshTerminal({
                 }}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                   viewMode === 'SERIAL_PORT_1'
-                    ? 'bg-indigo-600 text-white shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
                 title="Compute Engine Serial Port 1 boot & kernel console logs"
@@ -3060,12 +3089,18 @@ export default function XtermWebSshTerminal({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() =>
-                        navigator.clipboard?.writeText(scpChecksumResult.sha256)
-                      }
-                      className="px-2 py-1 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(
+                          scpChecksumResult.sha256
+                        );
+                        setCopiedShaPath(scpChecksumResult.path);
+                        setTimeout(() => setCopiedShaPath(''), 1800);
+                      }}
+                      className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                     >
-                      Copy SHA-256
+                      {copiedShaPath === scpChecksumResult.path
+                        ? '✓ Copied SHA-256'
+                        : 'Copy SHA-256'}
                     </button>
                     <button
                       type="button"
@@ -3524,16 +3559,25 @@ export default function XtermWebSshTerminal({
                                   scpChecksumResult?.sha256 && (
                                     <button
                                       type="button"
-                                      onClick={() =>
+                                      onClick={() => {
                                         navigator.clipboard?.writeText(
                                           scpChecksumResult.sha256
-                                        )
-                                      }
+                                        );
+                                        setCopiedShaPath(entry.path);
+                                        setTimeout(
+                                          () => setCopiedShaPath(''),
+                                          1800
+                                        );
+                                      }}
                                       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-300 border border-emerald-500/35 cursor-pointer"
                                       title={`Verified SHA-256: ${scpChecksumResult.sha256} (click to copy)`}
                                     >
-                                      🔒 SHA-256:{' '}
-                                      {scpChecksumResult.sha256.slice(0, 8)}…
+                                      {copiedShaPath === entry.path
+                                        ? '✓ Copied SHA-256!'
+                                        : `🔒 SHA-256: ${scpChecksumResult.sha256.slice(
+                                            0,
+                                            8
+                                          )}…`}
                                     </button>
                                   )}
                               </div>
