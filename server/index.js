@@ -48721,6 +48721,10 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
           .replace(/[^a-z0-9-]/g, '-')
           .replace(/^-+|-+$/g, '')
           .slice(0, 45) || 'cp-worker-pool';
+      const targetInstances = Math.max(
+        1,
+        Math.min(10, Number(instances) || 1)
+      );
       const cliArgs = [
         'beta',
         'run',
@@ -48730,10 +48734,46 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
         `--project=${projectId}`,
         `--region=${region}`,
         `--image=${image}`,
-        `--instances=${Math.max(1, Math.min(10, Number(instances) || 1))}`,
+        `--instances=${targetInstances}`,
         '--format=json',
       ];
       const cliRes = await runGcloudAlphaBetaJson(cliArgs, 25000);
+      const workerPoolYaml = `apiVersion: run.googleapis.com/v1
+kind: WorkerPool
+metadata:
+  name: ${cleanName}
+  namespace: "${projectId}"
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/ManualInstanceCount: "${targetInstances}"
+    spec:
+      containers:
+        - image: ${image}
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"`;
+      const workerPoolTerraform = `resource "google_cloud_run_v2_worker_pool" "${cleanName.replace(/-/g, '_')}" {
+  provider = google-beta
+  name     = "${cleanName}"
+  location = "${region}"
+  project  = "${projectId}"
+  launch_stage = "BETA"
+
+  scaling {
+    manual_instance_count = ${targetInstances}
+  }
+
+  template {
+    containers {
+      image = "${image}"
+    }
+  }
+}`;
       recordFlightEvent(projectId, {
         action: 'BETA_CLOUD_RUN_WORKER_POOL_DEPLOY',
         resourceType: 'CLOUD_RUN_WORKER_POOL_BETA',
@@ -48750,6 +48790,11 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
         executedCommand: cliRes.command,
         cliAppliedLive: cliRes.ok,
         durationMs: cliRes.durationMs,
+        workerPoolName: cleanName,
+        workerInstances: targetInstances,
+        workerImage: image,
+        generatedWorkerPoolYaml: workerPoolYaml,
+        generatedTerraformHcl: workerPoolTerraform,
         stdout: cliRes.stdout,
         stderr: cliRes.stderr,
         data: cliRes.data,
@@ -48807,6 +48852,8 @@ spec:
         probeCommandExecuted: listRes.command,
         cliAppliedLive: listRes.ok,
         durationMs: listRes.durationMs,
+        multiRegionName: cleanName,
+        targetRegions: targetRegions.split(','),
         stdout: listRes.stdout || yamlManifest,
         stderr: listRes.stderr,
         generatedMultiRegionYaml: yamlManifest,
@@ -48816,7 +48863,7 @@ spec:
 
     // ------------------------------------------------------------------------
     // 3. [BETA] INSPECT CLOUD RUN CONTAINER INSTANCES & DOCKER COMPOSE BRIDGE
-    //    (gcloud beta run instances list & gcloud beta run compose up)
+    //    (gcloud beta run instances list & gcloud run compose up [GA])
     // ------------------------------------------------------------------------
     if (action === 'INSPECT_BETA_RUN_INSTANCES') {
       const cliRes = await runGcloudAlphaBetaJson(
@@ -48843,11 +48890,11 @@ spec:
       return res.json({
         success: true,
         releaseTrack: 'BETA',
-        releaseBadge: '[BETA] gcloud beta run instances & compose',
+        releaseBadge: '[BETA] gcloud beta run instances & [GA] gcloud run compose',
         preGaNotice:
-          '`gcloud beta run instances` and `gcloud beta run compose up` are Public Preview (BETA) tools for direct container instance inspection and Compose-to-Cloud-Run deployment.',
+          '`gcloud beta run instances` inspects live container instances, while `gcloud run compose up` (promoted to GA in SDK 590.0.0) deploys a compose.yaml specification straight to Cloud Run.',
         executedCommand: cliRes.command,
-        composeCommand: `gcloud beta run compose up docker-compose.yaml --project=${projectId} --region=${region}`,
+        composeCommand: `gcloud run compose up compose.yaml --project=${projectId} --region=${region}`,
         generatedComposeYaml: composeYaml,
         cliAppliedLive: cliRes.ok,
         durationMs: cliRes.durationMs,
