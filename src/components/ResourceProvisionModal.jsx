@@ -9,6 +9,7 @@ import {
   Database,
   Sparkles,
   Check,
+  CheckCircle2,
   Copy,
   Zap,
   ShieldCheck,
@@ -2554,6 +2555,7 @@ export default function ResourceProvisionModal({
             primarySubnetRegion: vpcPrimarySubnetRegion,
             primarySubnetCidr: vpcPrimarySubnetCidr,
             enablePrivateGoogleAccess: vpcEnablePrivateGoogleAccess,
+            privateIpGoogleAccess: vpcEnablePrivateGoogleAccess,
             subnetPurpose: vpcSubnetPurpose,
             subnetStackType: vpcSubnetStackType,
             enableFlowLogs: vpcEnableFlowLogs,
@@ -2564,6 +2566,18 @@ export default function ResourceProvisionModal({
             secondaryPodCidr: vpcSecondaryPodCidr,
             secondarySvcRangeName: vpcSecondarySvcRangeName,
             secondarySvcCidr: vpcSecondarySvcCidr,
+            secondaryIpRanges: vpcEnableSecondaryRanges
+              ? [
+                  {
+                    rangeName: vpcSecondaryPodRangeName,
+                    ipCidrRange: vpcSecondaryPodCidr,
+                  },
+                  {
+                    rangeName: vpcSecondarySvcRangeName,
+                    ipCidrRange: vpcSecondarySvcCidr,
+                  },
+                ]
+              : [],
             bootstrapIapSshRule: vpcBootstrapIapSshRule,
             bootstrapInternalRule: vpcBootstrapInternalRule,
             bootstrapHealthCheckRule: vpcBootstrapHealthCheckRule,
@@ -2583,6 +2597,8 @@ export default function ResourceProvisionModal({
             description:
               serviceType === 'BIGQUERY_DATASET'
                 ? bqDescription
+                : serviceType === 'VPC_NETWORK'
+                ? vpcDescription
                 : firewallDescription,
             storageClass,
             locationType: gcsLocationType,
