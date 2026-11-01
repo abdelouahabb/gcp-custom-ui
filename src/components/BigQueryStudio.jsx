@@ -24,6 +24,11 @@ import {
   Sliders,
   ArrowRight,
   Cpu,
+  Download,
+  Search,
+  Activity,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 const STUDIO_TABS = [
@@ -37,15 +42,23 @@ const STUDIO_TABS = [
   },
   {
     id: 'TABLES_SQL',
-    label: 'SQL Pre-Crime X-Ray — Dry-Run Cost Estimator & Auto-Optimizer',
+    label: 'SQL Pre-Crime X-Ray — Dry-Run & Optimizer',
     shortLabel: 'SQL Pre-Crime X-Ray',
     badge: '$6.25/TB Dry-Run',
     icon: Sparkles,
-    tip: 'Browse or create Partitioned + Clustered tables, run live Dry-Run Byte Cost Estimation ($6.25/TB), and auto-rewrite SQL using Column Pruning, Predicate Pushdown & WHERE EXISTS semi-joins',
+    tip: 'Browse or create Partitioned + Clustered tables, seed live telemetry rows, run Dry-Run Byte Cost Estimation ($6.25/TB), and auto-rewrite SQL using Column Pruning & WHERE EXISTS',
+  },
+  {
+    id: 'LIVE_JOBS',
+    label: 'Live Jobs & Slot Telemetry (jobs.list)',
+    shortLabel: 'Live Jobs & Slots',
+    badge: 'GCP Jobs API',
+    icon: Activity,
+    tip: 'Inspect real-time Google Cloud BigQuery Job History (bigquery.jobs.list), Slot-ms consumption, Capacitor stage execution plans, cache hits, and per-job FinOps billing',
   },
   {
     id: 'FINOPS_CRYSTAL',
-    label: 'Slot FinOps Crystal — Logical vs Physical Storage & Cost Forecaster',
+    label: 'Slot FinOps Crystal — Logical vs Physical',
     shortLabel: 'Storage & Slot Crystal',
     badge: 'Capacitor 5:1',
     icon: DollarSign,
@@ -178,6 +191,19 @@ export default function BigQueryStudio({
   const [maxBytesGuardGb, setMaxBytesGuardGb] = useState(1); // 1 GB safety guard
   const [runningQuery, setRunningQuery] = useState(false);
   const [queryResult, setQueryResult] = useState(null);
+  const [showSqlDiffSideBySide, setShowSqlDiffSideBySide] = useState(true);
+  const [rowSearchFilter, setRowSearchFilter] = useState('');
+  const [dailyExecFrequency, setDailyExecFrequency] = useState(100); // 100 runs/day for annualized savings
+  const [queryHistory, setQueryHistory] = useState([]);
+  const [showQueryHistoryDrawer, setShowQueryHistoryDrawer] = useState(false);
+
+  // Interactive Table Schema & Live Row Seeding state
+  const [expandedSchemaTableId, setExpandedSchemaTableId] = useState(null);
+  const [seedingTableId, setSeedingTableId] = useState(null);
+
+  // Live BigQuery Jobs & Slot Telemetry state
+  const [jobsList, setJobsList] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
 
   useEffect(() => {
     if (initialSql && initialSql.trim()) {
@@ -266,15 +292,97 @@ export default function BigQueryStudio({
     [projectId]
   );
 
+  const fetchJobs = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingJobs(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/bigquery/jobs`
+      );
+      setJobsList(res.data?.jobs || []);
+    } catch {
+      setJobsList([]);
+    } finally {
+      setLoadingJobs(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     fetchDatasets();
-  }, [fetchDatasets]);
+    fetchJobs();
+  }, [fetchDatasets, fetchJobs]);
 
   useEffect(() => {
     if (selectedDatasetId) {
       fetchTables(selectedDatasetId);
     }
   }, [selectedDatasetId, fetchTables]);
+
+  // Stream 10 Live Telemetry Rows into a BigQuery Table via tabledata.insertAll
+  const handleSeedTableRows = async (tableId) => {
+    if (!projectId || !selectedDatasetId || !tableId) return;
+    setSeedingTableId(tableId);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/bigquery/datasets/${encodeURIComponent(
+          selectedDatasetId
+        )}/tables/${encodeURIComponent(tableId)}/seed-rows`
+      );
+      onShowToast?.(
+        res.data?.message ||
+          `Streamed 10 live telemetry rows into ${selectedDatasetId}.${tableId}!`
+      );
+      await fetchTables(selectedDatasetId);
+      const seededSql = `SELECT *\nFROM \`${projectId}.${selectedDatasetId}.${tableId}\`\nWHERE user_id IN (\n  SELECT user_id\n  FROM \`${projectId}.${selectedDatasetId}.${tableId}\`\n  WHERE region = 'us-central1'\n)\nORDER BY latency_ms DESC\nLIMIT 15;`;
+      setSqlInput(seededSql);
+      await handleExecuteQuery(false, seededSql);
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          `Failed to stream sample rows into ${tableId}.`
+      );
+    } finally {
+      setSeedingTableId(null);
+    }
+  };
+
+  // Export Live Query Rows as CSV or JSON
+  const handleExportRows = (format = 'CSV') => {
+    const rows = queryResult?.rows || [];
+    if (rows.length === 0) return;
+    let content = '';
+    let mime = 'text/csv;charset=utf-8;';
+    let ext = 'csv';
+
+    if (format === 'JSON') {
+      content = JSON.stringify(rows, null, 2);
+      mime = 'application/json;charset=utf-8;';
+      ext = 'json';
+    } else {
+      const cols = Object.keys(rows[0]);
+      const header = cols.join(',');
+      const lines = rows.map((r) =>
+        cols
+          .map((c) => {
+            const val = String(r[c] ?? '').replace(/"/g, '""');
+            return /[,"\n]/.test(val) ? `"${val}"` : val;
+          })
+          .join(',')
+      );
+      content = [header, ...lines].join('\n');
+    }
+
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bigquery_${projectId}_${Date.now()}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onShowToast?.(`Exported ${rows.length} BigQuery rows as .${ext.toUpperCase()}!`);
+  };
 
   // 1-Tap Live Compliance & FinOps Dataset Patch
   const handlePatchDataset = async (datasetId, patchPayload, labelDesc) => {
@@ -376,6 +484,7 @@ export default function BigQueryStudio({
   // Run SQL Dry-Run X-Ray or Live Query
   const handleExecuteQuery = async (isDryRun = true, sqlOverride = null) => {
     const targetSql = sqlOverride !== null ? sqlOverride : sqlInput;
+    const startedAt = Date.now();
     setRunningQuery(true);
     try {
       const activeDs = datasets.find((d) => d.datasetId === selectedDatasetId);
@@ -391,7 +500,27 @@ export default function BigQueryStudio({
           ),
         }
       );
-      setQueryResult(res.data);
+      const durationMs = Math.max(18, Date.now() - startedAt);
+      const enriched = { ...res.data, durationMs };
+      setQueryResult(enriched);
+      setQueryHistory((prev) => [
+        {
+          id: `bq-q-${Date.now()}`,
+          executedAt: new Date().toLocaleTimeString(),
+          durationMs,
+          dryRun: isDryRun,
+          ok: res.data?.ok !== false,
+          blockedBySafetyGuard: Boolean(res.data?.blockedBySafetyGuard),
+          totalBytesProcessed: Number(res.data?.totalBytesProcessed || 0),
+          optimizedBytesEstimate: Number(res.data?.optimizedBytesEstimate || 0),
+          onDemandCostUsd: Number(res.data?.onDemandCostUsd || 0),
+          totalRows: Number(res.data?.totalRows || 0),
+          sql: targetSql,
+        },
+        ...prev.slice(0, 19),
+      ]);
+      fetchJobs();
+
       setTimeout(() => {
         document
           .getElementById('bigquery-query-results-anchor')
@@ -419,7 +548,7 @@ export default function BigQueryStudio({
 
       if (isDryRun) {
         onShowToast?.(
-          `Dry-Run X-Ray ($0.00 billed): ${formatBytes(
+          `Dry-Run X-Ray ($0.00 billed · ${durationMs}ms): ${formatBytes(
             res.data?.totalBytesProcessed
           )} ($${Number(res.data?.onDemandCostUsd || 0).toFixed(
             4
@@ -429,7 +558,7 @@ export default function BigQueryStudio({
         );
       } else {
         onShowToast?.(
-          `Executed live BigQuery SQL (${
+          `Executed live BigQuery SQL (${durationMs}ms · ${
             res.data?.totalRows || 0
           } rows returned · ${formatBytes(
             res.data?.totalBytesBilled
@@ -662,7 +791,7 @@ export default function BigQueryStudio({
               <span>BigQuery Studio Modules (Select Module Below):</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
             {STUDIO_TABS.map((t) => {
               const Icon = t.icon || Database;
               const active = activeSubTab === t.id;
@@ -673,13 +802,13 @@ export default function BigQueryStudio({
                   data-feature-id={`BQ_TAB_${t.id}`}
                   onClick={() => setActiveSubTab(t.id)}
                   title={t.tip}
-                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-2.5 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                       : 'bg-zinc-50 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                   }`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span
                       className={`p-1 rounded-md shrink-0 ${
                         active
@@ -689,11 +818,11 @@ export default function BigQueryStudio({
                     >
                       <Icon className="w-3.5 h-3.5" />
                     </span>
-                    <span className="truncate">{t.label}</span>
+                    <span className="truncate">{t.shortLabel || t.label}</span>
                   </div>
                   {t.badge && (
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
+                      className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 ${
                         active
                           ? 'bg-white/20 text-white'
                           : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
@@ -790,6 +919,36 @@ export default function BigQueryStudio({
 
                       {/* 1-Tap Live Compliance & FinOps Hardening Actions */}
                       <div className="flex items-center gap-2 flex-wrap">
+                        {(!isPhysical || !hasPartitionTtl || !isBankerRounding) && (
+                          <button
+                            type="button"
+                            disabled={Boolean(hardeningId)}
+                            onClick={() =>
+                              handlePatchDataset(
+                                ds.datasetId,
+                                {
+                                  storageBillingModel: 'PHYSICAL',
+                                  defaultPartitionExpirationDays:
+                                    ds.defaultPartitionExpirationDays > 0
+                                      ? ds.defaultPartitionExpirationDays
+                                      : 90,
+                                  defaultRoundingMode: 'ROUND_HALF_EVEN',
+                                  labels: {
+                                    ...(ds.labels || {}),
+                                    finops_tier: 'physical_capacitor',
+                                    governance: 'zero_trust_hardened',
+                                  },
+                                },
+                                'Full Zero-Trust & FinOps Suite (Physical + 90d TTL + Banker Rounding)'
+                              )
+                            }
+                            title="Apply Physical Compressed Billing, 90-Day Partition TTL, IEEE 754 Banker Rounding, and FinOps Attribution Labels in 1 click"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>⚡ 1-Tap Full Harden (100/100)</span>
+                          </button>
+                        )}
                         {!isPhysical && (
                           <button
                             type="button"
@@ -1080,22 +1239,75 @@ export default function BigQueryStudio({
                     No tables in this dataset yet — click the button above to seed a Partitioned + Clustered analytical table.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {tables.map((t) => (
-                      <div
-                        key={t.tableId}
-                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                            {t.tableId}
-                          </span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                    {tables.map((t) => {
+                      const isSchemaOpen = expandedSchemaTableId === t.tableId;
+                      const isSeeding = seedingTableId === t.tableId;
+                      return (
+                        <div
+                          key={t.tableId}
+                          className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSchemaTableId(
+                                  isSchemaOpen ? null : t.tableId
+                                )
+                              }
+                              className="inline-flex items-center gap-1 font-bold text-zinc-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 truncate cursor-pointer"
+                              title="Click to inspect live table schema and insert column pills"
+                            >
+                              {isSchemaOpen ? (
+                                <ChevronDown className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                              ) : (
+                                <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                              )}
+                              <span className="truncate">{t.tableId}</span>
+                            </button>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 shrink-0">
                               {t.timePartitioning?.type
                                 ? `PARTITIONED (${t.timePartitioning.type})`
                                 : t.type}
                             </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                            <span>
+                              Cluster:{' '}
+                              {(t.clustering || []).join(', ') || 'None'}
+                            </span>
+                            <span>
+                              {t.numRows} rows · {formatBytes(t.numBytes)}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSchemaTableId(
+                                  isSchemaOpen ? null : t.tableId
+                                )
+                              }
+                              className="px-2 py-1 rounded bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                            >
+                              {isSchemaOpen
+                                ? 'Hide Schema'
+                                : `Schema (${(t.schemaFields || []).length} cols)`}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSeeding}
+                              onClick={() => handleSeedTableRows(t.tableId)}
+                              title="Stream 10 live telemetry rows into this table via bigquery.tabledata.insertAll and execute a live query"
+                              className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              {isSeeding
+                                ? 'Streaming 10 Rows...'
+                                : '+ Seed 10 Live Rows'}
+                            </button>
                             <button
                               type="button"
                               onClick={() => {
@@ -1103,23 +1315,69 @@ export default function BigQueryStudio({
                                 setSqlInput(tblSql);
                                 handleExecuteQuery(true, tblSql);
                               }}
-                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                              className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer ml-auto"
                             >
                               Dry-Run Table →
                             </button>
                           </div>
+
+                          {/* Expandable Live Column Schema & 1-Click Column Pill Builder */}
+                          {isSchemaOpen && (
+                            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                              <div className="text-[10px] text-zinc-500 flex items-center justify-between">
+                                <span>Click any column pill to build a pruned SELECT:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cols = (t.schemaFields || [])
+                                      .slice(0, 5)
+                                      .map((f) => f.name);
+                                    const prunedSql = `SELECT\n  ${
+                                      cols.length > 0 ? cols.join(',\n  ') : '*'
+                                    }\nFROM \`${projectId}.${selectedDatasetId}.${t.tableId}\`\nLIMIT 25;`;
+                                    setSqlInput(prunedSql);
+                                    handleExecuteQuery(true, prunedSql);
+                                  }}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                                >
+                                  Build Pruned SELECT →
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {(t.schemaFields || []).map((f) => (
+                                  <button
+                                    key={f.name}
+                                    type="button"
+                                    onClick={() => {
+                                      setSqlInput((prev) =>
+                                        prev.includes(f.name)
+                                          ? prev
+                                          : prev.replace(
+                                              /SELECT\s+\*/i,
+                                              `SELECT\n  ${f.name}`
+                                            )
+                                      );
+                                      onShowToast?.(
+                                        `Selected column "${f.name}" (${f.type})`
+                                      );
+                                    }}
+                                    title={f.description || `${f.name} (${f.type})`}
+                                    className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                      {f.name}
+                                    </span>
+                                    <span className="text-[9px] text-blue-600 dark:text-blue-400">
+                                      {f.type}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                          <span>
-                            Cluster:{' '}
-                            {(t.clustering || []).join(', ') || 'None'}
-                          </span>
-                          <span>
-                            {t.numRows} rows · {formatBytes(t.numBytes)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1185,7 +1443,7 @@ export default function BigQueryStudio({
               />
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={runningQuery}
@@ -1211,6 +1469,17 @@ export default function BigQueryStudio({
                     <Play className="w-3.5 h-3.5" />
                     <span>2. Execute Live SQL (Protected)</span>
                   </button>
+
+                  {queryHistory.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowQueryHistoryDrawer((v) => !v)}
+                      className="inline-flex items-center gap-1 px-2.5 py-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      <History className="w-3.5 h-3.5 text-blue-500" />
+                      <span>History ({queryHistory.length})</span>
+                    </button>
+                  )}
                 </div>
 
                 {queryResult?.optimizationReport?.optimizedSql &&
@@ -1235,6 +1504,73 @@ export default function BigQueryStudio({
                     </button>
                   )}
               </div>
+
+              {/* Session Query Audit Trail & Cost History Drawer */}
+              {showQueryHistoryDrawer && queryHistory.length > 0 && (
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      Session SQL Execution &amp; Dry-Run History ({queryHistory.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQueryHistoryDrawer(false)}
+                      className="text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                    >
+                      Close ✕
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                    {queryHistory.map((h) => (
+                      <div
+                        key={h.id}
+                        className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                              h.blockedBySafetyGuard
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                : !h.ok
+                                ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                : h.dryRun
+                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {h.blockedBySafetyGuard
+                              ? 'GUARD BLOCK'
+                              : !h.ok
+                              ? 'ERROR'
+                              : h.dryRun
+                              ? 'DRY-RUN'
+                              : `LIVE (${h.totalRows}r)`}
+                          </span>
+                          <span className="text-[10.5px] text-zinc-500 shrink-0">
+                            {h.executedAt} · {h.durationMs}ms
+                          </span>
+                          <span className="text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                            {formatBytes(h.totalBytesProcessed)} (${h.onDemandCostUsd.toFixed(4)})
+                          </span>
+                          <code className="text-[10px] text-zinc-500 truncate max-w-xs">
+                            {h.sql.replace(/\s+/g, ' ')}
+                          </code>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSqlInput(h.sql);
+                            setShowQueryHistoryDrawer(false);
+                          }}
+                          className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold cursor-pointer shrink-0"
+                        >
+                          Load SQL
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Dry-Run & Optimizer Report Output */}
               {queryResult && (
@@ -1332,8 +1668,13 @@ export default function BigQueryStudio({
                     </div>
 
                     <div className="p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/25">
-                      <div className="text-[10px] font-mono uppercase text-blue-500">
-                        Execution Mode
+                      <div className="text-[10px] font-mono uppercase text-blue-500 flex items-center justify-between">
+                        <span>Execution Mode</span>
+                        {queryResult.durationMs && (
+                          <span className="text-[10px] font-bold">
+                            {queryResult.durationMs}ms
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white mt-0.5">
                         {queryResult.blockedBySafetyGuard
@@ -1349,36 +1690,116 @@ export default function BigQueryStudio({
                     </div>
                   </div>
 
-                  {/* Summary of Optimizations (Required by bigquery-sql skill) */}
+                  {/* Visual Capacitor Byte Reduction Bar + Annualized FinOps Savings Calculator */}
+                  {queryResult.totalBytesProcessed > 0 && (
+                    <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs font-mono">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          Capacitor Scan Footprint &amp; Annualized Pipeline FinOps ROI
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-zinc-500">
+                            Pipeline Frequency:
+                          </span>
+                          <select
+                            value={dailyExecFrequency}
+                            onChange={(e) =>
+                              setDailyExecFrequency(Number(e.target.value))
+                            }
+                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-0.5 text-[10.5px] font-bold"
+                          >
+                            <option value={10}>10 runs/day (Hourly Batch)</option>
+                            <option value={100}>100 runs/day (BI Dashboard)</option>
+                            <option value={1000}>1,000 runs/day (High-Freq API)</option>
+                          </select>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10.5px]">
+                            Saves $
+                            {Math.max(
+                              0,
+                              (Number(queryResult.onDemandCostUsd || 0) -
+                                Number(queryResult.optimizedCostUsd || 0)) *
+                                dailyExecFrequency *
+                                365
+                            ).toFixed(2)}
+                            /yr
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                          <span>
+                            Before Optimizer: {formatBytes(queryResult.totalBytesProcessed)} (100%)
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            After Optimizer: {formatBytes(queryResult.optimizedBytesEstimate)} (
+                            {Math.max(
+                              1,
+                              100 -
+                                (queryResult.optimizationReport
+                                  ?.estimatedReductionPercent || 0)
+                            )}
+                            % of original scan)
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 rounded-full bg-red-500/25 overflow-hidden flex">
+                          <div
+                            style={{
+                              width: `${Math.max(
+                                4,
+                                100 -
+                                  (queryResult.optimizationReport
+                                    ?.estimatedReductionPercent || 0)
+                              )}%`,
+                            }}
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary of Optimizations (Required by bigquery-sql skill) + Side-by-Side Diff */}
                   {queryResult.optimizationReport && (
                     <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
                           Summary of Optimizations (`bigquery-sql` Engine)
                         </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            copyText(
-                              queryResult.optimizationReport.optimizedSql,
-                              'opt-sql'
-                            )
-                          }
-                          title="Copy optimized BigQuery SQL to clipboard"
-                          className="inline-flex items-center gap-1 text-[11px] font-mono text-blue-500 hover:underline cursor-pointer"
-                        >
-                          {copiedId === 'opt-sql' ? (
-                            <>
-                              <Check className="w-3 h-3" />
-                              <span>Copied Optimized SQL</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy Optimized SQL</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowSqlDiffSideBySide((v) => !v)}
+                            className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                          >
+                            {showSqlDiffSideBySide
+                              ? 'Unified SQL View'
+                              : 'Side-by-Side SQL Diff'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                queryResult.optimizationReport.optimizedSql,
+                                'opt-sql'
+                              )
+                            }
+                            title="Copy optimized BigQuery SQL to clipboard"
+                            className="inline-flex items-center gap-1 text-[11px] font-mono text-blue-500 hover:underline cursor-pointer"
+                          >
+                            {copiedId === 'opt-sql' ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Copied Optimized SQL</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Optimized SQL</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-1.5">
@@ -1404,45 +1825,292 @@ export default function BigQueryStudio({
                         ))}
                       </div>
 
-                      <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 text-[11px] font-mono overflow-x-auto">
-                        {queryResult.optimizationReport.optimizedSql}
-                      </pre>
+                      {showSqlDiffSideBySide &&
+                      queryResult.optimizationReport.originalSql?.trim() !==
+                        queryResult.optimizationReport.optimizedSql?.trim() ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-mono font-bold uppercase text-red-500">
+                              Before (Unoptimized SQL · {formatBytes(queryResult.totalBytesProcessed)})
+                            </div>
+                            <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-red-500/25 text-zinc-600 dark:text-zinc-400 text-[11px] font-mono overflow-x-auto max-h-56">
+                              {queryResult.optimizationReport.originalSql}
+                            </pre>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                              After (Auto-Optimized SQL · {formatBytes(queryResult.optimizedBytesEstimate)})
+                            </div>
+                            <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono overflow-x-auto max-h-56">
+                              {queryResult.optimizationReport.optimizedSql}
+                            </pre>
+                          </div>
+                        </div>
+                      ) : (
+                        <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 text-[11px] font-mono overflow-x-auto">
+                          {queryResult.optimizationReport.optimizedSql}
+                        </pre>
+                      )}
                     </div>
                   )}
 
-                  {/* Live Query Rows Table */}
+                  {/* Live Query Rows Table with Search Filter, Column Schema Badges & CSV/JSON Export */}
                   {!queryResult.dryRun &&
                     Array.isArray(queryResult.rows) &&
                     queryResult.rows.length > 0 && (
-                      <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                        <table className="w-full text-left text-xs font-mono">
-                          <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400">
-                            <tr>
-                              {Object.keys(queryResult.rows[0]).map((col) => (
-                                <th key={col} className="px-3 py-2">
-                                  {col}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                            {queryResult.rows.slice(0, 15).map((r, idx) => (
-                              <tr key={idx}>
-                                {Object.values(r).map((val, cIdx) => (
-                                  <td key={cIdx} className="px-3 py-1.5">
-                                    {String(val ?? 'NULL')}
-                                  </td>
-                                ))}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                              Live Query Result Rows ({queryResult.rows.length} of{' '}
+                              {queryResult.totalRows})
+                            </span>
+                            {queryResult.jobId && (
+                              <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500">
+                                Job: {queryResult.jobId.slice(0, 18)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <div className="relative">
+                              <Search className="w-3 h-3 text-zinc-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                value={rowSearchFilter}
+                                onChange={(e) =>
+                                  setRowSearchFilter(e.target.value)
+                                }
+                                placeholder="Filter rows..."
+                                className="pl-6 pr-2 py-1 rounded-md bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono w-36 focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleExportRows('CSV')}
+                              className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>Export CSV</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleExportRows('JSON')}
+                              className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>Export JSON</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl max-h-80">
+                          <table className="w-full text-left text-xs font-mono">
+                            <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
+                              <tr>
+                                {Object.keys(queryResult.rows[0]).map((col) => {
+                                  const fieldMeta = (
+                                    queryResult.schemaFields || []
+                                  ).find((f) => f.name === col);
+                                  return (
+                                    <th key={col} className="px-3 py-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{col}</span>
+                                        {fieldMeta?.type && (
+                                          <span className="px-1 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-normal">
+                                            {fieldMeta.type}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </th>
+                                  );
+                                })}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                              {queryResult.rows
+                                .filter((r) =>
+                                  !rowSearchFilter.trim()
+                                    ? true
+                                    : Object.values(r).some((v) =>
+                                        String(v ?? '')
+                                          .toLowerCase()
+                                          .includes(
+                                            rowSearchFilter.trim().toLowerCase()
+                                          )
+                                      )
+                                )
+                                .slice(0, 25)
+                                .map((r, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                                  >
+                                    {Object.entries(r).map(([colName, val], cIdx) => {
+                                      const fieldMeta = (
+                                        queryResult.schemaFields || []
+                                      ).find((f) => f.name === colName);
+                                      let displayVal = String(val ?? 'NULL');
+                                      if (
+                                        fieldMeta?.type === 'TIMESTAMP' &&
+                                        /^\d+(\.\d+)?([eE][+-]?\d+)?$/.test(
+                                          displayVal
+                                        )
+                                      ) {
+                                        const sec = Number(displayVal);
+                                        if (sec > 946684800 && sec < 4102444800) {
+                                          displayVal = new Date(
+                                            sec * 1000
+                                          ).toISOString();
+                                        }
+                                      }
+                                      return (
+                                        <td
+                                          key={cIdx}
+                                          className="px-3 py-1.5 whitespace-nowrap"
+                                        >
+                                          {displayVal}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                 </div>
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* TAB 2.5: LIVE BIGQUERY JOBS & SLOT TELEMETRY (bigquery.jobs.list)   */}
+      {/* =================================================================== */}
+      {activeSubTab === 'LIVE_JOBS' && (
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-500" />
+                <span>
+                  Live Google Cloud BigQuery Jobs &amp; Slot Telemetry (`bigquery.jobs.list`)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Real-time job execution ledger streamed from `bigquery.googleapis.com/bigquery/v2/projects/{projectId}/jobs` with Slot-ms consumption, Capacitor shuffle stages, and cache hits.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchJobs}
+              disabled={loadingJobs}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loadingJobs ? 'animate-spin' : ''}`}
+              />
+              <span>Refresh Live Jobs ({jobsList.length})</span>
+            </button>
+          </div>
+
+          {loadingJobs && jobsList.length === 0 ? (
+            <div className="py-8 text-center text-xs font-mono text-zinc-400 animate-pulse">
+              Querying live BigQuery jobs API (`bigquery.jobs.list`)...
+            </div>
+          ) : jobsList.length === 0 ? (
+            <div className="py-8 text-center text-xs font-mono text-zinc-500">
+              No recent BigQuery jobs found in `{projectId}` — run a query in the SQL Pre-Crime X-Ray tab to generate live job telemetry.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {jobsList.map((job) => (
+                <div
+                  key={job.jobId}
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          job.errorMessage
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {job.errorMessage ? 'ERROR' : job.state}
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {job.jobId}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px]">
+                        {job.location}
+                      </span>
+                      {job.cacheHit && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                          CACHE HIT ($0.00)
+                        </span>
+                      )}
+                      <span className="text-[11px] text-zinc-500">
+                        {job.userEmail}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        Scanned: {formatBytes(job.totalBytesProcessed)}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        ${Number(job.estimatedCostUsd || 0).toFixed(4)}
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        Slot-ms: {Number(job.totalSlotMs || 0).toLocaleString()}
+                      </span>
+                      <span className="text-zinc-500">{job.durationMs}ms</span>
+                      {job.query && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSqlInput(job.query);
+                            setActiveSubTab('TABLES_SQL');
+                          }}
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          Open in SQL X-Ray →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {job.query && (
+                    <pre className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-700 dark:text-zinc-300 overflow-x-auto">
+                      {job.query}
+                    </pre>
+                  )}
+
+                  {Array.isArray(job.stages) && job.stages.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-zinc-500">
+                        Execution Plan Stages:
+                      </span>
+                      {job.stages.map((st, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300"
+                        >
+                          {st.name}: {st.recordsRead.toLocaleString()} read →{' '}
+                          {st.recordsWritten.toLocaleString()} out ({st.slotMs} slot-ms)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1725,11 +2393,12 @@ export default function BigQueryStudio({
                   onClick={() => {
                     setSqlInput(card.sql);
                     setActiveSubTab('TABLES_SQL');
+                    handleExecuteQuery(true, card.sql);
                   }}
-                  title={`Load "${card.title}" into the SQL Dry-Run Cost Estimator & Live Executor`}
+                  title={`Load "${card.title}" into the SQL Dry-Run Cost Estimator & run Dry-Run X-Ray`}
                   className="w-full mt-2 py-1.5 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                 >
-                  Load into SQL X-Ray & Execute →
+                  Load into SQL X-Ray &amp; Dry-Run →
                 </button>
               </div>
             ))}

@@ -25562,6 +25562,8 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
       return res.json({
         ok: true,
         dryRun: Boolean(dryRun),
+        jobId: bqRes.jobReference?.jobId || null,
+        jobLocation: bqRes.jobReference?.location || location || 'US',
         cacheHit: Boolean(bqRes.cacheHit),
         jobComplete: bqRes.jobComplete !== false,
         totalBytesProcessed,
@@ -25668,6 +25670,178 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         'BigQuery query execution failed.',
+    });
+  }
+});
+
+// 11f. POST /api/project/:projectId/bigquery/datasets/:datasetId/tables/:tableId/seed-rows -> Stream 10 live telemetry rows via tabledata.insertAll
+app.post(
+  '/api/project/:projectId/bigquery/datasets/:datasetId/tables/:tableId/seed-rows',
+  async (req, res) => {
+    const { projectId, datasetId, tableId } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const now = Date.now();
+      const regions = ['us-central1', 'europe-west1', 'us-east4', 'asia-northeast1'];
+      const services = [
+        'checkout-orchestrator',
+        'vertex-rag-gateway',
+        'payment-ledger-api',
+        'auth-token-broker',
+      ];
+      const users = [
+        'usr_enterprise_01',
+        'usr_finops_02',
+        'usr_sovereign_03',
+        'usr_quant_04',
+        'usr_retail_05',
+      ];
+
+      const rows = Array.from({ length: 10 }).map((_, idx) => {
+        const tsIso = new Date(now - idx * 3600 * 1000).toISOString();
+        const region = regions[idx % regions.length];
+        const svc = services[idx % services.length];
+        const usr = users[idx % users.length];
+        const latency = Number((18.4 + idx * 14.7).toFixed(2));
+        const rev = Number((49.99 + idx * 125.5).toFixed(2));
+        return {
+          insertId: `seed-${now}-${idx}`,
+          json: {
+            event_id: `evt_${now}_${idx + 1}`,
+            event_timestamp: tsIso,
+            user_id: usr,
+            region,
+            service_name: svc,
+            latency_ms: latency,
+            revenue_usd: String(rev),
+          },
+        };
+      });
+
+      const insertRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets/${encodeURIComponent(datasetId)}/tables/${encodeURIComponent(
+          tableId
+        )}/insertAll`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            kind: 'bigquery#tableDataInsertAllRequest',
+            skipInvalidRows: true,
+            ignoreUnknownValues: true,
+            rows,
+          },
+          timeout: 10000,
+        }
+      );
+
+      const insertErrors = insertRes?.insertErrors || [];
+      if (insertErrors.length > 0) {
+        return res.status(400).json({
+          error:
+            insertErrors[0]?.errors?.[0]?.message ||
+            'BigQuery tabledata.insertAll reported row schema errors.',
+          insertErrors,
+        });
+      }
+
+      res.json({
+        ok: true,
+        insertedCount: rows.length,
+        message: `Streamed ${rows.length} live telemetry rows into ${projectId}.${datasetId}.${tableId} via tabledata.insertAll!`,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to stream rows into ${tableId}`,
+      });
+    }
+  }
+);
+
+// 11g. GET /api/project/:projectId/bigquery/jobs -> Live BigQuery Jobs & Slot Telemetry (bigquery.jobs.list)
+app.get('/api/project/:projectId/bigquery/jobs', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const listRes = await gcpFetch(
+      `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+        projectId
+      )}/jobs?allUsers=true&maxResults=30&projection=full`,
+      token,
+      projectId,
+      { timeout: 8000 }
+    );
+
+    const rawJobs = listRes?.jobs || [];
+    const jobs = rawJobs.map((j) => {
+      const qStats = j.statistics?.query || {};
+      const startMs = Number(j.statistics?.startTime || j.statistics?.creationTime || 0);
+      const endMs = Number(j.statistics?.endTime || startMs);
+      const totalBytesProcessed = Number(
+        qStats.totalBytesProcessed || j.statistics?.totalBytesProcessed || 0
+      );
+      const totalBytesBilled = Number(qStats.totalBytesBilled || 0);
+      const totalSlotMs = Number(
+        qStats.totalSlotMs || j.statistics?.totalSlotMs || 0
+      );
+      const billableBytes =
+        totalBytesBilled > 0
+          ? totalBytesBilled
+          : totalBytesProcessed > 0
+          ? Math.max(totalBytesProcessed, 10485760)
+          : 0;
+      const estimatedCostUsd = (billableBytes / 1e12) * 6.25;
+      const stages = (qStats.queryPlan || []).slice(0, 6).map((s) => ({
+        name: s.name,
+        status: s.status,
+        recordsRead: Number(s.recordsRead || 0),
+        recordsWritten: Number(s.recordsWritten || 0),
+        shuffleOutputBytes: Number(s.shuffleOutputBytes || 0),
+        slotMs: Number(s.slotMs || 0),
+      }));
+
+      return {
+        jobId: j.jobReference?.jobId || j.id,
+        location: j.jobReference?.location || 'US',
+        state: j.status?.state || 'DONE',
+        userEmail: j.user_email || 'authenticated-principal',
+        statementType: qStats.statementType || 'SELECT',
+        query: j.configuration?.query?.query || '',
+        dryRun: Boolean(j.configuration?.dryRun),
+        cacheHit: Boolean(qStats.cacheHit),
+        totalBytesProcessed,
+        totalBytesBilled,
+        totalSlotMs,
+        estimatedCostUsd,
+        durationMs: Math.max(0, endMs - startMs),
+        creationTime: startMs ? new Date(startMs).toISOString() : null,
+        errorMessage: j.status?.errorResult?.message || null,
+        stages,
+      };
+    });
+
+    res.json({
+      projectId,
+      count: jobs.length,
+      jobs,
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to fetch BigQuery job history.',
     });
   }
 });
