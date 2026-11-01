@@ -216,6 +216,7 @@ export default function GcloudAlphaBetaStudio({
   );
   const [workbenchHighlightLabel, setWorkbenchHighlightLabel] = useState('');
   const [workbenchProbeReceipt, setWorkbenchProbeReceipt] = useState(null);
+  const [workbenchViewTab, setWorkbenchViewTab] = useState('SUMMARY');
   const [showRawJson, setShowRawJson] = useState(false);
   const [designCodeTab, setDesignCodeTab] = useState('DEPLOY_SH');
   const workbenchSectionRef = useRef(null);
@@ -370,6 +371,11 @@ export default function GcloudAlphaBetaStudio({
         actionKey === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
       ) {
         setWorkbenchProbeReceipt(receiptObj);
+        setWorkbenchViewTab(
+          actionKey === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
+            ? 'HELP_MANPAGE'
+            : 'SUMMARY'
+        );
       }
       notify(
         `${res.data?.releaseBadge || '[ALPHA/BETA]'} executed (${
@@ -378,11 +384,34 @@ export default function GcloudAlphaBetaStudio({
       );
       fetchOverview();
     } catch (err) {
-      notify(
+      const errMsg =
         err.response?.data?.error ||
-          err.message ||
-          `Failed to execute ${actionKey}`
-      );
+        err.message ||
+        `Failed to execute ${actionKey}`;
+      if (
+        actionKey === 'EXECUTE_READONLY_GCLOUD_PROBE' ||
+        actionKey === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
+      ) {
+        setWorkbenchProbeReceipt({
+          actionKey,
+          timestamp: new Date().toLocaleTimeString(),
+          cliOk: false,
+          syntaxValid: false,
+          probeMode: 'CLI_DIAGNOSTIC',
+          executedCommand: payload?.commandText || workbenchCommand,
+          durationMs: 0,
+          probeData: [],
+          stderr: errMsg,
+          diagnostics: {
+            status: 'CLI_DIAGNOSTIC',
+            headline: 'Workbench Probe Diagnostic Notice',
+            detail: errMsg,
+          },
+          note: errMsg,
+        });
+        setWorkbenchViewTab('SUMMARY');
+      }
+      notify(errMsg);
     } finally {
       setActionRunning('');
     }
@@ -654,8 +683,15 @@ export default function GcloudAlphaBetaStudio({
                 <button
                   key={preset.label}
                   type="button"
-                  onClick={() => setWorkbenchCommand(preset.cmd)}
-                  className="px-2 py-0.5 rounded bg-white/80 hover:bg-white dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300/80 dark:border-zinc-700 text-[10px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  onClick={() =>
+                    handleLoadInWorkbench(preset.cmd, preset.label)
+                  }
+                  title={`Load & immediately probe: ${preset.cmd}`}
+                  className={`px-2 py-0.5 rounded border text-[10px] font-mono font-semibold cursor-pointer transition-colors ${
+                    workbenchCommand === preset.cmd
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                      : 'bg-white/80 hover:bg-white dark:bg-zinc-900 dark:hover:bg-zinc-800 border-zinc-300/80 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                  }`}
                 >
                   {preset.label}
                 </button>
@@ -669,6 +705,13 @@ export default function GcloudAlphaBetaStudio({
               type="text"
               value={workbenchCommand}
               onChange={(e) => setWorkbenchCommand(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && workbenchCommand.trim()) {
+                  executeAlphaBetaAction('EXECUTE_READONLY_GCLOUD_PROBE', {
+                    commandText: workbenchCommand,
+                  });
+                }
+              }}
               placeholder="Enter any gcloud / gcloud beta / gcloud alpha command..."
               className="flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
             />
@@ -697,7 +740,7 @@ export default function GcloudAlphaBetaStudio({
                     commandText: workbenchCommand,
                   })
                 }
-                title="Execute this read-only gcloud command live against your project with --format=json"
+                title="Execute this read-only gcloud command live against your project (or run a safe pre-flight dry-run for mutating verbs)"
                 className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
               >
                 <Play className="w-3 h-3" />
@@ -706,6 +749,23 @@ export default function GcloudAlphaBetaStudio({
                     ? 'Running Probe...'
                     : 'Run Live Probe'}
                 </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  copyText(
+                    workbenchCommand.includes('--project=')
+                      ? workbenchCommand
+                      : `${workbenchCommand} --project=${projectId}`,
+                    'Workbench CLI command'
+                  )
+                }
+                title="Copy full gcloud command with --project flag"
+                className="px-2.5 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer inline-flex items-center gap-1"
+              >
+                <Copy className="w-3 h-3" />
+                <span>Copy</span>
               </button>
 
               {typeof onOpenShellWithCommand === 'function' && (
@@ -728,20 +788,133 @@ export default function GcloudAlphaBetaStudio({
             </div>
           </div>
 
-          {/* Inline Live Workbench Probe Output Strip */}
+          {/* Animated In-Flight Progress Banner while Live Probe or Syntax Validation is running */}
+          {(actionRunning === 'EXECUTE_READONLY_GCLOUD_PROBE' ||
+            actionRunning === 'VALIDATE_GCLOUD_COMMAND_SYNTAX') && (
+            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/50 flex items-center justify-between gap-3 font-mono text-xs animate-pulse">
+              <div className="flex items-center gap-2.5">
+                <RefreshCw className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                <div>
+                  <div className="font-extrabold text-blue-300">
+                    {actionRunning === 'VALIDATE_GCLOUD_COMMAND_SYNTAX'
+                      ? `Inspecting SDK ${overview?.sdk?.coreVersion || '591.0.0'} Manpage & Flag Schema...`
+                      : `Executing Live SDK ${overview?.sdk?.coreVersion || '591.0.0'} Probe against project "${projectId}"...`}
+                  </div>
+                  <div className="text-[10.5px] text-zinc-400 break-all">
+                    $ {workbenchCommand}
+                  </div>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-bold shrink-0">
+                IN FLIGHT
+              </span>
+            </div>
+          )}
+
+          {/* Rich Interactive Live Workbench Probe & Dry-Run Inspection Panel */}
           {workbenchProbeReceipt && (
-            <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-emerald-500/40 space-y-1.5 font-mono text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="font-extrabold text-emerald-300">
-                    Live Workbench Probe Result ({workbenchProbeReceipt.durationMs || 0}ms)
+            <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-emerald-500/40 space-y-3 font-mono text-xs shadow-lg">
+              {/* 1. Top Header & Mode Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-800">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CheckCircle2
+                    className={`w-4 h-4 shrink-0 ${
+                      workbenchProbeReceipt.diagnostics?.status ===
+                        'API_NOT_ENABLED' ||
+                      workbenchProbeReceipt.diagnostics?.status ===
+                        'CLI_DIAGNOSTIC'
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                    }`}
+                  />
+                  <span className="font-extrabold text-emerald-300 text-xs">
+                    {workbenchProbeReceipt.probeMode ===
+                    'SAFE_DRY_RUN_AND_SYNTAX_VERIFIED'
+                      ? 'Safe Pre-Flight Dry-Run & Live Inventory Probe'
+                      : workbenchProbeReceipt.probeMode ===
+                          'SYNTAX_AND_MANPAGE_VERIFIED'
+                        ? 'SDK 591.0.0 Command Syntax & Manpage Verification'
+                        : 'Live GCP Read-Only Probe Result'}
+                  </span>
+                  {workbenchProbeReceipt.releaseTrack && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
+                      [{workbenchProbeReceipt.releaseTrack} · SDK{' '}
+                      {overview?.sdk?.coreVersion || '591.0.0'}]
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                      workbenchProbeReceipt.syntaxValid !== false
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}
+                  >
+                    {workbenchProbeReceipt.syntaxValid !== false
+                      ? '✓ SYNTAX VALID'
+                      : 'DIAGNOSTIC'}
                   </span>
                   <span className="text-[10px] text-zinc-400">
+                    {workbenchProbeReceipt.durationMs || 0}ms ·{' '}
                     {workbenchProbeReceipt.timestamp}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* View Switcher Pills */}
+                  {[
+                    {
+                      id: 'SUMMARY',
+                      label: `Live Probe & Anatomy (${
+                        Array.isArray(workbenchProbeReceipt.probeData)
+                          ? workbenchProbeReceipt.probeData.length
+                          : Array.isArray(workbenchProbeReceipt.data)
+                            ? workbenchProbeReceipt.data.length
+                            : 0
+                      })`,
+                    },
+                    {
+                      id: 'HELP_MANPAGE',
+                      label: 'SDK 591.0.0 --help Manpage',
+                    },
+                    {
+                      id: 'RAW_JSON',
+                      label: 'Raw JSON Payload',
+                    },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setWorkbenchViewTab(t.id)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                        workbenchViewTab === t.id
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+
+                  {workbenchProbeReceipt.parsedCommandBreakdown?.ownerStudio && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleNavigateOwnerStudio(
+                          workbenchProbeReceipt.parsedCommandBreakdown
+                            .ownerStudio,
+                          workbenchProbeReceipt.parsedCommandBreakdown
+                            .ownerStudioLabel || 'Owning Studio'
+                        )
+                      }
+                      className="px-2.5 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold cursor-pointer"
+                    >
+                      Open{' '}
+                      {workbenchProbeReceipt.parsedCommandBreakdown
+                        .ownerStudioLabel || 'Studio'}{' '}
+                      →
+                    </button>
+                  )}
+
                   {activeSubTab === 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY' && (
                     <button
                       type="button"
@@ -753,9 +926,10 @@ export default function GcloudAlphaBetaStudio({
                       }
                       className="px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
                     >
-                      ↓ Jump Back to Grounded Architecture Pillars
+                      ↓ Jump Back to Grounded Pillars
                     </button>
                   )}
+
                   <button
                     type="button"
                     onClick={() => setWorkbenchProbeReceipt(null)}
@@ -765,21 +939,416 @@ export default function GcloudAlphaBetaStudio({
                   </button>
                 </div>
               </div>
-              <div className="text-[11px] text-emerald-400 break-all">
-                $ {workbenchProbeReceipt.executedCommand || workbenchCommand}
+
+              {/* 2. Executed Command Line & Parsed Command Anatomy Strip */}
+              <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[11px] text-emerald-400 break-all font-bold">
+                    $ {workbenchProbeReceipt.executedCommand || workbenchCommand}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          workbenchProbeReceipt.executedCommand ||
+                            workbenchCommand,
+                          'Executed gcloud command'
+                        )
+                      }
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                    >
+                      Copy CLI
+                    </button>
+                    {typeof onOpenShellWithCommand === 'function' && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenShellWithCommand(
+                            workbenchProbeReceipt.executedCommand ||
+                              workbenchCommand
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        $ Run in Cloud Shell
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {workbenchProbeReceipt.parsedCommandBreakdown && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-zinc-800/80 text-[10px]">
+                    <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                      Group:{' '}
+                      <strong className="text-white">
+                        {
+                          workbenchProbeReceipt.parsedCommandBreakdown
+                            .commandGroup
+                        }
+                      </strong>
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded font-bold ${
+                        workbenchProbeReceipt.parsedCommandBreakdown.isMutating
+                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      }`}
+                    >
+                      Verb:{' '}
+                      {workbenchProbeReceipt.parsedCommandBreakdown.verb?.toUpperCase()}{' '}
+                      (
+                      {workbenchProbeReceipt.parsedCommandBreakdown.isMutating
+                        ? 'MUTATING · SAFE DRY-RUN'
+                        : 'READ-ONLY LIVE'}
+                      )
+                    </span>
+                    {workbenchProbeReceipt.parsedCommandBreakdown
+                      .targetServiceApi && (
+                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                        API:{' '}
+                        {
+                          workbenchProbeReceipt.parsedCommandBreakdown
+                            .targetServiceApi
+                        }
+                      </span>
+                    )}
+                    {(
+                      workbenchProbeReceipt.parsedCommandBreakdown
+                        .positionalArgs || []
+                    ).map((arg, idx) => (
+                      <span
+                        key={`${arg}-${idx}`}
+                        className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                      >
+                        Target: {arg}
+                      </span>
+                    ))}
+                    {(
+                      workbenchProbeReceipt.parsedCommandBreakdown.flags || []
+                    ).map((flag, idx) => (
+                      <span
+                        key={`${flag}-${idx}`}
+                        className="px-2 py-0.5 rounded bg-zinc-800 text-emerald-300 border border-emerald-500/30"
+                      >
+                        ✓ {flag.length > 48 ? `${flag.slice(0, 48)}...` : flag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              {workbenchProbeReceipt.helpExcerpt ? (
-                <pre className="max-h-40 overflow-auto p-2 rounded bg-black/70 text-[10.5px] text-emerald-200 whitespace-pre-wrap">
-                  {workbenchProbeReceipt.helpExcerpt}
-                </pre>
-              ) : (
-                <div className="text-[11px] text-zinc-300">
-                  {workbenchProbeReceipt.note ||
-                    `Probe completed (${
-                      Array.isArray(workbenchProbeReceipt.probeData)
-                        ? `${workbenchProbeReceipt.probeData.length} item(s) returned`
-                        : 'CLI verified'
-                    }).`}
+
+              {/* 3. Tab View Content */}
+              {workbenchViewTab === 'SUMMARY' && (
+                <div className="space-y-2.5">
+                  {/* Diagnostic Headline & Explanation Banner */}
+                  {workbenchProbeReceipt.diagnostics && (
+                    <div
+                      className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                        workbenchProbeReceipt.diagnostics.status ===
+                        'API_NOT_ENABLED'
+                          ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                          : workbenchProbeReceipt.diagnostics.status ===
+                              'SAFE_DRY_RUN_VERIFIED'
+                            ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-200'
+                            : workbenchProbeReceipt.diagnostics.status ===
+                                'CLI_DIAGNOSTIC'
+                              ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
+                              : 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="font-extrabold text-xs flex items-center gap-1.5">
+                          <span>
+                            {workbenchProbeReceipt.diagnostics.status ===
+                            'API_NOT_ENABLED'
+                              ? '⚠️ GCP Service API Enablement Required'
+                              : workbenchProbeReceipt.diagnostics.status ===
+                                  'SAFE_DRY_RUN_VERIFIED'
+                                ? '🛡️ Safe Pre-Flight Dry-Run & Flag Schema Verified'
+                                : '✓ Live GCP Probe Verification'}
+                          </span>
+                          <span>—</span>
+                          <span>
+                            {workbenchProbeReceipt.diagnostics.headline}
+                          </span>
+                        </div>
+                        <div className="text-[11px] opacity-90 leading-relaxed">
+                          {workbenchProbeReceipt.diagnostics.detail}
+                        </div>
+                      </div>
+
+                      {workbenchProbeReceipt.parsedCommandBreakdown
+                        ?.enableApiCli &&
+                        workbenchProbeReceipt.diagnostics.status ===
+                          'API_NOT_ENABLED' && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                copyText(
+                                  workbenchProbeReceipt.parsedCommandBreakdown
+                                    .enableApiCli,
+                                  'Enable Service API command'
+                                )
+                              }
+                              className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              Copy Enable API CLI
+                            </button>
+                            {typeof onOpenShellWithCommand === 'function' && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onOpenShellWithCommand(
+                                    workbenchProbeReceipt.parsedCommandBreakdown
+                                      .enableApiCli
+                                  )
+                                }
+                                className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-500/40 text-[10px] font-bold cursor-pointer"
+                              >
+                                $ Enable in Shell
+                              </button>
+                            )}
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {/* Live Returned Resource Cards (when probeData or data has items) */}
+                  {(() => {
+                    const rawList = Array.isArray(
+                      workbenchProbeReceipt.probeData
+                    )
+                      ? workbenchProbeReceipt.probeData
+                      : Array.isArray(workbenchProbeReceipt.data)
+                        ? workbenchProbeReceipt.data
+                        : workbenchProbeReceipt.data &&
+                            typeof workbenchProbeReceipt.data === 'object'
+                          ? [workbenchProbeReceipt.data]
+                          : [];
+
+                    if (rawList.length > 0) {
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[10.5px] text-zinc-400">
+                            <span className="font-bold uppercase tracking-wider text-emerald-300">
+                              Live Returned Project Resources ({rawList.length})
+                            </span>
+                            <span>Project: {projectId}</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+                            {rawList.slice(0, 12).map((item, idx) => {
+                              if (!item || typeof item !== 'object') {
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-200 break-all"
+                                  >
+                                    {String(item)}
+                                  </div>
+                                );
+                              }
+                              const fullName = String(
+                                item.name ||
+                                  item.id ||
+                                  item.resourceType ||
+                                  item.uri ||
+                                  item.title ||
+                                  `Resource #${idx + 1}`
+                              );
+                              const shortTitle = fullName.includes('/')
+                                ? fullName.split('/').pop()
+                                : fullName;
+                              const stateVal =
+                                item.state ||
+                                item.status ||
+                                item.stage ||
+                                item.onboardingState ||
+                                item.category ||
+                                'ACTIVE';
+                              const subtitleVal =
+                                item.displayName ||
+                                item.description ||
+                                item.location ||
+                                item.region ||
+                                item.createTime ||
+                                fullName;
+                              const extraKeys = Object.entries(item)
+                                .filter(
+                                  ([k, v]) =>
+                                    ![
+                                      'name',
+                                      'id',
+                                      'state',
+                                      'status',
+                                      'displayName',
+                                      'description',
+                                    ].includes(k) &&
+                                    (typeof v === 'string' ||
+                                      typeof v === 'number' ||
+                                      typeof v === 'boolean')
+                                )
+                                .slice(0, 3);
+
+                              return (
+                                <div
+                                  key={idx}
+                                  className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800 hover:border-emerald-500/40 space-y-1 transition-colors"
+                                >
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span className="font-extrabold text-emerald-300 text-[11px] truncate">
+                                      {shortTitle}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9.5px] font-bold shrink-0">
+                                      {String(stateVal)}
+                                    </span>
+                                  </div>
+                                  <div className="text-[10px] text-zinc-400 truncate">
+                                    {String(subtitleVal)}
+                                  </div>
+                                  {extraKeys.length > 0 && (
+                                    <div className="pt-1 border-t border-zinc-800/80 flex flex-wrap gap-1">
+                                      {extraKeys.map(([k, v]) => (
+                                        <span
+                                          key={k}
+                                          className="px-1.5 py-0.5 rounded bg-zinc-950 text-zinc-300 text-[9.5px] truncate max-w-full"
+                                        >
+                                          {k}: {String(v).slice(0, 36)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
+
+                  {/* Terminal stdout / stderr output if non-empty and helpful */}
+                  {(workbenchProbeReceipt.stderr ||
+                    (workbenchProbeReceipt.stdout &&
+                      workbenchProbeReceipt.stdout.trim() !== '[]')) && (
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        Live CLI Stream Output (stdout / stderr):
+                      </div>
+                      <pre className="max-h-40 overflow-auto p-2.5 rounded-lg bg-black/80 border border-zinc-800 text-[10.5px] text-zinc-200 whitespace-pre-wrap">
+                        {(
+                          workbenchProbeReceipt.stdout ||
+                          workbenchProbeReceipt.stderr ||
+                          ''
+                        ).slice(0, 2000)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Inline Manpage Synopsis Preview when 0 items returned so user always sees rich SDK 591.0.0 documentation */}
+                  {workbenchProbeReceipt.helpExcerpt &&
+                    (!Array.isArray(workbenchProbeReceipt.probeData) ||
+                      workbenchProbeReceipt.probeData.length === 0) && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                            Verified SDK {overview?.sdk?.coreVersion || '591.0.0'}{' '}
+                            Command Synopsis &amp; Flags (--help):
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setWorkbenchViewTab('HELP_MANPAGE')}
+                            className="text-[10px] text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Expand Full Manpage →
+                          </button>
+                        </div>
+                        <pre className="max-h-36 overflow-auto p-2.5 rounded-lg bg-black/75 border border-zinc-800 text-[10.5px] text-emerald-200 whitespace-pre-wrap">
+                          {workbenchProbeReceipt.helpExcerpt}
+                        </pre>
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {workbenchViewTab === 'HELP_MANPAGE' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10.5px] text-blue-300">
+                    <span className="font-bold">
+                      Installed Google Cloud SDK{' '}
+                      {overview?.sdk?.coreVersion || '591.0.0'} Manpage (
+                      {workbenchProbeReceipt.parsedCommandBreakdown
+                        ?.commandGroup || workbenchCommand}{' '}
+                      --help)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          workbenchProbeReceipt.helpExcerpt || '',
+                          'SDK --help manpage'
+                        )
+                      }
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                    >
+                      Copy Manpage
+                    </button>
+                  </div>
+                  <pre className="max-h-72 overflow-auto p-3 rounded-lg bg-black/80 border border-zinc-800 text-[11px] text-emerald-200 whitespace-pre-wrap leading-relaxed">
+                    {workbenchProbeReceipt.helpExcerpt ||
+                      'Click "Validate Syntax (--help)" to inspect the full SDK 591.0.0 command manpage.'}
+                  </pre>
+                </div>
+              )}
+
+              {workbenchViewTab === 'RAW_JSON' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10.5px] text-zinc-400">
+                    <span className="font-bold text-emerald-300">
+                      Structured Probe Receipt &amp; Live JSON Payload
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          JSON.stringify(
+                            workbenchProbeReceipt.data ??
+                              workbenchProbeReceipt.probeData ??
+                              workbenchProbeReceipt,
+                            null,
+                            2
+                          ),
+                          'Probe JSON payload'
+                        )
+                      }
+                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                    >
+                      Copy JSON
+                    </button>
+                  </div>
+                  <pre className="max-h-72 overflow-auto p-3 rounded-lg bg-black/80 border border-zinc-800 text-[10.5px] text-emerald-300 whitespace-pre-wrap">
+                    {JSON.stringify(
+                      {
+                        executedCommand: workbenchProbeReceipt.executedCommand,
+                        probeMode: workbenchProbeReceipt.probeMode,
+                        releaseTrack: workbenchProbeReceipt.releaseTrack,
+                        syntaxValid: workbenchProbeReceipt.syntaxValid,
+                        durationMs: workbenchProbeReceipt.durationMs,
+                        parsedCommandBreakdown:
+                          workbenchProbeReceipt.parsedCommandBreakdown,
+                        diagnostics: workbenchProbeReceipt.diagnostics,
+                        data:
+                          workbenchProbeReceipt.data ??
+                          workbenchProbeReceipt.probeData ??
+                          [],
+                      },
+                      null,
+                      2
+                    )}
+                  </pre>
                 </div>
               )}
             </div>
