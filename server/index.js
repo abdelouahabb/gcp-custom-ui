@@ -17039,6 +17039,12 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         memoryUtilizationPct: matching.length > 0 ? hostMemPct : 0,
         infraMarker,
         isAnomalySpike: errorCount > 0,
+        entryIds: matching.map((m) => m.id),
+        topServices: Array.from(new Set(matching.map((m) => m.serviceName))).slice(0, 4),
+        sampleSummary:
+          matching.find((m) => m.severity === 'ERROR' || m.severity === 'CRITICAL')?.cleanMessage?.slice(0, 140) ||
+          matching[0]?.cleanMessage?.slice(0, 140) ||
+          '',
       };
     });
 

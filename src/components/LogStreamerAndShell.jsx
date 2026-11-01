@@ -158,7 +158,7 @@ export default function LogStreamerAndShell({
   const [lastQueryMeta, setLastQueryMeta] = useState(null);
   const [showNlpParseDrawer, setShowNlpParseDrawer] = useState(false);
   const [showSavedViewsDrawer, setShowSavedViewsDrawer] = useState(false);
-  const [showHistogramDrawer, setShowHistogramDrawer] = useState(false);
+  const [showHistogramDrawer, setShowHistogramDrawer] = useState(true);
   const [showAdvancedLabsTabs, setShowAdvancedLabsTabs] = useState(false);
   const [showAuditTimelineSection, setShowAuditTimelineSection] = useState(true);
 
@@ -209,6 +209,9 @@ export default function LogStreamerAndShell({
       if (!projectId) return;
       const startedAt = Date.now();
       setLoadingChrono(true);
+      if (!overrides.preserveBucketSelection) {
+        setSelectedHistogramBucket(null);
+      }
       if (overrides.notifyUser && !overrides.preserveTab) {
         setActiveChronoTab('SMART_STREAM');
         focusResultsStream();
@@ -704,6 +707,119 @@ export default function LogStreamerAndShell({
     }
   };
 
+  const getBucketMatchingEntries = useCallback(
+    (bucket) => {
+      if (!bucket) return chronoData?.entries || [];
+      const allEntries = chronoData?.entries || [];
+      if (Array.isArray(bucket.entryIds) && bucket.entryIds.length > 0) {
+        const idSet = new Set(bucket.entryIds);
+        return allEntries.filter((e) => idSet.has(e.id));
+      }
+      if (Array.isArray(bucket.entryIds) && bucket.entryIds.length === 0 && bucket.totalCount === 0) {
+        return [];
+      }
+      const bStart = Date.parse(bucket.startIso);
+      const bEnd = Date.parse(bucket.endIso);
+      return allEntries.filter((e) => {
+        const t = Date.parse(e.timestamp);
+        return bucket.bucketIndex === 23
+          ? t >= bStart && t <= bEnd
+          : t >= bStart && t < bEnd;
+      });
+    },
+    [chronoData]
+  );
+
+  const handleSelectHistogramBucket = useCallback(
+    (bucket) => {
+      if (!bucket) {
+        setSelectedHistogramBucket(null);
+        return;
+      }
+      if (selectedHistogramBucket === bucket.bucketIndex) {
+        setSelectedHistogramBucket(null);
+        focusResultsStream();
+        if (onShowToast) {
+          onShowToast('Cleared bar graph filter — showing all 24 timeline buckets.');
+        }
+        return;
+      }
+      setSelectedHistogramBucket(bucket.bucketIndex);
+      setActiveChronoTab('SMART_STREAM');
+      const matching = getBucketMatchingEntries(bucket);
+      const topEntry =
+        matching.find(
+          (e) =>
+            e.severity === 'ERROR' ||
+            e.severity === 'CRITICAL' ||
+            e.severity === 'WARNING'
+        ) ||
+        matching[0] ||
+        null;
+      setExpandedChronoEntryId(topEntry ? topEntry.id : null);
+      focusResultsStream();
+      if (onShowToast) {
+        const markerNote = bucket.infraMarker
+          ? ` · ${bucket.infraMarker.badge}: ${bucket.infraMarker.title}`
+          : '';
+        onShowToast(
+          `Bucket #${bucket.bucketIndex + 1}/24 (${bucket.label}${
+            bucket.windowLabel ? ` · ${bucket.windowLabel}` : ''
+          }): ${matching.length} log ${
+            matching.length === 1 ? 'entry' : 'entries'
+          } (ERR: ${bucket.errorCount}, WARN: ${bucket.warningCount}, INFO: ${
+            bucket.infoCount
+          })${markerNote}`
+        );
+      }
+    },
+    [
+      selectedHistogramBucket,
+      getBucketMatchingEntries,
+      focusResultsStream,
+      onShowToast,
+    ]
+  );
+
+  const jumpToAdjacentActiveBucket = useCallback(
+    (direction) => {
+      const buckets = chronoData?.histogramBuckets || [];
+      if (buckets.length === 0) return;
+      const activeBuckets = buckets.filter((b) => b.totalCount > 0);
+      const pool = activeBuckets.length > 0 ? activeBuckets : buckets;
+      if (selectedHistogramBucket === null) {
+        const target =
+          direction === 'PREV' ? pool[pool.length - 1] : pool[0];
+        if (target) handleSelectHistogramBucket(target);
+        return;
+      }
+      const currentIdxInPool = pool.findIndex(
+        (b) => b.bucketIndex === selectedHistogramBucket
+      );
+      let nextBucket = null;
+      if (currentIdxInPool !== -1) {
+        const nextPos =
+          direction === 'PREV'
+            ? (currentIdxInPool - 1 + pool.length) % pool.length
+            : (currentIdxInPool + 1) % pool.length;
+        nextBucket = pool[nextPos];
+      } else {
+        nextBucket =
+          direction === 'PREV'
+            ? [...pool]
+                .reverse()
+                .find((b) => b.bucketIndex < selectedHistogramBucket) ||
+              pool[pool.length - 1]
+            : pool.find((b) => b.bucketIndex > selectedHistogramBucket) ||
+              pool[0];
+      }
+      if (nextBucket) {
+        handleSelectHistogramBucket(nextBucket);
+      }
+    },
+    [chronoData, selectedHistogramBucket, handleSelectHistogramBucket]
+  );
+
   const triggerTimeTravelPeek = (timestampIso) => {
     setTimeTravelAnchor(timestampIso);
     setActiveChronoTab('SMART_STREAM');
@@ -849,7 +965,18 @@ export default function LogStreamerAndShell({
     }
   };
 
-  const chronoEntries = (chronoData?.entries || []).filter((e) => {
+  const activeSelectedBucket =
+    selectedHistogramBucket !== null
+      ? (chronoData?.histogramBuckets || []).find(
+          (b) => b.bucketIndex === selectedHistogramBucket
+        ) || null
+      : null;
+
+  const bucketFilteredEntries = activeSelectedBucket
+    ? getBucketMatchingEntries(activeSelectedBucket)
+    : chronoData?.entries || [];
+
+  const chronoEntries = bucketFilteredEntries.filter((e) => {
     if (severityFilter === 'ALL') return true;
     return e.severity === severityFilter;
   });
@@ -1766,10 +1893,26 @@ export default function LogStreamerAndShell({
                   CLICKHOUSE / HYPERDX / LOKI HISTOGRAM + INFRA OVERLAY
                 </span>
                 <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                  Stacked Severity Volume, P95 Latency &amp; Deployment/Quota Markers (Click any bar to zoom ±30s)
+                  Stacked Severity Volume, P95 Latency &amp; Deployment/Quota Markers (Click any bar or event pill to inspect what happened)
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono flex-wrap">
+              <div className="flex items-center gap-2 text-[10px] font-mono flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => jumpToAdjacentActiveBucket('PREV')}
+                  className="px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
+                  title="Jump to previous non-empty histogram bar and inspect its logs"
+                >
+                  ◀ Prev Active Bar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => jumpToAdjacentActiveBucket('NEXT')}
+                  className="px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
+                  title="Jump to next non-empty histogram bar and inspect its logs"
+                >
+                  Next Active Bar ▶
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowInfraOverlay((v) => !v)}
@@ -1793,10 +1936,10 @@ export default function LogStreamerAndShell({
                 {selectedHistogramBucket !== null && (
                   <button
                     type="button"
-                    onClick={clearTimeTravelPeek}
+                    onClick={() => handleSelectHistogramBucket(null)}
                     className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold cursor-pointer"
                   >
-                    Reset Zoom
+                    ✕ Show All 24 Bars
                   </button>
                 )}
               </div>
@@ -1806,32 +1949,35 @@ export default function LogStreamerAndShell({
             {showInfraOverlay && (
               <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 <span className="text-[10px] font-mono text-zinc-500">
-                  Correlated Infrastructure Events:
+                  Correlated Infrastructure Events (Click to jump to logs):
                 </span>
                 {chronoData.histogramBuckets
                   .filter((b) => b.infraMarker)
-                  .map((b) => (
-                    <button
-                      key={b.bucketIndex}
-                      type="button"
-                      onClick={() => {
-                        setSelectedHistogramBucket(b.bucketIndex);
-                        triggerTimeTravelPeek(b.centerIso);
-                      }}
-                      title={`${b.infraMarker.detail} — Click to lock ±30s around ${b.label}`}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
-                        b.infraMarker.type === 'QUOTA_EXHAUSTION'
-                          ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40'
-                          : b.infraMarker.type === 'REVISION_DEPLOY'
-                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40'
-                          : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40'
-                      }`}
-                    >
-                      <span className="underline">{b.infraMarker.badge}</span>
-                      <span>@ {b.label}:</span>
-                      <span className="font-normal">{b.infraMarker.title}</span>
-                    </button>
-                  ))}
+                  .map((b) => {
+                    const isPillSelected = selectedHistogramBucket === b.bucketIndex;
+                    return (
+                      <button
+                        key={b.bucketIndex}
+                        type="button"
+                        onClick={() => handleSelectHistogramBucket(b)}
+                        title={`${b.infraMarker.detail} — Click to filter and inspect ${b.totalCount} logs in Bucket #${b.bucketIndex + 1}/24 (${b.label})`}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 transition-all ${
+                          isPillSelected
+                            ? 'ring-2 ring-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500'
+                            : b.infraMarker.type === 'QUOTA_EXHAUSTION'
+                            ? 'bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border-red-500/40'
+                            : 'bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border-blue-500/40'
+                        }`}
+                      >
+                        <span className="underline">{b.infraMarker.badge}</span>
+                        <span>@ {b.label}:</span>
+                        <span className="font-normal">{b.infraMarker.title}</span>
+                        <span className="px-1 rounded bg-black/10 dark:bg-white/10 text-[9px] font-extrabold">
+                          {b.totalCount} logs
+                        </span>
+                      </button>
+                    );
+                  })}
               </div>
             )}
 
@@ -1842,47 +1988,61 @@ export default function LogStreamerAndShell({
               const activeReadoutBucket =
                 buckets.find((b) => b.bucketIndex === hoveredHistogramBucket) ||
                 buckets.find((b) => b.bucketIndex === selectedHistogramBucket) ||
+                buckets.filter((b) => b.totalCount > 0).slice(-1)[0] ||
                 buckets[buckets.length - 1] ||
                 buckets[0];
               return (
                 <div className="space-y-2" data-no-hover-explainer="true">
                   <div
-                    className="grid grid-cols-24 gap-1 items-end h-28 pt-3 px-1"
+                    className="grid grid-cols-24 gap-1 items-end h-32 pt-4 px-1"
                     style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
                     onMouseLeave={() => setHoveredHistogramBucket(null)}
                   >
                     {buckets.map((b) => {
-                      const errH = Math.round((b.errorCount / maxTotal) * 56);
-                      const warnH = Math.round((b.warningCount / maxTotal) * 56);
-                      const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 56));
+                      const hasLogs = b.totalCount > 0;
+                      const errH =
+                        b.errorCount > 0
+                          ? Math.max(8, Math.round((b.errorCount / maxTotal) * 54))
+                          : 0;
+                      const warnH =
+                        b.warningCount > 0
+                          ? Math.max(6, Math.round((b.warningCount / maxTotal) * 54))
+                          : 0;
+                      const infoH =
+                        b.infoCount > 0
+                          ? Math.max(8, Math.round((b.infoCount / maxTotal) * 54))
+                          : 0;
                       const isSelected = selectedHistogramBucket === b.bucketIndex;
                       const isHovered = hoveredHistogramBucket === b.bucketIndex;
                       return (
-                        <div
+                        <button
                           key={b.bucketIndex}
+                          type="button"
                           onMouseEnter={() => setHoveredHistogramBucket(b.bucketIndex)}
-                          onClick={() => {
-                            setSelectedHistogramBucket(b.bucketIndex);
-                            triggerTimeTravelPeek(b.centerIso);
-                          }}
-                          className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-colors relative ${
+                          onClick={() => handleSelectHistogramBucket(b)}
+                          title={`Bucket #${b.bucketIndex + 1}/24 (${b.label}${
+                            b.windowLabel ? ` · ${b.windowLabel}` : ''
+                          }) — Total: ${b.totalCount} (ERR: ${b.errorCount}, WARN: ${
+                            b.warningCount
+                          }, INFO: ${b.infoCount}) — Click to inspect logs below`}
+                          className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-all relative focus:outline-none ${
                             isSelected
-                              ? 'ring-2 ring-amber-500 bg-amber-500/10'
+                              ? 'ring-2 ring-amber-500 bg-amber-500/15 dark:bg-amber-500/20 shadow-sm'
                               : isHovered
-                              ? 'bg-zinc-200/80 dark:bg-zinc-800/80'
+                              ? 'bg-blue-500/10 dark:bg-blue-500/20 ring-1 ring-blue-500/40'
                               : b.isAnomalySpike
                               ? 'bg-red-500/5 hover:bg-red-500/15'
-                              : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70'
+                              : hasLogs
+                              ? 'bg-zinc-200/30 dark:bg-zinc-800/30 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80'
+                              : 'hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 opacity-70 hover:opacity-100'
                           }`}
                         >
                           {/* Top Infra Event Marker Badge */}
                           {showInfraOverlay && b.infraMarker && (
                             <span
-                              className={`text-[8px] font-mono font-extrabold px-1 rounded-full mb-0.5 truncate max-w-full ${
+                              className={`text-[7.5px] font-mono font-extrabold px-1 rounded-full mb-0.5 truncate max-w-full ${
                                 b.infraMarker.type === 'QUOTA_EXHAUSTION'
                                   ? 'bg-red-600 text-white'
-                                  : b.infraMarker.type === 'REVISION_DEPLOY'
-                                  ? 'bg-blue-600 text-white'
                                   : 'bg-blue-600 text-white'
                               }`}
                             >
@@ -1890,23 +2050,48 @@ export default function LogStreamerAndShell({
                             </span>
                           )}
 
+                          {/* Numeric Count Pill on Active Bars */}
+                          {hasLogs && (
+                            <span
+                              className={`text-[8.5px] font-mono font-extrabold leading-none mb-0.5 ${
+                                isSelected
+                                  ? 'text-amber-700 dark:text-amber-300'
+                                  : b.errorCount > 0
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : b.warningCount > 0
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-blue-600 dark:text-blue-400'
+                              }`}
+                            >
+                              {b.totalCount}
+                            </span>
+                          )}
+
                           <div className="w-full flex flex-col justify-end rounded-t overflow-hidden px-0.5">
-                            {b.errorCount > 0 && (
-                              <div
-                                style={{ height: `${Math.max(4, errH)}px` }}
-                                className="w-full bg-red-500 rounded-t-[2px]"
-                              />
+                            {hasLogs ? (
+                              <>
+                                {b.errorCount > 0 && (
+                                  <div
+                                    style={{ height: `${errH}px` }}
+                                    className="w-full bg-red-500 rounded-t-[2px]"
+                                  />
+                                )}
+                                {b.warningCount > 0 && (
+                                  <div
+                                    style={{ height: `${warnH}px` }}
+                                    className="w-full bg-amber-500"
+                                  />
+                                )}
+                                {b.infoCount > 0 && (
+                                  <div
+                                    style={{ height: `${infoH}px` }}
+                                    className="w-full bg-blue-500/85 dark:bg-blue-500/80 rounded-b-[2px]"
+                                  />
+                                )}
+                              </>
+                            ) : (
+                              <div className="w-full h-[2px] bg-zinc-300/70 dark:bg-zinc-800 rounded-full" />
                             )}
-                            {b.warningCount > 0 && (
-                              <div
-                                style={{ height: `${Math.max(3, warnH)}px` }}
-                                className="w-full bg-amber-500"
-                              />
-                            )}
-                            <div
-                              style={{ height: `${infoH}px` }}
-                              className="w-full bg-blue-500/80 dark:bg-blue-500/70 rounded-b-[2px]"
-                            />
                           </div>
 
                           {/* Correlated Container CPU Utilization Micro-Bar */}
@@ -1914,9 +2099,13 @@ export default function LogStreamerAndShell({
                             <div className="w-full px-0.5 mt-1">
                               <div className="w-full h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                                 <div
-                                  style={{ width: `${b.cpuUtilizationPct || 35}%` }}
+                                  style={{
+                                    width: `${hasLogs ? b.cpuUtilizationPct || 35 : 8}%`,
+                                  }}
                                   className={`h-full ${
-                                    (b.cpuUtilizationPct || 0) >= 85
+                                    !hasLogs
+                                      ? 'bg-zinc-300 dark:bg-zinc-700'
+                                      : (b.cpuUtilizationPct || 0) >= 85
                                       ? 'bg-red-500'
                                       : (b.cpuUtilizationPct || 0) >= 65
                                       ? 'bg-amber-500'
@@ -1927,18 +2116,26 @@ export default function LogStreamerAndShell({
                             </div>
                           )}
 
-                          <span className="text-[8.5px] font-mono text-zinc-400 mt-0.5 truncate">
-                            {b.bucketIndex % 4 === 0 ? b.label : ''}
+                          <span
+                            className={`text-[8.5px] font-mono mt-0.5 truncate ${
+                              isSelected
+                                ? 'font-extrabold text-amber-700 dark:text-amber-300'
+                                : hasLogs
+                                ? 'font-bold text-zinc-600 dark:text-zinc-300'
+                                : 'text-zinc-400'
+                            }`}
+                          >
+                            {b.bucketIndex % 4 === 0 || isSelected || hasLogs ? b.label : ''}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
 
                   {/* Fixed-Height Single-Line Bucket Readout Bar (Zero Layout Shift on Hover) */}
                   {activeReadoutBucket && (
-                    <div className="h-7 px-3 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-[11px] font-mono overflow-hidden">
-                      <div className="flex items-center gap-2.5 truncate">
+                    <div className="min-h-7 py-1 px-3 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
                           Bucket #{activeReadoutBucket.bucketIndex + 1}/24 ({activeReadoutBucket.label})
                         </span>
@@ -1960,13 +2157,28 @@ export default function LogStreamerAndShell({
                         <span className="text-blue-600 dark:text-blue-400 shrink-0">
                           INFO: {activeReadoutBucket.infoCount}
                         </span>
+                        {activeReadoutBucket.sampleSummary && (
+                          <>
+                            <span className="text-zinc-400 hidden md:inline">·</span>
+                            <span className="text-zinc-600 dark:text-zinc-400 truncate max-w-md hidden md:inline">
+                              {activeReadoutBucket.sampleSummary}
+                            </span>
+                          </>
+                        )}
                       </div>
-                      <div className="hidden sm:flex items-center gap-2.5 text-zinc-500 shrink-0">
-                        <span>P95: {activeReadoutBucket.p95LatencyMs}ms</span>
-                        <span>·</span>
-                        <span>CPU: {activeReadoutBucket.cpuUtilizationPct || 0}%</span>
-                        <span>·</span>
-                        <span>RAM: {activeReadoutBucket.memoryUtilizationPct || 0}%</span>
+                      <div className="flex items-center gap-2.5 text-zinc-500 shrink-0">
+                        <span className="hidden sm:inline">P95: {activeReadoutBucket.p95LatencyMs}ms</span>
+                        <span className="hidden sm:inline">·</span>
+                        <span className="hidden sm:inline">CPU: {activeReadoutBucket.cpuUtilizationPct || 0}%</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectHistogramBucket(activeReadoutBucket)}
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          {selectedHistogramBucket === activeReadoutBucket.bucketIndex
+                            ? '✓ Viewing This Bar Below'
+                            : `Inspect ${activeReadoutBucket.totalCount} Logs ↓`}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1999,7 +2211,8 @@ export default function LogStreamerAndShell({
 
         {/* ===================================================================
             LIVE QUERY RESULTS ANCHOR & VISUAL EXECUTION SPOTLIGHT BANNER
-            Auto-scrolled & highlighted whenever the user executes LQL or NL!
+            Auto-scrolled & highlighted whenever the user executes LQL, NL,
+            or clicks any bar in the 24-Bucket Histogram!
            =================================================================== */}
         <div
           id="chrono-live-results-anchor"
@@ -2007,6 +2220,8 @@ export default function LogStreamerAndShell({
           className={`scroll-mt-20 rounded-xl border transition-all duration-300 overflow-hidden ${
             resultsFlashActive
               ? 'border-blue-500 ring-2 ring-blue-500/70 bg-blue-500/[0.06] dark:bg-blue-500/[0.12] shadow-lg shadow-blue-500/10'
+              : activeSelectedBucket
+              ? 'border-amber-500/60 bg-amber-500/[0.04] dark:bg-amber-500/[0.08]'
               : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-[#16171a]'
           }`}
         >
@@ -2023,6 +2238,8 @@ export default function LogStreamerAndShell({
                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold border ${
                   loadingChrono
                     ? 'bg-blue-600 text-white border-blue-500'
+                    : activeSelectedBucket
+                    ? 'bg-amber-600 text-white border-amber-500'
                     : resultsFlashActive
                     ? 'bg-emerald-600 text-white border-emerald-500'
                     : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
@@ -2032,18 +2249,25 @@ export default function LogStreamerAndShell({
                   className={`w-2 h-2 rounded-full ${
                     loadingChrono
                       ? 'bg-white animate-ping'
+                      : activeSelectedBucket
+                      ? 'bg-amber-200'
                       : 'bg-emerald-400'
                   }`}
                 />
                 <span>
                   {loadingChrono
                     ? 'QUERYING CLOUD LOGGING...'
+                    : activeSelectedBucket
+                    ? `BAR #${activeSelectedBucket.bucketIndex + 1}/24 SELECTED (${activeSelectedBucket.label})`
                     : 'LIVE QUERY RESULTS'}
                 </span>
               </span>
 
               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                {chronoEntries.length} Log {chronoEntries.length === 1 ? 'Entry' : 'Entries'} Matched
+                {chronoEntries.length} Log {chronoEntries.length === 1 ? 'Entry' : 'Entries'} Shown
+                {activeSelectedBucket
+                  ? ` in Bucket #${activeSelectedBucket.bucketIndex + 1}/24 (of ${(chronoData?.entries || []).length} total)`
+                  : ' Matched'}
               </span>
               <span className="text-zinc-400">·</span>
               <span className="text-zinc-600 dark:text-zinc-400">
@@ -2101,7 +2325,11 @@ export default function LogStreamerAndShell({
                 {showCompiledSqlModal ? 'Hide LQL Editor' : 'Edit LQL / SQL'}
               </button>
 
-              {(nlQueryInput || customLqlInput || severityFilter !== 'ALL' || timeTravelAnchor) && (
+              {(nlQueryInput ||
+                customLqlInput ||
+                severityFilter !== 'ALL' ||
+                timeTravelAnchor ||
+                selectedHistogramBucket !== null) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -2109,6 +2337,7 @@ export default function LogStreamerAndShell({
                     setCustomLqlInput('');
                     setSeverityFilter('ALL');
                     setTimeTravelAnchor(null);
+                    setSelectedHistogramBucket(null);
                     setActiveSavedViewId(null);
                     fetchChronoLogs({
                       naturalLanguage: '',
@@ -2125,6 +2354,77 @@ export default function LogStreamerAndShell({
               )}
             </div>
           </div>
+
+          {/* Interactive Bar Graph Drilldown Banner: What Happened in This Bucket */}
+          {activeSelectedBucket && (
+            <div className="px-3.5 py-2.5 border-t border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <span className="px-2 py-0.5 rounded bg-amber-600 text-white text-[10px] font-extrabold uppercase shrink-0">
+                  WHAT HAPPENED IN BAR #{activeSelectedBucket.bucketIndex + 1}/24
+                </span>
+                <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                  {activeSelectedBucket.windowLabel || activeSelectedBucket.label}
+                </span>
+                <span className="text-zinc-400">·</span>
+                <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10.5px] font-bold">
+                  ERR: {activeSelectedBucket.errorCount}
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-bold">
+                  WARN: {activeSelectedBucket.warningCount}
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-bold">
+                  INFO: {activeSelectedBucket.infoCount}
+                </span>
+                {activeSelectedBucket.infraMarker && (
+                  <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold">
+                    {activeSelectedBucket.infraMarker.badge}: {activeSelectedBucket.infraMarker.title}
+                  </span>
+                )}
+                {Array.isArray(activeSelectedBucket.topServices) &&
+                  activeSelectedBucket.topServices.length > 0 && (
+                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 truncate">
+                      Services:{' '}
+                      <strong>{activeSelectedBucket.topServices.join(', ')}</strong>
+                    </span>
+                  )}
+                {activeSelectedBucket.sampleSummary && (
+                  <span className="text-[11px] text-zinc-600 dark:text-zinc-300 truncate max-w-xl">
+                    · {activeSelectedBucket.sampleSummary}
+                  </span>
+                )}
+                {activeSelectedBucket.totalCount === 0 && (
+                  <span className="text-[11px] text-amber-800 dark:text-amber-200 font-bold">
+                    No log entries occurred in this time slice — click &quot;Next Active Bar ▶&quot; to jump to the nearest active bar!
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => jumpToAdjacentActiveBucket('PREV')}
+                  className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                >
+                  ◀ Prev Active Bar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => jumpToAdjacentActiveBucket('NEXT')}
+                  className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                >
+                  Next Active Bar ▶
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectHistogramBucket(null)}
+                  className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Show All 24 Bars ({(chronoData?.entries || []).length} Logs)</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Streamlined Primary Studio Tabs (5 Core Tabs + Expandable 7 Advanced SRE Labs) + Workbench Toolbar */}
@@ -2565,15 +2865,57 @@ export default function LogStreamerAndShell({
               {chronoEntries.filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id))).length === 0 ? (
                 <div className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] text-center space-y-3 font-mono">
                   <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                    0 Log Entries Matched Current Query in <span className="text-blue-500">{projectId}</span>
+                    {activeSelectedBucket ? (
+                      <>
+                        0 Log Entries in Bar Graph Bucket #{activeSelectedBucket.bucketIndex + 1}/24 (
+                        <span className="text-amber-500">
+                          {activeSelectedBucket.windowLabel || activeSelectedBucket.label}
+                        </span>
+                        )
+                      </>
+                    ) : (
+                      <>
+                        0 Log Entries Matched Current Query in <span className="text-blue-500">{projectId}</span>
+                      </>
+                    )}
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
-                    Compiled LQL executed on <code className="text-blue-600 dark:text-blue-400">logging.googleapis.com/v2/entries:list</code>:{' '}
-                    <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 font-bold">
-                      {chronoData?.compiledQuery?.effectiveLql || 'severity>=DEFAULT'}
-                    </code>
+                    {activeSelectedBucket ? (
+                      <>
+                        This specific time slice had quiet traffic (`0` events), while the full query returned{' '}
+                        <strong className="text-zinc-900 dark:text-zinc-100">
+                          {(chronoData?.entries || []).length} log entries
+                        </strong>{' '}
+                        across active bars. Jump to the nearest active bar or show all 24 buckets:
+                      </>
+                    ) : (
+                      <>
+                        Compiled LQL executed on <code className="text-blue-600 dark:text-blue-400">logging.googleapis.com/v2/entries:list</code>:{' '}
+                        <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 font-bold">
+                          {chronoData?.compiledQuery?.effectiveLql || 'severity>=DEFAULT'}
+                        </code>
+                      </>
+                    )}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    {activeSelectedBucket && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => jumpToAdjacentActiveBucket('NEXT')}
+                          className="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Jump to Nearest Active Bar ▶
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectHistogramBucket(null)}
+                          className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Show All 24 Bars ({(chronoData?.entries || []).length} Logs)
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -2582,6 +2924,7 @@ export default function LogStreamerAndShell({
                         setSeverityFilter('ALL');
                         setShowPinnedOnly(false);
                         setTimeTravelAnchor(null);
+                        setSelectedHistogramBucket(null);
                         setActiveSavedViewId(null);
                         fetchChronoLogs({
                           naturalLanguage: '',
@@ -2590,7 +2933,7 @@ export default function LogStreamerAndShell({
                           notifyUser: true,
                         });
                       }}
-                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                      className="px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold cursor-pointer"
                     >
                       Reset Filter to All Live Project Logs
                     </button>
