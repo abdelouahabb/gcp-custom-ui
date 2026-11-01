@@ -634,6 +634,126 @@ export default function ResourceProvisionModal({
   const [autoCreateSubnetworks, setAutoCreateSubnetworks] = useState(true);
   const [routingMode, setRoutingMode] = useState('REGIONAL');
   const [mtu, setMtu] = useState(1460);
+  const [vpcBlueprint, setVpcBlueprint] = useState('always-free-auto');
+  const [vpcDescription, setVpcDescription] = useState(
+    'Zero-Trust Andromeda VPC Network provisioned via CloudPulse 2026'
+  );
+  const [vpcEnableUlaInternalIpv6, setVpcEnableUlaInternalIpv6] = useState(false);
+  const [vpcFirewallPolicyOrder, setVpcFirewallPolicyOrder] = useState(
+    'AFTER_CLASSIC_FIREWALL'
+  ); // 'AFTER_CLASSIC_FIREWALL' | 'BEFORE_CLASSIC_FIREWALL'
+  const [vpcPrimarySubnetName, setVpcPrimarySubnetName] = useState('subnet-primary-01');
+  const [vpcPrimarySubnetRegion, setVpcPrimarySubnetRegion] = useState('us-central1');
+  const [vpcPrimarySubnetCidr, setVpcPrimarySubnetCidr] = useState('10.240.0.0/20');
+  const [vpcEnablePrivateGoogleAccess, setVpcEnablePrivateGoogleAccess] = useState(true);
+  const [vpcSubnetPurpose, setVpcSubnetPurpose] = useState('PRIVATE'); // 'PRIVATE' | 'REGIONAL_MANAGED_PROXY'
+  const [vpcSubnetStackType, setVpcSubnetStackType] = useState('IPV4_ONLY'); // 'IPV4_ONLY' | 'IPV4_IPV6'
+  const [vpcEnableFlowLogs, setVpcEnableFlowLogs] = useState(false);
+  const [vpcFlowLogsInterval, setVpcFlowLogsInterval] = useState('INTERVAL_5_SEC');
+  const [vpcFlowLogsSampling, setVpcFlowLogsSampling] = useState(0.5);
+  const [vpcEnableSecondaryRanges, setVpcEnableSecondaryRanges] = useState(false);
+  const [vpcSecondaryPodRangeName, setVpcSecondaryPodRangeName] = useState('gke-pods-range');
+  const [vpcSecondaryPodCidr, setVpcSecondaryPodCidr] = useState('10.244.0.0/14');
+  const [vpcSecondarySvcRangeName, setVpcSecondarySvcRangeName] = useState('gke-services-range');
+  const [vpcSecondarySvcCidr, setVpcSecondarySvcCidr] = useState('10.248.0.0/20');
+  const [vpcBootstrapIapSshRule, setVpcBootstrapIapSshRule] = useState(true);
+  const [vpcBootstrapInternalRule, setVpcBootstrapInternalRule] = useState(true);
+  const [vpcBootstrapHealthCheckRule, setVpcBootstrapHealthCheckRule] = useState(false);
+  const [vpcBootstrapDenyEgressC2, setVpcBootstrapDenyEgressC2] = useState(false);
+  const [vpcBlueprintCodeTab, setVpcBlueprintCodeTab] = useState('GCLOUD_CLI');
+
+  const applyVpcBlueprint = (bpId) => {
+    setVpcBlueprint(bpId);
+    if (bpId === 'always-free-auto') {
+      setAutoCreateSubnetworks(true);
+      setRoutingMode('REGIONAL');
+      setMtu(1460);
+      setVpcEnableUlaInternalIpv6(false);
+      setVpcFirewallPolicyOrder('AFTER_CLASSIC_FIREWALL');
+      setVpcEnableFlowLogs(false);
+      setVpcEnableSecondaryRanges(false);
+      setVpcBootstrapIapSshRule(true);
+      setVpcBootstrapInternalRule(true);
+      setVpcBootstrapHealthCheckRule(false);
+      setVpcBootstrapDenyEgressC2(false);
+      setVpcDescription('Global Auto-Mode VPC Network ($0.00/mo control plane + IAP SSH shield)');
+    } else if (bpId === 'zero-trust-custom-iap') {
+      setAutoCreateSubnetworks(false);
+      setRoutingMode('REGIONAL');
+      setMtu(1460);
+      setVpcPrimarySubnetRegion('us-central1');
+      setVpcPrimarySubnetName('subnet-zero-trust-us');
+      setVpcPrimarySubnetCidr('10.240.0.0/20');
+      setVpcEnablePrivateGoogleAccess(true);
+      setVpcSubnetPurpose('PRIVATE');
+      setVpcSubnetStackType('IPV4_ONLY');
+      setVpcEnableFlowLogs(true);
+      setVpcFlowLogsInterval('INTERVAL_5_SEC');
+      setVpcFlowLogsSampling(0.5);
+      setVpcEnableSecondaryRanges(false);
+      setVpcFirewallPolicyOrder('BEFORE_CLASSIC_FIREWALL');
+      setVpcBootstrapIapSshRule(true);
+      setVpcBootstrapInternalRule(true);
+      setVpcBootstrapHealthCheckRule(true);
+      setVpcBootstrapDenyEgressC2(true);
+      setVpcDescription('Zero-Trust Custom Subnet VPC with Private Google Access, 5s Flow Logs & IAP Perimeter');
+    } else if (bpId === 'gke-kubernetes-aliases') {
+      setAutoCreateSubnetworks(false);
+      setRoutingMode('GLOBAL');
+      setMtu(1460);
+      setVpcPrimarySubnetRegion('us-central1');
+      setVpcPrimarySubnetName('subnet-gke-nodes');
+      setVpcPrimarySubnetCidr('10.240.0.0/20');
+      setVpcEnablePrivateGoogleAccess(true);
+      setVpcSubnetPurpose('PRIVATE');
+      setVpcEnableSecondaryRanges(true);
+      setVpcSecondaryPodRangeName('gke-pods-range');
+      setVpcSecondaryPodCidr('10.244.0.0/14');
+      setVpcSecondarySvcRangeName('gke-services-range');
+      setVpcSecondarySvcCidr('10.248.0.0/20');
+      setVpcEnableFlowLogs(false);
+      setVpcBootstrapIapSshRule(true);
+      setVpcBootstrapInternalRule(true);
+      setVpcBootstrapHealthCheckRule(true);
+      setVpcBootstrapDenyEgressC2(false);
+      setVpcDescription('VPC-Native GKE Kubernetes Network with /14 Pod & /20 Service Secondary IP Alias Ranges');
+    } else if (bpId === 'ai-hpc-jumbo-8896') {
+      setAutoCreateSubnetworks(false);
+      setRoutingMode('GLOBAL');
+      setMtu(8896);
+      setVpcEnableUlaInternalIpv6(true);
+      setVpcPrimarySubnetRegion('us-central1');
+      setVpcPrimarySubnetName('subnet-gpu-fabric');
+      setVpcPrimarySubnetCidr('10.250.0.0/16');
+      setVpcEnablePrivateGoogleAccess(true);
+      setVpcSubnetStackType('IPV4_IPV6');
+      setVpcEnableSecondaryRanges(false);
+      setVpcEnableFlowLogs(false);
+      setVpcBootstrapIapSshRule(true);
+      setVpcBootstrapInternalRule(true);
+      setVpcBootstrapHealthCheckRule(false);
+      setVpcBootstrapDenyEgressC2(true);
+      setVpcDescription('AI/HPC 8896-Byte Jumbo Frame GPU Fabric VPC with Global BGP & Dual-Stack ULA IPv6');
+    } else if (bpId === 'sovereign-pci-isolated') {
+      setAutoCreateSubnetworks(false);
+      setRoutingMode('REGIONAL');
+      setMtu(1500);
+      setVpcFirewallPolicyOrder('BEFORE_CLASSIC_FIREWALL');
+      setVpcPrimarySubnetRegion('us-east4');
+      setVpcPrimarySubnetName('subnet-pci-vault');
+      setVpcPrimarySubnetCidr('172.16.0.0/20');
+      setVpcEnablePrivateGoogleAccess(true);
+      setVpcEnableFlowLogs(true);
+      setVpcFlowLogsInterval('INTERVAL_5_SEC');
+      setVpcFlowLogsSampling(1.0);
+      setVpcEnableSecondaryRanges(false);
+      setVpcBootstrapIapSshRule(true);
+      setVpcBootstrapInternalRule(false);
+      setVpcBootstrapHealthCheckRule(false);
+      setVpcBootstrapDenyEgressC2(true);
+      setVpcDescription('PCI-DSS / Sovereign Isolated Enclave VPC (100% Flow Log Sampling + Strict Egress Kill-Switch)');
+    }
+  };
   const [firewallNetwork, setFirewallNetwork] = useState('default');
   const [firewallAction, setFirewallAction] = useState('ALLOW');
   const [firewallDirection, setFirewallDirection] = useState('INGRESS');
@@ -1458,9 +1578,33 @@ export default function ResourceProvisionModal({
       return `gcloud compute instances create ${clean} --project=${projectId} --zone=${zone} --machine-type=${effectiveMachineType}${saFlag} --boot-disk-size=${diskSizeGb}GB --boot-disk-type=${diskType}${hyperdiskFlags}${cmekFlag}${dataDiskFlag}${localSsdFlag}${spotFlag}${maxDurFlag}${gpuFlag}${netFlag}${tagFlag}${confFlag}${shieldFlag}${metaFlag}${labelFlag}${delProtFlag}`;
     }
     if (serviceType === 'VPC_NETWORK') {
-      return `gcloud compute networks create ${clean} --project=${projectId} --subnet-mode=${
+      const ulaFlag = vpcEnableUlaInternalIpv6 ? ' --enable-ula-internal-ipv6' : '';
+      const orderFlag =
+        vpcFirewallPolicyOrder === 'BEFORE_CLASSIC_FIREWALL'
+          ? ' --network-firewall-policy-enforcement-order=BEFORE_CLASSIC_FIREWALL'
+          : '';
+      const baseNetCmd = `gcloud compute networks create ${clean} --project=${projectId} --subnet-mode=${
         autoCreateSubnetworks ? 'auto' : 'custom'
-      } --bgp-routing-mode=${routingMode.toLowerCase()} --mtu=${mtu}`;
+      } --bgp-routing-mode=${routingMode.toLowerCase()} --mtu=${mtu}${ulaFlag}${orderFlag}`;
+      const subCmd = !autoCreateSubnetworks
+        ? ` && gcloud compute networks subnets create ${
+            vpcPrimarySubnetName.trim() || `${clean}-subnet-01`
+          } --project=${projectId} --network=${clean} --region=${vpcPrimarySubnetRegion} --range=${vpcPrimarySubnetCidr}${
+            vpcEnablePrivateGoogleAccess ? ' --enable-private-ip-google-access' : ''
+          }${
+            vpcEnableFlowLogs
+              ? ` --enable-flow-logs --logging-aggregation-interval=${vpcFlowLogsInterval.toLowerCase().replace(/_/g, '-')} --logging-flow-sampling=${vpcFlowLogsSampling}`
+              : ''
+          }${
+            vpcEnableSecondaryRanges
+              ? ` --secondary-range=${vpcSecondaryPodRangeName}=${vpcSecondaryPodCidr},${vpcSecondarySvcRangeName}=${vpcSecondarySvcCidr}`
+              : ''
+          }`
+        : '';
+      const iapFwCmd = vpcBootstrapIapSshRule
+        ? ` && gcloud compute firewall-rules create ${clean}-allow-iap-ssh --project=${projectId} --network=${clean} --direction=INGRESS --priority=1000 --allow=tcp:22,tcp:3389 --source-ranges=35.235.240.0/20`
+        : '';
+      return `${baseNetCmd}${subCmd}${iapFwCmd}`;
     }
     if (serviceType === 'VPC_FIREWALL') {
       return `gcloud compute firewall-rules create ${clean} --project=${projectId} --network=${firewallNetwork} --allow=${firewallProtocol}${
@@ -2176,6 +2320,29 @@ export default function ResourceProvisionModal({
       };
     }
 
+    if (serviceType === 'VPC_NETWORK') {
+      const fwCount = [
+        vpcBootstrapIapSshRule,
+        vpcBootstrapInternalRule,
+        vpcBootstrapHealthCheckRule,
+        vpcBootstrapDenyEgressC2,
+      ].filter(Boolean).length;
+      return {
+        hourly: 0,
+        monthly: 0,
+        badge: `ALWAYS FREE VPC CONTROL PLANE ($0.00/MO · ${routingMode} BGP · ${mtu} MTU)`,
+        detail: autoCreateSubnetworks
+          ? `$0.00/mo fixed charge · Auto-creates regional subnets across 40 GCP regions (10.128.0.0/9)${
+              fwCount > 0 ? ` + ${fwCount} Zero-Trust Firewall rule(s)` : ''
+            }`
+          : `$0.00/mo fixed charge · Custom Subnet ${vpcPrimarySubnetName} (${vpcPrimarySubnetCidr} in ${vpcPrimarySubnetRegion})${
+              vpcEnablePrivateGoogleAccess ? ' · Private Google Access ON' : ''
+            }${vpcEnableSecondaryRanges ? ' · GKE Pod/Svc Alias Ranges' : ''}${
+              vpcEnableFlowLogs ? ' · VPC Flow Logs ($0.50/GB ingested)' : ''
+            }${fwCount > 0 ? ` · ${fwCount} Bootstrap Firewall rule(s)` : ''}`,
+      };
+    }
+
     return {
       hourly: 0,
       monthly: 0,
@@ -2184,6 +2351,19 @@ export default function ResourceProvisionModal({
     };
   }, [
     serviceType,
+    autoCreateSubnetworks,
+    routingMode,
+    mtu,
+    vpcPrimarySubnetName,
+    vpcPrimarySubnetRegion,
+    vpcPrimarySubnetCidr,
+    vpcEnablePrivateGoogleAccess,
+    vpcEnableFlowLogs,
+    vpcEnableSecondaryRanges,
+    vpcBootstrapIapSshRule,
+    vpcBootstrapInternalRule,
+    vpcBootstrapHealthCheckRule,
+    vpcBootstrapDenyEgressC2,
     sqlArchitecture,
     sqlEdition,
     sqlDatabaseVersion,
@@ -2366,6 +2546,28 @@ export default function ResourceProvisionModal({
             autoCreateSubnetworks,
             routingMode,
             mtu,
+            vpcBlueprint,
+            vpcDescription,
+            enableUlaInternalIpv6: vpcEnableUlaInternalIpv6,
+            networkFirewallPolicyEnforcementOrder: vpcFirewallPolicyOrder,
+            primarySubnetName: vpcPrimarySubnetName,
+            primarySubnetRegion: vpcPrimarySubnetRegion,
+            primarySubnetCidr: vpcPrimarySubnetCidr,
+            enablePrivateGoogleAccess: vpcEnablePrivateGoogleAccess,
+            subnetPurpose: vpcSubnetPurpose,
+            subnetStackType: vpcSubnetStackType,
+            enableFlowLogs: vpcEnableFlowLogs,
+            flowLogsInterval: vpcFlowLogsInterval,
+            flowLogsSampling: Number(vpcFlowLogsSampling),
+            enableSecondaryRanges: vpcEnableSecondaryRanges,
+            secondaryPodRangeName: vpcSecondaryPodRangeName,
+            secondaryPodCidr: vpcSecondaryPodCidr,
+            secondarySvcRangeName: vpcSecondarySvcRangeName,
+            secondarySvcCidr: vpcSecondarySvcCidr,
+            bootstrapIapSshRule: vpcBootstrapIapSshRule,
+            bootstrapInternalRule: vpcBootstrapInternalRule,
+            bootstrapHealthCheckRule: vpcBootstrapHealthCheckRule,
+            bootstrapDenyEgressC2: vpcBootstrapDenyEgressC2,
             network:
               serviceType === 'GKE_CLUSTER' ? gkeNetwork : firewallNetwork,
             action: firewallAction,
@@ -3038,50 +3240,660 @@ export default function ResourceProvisionModal({
           )}
 
           {serviceType === 'VPC_NETWORK' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Subnet Creation Mode
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAutoCreateSubnetworks(true)}
-                    className={`py-2 px-3 rounded-md border text-xs font-mono font-semibold transition-colors ${
-                      autoCreateSubnetworks
-                        ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    AUTO SUBNETS
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAutoCreateSubnetworks(false)}
-                    className={`py-2 px-3 rounded-md border text-xs font-mono font-semibold transition-colors ${
-                      !autoCreateSubnetworks
-                        ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    CUSTOM SUBNETS
-                  </button>
+            <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+              {/* 1-Tap Production VPC Architecture Blueprints */}
+              <div className="p-3 rounded-lg border border-blue-500/25 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Network className="w-4 h-4 text-blue-500" />
+                    <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
+                      1-Tap Production VPC Architecture Blueprints (Andromeda SDN)
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    $0.00/MO CONTROL PLANE · ZERO IDLE CHARGE
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                  {[
+                    {
+                      id: 'always-free-auto',
+                      title: 'Auto-Mode Global VPC',
+                      badge: 'ALWAYS FREE · 40 REGIONS',
+                      desc: '10.128.0.0/9 auto-subnets + IAP SSH & internal mesh',
+                      accent: 'emerald',
+                    },
+                    {
+                      id: 'zero-trust-custom-iap',
+                      title: 'Zero-Trust Custom VPC',
+                      badge: 'PGA + IAP + 5S FLOW LOGS',
+                      desc: '10.240.0.0/20 custom subnet, PGA ON, C2 Egress Kill-Switch',
+                      accent: 'blue',
+                    },
+                    {
+                      id: 'gke-kubernetes-aliases',
+                      title: 'VPC-Native GKE Fabric',
+                      badge: '/14 POD + /20 SVC ALIASES',
+                      desc: 'Global BGP + Secondary IP Alias ranges for Kubernetes Pods/Services',
+                      accent: 'indigo',
+                    },
+                    {
+                      id: 'ai-hpc-jumbo-8896',
+                      title: 'AI / HPC 8896 Jumbo VPC',
+                      badge: '8896 MTU · DUAL-STACK IPv6',
+                      desc: 'Max throughput GPU NCCL/RDMA fabric + Internal ULA IPv6',
+                      accent: 'purple',
+                    },
+                    {
+                      id: 'sovereign-pci-isolated',
+                      title: 'PCI-DSS Isolated Enclave',
+                      badge: '100% FLOW LOGS · ZERO EGRESS',
+                      desc: 'Strict regional isolation, hierarchical firewall priority & C2 block',
+                      accent: 'amber',
+                    },
+                  ].map((bp) => {
+                    const active = vpcBlueprint === bp.id;
+                    return (
+                      <button
+                        key={bp.id}
+                        type="button"
+                        onClick={() => applyVpcBlueprint(bp.id)}
+                        className={`text-left p-2.5 rounded-lg border transition-all cursor-pointer flex flex-col justify-between ${
+                          active
+                            ? 'bg-blue-500/15 border-blue-500 shadow-sm ring-1 ring-blue-500/30'
+                            : 'bg-white/80 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                              {bp.title}
+                            </span>
+                            {active && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-[9px] font-mono font-extrabold text-blue-600 dark:text-blue-400 mb-1">
+                            {bp.badge}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                          {bp.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Maximum Transmission Unit (MTU)
-                </label>
-                <select
-                  value={mtu}
-                  onChange={(e) => setMtu(Number(e.target.value))}
-                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                >
-                  <option value={1460}>1460 bytes (Standard GCP Default)</option>
-                  <option value={1500}>1500 bytes (Standard Ethernet)</option>
-                  <option value={8896}>8896 bytes (Jumbo Frames AI/HPC)</option>
-                </select>
+              {/* STEP 1: Global Andromeda Fabric, BGP Routing, MTU, ULA IPv6 & Firewall Enforcement Order */}
+              <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                    1. Andromeda Global Fabric · MTU · Internal IPv6 & Firewall Order
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    compute.v1.networks
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      Maximum Transmission Unit (MTU)
+                    </label>
+                    <select
+                      value={mtu}
+                      onChange={(e) => setMtu(Number(e.target.value))}
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    >
+                      <option value={1460}>1460 bytes (Standard GCP Default)</option>
+                      <option value={1500}>1500 bytes (Standard Ethernet / VPN)</option>
+                      <option value={8896}>8896 bytes (Jumbo Frames · AI/HPC GPU Fabric)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      Firewall Policy Evaluation Order
+                    </label>
+                    <select
+                      value={vpcFirewallPolicyOrder}
+                      onChange={(e) => setVpcFirewallPolicyOrder(e.target.value)}
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    >
+                      <option value="AFTER_CLASSIC_FIREWALL">
+                        AFTER_CLASSIC_FIREWALL (GCP Default)
+                      </option>
+                      <option value="BEFORE_CLASSIC_FIREWALL">
+                        BEFORE_CLASSIC_FIREWALL (Zero-Trust Hierarchical First)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      Internal ULA IPv6 Addressing (`fd20::/48`)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setVpcEnableUlaInternalIpv6((v) => !v)}
+                      className={`w-full py-2 px-3 rounded-[8px] border text-xs font-mono font-semibold transition-all cursor-pointer flex items-center justify-between ${
+                        vpcEnableUlaInternalIpv6
+                          ? 'bg-purple-500/15 border-purple-500 text-purple-700 dark:text-purple-300'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span>
+                        {vpcEnableUlaInternalIpv6
+                          ? 'ENABLED (--enable-ula-internal-ipv6)'
+                          : 'DISABLED (IPv4 Only Fabric)'}
+                      </span>
+                      <span className="text-[10px] font-bold">
+                        {vpcEnableUlaInternalIpv6 ? 'DUAL-STACK' : 'IPV4'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                    VPC Network Description & Governance Purpose
+                  </label>
+                  <input
+                    type="text"
+                    value={vpcDescription}
+                    onChange={(e) => setVpcDescription(e.target.value)}
+                    placeholder="e.g. Zero-Trust Production VPC Network with IAP SSH & Private Google Access"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              {/* STEP 2: Subnet Creation Mode (AUTO vs CUSTOM Primary Regional Subnet Architect) */}
+              <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                    2. Subnet Topology Mode (Auto 40-Region Mesh vs Custom CIDR Architect)
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setAutoCreateSubnetworks(true)}
+                      className={`py-1.5 px-3 rounded-md border text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                        autoCreateSubnetworks
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      AUTO SUBNETS (10.128.0.0/9)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAutoCreateSubnetworks(false)}
+                      className={`py-1.5 px-3 rounded-md border text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                        !autoCreateSubnetworks
+                          ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      CUSTOM REGIONAL SUBNET
+                    </button>
+                  </div>
+                </div>
+
+                {autoCreateSubnetworks ? (
+                  <div className="p-2.5 rounded-md bg-emerald-500/5 border border-emerald-500/20 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                        Auto-Mode Global Subnet Allocation (`--subnet-mode=auto`):
+                      </span>{' '}
+                      Google Cloud automatically provisions one `/20` subnet (`4,092` usable IPs) in every GCP region out of the `10.128.0.0/9` block (`us-central1` = `10.128.0.0/20`, `europe-west1` = `10.132.0.0/20`, etc.). Ideal for rapid multi-region VM deployments at `$0.00/mo`.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Primary Subnet Name
+                        </label>
+                        <input
+                          type="text"
+                          value={vpcPrimarySubnetName}
+                          onChange={(e) => setVpcPrimarySubnetName(e.target.value)}
+                          placeholder="subnet-primary-01"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Subnet Region (40 Global Regions)
+                        </label>
+                        <select
+                          value={vpcPrimarySubnetRegion}
+                          onChange={(e) => setVpcPrimarySubnetRegion(e.target.value)}
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          {Object.entries(GCP_REGION_ZONES).map(([reg, info]) => (
+                            <option key={reg} value={reg}>
+                              {reg} — {info.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-medium text-zinc-500">
+                            Primary IPv4 CIDR Range
+                          </label>
+                          <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">
+                            {(() => {
+                              const prefix = Number(
+                                String(vpcPrimarySubnetCidr).split('/')[1]
+                              );
+                              if (!Number.isFinite(prefix) || prefix < 8 || prefix > 29)
+                                return 'RFC-1918 CIDR';
+                              const usable = Math.max(0, Math.pow(2, 32 - prefix) - 4);
+                              return `${usable.toLocaleString()} usable IPs (-4 GCP reserved)`;
+                            })()}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={vpcPrimarySubnetCidr}
+                          onChange={(e) => setVpcPrimarySubnetCidr(e.target.value)}
+                          placeholder="10.240.0.0/20"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 1-Click RFC-1918 CIDR Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        1-Tap RFC-1918 CIDR Presets:
+                      </span>
+                      {[
+                        { cidr: '10.240.0.0/20', label: '10.240.0.0/20 (4,092 IPs · Standard)' },
+                        { cidr: '10.250.0.0/16', label: '10.250.0.0/16 (65,532 IPs · Large Fleet)' },
+                        { cidr: '172.16.0.0/20', label: '172.16.0.0/20 (4,092 IPs · Isolated)' },
+                        { cidr: '192.168.10.0/24', label: '192.168.10.0/24 (252 IPs · Micro Enclave)' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.cidr}
+                          type="button"
+                          onClick={() => setVpcPrimarySubnetCidr(preset.cidr)}
+                          className={`px-2 py-0.5 rounded border text-[10px] font-mono transition-colors cursor-pointer ${
+                            vpcPrimarySubnetCidr === preset.cidr
+                              ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 font-bold'
+                              : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Private Google Access, Stack Type & VPC Flow Logs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/60 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            Private Google Access (PGA)
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            Reach GCS/BigQuery/APIs from `--no-address` VMs ($0.00)
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVpcEnablePrivateGoogleAccess((v) => !v)}
+                          className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                            vpcEnablePrivateGoogleAccess
+                              ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                              : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                          }`}
+                        >
+                          {vpcEnablePrivateGoogleAccess ? 'ENABLED' : 'OFF'}
+                        </button>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/60 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            Subnet IP Stack Type
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            IPv4-only or Dual-Stack IPv4 + IPv6
+                          </div>
+                        </div>
+                        <select
+                          value={vpcSubnetStackType}
+                          onChange={(e) => setVpcSubnetStackType(e.target.value)}
+                          className="bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-[10px] font-mono text-zinc-900 dark:text-zinc-100"
+                        >
+                          <option value="IPV4_ONLY">IPV4_ONLY</option>
+                          <option value="IPV4_IPV6">IPV4_IPV6 (Dual-Stack)</option>
+                        </select>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/60 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            VPC Flow Logs Telemetry
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {vpcEnableFlowLogs
+                              ? `${vpcFlowLogsInterval} · ${Math.round(vpcFlowLogsSampling * 100)}% sample`
+                              : 'Disabled ($0.00 log ingestion)'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVpcEnableFlowLogs((v) => !v)}
+                          className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                            vpcEnableFlowLogs
+                              ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                              : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                          }`}
+                        >
+                          {vpcEnableFlowLogs ? 'FLOW LOGS ON' : 'OFF'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {vpcEnableFlowLogs && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2.5 rounded-md bg-blue-500/5 border border-blue-500/20">
+                        <div>
+                          <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                            Flow Log Aggregation Interval
+                          </label>
+                          <select
+                            value={vpcFlowLogsInterval}
+                            onChange={(e) => setVpcFlowLogsInterval(e.target.value)}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          >
+                            <option value="INTERVAL_5_SEC">INTERVAL_5_SEC (5s High-Precision Forensics)</option>
+                            <option value="INTERVAL_30_SEC">INTERVAL_30_SEC (30s Balanced)</option>
+                            <option value="INTERVAL_5_MIN">INTERVAL_5_MIN (5m Cost-Optimized)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                            Flow Log Sampling Rate
+                          </label>
+                          <select
+                            value={vpcFlowLogsSampling}
+                            onChange={(e) => setVpcFlowLogsSampling(Number(e.target.value))}
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          >
+                            <option value={0.5}>0.50 (50% GCP Recommended Default)</option>
+                            <option value={1.0}>1.00 (100% Full Packet-Header Audit · PCI-DSS)</option>
+                            <option value={0.1}>0.10 (10% Low-Cost Telemetry)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3: Secondary IP Alias Ranges for VPC-Native GKE Pods & Services */}
+                    <div className="p-2.5 rounded-lg border border-indigo-500/25 bg-indigo-500/5 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[11px] font-mono font-bold text-indigo-900 dark:text-indigo-200">
+                            3. VPC-Native GKE Secondary IP Alias Ranges (`secondaryIpRanges`)
+                          </span>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                            Pre-allocate dedicated Pod (`/14` = 262,140 IPs) and Service (`/20` = 4,092 IPs) alias ranges so GKE Autopilot/Standard clusters route natively without VXLAN overlay.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVpcEnableSecondaryRanges((v) => !v)}
+                          className={`shrink-0 px-3 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                            vpcEnableSecondaryRanges
+                              ? 'bg-indigo-500/20 border-indigo-500 text-indigo-700 dark:text-indigo-300'
+                              : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                          }`}
+                        >
+                          {vpcEnableSecondaryRanges ? 'GKE ALIASES ENABLED' : 'ADD GKE ALIASES'}
+                        </button>
+                      </div>
+
+                      {vpcEnableSecondaryRanges && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+                          <div>
+                            <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                              Pod Secondary Range Name
+                            </label>
+                            <input
+                              type="text"
+                              value={vpcSecondaryPodRangeName}
+                              onChange={(e) => setVpcSecondaryPodRangeName(e.target.value)}
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                              Pod Secondary CIDR (`/14` = 262k Pods)
+                            </label>
+                            <input
+                              type="text"
+                              value={vpcSecondaryPodCidr}
+                              onChange={(e) => setVpcSecondaryPodCidr(e.target.value)}
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                              Service Secondary Range Name
+                            </label>
+                            <input
+                              type="text"
+                              value={vpcSecondarySvcRangeName}
+                              onChange={(e) => setVpcSecondarySvcRangeName(e.target.value)}
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                              Service Secondary CIDR (`/20` = 4k Svcs)
+                            </label>
+                            <input
+                              type="text"
+                              value={vpcSecondarySvcCidr}
+                              onChange={(e) => setVpcSecondarySvcCidr(e.target.value)}
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 4: Zero-Trust Perimeter Firewall Auto-Bootstrap Suite ($0.00/mo) */}
+              <div className="p-3 rounded-lg border border-emerald-500/25 bg-emerald-500/5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-500" />
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
+                      4. Zero-Trust Perimeter Firewall Auto-Bootstrap Suite ($0.00/mo)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                    New GCP VPCs have 0 ingress rules by default — auto-provision hardened baseline rules
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    {
+                      checked: vpcBootstrapIapSshRule,
+                      toggle: () => setVpcBootstrapIapSshRule((v) => !v),
+                      title: 'Allow Cloud IAP Zero-Trust Tunnel (SSH 22 & RDP 3389)',
+                      sub: 'Source 35.235.240.0/20 ONLY · Enables Browser SSH to --no-address VMs without public IPs',
+                      badge: 'RECOMMENDED · PRIORITY 1000',
+                    },
+                    {
+                      checked: vpcBootstrapInternalRule,
+                      toggle: () => setVpcBootstrapInternalRule((v) => !v),
+                      title: `Allow Internal VPC East-West Mesh (${
+                        autoCreateSubnetworks ? '10.128.0.0/9' : vpcPrimarySubnetCidr
+                      })`,
+                      sub: 'Allows private TCP, UDP & ICMP communication strictly between VMs inside this VPC',
+                      badge: 'INTERNAL MESH · PRIORITY 1000',
+                    },
+                    {
+                      checked: vpcBootstrapHealthCheckRule,
+                      toggle: () => setVpcBootstrapHealthCheckRule((v) => !v),
+                      title: 'Allow Google Cloud Load Balancer Health Checks',
+                      sub: 'Sources 130.211.0.0/22 & 35.191.0.0/16 -> TCP 80, 443, 8080 for GFE/GCLB backends',
+                      badge: 'GCLB PROBES · PRIORITY 1000',
+                    },
+                    {
+                      checked: vpcBootstrapDenyEgressC2,
+                      toggle: () => setVpcBootstrapDenyEgressC2((v) => !v),
+                      title: 'Arm Outbound C2 & Crypto-Miner Egress Kill-Switch',
+                      sub: 'DENY EGRESS on Stratum/Log4Shell/Reverse-Shell ports (1389, 3333, 4444, 5555, 6667, 14444)',
+                      badge: 'EGRESS SHIELD · PRIORITY 110',
+                    },
+                  ].map((fw, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={fw.toggle}
+                      className={`text-left p-2.5 rounded-lg border transition-all cursor-pointer flex items-start gap-2.5 ${
+                        fw.checked
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-white/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={fw.checked}
+                        onChange={() => {}}
+                        className="mt-0.5 accent-emerald-600 cursor-pointer"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-mono font-bold truncate">
+                            {fw.title}
+                          </span>
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-900/10 dark:bg-white/10 shrink-0">
+                            {fw.badge}
+                          </span>
+                        </div>
+                        <p className="text-[10px] opacity-80 leading-snug mt-0.5">
+                          {fw.sub}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* STEP 5: Live 3-Tab VPC Blueprint Synthesizer (gcloud CLI / REST JSON / Terraform HCL) */}
+              <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-zinc-100 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-zinc-800 bg-zinc-900/80">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-300">
+                      Live Andromeda VPC Infrastructure-as-Code Synthesizer
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { id: 'GCLOUD_CLI', label: 'gcloud CLI' },
+                      { id: 'REST_JSON', label: 'compute.v1 REST JSON' },
+                      { id: 'TERRAFORM_HCL', label: 'Terraform HCL' },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setVpcBlueprintCodeTab(t.id)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer transition-colors ${
+                          vpcBlueprintCodeTab === t.id
+                            ? 'bg-blue-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <pre className="p-3 text-[10.5px] font-mono text-emerald-300 overflow-x-auto leading-relaxed max-h-48">
+                  {vpcBlueprintCodeTab === 'GCLOUD_CLI'
+                    ? gcloudPreview
+                    : vpcBlueprintCodeTab === 'REST_JSON'
+                    ? JSON.stringify(
+                        {
+                          network: {
+                            name: name || 'vpc-production-01',
+                            autoCreateSubnetworks,
+                            routingConfig: { routingMode },
+                            mtu,
+                            enableUlaInternalIpv6: vpcEnableUlaInternalIpv6,
+                            networkFirewallPolicyEnforcementOrder: vpcFirewallPolicyOrder,
+                            description: vpcDescription,
+                          },
+                          ...(!autoCreateSubnetworks
+                            ? {
+                                primarySubnetwork: {
+                                  name: vpcPrimarySubnetName,
+                                  region: vpcPrimarySubnetRegion,
+                                  ipCidrRange: vpcPrimarySubnetCidr,
+                                  privateIpGoogleAccess: vpcEnablePrivateGoogleAccess,
+                                  stackType: vpcSubnetStackType,
+                                  enableFlowLogs: vpcEnableFlowLogs,
+                                  ...(vpcEnableSecondaryRanges
+                                    ? {
+                                        secondaryIpRanges: [
+                                          {
+                                            rangeName: vpcSecondaryPodRangeName,
+                                            ipCidrRange: vpcSecondaryPodCidr,
+                                          },
+                                          {
+                                            rangeName: vpcSecondarySvcRangeName,
+                                            ipCidrRange: vpcSecondarySvcCidr,
+                                          },
+                                        ],
+                                      }
+                                    : {}),
+                                },
+                              }
+                            : {}),
+                        },
+                        null,
+                        2
+                      )
+                    : `resource "google_compute_network" "${(name || 'vpc_prod').replace(/[^a-zA-Z0-9_]/g, '_')}" {
+  project                               = "${projectId}"
+  name                                  = "${name || 'vpc-production-01'}"
+  auto_create_subnetworks               = ${autoCreateSubnetworks}
+  routing_mode                          = "${routingMode}"
+  mtu                                   = ${mtu}
+  enable_ula_internal_ipv6              = ${vpcEnableUlaInternalIpv6}
+  network_firewall_policy_enforcement_order = "${vpcFirewallPolicyOrder}"
+}${
+                        !autoCreateSubnetworks
+                          ? `\n\nresource "google_compute_subnetwork" "${vpcPrimarySubnetName.replace(/[^a-zA-Z0-9_]/g, '_')}" {
+  project                  = "${projectId}"
+  name                     = "${vpcPrimarySubnetName}"
+  network                  = google_compute_network.${(name || 'vpc_prod').replace(/[^a-zA-Z0-9_]/g, '_')}.id
+  region                   = "${vpcPrimarySubnetRegion}"
+  ip_cidr_range            = "${vpcPrimarySubnetCidr}"
+  private_ip_google_access = ${vpcEnablePrivateGoogleAccess}
+  stack_type               = "${vpcSubnetStackType}"
+}`
+                          : ''
+                      }`}
+                </pre>
               </div>
             </div>
           )}

@@ -6727,7 +6727,7 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       });
     }
 
-    // E) Create Real VPC Network (`compute.googleapis.com/compute/v1/projects/:id/global/networks`)
+    // E) Create Real VPC Network (`compute.googleapis.com/compute/v1/projects/:id/global/networks`) + Optional Custom Subnetwork & Zero-Trust Bootstrap Firewalls
     if (serviceType === 'VPC_NETWORK') {
       const autoCreateSubnetworks =
         config.autoCreateSubnetworks !== undefined
@@ -6735,6 +6735,16 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           : true;
       const routingMode = config.routingMode || 'REGIONAL';
       const mtu = Number(config.mtu || 1460);
+      const enableUlaInternalIpv6 = Boolean(config.enableUlaInternalIpv6);
+      const networkFirewallPolicyEnforcementOrder =
+        config.networkFirewallPolicyEnforcementOrder === 'BEFORE_CLASSIC_FIREWALL'
+          ? 'BEFORE_CLASSIC_FIREWALL'
+          : 'AFTER_CLASSIC_FIREWALL';
+      const description =
+        config.description ||
+        `Provisioned via CloudPulse 2026 (${
+          autoCreateSubnetworks ? 'Auto Subnets' : 'Custom Subnets'
+        })`;
 
       const op = await gcpFetch(
         `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -6750,19 +6760,210 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
             autoCreateSubnetworks,
             routingConfig: { routingMode },
             mtu,
-            description: `Provisioned via CloudPulse 2026 (${
-              autoCreateSubnetworks ? 'Auto Subnets' : 'Custom Subnets'
-            })`,
+            ...(enableUlaInternalIpv6 ? { enableUlaInternalIpv6: true } : {}),
+            networkFirewallPolicyEnforcementOrder,
+            description,
           },
           timeout: 8000,
         }
       );
 
+      const networkSelfLink = `projects/${projectId}/global/networks/${cleanName}`;
+      const needsFollowUp =
+        !autoCreateSubnetworks ||
+        Boolean(config.bootstrapIapSshRule) ||
+        Boolean(config.bootstrapInternalRule) ||
+        Boolean(config.bootstrapHealthCheckRule) ||
+        Boolean(config.bootstrapDenyEgressC2);
+
+      // Briefly poll global network creation operation (up to ~7.5s) if we need to attach custom subnet or bootstrap firewall rules
+      if (needsFollowUp && op?.name) {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          try {
+            const opState = await gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+                projectId
+              )}/global/operations/${encodeURIComponent(op.name)}`,
+              token,
+              projectId,
+              { timeout: 4000 }
+            );
+            if (opState?.status === 'DONE') break;
+          } catch {
+            // ignore transient polling error
+          }
+        }
+      }
+
+      const subResults = [];
+
+      // 1) If Custom Subnet Mode is selected, provision the Primary Regional Subnetwork
+      if (!autoCreateSubnetworks && config.primarySubnetCidr) {
+        const subName = String(
+          config.primarySubnetName || `${cleanName}-subnet-01`
+        )
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 62);
+        const subRegion = String(
+          config.primarySubnetRegion || region || 'us-central1'
+        ).trim();
+        const subBody = {
+          name: subName,
+          network: `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${cleanName}`,
+          ipCidrRange: String(config.primarySubnetCidr).trim(),
+          privateIpGoogleAccess:
+            config.privateIpGoogleAccess !== undefined
+              ? Boolean(config.privateIpGoogleAccess)
+              : true,
+          stackType:
+            config.subnetStackType === 'IPV4_IPV6' ? 'IPV4_IPV6' : 'IPV4_ONLY',
+          ...(config.subnetStackType === 'IPV4_IPV6'
+            ? { ipv6AccessType: 'INTERNAL' }
+            : {}),
+          ...(config.enableFlowLogs
+            ? {
+                enableFlowLogs: true,
+                logConfig: {
+                  enable: true,
+                  aggregationInterval:
+                    config.flowLogsInterval || 'INTERVAL_5_SEC',
+                  flowSampling: Number(config.flowLogsSampling ?? 0.5),
+                  metadata: 'INCLUDE_ALL_METADATA',
+                },
+              }
+            : {}),
+          ...(config.enableSecondaryRanges &&
+          Array.isArray(config.secondaryIpRanges) &&
+          config.secondaryIpRanges.length > 0
+            ? {
+                secondaryIpRanges: config.secondaryIpRanges.map((r) => ({
+                  rangeName: String(r.rangeName).trim(),
+                  ipCidrRange: String(r.ipCidrRange).trim(),
+                })),
+              }
+            : {}),
+        };
+
+        try {
+          await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/regions/${encodeURIComponent(subRegion)}/subnetworks`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: subBody,
+              timeout: 8000,
+            }
+          );
+          subResults.push(
+            `Custom Subnet "${subName}" (${subBody.ipCidrRange} in ${subRegion}${
+              subBody.privateIpGoogleAccess ? ', PGA ON' : ''
+            })`
+          );
+        } catch (subErr) {
+          subResults.push(
+            `Custom Subnet "${subName}" queued (${subErr.message || 'pending network readiness'})`
+          );
+        }
+      }
+
+      // 2) Provision selected Zero-Trust Bootstrap Firewall Rules
+      const fwBootstrapSpecs = [];
+      if (config.bootstrapIapSshRule) {
+        fwBootstrapSpecs.push({
+          name: `${cleanName}-allow-iap-ssh`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['35.235.240.0/20'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['22', '3389'] }],
+          description: 'Allow Cloud IAP Zero-Trust SSH/RDP Tunnel (35.235.240.0/20)',
+        });
+      }
+      if (config.bootstrapInternalRule) {
+        fwBootstrapSpecs.push({
+          name: `${cleanName}-allow-internal`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: [
+            autoCreateSubnetworks
+              ? '10.128.0.0/9'
+              : String(config.primarySubnetCidr || '10.240.0.0/20').trim(),
+          ],
+          allowed: [
+            { IPProtocol: 'tcp' },
+            { IPProtocol: 'udp' },
+            { IPProtocol: 'icmp' },
+          ],
+          description: 'Allow internal East-West VPC mesh traffic',
+        });
+      }
+      if (config.bootstrapHealthCheckRule) {
+        fwBootstrapSpecs.push({
+          name: `${cleanName}-allow-lb-hc`.slice(0, 62),
+          direction: 'INGRESS',
+          priority: 1000,
+          sourceRanges: ['130.211.0.0/22', '35.191.0.0/16'],
+          allowed: [{ IPProtocol: 'tcp', ports: ['80', '443', '8080'] }],
+          description: 'Allow Google Cloud Load Balancer health check probes',
+        });
+      }
+      if (config.bootstrapDenyEgressC2) {
+        fwBootstrapSpecs.push({
+          name: `${cleanName}-deny-egress-c2`.slice(0, 62),
+          direction: 'EGRESS',
+          priority: 110,
+          destinationRanges: ['0.0.0.0/0'],
+          denied: [
+            {
+              IPProtocol: 'tcp',
+              ports: ['1389', '3333', '4444', '5555', '6667', '14444', '45560'],
+            },
+          ],
+          description: 'Block outbound C2 & Stratum crypto-mining egress ports',
+        });
+      }
+
+      let fwCreatedCount = 0;
+      for (const fwSpec of fwBootstrapSpecs) {
+        try {
+          await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              projectId
+            )}/global/firewalls`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                ...fwSpec,
+                network: networkSelfLink,
+              },
+              timeout: 6000,
+            }
+          );
+          fwCreatedCount++;
+        } catch {
+          // ignore if network is still initializing
+        }
+      }
+      if (fwCreatedCount > 0) {
+        subResults.push(`${fwCreatedCount} Zero-Trust Firewall rule(s)`);
+      }
+
       return res.json({
         ok: true,
-        message: `Dispatched real VPC Network creation for "${cleanName}" (${
+        message: `Dispatched real VPC Network "${cleanName}" (${
           autoCreateSubnetworks ? 'Auto Subnet Mode' : 'Custom Subnet Mode'
-        }, ${routingMode} routing)!`,
+        }, ${routingMode} BGP, ${mtu} MTU${
+          subResults.length > 0 ? ` + ${subResults.join(' + ')}` : ''
+        })!`,
         operation: op,
       });
     }

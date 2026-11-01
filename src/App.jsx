@@ -3262,11 +3262,11 @@ function classifyDestructiveAxiosConfig(config) {
           impact: `Provisions and starts live Compute Engine VM "${resName}" (${vmShape}) on VPC "${vmNetName}" in zone "${loc}".`,
         },
         VPC_NETWORK: {
-          title: `Provision Custom VPC Network "${resName}" on "${projectId}"?`,
-          kind: `VPC Network (compute.googleapis.com/v1)`,
-          what: `1. Creates Isolated Global VPC Network "${resName}": Provisions a software-defined Andromeda virtual network with autoCreateSubnetworks=${Boolean(cfg.autoCreateSubnetworks)}.\n2. Initializes Global Routing Table: Sets up private internal routing across Google's global fiber backbone without exposing workloads to the public internet.\n3. Registers in VPC & Firewall Studio: Makes "${resName}" immediately available for subnets, firewall rules, and VM placement.`,
-          cost: `ZERO IDLE COST ($0.00/MO): Creating a VPC network and subnets incurs $0.00/mo in fixed charges (standard egress rates apply only to actual traffic).`,
-          impact: `Creates live VPC network "${resName}" in project "${projectId}".`,
+          title: `Provision Andromeda VPC Network "${resName}" (${cfg.autoCreateSubnetworks ? 'Auto 40-Region Subnets' : `Custom Subnet ${cfg.primarySubnetCidr || '10.240.0.0/20'}`}) on "${projectId}"?`,
+          kind: `VPC Network (${cfg.routingMode || 'REGIONAL'} BGP · ${cfg.mtu || 1460} MTU · compute.googleapis.com/v1)`,
+          what: `1. Creates Andromeda Global VPC Network "${resName}": Provisions a software-defined virtual network with ${cfg.routingMode || 'REGIONAL'} Cloud Router BGP, ${cfg.mtu || 1460}-byte MTU${cfg.enableUlaInternalIpv6 ? ', Dual-Stack Internal ULA IPv6' : ''}, and ${cfg.networkFirewallPolicyEnforcementOrder || 'AFTER_CLASSIC_FIREWALL'} policy evaluation.\n2. Configures Subnet Topology: ${cfg.autoCreateSubnetworks ? 'Auto-allocates /20 regional subnets across all 40 GCP regions (10.128.0.0/9).' : `Provisions custom regional subnet "${cfg.primarySubnetName || `${resName}-subnet-01`}" (${cfg.primarySubnetCidr || '10.240.0.0/20'}) in ${cfg.primarySubnetRegion || loc} with Private Google Access=${cfg.privateIpGoogleAccess !== false ? 'ENABLED' : 'OFF'}${cfg.enableFlowLogs ? ', VPC Flow Logs ON' : ''}${cfg.enableSecondaryRanges ? ', and GKE Pod/Service Secondary Alias Ranges' : ''}.`}\n3. Bootstraps Zero-Trust Perimeter Firewalls: Automatically attaches selected baseline rules (${[cfg.bootstrapIapSshRule && 'Cloud IAP SSH 35.235.240.0/20', cfg.bootstrapInternalRule && 'Internal VPC Mesh', cfg.bootstrapHealthCheckRule && 'GCLB Health Checks', cfg.bootstrapDenyEgressC2 && 'Outbound C2/Miner Egress Kill-Switch'].filter(Boolean).join(', ') || 'None'}) and registers in VPC & Firewall Studio.`,
+          cost: `ZERO IDLE CONTROL-PLANE COST ($0.00/MO): Creating a VPC network, custom subnets, Private Google Access, secondary GKE alias ranges, and firewall rules incurs $0.00/mo in fixed idle charges.${cfg.enableFlowLogs ? ' (Note: VPC Flow Logs bill ~$0.50/GB of sampled flow telemetry ingested into Cloud Logging.)' : ''}`,
+          impact: `Creates live VPC network "${resName}"${!cfg.autoCreateSubnetworks ? ` + subnet "${cfg.primarySubnetName || `${resName}-subnet-01`}"` : ''} in project "${projectId}".`,
         },
         VPC_FIREWALL: buildFirewallSpec(),
         CLOUD_RUN: {
