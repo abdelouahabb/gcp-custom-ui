@@ -839,7 +839,21 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   3. **Persistent `← Back to [Origin Studio]` Breadcrumb & `Re-Highlight Target`**: Displays a sticky top navigation bar showing `Origin Studio -> Destination Studio & Feature` with a 1-click **`← Back to [Origin Studio]`** button (preserved even while clicking additional sub-tabs inside the destination Studio) and a **`Re-Highlight Target`** button.
   4. **Nonce-Synchronized Repeatable Deep-Links (`studioSubTabNonce` & `bigQuerySqlNonce`)**: Guarantees that clicking the same cross-UI deep-link or Pipeline Bar card a second time after manually switching sub-tabs inside a Studio always re-activates and re-spotlights the target sub-tab.
 
-
-
-
+### 72. 10X BigQuery Studio (`LIVE_JOBS`, `1-Tap 100/100 Harden`, Schema-Aware Double Dry-Run X-Ray, Self-Healing Datasets) & Interactive BigLake Iceberg vs. External vs. Capacitor Action Matrix (`src/components/BigQueryStudio.jsx`, `src/components/BigLakeIcebergStudio.jsx`, `src/components/LogStreamerAndShell.jsx` & `server/index.js`)
+- **Where to find it**:
+  - Open **`BigQuery Studio`** (`BIGQUERY_STUDIO`) across all 5 tabs (`01 · Datasets & Posture`, `02 · SQL X-Ray & Auto-Optimizer`, `03 · Slot & Storage FinOps Crystal`, `04 · 168h Time-Machine`, and `05 · Live Jobs History`).
+  - Open **`BigLake & Iceberg`** (`BIGLAKE_STUDIO`) -> Tab **`01 · BigLake Metastore & REST Catalogs`** -> **Interactive Architecture TCO Simulator & 1-Click Action Matrix**.
+- **Why We Built This**:
+  - Standard BigQuery SQL optimizers rely on static regex guesses without inspecting the target table's real partitioning/clustering schema or verifying byte reduction with a second BigQuery `dryRun`. Meanwhile, deleted/uncreated demo datasets caused `404 Not found` errors, BigQuery's internal `_sha1` anonymous query-cache datasets cluttered dataset pickers, and architectural comparison tables were static text instead of interactive, executable workbenches.
+- **How It Works**:
+  1. **Schema-Aware Double Dry-Run SQL X-Ray & Protected Live Execution (`POST /api/project/:id/bigquery/dry-run` & `/query-live`)**:
+     - Preflights the referenced table via `bigquery.tables.get` to discover its exact columns, `timePartitioning.field`, `requirePartitionFilter`, and `clustering.fields`.
+     - Executes a real BigQuery `jobs.insert (dryRun: true)` on both the original SQL and the auto-optimized SQL (`verifiedByBigQueryDryRun: true`), auto-routes `bigquery-public-data` queries to `location: 'US'`, self-heals missing project datasets/tables via `ensureProjectBigQueryTablesExistForSql`, and enforces `maximumBytesBilled` on live execution.
+  2. **10X BigQuery Studio Workbench (`BigQueryStudio.jsx`)**:
+     - **`⚡ 1-Tap Full Harden (100/100)`**: Patches `storageBillingModel = 'PHYSICAL'`, `defaultPartitionExpirationMs` (90d), `defaultRoundingMode = 'ROUND_HALF_EVEN'`, and governance labels in 1 click.
+     - **Interactive `Schema (N cols)` Column Pill Builder & `+ Seed 10 Live Rows`**: Toggle multiple schema columns directly inside `SELECT`, stream 10 live telemetry rows via `tabledata.insertAll`, and filter out internal `_`-prefixed anonymous cache datasets.
+     - **Capacitor Scan Bar, Side-by-Side SQL Diff, Annualized FinOps ROI Calculator & `LIVE_JOBS` (`bigquery.jobs.list`)**: Visualizes byte savings, projects annual FinOps ROI across `10–5,000 runs/day`, exports results as CSV/JSON, and streams real-time project jobs with 1-click **"Load SQL into X-Ray"**.
+  3. **Interactive BigLake Open Iceberg vs. Legacy External vs. Native Capacitor TCO Simulator & Action Matrix (`BigLakeIcebergStudio.jsx`)**:
+     - Adjust **Lakehouse Storage (`10 TB`–`1,000 TB`)** and **Monthly Spark / Vertex AI Read Volume (`0 TB`–`500 TB/mo`)** sliders to dynamically compute monthly TCO (including the `$1.10/TB` BigQuery Storage Read API fee on closed Capacitor tables vs. `$0.00` on Open Iceberg Parquet).
+     - Execute 1-click live table provisioning (`open_iceberg_events` or `capacitor_warehouse_events`), open tailored DDL/CLI blueprints, or click **`Audit Bucket IAM`** to automatically execute `gcloud storage buckets get-iam-policy` in Cloud Shell (`DIRECT_REST_BRIDGE (storage.googleapis.com/storage/v1/b/iam)`) with a live `[BIGLAKE ZERO-TRUST IAM AUDIT]` verdict.
 

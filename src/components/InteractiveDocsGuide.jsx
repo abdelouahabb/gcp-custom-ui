@@ -669,27 +669,27 @@ const DOC_SECTIONS = [
   },
   {
     id: 'biglake-vs-bigquery-open-iceberg-2026',
-    wave: 'BIGLAKE & APACHE ICEBERG · OPEN LAKEHOUSE STUDIO',
+    wave: 'BIGLAKE & APACHE ICEBERG · OPEN LAKEHOUSE STUDIO & INTERACTIVE TCO ACTION MATRIX',
     title:
-      'Dedicated BigLake & Apache Iceberg Open Lakehouse Studio — REST Catalogs, Zero-Trust Bucket IAM, Compaction Doctor & Cross-Cloud Omni',
+      'Dedicated BigLake & Apache Iceberg Open Lakehouse Studio — Interactive 3-Column TCO Simulator & Action Matrix, REST Catalogs, Live Bucket IAM Audit, Compaction Doctor & Cross-Cloud Omni',
     badge: 'DEDICATED BIGLAKE TAB',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'BIGLAKE_STUDIO',
     problemSolved:
-      'Engineers frequently confuse Google BigQuery with Google BigLake, struggle with 3-step CLOUD_RESOURCE connection IAM errors, suffer from the Apache Iceberg Small-File Problem when streaming from Kafka/PubSub, or pay steep egress fees copying AWS S3 / Azure ADLS Parquet files into GCP.',
+      'Engineers frequently confuse Google BigQuery with Google BigLake, struggle with 3-step CLOUD_RESOURCE connection IAM errors, pay $1.10/TB BigQuery Storage Read API surcharges when Spark/Ray reads closed Capacitor tables, suffer from the Apache Iceberg Small-File Problem, or pay steep egress fees copying AWS S3 / Azure ADLS Parquet files into GCP.',
     howItWorks: [
-      'Tab 1 — BigLake Metastore & Iceberg REST Catalogs: Create and manage live BigLake Metastore Catalogs (/biglake/metastore/catalogs · biglake.googleapis.com/v1) with Iceberg REST Credential Vending and side-by-side architecture comparison.',
+      'Tab 1 — Interactive 3-Column TCO Simulator, 1-Click Action Matrix & BigLake REST Catalogs: Adjust Lakehouse Storage (10–1,000 TB) and Spark/Vertex AI Read Volume (0–500 TB/mo) sliders across Legacy External Table vs. BigLake + Apache Iceberg ($0 Spark Read API fee) vs. Native BigQuery Capacitor (5.2:1 Physical compression), provision live Iceberg or Capacitor tables + 10 seeded rows in 1 click, dry-run SQL in X-Ray, and run live Cloud Shell Bucket IAM Audits (gcloud storage buckets get-iam-policy).',
       'Tab 2 — 1-Click BigLake Connection, Zero-Trust IAM & Iceberg Wizard: Generates and runs Step 1 (bq mk --connection --connection_type=CLOUD_RESOURCE), Step 2 (Zero-Trust bucket IAM delegation for serviceAccountId), and Step 3 (Managed Iceberg DDL or Cached External Table + Zero-Copy PySpark reader).',
       'Tab 3 — Iceberg Small-File Compaction & Snapshot Doctor: Interactive simulator for streaming micro-files, generating EXPORT TABLE METADATA, CALL biglake.system.rewrite_data_files (SORT/Z-Order vs BINPACK), expire_snapshots, and remove_orphan_files.',
       'Tab 4 — Row/Column Security & Cross-Cloud Omni (AWS S3 / Azure ADLS): Enforces CREATE ROW ACCESS POLICY and CREATE DATA POLICY masking directly on open gs:// Parquet files, plus $0-egress BigLake Omni federated SQL over s3:// and azure://.',
     ],
     apisUsed: [
       'GET & POST /api/project/:id/biglake/metastore/catalogs → biglake.googleapis.com/v1/projects/:id/locations/:loc/catalogs',
-      'DELETE /api/project/:id/biglake/metastore/catalogs/:location/:catalogId',
+      'POST /api/project/:id/bigquery/datasets/:ds/tables & /seed-rows + POST /api/project/:id/shell (storage.googleapis.com/storage/v1/b/:bkt/iam)',
     ],
     billingImpact:
-      'Eliminates duplicate warehouse storage bills by keeping a single open Parquet/Iceberg copy on Cloud Storage ($0.020/GB-mo) and reduces query scan bytes by up to 80% via Iceberg compaction.',
+      'Eliminates duplicate warehouse storage bills and $1.10/TB Spark Storage Read API surcharges by keeping a single open Parquet/Iceberg copy on Cloud Storage ($0.020/GB-mo).',
   },
   {
     id: 'sovereign-iam-owner-guard-and-sa-key-killswitch',
@@ -959,26 +959,26 @@ const DOC_SECTIONS = [
   },
   {
     id: 'dedicated-bigquery-2026-studio',
-    wave: 'BIGQUERY STUDIO · PHYSICAL COMPRESSED LAKEHOUSE',
+    wave: 'BIGQUERY STUDIO · 10X PHYSICAL COMPRESSED LAKEHOUSE, DOUBLE DRY-RUN X-RAY & LIVE JOBS',
     title:
-      'BigQuery 2026 Enterprise Lakehouse, Physical Billing (-54%) & 168h Time-Machine Studio',
+      '10X BigQuery 2026 Enterprise Lakehouse — 1-Tap 100/100 Harden, Schema-Aware Double Dry-Run X-Ray, Live Jobs History & 168h Time-Machine',
     badge: 'BIGQUERY STUDIO TAB + PROVISION MODAL',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'BIGQUERY_STUDIO',
     problemSolved:
-      'Uncompressed Logical BigQuery billing overcharges high-compression datasets by up to 2.2x, while unpartitioned SELECT * queries can accidentally scan terabytes of data.',
+      'Uncompressed Logical BigQuery billing overcharges high-compression datasets by up to 2.2x, static SQL optimizers fail to inspect real table partition/cluster schemas, and deleted/missing demo datasets cause 404 query errors.',
     howItWorks: [
-      'Strict Compliance Blueprints (SEC/FINRA, GDPR EU, HIPAA, AI Vector BigLake): Locks jurisdiction, Physical Capacitor compressed billing (-54%), and 48h–168h Time-Travel windows.',
-      'Pre-Crime SQL Dry-Run X-Ray & Auto-SQL Partition/Cluster Optimizer: Estimates exact bytes billed and query cost before execution.',
-      ' 168-Hour FOR SYSTEM_TIME AS OF Time-Machine & 1-Tap Storage Billing Model Switcher (LOGICAL  PHYSICAL).',
+      'Tab 1 — Dataset Posture Matrix, 1-Tap Full Harden (100/100) & Interactive Schema Column Builder: Filters out hidden _sha1 cache datasets, patches Physical billing + 90d partition TTL + ROUND_HALF_EVEN + governance labels in 1 click, expands per-table Schema (N cols) pills to toggle SELECT columns, and streams 10 live rows via tabledata.insertAll.',
+      'Tab 2 — Schema-Aware Double Dry-Run SQL X-Ray, Capacitor Scan Bar & Protected Live SQL: Preflights real table schemas (tables.get), verifies both original and auto-optimized SQL via BigQuery jobs.insert (dryRun: true), self-heals missing project datasets/tables, enforces maximumBytesBilled on live queries, and computes Annualized FinOps ROI (10–5,000 runs/day) with CSV/JSON export.',
+      'Tabs 3, 4 & 5 — Slot & Storage FinOps Crystal, 168h FOR SYSTEM_TIME AS OF Time-Machine (with 1m Demo Safe rewind) & Live Jobs History (bigquery.jobs.list with 1-click "Load SQL into X-Ray").',
     ],
     apisUsed: [
-      'GET /api/project/:id/bigquery/datasets & POST /api/project/:id/provision (serviceType: "BIGQUERY_DATASET")',
-      'POST /api/project/:id/bigquery/dry-run → bigquery.googleapis.com/bigquery/v2/projects/:id/jobs',
+      'GET /api/project/:id/bigquery/datasets, /jobs & POST /api/project/:id/bigquery/datasets/:ds/harden-all',
+      'POST /api/project/:id/bigquery/dry-run & /query-live → bigquery.googleapis.com/bigquery/v2/projects/:id/jobs',
     ],
     billingImpact:
-      'Empty datasets cost $0.00/mo; Physical Compressed billing reduces active storage spend by up to 54% on compressible analytical tables.',
+      'Dry-Run X-Ray and Live Jobs inspection cost $0.00; Physical Compressed billing reduces active storage spend by up to 54% and maximumBytesBilled blocks runaway query scans.',
   },
   {
     id: 'dedicated-data-engineering-2026-studio',
