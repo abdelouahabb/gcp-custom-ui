@@ -253,18 +253,42 @@ export default function BigQueryStudio({
   const [bqEmbeddingModel, setBqEmbeddingModel] =
     useState('text-embedding-005');
 
-  // Auto-upgrade any stale 'gemini-2.5-flash' state or SQL/result rows from prior HMR state to 'gemini-3.8-flash'
+  // Auto-upgrade any stale 'gemini-2.5-flash' state or Spanner-only 'Orders' SQL from prior HMR state
   useEffect(() => {
     if (bqAiModel === 'gemini-2.5-flash') {
       setBqAiModel('gemini-3.8-flash');
     }
-    setSqlInput((prev) =>
-      typeof prev === 'string' && prev.includes('gemini-2.5-flash')
+    setSqlInput((prev) => {
+      if (typeof prev !== 'string') return prev;
+      if (
+        prev.includes('Orders@{FORCE_INDEX') ||
+        prev.includes('PENDING_COMMIT_TIMESTAMP()') ||
+        /\bFROM\s+Orders\b/i.test(prev)
+      ) {
+        return `-- BigQuery Federated TrueTime Strong-Read Audit (${projectId}.analytics_lakehouse.telemetry_events_2026)
+SELECT
+  event_id AS order_id,
+  user_id AS customer_id,
+  region,
+  service_name,
+  latency_ms,
+  revenue_usd AS order_total_usd,
+  event_timestamp AS committed_at
+FROM \`${projectId}.analytics_lakehouse.telemetry_events_2026\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+ORDER BY committed_at DESC
+LIMIT 25;`;
+      }
+      return prev.includes('gemini-2.5-flash')
         ? prev.replace(/gemini-2\.5-flash/g, 'gemini-3.8-flash')
-        : prev
-    );
+        : prev;
+    });
     setQueryResult((prev) => {
-      if (!prev || !Array.isArray(prev.rows)) return prev;
+      if (!prev) return prev;
+      if (prev.error && /Orders was not found/i.test(prev.error)) {
+        return null;
+      }
+      if (!Array.isArray(prev.rows)) return prev;
       const hasLegacy = prev.rows.some(
         (r) =>
           typeof r?.ai_prompt_preview === 'string' &&
@@ -286,7 +310,7 @@ export default function BigQueryStudio({
         ),
       };
     });
-  }, []);
+  }, [projectId]);
   const [bqVectorIndexType, setBqVectorIndexType] = useState('TREE_AH'); // 'TREE_AH' (ScaNN) | 'IVF'
   const [bqVectorTopK, setBqVectorTopK] = useState(10);
   const [bqForecastHorizonDays, setBqForecastHorizonDays] = useState(30);

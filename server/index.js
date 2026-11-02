@@ -25778,12 +25778,14 @@ app.post(
   }
 );
 
-// Self-Healing Helper: Auto-provisions missing project dataset + table + 5 live seed rows when a query references `projectId.dataset.table` that was deleted or not yet created
+// Self-Healing Helper: Auto-provisions missing project dataset + table + 5 live seed rows when a query references `projectId.dataset.table` or an unqualified table in `defaultDatasetId` that was deleted or not yet created
 async function ensureProjectBigQueryTablesExistForSql(
   projectId,
   sqlText,
   location = 'US',
-  token
+  token,
+  defaultDatasetId = 'analytics_lakehouse',
+  errorMessage = ''
 ) {
   if (!projectId || !sqlText || !token) return { provisioned: false, sql: sqlText };
   const escapedProj = projectId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -25807,6 +25809,41 @@ async function ensureProjectBigQueryTablesExistForSql(
     }
   }
 
+  // Also extract `Not found: Table <project>:<dataset>.<table>` directly from BigQuery error message
+  if (errorMessage) {
+    const errTableMatch = String(errorMessage).match(
+      /Not found:\s*Table\s+[a-zA-Z0-9_-]+[.:]([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/i
+    );
+    if (errTableMatch) {
+      const dsId = errTableMatch[1];
+      const tblId = errTableMatch[2];
+      if (
+        dsId &&
+        tblId &&
+        !targets.some((t) => t.dsId === dsId && t.tblId === tblId)
+      ) {
+        targets.push({ dsId, tblId });
+      }
+    }
+  }
+
+  // Also check unqualified `FROM <table>` / `JOIN <table>` / `INTO <table>` when defaultDatasetId is active
+  const fallbackDs = defaultDatasetId || 'analytics_lakehouse';
+  const unqualRegex = /\b(?:FROM|JOIN|INTO)\s+`?([a-zA-Z][a-zA-Z0-9_]*)`?(?:@\{[^}]*\})?/gi;
+  let uMatch;
+  while ((uMatch = unqualRegex.exec(sqlText)) !== null) {
+    const tblId = uMatch[1];
+    if (
+      tblId &&
+      !/^(SELECT|WHERE|GROUP|ORDER|LIMIT|UNNEST|TABLE|SYSTEM_TIME| ML|AI|GRAPH_TABLE|APPENDS)$/i.test(
+        tblId
+      ) &&
+      !targets.some((t) => t.dsId === fallbackDs && t.tblId === tblId)
+    ) {
+      targets.push({ dsId: fallbackDs, tblId });
+    }
+  }
+
   if (targets.length === 0) return { provisioned: false, sql: sqlText };
 
   const resolvedLoc =
@@ -25817,6 +25854,10 @@ async function ensureProjectBigQueryTablesExistForSql(
     { name: 'event_ts', type: 'TIMESTAMP', mode: 'NULLABLE' },
     { name: 'updated_at', type: 'TIMESTAMP', mode: 'NULLABLE' },
     { name: 'user_id', type: 'STRING', mode: 'NULLABLE' },
+    { name: 'customer_id', type: 'STRING', mode: 'NULLABLE' },
+    { name: 'order_id', type: 'STRING', mode: 'NULLABLE' },
+    { name: 'order_total_usd', type: 'FLOAT64', mode: 'NULLABLE' },
+    { name: 'committed_at', type: 'TIMESTAMP', mode: 'NULLABLE' },
     { name: 'user_email', type: 'STRING', mode: 'NULLABLE' },
     { name: 'user_email_sha256', type: 'STRING', mode: 'NULLABLE' },
     { name: 'event_type', type: 'STRING', mode: 'NULLABLE' },
@@ -25839,6 +25880,10 @@ async function ensureProjectBigQueryTablesExistForSql(
         event_ts: new Date(now - 60000).toISOString(),
         updated_at: new Date(now - 60000).toISOString(),
         user_id: 'usr_enterprise_01',
+        customer_id: 'cust-901',
+        order_id: 'ord-2026-8841',
+        order_total_usd: 4250.0,
+        committed_at: new Date(now - 60000).toISOString(),
         user_email: 'alice@example.com',
         user_email_sha256:
           'ff8d9819fc0e12bf0d24892e45987e249a28dce836a85c60e28e58c6d9e03227',
@@ -25860,6 +25905,10 @@ async function ensureProjectBigQueryTablesExistForSql(
         event_ts: new Date(now - 120000).toISOString(),
         updated_at: new Date(now - 120000).toISOString(),
         user_id: 'usr_finops_02',
+        customer_id: 'cust-901',
+        order_id: 'ord-2026-8842',
+        order_total_usd: 1890.5,
+        committed_at: new Date(now - 120000).toISOString(),
         user_email: 'bob@example.com',
         user_email_sha256:
           '4b9d3b87ef9965f80a2f431886d80a10b451c290903a5b0897bc754692696b38',
@@ -25881,6 +25930,10 @@ async function ensureProjectBigQueryTablesExistForSql(
         event_ts: new Date(now - 180000).toISOString(),
         updated_at: new Date(now - 180000).toISOString(),
         user_id: 'usr_sovereign_03',
+        customer_id: 'cust-902',
+        order_id: 'ord-2026-8843',
+        order_total_usd: 940.0,
+        committed_at: new Date(now - 180000).toISOString(),
         user_email: 'carol@example.com',
         user_email_sha256:
           '829c3804401b0727f70f73d4415e162400cbe57b1c4bc491b319a11992a49b23',
@@ -25994,10 +26047,14 @@ async function ensureProjectBigQueryTablesExistForSql(
   }
 
   // If the table was just auto-created, a FOR SYSTEM_TIME AS OF rewind > 1s ago would predate creationTime, so clamp to CURRENT_TIMESTAMP()
-  const repairedSql = sqlText.replace(
-    /FOR\s+SYSTEM_TIME\s+AS\s+OF\s+TIMESTAMP_SUB\s*\(\s*CURRENT_TIMESTAMP\s*\(\s*\)\s*,\s*INTERVAL\s+\d+\s+(?:HOUR|DAY|MINUTE|SECOND)S?\s*\)/gi,
-    'FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()'
-  );
+  // Also normalize Spanner-only hints (@{FORCE_INDEX=...} and PENDING_COMMIT_TIMESTAMP()) if pasted into BigQuery
+  const repairedSql = sqlText
+    .replace(/@\{[^}]*\}/g, '')
+    .replace(/\bPENDING_COMMIT_TIMESTAMP\s*\(\s*\)/gi, 'CURRENT_TIMESTAMP()')
+    .replace(
+      /FOR\s+SYSTEM_TIME\s+AS\s+OF\s+TIMESTAMP_SUB\s*\(\s*CURRENT_TIMESTAMP\s*\(\s*\)\s*,\s*INTERVAL\s+\d+\s+(?:HOUR|DAY|MINUTE|SECOND)S?\s*\)/gi,
+      'FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()'
+    );
   return { provisioned: true, sql: repairedSql };
 }
 
@@ -26123,7 +26180,9 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
             projectId,
             activeSql,
             location,
-            token
+            token,
+            datasetId || 'analytics_lakehouse',
+            firstMsg
           );
           if (healed.provisioned) {
             activeSql = healed.sql;

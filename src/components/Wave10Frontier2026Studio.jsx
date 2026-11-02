@@ -2021,7 +2021,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             whenToUse:
               'Use for wallet balances, inventory checks, and IAM auth checks. Guarantees seeing every write committed globally before your read started—with zero read locks.',
             estReadLatency: quorumIntact ? '4.2 ms' : 'PAUSED (Need 3/5 Votes)',
-            sqlSnippet: `-- 1. Write Transaction with Atomic TrueTime Commit Timestamp (2ε = ${commitWaitMs}ms wait)
+            sqlSnippet: `-- 1. Spanner Write with Atomic TrueTime Commit Timestamp (2ε = ${commitWaitMs}ms wait)
 INSERT INTO ${childTable} (customer_id, order_id, order_total_usd, committed_at)
 VALUES ('cust-901', 'ord-2026-8841', 4250.00, PENDING_COMMIT_TIMESTAMP());
 
@@ -2030,6 +2030,19 @@ SELECT customer_id, order_id, order_total_usd, committed_at
 FROM ${childTable}@{FORCE_INDEX=_BASE_TABLE}
 WHERE customer_id = 'cust-901'
 ORDER BY committed_at DESC;`,
+            bqSql: `-- BigQuery Federated TrueTime Strong-Read Audit (${activeLeaderZone} Leader · 2ε = ${commitWaitMs}ms)
+SELECT
+  event_id AS order_id,
+  user_id AS customer_id,
+  region,
+  service_name,
+  latency_ms,
+  revenue_usd AS order_total_usd,
+  event_timestamp AS committed_at
+FROM \`${projectId}.analytics_lakehouse.telemetry_events_2026\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+ORDER BY committed_at DESC
+LIMIT 25;`,
             cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --sql="SELECT customer_id, order_id, order_total_usd, committed_at FROM ${childTable} WHERE customer_id = 'cust-901' ORDER BY committed_at DESC LIMIT 10"`,
           },
           BOUNDED_STALENESS: {
@@ -2049,6 +2062,18 @@ JOIN ${childTable} AS c USING (customer_id)
 GROUP BY p.customer_id
 ORDER BY rolling_gmv_usd DESC
 LIMIT 25;`,
+            bqSql: `-- BigQuery Federated Bounded-Staleness Rollup (<2ms Local Replica Edge Read)
+SELECT
+  user_id AS customer_id,
+  region,
+  COUNT(event_id) AS recent_order_count,
+  ROUND(AVG(latency_ms), 2) AS avg_replica_latency_ms,
+  ROUND(SUM(revenue_usd), 2) AS rolling_gmv_usd
+FROM \`${projectId}.analytics_lakehouse.telemetry_events_2026\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY customer_id, region
+ORDER BY rolling_gmv_usd DESC
+LIMIT 25;`,
             cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --read-timestamp="${new Date(Date.now() - 15000).toISOString()}" --sql="SELECT customer_id, COUNT(order_id) AS orders FROM ${childTable} GROUP BY customer_id LIMIT 10"`,
           },
           EXACT_SNAPSHOT: {
@@ -2065,8 +2090,21 @@ SELECT
   committed_at
 FROM ${childTable}
 FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE)
-WHERE order_total_usd >= 1000.00
+WHERE order_total_usd >= 100.00
 ORDER BY order_total_usd DESC;`,
+            bqSql: `-- BigQuery + Spanner TrueTime Point-in-Time Snapshot Audit (FOR SYSTEM_TIME AS OF)
+SELECT
+  event_id AS order_id,
+  user_id AS customer_id,
+  region,
+  service_name,
+  revenue_usd AS order_total_usd,
+  event_timestamp AS committed_at
+FROM \`${projectId}.analytics_lakehouse.telemetry_events_2026\`
+FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 MINUTE)
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+ORDER BY order_total_usd DESC
+LIMIT 25;`,
             cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --sql="SELECT * FROM ${childTable} FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE) LIMIT 20"`,
           },
         };
@@ -2328,7 +2366,11 @@ ORDER BY order_total_usd DESC;`,
                       {onOpenBigQuerySql && (
                         <button
                           type="button"
-                          onClick={() => onOpenBigQuerySql(activeReadConfig.sqlSnippet)}
+                          onClick={() =>
+                            onOpenBigQuerySql(
+                              activeReadConfig.bqSql || activeReadConfig.sqlSnippet
+                            )
+                          }
                           className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                         >
                           Federated Query in BigQuery →
