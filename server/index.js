@@ -1637,7 +1637,7 @@ app.get('/api/context', async (req, res) => {
       req.query.explicitProject || req.headers['x-gcp-project-explicit'] || ''
     ).trim() === 'true';
 
-    // Prefer a project that actually has live Compute Engine VMs (like aicignaw-alien) when no explicit project override was chosen
+    // Dynamically discover if any project in the user's account has live Compute Engine VMs when no explicit project override was chosen
     let vmActiveProject = '';
     for (const [cachedProjId, cachedEntry] of lastKnownProjectVmsCache.entries()) {
       if (Array.isArray(cachedEntry?.vms) && cachedEntry.vms.length > 0) {
@@ -1645,11 +1645,34 @@ app.get('/api/context', async (req, res) => {
         break;
       }
     }
-    if (
-      !vmActiveProject &&
-      projects.some((p) => p.projectId === 'aicignaw-alien')
-    ) {
-      vmActiveProject = 'aicignaw-alien';
+    if (!vmActiveProject && !explicitUserChoice && projects.length > 0) {
+      const candidateProjectIds = projects
+        .map((p) => p.projectId)
+        .filter(Boolean)
+        .slice(0, 6);
+      const probeResults = await Promise.allSettled(
+        candidateProjectIds.map(async (candProjId) => {
+          const probeData = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${candProjId}/aggregated/instances?maxResults=10&returnPartialSuccess=true`,
+            activeToken || token,
+            candProjId,
+            { timeout: 3500 }
+          );
+          let hasVm = false;
+          Object.values(probeData?.items || {}).forEach((zVal) => {
+            if (Array.isArray(zVal?.instances) && zVal.instances.length > 0) {
+              hasVm = true;
+            }
+          });
+          return hasVm ? candProjId : '';
+        })
+      );
+      for (const r of probeResults) {
+        if (r.status === 'fulfilled' && r.value) {
+          vmActiveProject = r.value;
+          break;
+        }
+      }
     }
 
     const effectivePreferred =
@@ -2531,7 +2554,7 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
       }
     }
 
-    // If the currently viewed project has 0 VMs, surface any other project in the user's account that has running VMs (e.g. aicignaw-alien)
+    // If the currently viewed project has 0 VMs, dynamically surface any other project in the user's account that has running VMs
     const otherProjectsWithVms = [];
     if (liveVms.length === 0) {
       for (const [otherProjId, entry] of lastKnownProjectVmsCache.entries()) {
@@ -2553,39 +2576,48 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
           });
         }
       }
-      if (
-        projectId !== 'aicignaw-alien' &&
-        !otherProjectsWithVms.some((p) => p.projectId === 'aicignaw-alien')
-      ) {
+      if (otherProjectsWithVms.length === 0) {
         try {
-          const probeData = await gcpFetch(
-            `https://compute.googleapis.com/compute/v1/projects/aicignaw-alien/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          const { projects: siblingProjects } = await fetchAllActiveGcpProjects(
             token,
-            'aicignaw-alien',
-            { timeout: 4500 }
+            projectId
           );
-          const probedVms = [];
-          Object.entries(probeData?.items || {}).forEach(([zKey, zVal]) => {
-            const zName = zKey.replace('zones/', '');
-            (zVal.instances || []).forEach((inst) => {
-              probedVms.push({
-                name: inst.name,
-                zone: zName,
-                machineType: inst.machineType?.split('/').pop() || 'e2-micro',
-                status: inst.status || 'RUNNING',
-                externalIp:
-                  inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP ||
-                  'None',
+          const candidateSiblings = (siblingProjects || [])
+            .map((p) => p.projectId)
+            .filter((pid) => pid && pid !== projectId)
+            .slice(0, 5);
+          await Promise.allSettled(
+            candidateSiblings.map(async (siblingProjId) => {
+              const probeData = await gcpFetch(
+                `https://compute.googleapis.com/compute/v1/projects/${siblingProjId}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+                token,
+                siblingProjId,
+                { timeout: 4500 }
+              );
+              const probedVms = [];
+              Object.entries(probeData?.items || {}).forEach(([zKey, zVal]) => {
+                const zName = zKey.replace('zones/', '');
+                (zVal.instances || []).forEach((inst) => {
+                  probedVms.push({
+                    name: inst.name,
+                    zone: zName,
+                    machineType: inst.machineType?.split('/').pop() || 'e2-micro',
+                    status: inst.status || 'RUNNING',
+                    externalIp:
+                      inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP ||
+                      'None',
+                  });
+                });
               });
-            });
-          });
-          if (probedVms.length > 0) {
-            otherProjectsWithVms.push({
-              projectId: 'aicignaw-alien',
-              vmCount: probedVms.length,
-              vms: probedVms,
-            });
-          }
+              if (probedVms.length > 0) {
+                otherProjectsWithVms.push({
+                  projectId: siblingProjId,
+                  vmCount: probedVms.length,
+                  vms: probedVms,
+                });
+              }
+            })
+          );
         } catch {
           // ignore cross-project probe error
         }
@@ -76127,7 +76159,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
   try {
     const token = await resolveRequestToken(req);
     const preferredProject = String(
-      req.query.projectId || 'aicignaw-alien'
+      req.query.projectId || (await resolveHostDefaultProject()) || ''
     ).trim();
     const startedAtMs = Date.now();
     const allProjectsRaw = await fetchAllActiveGcpProjects(

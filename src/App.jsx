@@ -5324,11 +5324,7 @@ function CloudPulseCockpit() {
       sessionStorage.getItem('cloudpulse_project') ||
       localStorage.getItem('cloudpulse_project') ||
       '';
-    const storedProj =
-      explicitUserProj ||
-      (legacyStoredProj && legacyStoredProj !== 'vertexai-sprint'
-        ? legacyStoredProj
-        : '');
+    const storedProj = explicitUserProj || legacyStoredProj || '';
     if (storedToken) {
       axios.defaults.headers.common['x-gcp-access-token'] = storedToken;
     }
