@@ -51,7 +51,7 @@ export default function OltpDatabaseContinuityBar({
   const [synthDrawerOpen, setSynthDrawerOpen] = useState(false);
   const [activeArtifactTab, setActiveArtifactTab] = useState('TERRAFORM');
   const [copiedKey, setCopiedKey] = useState(null);
-  const [collapsed, setCollapsed] = useState(activeTab !== 'OVERVIEW');
+  const [collapsed, setCollapsed] = useState(false);
   const barRef = useRef(null);
   const synthDrawerRef = useRef(null);
 
@@ -244,62 +244,36 @@ export default function OltpDatabaseContinuityBar({
   return (
     <div
       ref={barRef}
-      className="rounded-xl border border-zinc-200 dark:border-teal-500/25 bg-white dark:bg-[#14171f] px-3.5 py-2.5 shadow-sm"
+      className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-slate-950/95 via-teal-950/20 to-slate-950/95 p-3.5 shadow-xl"
     >
       {/* Top Header Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 border border-teal-400/30 text-teal-600 dark:text-teal-300">
-            <Database className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/25 to-cyan-500/25 border border-teal-400/40 text-teal-300">
+            <Database className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
+          <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-300">
-                OLTP Database & HTAP Continuity
+              <span className="text-[11px] font-black uppercase tracking-wider text-teal-300">
+                5-Stage Operational OLTP Database & HTAP Continuity Pipeline
+              </span>
+              <span className="rounded-full bg-teal-500/15 border border-teal-400/30 px-2 py-0.5 text-[10px] font-bold text-teal-300">
+                Cloud SQL / Spanner ➔ IAM mTLS Proxy ➔ Replicas ➔ BigQuery Zero-ETL ➔ 35d PITR Vault
               </span>
               {counts.totalOltpEngines !== undefined && (
-                <span className="rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-300">
+                <span className="rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-300">
                   {counts.sqlInstances || 0} Cloud SQL · {counts.spannerInstances || 0} Spanner · {counts.datasets || 0} BQ Datasets
                 </span>
               )}
-              {collapsed && (
-                <div className="hidden xl:flex items-center gap-1 ml-1">
-                  {stages.map((st, idx) => {
-                    const isStSelected = st.id === activeHighlightedStageId;
-                    return (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() =>
-                          handleExecuteAction({
-                            targetTab: st.targetTab,
-                            subTab: st.targetSubTab,
-                          })
-                        }
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                          isStSelected
-                            ? 'bg-teal-600 text-white shadow-xs'
-                            : 'bg-zinc-100 dark:bg-slate-800/80 text-zinc-600 dark:text-slate-300 hover:bg-teal-500/20 hover:text-teal-300'
-                        }`}
-                        title={st.summary}
-                      >
-                        {st.stepNumber || idx + 1}. {st.shortTitle}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-            {!collapsed && (
-              <p className="text-[11px] text-zinc-500 dark:text-slate-400">
-                Purpose-built relational & distributed OLTP lifecycle connecting{' '}
-                <strong className="text-zinc-800 dark:text-slate-200">Cloud SQL / AlloyDB / Spanner</strong>,{' '}
-                <strong className="text-zinc-800 dark:text-slate-200">IAM mTLS Auth Proxy & Private VPC</strong>,{' '}
-                <strong className="text-zinc-800 dark:text-slate-200">Query Insights & Replicas</strong>,{' '}
-                <strong className="text-zinc-800 dark:text-slate-200">BigQuery EXTERNAL_QUERY()</strong>, and{' '}
-                <strong className="text-zinc-800 dark:text-slate-200">35-Day Millisecond PITR Clone</strong>.
-              </p>
-            )}
+            <p className="text-[11px] text-slate-400">
+              Purpose-built relational & distributed OLTP lifecycle connecting{' '}
+              <strong className="text-slate-200">Cloud SQL / AlloyDB / Spanner</strong>,{' '}
+              <strong className="text-slate-200">IAM mTLS Auth Proxy & Private VPC</strong>,{' '}
+              <strong className="text-slate-200">Query Insights & Replicas</strong>,{' '}
+              <strong className="text-slate-200">BigQuery EXTERNAL_QUERY()</strong>, and{' '}
+              <strong className="text-slate-200">35-Day Millisecond PITR Clone</strong>.
+            </p>
           </div>
         </div>
 

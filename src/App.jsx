@@ -6257,16 +6257,16 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('COMPUTE_VM')}
                 title="Provision a live GCP resource (1. Compute Engine VM [Default], 2. VPC Network, 3. Firewall Rule, 4. Cloud Run Service, 5. GKE Cluster, 6. Cloud SQL / AlloyDB, 7. Cloud Storage Bucket, or 8. BigQuery Dataset)"
-                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-lg px-4 py-2 text-xs font-extrabold tracking-tight transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-6 py-2.5 min-w-[200px] sm:min-w-[235px] text-xs sm:text-sm font-extrabold tracking-tight transition-all shadow-md cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" />
-                <span>+ Provision Resource</span>
+                <span>Provision Resource</span>
               </button>
             </div>
           </div>
 
           {/* Secondary Telemetry & Cockpit Controls Bar (Single-Row Compact Layout) */}
-          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap min-w-0">
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button

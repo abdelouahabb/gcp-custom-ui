@@ -606,7 +606,6 @@ export default function DataLakehouseAiPipelineBar({
   const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL');
   const [copiedKey, setCopiedKey] = useState(null);
-  const [collapsed, setCollapsed] = useState(activeTab !== 'OVERVIEW');
 
   const navigateOrScrollToStudio = useCallback(
     (targetTab, subTab) => {
@@ -779,54 +778,30 @@ export default function DataLakehouseAiPipelineBar({
     <div
       ref={containerRef}
       data-feature-id="WAVE3_LAKEHOUSE_AI_PIPELINE"
-      className="bg-white dark:bg-[#18191b] border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 shadow-sm space-y-2.5"
+      className="bg-white dark:bg-[#18191b] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-3"
     >
       {/* Top Header Row */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
-            <Database className="w-3.5 h-3.5" />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
+            <Database className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
+          <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Data, Lakehouse & AI Pipeline
+                Wave 3: 6-Stage Data, Lakehouse & AI Pipeline Glue
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 {blueprint?.counts?.buckets ?? 0} GCS · {blueprint?.counts?.datasets ?? 0} BQ · {blueprint?.counts?.dataAiApis ?? 'Live'} Data/AI APIs
               </span>
-              {collapsed && (
-                <div className="hidden xl:flex items-center gap-1 ml-1">
-                  {stages.map((st, idx) => {
-                    const isStSelected = st.id === activeHighlightedStageId;
-                    return (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => navigateOrScrollToStudio(st.targetTab)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                          isStSelected
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-emerald-500/20 hover:text-emerald-400'
-                        }`}
-                        title={st.summary}
-                      >
-                        {st.stepNumber || idx + 1}. {st.shortTitle}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-            {!collapsed && (
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                End-to-end Lakehouse & GenAI pipeline connecting GCS Raw Lakes, BigLake Iceberg Federation, BigQuery Medallion Marts, Dataform SQLX + Airflow DAGs, BQML Gemini 2.5 Flash, and 168h Time-Travel.
-              </p>
-            )}
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              End-to-end Lakehouse & GenAI pipeline connecting GCS Raw Lakes, BigLake Iceberg Federation, BigQuery Medallion Marts, Dataform SQLX + Airflow DAGs, BQML Gemini 2.5 Flash, and 168h Time-Travel.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => {
@@ -838,14 +813,14 @@ export default function DataLakehouseAiPipelineBar({
                 setDrawerOpen(true);
               }
             }}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
               drawerOpen && activeStage?.id === 'STAGE_4_DATAFORM_AIRFLOW'
                 ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                 : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
             }`}
           >
             <FileCode2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Synthesize Lakehouse Code (`.sqlx` + `dag.py` + `BQML`)</span>
+            <span>Step 4: Synthesize Lakehouse Code (`.sqlx` + `dag.py` + `BQML`)</span>
             {drawerOpen && activeStage?.id === 'STAGE_4_DATAFORM_AIRFLOW' ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
@@ -857,9 +832,9 @@ export default function DataLakehouseAiPipelineBar({
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
             >
-              <span>Close Stage</span>
+              <span>Close Stage Drawer</span>
             </button>
           )}
 
@@ -868,26 +843,15 @@ export default function DataLakehouseAiPipelineBar({
             onClick={fetchBlueprint}
             disabled={loading}
             title="Re-scan live GCS, BigLake, BigQuery, Pub/Sub, Cloud SQL, Spanner & Vertex AI inventory"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Sync</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
-            title={collapsed ? 'Expand 6-Stage Lakehouse & AI Pipeline' : 'Collapse Pipeline Bar'}
-          >
-            <span className="hidden sm:inline">{collapsed ? 'Stages' : 'Hide'}</span>
-            {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Sync Lakehouse</span>
           </button>
         </div>
       </div>
 
       {/* 6-Stage Interactive Lakehouse & AI Pipeline Chain */}
-      {!collapsed && (
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
         {stages.map((stage, idx) => {
           const IconComponent = STAGE_ICONS[stage.id] || Database;
@@ -981,7 +945,6 @@ export default function DataLakehouseAiPipelineBar({
           );
         })}
       </div>
-      )}
 
       {/* Expandable Wave 3 Lakehouse & AI Stage Drawer (Closed by Default) */}
       {drawerOpen && (

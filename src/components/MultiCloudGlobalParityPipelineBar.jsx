@@ -528,7 +528,6 @@ export default function MultiCloudGlobalParityPipelineBar({
   const [mermaidExpanded, setMermaidExpanded] = useState(false);
   const [mermaidViewMode, setMermaidViewMode] = useState('VISUAL'); // 'VISUAL' | 'CODE'
   const [copiedKey, setCopiedKey] = useState(null);
-  const [collapsed, setCollapsed] = useState(activeTab !== 'OVERVIEW');
   const barRef = useRef(null);
   const artifactDrawerRef = useRef(null);
 
@@ -780,71 +779,41 @@ export default function MultiCloudGlobalParityPipelineBar({
     <div
       ref={barRef}
       data-feature-id="WAVE7_MULTICLOUD_GLOBAL_PARITY_PIPELINE"
-      className="rounded-xl border border-zinc-200 dark:border-slate-800/90 bg-white dark:bg-[#14171f] px-3.5 py-2.5 shadow-sm"
+      className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-slate-950/95 via-teal-950/25 to-slate-950/95 p-3.5 shadow-xl"
     >
       {/* Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 border border-teal-400/30 text-teal-600 dark:text-teal-300">
-            <Globe className="w-3.5 h-3.5" />
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300">
+            <Globe className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
+          <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-600 dark:text-teal-300 border border-teal-400/30">
-                Global Subsea & Multi-Cloud Parity
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                Wave 7 · 6-Stage Global Subsea Backbone, Multi-Cloud Parity & 2026 Frontier
               </span>
-              <span className="text-[11px] font-mono text-zinc-500 dark:text-slate-400 truncate">
-                {counts.activeRegions ?? 1} Region(s) ({counts.avgCfePct ?? 93}% CFE) · {counts.principals ?? 0} IAM · {counts.vms ?? 0} VMs · {counts.firewalls ?? 0} Firewalls
+              <span className="text-[11px] font-mono text-slate-400">
+                {counts.activeRegions ?? 1} Active Region(s) ({counts.avgCfePct ?? 93}% CFE) · {counts.principals ?? 0} IAM · {counts.vms ?? 0} VMs · {counts.firewalls ?? 0} Firewalls · {counts.secrets ?? 0} Secrets · {counts.auditEvents ?? 0} Audit Events · {counts.enabledApis ?? 0} APIs
               </span>
-              {collapsed && (
-                <div className="hidden xl:flex items-center gap-1 ml-1">
-                  {stages.map((st) => {
-                    const isStSelected = st.id === activeHighlightedStageId;
-                    return (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() =>
-                          handleExecuteAction({
-                            targetTab: st.targetTab,
-                            subTab: st.targetSubTab,
-                            openArtifactTab: st.openArtifactTab,
-                          })
-                        }
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                          isStSelected
-                            ? 'bg-teal-600 text-white shadow-xs'
-                            : 'bg-zinc-100 dark:bg-slate-800/80 text-zinc-600 dark:text-slate-300 hover:bg-teal-500/20 hover:text-teal-300'
-                        }`}
-                        title={st.title}
-                      >
-                        {st.stepNumber}. {st.shortTitle}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-            {!collapsed && (
-              <p className="text-[11px] text-zinc-500 dark:text-slate-400 mt-0.5">
-                40-Region Subsea Fiber & Firewall X-Ray → AWS Parity Bridge → Azure Governance & Spend Fuse → Alibaba/Huawei Hyperscale → 10-Persona War-Room → SDK 591.0.0 & `.tf`
-              </p>
-            )}
+            <p className="text-xs text-slate-300 mt-0.5">
+              40-Region Subsea Fiber & Firewall X-Ray → AWS Parity Bridge → Azure Governance & Spend Fuse → Alibaba/Huawei Hyperscale → 10-Persona War-Room → SDK 591.0.0 & `.tf`
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setArtifactDrawerOpen((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold border transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold border transition cursor-pointer ${
               artifactDrawerOpen
-                ? 'bg-teal-500/25 text-teal-700 dark:text-teal-200 border-teal-400/50'
-                : 'bg-zinc-100 dark:bg-slate-900/90 text-teal-600 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/15'
+                ? 'bg-teal-500/25 text-teal-200 border-teal-400/50'
+                : 'bg-slate-900/90 text-teal-300 border-teal-500/30 hover:bg-teal-500/15'
             }`}
           >
             <FileCode2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Synthesize Multi-Cloud (`.tf` + `.yaml`)</span>
+            <span>Synthesize Multi-Cloud Bridge (`.tf` + `.yaml` + `.sh`)</span>
             {artifactDrawerOpen ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
@@ -856,9 +825,9 @@ export default function MultiCloudGlobalParityPipelineBar({
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-slate-700/80 bg-zinc-100 dark:bg-slate-900/90 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 dark:text-slate-300 hover:bg-zinc-200 dark:hover:bg-slate-800 cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 cursor-pointer"
             >
-              <span>Close Stage</span>
+              <span>Close Stage Drawer</span>
             </button>
           )}
 
@@ -866,28 +835,17 @@ export default function MultiCloudGlobalParityPipelineBar({
             type="button"
             onClick={fetchBlueprint}
             disabled={loading}
-            className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-slate-700/80 bg-zinc-100 dark:bg-slate-900/90 px-2 py-1 text-[11px] font-semibold text-zinc-700 dark:text-slate-300 hover:bg-zinc-200 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
             title="Re-probe live Global Subsea regions, IAM principals, VPC firewalls, Secrets & Cloud Audit Logs"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden md:inline">Sync</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-slate-700/80 bg-zinc-100 dark:bg-slate-900/90 px-2 py-1 text-[11px] font-semibold text-zinc-600 dark:text-slate-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
-            title={collapsed ? 'Expand 6-Stage Multi-Cloud Pipeline' : 'Collapse Pipeline Bar'}
-          >
-            <span className="hidden sm:inline">{collapsed ? 'Stages' : 'Hide'}</span>
-            {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
           </button>
         </div>
       </div>
 
       {/* 6-Stage Horizontal Pipeline Strip */}
-      {!collapsed && (
-      <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
         {stages.map((stage) => {
           const Icon = STAGE_ICONS[stage.id] || Globe;
           const isSelected = stage.id === activeHighlightedStageId;
@@ -968,7 +926,6 @@ export default function MultiCloudGlobalParityPipelineBar({
           );
         })}
       </div>
-      )}
 
       {/* Selected Stage Detail Strip (Closed by default; opens when a stage card is clicked) */}
       {drawerOpen && selectedStageObj && (

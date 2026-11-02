@@ -47,7 +47,6 @@ import {
 export default function StudioGcpAdvantageBar({
   projectId,
   studioDomain = 'VPC',
-  defaultExpanded = false,
   onRunInShell,
   onLoadBigQuerySql,
   onRefreshParent,
@@ -56,7 +55,7 @@ export default function StudioGcpAdvantageBar({
 }) {
   const [auditData, setAuditData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useState(true);
   const [copiedKey, setCopiedKey] = useState(null);
 
   // Domain-specific interactive states

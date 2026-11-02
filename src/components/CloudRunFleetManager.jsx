@@ -1884,38 +1884,54 @@ spec:
   }, []);
 
   const handleOpenWorkbenchStudio = useCallback(
-    (studioKey) => {
-      setShowWorkerPoolsSidecarStudio(studioKey === 'WORKER_POOLS');
-      setShowSchedulerToJobsStudio(studioKey === 'SCHEDULER_TO_JOBS');
-      setShowComposeStudio(studioKey === 'DOCKER_COMPOSE');
-      setShowAppEngineExterminator(studioKey === 'APP_ENGINE');
-      setShowArtifactHunter(studioKey === 'DEAD_ARTIFACTS');
-      setShowGlobalGkeTranspiler(studioKey === 'CLOUDRUN_TO_GKE');
+    (studioKey, forceOpen = false) => {
+      const isAlreadyOpen =
+        (studioKey === 'WORKER_POOLS' && showWorkerPoolsSidecarStudio) ||
+        (studioKey === 'SCHEDULER_TO_JOBS' && showSchedulerToJobsStudio) ||
+        (studioKey === 'DOCKER_COMPOSE' && showComposeStudio) ||
+        (studioKey === 'APP_ENGINE' && showAppEngineExterminator) ||
+        (studioKey === 'DEAD_ARTIFACTS' && showArtifactHunter) ||
+        (studioKey === 'CLOUDRUN_TO_GKE' && showGlobalGkeTranspiler);
 
-      if (studioKey === 'WORKER_POOLS') {
+      const nextKey = !forceOpen && isAlreadyOpen ? 'FLEET' : studioKey;
+
+      setShowWorkerPoolsSidecarStudio(nextKey === 'WORKER_POOLS');
+      setShowSchedulerToJobsStudio(nextKey === 'SCHEDULER_TO_JOBS');
+      setShowComposeStudio(nextKey === 'DOCKER_COMPOSE');
+      setShowAppEngineExterminator(nextKey === 'APP_ENGINE');
+      setShowArtifactHunter(nextKey === 'DEAD_ARTIFACTS');
+      setShowGlobalGkeTranspiler(nextKey === 'CLOUDRUN_TO_GKE');
+
+      if (nextKey === 'WORKER_POOLS') {
         scrollToStudioSection('cloudrun-2027-worker-pools-studio');
-      } else if (studioKey === 'SCHEDULER_TO_JOBS') {
+      } else if (nextKey === 'SCHEDULER_TO_JOBS') {
         if (!schedulerJobsState.data && !schedulerJobsState.loading) {
           handleFetchSchedulerAndJobs(false);
         }
         scrollToStudioSection('cloudrun-scheduler-jobs-studio');
-      } else if (studioKey === 'DOCKER_COMPOSE') {
+      } else if (nextKey === 'DOCKER_COMPOSE') {
         scrollToStudioSection('cloudrun-compose-studio');
-      } else if (studioKey === 'APP_ENGINE') {
+      } else if (nextKey === 'APP_ENGINE') {
         if (!appEngineState.data && !appEngineState.loading) {
           handleFetchAppEngineOverview(false);
         }
         scrollToStudioSection('cloudrun-appengine-studio');
-      } else if (studioKey === 'DEAD_ARTIFACTS') {
+      } else if (nextKey === 'DEAD_ARTIFACTS') {
         if (!artifactScanState.data && !artifactScanState.loading) {
           handleScanDeadArtifacts(false);
         }
         scrollToStudioSection('cloudrun-dead-artifacts-studio');
-      } else if (studioKey === 'CLOUDRUN_TO_GKE') {
+      } else if (nextKey === 'CLOUDRUN_TO_GKE') {
         scrollToStudioSection('cloudrun-to-gke-studio');
       }
     },
     [
+      showWorkerPoolsSidecarStudio,
+      showSchedulerToJobsStudio,
+      showComposeStudio,
+      showAppEngineExterminator,
+      showArtifactHunter,
+      showGlobalGkeTranspiler,
       scrollToStudioSection,
       schedulerJobsState.data,
       schedulerJobsState.loading,
@@ -1933,7 +1949,7 @@ spec:
     if (typeof window === 'undefined') return undefined;
     const onOpenWorkbench = (ev) => {
       const targetStudio = ev?.detail?.studio || 'WORKER_POOLS';
-      handleOpenWorkbenchStudio(targetStudio);
+      handleOpenWorkbenchStudio(targetStudio, true);
     };
     window.addEventListener('cloudpulse:open-cloudrun-workbench', onOpenWorkbench);
     return () =>
@@ -2138,7 +2154,7 @@ spec:
 
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
-      {/* Header: Top Title & Primary Actions + Single-View Tabbed Workspace Navigation */}
+      {/* Header: Top Title & Primary Actions + 7-Module Serverless Workbench Bar */}
       <div className="space-y-3.5 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
@@ -2164,7 +2180,7 @@ spec:
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {onSelectTab && (
               <>
                 <button
@@ -2172,10 +2188,10 @@ spec:
                   data-feature-id="RECYCLE_BIN"
                   onClick={() => onSelectTab('RECYCLE_BIN', 'CLOUD_RUN')}
                   title="Open 30-Day Cloud Recycle Bin filtered to Deleted Cloud Run Services (Stateless Container Image Re-Deploy)"
-                  className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Deleted (30d)</span>
+                  <span>Deleted Cloud Run (30d)</span>
                 </button>
                 <button
                   type="button"
@@ -2188,19 +2204,19 @@ spec:
                     )
                   }
                   title="Reverse-engineer Cloud Run services and project stack into live HashiCorp Terraform HCL (main.tf)"
-                  className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Export `.tf`</span>
+                  <span>Reverse-Engineer to .tf (`main.tf`)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onSelectTab('WAVE9_STUDIO')}
                   title="Open Cloud Build CI/CD, GitHub Repo Builder & Artifact Registry SBOM Studio"
-                  className="inline-flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 rounded-md px-3 py-2 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Cloud Build ↗</span>
+                  <span>Cloud Build & Registry ↗</span>
                 </button>
               </>
             )}
@@ -2210,7 +2226,7 @@ spec:
               data-feature-id="CLOUDRUN_SYNC_FLEET"
               onClick={() => fetchCloudRunFleet(false)}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -2219,324 +2235,55 @@ spec:
                     : ''
                 }`}
               />
-              <span>Sync</span>
+              <span>Sync Cloud Run</span>
             </button>
 
             <button
               type="button"
               data-feature-id="CLOUDRUN_CREATE_JOB_BTN"
               onClick={() => handleOpenWorkbenchStudio('SCHEDULER_TO_JOBS')}
-              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5 text-blue-500" />
-              <span>+ Create Job</span>
+              <span>+ Create Cloud Run Job</span>
             </button>
 
             <button
               type="button"
               data-feature-id="CLOUDRUN_DEPLOY_SERVICE_BTN"
               onClick={onOpenProvisionCloudRun}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md px-3 py-1.5 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>+ Deploy Service</span>
+              <span>+ Deploy Cloud Run Service</span>
             </button>
           </div>
         </div>
 
-        {/* Clean Single-View Workspace Tab Bar (Live Fleet + 6 Specialized Workbenches + VM Migration Link) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => handleOpenWorkbenchStudio('FLEET')}
-            title="View live Cloud Run services, scale-to-zero revisions, traffic splitting, and 1-Tap Instant Deploy templates"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              !isAnyWorkbenchOpen
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Rocket
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    !isAnyWorkbenchOpen ? 'text-white' : 'text-blue-500'
-                  }`}
-                />
-                <span className="truncate">Live Services</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  !isAnyWorkbenchOpen
-                    ? 'text-blue-100'
-                    : 'text-blue-600 dark:text-blue-400'
-                }`}
-              >
-                {services.length} Active
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                !isAnyWorkbenchOpen
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              Fleet &amp; 1-Tap Deploy
-            </div>
-          </button>
-
+        {/* 7-Module Serverless Workbench & Migration Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2 pt-1">
           <button
             type="button"
             data-feature-id="CLOUDRUN_2027_WORKER_POOLS_SIDECARS"
             onClick={() => handleOpenWorkbenchStudio('WORKER_POOLS')}
             title="2027 Cloud Run Worker Pools (Non-HTTP Pull Workers for Kafka/PubSub/Temporal), Multi-Container Sidecar Mesh (dependsOn DAG + Shared RAM Volume), Serverless NVIDIA L4/Blackwell GPU Sizer & Revision Canary Traffic Splitter"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showWorkerPoolsSidecarStudio
-                ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+                ? 'bg-emerald-600/15 dark:bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                : 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/40 text-zinc-900 dark:text-zinc-100'
             }`}
           >
             <div className="flex items-center justify-between gap-1.5">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Cpu
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showWorkerPoolsSidecarStudio
-                      ? 'text-white'
-                      : 'text-emerald-500'
-                  }`}
-                />
+                <Cpu className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 <span className="truncate">Worker Pools &amp; GPUs</span>
               </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showWorkerPoolsSidecarStudio
-                    ? 'text-emerald-100'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
+              <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                 2027 10X
               </span>
             </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showWorkerPoolsSidecarStudio
-                  ? 'text-emerald-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
               Pull Workers · Sidecar DAG · L4
-            </div>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_SCHEDULER_TO_JOBS"
-            onClick={() => handleOpenWorkbenchStudio('SCHEDULER_TO_JOBS')}
-            title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              showSchedulerToJobsStudio
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Zap
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showSchedulerToJobsStudio ? 'text-white' : 'text-blue-500'
-                  }`}
-                />
-                <span className="truncate">Scheduler → Jobs</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showSchedulerToJobsStudio
-                    ? 'text-blue-100'
-                    : 'text-zinc-500'
-                }`}
-              >
-                {schedulerJobsState.data
-                  ? `${schedulerJobsState.data.cloudRunJobsCount || 0} Jobs`
-                  : '24h Batch'}
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showSchedulerToJobsStudio
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              24h Timeout &amp; Task Shards
-            </div>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_DOCKER_COMPOSE_GA"
-            onClick={() => handleOpenWorkbenchStudio('DOCKER_COMPOSE')}
-            title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              showComposeStudio
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Layers
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showComposeStudio ? 'text-white' : 'text-emerald-500'
-                  }`}
-                />
-                <span className="truncate">Docker Compose</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showComposeStudio
-                    ? 'text-blue-100'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                SDK GA
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showComposeStudio
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              gcloud run compose up
-            </div>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_APP_ENGINE_EXTERMINATOR"
-            onClick={() => handleOpenWorkbenchStudio('APP_ENGINE')}
-            title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              showAppEngineExterminator
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Trash2
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showAppEngineExterminator ? 'text-white' : 'text-red-500'
-                  }`}
-                />
-                <span className="truncate">App Engine $0/mo</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showAppEngineExterminator
-                    ? 'text-blue-100'
-                    : 'text-zinc-500'
-                }`}
-              >
-                {appEngineState.data?.summary
-                  ? appEngineState.data.summary.activeServicesCount === 0
-                    ? '0 Active'
-                    : `${appEngineState.data.summary.activeServicesCount} Active`
-                  : 'Neutralize'}
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showAppEngineExterminator
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              Service Exterminator &amp; Vault
-            </div>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_DEAD_ARTIFACT_HUNTER"
-            onClick={() => handleOpenWorkbenchStudio('DEAD_ARTIFACTS')}
-            title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              showArtifactHunter
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <HardDrive
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showArtifactHunter ? 'text-white' : 'text-amber-500'
-                  }`}
-                />
-                <span className="truncate">Dead Artifacts</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showArtifactHunter
-                    ? 'text-blue-100'
-                    : 'text-amber-600 dark:text-amber-400'
-                }`}
-              >
-                {artifactScanState.data?.summary
-                  ? `${artifactScanState.data.summary.deadContainerImagesCount} Dead`
-                  : 'AR + GCS'}
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showArtifactHunter
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              Orphan Containers &amp; Staging
-            </div>
-          </button>
-
-          <button
-            type="button"
-            data-feature-id="CLOUDRUN_TO_GKE_TRANSPILER"
-            onClick={() => handleOpenWorkbenchStudio('CLOUDRUN_TO_GKE')}
-            title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
-            className={`w-full p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-              showGlobalGkeTranspiler
-                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
-                <Layers
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    showGlobalGkeTranspiler ? 'text-white' : 'text-blue-500'
-                  }`}
-                />
-                <span className="truncate">Cloud Run → GKE</span>
-              </span>
-              <span
-                className={`text-[9.5px] font-mono font-bold shrink-0 ${
-                  showGlobalGkeTranspiler ? 'text-blue-100' : 'text-zinc-500'
-                }`}
-              >
-                K8s YAML
-              </span>
-            </div>
-            <div
-              className={`text-[10.5px] font-mono truncate ${
-                showGlobalGkeTranspiler
-                  ? 'text-blue-100/90'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              6-Resource K8s Transpiler
             </div>
           </button>
 
@@ -2546,12 +2293,12 @@ spec:
               data-feature-id="VM_MIGRATE_TO_CLOUD_RUN"
               onClick={() => onSelectTab('VM_SSH')}
               title="Open GCE VM -> Cloud Run Gen2 Modernization Engine (mfit 6-Dimension Readiness Scorecard + m2c Runtime Analyzer + Persistent volumes[].gcs FUSE Disk Mount)"
-              className="w-full p-2.5 rounded-lg border bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-left transition-colors cursor-pointer flex flex-col justify-between gap-1"
+              className="w-full p-2.5 rounded-md border bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-left transition-colors cursor-pointer flex flex-col justify-between gap-1"
             >
               <div className="flex items-center justify-between gap-1.5">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
                   <HardDrive className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="truncate">VM → Cloud Run ↗</span>
+                  <span className="truncate">VM → Cloud Run</span>
                 </span>
                 <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
                   mfit + m2c
@@ -2562,6 +2309,139 @@ spec:
               </div>
             </button>
           )}
+
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_SCHEDULER_TO_JOBS"
+            onClick={() => handleOpenWorkbenchStudio('SCHEDULER_TO_JOBS')}
+            title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showSchedulerToJobsStudio
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Zap className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="truncate">Scheduler → Jobs</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                {schedulerJobsState.data
+                  ? `${schedulerJobsState.data.cloudRunJobsCount || 0} Jobs`
+                  : '24h Batch'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              24h Timeout &amp; Task Shards
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_DOCKER_COMPOSE_GA"
+            onClick={() => handleOpenWorkbenchStudio('DOCKER_COMPOSE')}
+            title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showComposeStudio
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Layers className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">Docker Compose</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                SDK GA
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              gcloud run compose up
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_APP_ENGINE_EXTERMINATOR"
+            onClick={() => handleOpenWorkbenchStudio('APP_ENGINE')}
+            title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showAppEngineExterminator
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="truncate">App Engine $0/mo</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                {appEngineState.data?.summary
+                  ? appEngineState.data.summary.activeServicesCount === 0
+                    ? '0 Active'
+                    : `${appEngineState.data.summary.activeServicesCount} Active`
+                  : 'Neutralize'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              Service Exterminator &amp; Vault
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_DEAD_ARTIFACT_HUNTER"
+            onClick={() => handleOpenWorkbenchStudio('DEAD_ARTIFACTS')}
+            title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showArtifactHunter
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <HardDrive className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span className="truncate">Dead Artifacts</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                {artifactScanState.data?.summary
+                  ? `${artifactScanState.data.summary.deadContainerImagesCount} Dead`
+                  : 'AR + GCS'}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              Orphan Containers &amp; Staging
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_TO_GKE_TRANSPILER"
+            onClick={() => handleOpenWorkbenchStudio('CLOUDRUN_TO_GKE')}
+            title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showGlobalGkeTranspiler
+                ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800/90 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Layers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="truncate">Cloud Run → GKE</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-zinc-500 shrink-0">
+                K8s YAML
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              6-Resource K8s Transpiler
+            </div>
+          </button>
         </div>
       </div>
 
