@@ -25,6 +25,15 @@ class RootErrorBoundary extends React.Component {
   static getDerivedStateFromError(error) {
     return { error };
   }
+  componentDidMount() {
+    if (import.meta.hot) {
+      import.meta.hot.on('vite:afterUpdate', () => {
+        if (this.state.error) {
+          this.setState({ error: null });
+        }
+      });
+    }
+  }
   render() {
     if (this.state.error) {
       return (

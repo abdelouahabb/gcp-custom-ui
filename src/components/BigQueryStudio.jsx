@@ -3126,10 +3126,12 @@ LIMIT 25;`,
           </div>
 
           <MermaidArchitectureDiagram
-            title={`Mermaid BigQuery Lakehouse ER Schema & AI/Vector Lineage (${projectId}.${aiDataset}.${aiTable})`}
-            defaultMode="SPLIT"
+            title={`Mermaid BigQuery Lakehouse ER Schema & AI/Vector Lineage (${projectId}.${
+              selectedDatasetId || 'analytics_lakehouse'
+            }.${rewindTableTarget || 'telemetry_events_2026'})`}
+            defaultMode="VISUAL"
             code={`erDiagram
-  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} {
+  ${(rewindTableTarget || 'telemetry_events_2026').replace(/[^A-Za-z0-9_]/g, '_')} {
     STRING event_id PK
     TIMESTAMP event_timestamp
     STRING region
@@ -3140,7 +3142,7 @@ LIMIT 25;`,
   }
   ScaNN_Vector_Index {
     STRING index_type PK
-    STRING distance_type
+    STRING embedding_model
     INT64 num_leaves
     INT64 top_k
   }
@@ -3153,9 +3155,18 @@ LIMIT 25;`,
     STRING sink_type PK
     STRING target_uri
   }
-  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} ||--o{ ScaNN_Vector_Index : "${aiVectorIndexType} (${aiDistanceType} · Top-${aiTopK})"
-  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} }o--|| Vertex_AI_Remote_Model : "${aiGenerativeModel} + TimesFM (${aiForecastHorizonDays}d)"
-  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} ||--o{ Continuous_Streaming_Sink : "EXPORT DATA (${aiContinuousSink})"`}
+  ${(rewindTableTarget || 'telemetry_events_2026').replace(
+    /[^A-Za-z0-9_]/g,
+    '_'
+  )} ||--o{ ScaNN_Vector_Index : "${bqVectorIndexType} (${bqEmbeddingModel})"
+  ${(rewindTableTarget || 'telemetry_events_2026').replace(
+    /[^A-Za-z0-9_]/g,
+    '_'
+  )} }o--|| Vertex_AI_Remote_Model : "${bqAiModel} + TimesFM (${bqForecastHorizonDays}d)"
+  ${(rewindTableTarget || 'telemetry_events_2026').replace(
+    /[^A-Za-z0-9_]/g,
+    '_'
+  )} ||--o{ Continuous_Streaming_Sink : "EXPORT DATA (${bqContinuousSink})"`}
           />
         </div>
       )}
