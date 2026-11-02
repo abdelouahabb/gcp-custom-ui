@@ -4733,11 +4733,11 @@ function CloudPulseCockpit() {
               behavior: 'smooth',
               block:
                 !isTallPanel &&
+                !spec.isShellCommand &&
                 (spec.targetElementId ||
                   spec.ruleName ||
                   spec.isXRay ||
-                  spec.sqlSeeded ||
-                  spec.isShellCommand)
+                  spec.sqlSeeded)
                   ? 'center'
                   : 'start',
             });

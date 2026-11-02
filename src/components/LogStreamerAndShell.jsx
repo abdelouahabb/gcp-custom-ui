@@ -114,6 +114,7 @@ export default function LogStreamerAndShell({
     )
   );
   const [shellRunning, setShellRunning] = useState(false);
+  const [shellDockMode, setShellDockMode] = useState('TOP_DOCK'); // 'TOP_DOCK' | 'FLOATING_DRAWER' | 'MINIMIZED'
   const [shellHistory, setShellHistory] = useState([
     {
       id: 'init-1',
@@ -887,6 +888,18 @@ export default function LogStreamerAndShell({
       if (!cmd || shellRunning) return;
       setShellInput(cmd);
       setShellHistoryCursor(-1);
+      setShellDockMode((prev) => (prev === 'MINIMIZED' ? 'TOP_DOCK' : prev));
+      if (cmdOverride && typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          const shellEl = document.getElementById('cloud-shell-terminal-card');
+          if (shellEl) {
+            const rect = shellEl.getBoundingClientRect();
+            if (rect.top < 0 || rect.bottom > window.innerHeight) {
+              shellEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        });
+      }
       setShellRunning(true);
       try {
         const res = await axios.post(
@@ -1022,6 +1035,278 @@ export default function LogStreamerAndShell({
 
   return (
     <div className="space-y-6">
+      {/* ===================================================================
+          SMART TOP-DOCKED / FLOATING TOUCH-OPTIMIZED MOBILE CLOUD SHELL
+          Placed ABOVE all asynchronous log streams so log refreshes never
+          push or shift the terminal down! Includes 1-click Top Dock,
+          Floating Corner Drawer, and Compact Minimized Bar modes.
+         =================================================================== */}
+      <div
+        id="cloud-shell-terminal-card"
+        className={
+          shellDockMode === 'FLOATING_DRAWER'
+            ? 'fixed bottom-4 right-4 left-4 xl:left-auto xl:w-[760px] z-50 bg-white/95 dark:bg-[#18191c]/95 backdrop-blur-md border-2 border-blue-500/50 rounded-2xl p-4 shadow-2xl flex flex-col transition-all scroll-mt-24'
+            : 'bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm flex flex-col transition-all scroll-mt-24'
+        }
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 shrink-0">
+              <Terminal className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
+                  Touch-Optimized Mobile Cloud Shell
+                </h3>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <ShieldAlert className="w-3 h-3" />
+                  <span>Safe Guardrails ON</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                  <span>
+                    {shellDockMode === 'FLOATING_DRAWER'
+                      ? 'Floating Overlay (Follows Scroll)'
+                      : 'Top-Docked (Zero Log-Refresh Shift)'}
+                  </span>
+                </span>
+              </div>
+              {shellDockMode !== 'MINIMIZED' && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Hybrid Direct REST Bridge + Real <code className="font-mono">gcloud</code>,{' '}
+                  <code className="font-mono">bq</code>, <code className="font-mono">gsutil</code> &amp;{' '}
+                  <code className="font-mono">kubectl</code> CLI execution with read-only data-loss guardrails.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="inline-flex rounded-lg p-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
+              <button
+                type="button"
+                onClick={() => setShellDockMode('TOP_DOCK')}
+                title="Pin Cloud Shell at the top of the workspace so log refreshes below never shift it"
+                className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
+                  shellDockMode === 'TOP_DOCK'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                Top Dock
+              </button>
+              <button
+                type="button"
+                onClick={() => setShellDockMode('FLOATING_DRAWER')}
+                title="Float Cloud Shell in the bottom-right corner while scrolling through logs"
+                className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
+                  shellDockMode === 'FLOATING_DRAWER'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                Floating Drawer
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setShellDockMode((prev) =>
+                    prev === 'MINIMIZED' ? 'TOP_DOCK' : 'MINIMIZED'
+                  )
+                }
+                title="Collapse Cloud Shell into a single compact command bar"
+                className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
+                  shellDockMode === 'MINIMIZED'
+                    ? 'bg-amber-500 text-zinc-950 shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                {shellDockMode === 'MINIMIZED' ? 'Expand Shell' : 'Minimize'}
+              </button>
+            </div>
+
+            {shellDockMode !== 'MINIMIZED' && (
+              <button
+                type="button"
+                onClick={() => setShellHistory([])}
+                title="Clear terminal output history"
+                className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {shellDockMode === 'MINIMIZED' ? (
+          <div className="mt-3 pt-2.5 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div className="flex items-center gap-2 truncate">
+              <span className="text-emerald-500 font-bold">$</span>
+              <span className="text-zinc-700 dark:text-zinc-300 truncate">
+                {shellInput || `gcloud storage buckets list --project=${projectId}`}
+              </span>
+              {shellHistory[0] && (
+                <span className="text-[10.5px] text-zinc-400">
+                  · Last exit={shellHistory[0].exitCode ?? 0} ({shellHistory[0].durationMs}ms)
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShellDockMode('TOP_DOCK')}
+              className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer shrink-0"
+            >
+              Open Terminal ({shellHistory.length} cmds)
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {/* One-Tap Smart Command Chips for Mobile Ergonomics */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5">
+              {quickCommands.map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  disabled={shellRunning}
+                  onClick={() => executeShellCommand(q.cmd)}
+                  className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  $ {q.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Command Input Form + Touch History Navigation */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                executeShellCommand();
+              }}
+              className="flex flex-wrap sm:flex-nowrap items-center gap-1.5"
+            >
+              <div className="relative flex-1 min-w-[200px]">
+                <span className="font-mono text-xs text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2">
+                  $
+                </span>
+                <input
+                  type="text"
+                  value={shellInput}
+                  onChange={(e) => setShellInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      cycleShellHistory('PREV');
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      cycleShellHistory('NEXT');
+                    }
+                  }}
+                  placeholder="Type any read-only gcloud, bq, gsutil, or kubectl command..."
+                  aria-label="Cloud Shell command input"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-7 pr-3 py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => cycleShellHistory('PREV')}
+                  disabled={shellHistory.length === 0}
+                  title="Previous command in history (Up Arrow)"
+                  className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cycleShellHistory('NEXT')}
+                  disabled={shellHistory.length === 0}
+                  title="Next command in history (Down Arrow)"
+                  className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
+                >
+                  Next
+                </button>
+                <button
+                  type="submit"
+                  disabled={shellRunning || !shellInput.trim()}
+                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[14px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>{shellRunning ? 'Running...' : 'Run'}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Terminal Output Stream */}
+            <div
+              className={`bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-800 dark:text-zinc-200 space-y-3 overflow-y-auto ${
+                shellDockMode === 'FLOATING_DRAWER'
+                  ? 'max-h-[240px]'
+                  : 'max-h-[280px]'
+              }`}
+            >
+              {shellHistory.length === 0 ? (
+                <div className="text-[11px] text-zinc-500 text-center py-6">
+                  Terminal cleared. Tap any quick command chip above or type a{' '}
+                  <code className="font-mono">gcloud</code> /{' '}
+                  <code className="font-mono">bq</code> command.
+                </div>
+              ) : (
+                shellHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border-b border-zinc-200 dark:border-zinc-800/80 pb-3 last:border-b-0 last:pb-0 space-y-1.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                      <span
+                        onClick={() => setShellInput(item.command)}
+                        title="Click to load command into input"
+                        className="text-emerald-400 font-bold cursor-pointer hover:underline break-all"
+                      >
+                        $ {item.command}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.engine && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[9.5px] text-blue-700 dark:text-blue-300">
+                            {item.engine}
+                          </span>
+                        )}
+                        <span
+                          className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold ${
+                            item.exitCode === 0
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}
+                        >
+                          exit={item.exitCode ?? 0}
+                        </span>
+                        <span className="text-zinc-500">{item.durationMs}ms</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(item.output, `shell-out-${item.id}`)
+                          }
+                          className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-0.5 cursor-pointer"
+                        >
+                          {copiedId === `shell-out-${item.id}` ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="text-[11px] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                      {item.output}
+                    </pre>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 1-Click 30-Day Cloud Recycle Bin Banner in Logs Explorer */}
       {onOpenRecycleBin && (
         <div className="p-3.5 rounded-2xl border border-blue-500/30 bg-white dark:bg-[#202124] flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
@@ -5049,9 +5334,9 @@ export default function LogStreamerAndShell({
         )}
       </div>
 
-      {/* Bottom 2-Column Grid: Raw Cloud Logging Tail + Touch-Optimized Mobile Cloud Shell */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left Column: Live Cloud Logging Streamer */}
+      {/* Bottom Full-Width Card: Raw Cloud Logging & Audit Tail */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Live Cloud Logging Streamer */}
         <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
@@ -5166,173 +5451,6 @@ export default function LogStreamerAndShell({
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Right Column: Touch-Optimized Mobile Cloud Shell */}
-        <div
-          id="cloud-shell-terminal-card"
-          className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Touch-Optimized Mobile Cloud Shell</span>
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Hybrid Direct REST Bridge + Real <code className="font-mono">gcloud</code>,{' '}
-                <code className="font-mono">bq</code>, <code className="font-mono">gsutil</code> &{' '}
-                <code className="font-mono">kubectl</code> CLI execution with read-only data-loss guardrails.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Safe Guardrails ON</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShellHistory([])}
-                title="Clear terminal output history"
-                className="px-2 py-1 rounded text-[10.5px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          {/* One-Tap Smart Command Chips for Mobile Ergonomics */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3">
-            {quickCommands.map((q) => (
-              <button
-                key={q.label}
-                type="button"
-                disabled={shellRunning}
-                onClick={() => executeShellCommand(q.cmd)}
-                className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                $ {q.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Command Input Form + Touch History Navigation */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              executeShellCommand();
-            }}
-            className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 mb-4"
-          >
-            <div className="relative flex-1 min-w-[200px]">
-              <span className="font-mono text-xs text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2">
-                $
-              </span>
-              <input
-                type="text"
-                value={shellInput}
-                onChange={(e) => setShellInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    cycleShellHistory('PREV');
-                  } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    cycleShellHistory('NEXT');
-                  }
-                }}
-                placeholder="Type any read-only gcloud, bq, gsutil, or kubectl command..."
-                aria-label="Cloud Shell command input"
-                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-7 pr-3 py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
-              />
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => cycleShellHistory('PREV')}
-                disabled={shellHistory.length === 0}
-                title="Previous command in history (Up Arrow)"
-                className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                onClick={() => cycleShellHistory('NEXT')}
-                disabled={shellHistory.length === 0}
-                title="Next command in history (Down Arrow)"
-                className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
-              >
-                Next
-              </button>
-              <button
-                type="submit"
-                disabled={shellRunning || !shellInput.trim()}
-                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[14px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{shellRunning ? 'Running...' : 'Run'}</span>
-              </button>
-            </div>
-          </form>
-
-          {/* Terminal Output Stream */}
-          <div className="flex-1 bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-800 dark:text-zinc-200 space-y-3 max-h-[340px] overflow-y-auto">
-            {shellHistory.length === 0 ? (
-              <div className="text-[11px] text-zinc-500 text-center py-8">
-                Terminal cleared. Tap any quick command chip above or type a <code className="font-mono">gcloud</code> / <code className="font-mono">bq</code> command.
-              </div>
-            ) : (
-              shellHistory.map((item) => (
-                <div
-                  key={item.id}
-                  className="border-b border-zinc-200 dark:border-zinc-800/80 pb-3 last:border-b-0 last:pb-0 space-y-1.5"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span
-                      onClick={() => setShellInput(item.command)}
-                      title="Click to load command into input"
-                      className="text-emerald-400 font-bold cursor-pointer hover:underline break-all"
-                    >
-                      $ {item.command}
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {item.engine && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[9.5px] text-blue-700 dark:text-blue-300">
-                          {item.engine}
-                        </span>
-                      )}
-                      <span
-                        className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold ${
-                          item.exitCode === 0
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}
-                      >
-                        exit={item.exitCode ?? 0}
-                      </span>
-                      <span className="text-zinc-500">{item.durationMs}ms</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(item.output, `shell-out-${item.id}`)}
-                        className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-0.5 cursor-pointer"
-                      >
-                        {copiedId === `shell-out-${item.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <pre className="text-[11px] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
-                    {item.output}
-                  </pre>
-                </div>
-              ))
-            )}
           </div>
         </div>
       </div>
