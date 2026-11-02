@@ -25122,9 +25122,12 @@ function analyzeAndOptimizeBigQuerySql(
     });
     estimatedByteReductionRatio += 0.85;
   } else {
+    const whereClausePart = /\bWHERE\b([\s\S]*?)(?:\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|$)/i.exec(
+      optimizedSql
+    )?.[1] || '';
     const hasPartitionFilter =
       /\b(_PARTITIONTIME|_PARTITIONDATE|event_timestamp|event_ts|updated_at|created_at|event_date|datehour|creation_date|start_time|year|metric_date)\b/i.test(
-        optimizedSql
+        whereClausePart
       );
     const schemaTsField = Array.isArray(schemaFields)
       ? schemaFields.find(

@@ -656,13 +656,13 @@ const DOC_SECTIONS = [
       'Engineers often think Cloud Spanner still costs $730+/mo for a full node and only stores relational rows, forcing teams to run 3 separate databases (Cloud SQL + Neo4j Graph + Pinecone Vector DB = ~$980/mo) connected by fragile CDC pipelines.',
     howItWorks: [
       'Tab 1 — Live Spanner Fleet & Granular 100-PU ($65.70/mo) Sizer: Provision fractional Spanner instances starting at 100 Processing Units (1/10th Node = $65.70/mo Standard / $98.55/mo Enterprise) with Managed Autoscaler and Edition comparison.',
-      'Tab 2 — Spanner Graph (ISO GQL) & Physical Interleaved Schema Architect: Design 0-network-hop INTERLEAVE IN PARENT hierarchies co-located in the same Paxos split and query live relational tables as an ISO GQL Property Graph.',
+      'Tab 2 — Live Spanner Graph (ISO GQL) Multi-Hop Traversal Engine & Zoomable Mermaid ER/Graph Topology: Execute real-time 1..6-hop ISO GQL Fraud-Ring, Zero-Trust IAM Blast-Radius, and Hybrid Vector+Graph traversals (EXECUTE_SPANNER_GQL) with instant TrueTime snapshot receipts, and inspect/zoom (60%–350%) or Fullscreen-expand both Flowchart and ER Schemas (MermaidArchitectureDiagram).',
       'Tab 3 — Spanner AI Vector Search (ScaNN) & Hybrid GraphRAG: Bind Vertex AI text-embedding-005 models, create ScaNN VECTOR INDEX on ARRAY<FLOAT32>(vector_length=>768), and combine GRAPH_TABLE multi-hop traversal with APPROX_COSINE_DISTANCE in one ACID query.',
-      'Tab 4 — Multi-Region 99.999% TrueTime, Change Streams CDC & PGAdapter: Inspect GPS + Atomic Clock TrueTime external consistency, switch between GoogleSQL and PostgreSQL (PGAdapter) dialects, and generate Zero-Downtime Change Streams CDC to BigQuery or Pub/Sub.',
+      'Tab 4 — Interactive 5-Zone Paxos Quorum Blackout Simulator, TrueTime (<7ms) Read-Mode SQL Workbench & Change Streams CDC: Click any of the 5 Paxos zones (us-central1-a/b, us-east1-b/c, us-west1-a Witness) or simulate a full regional blackout to watch live 3/5 quorum leader election (0ms RPO) and split-brain protection, generate Strong Read / Bounded Staleness (<2ms edge) / Exact Snapshot SQL + BigQuery federated queries, and export Change Streams CDC.',
     ],
     apisUsed: [
       'GET /api/project/:id/wave10/frontier → spanner.googleapis.com/v1/projects/:id/instances',
-      'POST /api/project/:id/wave10/action (CREATE_SPANNER_INSTANCE)',
+      'POST /api/project/:id/wave10/action (CREATE_SPANNER_INSTANCE, PROVISION_SPANNER_GRANULAR, EXECUTE_SPANNER_GQL)',
     ],
     billingImpact:
       'Unlocks fractional 100-PU Spanner ($65.70/mo instead of $730/mo) and consolidates Relational + Graph + Vector workloads into a single ACID engine.',
@@ -970,8 +970,8 @@ const DOC_SECTIONS = [
       'Uncompressed Logical BigQuery billing overcharges high-compression datasets by up to 2.2x, static SQL optimizers fail to inspect real table partition/cluster schemas, and deleted/missing demo datasets cause 404 query errors.',
     howItWorks: [
       'Tab 1 — Dataset Posture Matrix, 1-Tap Full Harden (100/100) & Interactive Schema Column Builder: Filters out hidden _sha1 cache datasets, patches Physical billing + 90d partition TTL + ROUND_HALF_EVEN + governance labels in 1 click, expands per-table Schema (N cols) pills to toggle SELECT columns, and streams 10 live rows via tabledata.insertAll.',
-      'Tab 2 — Schema-Aware Double Dry-Run SQL X-Ray, Capacitor Scan Bar & Protected Live SQL: Preflights real table schemas (tables.get), verifies both original and auto-optimized SQL via BigQuery jobs.insert (dryRun: true), self-heals missing project datasets/tables, enforces maximumBytesBilled on live queries, and computes Annualized FinOps ROI (10–5,000 runs/day) with CSV/JSON export.',
-      'Tabs 3, 4 & 5 — Slot & Storage FinOps Crystal, 168h FOR SYSTEM_TIME AS OF Time-Machine (with 1m Demo Safe rewind) & Live Jobs History (bigquery.jobs.list with 1-click "Load SQL into X-Ray").',
+      'Tab 2 — 10-Rule AST Auto-Optimizer & Verified Dual-Pass Dry-Run SQL X-Ray: Runs Pass #1 (raw SQL) and Pass #2 (rewritten SQL) against bigquery.googleapis.com/bigquery/v2/projects/:id/queries (dryRun: true) across 10 Capacitor & Slot rules: (1) SELECT * Column Pruning, (2) COUNT(col) → Zero-Byte COUNT(1) Capacitor Column Elimination, (3) Late String Materialization CTE (deferring CONCAT after GROUP BY + LIMIT), (4) Hot 7-Day Partition Window Pruning, (5) Early Cluster Key Pushdown (region IS NOT NULL), (6) WHERE IN → WHERE EXISTS Semi-Join, (7) SELECT COUNT(*) > 0 → EXISTS, (8) Partition Predicate Injection, (9) HyperLogLog++ APPROX_COUNT_DISTINCT, and (10) UNION DISTINCT → UNION ALL.',
+      'Tabs 3, 4, 5 & 6 — Slot & Storage FinOps Crystal, 168h FOR SYSTEM_TIME AS OF Time-Machine, Live Jobs History & BigQuery AI (gemini-3.8-flash Grounded ML.GENERATE_TEXT, TREE_AH ScaNN Vector Index, AI.FORECAST TimesFM, Continuous APPENDS SQL & Zoomable Mermaid ER Schema).',
     ],
     apisUsed: [
       'GET /api/project/:id/bigquery/datasets, /jobs & POST /api/project/:id/bigquery/datasets/:ds/harden-all',
