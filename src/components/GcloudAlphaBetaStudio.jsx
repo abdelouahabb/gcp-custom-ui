@@ -451,6 +451,15 @@ export default function GcloudAlphaBetaStudio({
       } else {
         onSelectStudioTab(normalized);
       }
+      if (normalized === 'CLOUD_RUN' && typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:open-cloudrun-workbench', {
+              detail: { studio: 'WORKER_POOLS' },
+            })
+          );
+        }, 100);
+      }
       notify(`Opened ${studioLabel} (${normalized})`);
     } else {
       window.dispatchEvent(

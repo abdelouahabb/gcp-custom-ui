@@ -93,6 +93,11 @@ export default function GkeFleetStudio({
   const [activeSubTab, setActiveSubTab] = useState(
     initialSubTab || 'FLEET_DEPLOY'
   );
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [gkeData, setGkeData] = useState(null);
   const [loadingGke, setLoadingGke] = useState(false);
 
@@ -605,7 +610,16 @@ spec:
               key={t.id}
               type="button"
               data-feature-id={`GKE_TAB_${t.id}`}
-              onClick={() => setActiveSubTab(t.id)}
+              onClick={() => {
+                setActiveSubTab(t.id);
+                if (typeof window !== 'undefined') {
+                  window.requestAnimationFrame(() => {
+                    document
+                      .getElementById('gke-active-subtab-anchor')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  });
+                }
+              }}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
                 active
                   ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
@@ -618,6 +632,8 @@ spec:
           );
         })}
       </div>
+
+      <div id="gke-active-subtab-anchor" className="scroll-mt-24" />
 
       {/* ===================================================================
           SUB-TAB 1: LIVE GKE FLEET & 1-CLICK CLUSTER PROVISIONER

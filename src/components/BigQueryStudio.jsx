@@ -218,10 +218,36 @@ export default function BigQueryStudio({
     if (initialSql && initialSql.trim()) {
       setSqlInput(initialSql);
       setActiveSubTab('TABLES_SQL');
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById('bigquery-active-subtab-anchor')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
     } else if (sqlSeedNonce > 0) {
       setActiveSubTab('TABLES_SQL');
     }
   }, [initialSql, sqlSeedNonce]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onLoadSql = (ev) => {
+      const nextSql = ev?.detail?.sql;
+      if (typeof nextSql === 'string' && nextSql.trim()) {
+        setSqlInput(nextSql);
+        setActiveSubTab('TABLES_SQL');
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById('bigquery-active-subtab-anchor')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    };
+    window.addEventListener('cloudpulse:bigquery-load-sql', onLoadSql);
+    return () =>
+      window.removeEventListener('cloudpulse:bigquery-load-sql', onLoadSql);
+  }, []);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -938,7 +964,16 @@ LIMIT 25;`;
                   key={t.id}
                   type="button"
                   data-feature-id={`BQ_TAB_${t.id}`}
-                  onClick={() => setActiveSubTab(t.id)}
+                  onClick={() => {
+                    setActiveSubTab(t.id);
+                    if (typeof window !== 'undefined') {
+                      window.requestAnimationFrame(() => {
+                        document
+                          .getElementById('bigquery-active-subtab-anchor')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      });
+                    }
+                  }}
                   title={t.tip}
                   className={`w-full h-11 px-2.5 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                     active
@@ -975,6 +1010,8 @@ LIMIT 25;`;
           </div>
         </div>
       </div>
+
+      <div id="bigquery-active-subtab-anchor" className="scroll-mt-24" />
 
       {/* =================================================================== */}
       {/* TAB 1: DATASET FLEET, ZERO-TRUST GOVERNANCE & 1-TAP HARDENER        */}
@@ -1177,6 +1214,13 @@ LIMIT 25;`;
                           onClick={() => {
                             setSelectedDatasetId(ds.datasetId);
                             setActiveSubTab('TABLES_SQL');
+                            if (typeof window !== 'undefined') {
+                              window.requestAnimationFrame(() => {
+                                document
+                                  .getElementById('bigquery-active-subtab-anchor')
+                                  ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              });
+                            }
                           }}
                           title={`Explore tables & run Dry-Run SQL Cost Estimator in ${ds.datasetId}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"

@@ -346,6 +346,11 @@ export default function CloudFunctionsEventarcStudio({
   const [activeSubTab, setActiveSubTab] = useState(
     initialSubTab || 'TRIGGER_WIZARD'
   );
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [loading, setLoading] = useState(false);
   const [functionsList, setFunctionsList] = useState([]);
   const [triggersList, setTriggersList] = useState([]);
@@ -1099,8 +1104,8 @@ main:
           </div>
         )}
 
-        {/* Sub-Tab Switcher (Uniform 4-Column Equal-Width Bento Grid) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
+        {/* Sub-Tab Switcher (Uniform 5-Column Equal-Width Bento Grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
           {[
             {
               id: 'TRIGGER_WIZARD',
@@ -1141,7 +1146,16 @@ main:
                 type="button"
                 data-feature-id={`FUNCTIONS_TAB_${tab.id}`}
                 title={`${tab.label} (${tab.badge})`}
-                onClick={() => setActiveSubTab(tab.id)}
+                onClick={() => {
+                  setActiveSubTab(tab.id);
+                  if (typeof window !== 'undefined') {
+                    window.requestAnimationFrame(() => {
+                      document
+                        .getElementById('functions-active-subtab-anchor')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                  }
+                }}
                 className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                   active
                     ? 'bg-blue-600 text-white shadow-sm'
@@ -1174,6 +1188,8 @@ main:
           })}
         </div>
       </div>
+
+      <div id="functions-active-subtab-anchor" className="scroll-mt-24" />
 
       {/* SUB-TAB 1: PLAIN-ENGLISH EVENTARC TRIGGER WIZARD & 4-HOP VISUAL PIPELINE */}
       {activeSubTab === 'TRIGGER_WIZARD' && (

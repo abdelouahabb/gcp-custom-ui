@@ -45,7 +45,7 @@ const QUICK_TEMPLATES = [
     gpuType: 'nvidia-l4',
   },
   {
-    label: 'Always-On Worker (Instance-based Billing)',
+    label: 'Always-On HTTP Service (Instance-based Billing)',
     namePrefix: 'worker-run',
     image: 'gcr.io/google-samples/hello-app:1.0',
     port: 8080,
@@ -75,7 +75,7 @@ const QUICK_TEMPLATES = [
 export default function CloudRunFleetManager({
   projectId,
   initialServices = [],
-  initialShowWorkerPoolsStudio = false,
+  initialShowWorkerPoolsStudio = true,
   onOpenProvisionCloudRun,
   onOpenSecretManagerStudio,
   onSelectTab,
@@ -242,6 +242,8 @@ volumes:
     cloudSqlProxy: true,
     redisRamCache: true,
   });
+  const [workerPoolDeploying, setWorkerPoolDeploying] = useState(false);
+  const [workerPoolDeployReceipt, setWorkerPoolDeployReceipt] = useState(null);
 
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
@@ -1863,14 +1865,109 @@ spec:
     [projectId]
   );
 
-  const handleToggleSchedulerToJobsStudio = () => {
-    setShowSchedulerToJobsStudio((prev) => {
-      const next = !prev;
-      if (next && !schedulerJobsState.data && !schedulerJobsState.loading) {
-        handleFetchSchedulerAndJobs(false);
+  const scrollToStudioSection = useCallback((domId) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      const el = document.getElementById(domId);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-      return next;
     });
+  }, []);
+
+  const handleOpenWorkbenchStudio = useCallback(
+    (studioKey) => {
+      setShowWorkerPoolsSidecarStudio(studioKey === 'WORKER_POOLS');
+      setShowSchedulerToJobsStudio(studioKey === 'SCHEDULER_TO_JOBS');
+      setShowComposeStudio(studioKey === 'DOCKER_COMPOSE');
+      setShowAppEngineExterminator(studioKey === 'APP_ENGINE');
+      setShowArtifactHunter(studioKey === 'DEAD_ARTIFACTS');
+      setShowGlobalGkeTranspiler(studioKey === 'CLOUDRUN_TO_GKE');
+
+      if (studioKey === 'WORKER_POOLS') {
+        scrollToStudioSection('cloudrun-2027-worker-pools-studio');
+      } else if (studioKey === 'SCHEDULER_TO_JOBS') {
+        if (!schedulerJobsState.data && !schedulerJobsState.loading) {
+          handleFetchSchedulerAndJobs(false);
+        }
+        scrollToStudioSection('cloudrun-scheduler-jobs-studio');
+      } else if (studioKey === 'DOCKER_COMPOSE') {
+        scrollToStudioSection('cloudrun-compose-studio');
+      } else if (studioKey === 'APP_ENGINE') {
+        if (!appEngineState.data && !appEngineState.loading) {
+          handleFetchAppEngineOverview(false);
+        }
+        scrollToStudioSection('cloudrun-appengine-studio');
+      } else if (studioKey === 'DEAD_ARTIFACTS') {
+        if (!artifactScanState.data && !artifactScanState.loading) {
+          handleScanDeadArtifacts(false);
+        }
+        scrollToStudioSection('cloudrun-dead-artifacts-studio');
+      } else if (studioKey === 'CLOUDRUN_TO_GKE') {
+        scrollToStudioSection('cloudrun-to-gke-studio');
+      }
+    },
+    [
+      scrollToStudioSection,
+      schedulerJobsState.data,
+      schedulerJobsState.loading,
+      handleFetchSchedulerAndJobs,
+      appEngineState.data,
+      appEngineState.loading,
+      handleFetchAppEngineOverview,
+      artifactScanState.data,
+      artifactScanState.loading,
+      handleScanDeadArtifacts,
+    ]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onOpenWorkbench = (ev) => {
+      const targetStudio = ev?.detail?.studio || 'WORKER_POOLS';
+      handleOpenWorkbenchStudio(targetStudio);
+    };
+    window.addEventListener('cloudpulse:open-cloudrun-workbench', onOpenWorkbench);
+    return () =>
+      window.removeEventListener('cloudpulse:open-cloudrun-workbench', onOpenWorkbench);
+  }, [handleOpenWorkbenchStudio]);
+
+  const handleDeployLiveWorkerPool = async () => {
+    if (workerPoolDeploying) return;
+    setWorkerPoolDeploying(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/gcloud-591/execute`,
+        {
+          action: 'DEPLOY_BETA_WORKER_POOL',
+          region: workerPoolRegion,
+          workerPoolName,
+          image: 'us-docker.pkg.dev/cloudrun/container/worker-pool:latest',
+          instances: workerPoolInstances,
+        }
+      );
+      setWorkerPoolDeployReceipt(res.data);
+      if (onShowToast) {
+        onShowToast(
+          `Deployed Cloud Run Worker Pool ${res.data?.workerPoolName || workerPoolName} (${workerPoolInstances} instances) in ${workerPoolRegion}!`,
+          'info'
+        );
+      }
+    } catch (err) {
+      if (!err?.__cancelledByUser && onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to deploy Cloud Run Worker Pool.'
+        );
+      }
+    } finally {
+      setWorkerPoolDeploying(false);
+    }
+  };
+
+  const handleToggleSchedulerToJobsStudio = () => {
+    handleOpenWorkbenchStudio('SCHEDULER_TO_JOBS');
   };
 
   const handleLoadSchedulerIntoJobForm = (sj) => {
@@ -2141,7 +2238,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_2027_WORKER_POOLS_SIDECARS"
-            onClick={() => setShowWorkerPoolsSidecarStudio((v) => !v)}
+            onClick={() => handleOpenWorkbenchStudio('WORKER_POOLS')}
             title="2027 Cloud Run Worker Pools (Non-HTTP Pull Workers for Kafka/PubSub/Temporal), Multi-Container Sidecar Mesh (dependsOn DAG + Shared RAM Volume), Serverless NVIDIA L4/Blackwell GPU Sizer & Revision Canary Traffic Splitter"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showWorkerPoolsSidecarStudio
@@ -2189,7 +2286,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_SCHEDULER_TO_JOBS"
-            onClick={handleToggleSchedulerToJobsStudio}
+            onClick={() => handleOpenWorkbenchStudio('SCHEDULER_TO_JOBS')}
             title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showSchedulerToJobsStudio
@@ -2216,7 +2313,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_DOCKER_COMPOSE_GA"
-            onClick={() => setShowComposeStudio((v) => !v)}
+            onClick={() => handleOpenWorkbenchStudio('DOCKER_COMPOSE')}
             title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showComposeStudio
@@ -2241,7 +2338,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_APP_ENGINE_EXTERMINATOR"
-            onClick={handleToggleAppEngineExterminator}
+            onClick={() => handleOpenWorkbenchStudio('APP_ENGINE')}
             title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showAppEngineExterminator
@@ -2270,7 +2367,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_DEAD_ARTIFACT_HUNTER"
-            onClick={handleToggleArtifactHunter}
+            onClick={() => handleOpenWorkbenchStudio('DEAD_ARTIFACTS')}
             title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showArtifactHunter
@@ -2297,7 +2394,7 @@ spec:
           <button
             type="button"
             data-feature-id="CLOUDRUN_TO_GKE_TRANSPILER"
-            onClick={() => setShowGlobalGkeTranspiler((v) => !v)}
+            onClick={() => handleOpenWorkbenchStudio('CLOUDRUN_TO_GKE')}
             title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
             className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
               showGlobalGkeTranspiler
@@ -2508,7 +2605,10 @@ spec:
   style SHM fill:#312e81,stroke:#6366f1,color:#e0e7ff`;
 
         return (
-          <div className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+          <div
+            id="cloudrun-2027-worker-pools-studio"
+            className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl scroll-mt-24"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -2718,7 +2818,19 @@ spec:
                         ? 'gcloud beta run worker-pools deploy + Knative v2 Spec'
                         : 'Multi-Container Knative Service YAML + Traffic Split'}
                     </span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {workerPoolWorkloadKind === 'WORKER_POOL' && (
+                        <button
+                          type="button"
+                          disabled={workerPoolDeploying}
+                          onClick={handleDeployLiveWorkerPool}
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          {workerPoolDeploying
+                            ? `Deploying ${workerPoolName}...`
+                            : '1-Click Deploy Worker Pool (gcloud beta)'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -2745,13 +2857,30 @@ spec:
                               `2027 Cloud Run (${workerPoolName})`
                             )
                           }
-                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                         >
                           Run in Cloud Shell →
                         </button>
                       )}
                     </div>
                   </div>
+                  {workerPoolDeployReceipt && (
+                    <div className="p-2 rounded bg-emerald-500/15 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 flex items-center justify-between gap-2">
+                      <span>
+                        ✓ {workerPoolDeployReceipt.releaseBadge}:{' '}
+                        <strong>{workerPoolDeployReceipt.workerPoolName}</strong> (
+                        {workerPoolDeployReceipt.workerInstances} instance(s) ·{' '}
+                        {workerPoolDeployReceipt.durationMs || 0}ms)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setWorkerPoolDeployReceipt(null)}
+                        className="text-zinc-400 hover:text-white cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
                   <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-56">
                     {`${workerPoolCliCmd}\n\n# --- ${workerPoolName}-service.yaml ---\n${sidecarServiceYaml}`}
                   </pre>
@@ -2770,7 +2899,10 @@ spec:
 
       {/* CLOUD SCHEDULER -> CLOUD RUN V2 JOBS CONVERTER & PARALLEL BATCH STUDIO */}
       {showSchedulerToJobsStudio && (
-        <div className="p-4 rounded-xl border border-blue-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+        <div
+          id="cloudrun-scheduler-jobs-studio"
+          className="p-4 rounded-xl border border-blue-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl scroll-mt-24"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -3433,7 +3565,10 @@ spec:
 
       {/* GOOGLE CLOUD SDK 590.0.0 GA `gcloud run compose up` MULTI-CONTAINER & SIDECAR STUDIO */}
       {showComposeStudio && (
-        <div className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+        <div
+          id="cloudrun-compose-studio"
+          className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl scroll-mt-24"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -3859,7 +3994,8 @@ services:
 
         return (
           <div
-            className={`p-4 rounded-xl border bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl ${
+            id="cloudrun-appengine-studio"
+            className={`p-4 rounded-xl border bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl scroll-mt-24 ${
               !isAppServing
                 ? 'border-zinc-300 dark:border-zinc-800'
                 : 'border-red-500/40'
@@ -4582,7 +4718,10 @@ services:
         );
 
         return (
-          <div className="p-4 rounded-xl border border-amber-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+          <div
+            id="cloudrun-dead-artifacts-studio"
+            className="p-4 rounded-xl border border-amber-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl scroll-mt-24"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -5097,7 +5236,10 @@ services:
         const isGraduating = busyMap[sampleSrv.id] === 'GRADUATING_GKE';
 
         return (
-          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg">
+          <div
+            id="cloudrun-to-gke-studio"
+            className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg scroll-mt-24"
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
@@ -5412,7 +5554,20 @@ services:
             <span>1-Tap Instant Deploy:</span>
           </span>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setWorkerPoolWorkloadKind('WORKER_POOL');
+                handleOpenWorkbenchStudio('WORKER_POOLS');
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-md transition-colors cursor-pointer"
+            >
+              <Cpu className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span className="truncate">
+                Worker Pool Studio (0 Open Ports) ↑
+              </span>
+            </button>
             {QUICK_TEMPLATES.map((tpl) => {
               const isDeployingThis = quickDeploying === tpl.label;
               return (
