@@ -35050,12 +35050,18 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
-    if (action === 'PROVISION_SPANNER_GRANULAR') {
-      const cleanId = String(instanceId || 'cloudpulse-graph-db')
+    if (
+      action === 'PROVISION_SPANNER_GRANULAR' ||
+      action === 'CREATE_SPANNER_INSTANCE'
+    ) {
+      const cleanId = String(
+        instanceId || req.body?.instanceName || 'cloudpulse-graph-db'
+      )
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-')
         .slice(0, 30);
       const pu = Math.max(100, Math.min(10000, Number(processingUnits) || 100));
+      const cfgName = String(req.body?.config || `regional-${region}`);
 
       const op = await gcpApiRequest({
         method: 'POST',
@@ -35067,7 +35073,7 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         data: {
           instanceId: cleanId,
           instance: {
-            config: `projects/${projectId}/instanceConfigs/regional-${region}`,
+            config: `projects/${projectId}/instanceConfigs/${cfgName}`,
             displayName: cleanId,
             processingUnits: pu,
             edition,
@@ -35076,17 +35082,17 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
       });
 
       recordFlightEvent(projectId, {
-        action: 'PROVISION_SPANNER_GRANULAR',
+        action,
         resourceType: 'SPANNER_INSTANCE',
         resourceName: cleanId,
-        region,
-        summary: `Provisioned ${pu}-PU Granular Cloud Spanner Graph instance ${cleanId} (${region})`,
+        region: cfgName,
+        summary: `Provisioned ${pu}-PU Granular Cloud Spanner Graph instance ${cleanId} (${cfgName})`,
       });
 
       return res.json({
         ok: true,
         operation: op?.name || null,
-        message: `Provisioned ${pu}-PU Cloud Spanner instance "${cleanId}" in regional-${region} (~$${(
+        message: `Provisioned ${pu}-PU Cloud Spanner instance "${cleanId}" in ${cfgName} (~$${(
           (pu / 100) *
           65.7
         ).toFixed(2)}/mo).`,

@@ -25,6 +25,7 @@ import {
   Zap,
 } from 'lucide-react';
 import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 export default function DataEngineeringStudio({
   projectId,
@@ -1429,6 +1430,34 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="lg:col-span-12">
+            <MermaidArchitectureDiagram
+              title={`Mermaid Medallion Bronze → Silver → Gold ER Schema (${pipelineName} · ${medallionLocation})`}
+              subtitle={`Interactive Entity-Relationship schema for ${projectId}.${pipelineName}_bronze_raw → ${pipelineName}_silver_cleaned → ${pipelineName}_gold_mart (Deduplication Key: ${dedupKey} · SLA: ${latencySla})`}
+              mermaidDsl={`erDiagram
+  BRONZE_RAW_INGESTION {
+    STRING ${dedupKey} PK
+    STRING source_type
+    STRING raw_json_payload
+    TIMESTAMP ${orderByCol}
+  }
+  SILVER_CLEANED_CONFORMED {
+    STRING ${dedupKey} PK
+    STRING pii_sha256_mask
+    FLOAT64 amount_usd
+    TIMESTAMP ${orderByCol}
+  }
+  GOLD_EXECUTIVE_MART {
+    DATE metric_date PK
+    STRING business_domain PK
+    INT64 distinct_events
+    FLOAT64 total_revenue_usd
+  }
+  BRONZE_RAW_INGESTION ||--|| SILVER_CLEANED_CONFORMED : "QUALIFY_ROW_NUMBER_${dedupKey}"
+  SILVER_CLEANED_CONFORMED }o--|| GOLD_EXECUTIVE_MART : "ROLLUP_${latencySla}"`}
+            />
           </div>
         </div>
       )}
@@ -3475,6 +3504,38 @@ WHERE 1=1${dltExpectNonNull ? `\n  AND ${dedupKey} IS NOT NULL AND ${orderByCol}
               );
             })}
           </div>
+
+          <MermaidArchitectureDiagram
+            title={`Mermaid Medallion Lakehouse ER Schema & Streaming Pipeline (${projectId}.${cleanTargetDs})`}
+            subtitle={`Interactive Entity-Relationship diagram for ${pipelineName} (Bronze ${cleanSourceDs}.${cleanSourceTable} → Silver ${cleanTargetDs}.${cleanTargetTable} → Gold AI/TimesFM · ${streamArchMode} @ ${streamThroughputMbSec} MB/s)`}
+            mermaidDsl={`erDiagram
+  BRONZE_${cleanSourceTable.toUpperCase()} {
+    STRING ${dedupKey} PK
+    STRING raw_payload
+    STRING ingestion_source
+    TIMESTAMP ${orderByCol}
+  }
+  SILVER_${cleanTargetTable.toUpperCase()} {
+    STRING ${dedupKey} PK
+    STRING event_type
+    FLOAT64 revenue_usd
+    TIMESTAMP ${orderByCol}
+  }
+  GOLD_TIMESFM_FORECAST {
+    TIMESTAMP forecast_timestamp PK
+    FLOAT64 predicted_daily_revenue_usd
+    FLOAT64 confidence_interval_95
+  }
+  GOLD_GEMINI_ENRICHED {
+    STRING ${dedupKey} FK
+    STRING executive_summary
+    STRING churn_risk_tier
+    STRING model_endpoint
+  }
+  BRONZE_${cleanSourceTable.toUpperCase()} ||--|| SILVER_${cleanTargetTable.toUpperCase()} : "QUALIFY_ROW_NUMBER_${dedupKey}"
+  SILVER_${cleanTargetTable.toUpperCase()} ||--o{ GOLD_TIMESFM_FORECAST : "AI.FORECAST_TimesFM"
+  SILVER_${cleanTargetTable.toUpperCase()} ||--o{ GOLD_GEMINI_ENRICHED : "AI.GENERATE_TABLE_gemini-3.8-flash"`}
+          />
         </div>
       )}
     </div>

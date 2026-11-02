@@ -181,13 +181,16 @@ LIMIT 10;`,
 
 export default function Wave10Frontier2026Studio({
   projectId,
+  initialSubTab = null,
   onNavigateTab,
   onOpenBigQuerySql,
   onOpenHealthAndDrift,
   onRunInShell,
   onShowToast,
 }) {
-  const [activeTab, setActiveTab] = useState('SPANNER_FLEET_PU');
+  const [activeTab, setActiveTab] = useState(
+    initialSubTab || 'SPANNER_FLEET_PU'
+  );
   const [loading, setLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);

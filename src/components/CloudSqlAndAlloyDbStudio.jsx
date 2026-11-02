@@ -114,8 +114,11 @@ export default function CloudSqlAndAlloyDbStudio({
   onRunInShell,
   onRefreshOverview,
   onShowToast,
+  initialSubTab = null,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('FLEET_PROVISION');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'FLEET_PROVISION'
+  );
   const [sqlData, setSqlData] = useState(null);
   const [loadingSql, setLoadingSql] = useState(false);
 
