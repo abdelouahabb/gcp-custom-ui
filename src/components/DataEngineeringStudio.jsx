@@ -2793,7 +2793,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   legacy: 'Mosaic AI / Custom Batch LLM Inference',
                   gcpNative: 'BigQuery `AI.FORECAST` & `AI.GENERATE_TABLE`',
                   advantage:
-                    'Zero-infra SQL TVFs powered by Google `TimesFM` (forecasting) and `gemini-2.5-flash` (structured table generation) using `CONNECTION "DEFAULT"`.',
+                    'Zero-infra SQL TVFs powered by Google `TimesFM` (forecasting) and `gemini-3.8-flash` (structured table generation) using `CONNECTION "DEFAULT"`.',
                 },
                 {
                   code: 'P04',
@@ -2947,8 +2947,8 @@ print(df.dtypes)
 display(df.peek(5))`,
                 },
                 CELL_3_BQ_AI_ML: {
-                  badge: 'Zero-Infra Foundation Models (`AI.FORECAST` TimesFM + `AI.GENERATE_TABLE` Gemini 2.5 Flash)',
-                  why: 'Runs Google Research TimesFM time-series forecasting and Gemini 2.5 Flash structured table generation directly inside BigQuery SQL using Table-Valued Functions (TVFs) in the FROM clause and named `=>` arguments.',
+                  badge: 'Zero-Infra Foundation Models (`AI.FORECAST` TimesFM + `AI.GENERATE_TABLE` Gemini 3.8 Flash)',
+                  why: 'Runs Google Research TimesFM time-series forecasting and Gemini 3.8 Flash structured table generation directly inside BigQuery SQL using Table-Valued Functions (TVFs) in the FROM clause and named `=>` arguments.',
                   isSql: true,
                   code: `%%bqsql
 -- 1. Zero-Shot Time-Series Revenue Forecasting powered by Google TimesFM (AI.FORECAST TVF in FROM clause)
@@ -2965,10 +2965,10 @@ FROM AI.FORECAST(
   confidence_level => 0.95
 );
 
--- 2. Structured Generative AI Table Enrichment with Gemini 2.5 Flash (AI.GENERATE_TABLE TVF in FROM clause)
+-- 2. Structured Generative AI Table Enrichment with Gemini 3.8 Flash (AI.GENERATE_TABLE TVF in FROM clause)
 CREATE OR REPLACE MODEL \`${projectId}.${cleanTargetDs}.gemini_flash_lakehouse\`
 REMOTE WITH CONNECTION \`DEFAULT\`
-OPTIONS (endpoint = 'gemini-2.5-flash');
+OPTIONS (endpoint = 'gemini-3.8-flash');
 
 SELECT
   ${dedupKey},

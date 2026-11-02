@@ -249,9 +249,44 @@ export default function BigQueryStudio({
   const [selectedSchemaCols, setSelectedSchemaCols] = useState([]);
 
   // Sub-Tab 6: BigQuery AI (Gemini / Vector ScaNN / TimesFM) & Continuous SQL Streaming state
-  const [bqAiModel, setBqAiModel] = useState('gemini-2.5-flash');
+  const [bqAiModel, setBqAiModel] = useState('gemini-3.8-flash');
   const [bqEmbeddingModel, setBqEmbeddingModel] =
     useState('text-embedding-005');
+
+  // Auto-upgrade any stale 'gemini-2.5-flash' state or SQL/result rows from prior HMR state to 'gemini-3.8-flash'
+  useEffect(() => {
+    if (bqAiModel === 'gemini-2.5-flash') {
+      setBqAiModel('gemini-3.8-flash');
+    }
+    setSqlInput((prev) =>
+      typeof prev === 'string' && prev.includes('gemini-2.5-flash')
+        ? prev.replace(/gemini-2\.5-flash/g, 'gemini-3.8-flash')
+        : prev
+    );
+    setQueryResult((prev) => {
+      if (!prev || !Array.isArray(prev.rows)) return prev;
+      const hasLegacy = prev.rows.some(
+        (r) =>
+          typeof r?.ai_prompt_preview === 'string' &&
+          r.ai_prompt_preview.includes('gemini-2.5-flash')
+      );
+      if (!hasLegacy) return prev;
+      return {
+        ...prev,
+        rows: prev.rows.map((r) =>
+          typeof r?.ai_prompt_preview === 'string'
+            ? {
+                ...r,
+                ai_prompt_preview: r.ai_prompt_preview.replace(
+                  /gemini-2\.5-flash/g,
+                  'gemini-3.8-flash'
+                ),
+              }
+            : r
+        ),
+      };
+    });
+  }, []);
   const [bqVectorIndexType, setBqVectorIndexType] = useState('TREE_AH'); // 'TREE_AH' (ScaNN) | 'IVF'
   const [bqVectorTopK, setBqVectorTopK] = useState(10);
   const [bqForecastHorizonDays, setBqForecastHorizonDays] = useState(30);
@@ -2776,11 +2811,14 @@ export default function BigQueryStudio({
                 onChange={(e) => setBqAiModel(e.target.value)}
                 className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               >
-                <option value="gemini-2.5-flash">
-                  gemini-2.5-flash (Low-Latency SQL)
+                <option value="gemini-3.8-flash">
+                  gemini-3.8-flash (Low-Latency SQL · -80% Cache)
                 </option>
-                <option value="gemini-2.5-pro">
-                  gemini-2.5-pro (Deep Reasoning)
+                <option value="gemini-3.1-pro">
+                  gemini-3.1-pro (Deep Reasoning SQL)
+                </option>
+                <option value="gemini-2.5-flash">
+                  gemini-2.5-flash (Legacy Endpoint)
                 </option>
               </select>
             </div>
