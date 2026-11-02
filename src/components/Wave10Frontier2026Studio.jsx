@@ -235,6 +235,9 @@ export default function Wave10Frontier2026Studio({
   const [cdcRetention, setCdcRetention] = useState('7d');
   const [cdcValueCapture, setCdcValueCapture] = useState('NEW_ROW_AND_OLD_VALUES');
   const [cdcSinkType, setCdcSinkType] = useState('BIGQUERY_STORAGE_WRITE');
+  const [offlinePaxosZones, setOfflinePaxosZones] = useState([]); // e.g. ['us-central1-a', 'us-central1-b']
+  const [trueTimeEpsilonMs, setTrueTimeEpsilonMs] = useState(2.8); // ε uncertainty in ms (2ε = 5.6ms commit wait)
+  const [trueTimeReadMode, setTrueTimeReadMode] = useState('STRONG_READ'); // 'STRONG_READ' | 'BOUNDED_STALENESS' | 'EXACT_SNAPSHOT'
 
   const fetchSpannerFleet = useCallback(async () => {
     if (!projectId) return;
@@ -1956,53 +1959,427 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
       {/* ===================================================================== */}
       {/* SUB-TAB 4: MULTI-REGION 99.999% TRUETIME, CHANGE STREAMS CDC & PG     */}
       {/* ===================================================================== */}
-      {activeTab === 'SPANNER_TRUETIME_CDC' && (
-        <div className="space-y-4">
-          {/* Top Card: TrueTime Atomic Clock & Paxos Quorum Visualizer */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Google TrueTime Atomic Clock (`[earliest, latest]` &lt;7ms) &amp; Paxos Quorum Topology
-                </h3>
-                <p className="text-[11px] text-zinc-500">
-                  How Spanner achieves external consistency (linearizability) across continents without global lock contention, using GPS + Rubidium atomic clocks in every datacenter:
-                </p>
+      {activeTab === 'SPANNER_TRUETIME_CDC' && (() => {
+        const paxosReplicas = [
+          {
+            zone: 'us-central1-a',
+            region: 'us-central1 (Iowa)',
+            role: 'READ_WRITE_LEADER',
+            roleLabel: 'Read-Write Leader',
+            storageCost: 'Full Replica',
+          },
+          {
+            zone: 'us-central1-b',
+            region: 'us-central1 (Iowa)',
+            role: 'READ_WRITE_VOTING',
+            roleLabel: 'Read-Write Voting',
+            storageCost: 'Full Replica',
+          },
+          {
+            zone: 'us-east1-b',
+            region: 'us-east1 (S. Carolina)',
+            role: 'READ_WRITE_FAILOVER',
+            roleLabel: 'Read-Write Voting (Failover Leader)',
+            storageCost: 'Full Replica',
+          },
+          {
+            zone: 'us-east1-c',
+            region: 'us-east1 (S. Carolina)',
+            role: 'READ_WRITE_VOTING',
+            roleLabel: 'Read-Write Voting',
+            storageCost: 'Full Replica',
+          },
+          {
+            zone: 'us-west1-a',
+            region: 'us-west1 (Oregon)',
+            role: 'WITNESS_TIEBREAKER',
+            roleLabel: 'Paxos Witness (Tie-Breaker)',
+            storageCost: '$0 Data Storage (Votes Only)',
+          },
+        ];
+
+        const healthyCount = paxosReplicas.filter(
+          (r) => !offlinePaxosZones.includes(r.zone)
+        ).length;
+        const quorumIntact = healthyCount >= 3;
+        const activeLeaderZone = !offlinePaxosZones.includes('us-central1-a')
+          ? 'us-central1-a'
+          : !offlinePaxosZones.includes('us-central1-b')
+            ? 'us-central1-b'
+            : !offlinePaxosZones.includes('us-east1-b')
+              ? 'us-east1-b'
+              : !offlinePaxosZones.includes('us-east1-c')
+                ? 'us-east1-c'
+                : 'NONE (QUORUM_PAUSED)';
+
+        const commitWaitMs = Number((trueTimeEpsilonMs * 2).toFixed(1));
+
+        const readModeConfigs = {
+          STRONG_READ: {
+            badge: 'DEFAULT · 0ms STALENESS · LINEARIZABLE',
+            title: '1. Lock-Free Strong Read ( Prevent Double-Spend Globally )',
+            whenToUse:
+              'Use for wallet balances, inventory checks, and IAM auth checks. Guarantees seeing every write committed globally before your read started—with zero read locks.',
+            estReadLatency: quorumIntact ? '4.2 ms' : 'PAUSED (Need 3/5 Votes)',
+            sqlSnippet: `-- 1. Write Transaction with Atomic TrueTime Commit Timestamp (2ε = ${commitWaitMs}ms wait)
+INSERT INTO ${childTable} (customer_id, order_id, order_total_usd, committed_at)
+VALUES ('cust-901', 'ord-2026-8841', 4250.00, PENDING_COMMIT_TIMESTAMP());
+
+-- 2. Lock-Free Global Strong Read (Guaranteed 0ms staleness across continents)
+SELECT customer_id, order_id, order_total_usd, committed_at
+FROM ${childTable}@{FORCE_INDEX=_BASE_TABLE}
+WHERE customer_id = 'cust-901'
+ORDER BY committed_at DESC;`,
+            cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --sql="SELECT customer_id, order_id, order_total_usd, committed_at FROM ${childTable} WHERE customer_id = 'cust-901' ORDER BY committed_at DESC LIMIT 10"`,
+          },
+          BOUNDED_STALENESS: {
+            badge: 'SUB-2ms LOCAL REPLICA · ZERO LEADER ROUNDTRIP',
+            title: '2. Bounded Staleness Read (`MAX_STALENESS = 15s` Local Edge Read)',
+            whenToUse:
+              'Use for high-QPS product catalogs, dashboards, and AI feature lookups. Because TrueTime knows the exact clock bound, any local replica serves the read in <2ms without contacting the leader!',
+            estReadLatency: '1.4 ms (Even during Quorum loss!)',
+            sqlSnippet: `-- Read directly from nearest regional replica (${activeLeaderZone !== 'NONE (QUORUM_PAUSED)' ? activeLeaderZone : 'us-west1-a'}) with zero cross-region roundtrip
+-- Client Session Directive: READ_ONLY WITH MAX_STALENESS = 15s
+SELECT
+  p.customer_id,
+  COUNT(c.order_id) AS recent_order_count,
+  ROUND(SUM(c.order_total_usd), 2) AS rolling_gmv_usd
+FROM ${parentTable} AS p
+JOIN ${childTable} AS c USING (customer_id)
+GROUP BY p.customer_id
+ORDER BY rolling_gmv_usd DESC
+LIMIT 25;`,
+            cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --read-timestamp="${new Date(Date.now() - 15000).toISOString()}" --sql="SELECT customer_id, COUNT(order_id) AS orders FROM ${childTable} GROUP BY customer_id LIMIT 10"`,
+          },
+          EXACT_SNAPSHOT: {
+            badge: 'MULTI-SHARD ATOMIC SNAPSHOT · ZERO WRITE BLOCKING',
+            title: '3. Exact TrueTime Point-in-Time Audit & Multi-Hop Fraud Snapshot',
+            whenToUse:
+              'Use for financial EOD reconciliation, multi-hop GQL fraud ring detection, or point-in-time recovery. Reads an immutable global snapshot across all Paxos splits at an exact microsecond.',
+            estReadLatency: '3.1 ms (Lock-free historical snapshot)',
+            sqlSnippet: `-- Query immutable global snapshot from 5 minutes ago without blocking live OLTP writes
+SELECT
+  customer_id,
+  order_id,
+  order_total_usd,
+  committed_at
+FROM ${childTable}
+FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE)
+WHERE order_total_usd >= 1000.00
+ORDER BY order_total_usd DESC;`,
+            cliCmd: `gcloud spanner databases execute-sql ${spannerName}-db --instance=${spannerName} --project=${projectId} --sql="SELECT * FROM ${childTable} FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE) LIMIT 20"`,
+          },
+        };
+
+        const activeReadConfig =
+          readModeConfigs[trueTimeReadMode] || readModeConfigs.STRONG_READ;
+
+        return (
+          <div className="space-y-4">
+            {/* Top Card: Interactive TrueTime Atomic Clock & Paxos Quorum Chaos Simulator */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+              <div className="flex items-start justify-between flex-wrap gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Google TrueTime Atomic Clock (`[earliest, latest]` &lt;7ms) &amp; Interactive 5-Way Paxos Quorum Simulator
+                    </h3>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                        quorumIntact
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
+                      }`}
+                    >
+                      {quorumIntact
+                        ? `QUORUM HEALTHY (${healthyCount}/5 VOTES) · 0ms RPO · LEADER: ${activeLeaderZone}`
+                        : `QUORUM PAUSED (${healthyCount}/5 VOTES · NEED 3) · SPLIT-BRAIN PREVENTED`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    <strong>Why this matters to you:</strong> Traditional multi-region DBs drift by ±150ms (NTP), forcing you to choose between <strong>stale reads / double-spend bugs</strong> or <strong>slow 120ms cross-ocean locks</strong>. Spanner uses GPS + atomic clocks (`2ε = {commitWaitMs}ms` commit wait) so <strong>any local replica serves consistent lock-free reads in &lt;5ms</strong> and survives a full regional blackout with <strong>0 lost transactions</strong>.
+                  </p>
+                </div>
+
+                {/* Quick Chaos Simulation Buttons */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOfflinePaxosZones(['us-central1-a', 'us-central1-b']);
+                      if (onShowToast) {
+                        onShowToast(
+                          'Simulated full us-central1 region blackout! Paxos quorum intact (3/5 votes) — Leader auto-elected in us-east1-b with 0ms RPO.'
+                        );
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
+                  >
+                    ⚡ Simulate Full `us-central1` Blackout (Kill 2 Zones)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOfflinePaxosZones([
+                        'us-central1-a',
+                        'us-central1-b',
+                        'us-east1-b',
+                      ]);
+                      if (onShowToast) {
+                        onShowToast(
+                          'Simulated 3-zone outage (2/5 votes left): Spanner halts writes to guarantee zero split-brain whileBounded Staleness local reads stay online.'
+                        );
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border border-red-500/30 cursor-pointer"
+                  >
+                    🔥 Simulate 3-Zone Outage (Test Split-Brain Guard)
+                  </button>
+                  {offlinePaxosZones.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOfflinePaxosZones([]);
+                        if (onShowToast) {
+                          onShowToast('Restored all 5 Paxos zones to 100% healthy.');
+                        }
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                    >
+                      ↺ Restore All 5 Zones
+                    </button>
+                  )}
+                </div>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                ZERO-RPO EXTERNAL CONSISTENCY
-              </span>
+
+              {/* Interactive 5-Replica Paxos Voting Grid (Click any zone to kill/restore) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 flex-wrap gap-2">
+                  <span>
+                    <strong>Interactive 5-Zone Multi-Region Paxos Topology (`nam6`):</strong> Click any zone card below to toggle outage and see live quorum &amp; failover behavior:
+                  </span>
+                  <span>
+                    TrueTime Uncertainty (`ε`):{' '}
+                    <strong className="text-blue-600 dark:text-blue-400">
+                      ±{trueTimeEpsilonMs}ms
+                    </strong>{' '}
+                    → Commit Wait (`2ε`):{' '}
+                    <strong className="text-emerald-600 dark:text-emerald-400">
+                      {commitWaitMs}ms
+                    </strong>
+                    <input
+                      type="range"
+                      min={1.0}
+                      max={3.5}
+                      step={0.2}
+                      value={trueTimeEpsilonMs}
+                      onChange={(e) => setTrueTimeEpsilonMs(Number(e.target.value))}
+                      className="ml-2 w-24 accent-blue-600 align-middle cursor-pointer"
+                    />
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                  {paxosReplicas.map((rep) => {
+                    const isOffline = offlinePaxosZones.includes(rep.zone);
+                    const isCurrentLeader = activeLeaderZone === rep.zone;
+                    return (
+                      <button
+                        key={rep.zone}
+                        type="button"
+                        onClick={() =>
+                          setOfflinePaxosZones((prev) =>
+                            prev.includes(rep.zone)
+                              ? prev.filter((z) => z !== rep.zone)
+                              : [...prev, rep.zone]
+                          )
+                        }
+                        className={`p-3 rounded-xl border text-left font-mono transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+                          isOffline
+                            ? 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 opacity-80'
+                            : isCurrentLeader
+                              ? 'bg-blue-500/10 border-blue-500 ring-1 ring-blue-500/30'
+                              : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                              {rep.zone}
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                isOffline
+                                  ? 'bg-red-600 text-white'
+                                  : isCurrentLeader
+                                    ? 'bg-blue-600 text-white'
+                                    : rep.role === 'WITNESS_TIEBREAKER'
+                                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                                      : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {isOffline
+                                ? 'OFFLINE (0 VOTE)'
+                                : isCurrentLeader
+                                  ? 'ACTIVE LEADER (1 VOTE)'
+                                  : 'ONLINE (1 VOTE)'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-zinc-500">{rep.region}</div>
+                          <div className="text-[10.5px] font-bold text-zinc-700 dark:text-zinc-300">
+                            {rep.roleLabel}
+                          </div>
+                        </div>
+                        <div className="pt-1.5 border-t border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between text-[9.5px] text-zinc-500">
+                          <span>{rep.storageCost}</span>
+                          <span className="underline">
+                            {isOffline ? 'Click to restore' : 'Click to kill'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Actionable TrueTime Read Mode & Commit-Timestamp SQL Workbench */}
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Actionable TrueTime Read &amp; Commit-Timestamp SQL Generator
+                    </div>
+                    <p className="text-[11px] text-zinc-500">
+                      Select how your microservice or analytics query uses TrueTime timestamps and execute or copy the exact SQL/CLI:
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { id: 'STRONG_READ', label: '1. Lock-Free Strong Read (0ms Stale)' },
+                      { id: 'BOUNDED_STALENESS', label: '2. Local Replica Read (<2ms Edge)' },
+                      { id: 'EXACT_SNAPSHOT', label: '3. Point-in-Time Audit Snapshot' },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setTrueTimeReadMode(m.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold border cursor-pointer transition-all ${
+                          trueTimeReadMode === m.id
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+                  <div className="lg:col-span-5 space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-extrabold text-blue-600 dark:text-blue-400">
+                        {activeReadConfig.title}
+                      </span>
+                    </div>
+                    <span className="inline-block px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                      {activeReadConfig.badge}
+                    </span>
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      {activeReadConfig.whenToUse}
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 font-mono text-[10.5px] space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Est. Read Latency:</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">
+                          {activeReadConfig.estReadLatency}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Write Commit Wait (`2ε`):</span>
+                        <strong className="text-blue-600 dark:text-blue-400">
+                          {commitWaitMs} ms
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Active Paxos Votes:</span>
+                        <strong
+                          className={
+                            quorumIntact
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-500'
+                          }
+                        >
+                          {healthyCount} / 5 ({quorumIntact ? '99.999% SLA' : 'Writes Paused'})
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(activeReadConfig.sqlSnippet, 'TRUETIME_SQL')
+                        }
+                        className="px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                      >
+                        {copiedKey === 'TRUETIME_SQL' ? '✓ Copied SQL' : 'Copy TrueTime SQL'}
+                      </button>
+                      {onOpenBigQuerySql && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenBigQuerySql(activeReadConfig.sqlSnippet)}
+                          className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                        >
+                          Federated Query in BigQuery →
+                        </button>
+                      )}
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() => onRunInShell(activeReadConfig.cliCmd)}
+                          className="px-2.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-[10.5px] font-mono font-bold cursor-pointer"
+                        >
+                          Run `gcloud spanner` in Shell →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-7">
+                    <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto leading-relaxed">
+                      {activeReadConfig.sqlSnippet}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Zoomable Mermaid Paxos Quorum & TrueTime Topology */}
+              <MermaidArchitectureDiagram
+                title={`Mermaid 5-Zone Paxos Quorum & TrueTime Commit-Wait Topology (${healthyCount}/5 Votes Online · Leader: ${activeLeaderZone})`}
+                subtitle={`Interactive diagram reflecting your live chaos simulation above (2ε = ${commitWaitMs}ms atomic clock window · ${quorumIntact ? 'Write Quorum Active' : 'Quorum Halted to Prevent Split-Brain'})`}
+                mermaidDsl={`flowchart TB
+  CLIENT["Global App / Microservice (Mode: ${trueTimeReadMode})"]
+  TRUETIME["GPS + Rubidium Atomic Clock (2e = ${commitWaitMs}ms Commit Wait)"]
+  Z1["us-central1-a (${offlinePaxosZones.includes('us-central1-a') ? 'OFFLINE' : activeLeaderZone === 'us-central1-a' ? 'ACTIVE LEADER' : 'ONLINE RW'})"]
+  Z2["us-central1-b (${offlinePaxosZones.includes('us-central1-b') ? 'OFFLINE' : activeLeaderZone === 'us-central1-b' ? 'ACTIVE LEADER' : 'ONLINE RW'})"]
+  Z3["us-east1-b (${offlinePaxosZones.includes('us-east1-b') ? 'OFFLINE' : activeLeaderZone === 'us-east1-b' ? 'FAILOVER LEADER' : 'ONLINE RW'})"]
+  Z4["us-east1-c (${offlinePaxosZones.includes('us-east1-c') ? 'OFFLINE' : activeLeaderZone === 'us-east1-c' ? 'FAILOVER LEADER' : 'ONLINE RW'})"]
+  Z5["us-west1-a (${offlinePaxosZones.includes('us-west1-a') ? 'OFFLINE' : 'WITNESS TIE-BREAKER $0 STORAGE'})"]
+  QUORUM["Paxos Consensus (${healthyCount}/5 Votes -> ${quorumIntact ? 'COMMITTED 0ms RPO' : 'PAUSED NO SPLIT-BRAIN'})"]
+  CLIENT -->|"1. Write / Snapshot Read"| TRUETIME
+  TRUETIME -->|"2. Stamp Commit TS"| Z1
+  TRUETIME -->|"2. Replicate Log"| Z2
+  TRUETIME -->|"2. Replicate Log"| Z3
+  TRUETIME -->|"2. Replicate Log"| Z4
+  TRUETIME -->|"2. Vote Only"| Z5
+  Z1 --> QUORUM
+  Z2 --> QUORUM
+  Z3 --> QUORUM
+  Z4 --> QUORUM
+  Z5 --> QUORUM`}
+              />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                <div className="text-xs font-extrabold font-mono text-blue-600 dark:text-blue-400">
-                  1. GPS + Rubidium Atomic Clocks
-                </div>
-                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  Every Spanner region runs redundant GPS receivers and atomic clocks bounding clock drift (`2ε`) to under <strong>7 milliseconds</strong> globally.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                <div className="text-xs font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                  2. Commit Wait Rule (`TT.now().latest`)
-                </div>
-                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  If Transaction T2 starts after T1 commits in Tokyo, T2 is guaranteed a higher TrueTime timestamp in Virginia—enabling lock-free snapshot reads anywhere.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                <div className="text-xs font-extrabold font-mono text-amber-600 dark:text-amber-400">
-                  3. Multi-Region 5-Replica Paxos (`nam6` / `eur6`)
-                </div>
-                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  2 Read-Write regions (4 zones) + 1 low-cost Witness zone form a 5-vote Paxos quorum: survives an entire regional blackout with <strong>0ms RPO and 99.999% uptime</strong>.
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Bottom Grid: Change Streams CDC Builder + Dialect Switcher */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2137,7 +2514,8 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
