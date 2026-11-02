@@ -19,6 +19,7 @@ import {
   Clock,
   ArrowRight,
   Server,
+  Terminal,
 } from 'lucide-react';
 
 const SPANNER_CONFIGS = [
@@ -323,6 +324,34 @@ RETURN s.service_id, db.db_id, p.email, g.role,
 ORDER BY semantic_similarity ASC
 LIMIT 10;`;
 
+    const dynamicFallbackResults =
+      selectedGqlPreset === 'FRAUD_RING'
+        ? [
+            {
+              service_id: 'wallet-ingress-api',
+              db_id: `payout-router-svc → ${spannerName} (${gqlHopDepth}-Hop Cycle)`,
+              email: `${gqlHopDepth}-Hop Circular Transfer Loop (<${gqlMaxLatencyMs}ms)`,
+              role: `RING_EXPOSURE: $${(gqlMinBurnUsd * 148.2).toLocaleString(
+                'en-US',
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}`,
+              semantic_similarity: '0.018 (98.2% Anomaly)',
+            },
+            {
+              service_id: 'card-auth-gateway',
+              db_id: `fx-swap-engine → offshore-vault-api (${gqlHopDepth}-Hop Cycle)`,
+              email: `Velocity Spike (<${Math.round(
+                gqlMaxLatencyMs * 0.4
+              )}ms Inter-Hop)`,
+              role: `RING_EXPOSURE: $${(gqlMinBurnUsd * 64.9).toLocaleString(
+                'en-US',
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}`,
+              semantic_similarity: '0.044 (95.6% Anomaly)',
+            },
+          ]
+        : basePreset.results;
+
     const activePreset = {
       ...basePreset,
       label:
@@ -330,7 +359,12 @@ LIMIT 10;`;
           ? `Real-Time Payment Fraud Ring Detection (${gqlHopDepth}-Hop Cycle)`
           : basePreset.label,
       query: gqlCustomQuery.trim() || dynamicQuery,
-      results: gqlLiveResponse?.rows || basePreset.results,
+      results:
+        gqlLiveResponse?.presetId === selectedGqlPreset &&
+        Array.isArray(gqlLiveResponse?.rows) &&
+        gqlLiveResponse.rows.length > 0
+          ? gqlLiveResponse.rows
+          : dynamicFallbackResults,
     };
 
     const cliCmd = autoscaleEnabled
