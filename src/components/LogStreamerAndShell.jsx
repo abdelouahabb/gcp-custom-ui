@@ -115,6 +115,86 @@ export default function LogStreamerAndShell({
   );
   const [shellRunning, setShellRunning] = useState(false);
   const [shellDockMode, setShellDockMode] = useState('TOP_DOCK'); // 'TOP_DOCK' | 'FLOATING_DRAWER' | 'MINIMIZED'
+  const [floatingShellMinimized, setFloatingShellMinimized] = useState(false);
+  const [floatingOffset, setFloatingOffset] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cloudpulse_floating_shell_offset_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed?.dx === 'number' && typeof parsed?.dy === 'number') {
+          return { dx: parsed.dx, dy: parsed.dy };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return { dx: 0, dy: 0 };
+  });
+  const [isDraggingShell, setIsDraggingShell] = useState(false);
+  const shellDragStartRef = useRef(null);
+
+  const handleShellDragPointerDown = useCallback(
+    (e) => {
+      if (shellDockMode !== 'FLOATING_DRAWER') return;
+      // Don't start drag when clicking interactive buttons or inputs inside the header
+      if (e.target.closest('button, input, a, select')) return;
+      e.preventDefault();
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      setIsDraggingShell(true);
+      shellDragStartRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        initialDx: floatingOffset.dx,
+        initialDy: floatingOffset.dy,
+      };
+    },
+    [shellDockMode, floatingOffset.dx, floatingOffset.dy]
+  );
+
+  const handleShellDragPointerMove = useCallback(
+    (e) => {
+      if (!isDraggingShell || !shellDragStartRef.current) return;
+      const rawDx =
+        shellDragStartRef.current.initialDx +
+        (e.clientX - shellDragStartRef.current.startX);
+      const rawDy =
+        shellDragStartRef.current.initialDy +
+        (e.clientY - shellDragStartRef.current.startY);
+      // Clamp within viewport bounds so the drawer stays accessible on screen
+      const maxLeftShift =
+        typeof window !== 'undefined' ? -(window.innerWidth - 320) : -1200;
+      const maxUpShift =
+        typeof window !== 'undefined' ? -(window.innerHeight - 140) : -800;
+      const clampedDx = Math.max(maxLeftShift, Math.min(24, rawDx));
+      const clampedDy = Math.max(maxUpShift, Math.min(24, rawDy));
+      setFloatingOffset({ dx: clampedDx, dy: clampedDy });
+    },
+    [isDraggingShell]
+  );
+
+  const handleShellDragPointerUp = useCallback(() => {
+    if (!isDraggingShell) return;
+    setIsDraggingShell(false);
+    shellDragStartRef.current = null;
+    try {
+      localStorage.setItem(
+        'cloudpulse_floating_shell_offset_v1',
+        JSON.stringify(floatingOffset)
+      );
+    } catch {
+      // ignore
+    }
+  }, [isDraggingShell, floatingOffset]);
+
+  const resetFloatingShellPosition = useCallback(() => {
+    setFloatingOffset({ dx: 0, dy: 0 });
+    try {
+      localStorage.removeItem('cloudpulse_floating_shell_offset_v1');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const [shellHistory, setShellHistory] = useState([
     {
       id: 'init-1',
@@ -889,6 +969,7 @@ export default function LogStreamerAndShell({
       setShellInput(cmd);
       setShellHistoryCursor(-1);
       setShellDockMode((prev) => (prev === 'MINIMIZED' ? 'TOP_DOCK' : prev));
+      setFloatingShellMinimized(false);
       if (cmdOverride && typeof window !== 'undefined') {
         window.requestAnimationFrame(() => {
           const shellEl = document.getElementById('cloud-shell-terminal-card');
@@ -1036,21 +1117,57 @@ export default function LogStreamerAndShell({
   return (
     <div className="space-y-6">
       {/* ===================================================================
-          SMART TOP-DOCKED / FLOATING TOUCH-OPTIMIZED MOBILE CLOUD SHELL
+          SMART TOP-DOCKED / DRAGGABLE FLOATING TOUCH-OPTIMIZED MOBILE CLOUD SHELL
           Placed ABOVE all asynchronous log streams so log refreshes never
           push or shift the terminal down! Includes 1-click Top Dock,
-          Floating Corner Drawer, and Compact Minimized Bar modes.
+          User-Draggable Floating Drawer (mouse & touch), and Minimize modes.
          =================================================================== */}
       <div
         id="cloud-shell-terminal-card"
+        style={
+          shellDockMode === 'FLOATING_DRAWER'
+            ? {
+                transform: `translate3d(${floatingOffset.dx}px, ${floatingOffset.dy}px, 0)`,
+              }
+            : undefined
+        }
         className={
           shellDockMode === 'FLOATING_DRAWER'
-            ? 'fixed bottom-4 right-4 left-4 xl:left-auto xl:w-[760px] z-50 bg-white/95 dark:bg-[#18191c]/95 backdrop-blur-md border-2 border-blue-500/50 rounded-2xl p-4 shadow-2xl flex flex-col transition-all scroll-mt-24'
+            ? `fixed bottom-4 right-4 left-4 xl:left-auto ${
+                floatingShellMinimized ? 'xl:w-[460px]' : 'xl:w-[760px]'
+              } z-50 bg-white/95 dark:bg-[#18191c]/95 backdrop-blur-md border-2 ${
+                isDraggingShell
+                  ? 'border-emerald-500 shadow-emerald-500/20 select-none'
+                  : 'border-blue-500/50'
+              } rounded-2xl p-4 shadow-2xl flex flex-col scroll-mt-24`
             : 'bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm flex flex-col transition-all scroll-mt-24'
         }
       >
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div
+          onPointerDown={handleShellDragPointerDown}
+          onPointerMove={handleShellDragPointerMove}
+          onPointerUp={handleShellDragPointerUp}
+          onPointerCancel={handleShellDragPointerUp}
+          title={
+            shellDockMode === 'FLOATING_DRAWER'
+              ? 'Drag this header anywhere on screen to reposition the Floating Cloud Shell'
+              : undefined
+          }
+          className={`flex flex-wrap items-center justify-between gap-2 ${
+            shellDockMode === 'FLOATING_DRAWER'
+              ? 'cursor-grab active:cursor-grabbing select-none pb-1.5 border-b border-zinc-200/60 dark:border-zinc-800/80'
+              : ''
+          }`}
+        >
           <div className="flex items-center gap-2.5 min-w-0">
+            {shellDockMode === 'FLOATING_DRAWER' && (
+              <div
+                title="Drag to move Floating Cloud Shell"
+                className="px-1.5 py-1 rounded bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-extrabold tracking-widest shrink-0"
+              >
+                ⋮⋮ DRAG
+              </div>
+            )}
             <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 shrink-0">
               <Terminal className="w-4 h-4" />
             </div>
@@ -1066,12 +1183,14 @@ export default function LogStreamerAndShell({
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
                   <span>
                     {shellDockMode === 'FLOATING_DRAWER'
-                      ? 'Floating Overlay (Follows Scroll)'
+                      ? isDraggingShell
+                        ? 'Dragging Floating Shell...'
+                        : 'Draggable Floating Drawer (Drag Header to Move)'
                       : 'Top-Docked (Zero Log-Refresh Shift)'}
                   </span>
                 </span>
               </div>
-              {shellDockMode !== 'MINIMIZED' && (
+              {shellDockMode !== 'MINIMIZED' && !floatingShellMinimized && (
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                   Hybrid Direct REST Bridge + Real <code className="font-mono">gcloud</code>,{' '}
                   <code className="font-mono">bq</code>, <code className="font-mono">gsutil</code> &amp;{' '}
@@ -1082,10 +1201,24 @@ export default function LogStreamerAndShell({
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
+            {shellDockMode === 'FLOATING_DRAWER' &&
+              (floatingOffset.dx !== 0 || floatingOffset.dy !== 0) && (
+                <button
+                  type="button"
+                  onClick={resetFloatingShellPosition}
+                  title="Snap floating terminal back to default bottom-right corner"
+                  className="px-2 py-1 rounded-md text-[10.5px] font-mono font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
+                >
+                  Reset Pos
+                </button>
+              )}
             <div className="inline-flex rounded-lg p-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
               <button
                 type="button"
-                onClick={() => setShellDockMode('TOP_DOCK')}
+                onClick={() => {
+                  setShellDockMode('TOP_DOCK');
+                  setFloatingShellMinimized(false);
+                }}
                 title="Pin Cloud Shell at the top of the workspace so log refreshes below never shift it"
                 className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
                   shellDockMode === 'TOP_DOCK'
@@ -1097,8 +1230,11 @@ export default function LogStreamerAndShell({
               </button>
               <button
                 type="button"
-                onClick={() => setShellDockMode('FLOATING_DRAWER')}
-                title="Float Cloud Shell in the bottom-right corner while scrolling through logs"
+                onClick={() => {
+                  setShellDockMode('FLOATING_DRAWER');
+                  setFloatingShellMinimized(false);
+                }}
+                title="Float Cloud Shell anywhere on screen (drag header to move)"
                 className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
                   shellDockMode === 'FLOATING_DRAWER'
                     ? 'bg-blue-600 text-white shadow-xs'
@@ -1109,23 +1245,29 @@ export default function LogStreamerAndShell({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setShellDockMode((prev) =>
-                    prev === 'MINIMIZED' ? 'TOP_DOCK' : 'MINIMIZED'
-                  )
-                }
+                onClick={() => {
+                  if (shellDockMode === 'FLOATING_DRAWER') {
+                    setFloatingShellMinimized((prev) => !prev);
+                  } else {
+                    setShellDockMode((prev) =>
+                      prev === 'MINIMIZED' ? 'TOP_DOCK' : 'MINIMIZED'
+                    );
+                  }
+                }}
                 title="Collapse Cloud Shell into a single compact command bar"
                 className={`px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${
-                  shellDockMode === 'MINIMIZED'
+                  shellDockMode === 'MINIMIZED' || floatingShellMinimized
                     ? 'bg-amber-500 text-zinc-950 shadow-xs'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
-                {shellDockMode === 'MINIMIZED' ? 'Expand Shell' : 'Minimize'}
+                {shellDockMode === 'MINIMIZED' || floatingShellMinimized
+                  ? 'Expand Shell'
+                  : 'Minimize'}
               </button>
             </div>
 
-            {shellDockMode !== 'MINIMIZED' && (
+            {shellDockMode !== 'MINIMIZED' && !floatingShellMinimized && (
               <button
                 type="button"
                 onClick={() => setShellHistory([])}
@@ -1138,7 +1280,7 @@ export default function LogStreamerAndShell({
           </div>
         </div>
 
-        {shellDockMode === 'MINIMIZED' ? (
+        {shellDockMode === 'MINIMIZED' || floatingShellMinimized ? (
           <div className="mt-3 pt-2.5 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
             <div className="flex items-center gap-2 truncate">
               <span className="text-emerald-500 font-bold">$</span>
@@ -1153,7 +1295,13 @@ export default function LogStreamerAndShell({
             </div>
             <button
               type="button"
-              onClick={() => setShellDockMode('TOP_DOCK')}
+              onClick={() => {
+                if (shellDockMode === 'FLOATING_DRAWER') {
+                  setFloatingShellMinimized(false);
+                } else {
+                  setShellDockMode('TOP_DOCK');
+                }
+              }}
               className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer shrink-0"
             >
               Open Terminal ({shellHistory.length} cmds)
