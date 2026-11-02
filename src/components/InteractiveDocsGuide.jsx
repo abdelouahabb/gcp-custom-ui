@@ -218,6 +218,31 @@ const DOC_SECTIONS = [
       '100% $0.00/mo SIEM license tax — Secret Manager metadata-only canary containers (0 versions), IAM Decoy Service Accounts, VPC firewall rules, GCS publicAccessPrevention locks, TLS 1.3 socket probes, Binary Authorization policy rules, and Cloud Audit Admin Activity logs incur $0.00/mo.',
   },
   {
+    id: 'containers-serverless-2027-10x-suite',
+    wave: 'CONTAINERS & SERVERLESS 2026/2027 10X SUITE · CLOUD RUN WORKER POOLS & SIDECAR DAG, GKE COMPUTECLASS & GATEWAY API, AND EVENTARC ADVANCED BUS + 3-ENGINE SIZER',
+    title:
+      '2026/2027 10X Container-as-a-Service (CaaS) Suite — Cloud Run Worker Pools (`gcloud beta run worker-pools`) & Multi-Container Sidecar DAG, GKE Autopilot `ComputeClass` Cascade & Gateway API Canary, and Eventarc Advanced Message Bus (`--cel-match`) + 3-Engine TCO Matrix',
+    badge: 'CLOUD RUN + GKE + FUNCTIONS TABS (2027 10X)',
+    badgeColor: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+    icon: Cpu,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'In 2026/2027, container and serverless engineering spans three distinct execution engines—Cloud Run (Services, Jobs, and non-HTTP Worker Pools), GKE Autopilot (Custom ComputeClass hardware cascades + Gateway API), and Cloud Run Functions / Eventarc Advanced. Engineers need a unified, zero-jargon workbench to configure pull-based Worker Pools without dummy port-8080 listeners, wire multi-container sidecars (`dependsOn` + shared RAM volumes), prevent GPU/Spot stockouts with GKE `ComputeClass` + DWS `flexStart`, filter noisy events at the Eventarc Bus layer via CEL before paying for function invocations, and mathematically size workloads across all 3 engines.',
+    howItWorks: [
+      '1. Cloud Run 10X (`CloudRunFleetManager.jsx` — Worker Pools, Sidecar `dependsOn` Mesh & Serverless L4/Blackwell GPUs): Opens directly below the 7-Module Serverless Workbench Bar. Configures continuous non-HTTP Cloud Run Worker Pools (`gcloud beta run worker-pools deploy`) for Pub/Sub StreamingPull, Managed Kafka, and Temporal workers (with 1-Click Live Deployment via POST /api/project/:id/gcloud-591/execute), multi-container sidecar meshes (`otel-collector`, `cloud-sql-proxy`, `redis-l1-cache`) with strict `dependsOn` health ordering and a 2Gi `emptyDir: Memory` volume, on-demand NVIDIA L4 (24GB) or RTX PRO 6000 Blackwell (96GB) GPUs with `--no-gpu-zonal-redundancy`, revision canary traffic splitting, and a live zoomable Mermaid topology diagram.',
+      '2. GKE Autopilot 10X (`GkeFleetStudio.jsx` Sub-Tab 4 — 2027 `ComputeClass` Cascade, Gateway API & DWS): Generates declarative `cloud.google.com/v1` `ComputeClass` CRDs with a 3-tier hardware priority cascade (`Priority 1: Spot C3/G2/N2 -68%` -> `Priority 2: Cross-SKU Spot Fallback` -> `Priority 3: On-Demand SLA Floor`) and `activeMigration.optimizeRulePriority: true` (automatically migrating Pods back to Spot when capacity returns), Dynamic Workload Scheduler (`flexStart`) GPU provisioning, and Kubernetes `gateway.networking.k8s.io/v1` `Gateway` + `HTTPRoute` canary traffic splitting (`0%-100%` weight slider + `X-Canary: true` header routing).',
+      '3. Cloud Run Functions & Eventarc 10X (`CloudFunctionsEventarcStudio.jsx` Sub-Tab 5 — Eventarc Advanced Bus, CEL Filter, DLQ Replay & 3-Engine Sizer): Generates `gcloud eventarc message-buses`, `pipelines`, and `enrollments` with Common Expression Language (`--cel-match`) pre-invocation filters (`GCS_LARGE_PDF`, `HIGH_VALUE_ORDER`, `IAM_PRIVILEGE_ALERT`) that drop non-matching events at the bus layer for $0.00 compute cost, configures Dead-Letter Queue (`dlqTopicName`) quarantine + 1-click Pub/Sub replay, and runs a live 3-Engine TCO Sizer comparing Cloud Run Functions (2nd Gen) vs Cloud Run Multi-Container Service vs GKE Autopilot (`ComputeClass` Spot) across configurable RPS (1-500 req/s) and latency (20ms-2,000ms).',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/gcloud-591/execute (action: "DEPLOY_BETA_WORKER_POOL" -> gcloud beta run worker-pools deploy)',
+      'run.googleapis.com/v2 (workerPools · services · jobs)',
+      'cloud.google.com/v1 (ComputeClass) & gateway.networking.k8s.io/v1 (Gateway, HTTPRoute)',
+      'eventarc.googleapis.com/v1 (messageBuses · pipelines · enrollments)',
+    ],
+    billingImpact:
+      'Saves up to -68% on GKE Autopilot compute via activeMigration Spot reclamation, eliminates wasted Cloud Run Function invocations via $0.00 Eventarc Bus CEL pre-filtering, and prevents over-provisioning with real-time 3-engine TCO sizing.',
+  },
+  {
     id: 'cloudrun-compose-up-multi-container-studio',
     wave: 'CLOUD RUN 2026 INNOVATION · GOOGLE CLOUD SDK 590.0.0 GA CLOUD RUN COMPOSE (gcloud run compose up) STUDIO',
     title:

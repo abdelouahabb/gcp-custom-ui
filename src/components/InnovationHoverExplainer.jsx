@@ -3212,6 +3212,36 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket} (softDeletePolicy · retentionPolicy)',
     safetyMode: 'READ_ONLY',
   },
+  CLOUDRUN_2027_WORKER_POOLS_SIDECARS: {
+    badge: '2027 CLOUD RUN WORKER POOLS · SIDECAR DAG · L4/BLACKWELL GPU',
+    title: 'Cloud Run Worker Pools (`gcloud beta run worker-pools`), Sidecar `dependsOn` Mesh & Revision Canary Splitter',
+    whatItDoes:
+      'Configures and deploys continuous non-HTTP Cloud Run Worker Pools (`gcloud beta run worker-pools deploy`) for Kafka/PubSub/Temporal pull queues with 0 open HTTP ports, multi-container sidecar meshes (`otel-collector`, `cloud-sql-proxy`, `redis-l1-cache`) with `dependsOn` startup ordering and 2Gi in-memory IPC (`emptyDir: Memory`), on-demand NVIDIA L4 (24GB) / RTX PRO 6000 Blackwell (96GB) GPUs, and live revision canary traffic splitting.',
+    enterpriseValue:
+      'Eliminates dummy port-8080 HTTP health listeners on background pull consumers and wires production sidecars + serverless GPUs with interactive Mermaid topology visualization.',
+    gcpApis: 'run.googleapis.com/v2 (workerPools · services) · gcloud beta run worker-pools deploy',
+    safetyMode: 'READ_ONLY',
+  },
+  GKE_TAB_COMPUTECLASS_GATEWAY_2027: {
+    badge: '2027 GKE COMPUTECLASS CRD · GATEWAY API · DWS FLEX-START',
+    title: 'GKE Autopilot Custom `ComputeClass` Hardware Cascade, Gateway API L7 Canary & Dynamic Workload Scheduler (`flexStart`)',
+    whatItDoes:
+      'Synthesizes declarative `cloud.google.com/v1` `ComputeClass` CRDs with a 3-tier Spot-to-On-Demand hardware fallback priority chain and `activeMigration.optimizeRulePriority: true` (auto-reclaiming Spot capacity when available), Dynamic Workload Scheduler (`flexStart`) GPU queueing, and Kubernetes `gateway.networking.k8s.io/v1` `Gateway` + `HTTPRoute` canary traffic splitting.',
+    enterpriseValue:
+      'Prevents `ZONE_RESOURCE_POOL_EXHAUSTED` Pod scheduling failures while capturing -68% Spot savings automatically and replacing legacy Ingress with native L7 Gateway API canary weights.',
+    gcpApis: 'cloud.google.com/v1 (ComputeClass) · gateway.networking.k8s.io/v1 (Gateway, HTTPRoute)',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_EVENTARC_BUS_3ENGINE_2027: {
+    badge: '2027 EVENTARC ADVANCED BUS · CEL FILTER · DLQ REPLAY · 3-ENGINE SIZER',
+    title: 'Eventarc Advanced Message Bus (`--cel-match`), Dead-Letter Queue Replay Surgeon & 3-Engine Container TCO Sizer',
+    whatItDoes:
+      'Generates `gcloud eventarc message-buses`, `pipelines`, and `enrollments` with Common Expression Language (`--cel-match`) pre-invocation filters and JSON payload transformations, configures Dead-Letter Queue (`dlqTopicName`) quarantine + 1-click Pub/Sub replay, and compares Cloud Run Functions (2nd Gen) vs Cloud Run Multi-Container Services vs GKE Autopilot (`ComputeClass` Spot) across RPS and latency.',
+    enterpriseValue:
+      'Drops non-matching events at the Eventarc Bus layer for $0.00 compute invocation cost, prevents poison-pill retry storms, and mathematically selects the lowest-cost container engine.',
+    gcpApis: 'eventarc.googleapis.com/v1 (messageBuses · pipelines · enrollments) · pubsub.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
   CLOUDRUN_SCHEDULER_TO_JOBS: {
     badge: '24H BATCH & SHARDED CLOUD RUN V2 JOBS',
     title: 'Cloud Scheduler HTTP → Native Cloud Run v2 Batch Jobs Converter',
