@@ -23,7 +23,9 @@ import {
   FileCode,
   Activity,
   Lock,
+  GitBranch,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const TRIGGER_RECIPES = [
   {
@@ -337,10 +339,13 @@ const ADVANCED_EVENTARC_CATALOG = [
 
 export default function CloudFunctionsEventarcStudio({
   projectId,
+  initialSubTab = null,
   onRunInShell,
   onShowToast,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('TRIGGER_WIZARD');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'TRIGGER_WIZARD'
+  );
   const [loading, setLoading] = useState(false);
   const [functionsList, setFunctionsList] = useState([]);
   const [triggersList, setTriggersList] = useState([]);
@@ -388,6 +393,14 @@ export default function CloudFunctionsEventarcStudio({
 
   // Synthetic CloudEvent Test Trace State
   const [testingFn, setTestingFn] = useState(null);
+
+  // Sub-Tab 5: 2026/2027 Eventarc Advanced Bus, CEL Pipeline, DLQ Replay & 3-Engine Container Comparator State
+  const [eventarcBusName, setEventarcBusName] = useState(
+    'cloudpulse-enterprise-bus'
+  );
+  const [celFilterPreset, setCelFilterPreset] = useState('GCS_LARGE_PDF'); // 'GCS_LARGE_PDF' | 'HIGH_VALUE_ORDER' | 'IAM_PRIVILEGE_ALERT'
+  const [dlqTopicName, setDlqTopicName] = useState('eventarc-dlq-quarantine');
+  const [dlqMaxDeliveryAttempts, setDlqMaxDeliveryAttempts] = useState(5);
   const [testEventResult, setTestEventResult] = useState(null);
 
   // v1 vs v2 Affordability Calculator State
@@ -1112,6 +1125,12 @@ main:
               icon: Activity,
               label: 'Messaging & Workflows Matrix',
               badge: `${workflowsList.length} Workflows`,
+            },
+            {
+              id: 'EVENTARC_BUS_3ENGINE_2027',
+              icon: GitBranch,
+              label: '2027 Eventarc Advanced Bus, DLQ Replay & 3-Engine Sizer',
+              badge: 'CEL + DLQ',
             },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -2415,6 +2434,326 @@ main:
           </div>
         </div>
       )}
+
+      {/* SUB-TAB 5: 2026/2027 EVENTARC ADVANCED MESSAGE BUS, CEL PIPELINE, DLQ REPLAY & 3-ENGINE CONTAINER SIZER */}
+      {activeSubTab === 'EVENTARC_BUS_3ENGINE_2027' && (() => {
+        const celPresets = {
+          GCS_LARGE_PDF: {
+            label: 'GCS Document Upload > 1 MB (Skip Empty/Temp Files)',
+            celExpr: `message.type == "google.cloud.storage.object.v1.finalized" && message.data.name.endsWith(".pdf") && int(message.data.size) > 1048576`,
+            transformExpr: `{"eventId": message.id, "bucket": message.subject, "model": "gemini-3.8-flash", "receivedAt": message.time}`,
+          },
+          HIGH_VALUE_ORDER: {
+            label: 'High-Value Order Event (> $1,000 USD FinOps Priority)',
+            celExpr: `message.type == "cloudpulse.orders.v1.created" && double(message.data.amount_usd) >= 1000.0`,
+            transformExpr: `{"orderId": message.data.order_id, "amountUsd": message.data.amount_usd, "tier": "VIP_TRUETIME_SYNC"}`,
+          },
+          IAM_PRIVILEGE_ALERT: {
+            label: 'Zero-Trust IAM SetIamPolicy / Owner Escalation Guard',
+            celExpr: `message.type == "google.cloud.audit.log.v1.written" && message.data.protoPayload.methodName.contains("SetIamPolicy")`,
+            transformExpr: `{"principal": message.data.protoPayload.authenticationInfo.principalEmail, "severity": "CRITICAL_SOC"}`,
+          },
+        };
+        const activeCel =
+          celPresets[celFilterPreset] || celPresets.GCS_LARGE_PDF;
+
+        // 3-Engine Monthly Cost & Architecture Math (Cloud Run Function 2nd Gen vs Cloud Run Multi-Container Service vs GKE Autopilot Spot)
+        const monthlyRequests = simRps * 86400 * 30;
+        const vcpuSeconds =
+          (monthlyRequests * (simDurationMs / 1000)) /
+          Math.max(1, Math.min(80, Math.round(1000 / Math.max(50, simDurationMs)) * 4));
+        const fn2ndGenMonthlyUsd = Number(
+          Math.max(0, vcpuSeconds * 0.000024 + (monthlyRequests / 1e6) * 0.4).toFixed(2)
+        );
+        const cloudRunInstanceCpuMonthlyUsd = Number(
+          Math.max(12.5, vcpuSeconds * 0.000018).toFixed(2)
+        );
+        const gkeAutopilotSpotMonthlyUsd = Number(
+          Math.max(28.0, Math.ceil(simRps / 120) * 24.5).toFixed(2)
+        );
+
+        const eventarcBusCli = `# 1. Create Eventarc Advanced Message Bus & Dead-Letter Quarantine Topic
+gcloud eventarc message-buses create ${eventarcBusName} --location=${fnRegion} --project=${projectId}
+gcloud pubsub topics create ${dlqTopicName} --project=${projectId}
+gcloud pubsub subscriptions create ${dlqTopicName}-sub --topic=${dlqTopicName} --project=${projectId}
+
+# 2. Create Eventarc Pipeline with Retry Policy (${dlqMaxDeliveryAttempts} attempts) -> Cloud Run Function (${fnName})
+gcloud eventarc pipelines create ${fnName}-pipeline \\
+  --location=${fnRegion} \\
+  --project=${projectId} \\
+  --destinations="http_endpoint_uri=https://${fnRegion}-${projectId}.cloudfunctions.net/${fnName},network_attachment=projects/${projectId}/regions/${fnRegion}/networkAttachments/default" \\
+  --mediations="transformation_template='${activeCel.transformExpr}'" \\
+  --retry-policy-max-attempts=${dlqMaxDeliveryAttempts}
+
+# 3. Create CEL-Filtered Enrollment on Message Bus (Eliminates Wasted Function Invocations!)
+gcloud eventarc enrollments create ${fnName}-cel-enrollment \\
+  --location=${fnRegion} \\
+  --project=${projectId} \\
+  --message-bus=${eventarcBusName} \\
+  --destination-pipeline=${fnName}-pipeline \\
+  --cel-match='${activeCel.celExpr}'`;
+
+        const dlqReplayCli = `# Replay Quarantined Dead-Letter Events from ${dlqTopicName}-sub back into ${eventarcBusName}
+gcloud pubsub subscriptions pull ${dlqTopicName}-sub --limit=20 --auto-ack --format=json --project=${projectId}`;
+
+        return (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <GitBranch className="w-4 h-4 text-blue-500" />
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Eventarc Advanced Message Bus (`CEL` Filter + Payload Mediation), DLQ Replay Surgeon &amp; 3-Engine Container Sizer
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      ZERO WASTED INVOCATIONS · CEL MEDIATION · DLQ AUTO-REPLAY
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Filter noisy events at the **Eventarc Advanced Message Bus** using Common Expression Language (`--cel-match`) *before* billing a single Cloud Run Function invocation, replay quarantined DLQ messages in 1 click, and compare **Cloud Run Functions (2nd Gen)** vs **Cloud Run Services** vs **GKE Autopilot Spot**:
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Controls for Eventarc Advanced Bus & CEL Filter */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-zinc-50 dark:bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    Eventarc Message Bus ID
+                  </label>
+                  <input
+                    type="text"
+                    value={eventarcBusName}
+                    onChange={(e) => setEventarcBusName(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    CEL Pre-Invocation Filter Preset
+                  </label>
+                  <select
+                    value={celFilterPreset}
+                    onChange={(e) => setCelFilterPreset(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="GCS_LARGE_PDF">
+                      GCS PDF &gt; 1 MB (Skip Temp/Empty Files)
+                    </option>
+                    <option value="HIGH_VALUE_ORDER">
+                      Orders &gt;= $1,000 USD (VIP TrueTime Sync)
+                    </option>
+                    <option value="IAM_PRIVILEGE_ALERT">
+                      Zero-Trust IAM SetIamPolicy Escalation
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    Dead-Letter Quarantine Topic
+                  </label>
+                  <input
+                    type="text"
+                    value={dlqTopicName}
+                    onChange={(e) => setDlqTopicName(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    Max Delivery Retries Before DLQ:{' '}
+                    <strong className="text-blue-600 dark:text-blue-400">
+                      {dlqMaxDeliveryAttempts}x
+                    </strong>
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={dlqMaxDeliveryAttempts}
+                    onChange={(e) =>
+                      setDlqMaxDeliveryAttempts(Number(e.target.value))
+                    }
+                    className="w-full accent-blue-600 cursor-pointer mt-1.5"
+                  />
+                </div>
+              </div>
+
+              {/* CEL Filter + Transformation & CLI Workbench */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="lg:col-span-5 space-y-2.5 font-mono text-xs">
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400">
+                      1. CEL Enrollment Filter (`--cel-match`)
+                    </div>
+                    <code className="block text-[10.5px] text-emerald-700 dark:text-emerald-300 break-all">
+                      {activeCel.celExpr}
+                    </code>
+                    <p className="text-[10.5px] text-zinc-500 font-sans">
+                      Drops non-matching events inside Eventarc before spinning up a container instance—saving up to 85% of wasted cold starts.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">
+                      2. Zero-Code Payload Mediation (`transformation_template`)
+                    </div>
+                    <code className="block text-[10.5px] text-blue-600 dark:text-blue-300 break-all">
+                      {activeCel.transformExpr}
+                    </code>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => copyText(eventarcBusCli, 'EVENTARC_BUS_CLI')}
+                      className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    >
+                      {copiedKey === 'EVENTARC_BUS_CLI'
+                        ? '✓ Copied Bus CLI'
+                        : 'Copy Eventarc Bus CLI'}
+                    </button>
+                    {onRunInShell && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onRunInShell(eventarcBusCli)}
+                          className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-bold cursor-pointer"
+                        >
+                          Provision Bus in Shell →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRunInShell(dlqReplayCli)}
+                          className="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold cursor-pointer"
+                        >
+                          ↺ Replay DLQ Messages →
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7">
+                  <pre className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-72 leading-relaxed">
+                    {eventarcBusCli}
+                  </pre>
+                </div>
+              </div>
+
+              {/* 3-Engine Container & Serverless Decision Calculator */}
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Interactive 3-Engine Container &amp; Serverless Decision Matrix (Function 2nd Gen vs. Cloud Run Service vs. GKE Autopilot)
+                    </div>
+                    <p className="text-[11px] text-zinc-500">
+                      Slide traffic RPS and latency below to see which Google Cloud container runtime wins for your workload:
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 font-mono text-xs">
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-zinc-500">Traffic:</span>
+                      <strong>{simRps} RPS</strong>
+                      <input
+                        type="range"
+                        min={1}
+                        max={500}
+                        value={simRps}
+                        onChange={(e) => setSimRps(Number(e.target.value))}
+                        className="w-24 accent-blue-600 cursor-pointer"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-zinc-500">Duration:</span>
+                      <strong>{simDurationMs}ms</strong>
+                      <input
+                        type="range"
+                        min={20}
+                        max={2000}
+                        step={20}
+                        value={simDurationMs}
+                        onChange={(e) => setSimDurationMs(Number(e.target.value))}
+                        className="w-24 accent-emerald-600 cursor-pointer"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
+                  {[
+                    {
+                      name: '1. Cloud Run Function (2nd Gen)',
+                      cost: fn2ndGenMonthlyUsd,
+                      badge: simRps < 30 ? '★ BEST FOR EVENT BURSTS' : 'EVENT-DRIVEN',
+                      pros: 'Zero idle cost ($0.00 at 0 RPS) · Native Eventarc CEL triggers · 80x concurrency per instance',
+                    },
+                    {
+                      name: '2. Cloud Run Multi-Container Service',
+                      cost: cloudRunInstanceCpuMonthlyUsd,
+                      badge:
+                        simRps >= 30 && simRps <= 200
+                          ? '★ BEST FOR API + SIDECARS'
+                          : 'INSTANCE-BASED CPU',
+                      pros: 'Up to 10 sidecars (OTel, Nginx, Cloud SQL Proxy) · Direct VPC egress · Serverless L4 GPUs',
+                    },
+                    {
+                      name: '3. GKE Autopilot (`ComputeClass` Spot)',
+                      cost: gkeAutopilotSpotMonthlyUsd,
+                      badge: simRps > 200 ? '★ BEST AT HIGH SUSTAINED RPS' : 'K8S GATEWAY + DWS',
+                      pros: '-68% Spot ComputeClass cascade · K8s Gateway API HTTPRoute · Zero per-request invocation fee',
+                    },
+                  ].map((eng, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                          {eng.name}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                          {eng.badge}
+                        </span>
+                      </div>
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                        ~${eng.cost.toLocaleString()}/mo
+                      </div>
+                      <p className="text-[10.5px] text-zinc-500 font-sans leading-relaxed">
+                        {eng.pros}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <MermaidArchitectureDiagram
+                title={`Mermaid Eventarc Advanced Bus (${eventarcBusName}) & Cloud Run Function 2nd Gen (${fnName}) Topology`}
+                subtitle={`Interactive event-driven pipeline with CEL Pre-Invocation Filter (${celFilterPreset}), Payload Mediation, and ${dlqMaxDeliveryAttempts}-Retry Dead-Letter Quarantine (${dlqTopicName})`}
+                mermaidDsl={`flowchart TB
+  PRODUCER["130+ GCP Producers (GCS / BigQuery / Spanner / IAM Audit)"]
+  BUS["Eventarc Advanced Bus (${eventarcBusName})"]
+  CEL["CEL Enrollment Filter (${celFilterPreset})"]
+  MEDIATION["Zero-Code JSON Payload Mediation"]
+  FN["Cloud Run Function 2nd Gen (${fnName} · ${fnConcurrency}x Concurrency)"]
+  DLQ["Pub/Sub Dead-Letter Queue (${dlqTopicName} · Max ${dlqMaxDeliveryAttempts} Retries)"]
+  PRODUCER -->|"CloudEvent v1.0"| BUS
+  BUS -->|"Evaluate --cel-match"| CEL
+  CEL -->|"Matched Events Only ($0 Waste)"| MEDIATION
+  MEDIATION -->|"HTTP Push"| FN
+  FN -->|"If 5xx After ${dlqMaxDeliveryAttempts} Attempts"| DLQ
+  DLQ -->|"1-Click Replay"| BUS`}
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -16,7 +16,10 @@ import {
   Rocket,
   FileCode,
   Zap,
+  GitBranch,
+  Play,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const GPU_SKUS = {
   'nvidia-l4': {
@@ -81,12 +84,15 @@ const WORKLOAD_TEMPLATES = {
 
 export default function GkeFleetStudio({
   projectId,
+  initialSubTab = null,
   onOpenProvisionGke,
   onRunInShell,
   onRefreshOverview,
   onShowToast,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('FLEET_DEPLOY');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'FLEET_DEPLOY'
+  );
   const [gkeData, setGkeData] = useState(null);
   const [loadingGke, setLoadingGke] = useState(false);
 
@@ -130,6 +136,17 @@ export default function GkeFleetStudio({
   const [appMemReq, setAppMemReq] = useState('512Mi');
   const [appGpuCount, setAppGpuCount] = useState(0);
   const [copiedLabel, setCopiedLabel] = useState('');
+
+  // Sub-Tab 4: 2026/2027 GKE ComputeClass Priority Cascade, Gateway API HTTPRoute & DWS State
+  const [computeClassName, setComputeClassName] = useState('finops-spot-first-cc');
+  const [ccPrimaryFamily, setCcPrimaryFamily] = useState('c3'); // 'c3' | 'g2' | 'n2'
+  const [ccAutoMigrateBackToSpot, setCcAutoMigrateBackToSpot] = useState(true);
+  const [dwsFlexEnabled, setDwsFlexEnabled] = useState(true);
+  const [gatewayClass, setGatewayClass] = useState(
+    'gke-l7-global-external-managed'
+  );
+  const [canaryTrafficWeight, setCanaryTrafficWeight] = useState(15); // 15% Canary / 85% Stable
+  const [canaryHeaderMatch, setCanaryHeaderMatch] = useState('X-Canary: true');
 
   const handleCopy = (text, label = 'command') => {
     navigator.clipboard?.writeText(text);
@@ -574,6 +591,11 @@ spec:
             id: 'GPU_FINOPS',
             label: 'Spot GPU & AI Node-Pool FinOps Calculator',
             icon: Zap,
+          },
+          {
+            id: 'COMPUTECLASS_GATEWAY_2027',
+            label: '2027 ComputeClass Cascade, Gateway API & DWS',
+            icon: GitBranch,
           },
         ].map((t) => {
           const Icon = t.icon;
@@ -1383,6 +1405,327 @@ spec:
           </div>
         </div>
       )}
+
+      {/* ===================================================================
+          SUB-TAB 4: 2026/2027 GKE COMPUTECLASS CASCADE, GATEWAY API & DWS
+         =================================================================== */}
+      {activeSubTab === 'COMPUTECLASS_GATEWAY_2027' && (() => {
+        const stableWeight = 100 - canaryTrafficWeight;
+        const computeClassAndGatewayYaml = `# ============================================================================
+# 1. GKE 2026/2027 Autopilot Custom ComputeClass (Zero-Pending Spot->OnDemand Cascade)
+# Automatically provisions Spot (-68%) first, falls back to On-Demand during stockouts,
+# and live-migrates pods back to Spot when capacity returns!
+# ============================================================================
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: ${computeClassName}
+spec:
+  priorities:
+    # Priority 1: Preferred Spot ${ccPrimaryFamily.toUpperCase()} Compute (-68% FinOps Discount)
+    - machineFamily: ${ccPrimaryFamily}
+      spot: true
+      minCores: 4
+    # Priority 2: Secondary Spot N2 Fallback (Cross-Family Spot Resilience)
+    - machineFamily: n2
+      spot: true
+      minCores: 4
+    # Priority 3: Guaranteed On-Demand Floor (Prevents Pods Stalling in Pending)
+    - machineFamily: ${ccPrimaryFamily}
+      spot: false
+${
+  dwsFlexEnabled
+    ? `    # Priority 4: Dynamic Workload Scheduler (DWS Flex-Start for Atomic GPU/AI Queuing)
+    - machineFamily: g2
+      flexStart:
+        enabled: true
+        maxRunDurationSeconds: 604800\n`
+    : ''
+}  nodePoolAutoCreation:
+    enabled: true
+  whenUnsatisfiable: ScaleUpAnyway
+  activeMigration:
+    optimizeRulePriority: ${ccAutoMigrateBackToSpot}
+---
+# ============================================================================
+# 2. Kubernetes Gateway API (${gatewayClass}) + Weighted Canary HTTPRoute
+# Replaces legacy Ingress with native multi-cluster/multi-revision traffic splitting
+# ============================================================================
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ${appName}-global-gateway
+  namespace: ${appNamespace}
+spec:
+  gatewayClassName: ${gatewayClass}
+  listeners:
+    - name: https-listener
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${appName}-canary-route
+  namespace: ${appNamespace}
+spec:
+  parentRefs:
+    - name: ${appName}-global-gateway
+  rules:
+    # Rule A: Header-Pinned Canary Traffic (${canaryHeaderMatch}) -> 100% Canary Service
+    - matches:
+        - headers:
+            - name: ${canaryHeaderMatch.split(':')[0]?.trim() || 'X-Canary'}
+              value: "${canaryHeaderMatch.split(':')[1]?.trim() || 'true'}"
+      backendRefs:
+        - name: ${appName}-canary-svc
+          port: ${appPort}
+          weight: 100
+    # Rule B: Production Weighted Canary Split (${stableWeight}% Stable / ${canaryTrafficWeight}% Canary)
+    - backendRefs:
+        - name: ${appName}-stable-svc
+          port: ${appPort}
+          weight: ${stableWeight}
+        - name: ${appName}-canary-svc
+          port: ${appPort}
+          weight: ${canaryTrafficWeight}`;
+
+        const applyCliCmd = `gcloud container clusters get-credentials ${clusterName} --region=${clusterRegion} --project=${projectId} && cat << 'EOF' | kubectl apply -f -\n${computeClassAndGatewayYaml}\nEOF`;
+
+        return (
+          <div className="space-y-4">
+            <div className="p-4 rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <GitBranch className="w-4 h-4 text-blue-500" />
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                      GKE 2027 `ComputeClass` Priority Fallback Cascade, Gateway API (`HTTPRoute`) &amp; Dynamic Workload Scheduler
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      ZERO PENDING PODS · AUTO SPOT RE-MIGRATION · NATIVE CANARY
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Eliminate Spot VM stockout downtime with declarative **`ComputeClass` hardware fallback priorities** (`Spot Primary → Spot Secondary → On-Demand Guaranteed`) plus **`activeMigration.optimizeRulePriority`** and Kubernetes **Gateway API (`HTTPRoute`)** canary splitting:
+                  </p>
+                </div>
+              </div>
+
+              {/* 5 Interactive Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-zinc-50 dark:bg-zinc-900/80 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    ComputeClass CRD Name
+                  </label>
+                  <input
+                    type="text"
+                    value={computeClassName}
+                    onChange={(e) => setComputeClassName(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    Priority-1 Spot Machine Family
+                  </label>
+                  <select
+                    value={ccPrimaryFamily}
+                    onChange={(e) => setCcPrimaryFamily(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="c3">c3 (Intel Sapphire Rapids · Gen3)</option>
+                    <option value="g2">g2 (NVIDIA L4 AI Inference GPU)</option>
+                    <option value="n2">n2 (Balanced Production General)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    K8s Gateway API Class
+                  </label>
+                  <select
+                    value={gatewayClass}
+                    onChange={(e) => setGatewayClass(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="gke-l7-global-external-managed">
+                      gke-l7-global-external-managed (Anycast Global)
+                    </option>
+                    <option value="gke-l7-regional-external-managed">
+                      gke-l7-regional-external-managed (Regional L7)
+                    </option>
+                    <option value="gke-l7-rilb">
+                      gke-l7-rilb (Internal Zero-Trust VPC L7)
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                    HTTPRoute Split:{' '}
+                    <strong className="text-emerald-600 dark:text-emerald-400">
+                      {stableWeight}% Stable
+                    </strong>{' '}
+                    /{' '}
+                    <strong className="text-blue-600 dark:text-blue-400">
+                      {canaryTrafficWeight}% Canary
+                    </strong>
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={canaryTrafficWeight}
+                    onChange={(e) =>
+                      setCanaryTrafficWeight(Number(e.target.value))
+                    }
+                    className="w-full accent-blue-600 cursor-pointer mt-1.5"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-between gap-1.5">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[10.5px]">
+                    <input
+                      type="checkbox"
+                      checked={ccAutoMigrateBackToSpot}
+                      onChange={(e) =>
+                        setCcAutoMigrateBackToSpot(e.target.checked)
+                      }
+                      className="accent-emerald-600"
+                    />
+                    <span>Auto-Reclaim Spot (`activeMigration`)</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[10.5px]">
+                    <input
+                      type="checkbox"
+                      checked={dwsFlexEnabled}
+                      onChange={(e) => setDwsFlexEnabled(e.target.checked)}
+                      className="accent-blue-600"
+                    />
+                    <span>Enable DWS Flex-Start GPUs</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 3-Priority Fallback Cards + YAML Preview */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="lg:col-span-5 space-y-2.5">
+                  <div className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                    Declarative 3-Tier Autopilot Hardware Fallback Chain
+                  </div>
+                  {[
+                    {
+                      step: 'Priority 1 (Preferred)',
+                      title: `Spot ${ccPrimaryFamily.toUpperCase()} Node Pool (-68% FinOps)`,
+                      desc: `GKE Autopilot first attempts to schedule pods onto Spot ${ccPrimaryFamily.toUpperCase()} VMs for maximum cost savings.`,
+                      badge: '-68% COST',
+                      color: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+                    },
+                    {
+                      step: 'Priority 2 (Secondary Spot)',
+                      title: 'Cross-Family Spot N2 Fallback (-68% FinOps)',
+                      desc: `If ${ccPrimaryFamily.toUpperCase()} Spot is temporarily out of stock in ${clusterRegion}, Autopilot seamlessly falls back to N2 Spot.`,
+                      badge: 'CROSS-SKU',
+                      color: 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+                    },
+                    {
+                      step: 'Priority 3 (SLA Floor)',
+                      title: `Guaranteed On-Demand ${ccPrimaryFamily.toUpperCase()} + Auto-Return to Spot`,
+                      desc: ccAutoMigrateBackToSpot
+                        ? 'Guarantees 0 Pending pods during regional Spot exhaustion, and automatically drains back to Priority-1 Spot once capacity returns!'
+                        : 'Guarantees 0 Pending pods by falling back to On-Demand compute.',
+                      badge: ccAutoMigrateBackToSpot ? 'AUTO-RECLAIM ON' : 'SLA FLOOR',
+                      color: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+                    },
+                  ].map((p, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-xl border font-mono space-y-1 ${p.color}`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-extrabold">
+                        <span>
+                          {p.step}: {p.title}
+                        </span>
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-black/15">
+                          {p.badge}
+                        </span>
+                      </div>
+                      <p className="text-[10.5px] opacity-90 font-sans leading-relaxed">
+                        {p.desc}
+                      </p>
+                    </div>
+                  ))}
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          computeClassAndGatewayYaml,
+                          'ComputeClass + Gateway YAML'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {copiedLabel === 'ComputeClass + Gateway YAML' ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span>Copy 2027 Bundle YAML</span>
+                    </button>
+
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(applyCliCmd)}
+                        className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>Apply via `kubectl` in Cloud Shell →</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7">
+                  <pre className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-96 leading-relaxed">
+                    {computeClassAndGatewayYaml}
+                  </pre>
+                </div>
+              </div>
+
+              <MermaidArchitectureDiagram
+                title={`Mermaid GKE Gateway API (${gatewayClass}) & ComputeClass (${computeClassName}) Topology`}
+                subtitle={`Interactive K8s L7 HTTPRoute (${stableWeight}% Stable / ${canaryTrafficWeight}% Canary) + 3-Priority Spot/On-Demand ComputeClass Hardware Cascade in ${clusterRegion}`}
+                mermaidDsl={`flowchart TB
+  CLIENT["Global HTTPS Client / Header (${canaryHeaderMatch})"]
+  GW["K8s Gateway (${gatewayClass})"]
+  ROUTE["HTTPRoute (${appName}-canary-route)"]
+  STABLE_SVC["${appName}-stable-svc (Weight: ${stableWeight}%)"]
+  CANARY_SVC["${appName}-canary-svc (Weight: ${canaryTrafficWeight}%)"]
+  CC["ComputeClass (${computeClassName})"]
+  P1["Priority 1: Spot ${ccPrimaryFamily.toUpperCase()} (-68% FinOps)"]
+  P2["Priority 2: Spot N2 Cross-SKU Fallback"]
+  P3["Priority 3: On-Demand ${ccPrimaryFamily.toUpperCase()} (0 Pending Pods)"]
+  CLIENT --> GW
+  GW --> ROUTE
+  ROUTE -->|"${stableWeight}% Traffic"| STABLE_SVC
+  ROUTE -->|"${canaryTrafficWeight}% + Header"| CANARY_SVC
+  STABLE_SVC --> CC
+  CANARY_SVC --> CC
+  CC -->|"1st Choice"| P1
+  CC -->|"If Stockout"| P2
+  CC -->|"SLA Guarantee"| P3
+  P3 -->|"activeMigration=${ccAutoMigrateBackToSpot}"| P1`}
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

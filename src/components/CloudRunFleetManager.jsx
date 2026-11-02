@@ -28,6 +28,7 @@ import LocalDevTunnelBar from './LocalDevTunnelBar';
 import VisualCronScheduleBuilder, {
   describeCronInPlainEnglish,
 } from './VisualCronScheduleBuilder';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const QUICK_TEMPLATES = [
   {
@@ -74,6 +75,7 @@ const QUICK_TEMPLATES = [
 export default function CloudRunFleetManager({
   projectId,
   initialServices = [],
+  initialShowWorkerPoolsStudio = false,
   onOpenProvisionCloudRun,
   onOpenSecretManagerStudio,
   onSelectTab,
@@ -223,6 +225,23 @@ volumes:
   const [jobConversionResult, setJobConversionResult] = useState(null);
   const [jobConversionError, setJobConversionError] = useState(null);
   const [runningJobMap, setRunningJobMap] = useState({});
+
+  // 2027 Cloud Run Worker Pools, Multi-Container Sidecar Mesh, GPU Sizer & Canary Splitter Studio
+  const [showWorkerPoolsSidecarStudio, setShowWorkerPoolsSidecarStudio] = useState(
+    Boolean(initialShowWorkerPoolsStudio)
+  );
+  const [workerPoolWorkloadKind, setWorkerPoolWorkloadKind] = useState('WORKER_POOL'); // WORKER_POOL | SIDECAR_SERVICE
+  const [workerPoolName, setWorkerPoolName] = useState('orders-kafka-consumer-pool');
+  const [workerPoolRegion, setWorkerPoolRegion] = useState('us-central1');
+  const [workerPoolQueueSource, setWorkerPoolQueueSource] = useState('PUBSUB_PULL'); // PUBSUB_PULL | KAFKA_CONSUMER | TEMPORAL_WORKER
+  const [workerPoolInstances, setWorkerPoolInstances] = useState(3);
+  const [workerPoolGpuSku, setWorkerPoolGpuSku] = useState('nvidia-l4'); // none | nvidia-l4 | nvidia-rtx-pro-6000
+  const [workerPoolCanaryPct, setWorkerPoolCanaryPct] = useState(20);
+  const [workerPoolSidecars, setWorkerPoolSidecars] = useState({
+    otelCollector: true,
+    cloudSqlProxy: true,
+    redisRamCache: true,
+  });
 
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
@@ -2117,8 +2136,33 @@ spec:
           </div>
         </div>
 
-        {/* 6-Module Serverless Workbench & Migration Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 pt-1">
+        {/* 7-Module Serverless Workbench & Migration Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2 pt-1">
+          <button
+            type="button"
+            data-feature-id="CLOUDRUN_2027_WORKER_POOLS_SIDECARS"
+            onClick={() => setShowWorkerPoolsSidecarStudio((v) => !v)}
+            title="2027 Cloud Run Worker Pools (Non-HTTP Pull Workers for Kafka/PubSub/Temporal), Multi-Container Sidecar Mesh (dependsOn DAG + Shared RAM Volume), Serverless NVIDIA L4/Blackwell GPU Sizer & Revision Canary Traffic Splitter"
+            className={`w-full p-2.5 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+              showWorkerPoolsSidecarStudio
+                ? 'bg-emerald-600/15 dark:bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                : 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/40 text-zinc-900 dark:text-zinc-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold truncate">
+                <Cpu className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">Worker Pools &amp; GPUs</span>
+              </span>
+              <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                2027 10X
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              Pull Workers · Sidecar DAG · L4
+            </div>
+          </button>
+
           {onSelectTab && (
             <button
               type="button"
@@ -2276,6 +2320,453 @@ spec:
           </button>
         </div>
       </div>
+
+      {/* 2027 CLOUD RUN WORKER POOLS, MULTI-CONTAINER SIDECAR MESH, GPU SIZER & CANARY SPLITTER STUDIO */}
+      {showWorkerPoolsSidecarStudio && (() => {
+        const isGpu = workerPoolGpuSku !== 'none';
+        const gpuName =
+          workerPoolGpuSku === 'nvidia-rtx-pro-6000'
+            ? 'NVIDIA RTX PRO 6000 Blackwell (96GB VRAM · 8 vCPU · 32Gi RAM)'
+            : workerPoolGpuSku === 'nvidia-l4'
+            ? 'NVIDIA L4 Tensor Core (24GB VRAM · 4 vCPU · 16Gi RAM)'
+            : 'CPU-Only Gen2 MicroVM (2 vCPU · 4Gi RAM)';
+        const cpuLimit =
+          workerPoolGpuSku === 'nvidia-rtx-pro-6000'
+            ? '8'
+            : workerPoolGpuSku === 'nvidia-l4'
+            ? '4'
+            : '2';
+        const memLimit =
+          workerPoolGpuSku === 'nvidia-rtx-pro-6000'
+            ? '32Gi'
+            : workerPoolGpuSku === 'nvidia-l4'
+            ? '16Gi'
+            : '4Gi';
+
+        const activeDeps = [];
+        if (workerPoolSidecars.otelCollector) activeDeps.push('otel-collector');
+        if (workerPoolSidecars.cloudSqlProxy) activeDeps.push('cloud-sql-proxy');
+        if (workerPoolSidecars.redisRamCache) activeDeps.push('redis-l1-cache');
+
+        const hourlyInstanceRate =
+          workerPoolGpuSku === 'nvidia-rtx-pro-6000'
+            ? 1.85
+            : workerPoolGpuSku === 'nvidia-l4'
+            ? 0.67
+            : 0.086;
+        const estMonthlyUsd = (
+          hourlyInstanceRate *
+          24 *
+          30 *
+          (workerPoolWorkloadKind === 'WORKER_POOL' ? workerPoolInstances : Math.max(1, workerPoolInstances)) *
+          0.7 // 30% Sustained / CUD discount
+        ).toFixed(2);
+
+        const workerPoolCliCmd =
+          workerPoolWorkloadKind === 'WORKER_POOL'
+            ? `# 1. Deploy 2027 Cloud Run Worker Pool (Continuous Non-HTTP Pull Consumer · 0 Open Ports)\ngcloud beta run worker-pools deploy ${workerPoolName} \\\n  --project=${projectId} \\\n  --region=${workerPoolRegion} \\\n  --image=us-docker.pkg.dev/cloudrun/container/worker-pool:latest \\\n  --instances=${workerPoolInstances} \\\n  --cpu=${cpuLimit} \\\n  --memory=${memLimit}${
+                isGpu
+                  ? ` \\\n  --gpu=1 \\\n  --gpu-type=${workerPoolGpuSku} \\\n  --no-gpu-zonal-redundancy`
+                  : ''
+              } \\\n  --network=default \\\n  --subnet=default \\\n  --vpc-egress=private-ranges-only \\\n  --set-env-vars="QUEUE_DRIVER=${workerPoolQueueSource},GRACEFUL_SIGTERM_DRAIN_SEC=30"`
+            : `# 1. Deploy Multi-Container Sidecar Service with dependsOn DAG & Revision Canary Split\ngcloud run services replace ${workerPoolName}-service.yaml \\\n  --project=${projectId} \\\n  --region=${workerPoolRegion}\n\n# 2. Shift ${workerPoolCanaryPct}% Live Traffic to Canary Revision + Zero-Traffic Direct URL Tag\ngcloud run services update-traffic ${workerPoolName} \\\n  --project=${projectId} \\\n  --region=${workerPoolRegion} \\\n  --to-revisions=LATEST=${workerPoolCanaryPct},${workerPoolName}-stable=${100 - workerPoolCanaryPct} \\\n  --set-tags=canary=LATEST`;
+
+        const sidecarServiceYaml = `apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ${workerPoolName}
+  namespace: '${projectId}'
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/network-interfaces: '[{"network":"default","subnetwork":"default"}]'
+        run.googleapis.com/vpc-access-egress: private-ranges-only${
+          isGpu
+            ? `\n        run.googleapis.com/gpu-zonal-redundancy-disabled: 'true'`
+            : ''
+        }
+    spec:
+      containerConcurrency: ${isGpu ? 4 : 80}
+      containers:
+        - name: primary-app
+          image: us-docker.pkg.dev/cloudrun/container/hello:latest
+          ports:
+            - name: http1
+              containerPort: 8080${
+                activeDeps.length > 0
+                  ? `\n          dependsOn:\n${activeDeps.map((d) => `            - ${d}`).join('\n')}`
+                  : ''
+              }
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://127.0.0.1:4318
+            - name: REDIS_URL
+              value: redis://127.0.0.1:6379
+            - name: DB_SOCKET_PATH
+              value: /mnt/shared-ram/cloudsql
+          resources:
+            limits:
+              cpu: '${cpuLimit}'
+              memory: ${memLimit}${
+                isGpu ? `\n              nvidia.com/gpu: '1'` : ''
+              }
+          volumeMounts:
+            - name: shared-ram-ipc
+              mountPath: /mnt/shared-ram${
+                workerPoolSidecars.otelCollector
+                  ? `\n        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:latest
+          resources:
+            limits:
+              cpu: '500m'
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /
+              port: 13133`
+                  : ''
+              }${
+                workerPoolSidecars.cloudSqlProxy
+                  ? `\n        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.0
+          args: ["--unix-socket=/mnt/shared-ram/cloudsql", "--auto-iam-authn", "${projectId}:${workerPoolRegion}:primary-pg"]
+          resources:
+            limits:
+              cpu: '500m'
+              memory: 512Mi
+          volumeMounts:
+            - name: shared-ram-ipc
+              mountPath: /mnt/shared-ram`
+                  : ''
+              }${
+                workerPoolSidecars.redisRamCache
+                  ? `\n        - name: redis-l1-cache
+          image: mirror.gcr.io/library/redis:7.4-alpine
+          resources:
+            limits:
+              cpu: '500m'
+              memory: 1Gi`
+                  : ''
+              }${
+                isGpu
+                  ? `\n      nodeSelector:\n        run.googleapis.com/accelerator: ${workerPoolGpuSku}`
+                  : ''
+              }
+      volumes:
+        - name: shared-ram-ipc
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+  traffic:
+    - tag: stable
+      revisionName: ${workerPoolName}-stable
+      percent: ${100 - workerPoolCanaryPct}
+    - tag: canary
+      latestRevision: true
+      percent: ${workerPoolCanaryPct}`;
+
+        const mermaidSidecarChart = `flowchart LR
+  subgraph Ingress["Cloud Run L7 / Pull Queue"]
+    ${
+      workerPoolWorkloadKind === 'WORKER_POOL'
+        ? `Q["${workerPoolQueueSource}\\n(0 Open HTTP Ports)"]`
+        : `GFE["Global HTTPS Load Balancer\\nCanary Split"]\n    STABLE["Revision: stable (${100 - workerPoolCanaryPct}%)"]\n    CANARY["Revision: canary (${workerPoolCanaryPct}%)\\nhttps://canary---${workerPoolName}.run.app"]\n    GFE -->|${100 - workerPoolCanaryPct}%| STABLE\n    GFE -->|${workerPoolCanaryPct}%| CANARY`
+    }
+  end
+  subgraph MicroVM["Cloud Run Gen2 MicroVM (${cpuLimit} vCPU · ${memLimit}${isGpu ? ` · 1x ${workerPoolGpuSku}` : ''})"]
+    APP["Primary Container\\n(${workerPoolName})"]
+    SHM[("In-Memory Volume\\n/mnt/shared-ram (2Gi)")]
+    APP <--> SHM
+    ${
+      workerPoolSidecars.otelCollector
+        ? `OTEL["Sidecar: otel-collector\\n:4318 OTLP Trace/Metrics"]\n    APP -->|dependsOn| OTEL`
+        : ''
+    }
+    ${
+      workerPoolSidecars.cloudSqlProxy
+        ? `SQLP["Sidecar: cloud-sql-proxy\\nIAM Auto-Authn Unix Socket"]\n    APP -->|dependsOn| SQLP\n    SQLP <--> SHM`
+        : ''
+    }
+    ${
+      workerPoolSidecars.redisRamCache
+        ? `REDIS["Sidecar: redis-l1-cache\\n127.0.0.1:6379 (<0.2ms)"]\n    APP -->|dependsOn| REDIS`
+        : ''
+    }
+  end
+  ${
+    workerPoolWorkloadKind === 'WORKER_POOL'
+      ? `Q -->|"Continuous Pull (${workerPoolInstances} Warm Workers)"| APP`
+      : `CANARY --> APP`
+  }
+  style APP fill:#064e3b,stroke:#10b981,color:#d1fae5
+  style SHM fill:#312e81,stroke:#6366f1,color:#e0e7ff`;
+
+        return (
+          <div className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
+                    <Cpu className="w-3 h-3" />
+                    <span>2027 CLOUD RUN WORKER POOLS · MULTI-CONTAINER SIDECAR DAG · SERVERLESS L4/BLACKWELL GPU</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-500 bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded-full">
+                    <span>Est. 30% CUD Floor: ${estMonthlyUsd}/mo ({workerPoolInstances}x {gpuName.split(' (')[0]})</span>
+                  </span>
+                </div>
+                <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
+                  Cloud Run Worker Pools (`gcloud beta run worker-pools`), Sidecar `dependsOn` Mesh &amp; Revision Canary Traffic Splitter
+                </h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Run continuous non-HTTP pull workers (Kafka, Pub/Sub pull, Temporal) without dummy port <code>8080</code> listeners, wire up to 10 sidecar containers with strict <code>dependsOn</code> startup health ordering and shared in-memory IPC (<code>emptyDir: Memory</code>), and attach on-demand <strong>NVIDIA L4 (24GB)</strong> or <strong>RTX PRO 6000 Blackwell (96GB)</strong> GPUs.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWorkerPoolsSidecarStudio(false)}
+                className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left 5 Cols: Interactive Configurator */}
+              <div className="lg:col-span-5 space-y-3 bg-zinc-50 dark:bg-zinc-900/70 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    {
+                      id: 'WORKER_POOL',
+                      title: '1. Cloud Run Worker Pool',
+                      sub: 'Non-HTTP Pull Queue Consumer',
+                    },
+                    {
+                      id: 'SIDECAR_SERVICE',
+                      title: '2. Multi-Container Service',
+                      sub: 'Sidecar DAG + Canary Traffic Split',
+                    },
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setWorkerPoolWorkloadKind(mode.id)}
+                      className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                        workerPoolWorkloadKind === mode.id
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-200 font-bold'
+                          : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <div className="text-xs font-mono font-bold">{mode.title}</div>
+                      <div className="text-[10px] opacity-80">{mode.sub}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                      Resource Name
+                    </label>
+                    <input
+                      type="text"
+                      value={workerPoolName}
+                      onChange={(e) => setWorkerPoolName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                      Region &amp; Direct VPC
+                    </label>
+                    <select
+                      value={workerPoolRegion}
+                      onChange={(e) => setWorkerPoolRegion(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    >
+                      <option value="us-central1">us-central1 (L4 + Blackwell)</option>
+                      <option value="us-east4">us-east4 (L4 + Direct VPC)</option>
+                      <option value="europe-west4">europe-west4 (Netherlands)</option>
+                      <option value="asia-southeast1">asia-southeast1 (Singapore)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                      Serverless GPU Accelerator
+                    </label>
+                    <select
+                      value={workerPoolGpuSku}
+                      onChange={(e) => setWorkerPoolGpuSku(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    >
+                      <option value="nvidia-l4">nvidia-l4 (24GB VRAM · 4 vCPU)</option>
+                      <option value="nvidia-rtx-pro-6000">nvidia-rtx-pro-6000 (96GB Blackwell)</option>
+                      <option value="none">CPU-Only Gen2 (2 vCPU · 4Gi)</option>
+                    </select>
+                  </div>
+                  {workerPoolWorkloadKind === 'WORKER_POOL' ? (
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                        Pull Queue Driver
+                      </label>
+                      <select
+                        value={workerPoolQueueSource}
+                        onChange={(e) => setWorkerPoolQueueSource(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                      >
+                        <option value="PUBSUB_PULL">Cloud Pub/Sub StreamingPull</option>
+                        <option value="KAFKA_CONSUMER">Managed Kafka Consumer Group</option>
+                        <option value="TEMPORAL_WORKER">Temporal.io Durable Activity Worker</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-mono mb-1">
+                        <span className="text-zinc-500 uppercase">Canary Revision Split</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          {100 - workerPoolCanaryPct}% Stable / {workerPoolCanaryPct}% Canary
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={workerPoolCanaryPct}
+                        onChange={(e) => setWorkerPoolCanaryPct(Number(e.target.value))}
+                        className="w-full accent-emerald-500 cursor-pointer"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-[10px] font-mono mb-1">
+                    <span className="text-zinc-500 uppercase">
+                      {workerPoolWorkloadKind === 'WORKER_POOL'
+                        ? 'Dedicated Pull Worker Instances'
+                        : 'Warm Minimum MicroVM Instances'}
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      {workerPoolInstances} {workerPoolInstances === 1 ? 'Instance' : 'Instances'} (${estMonthlyUsd}/mo)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={workerPoolInstances}
+                    onChange={(e) => setWorkerPoolInstances(Number(e.target.value))}
+                    className="w-full accent-emerald-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                  <div className="text-[10px] font-mono font-bold uppercase text-zinc-500">
+                    Multi-Container Sidecar DAG (`dependsOn` + Shared `/mnt/shared-ram`)
+                  </div>
+                  {[
+                    {
+                      key: 'otelCollector',
+                      label: 'otel-collector (:4318 OTLP Trace/Metrics Export)',
+                    },
+                    {
+                      key: 'cloudSqlProxy',
+                      label: 'cloud-sql-proxy (Auto-IAM Authn Unix Socket in RAM)',
+                    },
+                    {
+                      key: 'redisRamCache',
+                      label: 'redis-l1-cache (127.0.0.1:6379 Sub-0.2ms Sidecar)',
+                    },
+                  ].map((sc) => (
+                    <label
+                      key={sc.key}
+                      className="flex items-center gap-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(workerPoolSidecars[sc.key])}
+                        onChange={(e) =>
+                          setWorkerPoolSidecars((prev) => ({
+                            ...prev,
+                            [sc.key]: e.target.checked,
+                          }))
+                        }
+                        className="rounded accent-emerald-500"
+                      />
+                      <span>{sc.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right 7 Cols: CLI + Knative Multi-Container YAML + Mermaid Diagram */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold uppercase text-emerald-400">
+                      {workerPoolWorkloadKind === 'WORKER_POOL'
+                        ? 'gcloud beta run worker-pools deploy + Knative v2 Spec'
+                        : 'Multi-Container Knative Service YAML + Traffic Split'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(
+                            `${workerPoolCliCmd}\n\n${sidecarServiceYaml}`
+                          );
+                          if (onShowToast) {
+                            onShowToast(
+                              'Copied 2027 Cloud Run Worker Pool / Multi-Container Sidecar YAML to clipboard',
+                              'info'
+                            );
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Copy CLI &amp; YAML
+                      </button>
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              workerPoolCliCmd,
+                              `2027 Cloud Run (${workerPoolName})`
+                            )
+                          }
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <pre className="p-2.5 rounded-lg bg-black/70 border border-zinc-800 text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-56">
+                    {`${workerPoolCliCmd}\n\n# --- ${workerPoolName}-service.yaml ---\n${sidecarServiceYaml}`}
+                  </pre>
+                </div>
+
+                <MermaidArchitectureDiagram
+                  chart={mermaidSidecarChart}
+                  title={`Cloud Run Gen2 MicroVM Topology (${workerPoolName} · ${gpuName.split(' (')[0]})`}
+                  subtitle="Interactive Zoom/Pan · Multi-container dependsOn startup order, 2Gi in-memory IPC volume & revision traffic split"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CLOUD SCHEDULER -> CLOUD RUN V2 JOBS CONVERTER & PARALLEL BATCH STUDIO */}
       {showSchedulerToJobsStudio && (
