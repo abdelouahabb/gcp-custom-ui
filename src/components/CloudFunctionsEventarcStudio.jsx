@@ -1150,9 +1150,13 @@ main:
                   setActiveSubTab(tab.id);
                   if (typeof window !== 'undefined') {
                     window.requestAnimationFrame(() => {
-                      document
-                        .getElementById('functions-active-subtab-anchor')
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      const el = document.getElementById('functions-active-subtab-anchor');
+                      if (el) {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.top < 60 || rect.top > window.innerHeight * 0.6) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }
                     });
                   }
                 }}

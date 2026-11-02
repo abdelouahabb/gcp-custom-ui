@@ -230,6 +230,11 @@ volumes:
   const [showWorkerPoolsSidecarStudio, setShowWorkerPoolsSidecarStudio] = useState(
     Boolean(initialShowWorkerPoolsStudio)
   );
+  useEffect(() => {
+    if (initialShowWorkerPoolsStudio) {
+      setShowWorkerPoolsSidecarStudio(true);
+    }
+  }, [initialShowWorkerPoolsStudio]);
   const [workerPoolWorkloadKind, setWorkerPoolWorkloadKind] = useState('WORKER_POOL'); // WORKER_POOL | SIDECAR_SERVICE
   const [workerPoolName, setWorkerPoolName] = useState('orders-kafka-consumer-pool');
   const [workerPoolRegion, setWorkerPoolRegion] = useState('us-central1');
@@ -1865,12 +1870,15 @@ spec:
     [projectId]
   );
 
-  const scrollToStudioSection = useCallback((domId) => {
+  const scrollToStudioSection = useCallback(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
     window.requestAnimationFrame(() => {
-      const el = document.getElementById(domId);
+      const el = document.getElementById('cloudrun-workbench-top-anchor');
       if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const rect = el.getBoundingClientRect();
+        if (rect.top < 60 || rect.top > window.innerHeight * 0.6) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
     });
   }, []);
@@ -2417,6 +2425,8 @@ spec:
           </button>
         </div>
       </div>
+
+      <div id="cloudrun-workbench-top-anchor" className="scroll-mt-24" />
 
       {/* 2027 CLOUD RUN WORKER POOLS, MULTI-CONTAINER SIDECAR MESH, GPU SIZER & CANARY SPLITTER STUDIO */}
       {showWorkerPoolsSidecarStudio && (() => {
@@ -5545,98 +5555,6 @@ services:
           </div>
         );
       })()}
-
-      {/* Quick 1-Tap Cloud Run Templates & Runtime Service Account Bar */}
-      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 shrink-0">
-            <Zap className="w-3.5 h-3.5 text-blue-500" />
-            <span>1-Tap Instant Deploy:</span>
-          </span>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 flex-1">
-            <button
-              type="button"
-              onClick={() => {
-                setWorkerPoolWorkloadKind('WORKER_POOL');
-                handleOpenWorkbenchStudio('WORKER_POOLS');
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-md transition-colors cursor-pointer"
-            >
-              <Cpu className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span className="truncate">
-                Worker Pool Studio (0 Open Ports) ↑
-              </span>
-            </button>
-            {QUICK_TEMPLATES.map((tpl) => {
-              const isDeployingThis = quickDeploying === tpl.label;
-              return (
-                <button
-                  key={tpl.label}
-                  type="button"
-                  disabled={Boolean(quickDeploying)}
-                  onClick={() => handleQuickDeployTemplate(tpl)}
-                  className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 px-3 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {isDeployingThis ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
-                  ) : (
-                    <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  )}
-                  <span className="truncate">
-                    {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Runtime Service Account Selector for 1-Tap Instant Deploy */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800/70">
-          <div className="flex items-center gap-2 flex-wrap">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-            <span className="text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
-              Runtime Service Account (iam.serviceAccounts.actAs):
-            </span>
-            {defaultComputeSaMissing && (
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                Default Compute SA Deleted · Using Custom SA
-              </span>
-            )}
-          </div>
-          <select
-            value={selectedQuickSa}
-            onMouseDown={() => {
-              if (serviceAccounts.length === 0) {
-                refreshServiceAccountsOnly();
-              }
-            }}
-            onFocus={() => {
-              if (serviceAccounts.length === 0) {
-                refreshServiceAccountsOnly();
-              }
-            }}
-            onChange={(e) => setSelectedQuickSa(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 max-w-full sm:max-w-md cursor-pointer"
-          >
-            {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
-              <option value="">
-                Select Available Service Account ({projectId})
-              </option>
-            )}
-            {serviceAccounts
-              .filter((sa) => !sa.disabled)
-              .map((sa) => (
-                <option key={sa.email} value={sa.email}>
-                  {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
-                  {sa.email}
-                  {sa.displayName ? ` — ${sa.displayName}` : ''}
-                </option>
-              ))}
-          </select>
-        </div>
-      </div>
 
       {/* Live Cloud Run Services Grid */}
       {loading && services.length === 0 ? (
@@ -8856,6 +8774,85 @@ services:
           })}
         </div>
       )}
+
+      {/* Quick 1-Tap Cloud Run Service Templates & Runtime Service Account Footer Bar */}
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 shrink-0">
+            <Zap className="w-3.5 h-3.5 text-blue-500" />
+            <span>1-Tap Service Templates:</span>
+          </span>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+            {QUICK_TEMPLATES.map((tpl) => {
+              const isDeployingThis = quickDeploying === tpl.label;
+              return (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  disabled={Boolean(quickDeploying)}
+                  onClick={() => handleQuickDeployTemplate(tpl)}
+                  className="w-full inline-flex items-center justify-center gap-2 text-xs font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 px-3 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isDeployingThis ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
+                  ) : (
+                    <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Runtime Service Account Selector */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800/70">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            <span className="text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
+              Runtime Service Account (iam.serviceAccounts.actAs):
+            </span>
+            {defaultComputeSaMissing && (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                Default Compute SA Deleted · Using Custom SA
+              </span>
+            )}
+          </div>
+          <select
+            value={selectedQuickSa}
+            onMouseDown={() => {
+              if (serviceAccounts.length === 0) {
+                refreshServiceAccountsOnly();
+              }
+            }}
+            onFocus={() => {
+              if (serviceAccounts.length === 0) {
+                refreshServiceAccountsOnly();
+              }
+            }}
+            onChange={(e) => setSelectedQuickSa(e.target.value)}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 max-w-full sm:max-w-md cursor-pointer"
+          >
+            {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
+              <option value="">
+                Select Available Service Account ({projectId})
+              </option>
+            )}
+            {serviceAccounts
+              .filter((sa) => !sa.disabled)
+              .map((sa) => (
+                <option key={sa.email} value={sa.email}>
+                  {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
+                  {sa.email}
+                  {sa.displayName ? ` — ${sa.displayName}` : ''}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
     </div>
   );
 }

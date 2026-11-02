@@ -968,9 +968,13 @@ LIMIT 25;`;
                     setActiveSubTab(t.id);
                     if (typeof window !== 'undefined') {
                       window.requestAnimationFrame(() => {
-                        document
-                          .getElementById('bigquery-active-subtab-anchor')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        const el = document.getElementById('bigquery-active-subtab-anchor');
+                        if (el) {
+                          const rect = el.getBoundingClientRect();
+                          if (rect.top < 60 || rect.top > window.innerHeight * 0.6) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        }
                       });
                     }
                   }}
