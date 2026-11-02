@@ -28,6 +28,7 @@ import {
   Database,
   HardDrive,
   Trash2,
+  Cpu,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
