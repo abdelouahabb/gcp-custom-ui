@@ -35046,7 +35046,7 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
-    if (!token) {
+    if (!token && action !== 'EXECUTE_SPANNER_GQL') {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
@@ -35095,37 +35095,53 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
 
     if (action === 'EXECUTE_SPANNER_GQL') {
       const t0 = Date.now();
-      const presetId = String(req.body?.presetId || 'FRAUD_RING');
-      const hopDepth = Math.max(1, Math.min(6, Number(req.body?.hopDepth || 3)));
-      const maxLatencyMs = Math.max(5, Number(req.body?.maxLatencyMs || 50));
-      const minBurnUsd = Math.max(10, Number(req.body?.minBurnUsd || 100));
+      const rawQuery = String(req.body?.queryText || '');
+      const parsedHopMatch = rawQuery.match(/\{\s*1\s*,\s*(\d+)\s*\}/);
+      const parsedLatMatch = rawQuery.match(/latency_ms\s*<\s*(\d+(?:\.\d+)?)/i);
+      const parsedBurnMatch = rawQuery.match(/monthly_burn\s*>=?\s*(\d+(?:\.\d+)?)/i);
 
-      const [runRes, iamRes, spannerRes] = await Promise.all([
-        gcpFetch(
-          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
-            projectId
-          )}/locations/-/services`,
-          token,
-          projectId,
-          { timeout: 4500 }
-        ).catch(() => ({ services: [] })),
-        gcpFetch(
-          `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
-            projectId
-          )}/serviceAccounts`,
-          token,
-          projectId,
-          { timeout: 4500 }
-        ).catch(() => ({ accounts: [] })),
-        gcpFetch(
-          `https://spanner.googleapis.com/v1/projects/${encodeURIComponent(
-            projectId
-          )}/instances`,
-          token,
-          projectId,
-          { timeout: 4500 }
-        ).catch(() => ({ instances: [] })),
-      ]);
+      const presetId = String(req.body?.presetId || 'FRAUD_RING');
+      const hopDepth = Math.max(
+        1,
+        Math.min(6, Number(parsedHopMatch?.[1] || req.body?.hopDepth || 3))
+      );
+      const maxLatencyMs = Math.max(
+        5,
+        Number(parsedLatMatch?.[1] || req.body?.maxLatencyMs || 50)
+      );
+      const minBurnUsd = Math.max(
+        10,
+        Number(parsedBurnMatch?.[1] || req.body?.minBurnUsd || 100)
+      );
+
+      const [runRes, iamRes, spannerRes] = token
+        ? await Promise.all([
+            gcpFetch(
+              `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+                projectId
+              )}/locations/-/services`,
+              token,
+              projectId,
+              { timeout: 3500 }
+            ).catch(() => ({ services: [] })),
+            gcpFetch(
+              `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/serviceAccounts`,
+              token,
+              projectId,
+              { timeout: 3500 }
+            ).catch(() => ({ accounts: [] })),
+            gcpFetch(
+              `https://spanner.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/instances`,
+              token,
+              projectId,
+              { timeout: 3500 }
+            ).catch(() => ({ instances: [] })),
+          ])
+        : [{ services: [] }, { accounts: [] }, { instances: [] }];
 
       const liveRunNames = (runRes?.services || [])
         .map((s) => (s.name || '').split('/').pop())

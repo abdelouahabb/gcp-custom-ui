@@ -1306,7 +1306,9 @@ function classifyDestructiveAxiosConfig(config) {
           String(body.action || '').toUpperCase()
         )) ||
       (rawUrl.includes('/wave10/action') &&
-        String(body.action || '').toUpperCase() === 'SCAN_MODEL_ARMOR') ||
+        ['SCAN_MODEL_ARMOR', 'EXECUTE_SPANNER_GQL'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
       rawUrl.includes('/mcp/tools-list') ||
       rawUrl.includes('/mcp/run-triage-chain') ||
       rawUrl.includes('/mcp/agent-chat') ||

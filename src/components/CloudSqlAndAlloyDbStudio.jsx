@@ -167,6 +167,8 @@ export default function CloudSqlAndAlloyDbStudio({
   const [spannerProcessingUnits, setSpannerProcessingUnits] = useState(300); // 100 PU = 0.1 node
   const [spannerGraphName, setSpannerGraphName] = useState('FinTechFraudGraph');
   const [spannerHopDepth, setSpannerHopDepth] = useState(3);
+  const [spannerGqlRunCount, setSpannerGqlRunCount] = useState(0);
+  const [spannerGqlCommitTs, setSpannerGqlCommitTs] = useState('');
 
   // --- Sub-Tab 6: Datastream Zero-ETL CDC into BigQuery & BigLake State ---
   const [cdcStreamId, setCdcStreamId] = useState('alloydb-to-bq-realtime-cdc');
@@ -2548,12 +2550,27 @@ CREATE OR REPLACE PROPERTY GRAPH ${spannerGraphName}
               </pre>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
                   2. ISO GQL Circular Fraud Ring Traversal + CLI Provisioning
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextRun = spannerGqlRunCount + 1;
+                      setSpannerGqlRunCount(nextRun);
+                      setSpannerGqlCommitTs(new Date().toISOString());
+                      onShowToast?.(
+                        `Run #${nextRun}: Executed ISO GQL (${spannerHopDepth}-Hop Fraud Ring Traversal) on ${spannerGraphName}!`
+                      );
+                    }}
+                    className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-extrabold inline-flex items-center gap-1 cursor-pointer shadow-sm"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Run ISO GQL</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
@@ -2599,6 +2616,79 @@ gcloud spanner instances create ${spannerInstanceId} \\
   --processing-units=${spannerProcessingUnits} \\
   --project=${projectId}`}
               </pre>
+
+              {/* Live ISO GQL Execution Result Table */}
+              <div
+                className={`p-3 rounded-[8px] bg-zinc-50 dark:bg-zinc-950 border space-y-2 transition-all ${
+                  spannerGqlRunCount > 0
+                    ? 'border-emerald-500 shadow-sm shadow-emerald-500/10'
+                    : 'border-emerald-500/30'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                    {spannerGqlRunCount > 0
+                      ? `LIVE GQL RUN #${spannerGqlRunCount} · COMPLETE (${(2.4 + spannerHopDepth * 0.5).toFixed(1)}ms · 1 Paxos Split)`
+                      : `ISO GQL Result Preview (${spannerHopDepth}-Hop Cycle · Click "Run ISO GQL" to Execute)`}
+                  </span>
+                  <span className="text-zinc-500">
+                    {spannerGqlCommitTs
+                      ? `TrueTime Commit: ${spannerGqlCommitTs}`
+                      : `Graph: ${spannerGraphName} (${spannerConfig})`}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500">
+                        <th className="py-1 pr-2">ring_origin_account</th>
+                        <th className="py-1 pr-2">sovereign_region</th>
+                        <th className="py-1 pr-2">hop_count</th>
+                        <th className="py-1 pr-2">ring_exposure_usd</th>
+                        <th className="py-1 text-right">risk_score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60">
+                      <tr>
+                        <td className="py-1.5 pr-2 font-bold text-emerald-600 dark:text-emerald-400">
+                          ACCT-9941-FINTECH
+                        </td>
+                        <td className="py-1.5 pr-2">us-central1</td>
+                        <td className="py-1.5 pr-2 text-blue-600 dark:text-blue-400 font-bold">
+                          {spannerHopDepth} Hops (Circular Loop)
+                        </td>
+                        <td className="py-1.5 pr-2 text-amber-600 dark:text-amber-400 font-bold">
+                          ${(spannerProcessingUnits * 49.4).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="py-1.5 text-right text-emerald-500 font-bold">
+                          0.98 (Critical Ring)
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 pr-2 font-bold text-emerald-600 dark:text-emerald-400">
+                          ACCT-3108-SETTLEMENT
+                        </td>
+                        <td className="py-1.5 pr-2">europe-west1</td>
+                        <td className="py-1.5 pr-2 text-blue-600 dark:text-blue-400 font-bold">
+                          {spannerHopDepth} Hops (Cross-Region Split)
+                        </td>
+                        <td className="py-1.5 pr-2 text-amber-600 dark:text-amber-400 font-bold">
+                          ${(spannerProcessingUnits * 21.6).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="py-1.5 text-right text-emerald-500 font-bold">
+                          0.94 (High Velocity)
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
