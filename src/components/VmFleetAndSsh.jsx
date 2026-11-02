@@ -36,6 +36,10 @@ import VisualCronScheduleBuilder, {
 } from './VisualCronScheduleBuilder';
 
 const SSH_QUICK_CHIPS = [
+  {
+    label: '⚡ 1-Click Ops Agent Install',
+    cmd: 'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl is-active google-cloud-ops-agent',
+  },
   { label: 'Serial Console Logs (REST API)', cmd: 'serial-console' },
   { label: 'Kernel (uname -a)', cmd: 'uname -a' },
   { label: 'Disk Space (df -h)', cmd: 'df -h' },
@@ -44,6 +48,49 @@ const SSH_QUICK_CHIPS = [
   { label: 'GPU Status (nvidia-smi)', cmd: 'nvidia-smi || lspci | grep -i nvidia' },
   { label: 'Docker Containers', cmd: 'docker ps' },
   { label: 'Network (ip addr)', cmd: 'ip addr' },
+];
+
+const GCE_AGENT_CATALOG = [
+  {
+    id: 'OPS_AGENT',
+    name: 'Google Cloud Ops Agent v2',
+    serviceName: 'google-cloud-ops-agent',
+    badge: 'RECOMMENDED · RAM + DISK + GPU + SYSLOG',
+    defaultChecked: true,
+    summary:
+      'Unlocks inside-VM Memory (RAM %), Disk Space (df -h %), Process metrics, NVIDIA GPU DCGM utilization, and /var/log/syslog + Docker log streaming into Cloud Monitoring & Logging.',
+    cli: 'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install',
+  },
+  {
+    id: 'OS_CONFIG_AGENT',
+    name: 'OS Config & Zero-SSH Patch Agent',
+    serviceName: 'google-osconfig-agent',
+    badge: 'RECOMMENDED · OS INVENTORY & CVE PATCHING',
+    defaultChecked: true,
+    summary:
+      'Enables VM Manager OS Inventory, CVE Vulnerability Assessment, and Zero-SSH OS Patch Deployments by setting enable-osconfig=TRUE & enable-guest-attributes=TRUE.',
+    cli: 'sudo systemctl enable --now google-osconfig-agent && sudo systemctl status google-osconfig-agent --no-pager',
+  },
+  {
+    id: 'OTEL_COLLECTOR',
+    name: 'OpenTelemetry OTLP Collector (:4317/:4318)',
+    serviceName: 'otelcol-contrib',
+    badge: 'CLOUD TRACE + PROMETHEUS',
+    defaultChecked: false,
+    summary:
+      'Configures /etc/cloudpulse-otel/config.yaml OTLP gRPC (:4317) & HTTP (:4318) trace and hostmetrics pipeline forwarding to Google Cloud Trace & Managed Prometheus.',
+    cli: 'sudo mkdir -p /etc/cloudpulse-otel && ls -la /etc/cloudpulse-otel',
+  },
+  {
+    id: 'DOCKER_CLOUDSQL_PROXY',
+    name: 'Cloud SQL Auth Proxy v2 + Docker Check',
+    serviceName: 'cloud-sql-proxy / docker',
+    badge: 'ZERO-SSL IAM DB PROXY',
+    defaultChecked: false,
+    summary:
+      'Installs official cloud-sql-proxy v2.14.1 binary (/usr/local/bin/cloud-sql-proxy) for IAM-authenticated database sockets and ensures docker.service is enabled.',
+    cli: 'sudo curl -fsSL -o /usr/local/bin/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.1/cloud-sql-proxy.linux.amd64 && sudo chmod +x /usr/local/bin/cloud-sql-proxy && /usr/local/bin/cloud-sql-proxy --version',
+  },
 ];
 
 const QUICK_VM_TEMPLATES = [
@@ -285,6 +332,27 @@ export default function VmFleetAndSsh({
   const [migrationResult, setMigrationResult] = useState(null);
   const [migrationError, setMigrationError] = useState(null);
 
+  // 1-Click GCE Guest Agent & Telemetry Installer state
+  const [openAgentInstallerVm, setOpenAgentInstallerVm] = useState(null);
+  const [selectedGceAgents, setSelectedGceAgents] = useState([
+    'OPS_AGENT',
+    'OS_CONFIG_AGENT',
+  ]);
+  const [installingVmAgent, setInstallingVmAgent] = useState(null); // vmName or 'FLEET'
+  const [agentInstallReceiptByVm, setAgentInstallReceiptByVm] = useState({});
+  const [agentInstallError, setAgentInstallError] = useState(null);
+  const [ptyCommandTrigger, setPtyCommandTrigger] = useState(null);
+
+  const toggleGceAgentChoice = (agentId) => {
+    setSelectedGceAgents((prev) => {
+      if (prev.includes(agentId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((id) => id !== agentId);
+      }
+      return [...prev, agentId];
+    });
+  };
+
   const userShort =
     account &&
     String(account).includes('@') &&
@@ -445,6 +513,7 @@ export default function VmFleetAndSsh({
             shieldedIntegrityMonitoring: true,
             enableOsLogin: Boolean(tpl.enableOsLogin),
             blockProjectSshKeys: Boolean(tpl.blockProjectSshKeys),
+            installOpsAgent: true,
             deployContainerImage: tpl.containerDeployImage || tpl.deployContainerImage || '',
             containerDeployImage: tpl.containerDeployImage || '',
             startupScript: tpl.startupScript || '',
@@ -862,6 +931,122 @@ export default function VmFleetAndSsh({
     }
   };
 
+  const handleInstallGceAgentOnVm = async (
+    vm,
+    agentsOverride = null,
+    verifyLiveSsh = true
+  ) => {
+    if (!vm?.name || installingVmAgent) return;
+    const agentsToInstall =
+      Array.isArray(agentsOverride) && agentsOverride.length > 0
+        ? agentsOverride
+        : selectedGceAgents;
+    setInstallingVmAgent(vm.name);
+    setAgentInstallError(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/install-agent`,
+        {
+          zone: vm.zone || 'us-east1-b',
+          agents: agentsToInstall,
+          verifyLiveSsh,
+        }
+      );
+      const data = res.data || {};
+      setAgentInstallReceiptByVm((prev) => ({
+        ...prev,
+        [vm.name]: data,
+      }));
+      if (onShowToast) {
+        onShowToast(
+          data.message ||
+            `Installed GCE Agents (${agentsToInstall.join(', ')}) on ${vm.name}!`,
+          'success'
+        );
+      }
+      await fetchVms(true);
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        err.message ||
+        `Failed to install GCE agents on ${vm.name}.`;
+      setAgentInstallError(errMsg);
+      if (onShowError) onShowError(errMsg);
+    } finally {
+      setInstallingVmAgent(null);
+    }
+  };
+
+  const handleInstallGceAgentFleet = async () => {
+    if (installingVmAgent || vms.length === 0) return;
+    setInstallingVmAgent('FLEET');
+    setAgentInstallError(null);
+    try {
+      const targets = (filteredVms.length > 0 ? filteredVms : vms).map((v) => ({
+        name: v.name,
+        zone: v.zone || 'us-east1-b',
+      }));
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/install-agent-fleet`,
+        {
+          agents: selectedGceAgents,
+          targets,
+          verifyLiveSsh: targets.length <= 3,
+        }
+      );
+      const data = res.data || {};
+      const nextReceipts = {};
+      (data.results || []).forEach((r) => {
+        if (r?.vmName && r?.ok) {
+          nextReceipts[r.vmName] = r;
+        }
+      });
+      setAgentInstallReceiptByVm((prev) => ({
+        ...prev,
+        ...nextReceipts,
+      }));
+      if (onShowToast) {
+        onShowToast(
+          data.message ||
+            `1-Click GCE Agent Bootstrap applied across ${targets.length} VM(s)!`,
+          'success'
+        );
+      }
+      await fetchVms(true);
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to run fleet-wide GCE agent installation.';
+      setAgentInstallError(errMsg);
+      if (onShowError) onShowError(errMsg);
+    } finally {
+      setInstallingVmAgent(null);
+    }
+  };
+
+  const handleStreamAgentInstallInSsh = (vm, customCli = '') => {
+    if (!vm) return;
+    const cmdToRun =
+      customCli ||
+      'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl enable --now google-osconfig-agent 2>/dev/null || true && sudo systemctl status google-cloud-ops-agent --no-pager';
+    setActiveSshVm(vm);
+    setScpTargetVmName(vm.name);
+    setTerminalViewMode('LIVE_SSH_PTY');
+    setOpenSshTrigger((n) => n + 1);
+    setPtyCommandTrigger({
+      id: `${vm.name}-${Date.now()}`,
+      cmd: cmdToRun,
+    });
+    if (onShowToast) {
+      onShowToast(
+        `Streaming live GCE Ops Agent installer into @xterm/xterm Web SSH terminal on ${vm.name}...`
+      );
+    }
+  };
+
   const getVmAcceleratorProfile = (v) => {
     const accList = Array.isArray(v.guestAccelerators)
       ? v.guestAccelerators
@@ -1073,22 +1258,47 @@ export default function VmFleetAndSsh({
 
           <div className="flex items-center gap-2 flex-wrap">
             {vms.length > 0 && (
-              <button
-                type="button"
-                data-feature-id="VM_MIGRATE_TO_CLOUD_RUN"
-                onClick={() => {
-                  const targetVm =
-                    filteredVms[0] || vms[0];
-                  if (targetVm) {
-                    handleToggleMigrateVm(targetVm);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
-                title="Convert a 24/7 Compute Engine VM into an auto-scaling Cloud Run Gen2 service (minInstances: 0 -> $0.00/mo idle)"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Migrate VM → Cloud Run (Scale-to-$0)</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-feature-id="VM_INSTALL_GCE_AGENT"
+                  disabled={Boolean(installingVmAgent)}
+                  onClick={() => {
+                    const targetVm = filteredVms[0] || vms[0];
+                    if (targetVm) {
+                      setOpenAgentInstallerVm((prev) =>
+                        prev === targetVm.name ? null : targetVm.name
+                      );
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                  title="1-Click install Google Cloud Ops Agent v2 (RAM %, Disk %, GPU, Syslog), OS Config Patch Agent, OpenTelemetry & Cloud SQL Proxy inside GCE VMs"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>
+                    {installingVmAgent === 'FLEET'
+                      ? 'Installing Agents on Fleet...'
+                      : '⚡ 1-Click Install GCE Agent'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  data-feature-id="VM_MIGRATE_TO_CLOUD_RUN"
+                  onClick={() => {
+                    const targetVm =
+                      filteredVms[0] || vms[0];
+                    if (targetVm) {
+                      handleToggleMigrateVm(targetVm);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+                  title="Convert a 24/7 Compute Engine VM into an auto-scaling Cloud Run Gen2 service (minInstances: 0 -> $0.00/mo idle)"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Migrate VM → Cloud Run (Scale-to-$0)</span>
+                </button>
+              </>
             )}
 
             {onSelectTab && (
@@ -1526,7 +1736,10 @@ export default function VmFleetAndSsh({
               className={`${
                 sshTerminalExpanded
                   ? 'xl:col-span-12 order-2'
-                  : openMigrateCloudRunVm || openTunnelVm || splitLayoutMode === '6_6'
+                  : openMigrateCloudRunVm ||
+                    openTunnelVm ||
+                    openAgentInstallerVm ||
+                    splitLayoutMode === '6_6'
                   ? 'xl:col-span-6'
                   : splitLayoutMode === '5_7'
                   ? 'xl:col-span-5'
@@ -1723,6 +1936,53 @@ export default function VmFleetAndSsh({
                             </>
                           )}
                         </button>
+
+                        {/* Guest Ops Agent & OS Config Status Badge (Clickable to open 1-Click Agent Installer) */}
+                        {(() => {
+                          const receipt = agentInstallReceiptByVm[vm.name];
+                          const statusObj =
+                            receipt?.agentTelemetryStatus ||
+                            vm.agentTelemetryStatus ||
+                            {};
+                          const hasOpsAndOs =
+                            statusObj.opsAgentConfigured &&
+                            statusObj.osConfigEnabled;
+                          const hasAnyAgent =
+                            statusObj.opsAgentConfigured ||
+                            statusObj.osConfigEnabled ||
+                            (statusObj.installedAgentsList || []).length > 0;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenAgentInstallerVm((prev) =>
+                                  prev === vm.name ? null : vm.name
+                                )
+                              }
+                              title={
+                                hasOpsAndOs
+                                  ? 'Google Cloud Ops Agent v2 + OS Config Agent configured on this VM — click to inspect or install additional agents'
+                                  : 'Guest Ops Agent not yet installed (GCE only reports hypervisor CPU without Ops Agent) — click to 1-Click install inside VM'
+                              }
+                              className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                                hasOpsAndOs
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/25'
+                                  : hasAnyAgent
+                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/35 hover:bg-blue-500/25'
+                                  : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/35 hover:bg-violet-500/25'
+                              }`}
+                            >
+                              <Zap className="w-2.5 h-2.5" />
+                              <span>
+                                {hasOpsAndOs
+                                  ? '✓ OPS + OS AGENT READY'
+                                  : hasAnyAgent
+                                  ? `✓ ${(statusObj.installedAgentsList || []).length} AGENT(S)`
+                                  : '+ 1-CLICK GCE AGENT'}
+                              </span>
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex flex-wrap items-center gap-2">
@@ -1744,8 +2004,8 @@ export default function VmFleetAndSsh({
                     <div
                       className={`w-full grid grid-cols-2 ${
                         sshTerminalExpanded || splitLayoutMode === '6_6'
-                          ? 'sm:grid-cols-4'
-                          : ''
+                          ? 'sm:grid-cols-5'
+                          : 'sm:grid-cols-3'
                       } gap-1.5 pt-1`}
                     >
                       <button
@@ -1838,6 +2098,29 @@ export default function VmFleetAndSsh({
                       >
                         <Wifi className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">127.0.0.1 IAP Tunnel</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() =>
+                          setOpenAgentInstallerVm((prev) =>
+                            prev === vm.name ? null : vm.name
+                          )
+                        }
+                        title="1-Click install Google Cloud Ops Agent v2 (RAM %, Disk %, GPU, Syslog), OS Config Patch Agent, OpenTelemetry & Cloud SQL Auth Proxy inside this GCE VM"
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                          openAgentInstallerVm === vm.name
+                            ? 'bg-violet-600 text-white border-violet-500 shadow-sm ring-1 ring-violet-400/50'
+                            : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/40 hover:bg-violet-500/25'
+                        }`}
+                      >
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">
+                          {installingVmAgent === vm.name
+                            ? 'Installing Agent...'
+                            : '1-Click GCE Agent'}
+                        </span>
                       </button>
 
                       <button
@@ -1936,6 +2219,288 @@ export default function VmFleetAndSsh({
                       </div>
                     </div>
                   </div>
+
+                  {/* 1-Click GCE Guest Agent & Telemetry Installer Drawer */}
+                  {openAgentInstallerVm === vm.name && (
+                    <div className="mb-3.5 p-3.5 rounded-xl bg-violet-500/5 border border-violet-500/35 space-y-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-violet-600 text-white">
+                              <Zap className="w-3 h-3" />
+                              <span>1-CLICK GCE AGENT INSTALLER</span>
+                            </span>
+                            <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                              Bootstrap Inside-VM Telemetry &amp; Patch Agents on {vm.name} ({vm.zone})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-300 mt-1 leading-relaxed">
+                            By default, Compute Engine only reports hypervisor CPU &amp; network bytes. Installing the{' '}
+                            <strong>Google Cloud Ops Agent v2</strong> + <strong>OS Config Agent</strong> unlocks live{' '}
+                            <strong>Guest RAM %</strong>, <strong>Disk Space (df -h %)</strong>,{' '}
+                            <strong>NVIDIA GPU DCGM metrics</strong>, <strong>/var/log/syslog + Docker logs</strong>, and{' '}
+                            <strong>Zero-SSH CVE Patching</strong>. Uses Dual-Engine execution: live SSH/IAP install when running +{' '}
+                            <code>instances.setMetadata</code> persistence so even stopped or firewall-locked VMs auto-bootstrap on boot!
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setOpenAgentInstallerVm(null)}
+                          className="text-xs font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      {/* Selectable Agent Bundle Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {GCE_AGENT_CATALOG.map((agent) => {
+                          const isChecked = selectedGceAgents.includes(agent.id);
+                          const receipt = agentInstallReceiptByVm[vm.name];
+                          const statusObj =
+                            receipt?.agentTelemetryStatus ||
+                            vm.agentTelemetryStatus ||
+                            {};
+                          const isAlreadyInstalled = (
+                            statusObj.installedAgentsList || []
+                          ).includes(agent.id);
+
+                          return (
+                            <div
+                              key={agent.id}
+                              onClick={() => toggleGceAgentChoice(agent.id)}
+                              className={`p-2.5 rounded-lg border transition-colors cursor-pointer ${
+                                isChecked
+                                  ? 'bg-violet-500/10 border-violet-500/45'
+                                  : 'bg-white/80 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-violet-500/30'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <label
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-2 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() =>
+                                      toggleGceAgentChoice(agent.id)
+                                    }
+                                    className="rounded border-violet-400 text-violet-600 focus:ring-violet-500"
+                                  />
+                                  <span>{agent.name}</span>
+                                </label>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {isAlreadyInstalled && (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                      ✓ INSTALLED
+                                    </span>
+                                  )}
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-violet-500/15 text-violet-700 dark:text-violet-300">
+                                    {agent.badge}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="text-[11px] text-zinc-600 dark:text-zinc-300 mt-1 leading-relaxed">
+                                {agent.summary}
+                              </p>
+
+                              <div className="mt-1.5 flex items-center justify-between gap-2 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800/80">
+                                <code className="text-[10px] font-mono text-zinc-500 truncate">
+                                  systemd: {agent.serviceName}
+                                </code>
+                                <div
+                                  className="flex items-center gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    disabled={Boolean(installingVmAgent)}
+                                    onClick={() =>
+                                      handleInstallGceAgentOnVm(
+                                        vm,
+                                        [agent.id],
+                                        true
+                                      )
+                                    }
+                                    className="px-2 py-0.5 rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                                    title={`1-Click install only ${agent.name} on ${vm.name}`}
+                                  >
+                                    ⚡ 1-Click Install
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleStreamAgentInstallInSsh(
+                                        vm,
+                                        agent.cli
+                                      )
+                                    }
+                                    className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                                    title={`Stream ${agent.name} installation live inside the @xterm/xterm Web SSH terminal`}
+                                  >
+                                    Stream in SSH
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Primary 1-Click Action Row */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-violet-500/25">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            disabled={Boolean(installingVmAgent)}
+                            onClick={() =>
+                              handleInstallGceAgentOnVm(
+                                vm,
+                                selectedGceAgents,
+                                true
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg px-3.5 py-2 text-xs font-bold shadow-sm cursor-pointer disabled:opacity-50"
+                          >
+                            {installingVmAgent === vm.name ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>
+                                  Installing {selectedGceAgents.length} Agent(s) on {vm.name}...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-3.5 h-3.5" />
+                                <span>
+                                  ⚡ 1-Click Install Selected ({selectedGceAgents.length}) on {vm.name}
+                                </span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleStreamAgentInstallInSsh(vm)}
+                            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-2 text-xs font-bold shadow-sm cursor-pointer"
+                            title="Connect the right-hand @xterm/xterm Web SSH terminal to this VM and stream the live Ops Agent + OS Config installation output line-by-line"
+                          >
+                            <Terminal className="w-3.5 h-3.5" />
+                            <span>Stream Live in Web SSH Terminal</span>
+                          </button>
+
+                          {vms.length > 1 && (
+                            <button
+                              type="button"
+                              disabled={Boolean(installingVmAgent)}
+                              onClick={handleInstallGceAgentFleet}
+                              className="inline-flex items-center gap-1.5 bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/35 rounded-lg px-3 py-2 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              title="Install the selected agents across all VMs in the current fleet"
+                            >
+                              <Server className="w-3.5 h-3.5" />
+                              <span>
+                                {installingVmAgent === 'FLEET'
+                                  ? 'Bootstrapping All VMs...'
+                                  : `Install Across All ${vms.length} VMs`}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+
+                        {onRunInShell && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRunInShell(
+                                `gcloud compute ssh ${vm.name} --zone=${vm.zone} --project=${projectId} --tunnel-through-iap --command="curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl status google-cloud-ops-agent --no-pager"`
+                              )
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-violet-700 dark:text-violet-300 hover:underline cursor-pointer"
+                          >
+                            <Terminal className="w-3 h-3" />
+                            <span>Run in Cloud Shell</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {agentInstallError && (
+                        <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-mono">
+                          {agentInstallError}
+                        </div>
+                      )}
+
+                      {/* Live Agent Installation & Telemetry Verification Receipt */}
+                      {agentInstallReceiptByVm[vm.name] && (
+                        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/35 space-y-2 text-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="font-mono font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
+                              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                              <span>
+                                {agentInstallReceiptByVm[vm.name].message}
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono font-bold text-[10px]">
+                              Engine: {agentInstallReceiptByVm[vm.name].engineUsed} (
+                              {agentInstallReceiptByVm[vm.name].durationMs}ms)
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+                            <div className="p-2 rounded bg-white/80 dark:bg-zinc-900/80 border border-emerald-500/25">
+                              <div className="text-[10px] text-zinc-500">
+                                Ops Agent (RAM/Disk/Logs)
+                              </div>
+                              <div className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                {agentInstallReceiptByVm[vm.name].verification
+                                  ?.opsAgentStatus || 'configured'}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded bg-white/80 dark:bg-zinc-900/80 border border-emerald-500/25">
+                              <div className="text-[10px] text-zinc-500">
+                                OS Config Patch Agent
+                              </div>
+                              <div className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                {agentInstallReceiptByVm[vm.name].verification
+                                  ?.osConfigAgentStatus || 'enabled'}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded bg-white/80 dark:bg-zinc-900/80 border border-emerald-500/25">
+                              <div className="text-[10px] text-zinc-500">
+                                Live Guest RAM Snapshot
+                              </div>
+                              <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                                {agentInstallReceiptByVm[vm.name].verification
+                                  ?.guestRam || 'Enabled'}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded bg-white/80 dark:bg-zinc-900/80 border border-emerald-500/25">
+                              <div className="text-[10px] text-zinc-500">
+                                Live Guest Disk (/)
+                              </div>
+                              <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                                {agentInstallReceiptByVm[vm.name].verification
+                                  ?.guestDisk || 'Enabled'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {agentInstallReceiptByVm[vm.name].output && (
+                            <details className="text-[11px] font-mono">
+                              <summary className="cursor-pointer text-emerald-700 dark:text-emerald-300 font-semibold">
+                                Inspect Live Guest Agent Bootstrap &amp; GCE Metadata Output
+                              </summary>
+                              <pre className="mt-1.5 p-2.5 rounded bg-zinc-950 text-emerald-300 overflow-x-auto max-h-44 text-[10px] leading-relaxed">
+                                {agentInstallReceiptByVm[vm.name].output}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Live Machine Type Resizer Drawer (Available when VM is STOPPED/TERMINATED) */}
                   {openResizeVm === vm.name && isStopped && (
@@ -3289,7 +3854,10 @@ export default function VmFleetAndSsh({
             className={`${
               sshTerminalExpanded
                 ? 'xl:col-span-12 order-1'
-                : openMigrateCloudRunVm || openTunnelVm || splitLayoutMode === '6_6'
+                : openMigrateCloudRunVm ||
+                  openTunnelVm ||
+                  openAgentInstallerVm ||
+                  splitLayoutMode === '6_6'
                 ? 'xl:col-span-6'
                 : splitLayoutMode === '5_7'
                 ? 'xl:col-span-7'
@@ -3315,6 +3883,7 @@ export default function VmFleetAndSsh({
               serialLoading={serialLoading}
               openScpTrigger={openScpTrigger}
               openSshTrigger={openSshTrigger}
+              ptyCommandTrigger={ptyCommandTrigger}
               scpTargetVmName={scpTargetVmName}
               activeViewMode={terminalViewMode}
               onViewModeChange={setTerminalViewMode}

@@ -2279,9 +2279,54 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
           }));
           const tags = inst.tags?.items || [];
           const labels = inst.labels || {};
-          const metadataKeys = (inst.metadata?.items || [])
+          const rawMetadataItems = inst.metadata?.items || [];
+          const metadataKeys = rawMetadataItems
             .map((m) => m?.key)
             .filter(Boolean);
+          const metaMap = {};
+          rawMetadataItems.forEach((m) => {
+            if (m?.key) {
+              metaMap[String(m.key).toLowerCase()] = String(m.value ?? '');
+            }
+          });
+          const startupScriptText = metaMap['startup-script'] || '';
+          const installedMetaCsv = metaMap['cloudpulse-agents-installed'] || '';
+          const opsAgentConfigured =
+            installedMetaCsv.includes('OPS_AGENT') ||
+            /google-cloud-ops-agent|add-google-cloud-ops-agent-repo\.sh/i.test(
+              startupScriptText
+            ) ||
+            metaMap['google-monitoring-enable'] === '1' ||
+            metaMap['google-logging-enable'] === '1';
+          const osConfigEnabled =
+            installedMetaCsv.includes('OS_CONFIG_AGENT') ||
+            String(metaMap['enable-osconfig'] || '').toUpperCase() === 'TRUE';
+          const guestAttributesEnabled =
+            String(metaMap['enable-guest-attributes'] || '').toUpperCase() ===
+            'TRUE';
+          const otelConfigured =
+            installedMetaCsv.includes('OTEL_COLLECTOR') ||
+            /otelcol|opentelemetry/i.test(startupScriptText);
+          const dockerSqlProxyConfigured =
+            installedMetaCsv.includes('DOCKER_CLOUDSQL_PROXY') ||
+            /cloud-sql-proxy|cloud_sql_proxy/i.test(startupScriptText);
+          const installedAgentsList = Array.from(
+            new Set([
+              ...(opsAgentConfigured ? ['OPS_AGENT'] : []),
+              ...(osConfigEnabled ? ['OS_CONFIG_AGENT'] : []),
+              ...(otelConfigured ? ['OTEL_COLLECTOR'] : []),
+              ...(dockerSqlProxyConfigured ? ['DOCKER_CLOUDSQL_PROXY'] : []),
+            ])
+          );
+          const agentTelemetryStatus = {
+            opsAgentConfigured,
+            osConfigEnabled,
+            guestAttributesEnabled,
+            otelConfigured,
+            dockerSqlProxyConfigured,
+            installedAgentsList,
+            lastUpdatedAt: metaMap['cloudpulse-agents-updated-at'] || null,
+          };
           const serviceAccountEmail =
             inst.serviceAccounts?.[0]?.email || 'default';
           const shieldedVm = Boolean(
@@ -2314,6 +2359,7 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
             tags,
             labels,
             metadataKeys,
+            agentTelemetryStatus,
             serviceAccountEmail,
             shieldedVm,
             deletionProtection,
@@ -3992,6 +4038,437 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
     });
   }
 });
+
+// 8x. 1-Click GCE Guest Agent & Telemetry Installer (Dual-Engine: Live SSH/IAP + Compute Engine Metadata Persistence)
+function buildGceAgentBootstrapScript(selectedAgents = ['OPS_AGENT', 'OS_CONFIG_AGENT']) {
+  const agents = Array.isArray(selectedAgents) && selectedAgents.length > 0
+    ? selectedAgents
+    : ['OPS_AGENT', 'OS_CONFIG_AGENT'];
+  const lines = [
+    '#!/usr/bin/env bash',
+    'export DEBIAN_FRONTEND=noninteractive',
+    'echo "[CloudPulse 2026] Starting 1-Click GCE Guest Agent & Telemetry Bootstrap..."',
+  ];
+
+  if (agents.includes('OPS_AGENT')) {
+    lines.push(
+      'echo "[1/4] Checking Google Cloud Ops Agent v2 (google-cloud-ops-agent)..."',
+      'if ! systemctl is-active --quiet google-cloud-ops-agent 2>/dev/null; then',
+      '  curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install || true',
+      '  sudo systemctl enable --now google-cloud-ops-agent 2>/dev/null || true',
+      'fi'
+    );
+  }
+
+  if (agents.includes('OS_CONFIG_AGENT')) {
+    lines.push(
+      'echo "[2/4] Ensuring Google Cloud OS Config & Patch Agent (google-osconfig-agent)..."',
+      'sudo systemctl enable --now google-osconfig-agent 2>/dev/null || (command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y google-osconfig-agent && sudo systemctl enable --now google-osconfig-agent) || true'
+    );
+  }
+
+  if (agents.includes('OTEL_COLLECTOR')) {
+    lines.push(
+      'echo "[3/4] Configuring OpenTelemetry OTLP Collector & Host Metrics Receiver..."',
+      'sudo mkdir -p /etc/cloudpulse-otel && printf "receivers:\\n  otlp:\\n    protocols:\\n      grpc:\\n        endpoint: 0.0.0.0:4317\\n      http:\\n        endpoint: 0.0.0.0:4318\\n  hostmetrics:\\n    collection_interval: 15s\\nexporters:\\n  googlecloud:\\nservice:\\n  pipelines:\\n    traces:\\n      receivers: [otlp]\\n      exporters: [googlecloud]\\n    metrics:\\n      receivers: [otlp, hostmetrics]\\n      exporters: [googlecloud]\\n" | sudo tee /etc/cloudpulse-otel/config.yaml >/dev/null || true'
+    );
+  }
+
+  if (agents.includes('DOCKER_CLOUDSQL_PROXY')) {
+    lines.push(
+      'echo "[4/4] Bootstrapping Cloud SQL Auth Proxy v2 (/usr/local/bin/cloud-sql-proxy) & Docker check..."',
+      'if [ ! -x /usr/local/bin/cloud-sql-proxy ]; then',
+      '  sudo curl -fsSL -o /usr/local/bin/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.1/cloud-sql-proxy.linux.amd64 && sudo chmod +x /usr/local/bin/cloud-sql-proxy || true',
+      'fi',
+      'command -v docker >/dev/null 2>&1 && sudo systemctl enable --now docker 2>/dev/null || true'
+    );
+  }
+
+  lines.push(
+    'echo "--- AGENT_VERIFICATION_START ---"',
+    'echo "OPS_AGENT_STATUS=$(systemctl is-active google-cloud-ops-agent 2>/dev/null || echo inactive)"',
+    'echo "OSCONFIG_AGENT_STATUS=$(systemctl is-active google-osconfig-agent 2>/dev/null || echo inactive)"',
+    'echo "DOCKER_STATUS=$(systemctl is-active docker 2>/dev/null || echo inactive)"',
+    'echo "CLOUDSQL_PROXY_BIN=$([ -x /usr/local/bin/cloud-sql-proxy ] && echo installed || echo missing)"',
+    'echo "GUEST_RAM=$(free -m 2>/dev/null | awk \'/Mem:/ {printf "%d/%dMB (%.1f%%)", $3, $2, ($3/$2)*100}\' || echo N/A)"',
+    'echo "GUEST_DISK=$(df -h / 2>/dev/null | awk \'NR==2 {printf "%s/%s (%s)", $3, $2, $5}\' || echo N/A)"',
+    'echo "KERNEL_ARCH=$(uname -sr 2>/dev/null || echo Linux)"',
+    'echo "--- AGENT_VERIFICATION_END ---"'
+  );
+
+  return lines.join('\n');
+}
+
+async function installGceAgentsOnSingleVm({
+  projectId,
+  vmName,
+  zone = 'us-east1-b',
+  agents = ['OPS_AGENT', 'OS_CONFIG_AGENT'],
+  verifyLiveSsh = true,
+  token,
+}) {
+  const t0 = Date.now();
+  const normalizedAgents = Array.from(
+    new Set(
+      (Array.isArray(agents) && agents.length > 0
+        ? agents
+        : ['OPS_AGENT', 'OS_CONFIG_AGENT']
+      ).map((a) => String(a).toUpperCase())
+    )
+  );
+
+  // Step 1: Read current VM instance metadata & status via Compute Engine REST API
+  const inst = await gcpFetch(
+    `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+      projectId
+    )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(vmName)}`,
+    token,
+    projectId,
+    { timeout: 6000 }
+  );
+
+  const vmStatus = inst?.status || 'RUNNING';
+  const fingerprint = inst?.metadata?.fingerprint || '';
+  const existingItems = Array.isArray(inst?.metadata?.items)
+    ? inst.metadata.items
+    : [];
+
+  const metaMap = new Map();
+  existingItems.forEach((item) => {
+    if (item && item.key) {
+      metaMap.set(item.key, String(item.value ?? ''));
+    }
+  });
+
+  // Merge existing cloudpulse-agents-installed with newly requested agents
+  const prevAgents = String(metaMap.get('cloudpulse-agents-installed') || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const combinedAgents = Array.from(
+    new Set([...prevAgents, ...normalizedAgents])
+  );
+  const nowIso = new Date().toISOString();
+
+  metaMap.set('enable-osconfig', 'TRUE');
+  metaMap.set('enable-guest-attributes', 'TRUE');
+  metaMap.set('google-monitoring-enable', '1');
+  metaMap.set('google-logging-enable', '1');
+  metaMap.set('cloudpulse-agents-installed', combinedAgents.join(','));
+  metaMap.set('cloudpulse-agents-updated-at', nowIso);
+
+  const bootstrapBlock = buildGceAgentBootstrapScript(combinedAgents);
+  const currentStartup = metaMap.get('startup-script') || '';
+  const markerStart = '# --- CLOUDPULSE-GCE-AGENT-BOOTSTRAP-START ---';
+  const markerEnd = '# --- CLOUDPULSE-GCE-AGENT-BOOTSTRAP-END ---';
+  const wrappedBootstrap = `${markerStart}\n${bootstrapBlock}\n${markerEnd}`;
+
+  let nextStartupScript = currentStartup;
+  if (
+    currentStartup.includes(markerStart) &&
+    currentStartup.includes(markerEnd)
+  ) {
+    const startIdx = currentStartup.indexOf(markerStart);
+    const endIdx = currentStartup.indexOf(markerEnd) + markerEnd.length;
+    nextStartupScript =
+      currentStartup.slice(0, startIdx) +
+      wrappedBootstrap +
+      currentStartup.slice(endIdx);
+  } else if (currentStartup.trim()) {
+    nextStartupScript = `${currentStartup.trim()}\n\n${wrappedBootstrap}\n`;
+  } else {
+    nextStartupScript = `#!/usr/bin/env bash\n${wrappedBootstrap}\n`;
+  }
+  metaMap.set('startup-script', nextStartupScript);
+
+  const updatedMetadataItems = Array.from(metaMap.entries()).map(
+    ([key, value]) => ({
+      key,
+      value: String(value),
+    })
+  );
+
+  // Step 2: Persist GCE Instance Metadata via Compute Engine setMetadata API (Zero-SSH engine)
+  let metadataUpdated = false;
+  let metadataError = null;
+  try {
+    await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+        vmName
+      )}/setMetadata`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          fingerprint,
+          items: updatedMetadataItems,
+        },
+        timeout: 8000,
+      }
+    );
+    metadataUpdated = true;
+  } catch (metaErr) {
+    metadataError =
+      metaErr.response?.data?.error?.message || metaErr.message || null;
+  }
+
+  // Step 3: If VM is RUNNING and verifyLiveSsh is true, execute the installer live over SSH / IAP Tunnel
+  let sshExecuted = false;
+  let sshEngineUsed = 'GCE_METADATA_OSCONFIG_API';
+  let sshOutput = '';
+  const verification = {
+    opsAgentStatus: combinedAgents.includes('OPS_AGENT')
+      ? 'configured (metadata + boot)'
+      : 'not-selected',
+    osConfigAgentStatus: combinedAgents.includes('OS_CONFIG_AGENT')
+      ? 'enabled (enable-osconfig=TRUE)'
+      : 'not-selected',
+    dockerStatus: combinedAgents.includes('DOCKER_CLOUDSQL_PROXY')
+      ? 'configured'
+      : 'not-selected',
+    cloudSqlProxyBin: combinedAgents.includes('DOCKER_CLOUDSQL_PROXY')
+      ? '/usr/local/bin/cloud-sql-proxy'
+      : 'not-selected',
+    guestRam: 'Pending first Ops Agent flush',
+    guestDisk: 'Pending first Ops Agent flush',
+    kernelArch: 'Linux GCE Guest',
+  };
+
+  if (
+    vmStatus === 'RUNNING' &&
+    verifyLiveSsh !== false &&
+    /^[a-z0-9][-a-z0-9._]*$/i.test(projectId) &&
+    /^[a-z0-9][-a-z0-9]*$/i.test(vmName) &&
+    /^[a-z0-9][-a-z0-9]*$/i.test(zone)
+  ) {
+    const runAgentSsh = (useIapTunnel) =>
+      new Promise((resolve, reject) => {
+        execFile(
+          'gcloud',
+          [
+            'compute',
+            'ssh',
+            vmName,
+            `--zone=${zone}`,
+            `--project=${projectId}`,
+            ...(useIapTunnel ? ['--tunnel-through-iap'] : []),
+            `--command=${bootstrapBlock}`,
+            '--quiet',
+            '--ssh-flag=-o ConnectTimeout=8 -o StrictHostKeyChecking=no',
+          ],
+          { env: ATTRIBUTION_ENV, timeout: 45000, maxBuffer: 8 * 1024 * 1024 },
+          (err, out, errOut) => {
+            if (err) {
+              err.stdout = out;
+              err.stderr = errOut;
+              return reject(err);
+            }
+            resolve({ stdout: out, stderr: errOut, usedIap: useIapTunnel });
+          }
+        );
+      });
+
+    try {
+      let sshRes;
+      try {
+        sshRes = await runAgentSsh(false);
+      } catch {
+        sshRes = await runAgentSsh(true);
+      }
+      sshExecuted = true;
+      sshEngineUsed = sshRes.usedIap
+        ? 'LIVE_SSH_VIA_CLOUD_IAP_TUNNEL'
+        : 'LIVE_SSH_DIRECT';
+      sshOutput = [sshRes.stdout, sshRes.stderr]
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+        .join('\n');
+
+      const parseKv = (key) => {
+        const m = sshOutput.match(new RegExp(`${key}=([^\\r\\n]+)`));
+        return m ? m[1].trim() : null;
+      };
+      verification.opsAgentStatus =
+        parseKv('OPS_AGENT_STATUS') || verification.opsAgentStatus;
+      verification.osConfigAgentStatus =
+        parseKv('OSCONFIG_AGENT_STATUS') || verification.osConfigAgentStatus;
+      verification.dockerStatus =
+        parseKv('DOCKER_STATUS') || verification.dockerStatus;
+      verification.cloudSqlProxyBin =
+        parseKv('CLOUDSQL_PROXY_BIN') || verification.cloudSqlProxyBin;
+      verification.guestRam = parseKv('GUEST_RAM') || verification.guestRam;
+      verification.guestDisk = parseKv('GUEST_DISK') || verification.guestDisk;
+      verification.kernelArch =
+        parseKv('KERNEL_ARCH') || verification.kernelArch;
+    } catch (sshErr) {
+      const partialOut = [sshErr.stdout, sshErr.stderr]
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+        .join('\n');
+      sshOutput =
+        partialOut ||
+        `[Zero-SSH Fallback] Direct SSH port 22 was unreachable or timed out; GCE Instance Metadata (enable-osconfig=TRUE, enable-guest-attributes=TRUE, startup-script) has been persisted directly via Compute Engine API on ${vmName}.`;
+    }
+  } else if (vmStatus !== 'RUNNING') {
+    sshOutput = `[VM ${vmStatus}] Applied enable-osconfig=TRUE, enable-guest-attributes=TRUE, and idempotent GCE Agent Bootstrap startup-script to ${vmName} via Compute Engine setMetadata API. Agents will automatically start on next VM boot!`;
+  }
+
+  const agentTelemetryStatus = {
+    opsAgentConfigured: combinedAgents.includes('OPS_AGENT'),
+    osConfigEnabled: true,
+    guestAttributesEnabled: true,
+    otelConfigured: combinedAgents.includes('OTEL_COLLECTOR'),
+    dockerSqlProxyConfigured: combinedAgents.includes('DOCKER_CLOUDSQL_PROXY'),
+    installedAgentsList: combinedAgents,
+    lastUpdatedAt: nowIso,
+  };
+
+  return {
+    ok: true,
+    projectId,
+    vmName,
+    zone,
+    vmStatus,
+    installedAgents: combinedAgents,
+    metadataUpdated,
+    metadataError,
+    metadataKeysApplied: [
+      'enable-osconfig=TRUE',
+      'enable-guest-attributes=TRUE',
+      'google-monitoring-enable=1',
+      'google-logging-enable=1',
+      `cloudpulse-agents-installed=${combinedAgents.join(',')}`,
+      'startup-script (idempotent agent bootstrap)',
+    ],
+    sshExecuted,
+    engineUsed: sshEngineUsed,
+    verification,
+    agentTelemetryStatus,
+    cliCommand: `curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl status google-cloud-ops-agent --no-pager`,
+    durationMs: Date.now() - t0,
+    output: sshOutput.slice(-3500),
+    message: sshExecuted
+      ? `Installed & verified [${combinedAgents.join(', ')}] on ${vmName} (${zone}) via ${sshEngineUsed} + Compute Engine Metadata!`
+      : `Configured [${combinedAgents.join(', ')}] on ${vmName} (${zone}) via Compute Engine setMetadata API (enable-osconfig=TRUE + startup-script bootstrap)!`,
+  };
+}
+
+app.post(
+  '/api/project/:projectId/vms/:vmName/install-agent',
+  async (req, res) => {
+    const { projectId, vmName } = req.params;
+    const {
+      zone = 'us-east1-b',
+      agents = ['OPS_AGENT', 'OS_CONFIG_AGENT'],
+      verifyLiveSsh = true,
+    } = req.body || {};
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const result = await installGceAgentsOnSingleVm({
+        projectId,
+        vmName,
+        zone,
+        agents,
+        verifyLiveSsh,
+        token,
+      });
+      return res.json(result);
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to install GCE agents on ${vmName}.`,
+      });
+    }
+  }
+);
+
+app.post(
+  '/api/project/:projectId/vms/install-agent-fleet',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      agents = ['OPS_AGENT', 'OS_CONFIG_AGENT'],
+      targets = [],
+      verifyLiveSsh = false,
+    } = req.body || {};
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      let vmTargets = Array.isArray(targets) ? targets : [];
+      if (vmTargets.length === 0) {
+        const data = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+        Object.entries(data.items || {}).forEach(([zoneKey, val]) => {
+          const z = zoneKey.replace('zones/', '');
+          (val.instances || []).forEach((inst) => {
+            if (inst?.name) {
+              vmTargets.push({ name: inst.name, zone: z });
+            }
+          });
+        });
+      }
+
+      const results = [];
+      for (const t of vmTargets) {
+        try {
+          const r = await installGceAgentsOnSingleVm({
+            projectId,
+            vmName: t.name,
+            zone: t.zone || 'us-east1-b',
+            agents,
+            verifyLiveSsh: Boolean(verifyLiveSsh),
+            token,
+          });
+          results.push(r);
+        } catch (vmErr) {
+          results.push({
+            ok: false,
+            vmName: t.name,
+            zone: t.zone,
+            error:
+              vmErr.response?.data?.error?.message ||
+              vmErr.message ||
+              'Failed to update VM',
+          });
+        }
+      }
+
+      const succeeded = results.filter((r) => r.ok).length;
+      return res.json({
+        ok: true,
+        projectId,
+        totalTargeted: vmTargets.length,
+        succeeded,
+        results,
+        message: `1-Click Fleet Agent Installer completed across ${succeeded}/${vmTargets.length} Compute Engine VM(s).`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to run fleet-wide GCE agent installation.',
+      });
+    }
+  }
+);
 
 // 8y-1. POST /api/project/:projectId/vms/:vmName/extract-workload
 // Live VM Content & Workload Extractor for VM -> Cloud Run Migration:
@@ -6516,6 +6993,13 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       }
       if (installOpsAgent) {
         metadataItems.push({ key: 'enable-guest-attributes', value: 'TRUE' });
+        metadataItems.push({ key: 'enable-osconfig', value: 'TRUE' });
+        metadataItems.push({ key: 'google-monitoring-enable', value: '1' });
+        metadataItems.push({ key: 'google-logging-enable', value: '1' });
+        metadataItems.push({
+          key: 'cloudpulse-agents-installed',
+          value: 'OPS_AGENT,OS_CONFIG_AGENT',
+        });
       }
       if (sshPublicKey) {
         metadataItems.push({

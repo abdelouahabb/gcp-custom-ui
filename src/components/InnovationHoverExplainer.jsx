@@ -3072,6 +3072,16 @@ export const INNOVATION_FEATURE_GUIDE = {
   // ============================================================================
   // DOMAIN II: VM, CLOUD STORAGE, CLOUD RUN, GKE, CLOUD BUILD & FUNCTIONS
   // ============================================================================
+  VM_INSTALL_GCE_AGENT: {
+    badge: 'DUAL-ENGINE 1-CLICK GCE AGENT INSTALLER',
+    title: '1-Click Install Google Cloud Ops Agent v2, OS Config Patch Agent, OpenTelemetry & Cloud SQL Proxy Inside GCE VMs',
+    whatItDoes:
+      'Executes a Dual-Engine bootstrap: (1) Live SSH / Cloud IAP Tunnel non-interactive installation (`add-google-cloud-ops-agent-repo.sh --also-install`, `google-osconfig-agent`, `/etc/cloudpulse-otel/config.yaml`, `cloud-sql-proxy`) when the VM is RUNNING, and (2) Zero-SSH Compute Engine `instances.setMetadata` persistence (`enable-osconfig=TRUE`, `enable-guest-attributes=TRUE`, and idempotent `startup-script` block) so stopped or firewall-locked VMs auto-install on boot.',
+    enterpriseValue:
+      'Unlocks inside-VM Guest RAM %, Disk Space %, NVIDIA GPU DCGM telemetry, /var/log/syslog + Docker log streaming, and Zero-SSH CVE Patch Management in 1 click.',
+    gcpApis: 'compute.googleapis.com/compute/v1 (instances.setMetadata) · Cloud IAP SSH · monitoring.googleapis.com · osconfig.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
   VM_MIGRATE_TO_CLOUD_RUN: {
     badge: 'VM-TO-SERVERLESS TRANSPILER (`mfit` + `m2c`)',
     title: 'Migrate 24/7 Compute Engine VM → Scale-to-$0 Cloud Run Gen2 Service',

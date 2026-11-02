@@ -40,6 +40,10 @@ import {
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
+  {
+    label: '⚡ 1-Click Install Ops Agent',
+    cmd: 'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl status google-cloud-ops-agent --no-pager\r',
+  },
   { label: 'sudo apt update', cmd: 'sudo apt update\r' },
   { label: 'Top / Processes', cmd: 'top -b -n 1 | head -n 25\r' },
   { label: 'Disk & RAM', cmd: 'df -h && echo "---" && free -h\r' },
@@ -82,6 +86,7 @@ export default function XtermWebSshTerminal({
   onSelectTab,
   openScpTrigger = 0,
   openSshTrigger = 0,
+  ptyCommandTrigger = null,
   scpTargetVmName = '',
   activeViewMode,
   onViewModeChange,
@@ -93,6 +98,7 @@ export default function XtermWebSshTerminal({
   const xtermRef = useRef(null);
   const fitAddonRef = useRef(null);
   const wsRef = useRef(null);
+  const pendingPtyCmdRef = useRef(null);
 
   const [viewMode, setViewModeState] = useState(
     activeViewMode || 'LIVE_SSH_PTY'
@@ -135,6 +141,22 @@ export default function XtermWebSshTerminal({
       setViewMode('LIVE_SSH_PTY');
     }
   }, [openSshTrigger, setViewMode]);
+
+  useEffect(() => {
+    if (!ptyCommandTrigger?.cmd) return;
+    setViewMode('LIVE_SSH_PTY');
+    const cmdWithNewline = ptyCommandTrigger.cmd.endsWith('\r')
+      ? ptyCommandTrigger.cmd
+      : `${ptyCommandTrigger.cmd}\r`;
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({ type: 'input', data: cmdWithNewline })
+      );
+      xtermRef.current?.focus();
+    } else {
+      pendingPtyCmdRef.current = cmdWithNewline;
+    }
+  }, [ptyCommandTrigger?.id, ptyCommandTrigger?.cmd, setViewMode]);
 
   // Sync selectedVmName when activeVm or vms list changes
   useEffect(() => {
@@ -1801,6 +1823,19 @@ export default function XtermWebSshTerminal({
             engine: msg.engine || 'SSH2_PTY',
             message: msg.message || '',
           });
+          if (
+            msg.status === 'CONNECTED' &&
+            pendingPtyCmdRef.current &&
+            ws.readyState === WebSocket.OPEN
+          ) {
+            const toSend = pendingPtyCmdRef.current;
+            pendingPtyCmdRef.current = null;
+            setTimeout(() => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'input', data: toSend }));
+              }
+            }, 350);
+          }
         }
       } catch {
         term.write(String(event.data));
