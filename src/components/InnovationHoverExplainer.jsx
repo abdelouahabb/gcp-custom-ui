@@ -75,13 +75,13 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   VM_SSH: {
-    badge: 'COMPUTE & WEB-SSH',
-    title: 'Compute Engine VM Fleet, Browser Web-SSH & SFTP Workbench',
+    badge: 'SERVERS, WEB-SSH & 1-TIME AGENT',
+    title: 'Compute Engine VM Fleet, 1-Time Guest Agent & Browser Web-SSH Workbench',
     whatItDoes:
-      'Manages Compute Engine VMs (Start, Stop, Reset, Machine-Type Resize, Disk Resize, Snapshot) and opens an in-browser xterm.js SSH terminal and SFTP file manager.',
+      'Lets you turn virtual machines on or off, install Google’s 1-Time Guest Agent to unlock inside-VM RAM/Disk/Process gauges without SSH, and open a live browser terminal or drag-and-drop SFTP file manager.',
     enterpriseValue:
-      'Provides instant browser-based SSH debugging and live vertical scaling without managing local SSH keys or bastion hosts.',
-    gcpApis: 'compute.googleapis.com/v1/instances · WebSocket PTY SSH Tunnel',
+      'Manage your cloud servers, clean up full disks, and log in safely from your browser without dealing with SSH keys or exposing public IP addresses.',
+    gcpApis: 'compute.googleapis.com/v1/instances · Ops Agent Zero-SSH Cockpit · WebSocket SSH Tunnel',
     safetyMode: 'READ_ONLY',
   },
   CLOUD_STORAGE: {
@@ -235,13 +235,13 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   LOGS_SHELL: {
-    badge: 'LIVE LOGS & CLOUD SHELL',
-    title: 'Live Cloud Logging Streamer, Trace Waterfall & Integrated Cloud Shell',
+    badge: 'LIVE LOGS & FLOATING CLOUD SHELL',
+    title: 'Live Cloud Logging Streamer & 3-Mode Draggable Cloud Shell',
     whatItDoes:
-      'Streams real-time Cloud Audit and container logs alongside an interactive browser terminal pre-authenticated with gcloud, bq, and gsutil.',
+      'Streams real-time application and security logs alongside a built-in Cloud Shell terminal that can stay pinned at the top (`Top Dock`), pop out into a freely draggable `Floating Drawer`, or fold into a slim bar (`Minimize`).',
     enterpriseValue:
-      'Lets engineers inspect live logs and run remediation CLI commands side-by-side without leaving the cockpit.',
-    gcpApis: 'logging.googleapis.com/v2/entries:list · WebSocket PTY Shell',
+      'Lets you search logs in plain English and run `gcloud`, `bq`, or `gsutil` commands from anywhere on screen without log refreshes ever pushing your terminal down.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list · Draggable WebSocket Cloud Shell',
     safetyMode: 'READ_ONLY',
   },
   RECYCLE_BIN: {
