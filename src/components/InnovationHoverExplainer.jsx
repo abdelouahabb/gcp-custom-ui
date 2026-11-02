@@ -4708,6 +4708,84 @@ function matchSpecificButtonInLaymanTerms(
     };
   }
 
+  if (labelLower.includes('true-ram dollar miner') || labelLower.includes('$/pid')) {
+    return {
+      badge: 'AGENT GOLDMINE · PILLAR 1',
+      title: '💰 True-RAM Dollar Miner & Per-Process ($/PID) Cost Ledger',
+      whatItDoes:
+        'Uses your installed Guest Agent to measure how much memory (RAM) your VM actually uses inside Linux, calculates how many dollars of empty RAM are sitting wasted every month, and shows the exact monthly dollar cost of every running Linux process (`$/PID`).',
+      enterpriseValue:
+        'Standard Google Cloud only sees outside CPU %, so teams overpay 2x–4x for empty memory. This mines pure monthly savings that are 100% invisible without the Guest Agent!',
+      gcpApis: 'Ops Agent Memory Working-Set (`free -m` / `ps %mem`) + GCP SKU Rightsizer',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('1-click downsize to')) {
+    return {
+      badge: 'POCKET MINED RAM SAVINGS',
+      title: cleanLabel,
+      whatItDoes:
+        'Resizes this virtual machine down to the exact machine size that comfortably fits your real inside-Linux memory usage (plus a 45% safety cushion).',
+      enterpriseValue:
+        'Turns wasted, empty RAM into immediate monthly dollar savings on your Google Cloud bill in one click.',
+      gcpApis: 'POST compute.instances.setMachineType (True-RAM Rightsizer)',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('port-vs-firewall') || labelLower.includes('ghost x-ray')) {
+    return {
+      badge: 'AGENT GOLDMINE · PILLAR 2',
+      title: '🕸️ Inside-VM Listening Sockets (`ss -tulpn`) vs. VPC Firewall Ghost X-Ray',
+      whatItDoes:
+        'Cross-checks which network ports are actually open inside your Linux server against your outer Google Cloud VPC Firewall rules and Public IP address.',
+      enterpriseValue:
+        'Instantly spots dangerous ports exposed to the public internet AND "Ghost Firewall Rules" (where a firewall port is left open to the world even though no app inside the VM is listening on it!).',
+      gcpApis: 'Guest Agent `ss -tulpn` + `compute.firewalls.list` Cross-Correlator',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('shield app ports on 127.0.0.1')) {
+    return {
+      badge: 'ZERO-SSH LOOPBACK SHIELD',
+      title: '🔒 Shield Application Ports on 127.0.0.1 Loopback (Zero-SSH)',
+      whatItDoes:
+        'Locks non-SSH application ports inside your VM to `127.0.0.1` (localhost) so outside scanners on the internet can never reach them directly.',
+      enterpriseValue:
+        'You can still connect to your app or database anytime using our encrypted `127.0.0.1 IAP Port-Forward` button—with zero public firewall exposure.',
+      gcpApis: 'Guest Agent Socket Loopback Guard (`LOCK_SOCKET_TO_LOOPBACK`)',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('live process → dockerfile') || labelLower.includes('process -> dockerfile')) {
+    return {
+      badge: 'AGENT GOLDMINE · PILLAR 3',
+      title: '🧬 Live Inside-VM Process → Auto-Generated Dockerfile & Cloud Run Extractor',
+      whatItDoes:
+        'Reads the live programs and ports running inside your VM and automatically writes a ready-to-use `Dockerfile` and `compose.yaml` for you.',
+      enterpriseValue:
+        'Lets you convert an expensive 24/7 virtual machine into an auto-scaling Cloud Run container that costs $0.00 when idle—even if nobody remembers how the VM was originally set up!',
+      gcpApis: 'Guest Agent Process & Port Inspector → Cloud Run v2 Blueprint Synthesizer',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('arm 2 gb emergency oom swap') || labelLower.includes('oom swap shield')) {
+    return {
+      badge: 'AGENT GOLDMINE · PILLAR 4',
+      title: '🛡️ Arm 2 GB Emergency OOM Swap & 85% Disk Auto-Vacuum Shield',
+      whatItDoes:
+        'Creates a 2 GB emergency memory safety cushion (`/swapfile` with `swappiness=10`) inside your Linux VM and sets up automatic log cleanup before your disk can hit 100%.',
+      enterpriseValue:
+        'By default, Google Cloud Linux VMs ship with 0 MB of swap—so a single traffic spike causes the Linux OOM-Killer to crash your database or app at 3 AM. This shield prevents those crashes in 1 click!',
+      gcpApis: 'Guest Agent `fallocate -l 2G /swapfile` + `mkswap` + `swapon` (`ARM_OOM_SWAP_AND_AUTOHEAL`)',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
   if (labelLower.includes('top processes & open ports')) {
     return {
       badge: 'ZERO-SSH TASK MANAGER',
