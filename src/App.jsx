@@ -1245,6 +1245,10 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/billing-guardian/sync-console-credits') ||
       rawUrl.includes('/billing-guardian/reset-console-credits') ||
       (rawUrl.includes('/vms/') && rawUrl.endsWith('/ssh')) ||
+      (rawUrl.includes('/vms/') &&
+        rawUrl.endsWith('/agent-cockpit') &&
+        String(body.action || 'INSPECT_COCKPIT').toUpperCase() ===
+          'INSPECT_COCKPIT') ||
       (rawUrl.includes('/bigquery/query') && Boolean(body.dryRun)) ||
       (rawUrl.includes('/synthesis/runbook') &&
         String(body.mode || 'DRY_RUN').toUpperCase() === 'DRY_RUN') ||
@@ -5312,10 +5316,19 @@ function CloudPulseCockpit() {
     const storedAccount =
       sessionStorage.getItem('cloudpulse_account') ||
       localStorage.getItem('cloudpulse_account');
-    const storedProj =
+    const explicitUserProj =
+      sessionStorage.getItem('cloudpulse_user_selected_project_v2') ||
+      localStorage.getItem('cloudpulse_user_selected_project_v2') ||
+      '';
+    const legacyStoredProj =
       sessionStorage.getItem('cloudpulse_project') ||
       localStorage.getItem('cloudpulse_project') ||
       '';
+    const storedProj =
+      explicitUserProj ||
+      (legacyStoredProj && legacyStoredProj !== 'vertexai-sprint'
+        ? legacyStoredProj
+        : '');
     if (storedToken) {
       axios.defaults.headers.common['x-gcp-access-token'] = storedToken;
     }
@@ -5325,7 +5338,12 @@ function CloudPulseCockpit() {
 
     axios
       .get('/api/context', {
-        params: storedProj ? { preferredProject: storedProj } : {},
+        params: storedProj
+          ? {
+              preferredProject: storedProj,
+              explicitProject: explicitUserProj ? 'true' : 'false',
+            }
+          : {},
       })
       .then((res) => {
         if (res.data.authenticated) {
@@ -6414,6 +6432,10 @@ function CloudPulseCockpit() {
                             'cloudpulse_project_explicit',
                             'true'
                           );
+                          sessionStorage.setItem(
+                            'cloudpulse_user_selected_project_v2',
+                            proj.projectId
+                          );
                           try {
                             localStorage.setItem(
                               'cloudpulse_project',
@@ -6422,6 +6444,10 @@ function CloudPulseCockpit() {
                             localStorage.setItem(
                               'cloudpulse_project_explicit',
                               'true'
+                            );
+                            localStorage.setItem(
+                              'cloudpulse_user_selected_project_v2',
+                              proj.projectId
                             );
                           } catch {
                             // ignore
@@ -7938,6 +7964,33 @@ function CloudPulseCockpit() {
                       })
                     }
                     onSyncLiveVms={handleSyncLiveVms}
+                    onSelectProject={(pid) => {
+                      if (!pid) return;
+                      sessionStorage.setItem('cloudpulse_project', pid);
+                      sessionStorage.setItem(
+                        'cloudpulse_project_explicit',
+                        'true'
+                      );
+                      sessionStorage.setItem(
+                        'cloudpulse_user_selected_project_v2',
+                        pid
+                      );
+                      try {
+                        localStorage.setItem('cloudpulse_project', pid);
+                        localStorage.setItem(
+                          'cloudpulse_project_explicit',
+                          'true'
+                        );
+                        localStorage.setItem(
+                          'cloudpulse_user_selected_project_v2',
+                          pid
+                        );
+                      } catch {
+                        // ignore
+                      }
+                      setSelectedProjectId(pid);
+                      showToast(`Switched active GCP project to ${pid}`);
+                    }}
                     onRunInShell={handleRunInShell}
                     onSelectTab={handleNavigateStudioTab}
                     onShowToast={showToast}

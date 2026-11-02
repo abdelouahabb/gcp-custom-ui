@@ -94,6 +94,7 @@ export default function XtermWebSshTerminal({
   onChangeTargetVmName,
   activeViewMode,
   onViewModeChange,
+  onDiskUsageLoaded,
   onShowToast,
   onShowError,
 }) {
@@ -109,18 +110,23 @@ export default function XtermWebSshTerminal({
     activeViewMode || 'LIVE_SSH_PTY'
   ); // 'LIVE_SSH_PTY' | 'SCP_FILE_MANAGER' | 'SERIAL_PORT_1'
 
+  useEffect(() => {
+    if (activeViewMode && activeViewMode !== viewMode) {
+      setViewModeState(activeViewMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeViewMode]);
+
   const setViewMode = useCallback(
     (nextMode) => {
-      setViewModeState((prev) => {
-        const resolved =
-          typeof nextMode === 'function' ? nextMode(prev) : nextMode;
-        if (onViewModeChange) {
-          onViewModeChange(resolved);
-        }
-        return resolved;
-      });
+      const resolved =
+        typeof nextMode === 'function' ? nextMode(viewMode) : nextMode;
+      setViewModeState(resolved);
+      if (onViewModeChange) {
+        onViewModeChange(resolved);
+      }
     },
-    [onViewModeChange]
+    [onViewModeChange, viewMode]
   );
 
   const [sshEngine, setSshEngine] = useState(
@@ -474,13 +480,17 @@ export default function XtermWebSshTerminal({
     return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
+  const targetScpVm = activeVm || focusedVm;
+  const targetScpVmName = targetScpVm?.name || '';
+  const targetScpVmZone = targetScpVm?.zone || '';
+  const targetScpVmStatus = targetScpVm?.status || '';
+
   const fetchScpDirectory = useCallback(
-    async (targetPath = scpPath, options = {}) => {
-      const targetVm = activeVm || focusedVm;
-      if (isCloudRun || !projectId || !targetVm?.name) return;
+    async (targetPath = '~', options = {}) => {
+      if (isCloudRun || !projectId || !targetScpVmName) return;
       if (
-        targetVm.status &&
-        String(targetVm.status).toUpperCase() !== 'RUNNING'
+        targetScpVmStatus &&
+        String(targetScpVmStatus).toUpperCase() !== 'RUNNING'
       ) {
         setRawScpError('VM is stopped.');
         setScpEntries([]);
@@ -498,10 +508,10 @@ export default function XtermWebSshTerminal({
         const res = await axios.get(
           `/api/project/${encodeURIComponent(
             projectId
-          )}/vms/${encodeURIComponent(targetVm.name)}/scp/list`,
+          )}/vms/${encodeURIComponent(targetScpVmName)}/scp/list`,
           {
             params: {
-              zone: targetVm.zone || '',
+              zone: targetScpVmZone,
               username: customUsername || defaultUsername || 'ubuntu',
               path: targetPath || '~',
             },
@@ -514,6 +524,9 @@ export default function XtermWebSshTerminal({
         setScpParentPath(data.parentPath || '/');
         setScpEntries(Array.isArray(data.entries) ? data.entries : []);
         setScpDiskUsage(data.diskUsage || null);
+        if (data.diskUsage && onDiskUsageLoaded) {
+          onDiskUsageLoaded(targetScpVmName, data.diskUsage);
+        }
         setScpSelectedPaths([]);
         setScpEngineUsed(data.engineUsed || 'SSH2_SFTP_DIRECT');
         setScpCliUpload(data.cliUploadExample || '');
@@ -531,27 +544,29 @@ export default function XtermWebSshTerminal({
       }
     },
     [
-      activeVm,
-      focusedVm,
+      targetScpVmName,
+      targetScpVmZone,
+      targetScpVmStatus,
       isCloudRun,
       projectId,
       customUsername,
       defaultUsername,
-      scpPath,
+      onDiskUsageLoaded,
     ]
   );
 
   useEffect(() => {
     if (
       (viewMode === 'SCP_FILE_MANAGER' || viewMode === 'SPLIT_SSH_AND_SCP') &&
-      (activeVm || focusedVm)
+      targetScpVmName
     ) {
       fetchScpDirectory(scpPath || '~');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     viewMode,
-    activeVm?.name,
-    focusedVm?.name,
+    targetScpVmName,
+    targetScpVmStatus,
     customUsername,
     fetchScpDirectory,
   ]);

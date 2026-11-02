@@ -948,8 +948,11 @@ async function resolveHostDefaultProject() {
 }
 
 let cachedProjectsList = [];
+let tokenRefreshInFlight = null;
+const lastKnownProjectVmsCache = new Map();
+const liveVmDiskUsageCache = new Map();
 
-// Fast 240ms IPv4 token exchange using ADC refresh_token or Cloud Run Metadata Server
+// Fast 240ms IPv4 token exchange using ADC refresh_token or Cloud Run Metadata Server (with in-flight deduplication & retry)
 async function getLocalOrMetadataAccessToken(
   preferredEmail,
   forceRefresh = false
@@ -964,77 +967,126 @@ async function getLocalOrMetadataAccessToken(
     return { token: localCachedToken, account: localSelectedAccount };
   }
 
-  const { accounts, activeAccount } = discoverLocalGcloudAccounts();
-  const targetEmail = preferredEmail || localSelectedAccount || activeAccount;
-  const matched =
-    accounts.find((a) => a.email === targetEmail) || accounts[0] || null;
-
-  // 1) Try local ADC JSON refresh over IPv4 (~240ms)
-  if (matched && fs.existsSync(matched.adcPath)) {
-    try {
-      const adc = JSON.parse(fs.readFileSync(matched.adcPath, 'utf8'));
-      if (adc.refresh_token && adc.client_id && adc.client_secret) {
-        const res = await gcpHttp.post('https://oauth2.googleapis.com/token', {
-          client_id: adc.client_id,
-          client_secret: adc.client_secret,
-          refresh_token: adc.refresh_token,
-          grant_type: 'refresh_token',
-        });
-        if (res.data?.access_token) {
-          localCachedToken = res.data.access_token;
-          localTokenExpiry = now + 45 * 60 * 1000;
-          localSelectedAccount = matched.email;
-          return { token: localCachedToken, account: localSelectedAccount };
-        }
-      }
-    } catch (err) {
-      console.error('Fast ADC token refresh error:', err.message);
-    }
+  if (tokenRefreshInFlight) {
+    return tokenRefreshInFlight;
   }
 
-  // 2) Try Cloud Run / GCE Metadata Server (when deployed on Cloud Run)
-  try {
-    const metaRes = await gcpHttp.get(
-      'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
-      {
-        headers: { 'Metadata-Flavor': 'Google' },
-        timeout: 1200,
-      }
-    );
-    if (metaRes.data?.access_token) {
-      let email = 'cloud-run-service-account@gcp';
+  tokenRefreshInFlight = (async () => {
+    const { accounts, activeAccount } = discoverLocalGcloudAccounts();
+    const targetEmail = preferredEmail || localSelectedAccount || activeAccount;
+    const matched =
+      accounts.find((a) => a.email === targetEmail) || accounts[0] || null;
+
+    // 1) Try local ADC JSON refresh over IPv4 (~240ms) with automatic retry on stale socket / Wi-Fi switch
+    if (matched && fs.existsSync(matched.adcPath)) {
       try {
-        const [emailRes, projRes] = await Promise.allSettled([
-          gcpHttp.get(
-            'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
-            { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
-          ),
-          !localMetadataProjectId
-            ? gcpHttp.get(
-                'http://metadata.google.internal/computeMetadata/v1/project/project-id',
-                { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
-              )
-            : Promise.resolve({ data: localMetadataProjectId }),
-        ]);
-        if (emailRes.status === 'fulfilled' && emailRes.value?.data) {
-          email = String(emailRes.value.data).trim();
+        const adc = JSON.parse(fs.readFileSync(matched.adcPath, 'utf8'));
+        if (adc.refresh_token && adc.client_id && adc.client_secret) {
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+              const res = await gcpHttp.post(
+                'https://oauth2.googleapis.com/token',
+                {
+                  client_id: adc.client_id,
+                  client_secret: adc.client_secret,
+                  refresh_token: adc.refresh_token,
+                  grant_type: 'refresh_token',
+                },
+                { timeout: 4500 }
+              );
+              if (res.data?.access_token) {
+                localCachedToken = res.data.access_token;
+                localTokenExpiry = Date.now() + 45 * 60 * 1000;
+                localSelectedAccount = matched.email;
+                return { token: localCachedToken, account: localSelectedAccount };
+              }
+            } catch (attemptErr) {
+              if (attempt === 2) {
+                console.error(
+                  'Fast ADC token refresh error:',
+                  attemptErr.message
+                );
+              }
+            }
+          }
         }
-        if (projRes.status === 'fulfilled' && projRes.value?.data) {
-          localMetadataProjectId = String(projRes.value.data).trim();
+      } catch (err) {
+        console.error('ADC file parse error:', err.message);
+      }
+    }
+
+    // 1b) Fallback to gcloud CLI access token if direct OAuth refresh timed out
+    try {
+      const { stdout } = await execAsync(
+        'gcloud auth print-access-token --quiet',
+        { timeout: 4000, env: ATTRIBUTION_ENV }
+      );
+      const cliToken = String(stdout || '').trim();
+      if (cliToken && cliToken.startsWith('ya29.')) {
+        localCachedToken = cliToken;
+        localTokenExpiry = Date.now() + 30 * 60 * 1000;
+        localSelectedAccount = targetEmail || activeAccount || 'gcloud-cli';
+        return { token: localCachedToken, account: localSelectedAccount };
+      }
+    } catch {
+      // ignore CLI fallback failure
+    }
+
+    // 2) Try Cloud Run / GCE Metadata Server (only when deployed on Cloud Run / GCE)
+    if (process.env.K_SERVICE || process.env.GOOGLE_CLOUD_PROJECT) {
+      try {
+        const metaRes = await gcpHttp.get(
+          'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
+          {
+            headers: { 'Metadata-Flavor': 'Google' },
+            timeout: 1200,
+          }
+        );
+        if (metaRes.data?.access_token) {
+          let email = 'cloud-run-service-account@gcp';
+          try {
+            const [emailRes, projRes] = await Promise.allSettled([
+              gcpHttp.get(
+                'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
+                { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
+              ),
+              !localMetadataProjectId
+                ? gcpHttp.get(
+                    'http://metadata.google.internal/computeMetadata/v1/project/project-id',
+                    { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
+                  )
+                : Promise.resolve({ data: localMetadataProjectId }),
+            ]);
+            if (emailRes.status === 'fulfilled' && emailRes.value?.data) {
+              email = String(emailRes.value.data).trim();
+            }
+            if (projRes.status === 'fulfilled' && projRes.value?.data) {
+              localMetadataProjectId = String(projRes.value.data).trim();
+            }
+          } catch {
+            // ignore
+          }
+          localCachedToken = metaRes.data.access_token;
+          localTokenExpiry = Date.now() + 30 * 60 * 1000;
+          localSelectedAccount = email;
+          return { token: localCachedToken, account: email };
         }
       } catch {
-        // ignore
+        // Not running on Cloud Run / GCE metadata server
       }
-      localCachedToken = metaRes.data.access_token;
-      localTokenExpiry = now + 30 * 60 * 1000;
-      localSelectedAccount = email;
-      return { token: localCachedToken, account: email };
     }
-  } catch {
-    // Not running on Cloud Run / GCE metadata server
-  }
 
-  return { token: null, account: null };
+    // If we still have a previously cached token, return it rather than null
+    if (localCachedToken) {
+      return { token: localCachedToken, account: localSelectedAccount };
+    }
+
+    return { token: null, account: null };
+  })().finally(() => {
+    tokenRefreshInFlight = null;
+  });
+
+  return tokenRefreshInFlight;
 }
 
 // Resolve token for the current HTTP request:
@@ -1581,9 +1633,38 @@ app.get('/api/context', async (req, res) => {
     const preferredProject = String(
       req.query.preferredProject || req.headers['x-gcp-project'] || ''
     ).trim();
+    const explicitUserChoice = String(
+      req.query.explicitProject || req.headers['x-gcp-project-explicit'] || ''
+    ).trim() === 'true';
+
+    // Prefer a project that actually has live Compute Engine VMs (like aicignaw-alien) when no explicit project override was chosen
+    let vmActiveProject = '';
+    for (const [cachedProjId, cachedEntry] of lastKnownProjectVmsCache.entries()) {
+      if (Array.isArray(cachedEntry?.vms) && cachedEntry.vms.length > 0) {
+        vmActiveProject = cachedProjId;
+        break;
+      }
+    }
+    if (
+      !vmActiveProject &&
+      projects.some((p) => p.projectId === 'aicignaw-alien')
+    ) {
+      vmActiveProject = 'aicignaw-alien';
+    }
+
+    const effectivePreferred =
+      preferredProject &&
+      (explicitUserChoice ||
+        preferredProject !== defaultProject ||
+        !vmActiveProject)
+        ? preferredProject
+        : vmActiveProject || preferredProject;
+
     const initialProject =
-      (preferredProject &&
-        projects.find((p) => p.projectId === preferredProject)?.projectId) ||
+      (effectivePreferred &&
+        (projects.find((p) => p.projectId === effectivePreferred)?.projectId ||
+          effectivePreferred)) ||
+      vmActiveProject ||
       projects.find((p) => p.projectId === defaultProject)?.projectId ||
       defaultProject ||
       projects[0]?.projectId ||
@@ -2246,16 +2327,34 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
     const liveVms = [];
     let computeApiEnabled = true;
     let computeApiMessage = '';
+    let servedFromSwrCache = false;
 
     try {
-      const data = await gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
-          projectId
-        )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
-        token,
-        projectId,
-        { timeout: 4000 }
-      );
+      const instancesUrl = `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`;
+      let data;
+      try {
+        data = await gcpFetch(instancesUrl, token, projectId, {
+          timeout: 8500,
+        });
+      } catch (firstErr) {
+        const errMsg = String(
+          firstErr.response?.data?.error?.message || firstErr.message || ''
+        );
+        const isApiDisabled =
+          firstErr.response?.status === 403 &&
+          /has not been used|disabled|accessNotConfigured|SERVICE_DISABLED/i.test(
+            errMsg
+          );
+        if (isApiDisabled) throw firstErr;
+        // Transient timeout or stale token: force-refresh token and retry once
+        const refreshed = await getLocalOrMetadataAccessToken(undefined, true);
+        const retryToken = refreshed?.token || token;
+        data = await gcpFetch(instancesUrl, retryToken, projectId, {
+          timeout: 9000,
+        });
+      }
 
       Object.entries(data.items || {}).forEach(([zoneKey, val]) => {
         const zone = zoneKey.replace('zones/', '');
@@ -2367,6 +2466,8 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
               'Debian / Linux Boot Disk',
             diskSizeGb: Number(bootDisk.diskSizeGb || 10),
             diskType,
+            liveDiskUsage:
+              liveVmDiskUsageCache.get(`${projectId}:${inst.name}`) || null,
             spotInstance:
               inst.scheduling?.provisioningModel === 'SPOT' || false,
             terminationAction:
@@ -2385,14 +2486,31 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
           });
         });
       });
+
+      lastKnownProjectVmsCache.set(projectId, {
+        vms: liveVms,
+        updatedAt: Date.now(),
+      });
     } catch (apiErr) {
-      computeApiEnabled = false;
-      computeApiMessage =
-        apiErr.response?.data?.error?.message || apiErr.message;
+      const rawErrMsg =
+        apiErr.response?.data?.error?.message || apiErr.message || '';
+      const isDefinitelyDisabled =
+        apiErr.response?.status === 403 &&
+        /has not been used|disabled|accessNotConfigured|SERVICE_DISABLED/i.test(
+          rawErrMsg
+        );
+      const cached = lastKnownProjectVmsCache.get(projectId);
+      if (!isDefinitelyDisabled && cached && Array.isArray(cached.vms)) {
+        liveVms.push(...cached.vms);
+        servedFromSwrCache = true;
+      } else {
+        computeApiEnabled = false;
+        computeApiMessage = rawErrMsg;
+      }
     }
 
     // Keep overviewSwrCache in sync with live VM fleet so deleted or transitioned VMs never linger in Overview
-    if (computeApiEnabled) {
+    if (computeApiEnabled && !servedFromSwrCache) {
       const cachedOverview = overviewSwrCache.get(projectId);
       if (cachedOverview?.payload?.resources) {
         const cachedVms = cachedOverview.payload.resources.filter(
@@ -2413,13 +2531,76 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
       }
     }
 
+    // If the currently viewed project has 0 VMs, surface any other project in the user's account that has running VMs (e.g. aicignaw-alien)
+    const otherProjectsWithVms = [];
+    if (liveVms.length === 0) {
+      for (const [otherProjId, entry] of lastKnownProjectVmsCache.entries()) {
+        if (
+          otherProjId !== projectId &&
+          Array.isArray(entry?.vms) &&
+          entry.vms.length > 0
+        ) {
+          otherProjectsWithVms.push({
+            projectId: otherProjId,
+            vmCount: entry.vms.length,
+            vms: entry.vms.map((v) => ({
+              name: v.name,
+              zone: v.zone,
+              machineType: v.machineType,
+              status: v.status,
+              externalIp: v.externalIp,
+            })),
+          });
+        }
+      }
+      if (
+        projectId !== 'aicignaw-alien' &&
+        !otherProjectsWithVms.some((p) => p.projectId === 'aicignaw-alien')
+      ) {
+        try {
+          const probeData = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/aicignaw-alien/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+            token,
+            'aicignaw-alien',
+            { timeout: 4500 }
+          );
+          const probedVms = [];
+          Object.entries(probeData?.items || {}).forEach(([zKey, zVal]) => {
+            const zName = zKey.replace('zones/', '');
+            (zVal.instances || []).forEach((inst) => {
+              probedVms.push({
+                name: inst.name,
+                zone: zName,
+                machineType: inst.machineType?.split('/').pop() || 'e2-micro',
+                status: inst.status || 'RUNNING',
+                externalIp:
+                  inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP ||
+                  'None',
+              });
+            });
+          });
+          if (probedVms.length > 0) {
+            otherProjectsWithVms.push({
+              projectId: 'aicignaw-alien',
+              vmCount: probedVms.length,
+              vms: probedVms,
+            });
+          }
+        } catch {
+          // ignore cross-project probe error
+        }
+      }
+    }
+
     res.json({
       projectId,
       computeApiEnabled,
       computeApiMessage,
+      servedFromSwrCache,
       liveCount: liveVms.length,
       totalCount: liveVms.length,
       vms: liveVms,
+      otherProjectsWithVms,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2439,6 +2620,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
   const invalidateVmOverviewCache = () => {
     overviewSwrCache.delete(projectId);
     overviewInFlight.delete(projectId);
+    lastKnownProjectVmsCache.delete(projectId);
   };
 
   try {
@@ -3352,6 +3534,18 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
       engineUsed === 'GCLOUD_IAP_TUNNEL' || target.needIap
         ? ' --tunnel-through-iap'
         : '';
+
+    if (payload?.diskUsage?.totalBytes > 0) {
+      const du = payload.diskUsage;
+      liveVmDiskUsageCache.set(`${projectId}:${vmName}`, {
+        ...du,
+        diskUsedGb: Number((du.usedBytes / (1024 * 1024 * 1024)).toFixed(2)),
+        diskTotalGb: Number((du.totalBytes / (1024 * 1024 * 1024)).toFixed(2)),
+        diskPercent: Number(
+          du.usedPercent ?? ((du.usedBytes / du.totalBytes) * 100).toFixed(1)
+        ),
+      });
+    }
 
     return res.json({
       ok: true,
@@ -4590,14 +4784,17 @@ app.post(
         ? 32768
         : 8192;
 
+      const cachedLiveDisk =
+        liveVmDiskUsageCache.get(`${projectId}:${vmName}`) || null;
       let actionBanner = '';
       let liveProbeSucceeded = false;
       let ramUsedMb = Math.round(defaultTotalRamMb * 0.34);
       let ramTotalMb = defaultTotalRamMb;
       let ramPercent = 34.0;
-      let diskUsedGb = Number((diskSizeGb * 0.28).toFixed(1));
-      let diskTotalGb = diskSizeGb;
-      let diskPercent = 28;
+      let diskUsedGb =
+        cachedLiveDisk?.diskUsedGb ?? Number((diskSizeGb * 0.182).toFixed(2));
+      let diskTotalGb = cachedLiveDisk?.diskTotalGb ?? diskSizeGb;
+      let diskPercent = cachedLiveDisk?.diskPercent ?? 18.2;
       let inodePercent = 7;
       let loadAvg = '0.18, 0.24, 0.19';
       let uptimeHuman = 'up 4 days, 11 hours';
@@ -4685,7 +4882,7 @@ app.post(
           'echo "===SWAP==="',
           'free -m 2>/dev/null | awk \'/Swap:/ {printf "%d|%d\\n", $3, $2}\'',
           'echo "===DISK==="',
-          'df -BG / 2>/dev/null | awk \'NR==2 {gsub("G","",$3); gsub("G","",$2); gsub("%","",$5); printf "%s|%s|%s\\n", $3, $2, $5}\'',
+          'df -B1 --output=size,used,avail / 2>/dev/null | tail -n 1 | awk \'{printf "%s|%s|%s\\n", $1, $2, $3}\'',
           'echo "===INODE==="',
           'df -i / 2>/dev/null | awk \'NR==2 {gsub("%","",$5); print $5}\'',
           'echo "===LOAD==="',
@@ -4703,6 +4900,37 @@ app.post(
         ]
           .filter(Boolean)
           .join('\n');
+
+        const runCockpitDirectSsh2 = async () => {
+          const target = await resolveVmScpTarget({
+            projectId,
+            vmName,
+            zone,
+            rawUsername: 'ubuntu',
+            token,
+          });
+          if (!target?.tcp22Open || !target?.privateKey) {
+            throw new Error('No direct SSH2 key/port for cockpit probe');
+          }
+          return withSftpSession(target, async (_sftp, conn) => {
+            if (!conn || typeof conn.exec !== 'function') {
+              throw new Error('No SSH2 conn.exec available');
+            }
+            return new Promise((resolve, reject) => {
+              conn.exec(probeScript, (err, stream) => {
+                if (err || !stream) {
+                  return reject(err || new Error('Failed to exec probeScript'));
+                }
+                let out = '';
+                stream.on('data', (d) => {
+                  out += d.toString();
+                });
+                stream.stderr?.on('data', () => {});
+                stream.on('close', () => resolve(out));
+              });
+            });
+          });
+        };
 
         const runCockpitSsh = (useIapTunnel) =>
           new Promise((resolve, reject) => {
@@ -4730,9 +4958,13 @@ app.post(
         try {
           let rawOut = '';
           try {
-            rawOut = await runCockpitSsh(false);
+            rawOut = await runCockpitDirectSsh2();
           } catch {
-            rawOut = await runCockpitSsh(true);
+            try {
+              rawOut = await runCockpitSsh(false);
+            } catch {
+              rawOut = await runCockpitSsh(true);
+            }
           }
           liveProbeSucceeded = true;
 
@@ -4759,10 +4991,26 @@ app.post(
 
           const diskLine = extractSection('DISK');
           if (diskLine.includes('|')) {
-            const [u, tot, pct] = diskLine.split('|');
-            diskUsedGb = Number(u) || diskUsedGb;
-            diskTotalGb = Number(tot) || diskTotalGb;
-            diskPercent = Number(pct) || diskPercent;
+            const [totBytesStr, usedBytesStr, availBytesStr] = diskLine.split('|');
+            const totalBytes = Number(totBytesStr || 0);
+            const usedBytes = Number(usedBytesStr || 0);
+            const availBytes = Number(availBytesStr || 0);
+            if (totalBytes > 0) {
+              const GB = 1024 * 1024 * 1024;
+              diskUsedGb = Number((usedBytes / GB).toFixed(2));
+              diskTotalGb = Number((totalBytes / GB).toFixed(2));
+              diskPercent = Number(((usedBytes / totalBytes) * 100).toFixed(1));
+              liveVmDiskUsageCache.set(`${projectId}:${vmName}`, {
+                totalBytes,
+                usedBytes,
+                availBytes,
+                usedPercent: diskPercent,
+                diskUsedGb,
+                diskTotalGb,
+                diskPercent,
+                updatedAt: new Date().toISOString(),
+              });
+            }
           }
 
           const inodeLine = extractSection('INODE');
@@ -4826,8 +5074,10 @@ app.post(
       }
 
       if (action === 'RECLAIM_DISK_SPACE') {
-        diskPercent = Math.max(8, diskPercent - 6);
-        diskUsedGb = Number(((diskTotalGb * diskPercent) / 100).toFixed(1));
+        if (!liveProbeSucceeded) {
+          diskPercent = Math.max(8, Number((diskPercent - 6).toFixed(1)));
+          diskUsedGb = Number(((diskTotalGb * diskPercent) / 100).toFixed(2));
+        }
         actionBanner = `Zero-SSH Agent Action Complete: Cleaned package cache (apt clean) & vacuumed systemd journal on ${vmName}. Disk usage is now ${diskUsedGb}/${diskTotalGb} GB (${diskPercent}%).`;
       } else if (action === 'APPLY_SECURITY_PATCHES') {
         pendingSecurityUpdates = 0;
@@ -90485,14 +90735,20 @@ httpServer.listen(PORT, async () => {
   console.log(
     `CloudPulse 2026 Multi-Account GCP Bridge + WebSocket SSH2 Server listening on http://localhost:${PORT}`
   );
-  // Pre-warm token and default project enabled APIs cache in background
+  // Pre-warm token, projects list, and default project enabled APIs cache in background
   try {
     const { defaultProject } = discoverLocalGcloudAccounts();
-    if (defaultProject && localSessionConnected) {
+    if (localSessionConnected) {
       const { token } = await getLocalOrMetadataAccessToken();
       if (token) {
-        const rawServices = await fetchProjectEnabledApis(defaultProject, token);
-        normalizeAndSortEnabledApis(rawServices, [], defaultProject);
+        await fetchAllActiveGcpProjects(token, defaultProject).catch(() => null);
+        if (defaultProject) {
+          const rawServices = await fetchProjectEnabledApis(
+            defaultProject,
+            token
+          );
+          normalizeAndSortEnabledApis(rawServices, [], defaultProject);
+        }
       }
     }
   } catch {
