@@ -2291,25 +2291,40 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
           });
           const startupScriptText = metaMap['startup-script'] || '';
           const installedMetaCsv = metaMap['cloudpulse-agents-installed'] || '';
+          // Only mark the GCE Agent as installed if it was explicitly installed via the 1-Time Agent Installer
+          // (which stamps cloudpulse-agents-updated-at / cloudpulse-agent-goldmine-installed and the bootstrap block),
+          // NOT merely from default VM creation flags.
+          const explicitlyInstalledViaAgentInstaller =
+            String(
+              metaMap['cloudpulse-agent-goldmine-installed'] || ''
+            ).toUpperCase() === 'TRUE' ||
+            Boolean(metaMap['cloudpulse-agents-updated-at']) ||
+            startupScriptText.includes(
+              '# --- CLOUDPULSE-GCE-AGENT-BOOTSTRAP-START ---'
+            );
           const opsAgentConfigured =
-            installedMetaCsv.includes('OPS_AGENT') ||
-            /google-cloud-ops-agent|add-google-cloud-ops-agent-repo\.sh/i.test(
-              startupScriptText
-            ) ||
-            metaMap['google-monitoring-enable'] === '1' ||
-            metaMap['google-logging-enable'] === '1';
+            explicitlyInstalledViaAgentInstaller &&
+            (installedMetaCsv.includes('OPS_AGENT') ||
+              /google-cloud-ops-agent|add-google-cloud-ops-agent-repo\.sh/i.test(
+                startupScriptText
+              ));
           const osConfigEnabled =
-            installedMetaCsv.includes('OS_CONFIG_AGENT') ||
-            String(metaMap['enable-osconfig'] || '').toUpperCase() === 'TRUE';
+            explicitlyInstalledViaAgentInstaller &&
+            (installedMetaCsv.includes('OS_CONFIG_AGENT') ||
+              String(metaMap['enable-osconfig'] || '').toUpperCase() ===
+                'TRUE');
           const guestAttributesEnabled =
+            explicitlyInstalledViaAgentInstaller &&
             String(metaMap['enable-guest-attributes'] || '').toUpperCase() ===
-            'TRUE';
+              'TRUE';
           const otelConfigured =
-            installedMetaCsv.includes('OTEL_COLLECTOR') ||
-            /otelcol|opentelemetry/i.test(startupScriptText);
+            explicitlyInstalledViaAgentInstaller &&
+            (installedMetaCsv.includes('OTEL_COLLECTOR') ||
+              /otelcol|opentelemetry/i.test(startupScriptText));
           const dockerSqlProxyConfigured =
-            installedMetaCsv.includes('DOCKER_CLOUDSQL_PROXY') ||
-            /cloud-sql-proxy|cloud_sql_proxy/i.test(startupScriptText);
+            explicitlyInstalledViaAgentInstaller &&
+            (installedMetaCsv.includes('DOCKER_CLOUDSQL_PROXY') ||
+              /cloud-sql-proxy|cloud_sql_proxy/i.test(startupScriptText));
           const installedAgentsList = Array.from(
             new Set([
               ...(opsAgentConfigured ? ['OPS_AGENT'] : []),
@@ -2319,6 +2334,7 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
             ])
           );
           const agentTelemetryStatus = {
+            agentGoldmineInstalled: explicitlyInstalledViaAgentInstaller,
             opsAgentConfigured,
             osConfigEnabled,
             guestAttributesEnabled,
@@ -4154,6 +4170,7 @@ async function installGceAgentsOnSingleVm({
   metaMap.set('enable-guest-attributes', 'TRUE');
   metaMap.set('google-monitoring-enable', '1');
   metaMap.set('google-logging-enable', '1');
+  metaMap.set('cloudpulse-agent-goldmine-installed', 'TRUE');
   metaMap.set('cloudpulse-agents-installed', combinedAgents.join(','));
   metaMap.set('cloudpulse-agents-updated-at', nowIso);
 
@@ -4318,6 +4335,7 @@ async function installGceAgentsOnSingleVm({
   }
 
   const agentTelemetryStatus = {
+    agentGoldmineInstalled: true,
     opsAgentConfigured: combinedAgents.includes('OPS_AGENT'),
     osConfigEnabled: true,
     guestAttributesEnabled: true,
@@ -4500,6 +4518,28 @@ app.post(
       );
 
       const vmStatus = inst?.status || 'RUNNING';
+      const rawMetaItems = Array.isArray(inst?.metadata?.items)
+        ? inst.metadata.items
+        : [];
+      const instMeta = {};
+      rawMetaItems.forEach((m) => {
+        if (m?.key) {
+          instMeta[String(m.key).toLowerCase()] = String(m.value ?? '');
+        }
+      });
+      const isAgentExplicitlyInstalled =
+        String(
+          instMeta['cloudpulse-agent-goldmine-installed'] || ''
+        ).toUpperCase() === 'TRUE' ||
+        Boolean(instMeta['cloudpulse-agents-updated-at']) ||
+        String(instMeta['startup-script'] || '').includes(
+          '# --- CLOUDPULSE-GCE-AGENT-BOOTSTRAP-START ---'
+        );
+      if (!isAgentExplicitlyInstalled) {
+        return res.status(409).json({
+          error: `GCE Guest Agent is not installed on ${vmName} yet. Click "⚡ 1-Time Install GCE Agent" first to unlock inside-VM telemetry & Goldmine features.`,
+        });
+      }
       const machineShort =
         inst?.machineType?.split('/').pop() || 'e2-medium';
       const diskSizeGb = Number(inst?.disks?.[0]?.diskSizeGb || 20);
@@ -7568,10 +7608,6 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         metadataItems.push({ key: 'enable-osconfig', value: 'TRUE' });
         metadataItems.push({ key: 'google-monitoring-enable', value: '1' });
         metadataItems.push({ key: 'google-logging-enable', value: '1' });
-        metadataItems.push({
-          key: 'cloudpulse-agents-installed',
-          value: 'OPS_AGENT,OS_CONFIG_AGENT',
-        });
       }
       if (sshPublicKey) {
         metadataItems.push({

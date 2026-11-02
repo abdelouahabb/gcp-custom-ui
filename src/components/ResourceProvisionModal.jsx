@@ -16,6 +16,10 @@ import {
   Network,
   Shield,
   Terminal,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import VisualCronScheduleBuilder, {
   describeCronInPlainEnglish,
@@ -142,7 +146,7 @@ export default function ResourceProvisionModal({
   const [enableOsLogin2fa, setEnableOsLogin2fa] = useState(false);
   const [blockProjectSshKeys, setBlockProjectSshKeys] = useState(false);
   const [enableSerialPort, setEnableSerialPort] = useState(false);
-  const [installOpsAgent, setInstallOpsAgent] = useState(true);
+  const [installOpsAgent, setInstallOpsAgent] = useState(false);
   const [sshPublicKey, setSshPublicKey] = useState('');
   const [deployContainerImage, setDeployContainerImage] = useState('');
   const [enableDisplayDevice, setEnableDisplayDevice] = useState(false);
@@ -151,6 +155,7 @@ export default function ResourceProvisionModal({
   const [startupScript, setStartupScript] = useState('');
   const [vmCustomLabels, setVmCustomLabels] = useState('env=prod,cost_center=compute,managed_by=cloudpulse');
   const [vmBlueprintCodeTab, setVmBlueprintCodeTab] = useState('GCLOUD_CLI');
+  const [showVmBlueprintsBottom, setShowVmBlueprintsBottom] = useState(false);
 
   const GCP_REGION_ZONES = {
     'us-east1': {
@@ -4499,134 +4504,6 @@ resource "google_compute_router_nat" "cloud_nat" {
 
             return (
               <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-3">
-                {/* 1-Tap Production GCE Workload & Compliance Blueprints */}
-                <div className="p-3 rounded-[10px] border border-blue-500/30 bg-blue-500/[0.05] space-y-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                      1-Tap Google Compute Engine Production Blueprints (Instant Architecture Presets)
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
-                      Active Spec: {effectiveMachineType} · {zone} · {isArmArch ? 'Arm64' : 'x86_64'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-1.5">
-                    {[
-                      {
-                        id: 'always-free-micro',
-                        title: '$0.00/mo Always Free',
-                        desc: 'e2-micro · us-central1 · 30GB pd-standard HDD · OS Login',
-                      },
-                      {
-                        id: 'zero-trust-iap-bastion',
-                        title: 'Zero-IP IAP Bastion',
-                        desc: 'e2-medium · --no-address · IAP Tunnel · OS Login 2FA · Shielded',
-                      },
-                      {
-                        id: 'c4-gen5-low-latency',
-                        title: 'C4 Gen-5 + Hyperdisk',
-                        desc: 'c4-standard-4 Emerald Rapids · 12k IOPS Hyperdisk · 200G gVNIC',
-                      },
-                      {
-                        id: 'confidential-sev-snp',
-                        title: 'Confidential SEV-SNP',
-                        desc: 'n2d-standard-4 AMD EPYC · RAM Encryption · Zero Public IP',
-                      },
-                      {
-                        id: 'gpu-ai-inference-l4',
-                        title: 'NVIDIA L4 + NVMe AI',
-                        desc: 'g2-standard-8 (24GB L4) + 375GB Local NVMe + PyTorch/vLLM',
-                      },
-                      {
-                        id: 'cos-container-appliance',
-                        title: 'Arm64 COS Docker Box',
-                        desc: 't2a-standard-2 Ampere · Container-Optimized OS · Auto-Run Image',
-                      },
-                    ].map((bp) => {
-                      const active = vmBlueprint === bp.id;
-                      return (
-                        <button
-                          key={bp.id}
-                          type="button"
-                          onClick={() => applyVmBlueprint(bp.id)}
-                          className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
-                            active
-                              ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
-                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
-                          }`}
-                        >
-                          <div className="text-[11px] font-bold flex items-center justify-between gap-1">
-                            <span className="truncate">{bp.title}</span>
-                            {active && (
-                              <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 shrink-0">
-                                ACTIVE
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[9.5px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
-                            {bp.desc}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Quick External IPv4 Address Policy Bar (None --no-address | Ephemeral | Reserved Static) */}
-                  <div className="pt-2 border-t border-blue-500/20 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10.5px] font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                        External IPv4 Address Policy:
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
-                        {externalIpMode === 'NONE' || !externalIpEnabled
-                          ? '🔒 Zero Public IP (--no-address · Private VPC + Cloud IAP SSH · Saves $3.65/mo)'
-                          : externalIpMode === 'STATIC'
-                          ? `📌 Static Reserved IPv4 (${staticExternalIp || 'enter IP or address name'} · $3.65/mo)`
-                          : '🌐 Ephemeral Public IPv4 (ONE_TO_ONE_NAT · $3.65/mo)'}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {[
-                        {
-                          mode: 'NONE',
-                          label: '🔒 None (--no-address · $0 IP)',
-                          activeCls:
-                            'bg-emerald-600 border-emerald-600 text-white shadow-sm',
-                        },
-                        {
-                          mode: 'EPHEMERAL',
-                          label: '🌐 Ephemeral Public IPv4',
-                          activeCls:
-                            'bg-blue-600 border-blue-600 text-white shadow-sm',
-                        },
-                        {
-                          mode: 'STATIC',
-                          label: '📌 Static Reserved IPv4',
-                          activeCls:
-                            'bg-violet-600 border-violet-600 text-white shadow-sm',
-                        },
-                      ].map((opt) => {
-                        const isSelected =
-                          (opt.mode === 'NONE' && (!externalIpEnabled || externalIpMode === 'NONE')) ||
-                          (opt.mode !== 'NONE' && externalIpEnabled && externalIpMode === opt.mode);
-                        return (
-                          <button
-                            key={opt.mode}
-                            type="button"
-                            onClick={() => handleSelectExternalIpMode(opt.mode)}
-                            className={`px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-all cursor-pointer ${
-                              isSelected
-                                ? opt.activeCls
-                                : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
                 {/* STEP 1: Machine Series, Predefined vs Custom vCPU/RAM Sizer & GPU Accelerators */}
                 <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -5821,6 +5698,170 @@ resource "google_compute_router_nat" "cloud_nat" {
                       ? JSON.stringify(vmRestPayloadPreview, null, 2)
                       : vmTerraformPreview}
                   </pre>
+                </div>
+
+                {/* COLLAPSED AT BOTTOM BY DEFAULT: 1-Tap Production GCE Blueprints & External IPv4 Policy */}
+                <div className="rounded-[10px] border border-blue-500/35 bg-blue-500/[0.04] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowVmBlueprintsBottom((v) => !v)}
+                    className="w-full px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-left hover:bg-blue-500/[0.08] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Zap className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                        1-Tap Production GCE Blueprints (Instant Architecture Presets)
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                        Active Spec: {effectiveMachineType} · {zone} ·{' '}
+                        {isArmArch ? 'Arm64' : 'x86_64'}
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45">
+                      <span>
+                        {showVmBlueprintsBottom
+                          ? 'Collapse Blueprints'
+                          : 'Expand 6 Production Blueprints'}
+                      </span>
+                      {showVmBlueprintsBottom ? (
+                        <ChevronUp className="w-3 h-3" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3" />
+                      )}
+                    </span>
+                  </button>
+
+                  {showVmBlueprintsBottom && (
+                    <div className="p-3 pt-2 border-t border-blue-500/20 space-y-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-1.5">
+                        {[
+                          {
+                            id: 'always-free-micro',
+                            title: '$0.00/mo Always Free',
+                            desc: 'e2-micro · us-central1 · 30GB pd-standard HDD · OS Login',
+                          },
+                          {
+                            id: 'zero-trust-iap-bastion',
+                            title: 'Zero-IP IAP Bastion',
+                            desc: 'e2-medium · --no-address · IAP Tunnel · OS Login 2FA · Shielded',
+                          },
+                          {
+                            id: 'c4-gen5-low-latency',
+                            title: 'C4 Gen-5 + Hyperdisk',
+                            desc: 'c4-standard-4 Emerald Rapids · 12k IOPS Hyperdisk · 200G gVNIC',
+                          },
+                          {
+                            id: 'confidential-sev-snp',
+                            title: 'Confidential SEV-SNP',
+                            desc: 'n2d-standard-4 AMD EPYC · RAM Encryption · Zero Public IP',
+                          },
+                          {
+                            id: 'gpu-ai-inference-l4',
+                            title: 'NVIDIA L4 + NVMe AI',
+                            desc: 'g2-standard-8 (24GB L4) + 375GB Local NVMe + PyTorch/vLLM',
+                          },
+                          {
+                            id: 'cos-container-appliance',
+                            title: 'Arm64 COS Docker Box',
+                            desc: 't2a-standard-2 Ampere · Container-Optimized OS · Auto-Run Image',
+                          },
+                        ].map((bp) => {
+                          const active = vmBlueprint === bp.id;
+                          return (
+                            <button
+                              key={bp.id}
+                              type="button"
+                              onClick={() => applyVmBlueprint(bp.id)}
+                              className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
+                                active
+                                  ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                              }`}
+                            >
+                              <div className="text-[11px] font-bold flex items-center justify-between gap-1">
+                                <span className="truncate">{bp.title}</span>
+                                {active && (
+                                  <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 shrink-0">
+                                    ACTIVE
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[9.5px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                                {bp.desc}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="pt-2 border-t border-blue-500/20 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10.5px] font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                            External IPv4 Address Policy:
+                          </span>
+                          <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                            {externalIpMode === 'NONE' || !externalIpEnabled
+                              ? 'Zero Public IP (--no-address · Private VPC + Cloud IAP SSH · Saves $3.65/mo)'
+                              : externalIpMode === 'STATIC'
+                              ? `Static Reserved IPv4 (${
+                                  staticExternalIp || 'enter IP or address name'
+                                } · $3.65/mo)`
+                              : 'Ephemeral Public IPv4 (ONE_TO_ONE_NAT · $3.65/mo)'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {[
+                            {
+                              mode: 'NONE',
+                              label: 'None (--no-address · $0 IP)',
+                              icon: <Lock className="w-2.5 h-2.5" />,
+                              activeCls:
+                                'bg-emerald-600 border-emerald-600 text-white shadow-sm',
+                            },
+                            {
+                              mode: 'EPHEMERAL',
+                              label: 'Ephemeral Public IPv4',
+                              icon: <Globe className="w-2.5 h-2.5" />,
+                              activeCls:
+                                'bg-blue-600 border-blue-600 text-white shadow-sm',
+                            },
+                            {
+                              mode: 'STATIC',
+                              label: 'Static Reserved IPv4',
+                              icon: <ShieldCheck className="w-2.5 h-2.5" />,
+                              activeCls:
+                                'bg-violet-600 border-violet-600 text-white shadow-sm',
+                            },
+                          ].map((opt) => {
+                            const isSelected =
+                              (opt.mode === 'NONE' &&
+                                (!externalIpEnabled ||
+                                  externalIpMode === 'NONE')) ||
+                              (opt.mode !== 'NONE' &&
+                                externalIpEnabled &&
+                                externalIpMode === opt.mode);
+                            return (
+                              <button
+                                key={opt.mode}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectExternalIpMode(opt.mode)
+                                }
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? opt.activeCls
+                                    : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                                }`}
+                              >
+                                {opt.icon}
+                                <span>{opt.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );

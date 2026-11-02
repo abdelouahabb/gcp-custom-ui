@@ -28,6 +28,14 @@ import {
   AlertTriangle,
   FolderOpen,
   Search,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  DollarSign,
+  Activity,
+  Globe,
+  Rocket,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
@@ -37,7 +45,7 @@ import VisualCronScheduleBuilder, {
 
 const SSH_QUICK_CHIPS = [
   {
-    label: '⚡ 1-Click Ops Agent Install',
+    label: '1-Click Ops Agent Install',
     cmd: 'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl is-active google-cloud-ops-agent',
   },
   { label: 'Serial Console Logs (REST API)', cmd: 'serial-console' },
@@ -348,6 +356,12 @@ export default function VmFleetAndSsh({
   const [agentCockpitBusyByVm, setAgentCockpitBusyByVm] = useState({});
   const [openAgentCockpitTabByVm, setOpenAgentCockpitTabByVm] = useState({});
 
+  // Enterprise VM Card Height, Accordion, Agent Drawer Collapse & Hide Engine
+  const [collapsedVmMap, setCollapsedVmMap] = useState({});
+  const [autoAccordionVmMode, setAutoAccordionVmMode] = useState(true);
+  const [collapsedAgentSectionByVm, setCollapsedAgentSectionByVm] = useState({});
+  const [hiddenVmNames, setHiddenVmNames] = useState([]);
+
   const isVmAgentInstalled = useCallback(
     (vm) => {
       if (!vm?.name) return false;
@@ -355,7 +369,9 @@ export default function VmFleetAndSsh({
       const statusObj =
         receipt?.agentTelemetryStatus || vm.agentTelemetryStatus || {};
       return Boolean(
-        statusObj.opsAgentConfigured && statusObj.osConfigEnabled
+        statusObj.agentGoldmineInstalled &&
+          statusObj.opsAgentConfigured &&
+          statusObj.osConfigEnabled
       );
     },
     [agentInstallReceiptByVm]
@@ -531,7 +547,7 @@ export default function VmFleetAndSsh({
             shieldedIntegrityMonitoring: true,
             enableOsLogin: Boolean(tpl.enableOsLogin),
             blockProjectSshKeys: Boolean(tpl.blockProjectSshKeys),
-            installOpsAgent: true,
+            installOpsAgent: false,
             deployContainerImage: tpl.containerDeployImage || tpl.deployContainerImage || '',
             containerDeployImage: tpl.containerDeployImage || '',
             startupScript: tpl.startupScript || '',
@@ -1371,7 +1387,7 @@ export default function VmFleetAndSsh({
                       {allVmsAgentReady ? (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>✓ GCE Agent Installed ({vms.length}/{vms.length} VMs)</span>
+                          <span>GCE Agent Installed ({vms.length}/{vms.length} VMs)</span>
                         </>
                       ) : installingVmAgent ? (
                         <>
@@ -1382,7 +1398,7 @@ export default function VmFleetAndSsh({
                         <>
                           <Zap className="w-3.5 h-3.5" />
                           <span>
-                            ⚡ 1-Time Install GCE Agent (
+                            1-Time Install GCE Agent (
                             {pendingAgentVms.length === 1
                               ? pendingAgentVms[0].name
                               : `${pendingAgentVms.length} VMs`}
@@ -1468,112 +1484,6 @@ export default function VmFleetAndSsh({
               <PlusCircle className="w-4 h-4" />
               <span>+ Open 6-Stage GCE VM Architect</span>
             </button>
-          </div>
-        </div>
-
-        {/* 1-Tap Production GCE Blueprints Quick-Provision Strip */}
-        <div className="pt-2.5 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-              ⚡ 1-Tap Production GCE Blueprints (Instant Live Provisioning or Customize in 6-Stage Architect)
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-mono text-zinc-500">
-                Public IPv4 Mode:
-              </span>
-              {[
-                { id: 'DEFAULT', label: 'Blueprint Default' },
-                { id: 'NO_PUBLIC_IP', label: '🔒 No Public IP (--no-address)' },
-                { id: 'EPHEMERAL_PUBLIC_IP', label: '🌐 Ephemeral Public IP' },
-              ].map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setQuickDeployIpMode(m.id)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
-                    quickDeployIpMode === m.id
-                      ? m.id === 'NO_PUBLIC_IP'
-                        ? 'bg-emerald-600 border-emerald-600 text-white'
-                        : 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {QUICK_VM_TEMPLATES.map((tpl) => {
-              const isDeploying = quickDeployingLabel === tpl.label;
-              const effectiveTplPublicIp =
-                quickDeployIpMode === 'NO_PUBLIC_IP'
-                  ? false
-                  : quickDeployIpMode === 'EPHEMERAL_PUBLIC_IP'
-                  ? true
-                  : tpl.externalIpEnabled !== false;
-              return (
-                <div
-                  key={tpl.id || tpl.label}
-                  className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 transition-colors flex flex-col justify-between gap-2"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                        {tpl.label}
-                      </span>
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0">
-                        {tpl.badge}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                      {tpl.desc}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/80">
-                    <span className="text-[10px] font-mono text-zinc-500 truncate">
-                      {tpl.machineType} · {tpl.diskSizeGb}GB ·{' '}
-                      <span
-                        className={
-                          effectiveTplPublicIp
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-emerald-600 dark:text-emerald-400 font-bold'
-                        }
-                      >
-                        {effectiveTplPublicIp ? '🌐 Public IP' : '🔒 --no-address'}
-                      </span>
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={onOpenProvisionVm}
-                        className="px-2 py-1 rounded text-[10px] font-mono font-semibold bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                      >
-                        Customize
-                      </button>
-                      <button
-                        type="button"
-                        disabled={Boolean(quickDeployingLabel)}
-                        onClick={() => handleQuickDeployVm(tpl)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 cursor-pointer"
-                      >
-                        {isDeploying ? (
-                          <>
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                            <span>Deploying...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3 h-3" />
-                            <span>1-Click Launch</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
 
@@ -1740,13 +1650,16 @@ export default function VmFleetAndSsh({
 
       {powerError && !onShowError && (
         <div className="fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl bg-zinc-950/95 border border-red-500/60 text-xs font-mono text-red-200 flex items-center justify-between gap-3 shadow-2xl">
-          <span>⚠ {powerError}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <span>{powerError}</span>
+          </span>
           <button
             type="button"
             onClick={() => setRawPowerError(null)}
             className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer shrink-0"
           >
-            ✕ Dismiss
+            Dismiss
           </button>
         </div>
       )}
@@ -1787,57 +1700,173 @@ export default function VmFleetAndSsh({
         </div>
       ) : (
         <div className="space-y-2.5">
-          {/* Asymmetric Master-Detail Workspace Split Switcher */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
-            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-              <Server className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                Master-Detail Workspace Layout:
-              </span>
-              <span className="hidden sm:inline text-zinc-500">
-                {openMigrateCloudRunVm || openTunnelVm
-                  ? 'Auto-expanded 50% / 50% while VM drawer is open'
-                  : splitLayoutMode === '4_8'
-                  ? 'Compact VM Sidebar (33%) · Wide SSH & SCP Workbench (67%)'
-                  : splitLayoutMode === '5_7'
-                  ? 'Balanced VM Sidebar (42%) · SSH & SCP Workbench (58%)'
-                  : 'Equal Split (50% / 50%)'}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: '4_8', label: '33% VM / 67% SSH (Recommended)' },
-                { id: '5_7', label: '42% / 58%' },
-                { id: '6_6', label: '50% / 50%' },
-              ].map((opt) => (
+          {/* Asymmetric Master-Detail Workspace Split Switcher + Enterprise VM Accordion / Collapse / Hide Controls */}
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2 text-[11px] font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 flex-wrap">
+                <Server className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  Enterprise Fleet Sync &amp; Height Control:
+                </span>
                 <button
-                  key={opt.id}
                   type="button"
-                  onClick={() => {
-                    setSshTerminalExpanded(false);
-                    setSplitLayoutMode(opt.id);
-                  }}
-                  className={`px-2 py-1 rounded-md font-bold transition-colors cursor-pointer ${
-                    !sshTerminalExpanded && splitLayoutMode === opt.id
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
+                  onClick={() => setAutoAccordionVmMode((v) => !v)}
+                  title="When enabled, opening one VM card automatically collapses the others into compact 1-line rows so the left VM fleet and right SSH/SFTP terminal stay 100% height-synced"
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                    autoAccordionVmMode
+                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500'
                   }`}
                 >
-                  {opt.label}
+                  <span>
+                    {autoAccordionVmMode
+                      ? '● Smart 1-VM Focus (Synced Height)'
+                      : 'Smart 1-VM Focus (Off)'}
+                  </span>
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setSshTerminalExpanded((prev) => !prev)}
-                className={`px-2 py-1 rounded-md font-bold transition-colors cursor-pointer ${
-                  sshTerminalExpanded
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
-                }`}
-              >
-                {sshTerminalExpanded ? 'Exit Full-Width (100%)' : '100% Full SSH'}
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMap = {};
+                    filteredVms.forEach((v) => {
+                      nextMap[v.name] = true;
+                    });
+                    setCollapsedVmMap(nextMap);
+                  }}
+                  title="Collapse all VM cards into sleek 1-line enterprise rows (~52px height each)"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 cursor-pointer"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                  <span>Collapse All ({filteredVms.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAutoAccordionVmMode(false);
+                    const nextMap = {};
+                    filteredVms.forEach((v) => {
+                      nextMap[v.name] = false;
+                    });
+                    setCollapsedVmMap(nextMap);
+                  }}
+                  title="Expand all VM cards simultaneously"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 cursor-pointer"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                  <span>Expand All</span>
+                </button>
+
+                {hiddenVmNames.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHiddenVmNames([])}
+                    title="Restore all hidden VMs back into the workspace view"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 cursor-pointer"
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Show Hidden VMs ({hiddenVmNames.length})</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: '4_8', label: '33% VM / 67% SSH' },
+                  { id: '5_7', label: '42% / 58%' },
+                  { id: '6_6', label: '50% / 50%' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setSshTerminalExpanded(false);
+                      setSplitLayoutMode(opt.id);
+                    }}
+                    className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                      !sshTerminalExpanded && splitLayoutMode === opt.id
+                        ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                        : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSshTerminalExpanded((prev) => !prev)}
+                  className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                    sshTerminalExpanded
+                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
+                  }`}
+                >
+                  {sshTerminalExpanded ? 'Exit Full-Width (100%)' : '100% Full SSH'}
+                </button>
+              </div>
             </div>
+
+            {/* Quick Enterprise VM Jump & Sync Bar (Syncs Left Card Focus + Right SSH/SFTP Target in 1 Click) */}
+            {filteredVms.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-zinc-200/80 dark:border-zinc-800/80">
+                <span className="text-[10px] font-bold uppercase text-zinc-500">
+                  Quick Focus VM (Left + Right Sync):
+                </span>
+                {filteredVms.map((v) => {
+                  const isHidden = hiddenVmNames.includes(v.name);
+                  const focusedTargetName =
+                    activeSshVm?.name ||
+                    scpTargetVmName ||
+                    filteredVms[0]?.name;
+                  const isReadyOnRightTab = v.name === focusedTargetName;
+                  const isExp =
+                    collapsedVmMap[v.name] !== undefined
+                      ? !collapsedVmMap[v.name]
+                      : false;
+                  return (
+                    <button
+                      key={v.id || v.name}
+                      type="button"
+                      onClick={() => {
+                        if (isHidden) {
+                          setHiddenVmNames((prev) =>
+                            prev.filter((n) => n !== v.name)
+                          );
+                        }
+                        setScpTargetVmName(v.name);
+                      }}
+                      title={`Click to set ${v.name} (${v.zone}) as the Ready VM on the Right SSH/SFTP Workbench (double-click or click Expand on its row to open the full card)`}
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        isHidden
+                          ? 'bg-zinc-200/70 dark:bg-zinc-800/70 text-zinc-400 border border-dashed border-zinc-400 line-through'
+                          : isReadyOnRightTab
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          v.status === 'RUNNING'
+                            ? 'bg-emerald-400'
+                            : 'bg-zinc-400'
+                        }`}
+                      />
+                      <span>{v.name}</span>
+                      <span className="text-[9px] opacity-85">
+                        {isHidden
+                          ? '(Hidden)'
+                          : isReadyOnRightTab
+                          ? '● Ready on Right →'
+                          : isExp
+                          ? '● Expanded'
+                          : '▸ Collapsed'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
@@ -1854,9 +1883,11 @@ export default function VmFleetAndSsh({
                   : splitLayoutMode === '5_7'
                   ? 'xl:col-span-5'
                   : 'xl:col-span-4'
-              } space-y-3 transition-all duration-200`}
+              } space-y-2.5 xl:max-h-[calc(100vh-110px)] xl:overflow-y-auto xl:pr-1 transition-all duration-200`}
             >
-              {filteredVms.map((vm) => {
+              {filteredVms
+                .filter((vm) => !hiddenVmNames.includes(vm.name))
+                .map((vm, vmIdx) => {
                 const pendingOp = pendingOps[vm.name];
                 const isDeleting =
                   pendingOp?.type === 'DELETING' ||
@@ -1889,6 +1920,188 @@ export default function VmFleetAndSsh({
                 const vmReg =
                   vm.region || vm.zone.split('-').slice(0, 2).join('-');
 
+                const focusedTargetName =
+                  activeSshVm?.name ||
+                  scpTargetVmName ||
+                  filteredVms[0]?.name;
+                const isReadyOnRightTab =
+                  !isDeleting && vm.name === focusedTargetName;
+                const isVmCollapsed =
+                  collapsedVmMap[vm.name] !== undefined
+                    ? Boolean(collapsedVmMap[vm.name])
+                    : true;
+
+                const handleToggleVmCollapse = (forceExpand = null) => {
+                  const nextExpanded =
+                    forceExpand !== null ? forceExpand : isVmCollapsed;
+                  if (nextExpanded) {
+                    setScpTargetVmName(vm.name);
+                  }
+                  setCollapsedVmMap((prev) => {
+                    if (autoAccordionVmMode && nextExpanded) {
+                      const next = {};
+                      filteredVms.forEach((item) => {
+                        next[item.name] = item.name !== vm.name;
+                      });
+                      return next;
+                    }
+                    return {
+                      ...prev,
+                      [vm.name]: !nextExpanded,
+                    };
+                  });
+                };
+
+                // SLEEK 52px SINGLE-LINE COLLAPSED ENTERPRISE VM ROW (All Collapsed by Default + Highlights Ready VM on Right!)
+                if (isVmCollapsed) {
+                  const hasOpsAndOs = isVmAgentInstalled(vm);
+                  return (
+                    <div
+                      key={vm.id}
+                      onClick={() => setScpTargetVmName(vm.name)}
+                      className={`group relative overflow-hidden rounded-xl px-3.5 py-2.5 transition-all duration-200 cursor-pointer flex flex-wrap items-center justify-between gap-2 ${
+                        isDeleting
+                          ? 'bg-white dark:bg-[#202124] border border-red-500/40 opacity-65'
+                          : isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal
+                          ? 'bg-blue-500/[0.06] dark:bg-blue-500/[0.11] border-2 border-blue-500 ring-2 ring-blue-500/25 shadow-sm'
+                          : 'bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 shadow-2xs'
+                      }`}
+                    >
+                      {(isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal) && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500" />
+                      )}
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap pl-1">
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                            isDeleting
+                              ? 'bg-red-500 animate-ping'
+                              : isTransitional
+                              ? 'bg-amber-500 animate-ping'
+                              : isRunning
+                              ? 'bg-emerald-500 animate-pulse'
+                              : 'bg-zinc-500'
+                          }`}
+                        />
+                        <span className="text-xs font-bold font-mono text-zinc-950 dark:text-zinc-50 truncate">
+                          {vm.name}
+                        </span>
+                        {(isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal) && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[9px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-2xs"
+                            title={`${vm.name} is currently selected and ready on the right SSH / SFTP workbench`}
+                          >
+                            <span>● READY ON RIGHT TAB →</span>
+                          </span>
+                        )}
+                        <span
+                          className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                            isRunning
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          {effectiveStatus}
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                          {vm.zone} · {vm.machineType}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full border ${
+                            hasOpsAndOs
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-300 dark:border-zinc-700'
+                          }`}
+                        >
+                          {hasOpsAndOs ? (
+                            <>
+                              <Check className="w-2.5 h-2.5" />
+                              <span>Agent Ready</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>No Agent</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      <div
+                        className="flex items-center gap-1.5 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={() => {
+                            if (isSshFocusedInTerminal) {
+                              setActiveSshVm(null);
+                            } else {
+                              setActiveSshVm(vm);
+                              setScpTargetVmName(vm.name);
+                              setTerminalViewMode('LIVE_SSH_PTY');
+                              setOpenSshTrigger((n) => n + 1);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            isSshFocusedInTerminal
+                              ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                              : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                          }`}
+                          title={`Connect SSH terminal to ${vm.name}`}
+                        >
+                          {isSshFocusedInTerminal ? '● SSH ON' : 'SSH'}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={() => {
+                            if (isScpActiveForVm) {
+                              setScpTargetVmName('');
+                              setTerminalViewMode('LIVE_SSH_PTY');
+                              setOpenSshTrigger((n) => n + 1);
+                            } else {
+                              setScpTargetVmName(vm.name);
+                              setTerminalViewMode('SCP_FILE_MANAGER');
+                              setOpenScpTrigger((n) => n + 1);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            isScpActiveForVm
+                              ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                              : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                          }`}
+                          title={`Open SCP / SFTP File Studio for ${vm.name}`}
+                        >
+                          {isScpActiveForVm ? '● SFTP ON' : 'SFTP'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleVmCollapse(true)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10 cursor-pointer"
+                          title={`Expand full VM controls & Agent Goldmine for ${vm.name}`}
+                        >
+                          <span>Expand</span>
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHiddenVmNames((prev) => [...prev, vm.name])
+                          }
+                          className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                          title={`Temporarily hide ${vm.name} from the workspace list`}
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={vm.id}
@@ -1897,11 +2110,14 @@ export default function VmFleetAndSsh({
                         ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
                         : isTransitional
                         ? 'border-amber-500/40 opacity-85'
-                        : isScpActiveForVm || isSshFocusedInTerminal
-                        ? 'border-blue-500 ring-1 ring-blue-500/40'
+                        : isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal
+                        ? 'border-2 border-blue-500 ring-2 ring-blue-500/25'
                         : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
                     }`}
                   >
+                  {(isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal) && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500" />
+                  )}
                   {/* Animated Top Progress Strip during GCP Zonal Operation */}
                   {isTransitional && (
                     <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
@@ -1937,146 +2153,180 @@ export default function VmFleetAndSsh({
                   )}
 
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            isDeleting
-                              ? 'bg-red-500 animate-ping'
-                              : isTransitional
-                              ? 'bg-amber-500 animate-ping'
-                              : isRunning
-                              ? 'bg-emerald-500 animate-pulse'
-                              : 'bg-zinc-500'
-                          }`}
-                        />
-                        <h4
-                          className={`text-sm font-bold font-mono ${
-                            isDeleting
-                              ? 'line-through text-zinc-400 dark:text-zinc-500'
-                              : 'text-zinc-950 dark:text-zinc-50'
-                          }`}
-                        >
-                          {vm.name}
-                        </h4>
-                        <span
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                            isDeleting
-                              ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
-                              : isTransitional
-                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                              : isRunning
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                              : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                          }`}
-                        >
-                          {effectiveStatus}
-                        </span>
-
-                        {vm.spotInstance ? (
-                          <span className="text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
-                            SPOT VM
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
-                            STANDARD VM
-                          </span>
-                        )}
-
-                        {vm.shieldedVm && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
-                            <ShieldCheck className="w-3 h-3" />
-                            <span>SHIELDED</span>
-                          </span>
-                        )}
-
-                        {(() => {
-                          const acc = getVmAcceleratorProfile(vm);
-                          if (acc.hasGpu) {
-                            const label =
-                              vm.guestAccelerators?.length > 0
-                                ? `${vm.guestAccelerators[0].count}x ${vm.guestAccelerators[0].type}`
-                                : acc.types[0] || 'NVIDIA GPU';
-                            return (
-                              <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full">
-                                GPU: {label}
-                              </span>
-                            );
-                          }
-                          if (acc.hasTpu) {
-                            const label = acc.types[0] || 'Cloud TPU';
-                            return (
-                              <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-full">
-                                TPU: {label}
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 px-1.5 py-0.5 rounded-full">
-                              CPU-ONLY
-                            </span>
-                          );
-                        })()}
-
-                        {/* Deletion Protection Toggle Pill */}
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() =>
-                            handlePowerAction(vm, 'SET_DELETION_PROTECTION', {
-                              deletionProtection: !vm.deletionProtection,
-                            })
-                          }
-                          title="Click to toggle Compute Engine Deletion Protection"
-                          className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
-                            vm.deletionProtection
-                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700'
-                          }`}
-                        >
-                          {vm.deletionProtection ? (
-                            <>
-                              <Lock className="w-2.5 h-2.5" />
-                              <span>PROTECTED</span>
-                            </>
-                          ) : (
-                            <>
-                              <Unlock className="w-2.5 h-2.5" />
-                              <span>UNPROTECTED</span>
-                            </>
-                          )}
-                        </button>
-
-                        {/* Guest Ops Agent & OS Config Status Pill */}
-                        {(() => {
-                          const hasOpsAndOs = isVmAgentInstalled(vm);
-                          return (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              isDeleting
+                                ? 'bg-red-500 animate-ping'
+                                : isTransitional
+                                ? 'bg-amber-500 animate-ping'
+                                : isRunning
+                                ? 'bg-emerald-500 animate-pulse'
+                                : 'bg-zinc-500'
+                            }`}
+                          />
+                          <h4
+                            className={`text-sm font-bold font-mono ${
+                              isDeleting
+                                ? 'line-through text-zinc-400 dark:text-zinc-500'
+                                : 'text-zinc-950 dark:text-zinc-50'
+                            }`}
+                          >
+                            {vm.name}
+                          </h4>
+                          {(isReadyOnRightTab || isScpActiveForVm || isSshFocusedInTerminal) && (
                             <span
-                              title={
-                                hasOpsAndOs
-                                  ? 'Google Cloud Ops Agent v2 + OS Config Agent installed on this VM — Zero-SSH Agent Cockpit is UNLOCKED below!'
-                                  : 'Guest Ops Agent not yet installed (GCE only reports hypervisor CPU without Ops Agent) — use the 1-Time Install GCE Agent bar below to unlock Zero-SSH telemetry & ops'
-                              }
-                              className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                                hasOpsAndOs
-                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
-                                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
-                              }`}
+                              className="inline-flex items-center gap-1 text-[9px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-2xs"
+                              title={`${vm.name} is currently selected and ready on the right SSH / SFTP workbench`}
                             >
-                              {hasOpsAndOs ? (
-                                <>
-                                  <Check className="w-2.5 h-2.5" />
-                                  <span>AGENT INSTALLED · ZERO-SSH UNLOCKED</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Lock className="w-2.5 h-2.5" />
-                                  <span>NO GUEST AGENT (BLIND TO RAM/DISK/LOGS)</span>
-                                </>
-                              )}
+                              <span>● READY ON RIGHT TAB →</span>
                             </span>
-                          );
-                        })()}
+                          )}
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                              isDeleting
+                                ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
+                                : isTransitional
+                                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                : isRunning
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                            }`}
+                          >
+                            {effectiveStatus}
+                          </span>
+
+                          {vm.spotInstance ? (
+                            <span className="text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+                              SPOT VM
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
+                              STANDARD VM
+                            </span>
+                          )}
+
+                          {vm.shieldedVm && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded-full">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>SHIELDED</span>
+                            </span>
+                          )}
+
+                          {(() => {
+                            const acc = getVmAcceleratorProfile(vm);
+                            if (acc.hasGpu) {
+                              const label =
+                                vm.guestAccelerators?.length > 0
+                                  ? `${vm.guestAccelerators[0].count}x ${vm.guestAccelerators[0].type}`
+                                  : acc.types[0] || 'NVIDIA GPU';
+                              return (
+                                <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full">
+                                  GPU: {label}
+                                </span>
+                              );
+                            }
+                            if (acc.hasTpu) {
+                              const label = acc.types[0] || 'Cloud TPU';
+                              return (
+                                <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-full">
+                                  TPU: {label}
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 px-1.5 py-0.5 rounded-full">
+                                CPU-ONLY
+                              </span>
+                            );
+                          })()}
+
+                          {/* Deletion Protection Toggle Pill */}
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() =>
+                              handlePowerAction(vm, 'SET_DELETION_PROTECTION', {
+                                deletionProtection: !vm.deletionProtection,
+                              })
+                            }
+                            title="Click to toggle Compute Engine Deletion Protection"
+                            className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                              vm.deletionProtection
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700'
+                            }`}
+                          >
+                            {vm.deletionProtection ? (
+                              <>
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>PROTECTED</span>
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-2.5 h-2.5" />
+                                <span>UNPROTECTED</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Guest Ops Agent & OS Config Status Pill */}
+                          {(() => {
+                            const hasOpsAndOs = isVmAgentInstalled(vm);
+                            return (
+                              <span
+                                title={
+                                  hasOpsAndOs
+                                    ? 'Google Cloud Ops Agent v2 + OS Config Agent installed on this VM — Zero-SSH Agent Cockpit is UNLOCKED below!'
+                                    : 'Guest Ops Agent not yet installed (GCE only reports hypervisor CPU without Ops Agent) — use the 1-Time Install GCE Agent bar below to unlock Zero-SSH telemetry & ops'
+                                }
+                                className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                                  hasOpsAndOs
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                }`}
+                              >
+                                {hasOpsAndOs ? (
+                                  <>
+                                    <Check className="w-2.5 h-2.5" />
+                                    <span>AGENT INSTALLED · ZERO-SSH UNLOCKED</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-2.5 h-2.5" />
+                                    <span>NO GUEST AGENT (BLIND TO RAM/DISK/LOGS)</span>
+                                  </>
+                                )}
+                              </span>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Per-VM Collapse Card & Hide Controls */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleVmCollapse(false)}
+                            title={`Collapse ${vm.name} into a compact 1-line row to keep left & right panels aligned`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 cursor-pointer"
+                          >
+                            <span>Collapse</span>
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setHiddenVmNames((prev) => [...prev, vm.name])
+                            }
+                            title={`Hide ${vm.name} from the active workspace view (restore anytime from the top bar)`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                          >
+                            <EyeOff className="w-3 h-3" />
+                            <span>Hide</span>
+                          </button>
+                        </div>
                       </div>
 
                       <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex flex-wrap items-center gap-2">
@@ -2100,7 +2350,7 @@ export default function VmFleetAndSsh({
                         sshTerminalExpanded || splitLayoutMode === '6_6'
                           ? 'sm:grid-cols-4'
                           : ''
-                      } gap-1.5 pt-1`}
+                      } gap-2 pt-1`}
                     >
                       <button
                         type="button"
@@ -2122,24 +2372,35 @@ export default function VmFleetAndSsh({
                           isSshActive && !isSshFocusedInTerminal
                             ? `SSH is connected in the background to ${vm.name} — click to switch the right workspace back to the interactive SSH terminal`
                             : isSshFocusedInTerminal
-                            ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
-                            : `Click to connect live interactive SSH terminal to ${vm.name}`
+                            ? `SSH is enabled on ${vm.name} — click to disconnect & turn SSH off`
+                            : `Click to enable live interactive SSH terminal on ${vm.name}`
                         }
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                           isSshFocusedInTerminal
-                            ? 'bg-blue-600 hover:bg-red-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                            ? 'bg-blue-600 hover:bg-red-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
-                        <Terminal className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          {isDeleting
-                            ? 'Deprovisioning...'
-                            : isSshActive && !isSshFocusedInTerminal
-                            ? 'SSH / Console (Ready)'
-                            : isSshFocusedInTerminal
-                            ? '● SSH Connected (Off)'
-                            : 'SSH / Console'}
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <Terminal className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            {isDeleting
+                              ? 'Deprovisioning...'
+                              : isSshActive && !isSshFocusedInTerminal
+                              ? 'SSH / Console (Bg)'
+                              : isSshFocusedInTerminal
+                              ? 'SSH Connected'
+                              : 'SSH / Console'}
+                          </span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            isSshFocusedInTerminal
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {isSshFocusedInTerminal ? '● ON' : 'OFF'}
                         </span>
                       </button>
 
@@ -2148,6 +2409,7 @@ export default function VmFleetAndSsh({
                         disabled={isDeleting}
                         onClick={() => {
                           if (isScpActiveForVm) {
+                            setScpTargetVmName('');
                             setTerminalViewMode('LIVE_SSH_PTY');
                             setOpenSshTrigger((n) => n + 1);
                           } else {
@@ -2158,20 +2420,27 @@ export default function VmFleetAndSsh({
                         }}
                         title={
                           isScpActiveForVm
-                            ? `SCP / SFTP Studio is currently open for ${vm.name} — click to switch back to SSH / Console`
-                            : `Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`
+                            ? `SCP / SFTP Studio is currently enabled for ${vm.name} — click to close SFTP viewer`
+                            : `Click to enable Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`
                         }
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
                           isScpActiveForVm
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
-                        <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          {isScpActiveForVm
-                            ? '● SCP / SFTP Open'
-                            : 'SCP / SFTP Files'}
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">SCP / SFTP Files</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            isScpActiveForVm
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {isScpActiveForVm ? '● ON' : 'OFF'}
                         </span>
                       </button>
 
@@ -2184,14 +2453,25 @@ export default function VmFleetAndSsh({
                           )
                         }
                         title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
                           openTunnelVm === vm.name
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                            ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
-                        <Wifi className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">127.0.0.1 IAP Tunnel</span>
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <Wifi className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">127.0.0.1 IAP Tunnel</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            openTunnelVm === vm.name
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {openTunnelVm === vm.name ? '● ON' : 'OFF'}
+                        </span>
                       </button>
 
                       <button
@@ -2199,14 +2479,25 @@ export default function VmFleetAndSsh({
                         disabled={isDeleting}
                         onClick={() => handleToggleMigrateVm(vm)}
                         title="Migrate this Compute Engine VM instance to a Scale-to-$0.00 Cloud Run Gen2 Serverless Service (run.googleapis.com/v2)"
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
                           openMigrateCloudRunVm === vm.name
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm ring-1 ring-blue-400/50'
-                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                            ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
-                        <Layers className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">Migrate → Cloud Run</span>
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <Layers className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">Migrate → Cloud Run</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            openMigrateCloudRunVm === vm.name
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {openMigrateCloudRunVm === vm.name ? '● ON' : 'OFF'}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -2239,9 +2530,10 @@ export default function VmFleetAndSsh({
                             disabled={isBusy}
                             onClick={() => handlePowerAction(vm, 'DETACH_PUBLIC_IP')}
                             title="Detach External IPv4 (--no-address · deleteAccessConfig on nic0) — switch VM to private VPC + Cloud IAP SSH and save $3.65/mo"
-                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer disabled:opacity-50"
                           >
-                            🔒 Detach IP
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>Detach IP</span>
                           </button>
                         ) : (
                           <button
@@ -2268,7 +2560,7 @@ export default function VmFleetAndSsh({
                         vm.externalIp !== 'None (Internal Only)' &&
                         vm.externalIp !== 'None'
                           ? vm.externalIp
-                          : '🔒 None (--no-address · IAP)'}
+                          : 'None (--no-address · IAP)'}
                       </div>
                     </div>
                     <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
@@ -2291,14 +2583,53 @@ export default function VmFleetAndSsh({
                     </div>
                   </div>
 
-                  {/* DISTINCT 1-TIME GCE AGENT INSTALLER & UNLOCKED ZERO-SSH COCKPIT */}
+                  {/* DISTINCT 1-TIME GCE AGENT INSTALLER & UNLOCKED ZERO-SSH COCKPIT (With Compact Collapse Toggle) */}
                   {(() => {
                     const hasAgentInstalled = isVmAgentInstalled(vm);
+                    const isAgentSectionCollapsed = Boolean(
+                      collapsedAgentSectionByVm[vm.name]
+                    );
+                    if (isAgentSectionCollapsed) {
+                      return (
+                        <div className="mb-3 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/35 flex items-center justify-between gap-2 text-[11px] font-mono">
+                          <span className="inline-flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-200 truncate">
+                            {hasAgentInstalled ? (
+                              <>
+                                <Unlock className="w-3 h-3 text-emerald-500 shrink-0" />
+                                <span>
+                                  Agent Goldmine &amp; Telemetry Ready ({vm.name})
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3 h-3 text-violet-500 shrink-0" />
+                                <span>
+                                  Agent Goldmine Locked — 1-Time Install Available
+                                </span>
+                              </>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCollapsedAgentSectionByVm((prev) => ({
+                                ...prev,
+                                [vm.name]: false,
+                              }))
+                            }
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 cursor-pointer shrink-0"
+                          >
+                            <span>Show Goldmine</span>
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    }
                     const isInstallingThisVm = installingVmAgent === vm.name;
                     const cockpit = agentCockpitDataByVm[vm.name] || null;
                     const cockpitBusy = agentCockpitBusyByVm[vm.name] || null;
                     const activeCockpitTab =
-                      openAgentCockpitTabByVm[vm.name] || 'FINOPS_GOLD';
+                      openAgentCockpitTabByVm[vm.name] ?? null;
                     const mt = String(vm.machineType || 'e2-medium').toLowerCase();
                     const estTotalRamMb = mt.includes('micro')
                       ? 1024
@@ -2522,20 +2853,21 @@ export default function VmFleetAndSsh({
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-violet-600 text-white shadow-sm">
                                   <Lock className="w-2.5 h-2.5" />
-                                  <span>AGENT GOLDMINE LOCKED</span>
+                                  <span>AGENT GOLDMINE LOCKED (NO AGENT DATA)</span>
                                 </span>
                                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                                  Why Install the 1-Time GCE Agent Instead of SSHing Every Time?
+                                  Inside-VM Telemetry &amp; Goldmine Disabled Until You Install the GCE Agent
                                 </span>
                               </div>
                               <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                                Without the Guest Agent, Google Cloud is{' '}
+                                Right now, Google Cloud is{' '}
                                 <strong>100% blind to inside-VM Memory (RAM %)</strong>,{' '}
+                                <strong>Disk Usage (df -h)</strong>,{' '}
                                 <strong>Per-Process Dollar Cost ($/PID)</strong>,{' '}
-                                <strong>Listening Socket vs. Firewall Exposure</strong>, and{' '}
-                                <strong>Linux Swap / OOM-Killer Risk</strong>. Do a{' '}
-                                <strong>1-Time Agent Install</strong> to unlock our{' '}
-                                <strong>4-Pillar Agent Goldmine</strong> (True-RAM Dollar Miner, Port-vs-Firewall X-Ray, Live Process &rarr; Dockerfile Extractor &amp; 1-Click OOM Swap Shield)!
+                                <strong>Listening Sockets (`ss -tulpn`)</strong>, and{' '}
+                                <strong>Linux Swap / OOM Risk</strong> on{' '}
+                                <strong>{vm.name}</strong> because the Guest Agent is not installed yet. Click{' '}
+                                <strong>1-Time Install GCE Agent</strong> to install the agent and unlock all 6 inside-VM features below!
                               </p>
                             </div>
 
@@ -2561,7 +2893,7 @@ export default function VmFleetAndSsh({
                                 ) : (
                                   <>
                                     <Zap className="w-3.5 h-3.5" />
-                                    <span>⚡ 1-Time Install GCE Agent</span>
+                                    <span>1-Time Install GCE Agent</span>
                                   </>
                                 )}
                               </button>
@@ -2574,46 +2906,129 @@ export default function VmFleetAndSsh({
                                     prev === vm.name ? null : vm.name
                                   )
                                 }
-                                className="inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-mono font-bold bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-800 text-violet-700 dark:text-violet-300 border border-violet-500/40 cursor-pointer"
+                                className="inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-mono font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 cursor-pointer"
                                 title="Customize which agents (Ops Agent, OS Config, OpenTelemetry, Cloud SQL Proxy) are included in the 1-time install"
                               >
                                 <Sliders className="w-3 h-3" />
                                 <span>Bundle ({selectedGceAgents.length}/4)</span>
                               </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCollapsedAgentSectionByVm((prev) => ({
+                                    ...prev,
+                                    [vm.name]: true,
+                                  }))
+                                }
+                                className="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-mono font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 cursor-pointer"
+                                title="Collapse this Agent section into a compact 1-line bar to save vertical height"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                                <span>Compact</span>
+                              </button>
                             </div>
                           </div>
 
-                          {/* Preview of the 4 Revolutionary Goldmine Pillars that Unlock After 1-Time Install */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                          {/* 4 Blind / Locked Gauges (Zero Agent Data Available Until Agent Installed) */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 opacity-75 select-none">
                             {[
                               {
-                                title: '🔒 💰 True-RAM Dollar Miner',
-                                desc: `Uncover ~$${estSavingsMo}/mo in wasted inside-VM RAM + $/PID ledger`,
+                                label: 'True Guest RAM',
+                                status: 'Blind (No Agent)',
+                                sub: 'Requires Ops Agent v2',
                               },
                               {
-                                title: '🔒 🕸️ Port-vs-Firewall X-Ray',
-                                desc: 'Cross-check ss -tulpn sockets against VPC firewall rules',
+                                label: 'Guest Disk / (df -h)',
+                                status: 'Blind (No Agent)',
+                                sub: 'Requires Ops Agent v2',
                               },
                               {
-                                title: '🔒 🧬 Process → Dockerfile',
-                                desc: 'Reverse-engineer live VM processes into Cloud Run',
+                                label: 'True-RAM Gold',
+                                status: 'Locked',
+                                sub: 'Install Agent to mine $/PID',
                               },
                               {
-                                title: '🔒 🛡️ 2 GB OOM Swap Shield',
-                                desc: 'Prevent 3 AM Linux OOM-Killer crashes & full disks',
+                                label: 'OOM & Disk Countdown',
+                                status: 'Locked',
+                                sub: 'Install Agent for 2GB Swap',
                               },
-                            ].map((item) => (
+                            ].map((g) => (
                               <div
-                                key={item.title}
-                                className="p-2 rounded-lg bg-white/60 dark:bg-zinc-900/60 border border-violet-500/25 opacity-85"
+                                key={g.label}
+                                className="p-2 rounded-lg bg-white/60 dark:bg-zinc-900/60 border border-zinc-300/80 dark:border-zinc-800"
                               >
-                                <div className="text-[10px] font-mono font-bold text-violet-800 dark:text-violet-300 truncate">
-                                  {item.title}
+                                <div className="flex items-center justify-between text-[10px] font-mono">
+                                  <span className="text-zinc-500 uppercase">
+                                    {g.label}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1 font-bold text-zinc-500 dark:text-zinc-400">
+                                    <Lock className="w-2.5 h-2.5 shrink-0" />
+                                    <span>{g.status}</span>
+                                  </span>
                                 </div>
-                                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                                  {item.desc}
+                                <div className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate mt-1">
+                                  {g.sub}
                                 </div>
                               </div>
+                            ))}
+                          </div>
+
+                          {/* 6 Equal-Length Agent Goldmine Buttons — Strictly DISABLED Until Agent Installed */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                            {[
+                              {
+                                num: '01',
+                                icon: <DollarSign className="w-3.5 h-3.5" />,
+                                label: 'True-RAM Dollar Miner',
+                              },
+                              {
+                                num: '02',
+                                icon: <Wifi className="w-3.5 h-3.5" />,
+                                label: 'Port-vs-Firewall X-Ray',
+                              },
+                              {
+                                num: '03',
+                                icon: <Layers className="w-3.5 h-3.5" />,
+                                label: 'Process → Dockerfile',
+                              },
+                              {
+                                num: '04',
+                                icon: <ShieldCheck className="w-3.5 h-3.5" />,
+                                label: '2GB OOM Swap & Ops',
+                              },
+                              {
+                                num: '05',
+                                icon: <Activity className="w-3.5 h-3.5" />,
+                                label: 'Processes & Open Ports',
+                              },
+                              {
+                                num: '06',
+                                icon: <FileText className="w-3.5 h-3.5" />,
+                                label: 'Live Guest Syslog',
+                              },
+                            ].map((tab) => (
+                              <button
+                                key={tab.num}
+                                type="button"
+                                disabled={true}
+                                title="Disabled — Click '1-Time Install GCE Agent' above to install the agent and unlock this feature"
+                                className="w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 bg-zinc-100/80 dark:bg-zinc-900/60 text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-300 dark:border-zinc-800 opacity-75 cursor-not-allowed select-none"
+                              >
+                                <span className="inline-flex items-center gap-1.5 min-w-0">
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-zinc-200 dark:bg-zinc-800 text-zinc-500 shrink-0">
+                                    {tab.num}
+                                  </span>
+                                  <span className="shrink-0 opacity-70">
+                                    {tab.icon}
+                                  </span>
+                                  <span className="truncate">{tab.label}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 shrink-0">
+                                  <Lock className="w-2.5 h-2.5" />
+                                  <span>Locked</span>
+                                </span>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -2627,13 +3042,16 @@ export default function VmFleetAndSsh({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-600 text-white shadow-sm">
                               <Unlock className="w-2.5 h-2.5" />
-                              <span>⛏️ AGENT GOLDMINE UNLOCKED</span>
+                              <span>AGENT GOLDMINE UNLOCKED</span>
                             </span>
                             {goldmine.finopsGold.monthlySavingsUsd > 0 && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40">
-                                💰 Mined Gold: Save $
-                                {goldmine.finopsGold.monthlySavingsUsd}/mo ($
-                                {goldmine.finopsGold.annualSavingsUsd}/yr)
+                                <DollarSign className="w-3 h-3 shrink-0" />
+                                <span>
+                                  Mined Gold: Save $
+                                  {goldmine.finopsGold.monthlySavingsUsd}/mo ($
+                                  {goldmine.finopsGold.annualSavingsUsd}/yr)
+                                </span>
                               </span>
                             )}
                             <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
@@ -2650,7 +3068,7 @@ export default function VmFleetAndSsh({
                               className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800/90 text-emerald-700 dark:text-emerald-400 border border-emerald-500/35 opacity-75 cursor-not-allowed select-none"
                             >
                               <Check className="w-3 h-3" />
-                              <span>✓ GCE Agent Installed (1-Time Done)</span>
+                              <span>GCE Agent Installed (1-Time Done)</span>
                             </button>
 
                             <button
@@ -2673,6 +3091,21 @@ export default function VmFleetAndSsh({
                                 }`}
                               />
                               <span>Sync Live Agent Telemetry</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCollapsedAgentSectionByVm((prev) => ({
+                                  ...prev,
+                                  [vm.name]: true,
+                                }))
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 cursor-pointer"
+                              title="Collapse this Agent Goldmine section into a compact 1-line bar"
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                              <span>Compact</span>
                             </button>
                           </div>
                         </div>
@@ -2739,8 +3172,9 @@ export default function VmFleetAndSsh({
 
                           <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/35 flex flex-col justify-between">
                             <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="text-amber-800 dark:text-amber-300 font-bold uppercase">
-                                💰 True-RAM Gold
+                              <span className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300 font-bold uppercase">
+                                <DollarSign className="w-3 h-3 shrink-0" />
+                                <span>True-RAM Gold</span>
                               </span>
                               <span className="font-extrabold text-amber-700 dark:text-amber-300">
                                 {goldmine.finopsGold.unusedRamMb} MB Idle
@@ -2759,15 +3193,23 @@ export default function VmFleetAndSsh({
                                 OOM &amp; Disk Countdown
                               </span>
                               <span
-                                className={`font-bold ${
+                                className={`inline-flex items-center gap-1 font-bold ${
                                   goldmine.crashImmunity.autoImmunityArmed
                                     ? 'text-emerald-600 dark:text-emerald-400'
                                     : 'text-amber-600 dark:text-amber-400'
                                 }`}
                               >
-                                {goldmine.crashImmunity.autoImmunityArmed
-                                  ? '🛡️ 2GB Swap On'
-                                  : '⚠️ 0MB Swap'}
+                                {goldmine.crashImmunity.autoImmunityArmed ? (
+                                  <>
+                                    <ShieldCheck className="w-3 h-3 shrink-0" />
+                                    <span>2GB Swap On</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertTriangle className="w-3 h-3 shrink-0" />
+                                    <span>0MB Swap</span>
+                                  </>
+                                )}
                               </span>
                             </div>
                             <div className="text-[11px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 truncate mt-0.5">
@@ -2776,32 +3218,55 @@ export default function VmFleetAndSsh({
                           </div>
                         </div>
 
-                        {/* 6 Interactive Goldmine & Zero-SSH Cockpit Superpower Tabs */}
-                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        {/* 6 Equal-Length Agent Goldmine & Zero-SSH Cockpit Superpower Buttons (Symmetrical 3x2 Bento Grid) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
                           {[
                             {
                               id: 'FINOPS_GOLD',
-                              label: '💰 True-RAM Dollar Miner & $/PID',
+                              num: '01',
+                              icon: <DollarSign className="w-3.5 h-3.5" />,
+                              label: 'True-RAM Dollar Miner',
+                              badge:
+                                goldmine.finopsGold.monthlySavingsUsd > 0
+                                  ? `-$${goldmine.finopsGold.monthlySavingsUsd}/mo`
+                                  : '$/PID',
                             },
                             {
                               id: 'PORT_FIREWALL_XRAY',
-                              label: '🕸️ Port-vs-Firewall Ghost X-Ray',
+                              num: '02',
+                              icon: <Wifi className="w-3.5 h-3.5" />,
+                              label: 'Port-vs-Firewall X-Ray',
+                              badge: 'ss -tulpn',
                             },
                             {
                               id: 'CONTAINER_EXTRACTOR',
-                              label: '🧬 Live Process → Dockerfile & Cloud Run',
+                              num: '03',
+                              icon: <Layers className="w-3.5 h-3.5" />,
+                              label: 'Process → Dockerfile',
+                              badge: 'Cloud Run',
                             },
                             {
                               id: 'ZERO_SSH_OPS',
-                              label: '🛡️ 2GB OOM Swap Shield, Disk Clean & CVEs',
+                              num: '04',
+                              icon: <ShieldCheck className="w-3.5 h-3.5" />,
+                              label: '2GB OOM Swap & Ops',
+                              badge: goldmine.crashImmunity.autoImmunityArmed
+                                ? 'Swap ON'
+                                : '0MB Swap',
                             },
                             {
                               id: 'PROCESSES_PORTS',
-                              label: '📊 Top Processes & Open Ports',
+                              num: '05',
+                              icon: <Activity className="w-3.5 h-3.5" />,
+                              label: 'Processes & Open Ports',
+                              badge: 'Live Feed',
                             },
                             {
                               id: 'SYSLOG_TAIL',
-                              label: '📜 Live Guest Syslog',
+                              num: '06',
+                              icon: <FileText className="w-3.5 h-3.5" />,
+                              label: 'Live Guest Syslog',
+                              badge: 'Journal',
                             },
                           ].map((tab) => {
                             const isTabOpen = activeCockpitTab === tab.id;
@@ -2822,13 +3287,34 @@ export default function VmFleetAndSsh({
                                     );
                                   }
                                 }}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                className={`w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer ${
                                   isTabOpen
-                                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                                    : 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/15'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-md ring-2 ring-blue-400/35'
+                                    : 'bg-white dark:bg-zinc-900/95 text-blue-700 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                                 }`}
                               >
-                                {tab.label}
+                                <span className="inline-flex items-center gap-1.5 min-w-0">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
+                                      isTabOpen
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
+                                    }`}
+                                  >
+                                    {tab.num}
+                                  </span>
+                                  <span className="shrink-0">{tab.icon}</span>
+                                  <span className="truncate">{tab.label}</span>
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
+                                    isTabOpen
+                                      ? 'bg-white/25 text-white'
+                                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                                  }`}
+                                >
+                                  {isTabOpen ? '● ON' : tab.badge}
+                                </span>
                               </button>
                             );
                           })}
@@ -2847,8 +3333,9 @@ export default function VmFleetAndSsh({
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="space-y-0.5 max-w-2xl">
                                 <div className="font-mono font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                                  <DollarSign className="w-3.5 h-3.5 shrink-0" />
                                   <span>
-                                    💰 True Inside-Linux RAM Rightsizer &amp; Per-Process Dollar Ledger
+                                    True Inside-Linux RAM Rightsizer &amp; Per-Process Dollar Ledger
                                   </span>
                                   <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-[10px]">
                                     Impossible Without Guest Agent
@@ -2889,14 +3376,17 @@ export default function VmFleetAndSsh({
                                         );
                                       }
                                     }}
-                                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white font-mono font-extrabold text-[11px] shadow-sm cursor-pointer shrink-0"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white font-mono font-extrabold text-[11px] shadow-sm cursor-pointer shrink-0"
                                     title="Downsize this VM to match its real inside-Linux RAM working set (+45% safety headroom) and pocket the monthly savings immediately"
                                   >
-                                    ⚡ 1-Click Downsize to{' '}
-                                    {goldmine.finopsGold.recommendedMachineType}{' '}
-                                    (Save ${goldmine.finopsGold.monthlySavingsUsd}
-                                    /mo · $
-                                    {goldmine.finopsGold.annualSavingsUsd}/yr)
+                                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                                    <span>
+                                      1-Click Downsize to{' '}
+                                      {goldmine.finopsGold.recommendedMachineType}{' '}
+                                      (Save ${goldmine.finopsGold.monthlySavingsUsd}
+                                      /mo · $
+                                      {goldmine.finopsGold.annualSavingsUsd}/yr)
+                                    </span>
                                   </button>
                                 )}
                             </div>
@@ -2945,8 +3435,11 @@ export default function VmFleetAndSsh({
                           <div className="p-3 rounded-xl bg-white dark:bg-[#131314] border border-blue-500/35 space-y-2.5 text-[11px] font-mono">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                                  🕸️ Live Inside-VM Socket (`ss -tulpn`) vs. VPC Firewall Cross-Check
+                                <div className="inline-flex items-center gap-1.5 font-extrabold text-blue-600 dark:text-blue-400">
+                                  <Wifi className="w-3.5 h-3.5 shrink-0" />
+                                  <span>
+                                    Live Inside-VM Socket (`ss -tulpn`) vs. VPC Firewall Cross-Check
+                                  </span>
                                 </div>
                                 <div className="text-[10px] text-zinc-500 font-sans mt-0.5">
                                   Joins what programs are actually listening inside Linux against your outer Google Cloud VPC Firewall rules and Public IP.
@@ -2963,21 +3456,32 @@ export default function VmFleetAndSsh({
                                       'PORT_FIREWALL_XRAY'
                                     )
                                   }
-                                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50 ${
+                                    cockpitBusy === 'LOCK_SOCKET_TO_LOOPBACK'
+                                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                      : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                  }`}
                                   title="Bind non-SSH listening ports inside the VM to 127.0.0.1 loopback so they can only be reached via encrypted IAP Port Forwarding"
                                 >
-                                  🔒 Shield App Ports on 127.0.0.1 Loopback
+                                  <Lock className="w-3 h-3 shrink-0" />
+                                  <span>Shield App Ports on 127.0.0.1 Loopback</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    setOpenTunnelDrawerVm((prev) =>
+                                    setOpenTunnelVm((prev) =>
                                       prev === vm.name ? null : vm.name
                                     )
                                   }
-                                  className="px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/35 text-[10px] font-bold cursor-pointer"
+                                  className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                                    openTunnelVm === vm.name
+                                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                      : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                  }`}
                                 >
-                                  Open 127.0.0.1 IAP Port-Forward
+                                  {openTunnelVm === vm.name
+                                    ? '● 127.0.0.1 IAP Port-Forward Open'
+                                    : 'Open 127.0.0.1 IAP Port-Forward'}
                                 </button>
                               </div>
                             </div>
@@ -2991,7 +3495,7 @@ export default function VmFleetAndSsh({
                                   >
                                     <div className="flex items-center gap-2">
                                       <span
-                                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                           s.exposureStatus === 'INTERNET_EXPOSED'
                                             ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
                                             : s.exposureStatus === 'VPC_SHIELDED'
@@ -2999,11 +3503,22 @@ export default function VmFleetAndSsh({
                                             : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                                         }`}
                                       >
-                                        {s.exposureStatus === 'INTERNET_EXPOSED'
-                                          ? '🔴 PUBLIC INTERNET EXPOSED'
-                                          : s.exposureStatus === 'VPC_SHIELDED'
-                                          ? '🟡 FIREWALL SHIELDED'
-                                          : '🟢 127.0.0.1 LOOPBACK SAFE'}
+                                        <span
+                                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                            s.exposureStatus === 'INTERNET_EXPOSED'
+                                              ? 'bg-red-500'
+                                              : s.exposureStatus === 'VPC_SHIELDED'
+                                              ? 'bg-amber-500'
+                                              : 'bg-emerald-500'
+                                          }`}
+                                        />
+                                        <span>
+                                          {s.exposureStatus === 'INTERNET_EXPOSED'
+                                            ? 'PUBLIC INTERNET EXPOSED'
+                                            : s.exposureStatus === 'VPC_SHIELDED'
+                                            ? 'FIREWALL SHIELDED'
+                                            : '127.0.0.1 LOOPBACK SAFE'}
+                                        </span>
                                       </span>
                                       <span className="font-bold text-zinc-900 dark:text-zinc-100">
                                         {s.localAddress}
@@ -3022,11 +3537,14 @@ export default function VmFleetAndSsh({
 
                             {(goldmine.portFirewallXray.ghostFirewallPorts || [])
                               .length > 0 && (
-                              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-800 dark:text-amber-200">
-                                <strong>👻 Ghost Firewall Ports Detected:</strong>{' '}
-                                {goldmine.portFirewallXray.ghostFirewallPorts
-                                  .map((g) => g.issue)
-                                  .join(' · ')}
+                              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                                <span>
+                                  <strong>Ghost Firewall Ports Detected:</strong>{' '}
+                                  {goldmine.portFirewallXray.ghostFirewallPorts
+                                    .map((g) => g.issue)
+                                    .join(' · ')}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -3037,8 +3555,11 @@ export default function VmFleetAndSsh({
                           <div className="p-3 rounded-xl bg-white dark:bg-[#131314] border border-violet-500/35 space-y-2.5 text-[11px]">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <div className="font-mono font-extrabold text-violet-700 dark:text-violet-300">
-                                  🧬 Live Inside-VM Process &rarr; Auto-Generated Dockerfile &amp; Cloud Run Blueprint
+                                <div className="inline-flex items-center gap-1.5 font-mono font-extrabold text-violet-700 dark:text-violet-300">
+                                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                                  <span>
+                                    Live Inside-VM Process &rarr; Auto-Generated Dockerfile &amp; Cloud Run Blueprint
+                                  </span>
                                 </div>
                                 <div className="text-[10px] text-zinc-500 mt-0.5">
                                   Reverse-engineered from {vm.name}’s live running processes (
@@ -3076,15 +3597,18 @@ export default function VmFleetAndSsh({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenMigrationWizard(vm)}
-                                  className="px-2.5 py-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-bold cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-bold cursor-pointer"
                                   title="Launch full 1-Click VM to Cloud Run Migration Wizard using this extracted container blueprint"
                                 >
-                                  🚀 Migrate VM &rarr; Cloud Run (Save ~$
-                                  {
-                                    goldmine.containerBlueprint
-                                      .serverlessMonthlySavingsUsd
-                                  }
-                                  /mo)
+                                  <Rocket className="w-3 h-3 shrink-0" />
+                                  <span>
+                                    Migrate VM &rarr; Cloud Run (Save ~$
+                                    {
+                                      goldmine.containerBlueprint
+                                        .serverlessMonthlySavingsUsd
+                                    }
+                                    /mo)
+                                  </span>
                                 </button>
                               </div>
                             </div>
@@ -3235,7 +3759,7 @@ export default function VmFleetAndSsh({
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <button
                                 type="button"
                                 disabled={Boolean(cockpitBusy)}
@@ -3246,12 +3770,37 @@ export default function VmFleetAndSsh({
                                     'ZERO_SSH_OPS'
                                   )
                                 }
-                                className="px-2.5 py-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                                className={`w-full h-9 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                                  goldmine.crashImmunity.autoImmunityArmed ||
+                                  cockpitBusy === 'ARM_OOM_SWAP_AND_AUTOHEAL'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                    : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                }`}
                                 title="Dynamically creates a 2 GB /swapfile (vm.swappiness=10) inside the VM so temporary RAM spikes never trigger the Linux Kernel OOM-Killer at 3 AM"
                               >
-                                {cockpitBusy === 'ARM_OOM_SWAP_AND_AUTOHEAL'
-                                  ? 'Arming 2GB Swap Shield...'
-                                  : '⚡ Arm 2 GB Emergency OOM Swap & Auto-Heal Shield'}
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  {cockpitBusy === 'ARM_OOM_SWAP_AND_AUTOHEAL' ? (
+                                    <>
+                                      <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
+                                      <span>Arming 2GB Swap Shield...</span>
+                                    </>
+                                  ) : goldmine.crashImmunity.autoImmunityArmed ? (
+                                    <>
+                                      <Check className="w-3 h-3 shrink-0" />
+                                      <span>2 GB OOM Swap Shield Armed</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Zap className="w-3 h-3 shrink-0" />
+                                      <span>Arm 2 GB Emergency OOM Swap Shield</span>
+                                    </>
+                                  )}
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 shrink-0">
+                                  {goldmine.crashImmunity.autoImmunityArmed
+                                    ? '● ON'
+                                    : '2GB Swap'}
+                                </span>
                               </button>
                               <button
                                 type="button"
@@ -3263,11 +3812,23 @@ export default function VmFleetAndSsh({
                                     'ZERO_SSH_OPS'
                                   )
                                 }
-                                className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                                className={`w-full h-9 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                                  cockpitBusy === 'RECLAIM_DISK_SPACE'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                    : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                }`}
                               >
-                                {cockpitBusy === 'RECLAIM_DISK_SPACE'
-                                  ? 'Cleaning Disk...'
-                                  : '🧹 Reclaim Disk Space (apt clean + vacuum journal)'}
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  <HardDrive className="w-3 h-3 shrink-0" />
+                                  <span>
+                                    {cockpitBusy === 'RECLAIM_DISK_SPACE'
+                                      ? 'Cleaning Disk...'
+                                      : 'Reclaim Disk Space (apt + journal)'}
+                                  </span>
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 shrink-0">
+                                  Clean /
+                                </span>
                               </button>
                               <button
                                 type="button"
@@ -3279,11 +3840,23 @@ export default function VmFleetAndSsh({
                                     'ZERO_SSH_OPS'
                                   )
                                 }
-                                className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                                className={`w-full h-9 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                                  cockpitBusy === 'APPLY_SECURITY_PATCHES'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                    : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                }`}
                               >
-                                {cockpitBusy === 'APPLY_SECURITY_PATCHES'
-                                  ? 'Patching OS...'
-                                  : '🛡️ Apply OS Security Patches (Zero-SSH)'}
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  <ShieldCheck className="w-3 h-3 shrink-0" />
+                                  <span>
+                                    {cockpitBusy === 'APPLY_SECURITY_PATCHES'
+                                      ? 'Patching OS...'
+                                      : 'Apply OS Security Patches (Zero-SSH)'}
+                                  </span>
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 shrink-0">
+                                  CVE Fix
+                                </span>
                               </button>
                               <button
                                 type="button"
@@ -3295,9 +3868,19 @@ export default function VmFleetAndSsh({
                                     'ZERO_SSH_OPS'
                                   )
                                 }
-                                className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                                className={`w-full h-9 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                                  cockpitBusy === 'RESTART_GUEST_AGENTS'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                    : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                                }`}
                               >
-                                🔄 Restart Guest Agents
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  <RefreshCw className="w-3 h-3 shrink-0" />
+                                  <span>Restart Guest Telemetry Agents</span>
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 shrink-0">
+                                  systemd
+                                </span>
                               </button>
                             </div>
                           </div>
@@ -3379,8 +3962,9 @@ export default function VmFleetAndSsh({
                                 </label>
                                 <div className="flex items-center gap-1 shrink-0">
                                   {isAlreadyInstalled && (
-                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                                      ✓ INSTALLED
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                      <Check className="w-2.5 h-2.5" />
+                                      <span>INSTALLED</span>
                                     </span>
                                   )}
                                   <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-violet-500/15 text-violet-700 dark:text-violet-300">
@@ -3414,7 +3998,7 @@ export default function VmFleetAndSsh({
                                         true
                                       )
                                     }
-                                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                                       isAlreadyInstalled
                                         ? 'bg-zinc-200 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 cursor-not-allowed opacity-75'
                                         : 'bg-violet-600 hover:bg-violet-500 text-white cursor-pointer'
@@ -3425,9 +4009,17 @@ export default function VmFleetAndSsh({
                                         : `1-Click install only ${agent.name} on ${vm.name}`
                                     }
                                   >
-                                    {isAlreadyInstalled
-                                      ? '✓ Installed'
-                                      : '⚡ 1-Click Install'}
+                                    {isAlreadyInstalled ? (
+                                      <>
+                                        <Check className="w-2.5 h-2.5" />
+                                        <span>Installed</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Zap className="w-2.5 h-2.5" />
+                                        <span>1-Click Install</span>
+                                      </>
+                                    )}
                                   </button>
                                   <button
                                     type="button"
@@ -3475,7 +4067,7 @@ export default function VmFleetAndSsh({
                               <>
                                 <Check className="w-3.5 h-3.5" />
                                 <span>
-                                  ✓ GCE Agent Installed on {vm.name} (1-Time Done)
+                                  GCE Agent Installed on {vm.name} (1-Time Done)
                                 </span>
                               </>
                             ) : installingVmAgent === vm.name ? (
@@ -3489,7 +4081,7 @@ export default function VmFleetAndSsh({
                               <>
                                 <Zap className="w-3.5 h-3.5" />
                                 <span>
-                                  ⚡ 1-Time Install Selected ({selectedGceAgents.length}) on {vm.name}
+                                  1-Time Install Selected ({selectedGceAgents.length}) on {vm.name}
                                 </span>
                               </>
                             )}
@@ -4903,10 +5495,18 @@ export default function VmFleetAndSsh({
                                       openResizeVm === vm.name ? null : vm.name
                                     );
                                   }}
-                                  className="inline-flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                                    openResizeVm === vm.name
+                                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                      : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-2 border-blue-500/45 hover:border-blue-500'
+                                  }`}
                                 >
                                   <Sliders className="w-3 h-3" />
-                                  <span>Resize Machine</span>
+                                  <span>
+                                    {openResizeVm === vm.name
+                                      ? '● Resize Machine'
+                                      : 'Resize Machine'}
+                                  </span>
                                 </button>
                               )}
                             </>
@@ -4926,7 +5526,7 @@ export default function VmFleetAndSsh({
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => handlePowerAction(vm, 'SUSPEND')}
-                                  className="inline-flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-2 border-blue-500/45 hover:border-blue-500 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
                                 >
                                   <PauseCircle className="w-3 h-3" />
                                   <span>Suspend</span>
@@ -4962,7 +5562,7 @@ export default function VmFleetAndSsh({
             })}
           </div>
 
-          {/* Wide Right Interactive Web-SSH & Visual SCP/SFTP Studio (Default 8/12 = 67%) */}
+          {/* Wide Right Interactive Web-SSH & Visual SCP/SFTP Studio (Default 8/12 = 67%, Sticky Synced alongside Left Fleet) */}
           <div
             className={`${
               sshTerminalExpanded
@@ -4975,7 +5575,7 @@ export default function VmFleetAndSsh({
                 : splitLayoutMode === '5_7'
                 ? 'xl:col-span-7'
                 : 'xl:col-span-8'
-            } w-full transition-all duration-200`}
+            } w-full xl:sticky xl:top-4 self-start transition-all duration-200`}
           >
             <XtermWebSshTerminal
               projectId={projectId}
@@ -4998,6 +5598,7 @@ export default function VmFleetAndSsh({
               openSshTrigger={openSshTrigger}
               ptyCommandTrigger={ptyCommandTrigger}
               scpTargetVmName={scpTargetVmName}
+              onChangeTargetVmName={(nextName) => setScpTargetVmName(nextName)}
               activeViewMode={terminalViewMode}
               onViewModeChange={setTerminalViewMode}
               onShowToast={onShowToast}

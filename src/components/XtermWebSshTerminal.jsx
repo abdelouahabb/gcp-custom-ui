@@ -37,11 +37,14 @@ import {
   CornerLeftUp,
   Edit3,
   HardDrive,
+  Zap,
+  Activity,
+  AlertTriangle,
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
   {
-    label: '⚡ 1-Click Install Ops Agent',
+    label: '1-Click Install Ops Agent',
     cmd: 'curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh && sudo bash add-google-cloud-ops-agent-repo.sh --also-install && sudo systemctl status google-cloud-ops-agent --no-pager\r',
   },
   { label: 'sudo apt update', cmd: 'sudo apt update\r' },
@@ -88,6 +91,7 @@ export default function XtermWebSshTerminal({
   openSshTrigger = 0,
   ptyCommandTrigger = null,
   scpTargetVmName = '',
+  onChangeTargetVmName,
   activeViewMode,
   onViewModeChange,
   onShowToast,
@@ -158,14 +162,16 @@ export default function XtermWebSshTerminal({
     }
   }, [ptyCommandTrigger?.id, ptyCommandTrigger?.cmd, setViewMode]);
 
-  // Sync selectedVmName when activeVm or vms list changes
+  // Sync selectedVmName when activeVm, scpTargetVmName, or vms list changes
   useEffect(() => {
     if (activeVm?.name) {
       setSelectedVmName(activeVm.name);
+    } else if (scpTargetVmName) {
+      setSelectedVmName(scpTargetVmName);
     } else if (!selectedVmName && vms.length > 0) {
       setSelectedVmName(vms[0].name);
     }
-  }, [activeVm?.name, vms, selectedVmName]);
+  }, [activeVm?.name, scpTargetVmName, vms, selectedVmName]);
 
   const focusedVm =
     activeVm ||
@@ -1950,6 +1956,9 @@ export default function XtermWebSshTerminal({
                 onChange={(e) => {
                   const picked = vms.find((v) => v.name === e.target.value);
                   setSelectedVmName(e.target.value);
+                  if (onChangeTargetVmName) {
+                    onChangeTargetVmName(e.target.value);
+                  }
                   if (picked && isSessionEnabled && onSelectVm) {
                     onSelectVm(picked);
                   }
@@ -2242,24 +2251,37 @@ export default function XtermWebSshTerminal({
         <div className="flex items-center gap-1.5 flex-wrap">
           {!isCloudRun && (
             <div
-              className="inline-flex items-center rounded-lg bg-zinc-200/80 dark:bg-zinc-900 p-0.5 border border-zinc-300 dark:border-zinc-800"
+              className="inline-flex items-center gap-1 rounded-lg bg-zinc-100/80 dark:bg-zinc-900/80 p-1 border border-zinc-200 dark:border-zinc-800"
               role="tablist"
               aria-label="VM Workspace Mode Switcher"
             >
               <button
                 type="button"
-                onClick={() => setViewMode('LIVE_SSH_PTY')}
+                onClick={() => {
+                  setViewMode('LIVE_SSH_PTY');
+                  if (!isSessionEnabled && onSelectVm && focusedVm) {
+                    onSelectVm(focusedVm);
+                  }
+                }}
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
-                  viewMode === 'LIVE_SSH_PTY'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  viewMode === 'LIVE_SSH_PTY' && isSessionEnabled
+                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                    : viewMode === 'LIVE_SSH_PTY'
+                    ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border-2 border-blue-500/60 hover:border-blue-500 hover:bg-blue-500/10'
+                    : 'bg-white dark:bg-zinc-900 text-blue-600/80 dark:text-blue-300/80 border border-blue-500/35 hover:border-blue-500 hover:bg-blue-500/10'
                 }`}
-                title="Interactive Xterm.js Web-SSH PTY Terminal"
+                title={
+                  isSessionEnabled
+                    ? 'Interactive Xterm.js Web-SSH PTY Terminal (Enabled)'
+                    : 'SSH Console (Standby — click to connect & enable SSH)'
+                }
               >
                 <Terminal className="w-3 h-3" />
                 <span>SSH Console</span>
-                {isSessionEnabled && connStatus.status === 'CONNECTED' && (
+                {isSessionEnabled && connStatus.status === 'CONNECTED' ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                ) : (
+                  <span className="text-[9px] font-mono opacity-80">(Off)</span>
                 )}
               </button>
 
@@ -2267,11 +2289,17 @@ export default function XtermWebSshTerminal({
                 <>
                   <button
                     type="button"
-                    onClick={() => setViewMode('SCP_FILE_MANAGER')}
+                    onClick={() =>
+                      setViewMode((prev) =>
+                        prev === 'SCP_FILE_MANAGER'
+                          ? 'LIVE_SSH_PTY'
+                          : 'SCP_FILE_MANAGER'
+                      )
+                    }
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
                       viewMode === 'SCP_FILE_MANAGER'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                        ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                        : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
                     }`}
                     title={`Visual SCP / SFTP File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor for ${
                       (activeVm || focusedVm).name
@@ -2290,20 +2318,24 @@ export default function XtermWebSshTerminal({
                   <button
                     type="button"
                     onClick={() => {
-                      setViewMode('SPLIT_SSH_AND_SCP');
-                      if (!isSessionEnabled && onSelectVm && focusedVm) {
-                        onSelectVm(focusedVm);
+                      if (viewMode === 'SPLIT_SSH_AND_SCP') {
+                        setViewMode('LIVE_SSH_PTY');
+                      } else {
+                        setViewMode('SPLIT_SSH_AND_SCP');
+                        if (!isSessionEnabled && onSelectVm && focusedVm) {
+                          onSelectVm(focusedVm);
+                        }
                       }
                     }}
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
                       viewMode === 'SPLIT_SSH_AND_SCP'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                        ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                        : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
                     }`}
                     title="Dual Split-Screen Workbench: Live Xterm.js SSH Terminal + Visual SCP/SFTP File Studio side-by-side"
                   >
                     <HardDrive className="w-3 h-3" />
-                    <span>⚡ Split: SSH + SCP</span>
+                    <span>Split: SSH + SCP</span>
                   </button>
                 </>
               )}
@@ -2311,15 +2343,19 @@ export default function XtermWebSshTerminal({
               <button
                 type="button"
                 onClick={() => {
-                  setViewMode('SERIAL_PORT_1');
-                  if (focusedVm && onFetchSerialConsole) {
-                    onFetchSerialConsole(focusedVm);
+                  if (viewMode === 'SERIAL_PORT_1') {
+                    setViewMode('LIVE_SSH_PTY');
+                  } else {
+                    setViewMode('SERIAL_PORT_1');
+                    if (focusedVm && onFetchSerialConsole) {
+                      onFetchSerialConsole(focusedVm);
+                    }
                   }
                 }}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                   viewMode === 'SERIAL_PORT_1'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                    : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500 hover:bg-blue-500/10'
                 }`}
                 title="Compute Engine Serial Port 1 boot & kernel console logs"
               >
@@ -2333,7 +2369,7 @@ export default function XtermWebSshTerminal({
             <button
               type="button"
               onClick={() => onOpenMigrateVm(focusedVm)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 transition-colors cursor-pointer"
               title={`Open GCE → Cloud Run Modernization (mfit + m2c + GCS FUSE Disk Mount) for ${focusedVm.name}`}
             >
               <Rocket className="w-3 h-3" />
@@ -2605,7 +2641,7 @@ export default function XtermWebSshTerminal({
                         title="Open Live SSH Terminal + SCP/SFTP File Studio side-by-side"
                       >
                         <Terminal className="w-3 h-3" />
-                        <span>⚡ Split SSH + SCP</span>
+                        <span>Split SSH + SCP</span>
                       </button>
                     ) : (
                       <button
@@ -2651,16 +2687,24 @@ export default function XtermWebSshTerminal({
                           }.tar.gz`
                         )
                       }
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer disabled:opacity-50 ${
+                        scpActionBusy === `tar:${scpPath || '~'}`
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
                       title="Compress entire current VM directory on-the-fly and download as .tar.gz with SHA-256 verification"
                     >
                       <Download className="w-3 h-3" />
-                      <span>📦 Folder .tar.gz</span>
+                      <span>Folder .tar.gz</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => {
+                        if (scpEditorFile?.isNew) {
+                          setScpEditorFile(null);
+                          return;
+                        }
                         const defaultFilePath =
                           scpPath === '/'
                             ? '/new-script.sh'
@@ -2675,32 +2719,49 @@ export default function XtermWebSshTerminal({
                           isNew: true,
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        scpEditorFile?.isNew
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
                     >
                       <Plus className="w-3 h-3" />
-                      <span>+ New File</span>
+                      <span>
+                        {scpEditorFile?.isNew ? '● New File Open' : '+ New File'}
+                      </span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setScpNewFolderPrompt((v) => !v)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        scpNewFolderPrompt
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
                     >
                       <Folder className="w-3 h-3 text-amber-400" />
-                      <span>+ Folder</span>
+                      <span>
+                        {scpNewFolderPrompt ? '● + Folder' : '+ Folder'}
+                      </span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setShowScpHistory((v) => !v)}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold border cursor-pointer ${
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                         showScpHistory
-                          ? 'bg-emerald-600 text-white border-emerald-500'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
                       }`}
                       title="Toggle Session SCP/SFTP Transfer History & SHA-256 Checksum Ledger"
                     >
-                      <span>📊 Ledger ({scpTransferHistory.length})</span>
+                      <Activity className="w-3 h-3" />
+                      <span>
+                        {showScpHistory
+                          ? `● Ledger (${scpTransferHistory.length})`
+                          : `Ledger (${scpTransferHistory.length})`}
+                      </span>
                     </button>
 
                     <button
@@ -2878,7 +2939,11 @@ export default function XtermWebSshTerminal({
                           }.tar.gz`
                         )
                       }
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer disabled:opacity-50 ${
+                        scpActionBusy === 'batch-tar'
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
                     >
                       <Download className="w-3 h-3" />
                       <span>Download Selected (.tar.gz)</span>
@@ -2889,7 +2954,8 @@ export default function XtermWebSshTerminal({
                       onClick={() => handleCompressScpOnVm(scpSelectedPaths)}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
-                      <span>📦 Compress on VM (.tar.gz)</span>
+                      <HardDrive className="w-3 h-3" />
+                      <span>Compress on VM (.tar.gz)</span>
                     </button>
                     <button
                       type="button"
@@ -2977,10 +3043,11 @@ export default function XtermWebSshTerminal({
 
                       {scpTransferProgress.sha256 && (
                         <span
-                          className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
                           title={`Verified SHA-256 Digest: ${scpTransferProgress.sha256}`}
                         >
-                          🔒 SHA-256: {scpTransferProgress.sha256.slice(0, 12)}…
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>SHA-256: {scpTransferProgress.sha256.slice(0, 12)}…</span>
                         </span>
                       )}
                     </div>
@@ -3079,16 +3146,19 @@ export default function XtermWebSshTerminal({
               {showScpHistory && (
                 <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 p-3 space-y-2 text-[11px]">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-zinc-900 dark:text-white">
-                      📊 Session SCP / SFTP Transfer &amp; SHA-256 Checksum
-                      Ledger
+                    <span className="inline-flex items-center gap-1.5 font-extrabold text-zinc-900 dark:text-white">
+                      <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>
+                        Session SCP / SFTP Transfer &amp; SHA-256 Checksum
+                        Ledger
+                      </span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowScpHistory(false)}
                       className="text-zinc-400 hover:text-white text-[10px]"
                     >
-                      ✕ Close
+                      Close
                     </button>
                   </div>
                   {scpTransferHistory.length === 0 ? (
@@ -3149,10 +3219,13 @@ export default function XtermWebSshTerminal({
               {scpChecksumResult && (
                 <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px]">
                   <div className="space-y-0.5 min-w-0">
-                    <div className="font-extrabold text-emerald-600 dark:text-emerald-300">
-                      🔒 Remote File Integrity ({scpChecksumResult.name} ·{' '}
-                      {formatBytes(scpChecksumResult.sizeBytes)} ·{' '}
-                      {scpChecksumResult.lineCount} lines)
+                    <div className="inline-flex items-center gap-1 font-extrabold text-emerald-600 dark:text-emerald-300">
+                      <Lock className="w-3 h-3 shrink-0" />
+                      <span>
+                        Remote File Integrity ({scpChecksumResult.name} ·{' '}
+                        {formatBytes(scpChecksumResult.sizeBytes)} ·{' '}
+                        {scpChecksumResult.lineCount} lines)
+                      </span>
                     </div>
                     <div className="font-mono text-zinc-700 dark:text-zinc-300 truncate">
                       SHA-256: {scpChecksumResult.sha256} | MD5:{' '}
@@ -3373,7 +3446,11 @@ export default function XtermWebSshTerminal({
                               sizeBytes: scpEditorFile.sizeBytes,
                             })
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            scpActionBusy === `download:${scpEditorFile.path}`
+                              ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                              : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                          }`}
                         >
                           <Download className="w-3 h-3" />
                           <span>Download to Laptop</span>
@@ -3642,7 +3719,8 @@ export default function XtermWebSshTerminal({
                                 {/* Pending Delete Confirmation Warning Pill */}
                                 {isPendingDeleteConfirm && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
-                                    ⚠️ Confirm delete?
+                                    <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                                    <span>Confirm delete?</span>
                                   </span>
                                 )}
 
@@ -3664,12 +3742,24 @@ export default function XtermWebSshTerminal({
                                       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-300 border border-emerald-500/35 cursor-pointer"
                                       title={`Verified SHA-256: ${scpChecksumResult.sha256} (click to copy)`}
                                     >
-                                      {copiedShaPath === entry.path
-                                        ? '✓ Copied SHA-256!'
-                                        : `🔒 SHA-256: ${scpChecksumResult.sha256.slice(
-                                            0,
-                                            8
-                                          )}…`}
+                                      {copiedShaPath === entry.path ? (
+                                        <>
+                                          <Check className="w-2.5 h-2.5" />
+                                          <span>Copied SHA-256!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Lock className="w-2.5 h-2.5" />
+                                          <span>
+                                            SHA-256:{' '}
+                                            {scpChecksumResult.sha256.slice(
+                                              0,
+                                              8
+                                            )}
+                                            …
+                                          </span>
+                                        </>
+                                      )}
                                     </button>
                                   )}
                               </div>
@@ -3762,7 +3852,7 @@ export default function XtermWebSshTerminal({
                                                   ? `${scpTransferProgress.percent}%`
                                                   : 'Compressing...'
                                               }`
-                                            : '📦 .tar.gz'}
+                                            : '.tar.gz'}
                                         </button>
                                         <button
                                           type="button"
@@ -3802,7 +3892,13 @@ export default function XtermWebSshTerminal({
                                           onClick={() =>
                                             handleOpenScpFilePreview(entry)
                                           }
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                                            scpActionBusy ===
+                                              `preview:${entry.path}` ||
+                                            scpEditorFile?.path === entry.path
+                                              ? 'bg-blue-600 text-white border border-blue-500 shadow-sm'
+                                              : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500'
+                                          }`}
                                           title="View or edit file in-place via SCP/SFTP"
                                         >
                                           <Edit3 className="w-2.5 h-2.5" />
@@ -3876,10 +3972,11 @@ export default function XtermWebSshTerminal({
                                                 350
                                               );
                                             }}
-                                            className="px-1.5 py-0.5 rounded bg-teal-500/15 hover:bg-teal-500/25 text-teal-600 dark:text-teal-300 border border-teal-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-teal-500/15 hover:bg-teal-500/25 text-teal-600 dark:text-teal-300 border border-teal-500/30 text-[10px] font-bold cursor-pointer disabled:opacity-40"
                                             title="Execute script inside the live SSH terminal"
                                           >
-                                            ▶ Run
+                                            <Play className="w-2.5 h-2.5 fill-current" />
+                                            <span>Run</span>
                                           </button>
                                         )}
 
