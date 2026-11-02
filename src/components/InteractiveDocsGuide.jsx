@@ -244,6 +244,28 @@ const DOC_SECTIONS = [
       'Saves up to -68% on GKE Autopilot compute via activeMigration Spot reclamation, eliminates wasted Cloud Run Function invocations via $0.00 Eventarc Bus CEL pre-filtering, and prevents over-provisioning with real-time 3-engine TCO sizing.',
   },
   {
+    id: 'top-docked-and-user-draggable-floating-cloud-shell-drawer',
+    wave: 'LOGS & CLOUD SHELL 2026 UX · TOP-DOCKED & USER-DRAGGABLE FLOATING CLOUD SHELL DRAWER',
+    title:
+      'Top-Docked & User-Draggable Floating Touch-Optimized Cloud Shell Drawer (Zero Log-Refresh Layout Shift · Mouse & Touch Pointer Drag · Persistent Viewport Coordinates)',
+    badge: 'LOGS & SHELL TAB (TOP DOCK + FLOATING DRAWER)',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
+    icon: Terminal,
+    targetTab: 'LOGS_SHELL',
+    problemSolved:
+      'Placing a Cloud Shell terminal below asynchronous log streams causes the terminal to jump down out of view whenever a feature dispatches a command to Cloud Shell and triggers a background log refresh—and fixed-corner drawers can cover the exact log entry or chart you are inspecting.',
+    howItWorks: [
+      '1. Top-Docked Placement Above All Asynchronous Log Streams (`TOP_DOCK` Default): Anchors `#cloud-shell-terminal-card` at the very top of `LogStreamerAndShell.jsx` above the Neural Chrono-Log Studio, Live Cloud Audit Timeline, and Raw Cloud Logging Tail so background log refreshes never shift the terminal.',
+      '2. Freely User-Draggable Floating Drawer (`FLOATING_DRAWER`): Switch to Floating Drawer mode and grab anywhere on the Cloud Shell header (`⋮⋮ DRAG`) with mouse or touch to reposition the floating terminal anywhere on screen via hardware-accelerated `translate3d(dx, dy, 0)` with automatic viewport boundary clamping, `localStorage` coordinate persistence (`cloudpulse_floating_shell_offset_v1`), and a 1-click `Reset Pos` snap button.',
+      '3. Compact Minimize Mode (`MINIMIZED` & Floating Pill): Collapses the terminal into a single-line status bar (or compact `460px` draggable floating pill) while browsing logs, and automatically expands whenever any studio or log entry dispatches `$ Inspect in Shell`.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/shell (Hybrid Direct REST Bridge + Real gcloud, bq, gsutil & kubectl CLI execution with read-only data-loss guardrails)',
+    ],
+    billingImpact:
+      '100% $0.00/mo control-plane CLI execution with built-in read-only safety guardrails.',
+  },
+  {
     id: 'cloudrun-compose-up-multi-container-studio',
     wave: 'CLOUD RUN 2026 INNOVATION · GOOGLE CLOUD SDK 590.0.0 GA CLOUD RUN COMPOSE (gcloud run compose up) STUDIO',
     title:
