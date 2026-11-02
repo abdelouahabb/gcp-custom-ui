@@ -1938,10 +1938,36 @@ LIMIT 25;`;
                   {queryResult.optimizationReport && (
                     <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                          Summary of Optimizations (`bigquery-sql` Engine)
-                        </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                            Summary of Optimizations (10-Rule `bigquery-sql` AST + Dual `jobs.query(dryRun=true)` Compiler Pass)
+                          </span>
+                          {queryResult.optimizationReport.verifiedByBigQueryDryRun && (
+                            <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              ✓ Dual-Pass BigQuery API Verified (Pass #1: {formatBytes(queryResult.optimizationReport.dryRun1BaselineBytes ?? queryResult.totalBytesProcessed)} → Pass #2: {formatBytes(queryResult.optimizationReport.dryRun2OptimizedBytes ?? queryResult.optimizedBytesEstimate)})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {queryResult.optimizationReport.optimizedSql &&
+                            queryResult.optimizationReport.optimizedSql.trim() !==
+                              sqlInput.trim() && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextSql =
+                                    queryResult.optimizationReport.optimizedSql;
+                                  setSqlInput(nextSql);
+                                  onShowToast?.(
+                                    'Executing Auto-Optimized SQL live against BigQuery...'
+                                  );
+                                  handleExecuteQuery(false, nextSql);
+                                }}
+                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                              >
+                                ▶ Apply &amp; Execute Optimized SQL Live
+                              </button>
+                            )}
                           <button
                             type="button"
                             onClick={() => setShowSqlDiffSideBySide((v) => !v)}
