@@ -4478,6 +4478,8 @@ function CloudPulseCockpit() {
   const [recycleBinCategory, setRecycleBinCategory] = useState('ALL');
   const [bigQuerySubTab, setBigQuerySubTab] = useState('TABLES_SQL');
   const [sreSubTab, setSreSubTab] = useState('SLO_BURN_AND_RCA');
+  const [gkeSubTab, setGkeSubTab] = useState('FLEET_DEPLOY');
+  const [functionsSubTab, setFunctionsSubTab] = useState('TRIGGER_WIZARD');
   const [studioSubTabNonce, setStudioSubTabNonce] = useState(0);
   const [bigQuerySqlNonce, setBigQuerySqlNonce] = useState(0);
 
@@ -4895,6 +4897,18 @@ function CloudPulseCockpit() {
       });
       return;
     }
+    if (tabId === 'IAM_SURGEON') {
+      setSovereignSubTab('IAM_SURGEON');
+      setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'IAM_SURGEON',
+        targetLabel: 'IAM & Sovereign Studio → Autonomous IAM Surgeon',
+        badgeText: 'Autonomous IAM Surgeon',
+      });
+      return;
+    }
     const innovationSubTabAliases = {
       APPHUB_GDC: 'TOPOLOGY',
       APP_TOPOLOGY: 'TOPOLOGY',
@@ -4917,9 +4931,11 @@ function CloudPulseCockpit() {
       TERRAFORM: 'TERRAFORM',
       REVERSE_TERRAFORM: 'TERRAFORM',
     };
-    const isDirectInnovationSubTab = Boolean(innovationSubTabAliases[tabId]);
+    const isDirectPersonaSubTab = String(tabId || '').startsWith('FIVE_PERSONA_');
+    const isDirectInnovationSubTab =
+      Boolean(innovationSubTabAliases[tabId]) || isDirectPersonaSubTab;
     const resolvedSubTab = isDirectInnovationSubTab
-      ? subTab || innovationSubTabAliases[tabId]
+      ? subTab || innovationSubTabAliases[tabId] || tabId
       : subTab;
 
     const rawNormalizedTab = isDirectInnovationSubTab
@@ -4942,7 +4958,10 @@ function CloudPulseCockpit() {
       ? 'CLOUD_STORAGE'
       : tabId === 'SOVEREIGN_IAM' || tabId === 'IAM_SECURITY'
       ? 'SOVEREIGN_STUDIO'
-      : tabId === 'BILLING_GUARDIAN' || tabId === 'BILLING_CREDITS' || tabId === 'FINOPS_BILLING_RADAR'
+      : tabId === 'BILLING_GUARDIAN' ||
+        tabId === 'BILLING_CREDITS' ||
+        tabId === 'FINOPS_BILLING_RADAR' ||
+        tabId === 'BILLING_APIS'
       ? 'FINOPS'
       : tabId === 'CLOUD_RUN_FLEET'
       ? 'CLOUD_RUN'
@@ -5013,8 +5032,48 @@ function CloudPulseCockpit() {
       setSreSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'WAVE9_STUDIO') {
       setWave9SubTab(resolvedSubTab);
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:wave9-subtab', {
+            detail: { subTab: resolvedSubTab },
+          })
+        );
+      }, 30);
+    } else if (resolvedSubTab && normalizedTab === 'CLOUD_RUN') {
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:open-cloudrun-workbench', {
+            detail: { studio: resolvedSubTab },
+          })
+        );
+      }, 50);
+    } else if (resolvedSubTab && normalizedTab === 'GKE_STUDIO') {
+      setGkeSubTab(resolvedSubTab);
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:gke-subtab', {
+            detail: { subTab: resolvedSubTab },
+          })
+        );
+      }, 40);
+    } else if (resolvedSubTab && normalizedTab === 'FUNCTIONS_STUDIO') {
+      setFunctionsSubTab(resolvedSubTab);
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:functions-focus', {
+            detail: { subTab: resolvedSubTab },
+          })
+        );
+      }, 40);
     } else if (resolvedSubTab && normalizedTab === 'CLOUD_SOC') {
       setCloudSocSeed({ targetPillar: resolvedSubTab, nonce: Date.now() });
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:soc-subtab', {
+            detail: { subTab: resolvedSubTab },
+          })
+        );
+      }, 40);
     } else if (normalizedTab === 'RECYCLE_BIN') {
       setRecycleBinCategory(resolvedSubTab || 'ALL');
     } else if (normalizedTab === 'CLOUD_STORAGE') {
@@ -7401,6 +7460,7 @@ function CloudPulseCockpit() {
                     initialSubTab={wave9SubTab}
                     subTabNonce={studioSubTabNonce}
                     onSubTabChange={setWave9SubTab}
+                    onSelectTab={handleNavigateStudioTab}
                     onTriggerToast={showToast}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -7636,6 +7696,8 @@ function CloudPulseCockpit() {
                   />
                   <CloudFunctionsEventarcStudio
                     projectId={selectedProjectId}
+                    initialSubTab={functionsSubTab}
+                    onSelectTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                   />
@@ -7664,6 +7726,8 @@ function CloudPulseCockpit() {
                   />
                   <GkeFleetStudio
                     projectId={selectedProjectId}
+                    initialSubTab={gkeSubTab}
+                    onSelectTab={handleNavigateStudioTab}
                     onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
                     onRunInShell={handleRunInShell}
                     onRefreshOverview={() =>

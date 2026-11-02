@@ -337,18 +337,30 @@ const ADVANCED_EVENTARC_CATALOG = [
   },
 ];
 
+function normalizeFunctionsSubTab(raw) {
+  if (!raw) return 'TRIGGER_WIZARD';
+  if (raw === 'DEPLOY' || raw === 'PUBSUB' || raw === 'TRIGGER_WIZARD') {
+    return 'TRIGGER_WIZARD';
+  }
+  if (raw === 'ACTIVE_FLEET' || raw === 'LIVE_FLEET') {
+    return 'LIVE_FLEET';
+  }
+  return raw;
+}
+
 export default function CloudFunctionsEventarcStudio({
   projectId,
   initialSubTab = null,
+  onSelectTab,
   onRunInShell,
   onShowToast,
 }) {
   const [activeSubTab, setActiveSubTab] = useState(
-    initialSubTab || 'TRIGGER_WIZARD'
+    normalizeFunctionsSubTab(initialSubTab)
   );
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(normalizeFunctionsSubTab(initialSubTab));
     }
   }, [initialSubTab]);
   const [loading, setLoading] = useState(false);
@@ -467,7 +479,7 @@ export default function CloudFunctionsEventarcStudio({
     const handleFunctionsFocus = (e) => {
       const detail = e?.detail || {};
       if (detail.subTab) {
-        setActiveSubTab(detail.subTab);
+        setActiveSubTab(normalizeFunctionsSubTab(detail.subTab));
       }
       if (detail.topicName) {
         setWizardMode('BEGINNER');
@@ -2713,6 +2725,8 @@ gcloud pubsub subscriptions pull ${dlqTopicName}-sub --limit=20 --auto-ack --for
                       cost: fn2ndGenMonthlyUsd,
                       badge: simRps < 30 ? '★ BEST FOR EVENT BURSTS' : 'EVENT-DRIVEN',
                       pros: 'Zero idle cost ($0.00 at 0 RPS) · Native Eventarc CEL triggers · 80x concurrency per instance',
+                      actionLabel: 'Configure Function Trigger Wizard →',
+                      onAction: () => setActiveSubTab('TRIGGER_WIZARD'),
                     },
                     {
                       name: '2. Cloud Run Multi-Container Service',
@@ -2722,32 +2736,48 @@ gcloud pubsub subscriptions pull ${dlqTopicName}-sub --limit=20 --auto-ack --for
                           ? '★ BEST FOR API + SIDECARS'
                           : 'INSTANCE-BASED CPU',
                       pros: 'Up to 10 sidecars (OTel, Nginx, Cloud SQL Proxy) · Direct VPC egress · Serverless L4 GPUs',
+                      actionLabel: 'Open Cloud Run Sidecars & Worker Pools →',
+                      onAction: () =>
+                        onSelectTab && onSelectTab('CLOUD_RUN', 'WORKER_POOLS'),
                     },
                     {
                       name: '3. GKE Autopilot (`ComputeClass` Spot)',
                       cost: gkeAutopilotSpotMonthlyUsd,
                       badge: simRps > 200 ? '★ BEST AT HIGH SUSTAINED RPS' : 'K8S GATEWAY + DWS',
                       pros: '-68% Spot ComputeClass cascade · K8s Gateway API HTTPRoute · Zero per-request invocation fee',
+                      actionLabel: 'Open GKE ComputeClass & Gateway Studio →',
+                      onAction: () =>
+                        onSelectTab &&
+                        onSelectTab('GKE_STUDIO', 'COMPUTECLASS_GATEWAY_2027'),
                     },
                   ].map((eng, idx) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                      className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-2"
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                          {eng.name}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                          {eng.badge}
-                        </span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {eng.name}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                            {eng.badge}
+                          </span>
+                        </div>
+                        <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                          ~${eng.cost.toLocaleString()}/mo
+                        </div>
+                        <p className="text-[10.5px] text-zinc-500 font-sans leading-relaxed">
+                          {eng.pros}
+                        </p>
                       </div>
-                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                        ~${eng.cost.toLocaleString()}/mo
-                      </div>
-                      <p className="text-[10.5px] text-zinc-500 font-sans leading-relaxed">
-                        {eng.pros}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={eng.onAction}
+                        className="w-full py-1.5 px-2.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-blue-600 dark:text-blue-400 text-left cursor-pointer"
+                      >
+                        {eng.actionLabel}
+                      </button>
                     </div>
                   ))}
                 </div>

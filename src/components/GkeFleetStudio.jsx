@@ -82,22 +82,49 @@ const WORKLOAD_TEMPLATES = {
   },
 };
 
+function normalizeGkeSubTab(raw) {
+  if (!raw) return 'FLEET_DEPLOY';
+  if (
+    raw === 'COMPUTE_CLASS_GATEWAY_2027' ||
+    raw === 'COMPUTECLASS_GATEWAY_2027'
+  ) {
+    return 'COMPUTECLASS_GATEWAY_2027';
+  }
+  if (raw === 'POD_FINOPS' || raw === 'GPU_FINOPS') return 'GPU_FINOPS';
+  if (raw === 'DOCKER_GEN' || raw === 'WORKLOAD_YAML') return 'WORKLOAD_YAML';
+  if (raw === 'WORKLOAD_ID' || raw === 'FLEET_DEPLOY') return 'FLEET_DEPLOY';
+  return raw;
+}
+
 export default function GkeFleetStudio({
   projectId,
   initialSubTab = null,
+  onSelectTab,
   onOpenProvisionGke,
   onRunInShell,
   onRefreshOverview,
   onShowToast,
 }) {
   const [activeSubTab, setActiveSubTab] = useState(
-    initialSubTab || 'FLEET_DEPLOY'
+    normalizeGkeSubTab(initialSubTab)
   );
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(normalizeGkeSubTab(initialSubTab));
     }
   }, [initialSubTab]);
+
+  useEffect(() => {
+    const handleGkeSubTab = (evt) => {
+      const target = evt?.detail?.subTab;
+      if (target) {
+        setActiveSubTab(normalizeGkeSubTab(target));
+      }
+    };
+    window.addEventListener('cloudpulse:gke-subtab', handleGkeSubTab);
+    return () =>
+      window.removeEventListener('cloudpulse:gke-subtab', handleGkeSubTab);
+  }, []);
   const [gkeData, setGkeData] = useState(null);
   const [loadingGke, setLoadingGke] = useState(false);
 
@@ -1707,6 +1734,34 @@ spec:
                         <Terminal className="w-3.5 h-3.5" />
                         <span>Apply via `kubectl` in Cloud Shell →</span>
                       </button>
+                    )}
+
+                    {onSelectTab && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectTab('CLOUD_RUN', 'CLOUDRUN_TO_GKE')
+                          }
+                          className="px-3 py-1.5 rounded-md bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Rocket className="w-3.5 h-3.5" />
+                          <span>Transpile Cloud Run → K8s Bundle →</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectTab(
+                              'FUNCTIONS_STUDIO',
+                              'EVENTARC_BUS_3ENGINE_2027'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Compare in 3-Engine TCO Sizer →</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

@@ -21,6 +21,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   initialSubTab = 'CLOUD_BUILD_GITHUB',
   subTabNonce = 0,
   onSubTabChange,
+  onSelectTab,
   onTriggerToast,
   onRefreshOverview,
 }) {
@@ -1488,9 +1489,21 @@ options:
                   </div>
                 </div>
 
-                {/* 1-Click Batch Orphan Sweeper Button */}
-                {orphanImages.length > 0 && (
-                  <div className="flex items-center gap-1.5">
+                {/* 1-Click Batch Orphan Sweeper Button + Cross-Studio Cloud Run Dead Artifact Bridge */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectTab('CLOUD_RUN', 'DEAD_ARTIFACTS')
+                      }
+                      title="Open Cloud Run Dead Container & GCS Build Staging Hygiene Scanner"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      <span>Scan Cloud Run &amp; GCS Build Staging →</span>
+                    </button>
+                  )}
+                  {orphanImages.length > 0 && (
                     <button
                       type="button"
                       disabled={sweepingOrphans}
@@ -1505,8 +1518,8 @@ options:
                           : `Sweep All ${orphanImages.length} Orphans Now`}
                       </span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">

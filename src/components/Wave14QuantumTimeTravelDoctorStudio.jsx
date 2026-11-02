@@ -768,6 +768,18 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                       : 'Mutate & Prove Time-Travel Diff Live'}
                   </span>
                 </button>
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectStudioTab('BIGQUERY_STUDIO', 'TIMETRAVEL_LINEAGE')
+                    }
+                    className="px-3 py-2 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    <span>BigQuery Lineage &amp; Clone Studio →</span>
+                  </button>
+                )}
               </div>
             </div>
 

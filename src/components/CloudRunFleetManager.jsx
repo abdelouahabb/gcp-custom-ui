@@ -2671,13 +2671,40 @@ spec:
                   Run continuous non-HTTP pull workers (Kafka, Pub/Sub pull, Temporal) without dummy port <code>8080</code> listeners, wire up to 10 sidecar containers with strict <code>dependsOn</code> startup health ordering and shared in-memory IPC (<code>emptyDir: Memory</code>), and attach on-demand <strong>NVIDIA L4 (24GB)</strong> or <strong>RTX PRO 6000 Blackwell (96GB)</strong> GPUs.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowWorkerPoolsSidecarStudio(false)}
-                className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                Close
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {onSelectTab && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectTab(
+                          'FUNCTIONS_STUDIO',
+                          'EVENTARC_BUS_3ENGINE_2027'
+                        )
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-xs font-mono font-bold text-blue-700 dark:text-blue-300 cursor-pointer"
+                    >
+                      Wire Eventarc Bus &amp; DLQ →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                    >
+                      SDK 591.0.0 Alpha/Beta Lab →
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowWorkerPoolsSidecarStudio(false)}
+                  className="px-2.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -4789,7 +4816,18 @@ services:
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {onSelectTab && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectTab('WAVE9_STUDIO', 'SUPPLY_CHAIN_AR')
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <span>SLSA-3 Supply Chain &amp; Repo Manager →</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleScanDeadArtifacts(false)}
@@ -5296,13 +5334,26 @@ services:
                   Google Cloud Console only gives you a raw Knative `serving.knative.dev/v1` YAML and leaves you on your own. CloudPulse transpiles your Cloud Run service into a <strong>6-Resource Native Kubernetes Bundle</strong> (`Deployment` + `HPA v2` + `PDB` + `Service` + `NetworkPolicy` + `Workload Identity SA`) and deploys it to a live GKE cluster in 1 click.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowGlobalGkeTranspiler(false)}
-                className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                Close Studio
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {onSelectTab && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectTab('GKE_STUDIO', 'COMPUTECLASS_GATEWAY_2027')
+                    }
+                    className="px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-xs font-mono font-bold text-blue-700 dark:text-blue-300 cursor-pointer"
+                  >
+                    Open GKE ComputeClass &amp; Gateway Studio →
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowGlobalGkeTranspiler(false)}
+                  className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  Close Studio
+                </button>
+              </div>
             </div>
 
             {/* 4 Architectural & FinOps Benefits Cards */}
