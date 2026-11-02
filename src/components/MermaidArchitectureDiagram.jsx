@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Share2,
   Code2,
@@ -10,6 +10,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 /**
@@ -296,11 +298,24 @@ export default function MermaidArchitectureDiagram({
   const [viewMode, setViewMode] = useState(defaultMode);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanningCanvas, setIsPanningCanvas] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [nodeOffsets, setNodeOffsets] = useState({}); // { [nodeId]: { dx, dy } }
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const dragOriginRef = useRef(null);
+  const panOriginRef = useRef(null);
   const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!isFullscreen) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
 
   const parsed = useMemo(
     () => parseMermaidFlowchart(effectiveCode),
@@ -338,22 +353,65 @@ export default function MermaidArchitectureDiagram({
     setDraggingNodeId(nodeId);
   };
 
+  const handleCanvasMouseDown = (e) => {
+    if (e.button !== 0 || dragOriginRef.current) return;
+    const svg = svgRef.current;
+    const rect = svg?.getBoundingClientRect();
+    const vb = svg?.viewBox?.baseVal;
+    const scaleX = (vb?.width || 1200) / Math.max(rect?.width || 1, 1);
+    const scaleY = (vb?.height || 450) / Math.max(rect?.height || 1, 1);
+    panOriginRef.current = {
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      origPanX: panOffset.x,
+      origPanY: panOffset.y,
+      scaleX,
+      scaleY,
+    };
+    setIsPanningCanvas(true);
+  };
+
   const handleSvgMouseMove = (e) => {
-    if (!dragOriginRef.current) return;
-    const pt = clientToSvgPoint(e.clientX, e.clientY);
-    const { nodeId, startSvgX, startSvgY, origDx, origDy } = dragOriginRef.current;
-    const nextDx = Math.round(origDx + (pt.x - startSvgX));
-    const nextDy = Math.round(origDy + (pt.y - startSvgY));
-    setNodeOffsets((prev) => ({
-      ...prev,
-      [nodeId]: { dx: nextDx, dy: nextDy },
-    }));
+    if (dragOriginRef.current) {
+      const pt = clientToSvgPoint(e.clientX, e.clientY);
+      const { nodeId, startSvgX, startSvgY, origDx, origDy } = dragOriginRef.current;
+      const nextDx = Math.round(origDx + (pt.x - startSvgX));
+      const nextDy = Math.round(origDy + (pt.y - startSvgY));
+      setNodeOffsets((prev) => ({
+        ...prev,
+        [nodeId]: { dx: nextDx, dy: nextDy },
+      }));
+      return;
+    }
+    if (panOriginRef.current) {
+      const { startClientX, startClientY, origPanX, origPanY, scaleX, scaleY } =
+        panOriginRef.current;
+      const dx = (e.clientX - startClientX) * scaleX;
+      const dy = (e.clientY - startClientY) * scaleY;
+      setPanOffset({
+        x: Math.round(origPanX + dx),
+        y: Math.round(origPanY + dy),
+      });
+    }
   };
 
   const handleSvgMouseUp = () => {
     if (dragOriginRef.current) {
       dragOriginRef.current = null;
       setDraggingNodeId(null);
+    }
+    if (panOriginRef.current) {
+      panOriginRef.current = null;
+      setIsPanningCanvas(false);
+    }
+  };
+
+  const handleSvgWheel = (e) => {
+    // Allow Ctrl+Wheel, Meta+Wheel, Shift+Wheel, or any wheel when zoomed/fullscreen
+    if (e.ctrlKey || e.metaKey || e.shiftKey || isFullscreen || zoom > 1) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.2 : -0.2;
+      setZoom((z) => Math.max(0.6, Math.min(3.5, Number((z + delta).toFixed(2)))));
     }
   };
 
@@ -552,9 +610,20 @@ export default function MermaidArchitectureDiagram({
     URL.revokeObjectURL(url);
   };
 
+  const vbW = Math.max(240, Math.round(layout.canvasW / zoom));
+  const vbH = Math.max(160, Math.round(layout.canvasH / zoom));
+  const vbX = Math.round((layout.canvasW - vbW) / 2 - panOffset.x);
+  const vbY = Math.round((layout.canvasH - vbH) / 2 - panOffset.y);
+
   return (
-    <div className="w-full bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-4 shadow-sm">
-      {/* Top Toolbar: Title + View Mode Switcher + Zoom + Export SVG + Copy Mermaid */}
+    <div
+      className={
+        isFullscreen
+          ? 'fixed inset-3 z-[9999] bg-white dark:bg-[#131314] rounded-2xl border-2 border-blue-500/60 p-5 space-y-4 shadow-2xl overflow-y-auto flex flex-col'
+          : 'w-full bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-4 shadow-sm'
+      }
+    >
+      {/* Top Toolbar: Title + View Mode Switcher + Zoom + Fullscreen + Export SVG + Copy Mermaid */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
         <div className="flex items-center gap-2 min-w-0">
           <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -611,13 +680,13 @@ export default function MermaidArchitectureDiagram({
             </button>
           </div>
 
-          {/* Zoom Controls when Visual is visible */}
+          {/* Interactive Camera Zoom & Preset Controls when Visual is visible */}
           {viewMode !== 'CODE' && (
             <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-1 py-0.5 gap-0.5">
               <button
                 type="button"
                 onClick={() =>
-                  setZoom((z) => Math.max(0.65, Number((z - 0.15).toFixed(2))))
+                  setZoom((z) => Math.max(0.6, Number((z - 0.25).toFixed(2))))
                 }
                 title="Zoom Out"
                 className="p-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
@@ -630,28 +699,75 @@ export default function MermaidArchitectureDiagram({
               <button
                 type="button"
                 onClick={() =>
-                  setZoom((z) => Math.min(1.6, Number((z + 0.15).toFixed(2))))
+                  setZoom((z) => Math.min(3.5, Number((z + 0.25).toFixed(2))))
                 }
-                title="Zoom In"
+                title="Zoom In (up to 350%)"
                 className="p-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
               >
                 <ZoomIn className="w-3 h-3" />
               </button>
-              {(zoom !== 1 || Object.keys(nodeOffsets).length > 0) && (
+              {[1, 1.6, 2.4].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setZoom(preset)}
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold cursor-pointer ${
+                    Math.abs(zoom - preset) < 0.05
+                      ? 'bg-blue-600 text-white'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  {Math.round(preset * 100)}%
+                </button>
+              ))}
+              {(zoom !== 1 ||
+                panOffset.x !== 0 ||
+                panOffset.y !== 0 ||
+                Object.keys(nodeOffsets).length > 0) && (
                 <button
                   type="button"
                   onClick={() => {
                     setZoom(1);
+                    setPanOffset({ x: 0, y: 0 });
                     setNodeOffsets({});
                   }}
-                  title="Reset Zoom & Node Positions"
+                  title="Reset Zoom, Pan & Node Positions"
                   className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset Layout</span>
+                  <span>Reset</span>
                 </button>
               )}
             </div>
+          )}
+
+          {viewMode !== 'CODE' && (
+            <button
+              type="button"
+              onClick={() => setIsFullscreen((v) => !v)}
+              title={
+                isFullscreen
+                  ? 'Exit Fullscreen (Esc)'
+                  : 'Expand Mermaid Diagram to Fullscreen'
+              }
+              className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                isFullscreen
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
+              }`}
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="w-3 h-3" />
+                  <span>Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Fullscreen</span>
+                </>
+              )}
+            </button>
           )}
 
           {viewMode !== 'CODE' && (
@@ -687,28 +803,44 @@ export default function MermaidArchitectureDiagram({
         </div>
       </div>
 
-      {/* Rendered Browser SVG Visualization (Full Width & Draggable Nodes) */}
+      {/* Rendered Browser SVG Visualization (Camera Zoom + 2D Drag Pan + Draggable Nodes) */}
       {viewMode !== 'CODE' && (
-        <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-x-auto p-3">
-          <div
-            className="w-full"
-            style={{
-              minWidth: zoom > 1 ? `${Math.round(layout.canvasW * zoom)}px` : '100%',
-            }}
-          >
+        <div
+          className={`w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-hidden p-3 ${
+            isFullscreen ? 'flex-1 flex flex-col justify-between' : ''
+          }`}
+        >
+          <div className="w-full">
             <svg
               ref={svgRef}
-              viewBox={`0 0 ${layout.canvasW} ${layout.canvasH}`}
+              viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
               preserveAspectRatio="xMidYMid meet"
               width="100%"
+              onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleSvgMouseMove}
               onMouseUp={handleSvgMouseUp}
               onMouseLeave={handleSvgMouseUp}
+              onWheel={handleSvgWheel}
+              onDoubleClick={() => {
+                if (zoom < 1.6) {
+                  setZoom(1.75);
+                } else {
+                  setZoom(1);
+                  setPanOffset({ x: 0, y: 0 });
+                }
+              }}
               style={{
                 width: '100%',
                 height: 'auto',
-                minHeight: `${Math.round(layout.canvasH * 0.85 * zoom)}px`,
-                cursor: draggingNodeId ? 'grabbing' : 'default',
+                minHeight: isFullscreen
+                  ? '70vh'
+                  : `${Math.max(320, Math.round(layout.canvasH * 0.78))}px`,
+                cursor:
+                  draggingNodeId || isPanningCanvas
+                    ? 'grabbing'
+                    : zoom > 1
+                    ? 'grab'
+                    : 'default',
               }}
               className="block w-full select-none"
             >
@@ -1009,7 +1141,7 @@ export default function MermaidArchitectureDiagram({
           </div>
           <div className="px-2 pt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
             <span>
-              Drag any node to reposition it · Hover any node to highlight upstream &amp; downstream paths.
+              Zoom (60%–350% · Double-click or Ctrl+Scroll) · Drag background to pan · Drag any node to reposition · Click Fullscreen to expand.
             </span>
             <span>
               Rendered natively in browser SVG · Zero external runtime bloat

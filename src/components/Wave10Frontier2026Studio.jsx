@@ -1699,58 +1699,6 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
               />
             </div>
 
-            {/* Interactive Mermaid Data Schema & Property Graph Visualizer */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-xs font-extrabold font-mono text-blue-400">
-                    Interactive Mermaid Data Schema &amp; ISO GQL Topology Visualizer
-                  </div>
-                  <p className="text-[11px] text-zinc-500">
-                    Live-compiled from your `{parentTable}` → `{childTable}` → `{grandchildTable}` interleaved hierarchy and `{gqlHopDepth}`-hop `{selectedGqlPreset}` graph query.
-                  </p>
-                </div>
-                <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setMermaidSchemaMode('GRAPH_TOPOLOGY')}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
-                      mermaidSchemaMode === 'GRAPH_TOPOLOGY'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Graph &amp; Cycle Topology (flowchart TB)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMermaidSchemaMode('ER_SCHEMA')}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
-                      mermaidSchemaMode === 'ER_SCHEMA'
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Entity-Relationship Schema (erDiagram)
-                  </button>
-                </div>
-              </div>
-
-              <MermaidArchitectureDiagram
-                code={
-                  mermaidSchemaMode === 'ER_SCHEMA'
-                    ? spannerArtifacts.mermaidErDiagram
-                    : spannerArtifacts.mermaidGraphFlowchart
-                }
-                title={
-                  mermaidSchemaMode === 'ER_SCHEMA'
-                    ? `Mermaid erDiagram: ${parentTable} → ${childTable} → ${grandchildTable} + FinOpsKnowledgeGraph`
-                    : `Mermaid Graph Schema & ${gqlHopDepth}-Hop ISO GQL Cycle (${spannerArtifacts.activePreset.label})`
-                }
-                defaultMode="SPLIT"
-              />
-            </div>
-
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
@@ -1783,6 +1731,58 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 {spannerArtifacts.interleavedDdl}
               </pre>
             </div>
+          </div>
+
+          {/* Full 12-Col Span: Interactive Mermaid Data Schema & Property Graph Visualizer */}
+          <div className="lg:col-span-12 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-extrabold font-mono text-blue-400">
+                  Interactive Mermaid Data Schema &amp; ISO GQL Topology Visualizer (Full-Width · Zoom &amp; Pan)
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Live-compiled from your `{parentTable}` → `{childTable}` → `{grandchildTable}` interleaved hierarchy and `{gqlHopDepth}`-hop `{selectedGqlPreset}` graph query. Use <strong>160% / 240% / Fullscreen</strong> or double-click the canvas to zoom and drag-pan.
+                </p>
+              </div>
+              <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMermaidSchemaMode('GRAPH_TOPOLOGY')}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                    mermaidSchemaMode === 'GRAPH_TOPOLOGY'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  Graph &amp; Cycle Topology (flowchart TB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMermaidSchemaMode('ER_SCHEMA')}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                    mermaidSchemaMode === 'ER_SCHEMA'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  Entity-Relationship Schema (erDiagram)
+                </button>
+              </div>
+            </div>
+
+            <MermaidArchitectureDiagram
+              code={
+                mermaidSchemaMode === 'ER_SCHEMA'
+                  ? spannerArtifacts.mermaidErDiagram
+                  : spannerArtifacts.mermaidGraphFlowchart
+              }
+              title={
+                mermaidSchemaMode === 'ER_SCHEMA'
+                  ? `Mermaid erDiagram: ${parentTable} → ${childTable} → ${grandchildTable} + FinOpsKnowledgeGraph`
+                  : `Mermaid Graph Schema & ${gqlHopDepth}-Hop ISO GQL Cycle (${spannerArtifacts.activePreset.label})`
+              }
+              defaultMode="VISUAL"
+            />
           </div>
         </div>
       )}
