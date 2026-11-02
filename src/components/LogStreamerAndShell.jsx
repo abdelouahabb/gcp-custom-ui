@@ -76,7 +76,7 @@ const NL_INTENT_PRESETS = [
 function sanitizeExecutableCliInput(rawCmd) {
   const collapsed = String(rawCmd || '').replace(/\\\r?\n\s*/g, ' ');
   const lines = collapsed
-    .split(/\r?\n/)
+    .split(/\r?\n|\s*&&\s*/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith('#'))
     .map((line) => line.replace(/^\$\s+/, '').trim());

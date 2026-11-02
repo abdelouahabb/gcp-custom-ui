@@ -72,6 +72,14 @@ const STUDIO_TABS = [
     icon: History,
     tip: 'Rewind any BigQuery table up to 168 hours (7 days) to recover accidentally deleted/corrupted rows via Zero-Copy Clone or FOR SYSTEM_TIME AS OF snapshot SQL',
   },
+  {
+    id: 'AI_VECTOR_STREAMING',
+    label: 'BigQuery AI (Gemini / Vector ScaNN / TimesFM) & Continuous SQL',
+    shortLabel: 'BQ AI, Vectors & Stream',
+    badge: 'ScaNN + TimesFM',
+    icon: Cpu,
+    tip: 'Run Gemini 2.5 ML.GENERATE_TEXT, ScaNN/IVF VECTOR_SEARCH with text-embedding-005, Zero-Shot TimesFM AI.FORECAST, and Continuous SQL Streaming to Pub/Sub & Bigtable',
+  },
 ];
 
 const SAMPLE_UNOPTIMIZED_QUERIES = [
@@ -238,6 +246,16 @@ export default function BigQueryStudio({
     'telemetry_events_2026_restored'
   );
   const [selectedSchemaCols, setSelectedSchemaCols] = useState([]);
+
+  // Sub-Tab 6: BigQuery AI (Gemini / Vector ScaNN / TimesFM) & Continuous SQL Streaming state
+  const [bqAiModel, setBqAiModel] = useState('gemini-2.5-flash');
+  const [bqEmbeddingModel, setBqEmbeddingModel] =
+    useState('text-embedding-005');
+  const [bqVectorIndexType, setBqVectorIndexType] = useState('TREE_AH'); // 'TREE_AH' (ScaNN) | 'IVF'
+  const [bqVectorTopK, setBqVectorTopK] = useState(10);
+  const [bqForecastHorizonDays, setBqForecastHorizonDays] = useState(30);
+  const [bqContinuousSink, setBqContinuousSink] = useState('PUBSUB'); // 'PUBSUB' | 'BIGTABLE' | 'VERTEX_AI'
+  const [provisioningAiTable, setProvisioningAiTable] = useState(false);
 
   // Helper to construct partition-filter-compliant WHERE clause for any table
   const getTablePartitionWhereClause = useCallback((tblObj) => {
@@ -851,7 +869,7 @@ export default function BigQueryStudio({
               <span>BigQuery Studio Modules (Select Module Below):</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
             {STUDIO_TABS.map((t) => {
               const Icon = t.icon || Database;
               const active = activeSubTab === t.id;
@@ -2651,6 +2669,457 @@ export default function BigQueryStudio({
                 >
                   Load into SQL X-Ray &amp; Dry-Run →
                 </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          TAB 6: BIGQUERY AI (GEMINI / VECTOR SCANN / TIMESFM) & CONTINUOUS SQL
+         =================================================================== */}
+      {activeSubTab === 'AI_VECTOR_STREAMING' && (
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Cpu className="w-4 h-4 text-blue-500" />
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                  BigQuery AI (`ML.GENERATE_TEXT`), Vector Search (`ScaNN`/`IVF`), TimesFM (`AI.FORECAST`) &amp; Continuous SQL
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  ZERO DATA MOVEMENT · IN-WAREHOUSE GENAI + VECTOR RAG + STREAMING
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Execute Vertex AI Gemini 2.5 reasoning, `TREE_AH` (Google ScaNN) vector similarity search, zero-shot `TimesFM 2.0` time-series forecasting, and real-time Continuous SQL directly over `{projectId}.{selectedDatasetId || 'analytics_lakehouse'}`:
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={provisioningAiTable}
+                onClick={async () => {
+                  const ds = selectedDatasetId || 'analytics_lakehouse';
+                  setProvisioningAiTable(true);
+                  try {
+                    await axios.post(
+                      `/api/project/${encodeURIComponent(
+                        projectId
+                      )}/bigquery/datasets/${encodeURIComponent(ds)}/tables`,
+                      {
+                        tableId: 'ai_lakehouse_telemetry',
+                        partitionType: 'DAY',
+                        partitionField: 'event_timestamp',
+                        requirePartitionFilter: true,
+                        clusteringFields: ['region', 'user_id'],
+                      }
+                    );
+                    await axios
+                      .post(
+                        `/api/project/${encodeURIComponent(
+                          projectId
+                        )}/bigquery/datasets/${encodeURIComponent(
+                          ds
+                        )}/tables/ai_lakehouse_telemetry/seed-rows`
+                      )
+                      .catch(() => null);
+                    await fetchDatasets();
+                    if (selectedDatasetId) await fetchTables(selectedDatasetId);
+                    onShowToast?.(
+                      `Provisioned & seeded ${projectId}.${ds}.ai_lakehouse_telemetry for BigQuery AI & Forecasting!`
+                    );
+                  } catch (err) {
+                    onShowError?.(
+                      err.response?.data?.error ||
+                        'Failed to provision AI Lakehouse table'
+                    );
+                  } finally {
+                    setProvisioningAiTable(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>
+                  {provisioningAiTable
+                    ? 'Provisioning AI Table...'
+                    : '1-Click Provision & Seed AI Lakehouse Table'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onRunInShell?.(
+                    `bq mk --connection --location=US --project_id=${projectId} --connection_type=CLOUD_RESOURCE vertex_ai_conn && bq show --connection ${projectId}.us.vertex_ai_conn`
+                  )
+                }
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Create Vertex AI Connection in Shell</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 5 Interactive Controls for BigQuery AI, Vector ScaNN, TimesFM & Continuous SQL */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-zinc-50 dark:bg-[#131314] p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
+            <div>
+              <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                Vertex AI Foundation Model
+              </label>
+              <select
+                value={bqAiModel}
+                onChange={(e) => setBqAiModel(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="gemini-2.5-flash">
+                  gemini-2.5-flash (Low-Latency SQL)
+                </option>
+                <option value="gemini-2.5-pro">
+                  gemini-2.5-pro (Deep Reasoning)
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                Embedding Model
+              </label>
+              <select
+                value={bqEmbeddingModel}
+                onChange={(e) => setBqEmbeddingModel(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="text-embedding-005">
+                  text-embedding-005 (768-d RAG)
+                </option>
+                <option value="text-multilingual-embedding-002">
+                  text-multilingual-embedding-002
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                Vector Index Engine
+              </label>
+              <select
+                value={bqVectorIndexType}
+                onChange={(e) => setBqVectorIndexType(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="TREE_AH">
+                  TREE_AH (Google ScaNN Asymmetric Hash)
+                </option>
+                <option value="IVF">IVF (Inverted File Flat Index)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                TimesFM Horizon:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {bqForecastHorizonDays} Days
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={7}
+                max={90}
+                step={1}
+                value={bqForecastHorizonDays}
+                onChange={(e) =>
+                  setBqForecastHorizonDays(Number(e.target.value))
+                }
+                className="w-full accent-blue-600 cursor-pointer mt-1.5"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase text-zinc-500 mb-1">
+                Continuous Query Sink
+              </label>
+              <select
+                value={bqContinuousSink}
+                onChange={(e) => setBqContinuousSink(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="PUBSUB">
+                  Cloud Pub/Sub Topic (Real-Time Event Bus)
+                </option>
+                <option value="BIGTABLE">
+                  Cloud Bigtable (Sub-5ms Feature Serving)
+                </option>
+                <option value="VERTEX_AI">
+                  Vertex AI Online Feature Store
+                </option>
+              </select>
+            </div>
+          </div>
+
+          {/* 4 Actionable BigQuery AI, Vector ScaNN, TimesFM & Continuous SQL Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[
+              {
+                id: 'bq-ai-gemini',
+                badge: `VERTEX AI · ${bqAiModel.toUpperCase()}`,
+                title:
+                  '1. Grounded LLM SQL (ML.GENERATE_TEXT) Over Live Lakehouse Telemetry',
+                desc: 'Register a remote Vertex AI Gemini model and synthesize executive root-cause & FinOps remediation directly inside SQL.',
+                ddlSql: `-- 1. Register Remote Vertex AI Model (${bqAiModel}) in BigQuery
+CREATE OR REPLACE MODEL \`${projectId}.${
+                  selectedDatasetId || 'analytics_lakehouse'
+                }.gemini_lakehouse_copilot\`
+REMOTE WITH CONNECTION \`${projectId}.us.vertex_ai_conn\`
+OPTIONS (endpoint = '${bqAiModel}');
+
+-- 2. Run Grounded ML.GENERATE_TEXT Over Partitioned Telemetry Rows
+SELECT
+  service_name,
+  region,
+  ml_generate_text_llm_result AS executive_remediation_plan
+FROM ML.GENERATE_TEXT(
+  MODEL \`${projectId}.${
+                  selectedDatasetId || 'analytics_lakehouse'
+                }.gemini_lakehouse_copilot\`,
+  (
+    SELECT
+      service_name,
+      region,
+      CONCAT(
+        'Analyze service ', service_name,
+        ' in region ', region,
+        ' with latency ', CAST(ROUND(AVG(latency_ms), 1) AS STRING),
+        'ms and revenue $', CAST(ROUND(SUM(revenue_usd), 2) AS STRING),
+        '. Provide 2 concise SRE + FinOps optimizations.'
+      ) AS prompt
+    FROM \`${projectId}.${
+                  selectedDatasetId || 'analytics_lakehouse'
+                }.${rewindTableTarget || 'telemetry_events_2026'}\`
+    WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+    GROUP BY service_name, region
+  ),
+  STRUCT(0.2 AS temperature, 256 AS max_output_tokens, TRUE AS flatten_json_output)
+);`,
+                executableSql: `SELECT
+  service_name,
+  region,
+  COUNT(event_id) AS event_count,
+  ROUND(AVG(latency_ms), 2) AS avg_latency_ms,
+  ROUND(SUM(revenue_usd), 2) AS total_revenue_usd,
+  CONCAT('Service ', service_name, ' (', region, ') ready for ${bqAiModel} grounding') AS ai_prompt_preview
+FROM \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY service_name, region
+ORDER BY total_revenue_usd DESC
+LIMIT 20;`,
+              },
+              {
+                id: 'bq-vector-scann',
+                badge: `${bqVectorIndexType} VECTOR INDEX · TOP-${bqVectorTopK}`,
+                title: `2. BigQuery Vector Search (VECTOR_SEARCH + ${bqVectorIndexType} ScaNN Index)`,
+                desc: `Generate 768-d embeddings with ${bqEmbeddingModel}, build a sub-10ms ${bqVectorIndexType} vector index, and run semantic similarity joins.`,
+                ddlSql: `-- 1. Build ${bqVectorIndexType} (Google ScaNN) Vector Index on 768-d Embeddings
+CREATE OR REPLACE VECTOR INDEX idx_telemetry_scann
+ON \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.telemetry_embeddings\`(embedding)
+STORING (event_id, service_name, region, revenue_usd)
+OPTIONS (
+  index_type = '${bqVectorIndexType}',
+  distance_type = 'COSINE',
+  tree_ah_options = '{"leaf_node_embedding_count": 1000, "normalization_type": "L2"}'
+);
+
+-- 2. Sub-10ms Semantic VECTOR_SEARCH Top-${bqVectorTopK} Nearest Neighbors
+SELECT
+  base.event_id,
+  base.service_name,
+  base.region,
+  ROUND(1 - distance, 4) AS cosine_similarity
+FROM VECTOR_SEARCH(
+  TABLE \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.telemetry_embeddings\`,
+  'embedding',
+  (SELECT ml_generate_embedding_result AS embedding FROM ML.GENERATE_EMBEDDING(
+    MODEL \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.embedding_model\`,
+    (SELECT 'p99 latency spike in payment checkout gateway' AS content)
+  )),
+  top_k => ${bqVectorTopK},
+  distance_type => 'COSINE'
+);`,
+                executableSql: `SELECT
+  event_id,
+  event_timestamp,
+  service_name,
+  region,
+  latency_ms,
+  revenue_usd
+FROM \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+ORDER BY latency_ms DESC
+LIMIT ${bqVectorTopK};`,
+              },
+              {
+                id: 'bq-timesfm-forecast',
+                badge: `TIMESFM 2.0 · ${bqForecastHorizonDays}-DAY HORIZON`,
+                title: `3. Zero-Shot Time-Series Foundation Model (AI.FORECAST · ${bqForecastHorizonDays} Days)`,
+                desc: 'Forecast daily revenue and latency per region using Google Research TimesFM 2.0 with zero ARIMA model training overhead.',
+                ddlSql: `-- Zero-Training TimesFM 2.0 Foundation Model Forecasting (${bqForecastHorizonDays}-Day Horizon)
+SELECT
+  region,
+  forecast_timestamp,
+  ROUND(forecast_value, 2) AS predicted_revenue_usd,
+  ROUND(prediction_interval_lower_bound, 2) AS lower_95_ci,
+  ROUND(prediction_interval_upper_bound, 2) AS upper_95_ci
+FROM AI.FORECAST(
+  (
+    SELECT
+      TIMESTAMP_TRUNC(event_timestamp, DAY) AS ts_day,
+      region,
+      SUM(revenue_usd) AS daily_revenue
+    FROM \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`
+    WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
+    GROUP BY ts_day, region
+  ),
+  data_col => 'daily_revenue',
+  timestamp_col => 'ts_day',
+  id_cols => ['region'],
+  horizon => ${bqForecastHorizonDays},
+  confidence_level => 0.95
+)
+ORDER BY region, forecast_timestamp;`,
+                executableSql: `SELECT
+  DATE(event_timestamp) AS telemetry_date,
+  region,
+  COUNT(event_id) AS daily_events,
+  ROUND(AVG(latency_ms), 2) AS avg_latency_ms,
+  ROUND(SUM(revenue_usd), 2) AS actual_daily_revenue_usd
+FROM \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY telemetry_date, region
+ORDER BY telemetry_date DESC, actual_daily_revenue_usd DESC
+LIMIT 25;`,
+              },
+              {
+                id: 'bq-continuous-sql',
+                badge: `CONTINUOUS QUERY → ${bqContinuousSink}`,
+                title: `4. BigQuery Continuous SQL Streaming → ${bqContinuousSink} Event Bus`,
+                desc: 'Run an always-on BigQuery Continuous Query (`continuous = TRUE`) that streams sub-second anomaly alerts directly to Pub/Sub or Bigtable.',
+                ddlSql: `-- BigQuery Continuous SQL Query (Enterprise Edition Slot Reservation · continuous = TRUE)
+EXPORT DATA OPTIONS (
+  format = 'CLOUD_PUBSUB',
+  uri = 'https://pubsub.googleapis.com/projects/${projectId}/topics/cloudpulse-realtime-anomalies'
+) AS
+SELECT
+  TO_JSON_STRING(
+    STRUCT(
+      event_id,
+      event_timestamp,
+      user_id,
+      region,
+      service_name,
+      latency_ms,
+      revenue_usd,
+      'HIGH_LATENCY_SLA_BREACH' AS alert_type
+    )
+  ) AS message
+FROM APPENDS(
+  TABLE \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`,
+  CURRENT_TIMESTAMP() - INTERVAL 10 MINUTE
+)
+WHERE latency_ms >= 150.0;`,
+                executableSql: `SELECT
+  event_id,
+  event_timestamp,
+  user_id,
+  region,
+  service_name,
+  latency_ms,
+  revenue_usd
+FROM \`${projectId}.${selectedDatasetId || 'analytics_lakehouse'}.${
+                  rewindTableTarget || 'telemetry_events_2026'
+                }\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND latency_ms >= 50
+ORDER BY latency_ms DESC
+LIMIT 25;`,
+              },
+            ].map((item) => (
+              <div
+                key={item.id}
+                className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                      {item.title}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500">{item.desc}</p>
+                  <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-52">
+                    {item.ddlSql}
+                  </pre>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => copyText(item.ddlSql, item.id)}
+                    className="py-1.5 px-2.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    {copiedId === item.id ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span>Copied SQL</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy AI SQL</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSqlInput(item.executableSql);
+                      setActiveSubTab('TABLES_SQL');
+                      handleExecuteQuery(true, item.executableSql);
+                    }}
+                    className="py-1.5 px-2.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-mono font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Dry-Run in X-Ray →</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSqlInput(item.executableSql);
+                      setActiveSubTab('TABLES_SQL');
+                      handleExecuteQuery(false, item.executableSql);
+                    }}
+                    className="py-1.5 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-mono font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Execute Live →</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

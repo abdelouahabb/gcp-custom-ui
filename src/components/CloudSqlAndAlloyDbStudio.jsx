@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import {
   Database,
   ShieldCheck,
   RefreshCw,
   Copy,
+  Check,
   Sparkles,
   PlusCircle,
   Zap,
@@ -15,6 +16,11 @@ import {
   Layers,
   Terminal,
   Trash2,
+  Play,
+  ArrowRight,
+  GitBranch,
+  Activity,
+  Globe,
 } from 'lucide-react';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
 
@@ -136,15 +142,44 @@ export default function CloudSqlAndAlloyDbStudio({
   const [deletingDbName, setDeletingDbName] = useState('');
   const [copiedLabel, setCopiedLabel] = useState('');
 
-  // --- Sub-Tab 2: Architecture Comparator Workload Sliders ---
+  // --- Sub-Tab 2: Actionable Architecture Comparator & TCO Action Matrix State ---
   const [simVcpu, setSimVcpu] = useState(4);
   const [simStorageGb, setSimStorageGb] = useState(250);
   const [simVectorCountMillions, setSimVectorCountMillions] = useState(10);
+  const [simOlapScanGbDay, setSimOlapScanGbDay] = useState(120);
+  const [simReadReplicas, setSimReadReplicas] = useState(2);
+  const [selectedComparatorArch, setSelectedComparatorArch] =
+    useState('ALLOYDB'); // 'ENTERPRISE' | 'ENTERPRISE_PLUS' | 'ALLOYDB'
+  const [provisioningComparatorArch, setProvisioningComparatorArch] =
+    useState(null);
 
   // --- Sub-Tab 3: AI Vector & Index Surgeon State ---
   const [vectorTableName, setVectorTableName] = useState('knowledge_chunks');
   const [vectorDimensions, setVectorDimensions] = useState(768);
   const [embeddingModel, setEmbeddingModel] = useState('text-embedding-005');
+
+  // --- Sub-Tab 5: Spanner Graph (ISO GQL) & TrueTime Global ACID State ---
+  const [spannerInstanceId, setSpannerInstanceId] = useState(
+    'cloudpulse-fin-graph'
+  );
+  const [spannerDatabaseId, setSpannerDatabaseId] = useState('ledger_graph_db');
+  const [spannerConfig, setSpannerConfig] = useState('nam-eur-asia1'); // 'regional-us-central1' | 'nam3' | 'nam-eur-asia1'
+  const [spannerProcessingUnits, setSpannerProcessingUnits] = useState(300); // 100 PU = 0.1 node
+  const [spannerGraphName, setSpannerGraphName] = useState('FinTechFraudGraph');
+  const [spannerHopDepth, setSpannerHopDepth] = useState(3);
+
+  // --- Sub-Tab 6: Datastream Zero-ETL CDC into BigQuery & BigLake State ---
+  const [cdcStreamId, setCdcStreamId] = useState('alloydb-to-bq-realtime-cdc');
+  const [cdcSourceEngine, setCdcSourceEngine] = useState('ALLOYDB_PG'); // 'ALLOYDB_PG' | 'CLOUDSQL_PG' | 'CLOUDSQL_MYSQL'
+  const [cdcTargetDataset, setCdcTargetDataset] = useState(
+    'analytics_lakehouse'
+  );
+  const [cdcTargetTable, setCdcTargetTable] = useState(
+    'cdc_orders_realtime'
+  );
+  const [cdcMaxStalenessMins, setCdcMaxStalenessMins] = useState(5);
+  const [cdcTargetFormat, setCdcTargetFormat] = useState('BQ_UPSERT'); // 'BQ_UPSERT' | 'BIGLAKE_ICEBERG'
+  const [provisioningCdcTable, setProvisioningCdcTable] = useState(false);
 
   const handleCopy = (text, label = 'command') => {
     navigator.clipboard?.writeText(text);
@@ -502,16 +537,428 @@ WITH (m = 16, ef_construction = 64);`;
   const alloyClustersList = sqlData?.alloyDbClusters || [];
   const totalCount = instancesList.length + alloyClustersList.length;
 
-  // Architecture Comparator Math
-  const cloudSqlEntMonthly = Math.round(
-    (simVcpu * 0.068 * 2 + (simStorageGb * 0.17) / 730) * 730
-  );
-  const cloudSqlPlusMonthly = Math.round(
-    (simVcpu * 0.115 * 2 + (simStorageGb * 0.17) / 730) * 730
-  );
-  const alloyDbMonthly = Math.round(
-    (simVcpu * 0.134 * 2 + (simStorageGb * 0.00041 * 730) / 730) * 730
-  );
+  // Actionable Architecture & TCO Comparator Math + Live Execution Blueprints
+  const archComparatorMetrics = useMemo(() => {
+    const vcpu = Math.max(2, Number(simVcpu || 4));
+    const storageGb = Math.max(50, Number(simStorageGb || 250));
+    const vectorsM = Math.max(1, Number(simVectorCountMillions || 10));
+    const olapGb = Math.max(10, Number(simOlapScanGbDay || 120));
+    const replicas = Math.max(0, Number(simReadReplicas || 2));
+
+    // Classic Cloud SQL duplicates PD-SSD storage for HA standby + every Read Replica
+    const cloudSqlStorageCopies = 2 + replicas; // Primary + Regional HA Standby + Read Replicas
+    const cloudSqlEntStorageUsd = Math.round(
+      storageGb * 0.17 * cloudSqlStorageCopies
+    );
+    const cloudSqlEntComputeUsd = Math.round(
+      vcpu * 0.068 * (2 + replicas) * 730
+    );
+    const cloudSqlEntMonthly = cloudSqlEntComputeUsd + cloudSqlEntStorageUsd;
+
+    const cloudSqlPlusComputeUsd = Math.round(
+      vcpu * 0.115 * (2 + replicas) * 730
+    );
+    const cloudSqlPlusStorageUsd = Math.round(
+      storageGb * 0.17 * cloudSqlStorageCopies
+    );
+    const cloudSqlPlusMonthly = cloudSqlPlusComputeUsd + cloudSqlPlusStorageUsd;
+
+    // AlloyDB Disaggregated Colossus Storage: Pay ONLY ONCE for storage ($0.30/GB-mo regional) regardless of HA or Read Pool nodes!
+    const alloyDbStorageUsd = Math.round(storageGb * 0.3);
+    const alloyDbComputeUsd = Math.round(
+      vcpu * 0.134 * (1 + Math.max(1, replicas)) * 730
+    );
+    const alloyDbMonthly = alloyDbComputeUsd + alloyDbStorageUsd;
+
+    const replicaStorageSavedUsd = Math.max(
+      0,
+      cloudSqlPlusStorageUsd - alloyDbStorageUsd
+    );
+
+    const entTierId =
+      vcpu >= 8
+        ? 'db-custom-8-32768'
+        : vcpu >= 4
+        ? 'db-custom-4-16384'
+        : 'db-custom-2-8192';
+    const entPlusTierId =
+      vcpu >= 8
+        ? 'db-perf-optimized-N-8'
+        : vcpu >= 4
+        ? 'db-perf-optimized-N-4'
+        : 'db-perf-optimized-N-2';
+    const alloyTierId =
+      vcpu >= 8
+        ? 'alloydb-8vcpu-64gb'
+        : vcpu >= 4
+        ? 'alloydb-4vcpu-32gb'
+        : 'alloydb-2vcpu-16gb';
+
+    const winnerArch =
+      sqlEngineFamily === 'MYSQL'
+        ? 'ENTERPRISE_PLUS'
+        : vectorsM >= 5 || olapGb >= 60 || replicas >= 2
+        ? 'ALLOYDB'
+        : 'ENTERPRISE_PLUS';
+
+    const targetSqlInst = instancesList[0]?.name || sqlName || 'cloudpulse-pg16-vault';
+    const targetAlloyCluster =
+      alloyClustersList[0]?.name || 'cloudpulse-alloydb-pg16';
+
+    const blueprints = {
+      ENTERPRISE: {
+        id: 'ENTERPRISE',
+        title: `Cloud SQL Enterprise (${entTierId}) · Baseline OLTP + In-Place Upgrade Path`,
+        badge: '99.95% SLA · $0 LICENSE FEE · IN-PLACE UPGRADE READY',
+        tierId: entTierId,
+        provisionName: `cloudpulse-ent-${vcpu}vcpu`,
+        sql: `-- Cloud SQL Enterprise (${databaseVersion}) Baseline Tuning + pgvector HNSW
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- 1. Create Transactional + Vector Table (${storageGb} GB PD-SSD)
+CREATE TABLE IF NOT EXISTS ${vectorTableName} (
+  id BIGSERIAL PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  doc_uri TEXT NOT NULL,
+  embedding vector(${vectorDimensions}) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Standard HNSW Index (Baseline ${vectorsM * 45} QPS)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_${vectorTableName}_ent_hnsw
+ON ${vectorTableName} USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);`,
+        cli: `# 1. Provision Cloud SQL Enterprise (${vcpu} vCPU · ${vcpu * 4} GB RAM · Regional HA)
+gcloud sql instances create cloudpulse-ent-${vcpu}vcpu \\
+  --database-version=${databaseVersion} \\
+  --edition=ENTERPRISE \\
+  --tier=${entTierId} \\
+  --region=${sqlRegion} \\
+  --availability-type=REGIONAL \\
+  --storage-size=${storageGb}GB \\
+  --storage-type=SSD \\
+  --no-assign-ip \\
+  --network=projects/${projectId}/global/networks/default \\
+  --enable-point-in-time-recovery \\
+  --retained-backups-count=7 \\
+  --project=${projectId}`,
+        upgradeCli: `# In-Place Upgrade Existing Cloud SQL Instance (${targetSqlInst}) → ENTERPRISE_PLUS (<5s Near-Zero Downtime)
+gcloud sql instances patch ${targetSqlInst} \\
+  --edition=ENTERPRISE_PLUS \\
+  --tier=${entPlusTierId} \\
+  --enable-data-cache \\
+  --retained-backups-count=35 \\
+  --project=${projectId}`,
+        xrayQuery: `-- Federated BigQuery EXTERNAL_QUERY → Cloud SQL Enterprise (${targetSqlInst})
+SELECT
+  bq.region,
+  COUNT(*) AS lakehouse_events,
+  ROUND(AVG(bq.latency_ms), 2) AS avg_latency_ms,
+   ROUND(SUM(bq.revenue_usd), 2) AS total_revenue_usd
+FROM \`${projectId}.analytics_lakehouse.open_iceberg_events\` AS bq
+WHERE bq.event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY bq.region
+ORDER BY total_revenue_usd DESC
+LIMIT 25;`,
+      },
+      ENTERPRISE_PLUS: {
+        id: 'ENTERPRISE_PLUS',
+        title: `Cloud SQL Enterprise Plus (${entPlusTierId}) · Local NVMe Data Cache + 35d PITR`,
+        badge: '99.99% SLA · <5s DOWNTIME · 3x NVMe READ CACHE',
+        tierId: entPlusTierId,
+        provisionName: `cloudpulse-entplus-${vcpu}vcpu`,
+        sql: `-- Cloud SQL Enterprise Plus (${databaseVersion}) · NVMe Data Cache Acceleration + HNSW
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS google_db_advisor;
+
+-- 1. Pin Hot Vector & Ledger Pages in Local NVMe Data Cache (3x Read / 2x Write TPS)
+ALTER SYSTEM SET shared_buffers = '${Math.round(vcpu * 3.2)}GB';
+ALTER SYSTEM SET effective_cache_size = '${vcpu * 8}GB';
+
+-- 2. Query Google DB Advisor for Missing Composite Indexes & Lock Contention
+SELECT * FROM google_db_advisor_recommended_indexes LIMIT 10;`,
+        cli: `# Provision Cloud SQL Enterprise Plus with Local NVMe Data Cache & 35-Day PITR
+gcloud sql instances create cloudpulse-entplus-${vcpu}vcpu \\
+  --database-version=${databaseVersion} \\
+  --edition=ENTERPRISE_PLUS \\
+  --tier=${entPlusTierId} \\
+  --region=${sqlRegion} \\
+  --availability-type=REGIONAL \\
+  --enable-data-cache \\
+  --storage-size=${storageGb}GB \\
+  --storage-type=SSD \\
+  --no-assign-ip \\
+  --network=projects/${projectId}/global/networks/default \\
+  --enable-point-in-time-recovery \\
+  --retained-backups-count=35 \\
+  --project=${projectId}`,
+        upgradeCli: `# Enable Local NVMe Data Cache & 35-Day PITR on ${targetSqlInst}
+gcloud sql instances patch ${targetSqlInst} \\
+  --edition=ENTERPRISE_PLUS \\
+  --tier=${entPlusTierId} \\
+  --enable-data-cache \\
+  --retained-backups-count=35 \\
+  --availability-type=REGIONAL \\
+  --project=${projectId}`,
+        xrayQuery: `-- Hybrid BigQuery + Cloud SQL Enterprise Plus Federated Analytics
+SELECT
+  service_name,
+  region,
+  COUNT(*) AS tx_count,
+  ROUND(AVG(latency_ms), 2) AS p50_latency_ms,
+  ROUND(SUM(revenue_usd), 2) AS gross_volume_usd
+FROM \`${projectId}.analytics_lakehouse.open_iceberg_events\`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY service_name, region
+ORDER BY gross_volume_usd DESC
+LIMIT 25;`,
+      },
+      ALLOYDB: {
+        id: 'ALLOYDB',
+        title: `Google Cloud AlloyDB (${alloyTierId}) · Disaggregated Colossus + 100x Columnar + ScaNN`,
+        badge: '99.99% (<1s FAILOVER) · 100x COLUMNAR · 10x SCANN VECTOR QPS',
+        tierId: alloyTierId,
+        provisionName: `cloudpulse-alloy-${vcpu}vcpu`,
+        sql: `-- Google Cloud AlloyDB (${databaseVersion}) · Columnar Engine + Google Research ScaNN + Vertex AI Inline
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS alloydb_scann;
+CREATE EXTENSION IF NOT EXISTS google_ml_integration;
+CREATE EXTENSION IF NOT EXISTS google_columnar_engine;
+
+-- 1. Create RAG + Transactional Ledger Table with Auto-Generated Vertex AI Embeddings
+CREATE TABLE IF NOT EXISTS ${vectorTableName} (
+  id BIGSERIAL PRIMARY KEY,
+  region TEXT NOT NULL,
+  chunk_text TEXT NOT NULL,
+  revenue_usd NUMERIC(12,2) DEFAULT 0.00,
+  embedding vector(${vectorDimensions}) GENERATED ALWAYS AS (
+    embedding('${embeddingModel}', chunk_text)::vector(${vectorDimensions})
+  ) STORED,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Build Google Research ScaNN Index (${vectorsM * 480} QPS · 10x faster than HNSW · 4x smaller RAM)
+CREATE INDEX IF NOT EXISTS idx_${vectorTableName}_scann
+ON ${vectorTableName} USING scann (embedding cosine)
+WITH (num_leaves = ${Math.min(4000, Math.max(500, vectorsM * 100))}, quantizer = 'SQ8');
+
+-- 3. Populate AlloyDB In-Memory Columnar Engine for 100x faster Hybrid OLAP scans (${olapGb} GB/day)
+SELECT google_columnar_engine_add('${vectorTableName}');`,
+        cli: `# 1. Provision Disaggregated AlloyDB Cluster (Zero Replica Storage Duplication — Saves $${replicaStorageSavedUsd}/mo on Storage)
+gcloud alloydb clusters create cloudpulse-alloy-${vcpu}vcpu \\
+  --region=${sqlRegion} \\
+  --database-version=POSTGRES_16 \\
+  --network=projects/${projectId}/global/networks/default \\
+  --continuous-backup-recovery-window-days=35 \\
+  --project=${projectId} && \\
+gcloud alloydb instances create cloudpulse-alloy-${vcpu}vcpu-primary \\
+  --cluster=cloudpulse-alloy-${vcpu}vcpu \\
+  --region=${sqlRegion} \\
+  --instance-type=PRIMARY \\
+  --cpu-count=${vcpu} \\
+  --availability-type=REGIONAL \\
+  --ssl-mode=ENCRYPTED_ONLY \\
+  --database-flags=alloydb.iam_authentication=on,google_columnar_engine.enabled=on,alloydb.enable_pgaudit=on \\
+  --project=${projectId}`,
+        upgradeCli: `# Zero-Downtime Database Migration Service (DMS) Continuous CDC: Cloud SQL (${targetSqlInst}) → AlloyDB (${targetAlloyCluster})
+gcloud database-migration migration-jobs create cloudsql-to-alloydb-cdc \\
+  --region=${sqlRegion} \\
+  --type=CONTINUOUS \\
+  --source=cloudsql-pg-source \\
+  --destination=alloydb-cluster-dest \\
+  --project=${projectId}`,
+        xrayQuery: `-- Hybrid AlloyDB ScaNN + BigQuery Lakehouse Federated Join (Zero-ETL Analytics)
+SELECT
+  evt.region,
+  evt.service_name,
+  COUNT(evt.event_id) AS total_events,
+  ROUND(AVG(evt.latency_ms), 2) AS avg_latency_ms,
+  ROUND(SUM(evt.revenue_usd), 2) AS lakehouse_revenue_usd
+FROM \`${projectId}.analytics_lakehouse.open_iceberg_events\` AS evt
+WHERE evt.event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY evt.region, evt.service_name
+ORDER BY lakehouse_revenue_usd DESC
+LIMIT 25;`,
+      },
+    };
+
+    return {
+      vcpu,
+      storageGb,
+      vectorsM,
+      olapGb,
+      replicas,
+      cloudSqlEntMonthly,
+      cloudSqlEntComputeUsd,
+      cloudSqlEntStorageUsd,
+      cloudSqlPlusMonthly,
+      cloudSqlPlusComputeUsd,
+      cloudSqlPlusStorageUsd,
+      alloyDbMonthly,
+      alloyDbComputeUsd,
+      alloyDbStorageUsd,
+      replicaStorageSavedUsd,
+      entTierId,
+      entPlusTierId,
+      alloyTierId,
+      winnerArch,
+      targetSqlInst,
+      targetAlloyCluster,
+      blueprints,
+    };
+  }, [
+    simVcpu,
+    simStorageGb,
+    simVectorCountMillions,
+    simOlapScanGbDay,
+    simReadReplicas,
+    sqlEngineFamily,
+    databaseVersion,
+    vectorTableName,
+    vectorDimensions,
+    embeddingModel,
+    sqlRegion,
+    projectId,
+    instancesList,
+    alloyClustersList,
+    sqlName,
+  ]);
+
+  const handleLoadComparatorIntoProvisioner = (archKey) => {
+    const bp = archComparatorMetrics.blueprints[archKey];
+    if (!bp) return;
+    setSelectedComparatorArch(archKey);
+    setStorageSizeGb(archComparatorMetrics.storageGb);
+    if (archKey === 'ALLOYDB') {
+      setSqlEngineFamily('POSTGRES');
+      setSqlArchitecture('ALLOYDB');
+      setDatabaseVersion('POSTGRES_16');
+      setTier(bp.tierId);
+      setSqlName(bp.provisionName);
+      setSqlPitrDays(35);
+      setEnableColumnarEngine(true);
+      setEnableVectorScann(true);
+    } else if (archKey === 'ENTERPRISE_PLUS') {
+      setSqlArchitecture('CLOUD_SQL');
+      setEdition('ENTERPRISE_PLUS');
+      setTier(bp.tierId);
+      setSqlName(bp.provisionName);
+      setSqlPitrDays(35);
+    } else {
+      setSqlArchitecture('CLOUD_SQL');
+      setEdition('ENTERPRISE');
+      setTier(bp.tierId);
+      setSqlName(bp.provisionName);
+      setSqlPitrDays(7);
+    }
+    setActiveSubTab('FLEET_PROVISION');
+    if (onShowToast) {
+      onShowToast(
+        `Loaded ${archKey} (${archComparatorMetrics.vcpu} vCPU · ${archComparatorMetrics.storageGb} GB) into Provisioner!`
+      );
+    }
+  };
+
+  const handleProvisionFromComparator = async (archKey) => {
+    const bp = archComparatorMetrics.blueprints[archKey];
+    if (!bp || !projectId || provisioningComparatorArch) return;
+    setSelectedComparatorArch(archKey);
+    setProvisioningComparatorArch(archKey);
+    const isAlloy = archKey === 'ALLOYDB';
+    const targetEdition =
+      archKey === 'ENTERPRISE' ? 'ENTERPRISE' : 'ENTERPRISE_PLUS';
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision`,
+        {
+          serviceType: 'CLOUD_SQL',
+          name: bp.provisionName,
+          region: sqlRegion,
+          config: {
+            sqlArchitecture: isAlloy ? 'ALLOYDB' : 'CLOUD_SQL',
+            sqlEngineFamily: isAlloy ? 'POSTGRES' : sqlEngineFamily,
+            databaseVersion: isAlloy ? 'POSTGRES_16' : databaseVersion,
+            edition: targetEdition,
+            tier: bp.tierId,
+            sqlRegion,
+            availabilityType: 'REGIONAL',
+            storageSizeGb: archComparatorMetrics.storageGb,
+            networkMode: 'PRIVATE_VPC_ONLY',
+            sslMode: 'ENCRYPTED_ONLY',
+            pitrDays: archKey === 'ENTERPRISE' ? 7 : 35,
+            iamAuth: true,
+            enablePgAudit: true,
+            enableVectorScann: isAlloy,
+            enableColumnarEngine: isAlloy,
+            deletionProtection: true,
+          },
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Dispatched live ${archKey} (${bp.provisionName}) provisioning in ${sqlRegion}!`
+        );
+      }
+      await fetchCloudSqlFleet();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            `Failed to provision ${bp.provisionName} on GCP`
+        );
+      }
+    } finally {
+      setProvisioningComparatorArch(null);
+    }
+  };
+
+  const handleProvisionCdcTargetTable = async () => {
+    if (!projectId || provisioningCdcTable) return;
+    setProvisioningCdcTable(true);
+    try {
+      const ds = cdcTargetDataset.trim() || 'analytics_lakehouse';
+      const tbl = cdcTargetTable.trim() || 'cdc_orders_realtime';
+      await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/bigquery/datasets/${encodeURIComponent(ds)}/tables`,
+        {
+          tableId: tbl,
+          partitionType: 'DAY',
+          partitionField: 'event_timestamp',
+          requirePartitionFilter: true,
+          clusteringFields: ['region', 'user_id'],
+        }
+      );
+      await axios
+        .post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/bigquery/datasets/${encodeURIComponent(
+            ds
+          )}/tables/${encodeURIComponent(tbl)}/seed-rows`
+        )
+        .catch(() => null);
+      if (onShowToast) {
+        onShowToast(
+          `Provisioned Zero-ETL CDC target table ${projectId}.${ds}.${tbl} + seeded live CDC telemetry rows!`
+        );
+      }
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            'Failed to provision BigQuery CDC target table'
+        );
+      }
+    } finally {
+      setProvisioningCdcTable(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -522,14 +969,14 @@ WITH (m = 16, ef_construction = 64);`;
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
-                DEDICATED CLOUD SQL (MYSQL & POSTGRESQL) + GOOGLE CLOUD ALLOYDB AI VECTOR STUDIO
+                DEDICATED CLOUD SQL (MYSQL & POSTGRESQL) + ALLOYDB AI + SPANNER GRAPH + ZERO-ETL CDC STUDIO
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Cloud SQL (PostgreSQL & MySQL) vs. AlloyDB Disaggregated AI Database Studio
+              Cloud SQL, AlloyDB Disaggregated AI, Spanner Graph (ISO GQL) &amp; Zero-ETL CDC Studio
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl">
-              Choose **MySQL 8.4 LTS** or **PostgreSQL 16/17**, and when deploying PostgreSQL, choose between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com`)** or **Google Cloud AlloyDB (`alloydb.googleapis.com`)** with 100x Columnar Engine, `alloydb_scann` AI vectors, and strict SEC/GDPR/HIPAA compliance locks (``).
+              Choose **MySQL 8.4 LTS** or **PostgreSQL 16/17**, compare **Cloud SQL Enterprise vs. Enterprise Plus vs. AlloyDB** with 1-click provisioning &amp; DMS migration, build **Spanner Graph (ISO GQL)** topologies, and stream **Datastream Zero-ETL CDC** into BigQuery &amp; BigLake Iceberg.
             </p>
           </div>
 
@@ -575,7 +1022,7 @@ WITH (m = 16, ef_construction = 64);`;
               AlloyDB
             </div>
             <div className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
-              sqladmin + alloydb.googleapis.com/v1
+              sqladmin + alloydb + spanner.googleapis.com
             </div>
           </div>
 
@@ -613,26 +1060,26 @@ WITH (m = 16, ef_construction = 64);`;
 
           <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
             <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-              Continuous PITR Recovery Window
+              Continuous PITR &amp; Zero-ETL CDC
             </div>
             <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
-              {sqlPitrDays} Days WAL / Binlog
+              {sqlPitrDays}d WAL · {cdcMaxStalenessMins}m BigQuery CDC
             </div>
             <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-              Sub-second point-in-time clone ready
+              Sub-second PITR clone + Datastream CDC ready
             </div>
           </div>
         </div>
 
-        {/* In-Studio Cloud SQL & AlloyDB Sub-Tabs (4-Column Equal-Width Grid — Stays Inside Cloud SQL Studio) */}
+        {/* In-Studio Cloud SQL, AlloyDB, Spanner Graph & Zero-ETL CDC Sub-Tabs (6-Module Grid) */}
         <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Cloud SQL &amp; AlloyDB Cockpit Modules (Select Module Below):</span>
+              <span>Cloud SQL, AlloyDB, Spanner Graph &amp; Zero-ETL CDC Modules (Select Module Below):</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {[
               {
                 id: 'FLEET_PROVISION',
@@ -643,8 +1090,8 @@ WITH (m = 16, ef_construction = 64);`;
               {
                 id: 'ARCH_COMPARATOR',
                 icon: Layers,
-                label: 'Classic Cloud SQL vs. AlloyDB Comparator',
-                badge: '4x OLTP / 100x OLAP',
+                label: 'Actionable Architecture & TCO Matrix',
+                badge: '1-Click Deploy & DMS',
               },
               {
                 id: 'VECTOR_INDEX_SURGEON',
@@ -657,6 +1104,18 @@ WITH (m = 16, ef_construction = 64);`;
                 icon: ShieldCheck,
                 label: 'Zero-Trust IAM Auth Proxy & ORM Vault',
                 badge: 'Zero Static Passwords',
+              },
+              {
+                id: 'SPANNER_GRAPH_TRUETIME',
+                icon: GitBranch,
+                label: 'Spanner Graph (ISO GQL) & TrueTime ACID',
+                badge: '99.999% · 100 PU',
+              },
+              {
+                id: 'DATASTREAM_ZERO_ETL',
+                icon: Activity,
+                label: 'Datastream Zero-ETL CDC → BigQuery/Iceberg',
+                badge: 'Sub-Second Upsert',
               },
             ].map((t) => {
               const Icon = t.icon;
@@ -1173,25 +1632,44 @@ WITH (m = 16, ef_construction = 64);`;
       )}
 
       {/* ===================================================================
-          SUB-TAB 2: CLASSIC CLOUD SQL VS. ALLOYDB ARCHITECTURE COMPARATOR
+          SUB-TAB 2 (AND BOTTOM OF SUB-TAB 1): ACTIONABLE ARCHITECTURE, TCO & MIGRATION MATRIX
          =================================================================== */}
-      {activeSubTab === 'ARCH_COMPARATOR' && (
-        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+      {(activeSubTab === 'ARCH_COMPARATOR' ||
+        activeSubTab === 'FLEET_PROVISION') && (
+        <div className="p-5 rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
             <div>
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                Interactive Architecture & TCO Comparator: Cloud SQL Enterprise vs. Enterprise Plus vs. AlloyDB
-              </h3>
-              <p className="text-xs text-zinc-500">
-                Tune your target vCPU, storage, and vector dataset scale to compare performance SLAs and monthly TCO.
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Interactive Architecture &amp; TCO Comparator: Cloud SQL Enterprise vs. Enterprise Plus vs. AlloyDB
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  LIVE 1-CLICK PROVISIONING · IN-PLACE UPGRADE · DMS CDC · BQ X-RAY
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Simulate vCPU, storage, read replicas, vector scale, and hybrid OLAP scans across all 3 engines — then **provision live in 1 click**, **patch Enterprise → Enterprise Plus (&lt;5s downtime)**, **launch DMS Zero-Downtime AlloyDB CDC**, or **dry-run federated SQL in BigQuery X-Ray**:
               </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-300">
+                Colossus Storage Savings ({archComparatorMetrics.replicas} Replicas):{' '}
+                <strong className="text-emerald-500">
+                  -${archComparatorMetrics.replicaStorageSavedUsd}/mo
+                </strong>
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* 5 Interactive Workload & Topology Sliders */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-zinc-50 dark:bg-zinc-900/70 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 font-mono">
             <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Primary Instance vCPUs ({simVcpu} vCPU · {simVcpu * 8} GB RAM)
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Primary vCPUs:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {simVcpu} vCPU ({simVcpu * 8} GB RAM)
+                </strong>
               </label>
               <input
                 type="range"
@@ -1200,12 +1678,16 @@ WITH (m = 16, ef_construction = 64);`;
                 step={2}
                 value={simVcpu}
                 onChange={(e) => setSimVcpu(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-blue-600 cursor-pointer"
               />
             </div>
+
             <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Transactional & Vector Storage ({simStorageGb} GB)
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                DB &amp; Vector Storage:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {simStorageGb} GB
+                </strong>
               </label>
               <input
                 type="range"
@@ -1214,12 +1696,34 @@ WITH (m = 16, ef_construction = 64);`;
                 step={50}
                 value={simStorageGb}
                 onChange={(e) => setSimStorageGb(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-blue-600 cursor-pointer"
               />
             </div>
+
             <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                RAG Vector Embeddings ({simVectorCountMillions}M Vectors)
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Read Replicas / Pool:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {simReadReplicas} Nodes
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={5}
+                step={1}
+                value={simReadReplicas}
+                onChange={(e) => setSimReadReplicas(Number(e.target.value))}
+                className="w-full accent-emerald-600 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                RAG Embeddings:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {simVectorCountMillions}M Vectors
+                </strong>
               </label>
               <input
                 type="range"
@@ -1230,57 +1734,477 @@ WITH (m = 16, ef_construction = 64);`;
                 onChange={(e) =>
                   setSimVectorCountMillions(Number(e.target.value))
                 }
-                className="w-full"
+                className="w-full accent-blue-600 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Hybrid OLAP Scans:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {simOlapScanGbDay} GB/day
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={10}
+                max={1000}
+                step={10}
+                value={simOlapScanGbDay}
+                onChange={(e) => setSimOlapScanGbDay(Number(e.target.value))}
+                className="w-full accent-emerald-600 cursor-pointer"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-2">
-              <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-                Cloud SQL Enterprise (MySQL / PG)
+          {/* 3-Column Interactive Architecture Cards with Direct Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* COLUMN 1: CLOUD SQL ENTERPRISE */}
+            <div
+              onClick={() => setSelectedComparatorArch('ENTERPRISE')}
+              className={`p-4 rounded-[10px] border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                selectedComparatorArch === 'ENTERPRISE'
+                  ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/30 shadow-sm'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 hover:border-blue-500/40'
+              }`}
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    1. Cloud SQL Enterprise (MySQL / PG)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                    {archComparatorMetrics.entTierId}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-xl font-black font-mono text-blue-500">
+                    ~${archComparatorMetrics.cloudSqlEntMonthly}/mo
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500">
+                    Compute ${archComparatorMetrics.cloudSqlEntComputeUsd} +{' '}
+                    {2 + archComparatorMetrics.replicas}x SSD $
+                    {archComparatorMetrics.cloudSqlEntStorageUsd}
+                  </div>
+                </div>
+
+                <ul className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 space-y-1">
+                  <li>
+                    • <strong>Availability SLA:</strong> 99.95% (~60s zonal failover)
+                  </li>
+                  <li>
+                    • <strong>OLTP Throughput:</strong> 1.0x Baseline (Standard PD-SSD)
+                  </li>
+                  <li>
+                    • <strong>Analytical Scan ({simOlapScanGbDay} GB/d):</strong> Row-store only (1x · ~{Math.max(4, Math.round(simOlapScanGbDay * 0.18))}s)
+                  </li>
+                  <li>
+                    • <strong>Vector Search ({simVectorCountMillions}M):</strong> pgvector HNSW ({simVectorCountMillions * 45} QPS)
+                  </li>
+                  <li>
+                    • <strong>PITR Window:</strong> Up to 7 Days WAL / Binlog
+                  </li>
+                </ul>
               </div>
-              <div className="text-lg font-black font-mono text-blue-400">
-                ~${cloudSqlEntMonthly}/mo (Regional HA)
+
+              <div
+                className="pt-2.5 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  disabled={provisioningComparatorArch === 'ENTERPRISE'}
+                  onClick={() => handleProvisionFromComparator('ENTERPRISE')}
+                  className="w-full py-2 px-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>
+                    {provisioningComparatorArch === 'ENTERPRISE'
+                      ? 'Provisioning Cloud SQL Enterprise...'
+                      : `1-Click Provision Enterprise (${simVcpu} vCPU)`}
+                  </span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedComparatorArch('ENTERPRISE');
+                      onRunInShell?.(
+                        archComparatorMetrics.blueprints.ENTERPRISE.upgradeCli
+                      );
+                    }}
+                    className="py-1.5 px-2 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3 text-emerald-400" />
+                    <span>Upgrade → Ent Plus</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleLoadComparatorIntoProvisioner('ENTERPRISE')
+                    }
+                    className="py-1.5 px-2 rounded bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <ArrowRight className="w-3 h-3" />
+                    <span>Load in Wizard</span>
+                  </button>
+                </div>
               </div>
-              <ul className="text-[11px] font-mono text-zinc-500 space-y-1">
-                <li>• Availability SLA: 99.95% (~60s failover)</li>
-                <li>• OLTP Throughput: 1.0x Baseline</li>
-                <li>• Analytical Scan: Row-store only (1x)</li>
-                <li>• Vector Index: Standard HNSW ({simVectorCountMillions * 45} QPS)</li>
-              </ul>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-blue-500/40 bg-blue-500/5 space-y-2">
-              <div className="text-xs font-extrabold text-blue-400">
-                Cloud SQL Enterprise Plus (MySQL / PG)
+            {/* COLUMN 2: CLOUD SQL ENTERPRISE PLUS */}
+            <div
+              onClick={() => setSelectedComparatorArch('ENTERPRISE_PLUS')}
+              className={`p-4 rounded-[10px] border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                selectedComparatorArch === 'ENTERPRISE_PLUS'
+                  ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40 shadow-sm'
+                  : 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/60'
+              }`}
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-300">
+                    2. Cloud SQL Enterprise Plus (NVMe Cache)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                    {archComparatorMetrics.winnerArch === 'ENTERPRISE_PLUS'
+                      ? '★ OPTIMAL FOR MYSQL'
+                      : '99.99% <5s SLA'}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-xl font-black font-mono text-blue-600 dark:text-blue-300">
+                    ~${archComparatorMetrics.cloudSqlPlusMonthly}/mo
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500">
+                    Compute ${archComparatorMetrics.cloudSqlPlusComputeUsd} +{' '}
+                    {2 + archComparatorMetrics.replicas}x SSD $
+                    {archComparatorMetrics.cloudSqlPlusStorageUsd}
+                  </div>
+                </div>
+
+                <ul className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 space-y-1">
+                  <li>
+                    • <strong>Availability SLA:</strong> 99.99% (&lt;5s near-zero downtime)
+                  </li>
+                  <li>
+                    • <strong>OLTP Throughput:</strong> 3x Read / 2x Write (Local NVMe Cache)
+                  </li>
+                  <li>
+                    • <strong>Analytical Scan ({simOlapScanGbDay} GB/d):</strong> NVMe Data Cache (~{Math.max(2, Math.round(simOlapScanGbDay * 0.06))}s)
+                  </li>
+                  <li>
+                    • <strong>Vector Search ({simVectorCountMillions}M):</strong> Cached HNSW ({simVectorCountMillions * 120} QPS)
+                  </li>
+                  <li>
+                    • <strong>PITR Window:</strong> Full 35 Days + Sub-Second Clone
+                  </li>
+                </ul>
               </div>
-              <div className="text-lg font-black font-mono text-blue-700 dark:text-blue-300">
-                ~${cloudSqlPlusMonthly}/mo (Regional HA)
+
+              <div
+                className="pt-2.5 border-t border-blue-500/20 space-y-1.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  disabled={provisioningComparatorArch === 'ENTERPRISE_PLUS'}
+                  onClick={() =>
+                    handleProvisionFromComparator('ENTERPRISE_PLUS')
+                  }
+                  className="w-full py-2 px-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>
+                    {provisioningComparatorArch === 'ENTERPRISE_PLUS'
+                      ? 'Provisioning Enterprise Plus...'
+                      : `1-Click Provision Ent Plus (${simVcpu} vCPU + NVMe)`}
+                  </span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedComparatorArch('ENTERPRISE_PLUS');
+                      onRunInShell?.(
+                        archComparatorMetrics.blueprints.ENTERPRISE_PLUS
+                          .upgradeCli
+                      );
+                    }}
+                    className="py-1.5 px-2 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3 text-emerald-400" />
+                    <span>Enable NVMe Cache</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedComparatorArch('ENTERPRISE_PLUS');
+                      onOpenBigQuerySql?.(
+                        archComparatorMetrics.blueprints.ENTERPRISE_PLUS
+                          .xrayQuery,
+                        'Cloud SQL Enterprise Plus Federated X-Ray'
+                      );
+                    }}
+                    className="py-1.5 px-2 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-200 text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Federate in X-Ray</span>
+                  </button>
+                </div>
               </div>
-              <ul className="text-[11px] font-mono text-zinc-400 space-y-1">
-                <li>• Availability SLA: 99.99% (&lt;5s near-zero downtime)</li>
-                <li>• OLTP Throughput: 3x Read / 2x Write (NVMe Cache)</li>
-                <li>• PITR Window: Up to 35 Days</li>
-                <li>• Vector Index: HNSW in Data Cache ({simVectorCountMillions * 120} QPS)</li>
-              </ul>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-blue-500/50 bg-blue-500/10 space-y-2">
-              <div className="text-xs font-extrabold text-blue-700 dark:text-blue-300">
-                Google Cloud AlloyDB (PostgreSQL Only)
+            {/* COLUMN 3: GOOGLE CLOUD ALLOYDB */}
+            <div
+              onClick={() => setSelectedComparatorArch('ALLOYDB')}
+              className={`p-4 rounded-[10px] border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                selectedComparatorArch === 'ALLOYDB'
+                  ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/40 shadow-sm'
+                  : 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/60'
+              }`}
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
+                    3. Google Cloud AlloyDB (PostgreSQL AI)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                    {archComparatorMetrics.winnerArch === 'ALLOYDB'
+                      ? '★ OPTIMAL AI + HTAP WINNER'
+                      : '100x COLUMNAR + SCANN'}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    ~${archComparatorMetrics.alloyDbMonthly}/mo
+                  </div>
+                  <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                    1x Shared Colossus ${archComparatorMetrics.alloyDbStorageUsd}{' '}
+                    (Saves ${archComparatorMetrics.replicaStorageSavedUsd}/mo!)
+                  </div>
+                </div>
+
+                <ul className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 space-y-1">
+                  <li>
+                    • <strong>Availability SLA:</strong> 99.99% (&lt;1s storage-decoupled failover)
+                  </li>
+                  <li>
+                    • <strong>OLTP Throughput:</strong> 4x Faster than Standard PostgreSQL
+                  </li>
+                  <li>
+                    • <strong>Analytical Scan ({simOlapScanGbDay} GB/d):</strong> 100x Columnar Engine (~{Math.max(0.2, (simOlapScanGbDay * 0.002).toFixed(1))}s)
+                  </li>
+                  <li>
+                    • <strong>Vector Search ({simVectorCountMillions}M):</strong> Google ScaNN ({simVectorCountMillions * 480} QPS · 10x faster)
+                  </li>
+                  <li>
+                    • <strong>Zero Replica Storage Tax:</strong> Read pools share 1 Colossus layer
+                  </li>
+                </ul>
               </div>
-              <div className="text-lg font-black font-mono text-emerald-400">
-                ~${alloyDbMonthly}/mo (Colossus Storage)
+
+              <div
+                className="pt-2.5 border-t border-emerald-500/20 space-y-1.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  disabled={provisioningComparatorArch === 'ALLOYDB'}
+                  onClick={() => handleProvisionFromComparator('ALLOYDB')}
+                  className="w-full py-2 px-2.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>
+                    {provisioningComparatorArch === 'ALLOYDB'
+                      ? 'Provisioning AlloyDB Cluster...'
+                      : `1-Click Provision Live AlloyDB (${simVcpu} vCPU + ScaNN)`}
+                  </span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedComparatorArch('ALLOYDB');
+                      onRunInShell?.(
+                        archComparatorMetrics.blueprints.ALLOYDB.upgradeCli
+                      );
+                    }}
+                    className="py-1.5 px-2 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3 text-emerald-400" />
+                    <span>DMS Migrate → AlloyDB</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedComparatorArch('ALLOYDB');
+                      onOpenBigQuerySql?.(
+                        archComparatorMetrics.blueprints.ALLOYDB.xrayQuery,
+                        'AlloyDB ScaNN + BigQuery Federated Join'
+                      );
+                    }}
+                    className="py-1.5 px-2 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-[10px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Hybrid Join in X-Ray</span>
+                  </button>
+                </div>
               </div>
-              <ul className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 space-y-1">
-                <li>• Availability SLA: 99.99% (&lt;1s storage-decoupled failover)</li>
-                <li>• OLTP Throughput: 4x Faster than Standard Postgres</li>
-                <li>• Analytical Scan: 100x Faster (In-Memory Columnar Engine)</li>
-                <li>• Vector Index: Google ScaNN ({simVectorCountMillions * 480} QPS · 10x faster)</li>
-              </ul>
             </div>
           </div>
+
+          {/* Interactive Selected Architecture Execution Workbench Drawer */}
+          {selectedComparatorArch &&
+            archComparatorMetrics.blueprints[selectedComparatorArch] && (
+              <div className="p-4 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <FileCode className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                      {
+                        archComparatorMetrics.blueprints[selectedComparatorArch]
+                          .title
+                      }
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                      {
+                        archComparatorMetrics.blueprints[selectedComparatorArch]
+                          .badge
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleLoadComparatorIntoProvisioner(
+                          selectedComparatorArch
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <ArrowRight className="w-3 h-3" />
+                      <span>Load Sizing into Provisioner Form</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          archComparatorMetrics.blueprints[
+                            selectedComparatorArch
+                          ].sql,
+                          `${selectedComparatorArch} SQL Blueprint`
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedLabel ===
+                      `${selectedComparatorArch} SQL Blueprint` ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span>Copied SQL</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Tuning &amp; Vector SQL</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRunInShell?.(
+                          archComparatorMetrics.blueprints[
+                            selectedComparatorArch
+                          ].cli
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Terminal className="w-3 h-3 text-emerald-400" />
+                      <span>Run Provision CLI in Cloud Shell</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRunInShell?.(
+                          archComparatorMetrics.blueprints[
+                            selectedComparatorArch
+                          ].upgradeCli
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3" />
+                      <span>
+                        {selectedComparatorArch === 'ALLOYDB'
+                          ? 'Run DMS Zero-Downtime Migration CLI'
+                          : 'Run Live Edition Upgrade CLI'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenBigQuerySql?.(
+                          archComparatorMetrics.blueprints[
+                            selectedComparatorArch
+                          ].xrayQuery,
+                          `${selectedComparatorArch} Federated BigQuery X-Ray`
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>Dry-Run Federated SQL in BigQuery X-Ray →</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-mono font-bold uppercase text-zinc-500 mb-1">
+                      Production Engine Tuning, Vector &amp; Columnar SQL:
+                    </div>
+                    <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-52">
+                      {
+                        archComparatorMetrics.blueprints[selectedComparatorArch]
+                          .sql
+                      }
+                    </pre>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-mono font-bold uppercase text-zinc-500 mb-1">
+                      Equivalent Provisioning &amp; Zero-Downtime Migration CLI:
+                    </div>
+                    <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto max-h-52">
+                      {`${
+                        archComparatorMetrics.blueprints[selectedComparatorArch]
+                          .cli
+                      }\n\n${
+                        archComparatorMetrics.blueprints[selectedComparatorArch]
+                          .upgradeCli
+                      }`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       )}
 
@@ -1467,6 +2391,394 @@ WITH (m = 16, ef_construction = 64);`;
                 {sqlEngineFamily === 'MYSQL'
                   ? `DATABASE_URL="mysql://iam_user@127.0.0.1:3306/production_db?sslaccept=strict"`
                   : `DATABASE_URL="postgresql://iam_service_account@127.0.0.1:5432/production_db?sslmode=disable"`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          SUB-TAB 5: CLOUD SPANNER GRAPH (ISO GQL) & TRUETIME 99.999% STUDIO
+         =================================================================== */}
+      {activeSubTab === 'SPANNER_GRAPH_TRUETIME' && (
+        <div className="p-5 rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <GitBranch className="w-4 h-4 text-blue-500" />
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Cloud Spanner Graph (ISO GQL) &amp; TrueTime 99.999% Global ACID Studio
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                  GRANULAR 100 PU (~$65/MO) · ZERO-REPLICA LAG · ISO GQL + SQL
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Unify relational tables, **ISO GQL Property Graphs (`CREATE PROPERTY GRAPH`)**, and full-text/vector search inside a single TrueTime atomic clock database with **99.999% multi-region availability**:
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold">
+                Est. Monthly Spanner Cost ({spannerProcessingUnits} PU):{' '}
+                <strong>
+                  ~${Math.round(spannerProcessingUnits * 0.657)}/mo
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-zinc-50 dark:bg-zinc-900/70 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 font-mono">
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Spanner Instance ID
+              </label>
+              <input
+                type="text"
+                value={spannerInstanceId}
+                onChange={(e) => setSpannerInstanceId(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                TrueTime Topology &amp; SLA
+              </label>
+              <select
+                value={spannerConfig}
+                onChange={(e) => setSpannerConfig(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="nam-eur-asia1">
+                  nam-eur-asia1 (3-Continent 99.999% TrueTime)
+                </option>
+                <option value="nam3">
+                  nam3 (US Multi-Region 99.999% Zero-Downtime)
+                </option>
+                <option value="regional-us-central1">
+                  regional-us-central1 (Regional 99.99% Low-Cost)
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Granular Compute:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {spannerProcessingUnits} PU ({(spannerProcessingUnits / 1000).toFixed(1)} Nodes)
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={100}
+                max={2000}
+                step={100}
+                value={spannerProcessingUnits}
+                onChange={(e) =>
+                  setSpannerProcessingUnits(Number(e.target.value))
+                }
+                className="w-full accent-blue-600 cursor-pointer mt-1.5"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                GQL Multi-Hop Ring Depth:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  1..{spannerHopDepth} Hops
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={2}
+                max={6}
+                step={1}
+                value={spannerHopDepth}
+                onChange={(e) => setSpannerHopDepth(Number(e.target.value))}
+                className="w-full accent-emerald-600 cursor-pointer mt-1.5"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                  1. Spanner Graph Schema (`CREATE PROPERTY GRAPH`) + Interleaved Tables
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      `CREATE TABLE Account (\n  account_id STRING(64) NOT NULL,\n  owner_name STRING(128),\n  risk_score FLOAT64,\n  region STRING(32)\n) PRIMARY KEY(account_id);\n\nCREATE TABLE AccountTransfer (\n  account_id STRING(64) NOT NULL,\n  transfer_id STRING(64) NOT NULL,\n  to_account_id STRING(64) NOT NULL,\n  amount_usd NUMERIC,\n  transfer_ts TIMESTAMP OPTIONS (allow_commit_timestamp = true)\n) PRIMARY KEY(account_id, transfer_id),\n  INTERLEAVE IN PARENT Account ON DELETE CASCADE;\n\nCREATE OR REPLACE PROPERTY GRAPH ${spannerGraphName}\n  NODE TABLES (Account)\n  EDGE TABLES (\n    AccountTransfer\n      SOURCE KEY (account_id) REFERENCES Account (account_id)\n      DESTINATION KEY (to_account_id) REFERENCES Account (account_id)\n      LABEL TRANSFERRED\n  );`,
+                      'Spanner Graph DDL'
+                    )
+                  }
+                  className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                >
+                  Copy Graph DDL
+                </button>
+              </div>
+              <pre className="p-3 rounded-[8px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto">
+{`CREATE TABLE Account (
+  account_id STRING(64) NOT NULL,
+  owner_name STRING(128),
+  risk_score FLOAT64,
+  region STRING(32)
+) PRIMARY KEY(account_id);
+
+CREATE TABLE AccountTransfer (
+  account_id STRING(64) NOT NULL,
+  transfer_id STRING(64) NOT NULL,
+  to_account_id STRING(64) NOT NULL,
+  amount_usd NUMERIC,
+  transfer_ts TIMESTAMP OPTIONS (allow_commit_timestamp = true)
+) PRIMARY KEY(account_id, transfer_id),
+  INTERLEAVE IN PARENT Account ON DELETE CASCADE;
+
+CREATE OR REPLACE PROPERTY GRAPH ${spannerGraphName}
+  NODE TABLES (Account)
+  EDGE TABLES (
+    AccountTransfer
+      SOURCE KEY (account_id) REFERENCES Account (account_id)
+      DESTINATION KEY (to_account_id) REFERENCES Account (account_id)
+      LABEL TRANSFERRED
+  );`}
+              </pre>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                  2. ISO GQL Circular Fraud Ring Traversal + CLI Provisioning
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell?.(
+                        `gcloud spanner instances create ${spannerInstanceId} --config=${spannerConfig} --description="CloudPulse Spanner Graph" --processing-units=${spannerProcessingUnits} --project=${projectId} && gcloud spanner databases create ${spannerDatabaseId} --instance=${spannerInstanceId} --project=${projectId}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3 text-emerald-400" />
+                    <span>Provision Spanner ({spannerProcessingUnits} PU) in Shell</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenBigQuerySql?.(
+                        `-- Federated Spanner Graph + BigQuery Lakehouse Analytics\nSELECT\n  region,\n  service_name,\n  COUNT(*) AS graph_correlated_events,\n  ROUND(SUM(revenue_usd), 2) AS total_volume_usd\nFROM \`${projectId}.analytics_lakehouse.open_iceberg_events\`\nWHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\nGROUP BY region, service_name\nORDER BY total_volume_usd DESC\nLIMIT 25;`,
+                        'Spanner Graph Federated BigQuery X-Ray'
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Federate in BigQuery X-Ray →</span>
+                  </button>
+                </div>
+              </div>
+              <pre className="p-3 rounded-[8px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto">
+{`-- ISO GQL Multi-Hop Fraud Ring Detection (1..${spannerHopDepth} Hops)
+GRAPH ${spannerGraphName}
+MATCH (src:Account)-[t:TRANSFERRED]->{1,${spannerHopDepth}}(dst:Account)
+WHERE src.account_id = dst.account_id
+  AND src.risk_score >= 0.75
+RETURN src.account_id AS ring_origin_account,
+        src.region AS sovereign_region,
+       COUNT(t) AS hop_count
+ORDER BY hop_count DESC
+LIMIT 25;
+
+# Equivalent gcloud CLI to Provision Granular Spanner Instance (${spannerProcessingUnits} PU):
+gcloud spanner instances create ${spannerInstanceId} \\
+  --config=${spannerConfig} \\
+  --processing-units=${spannerProcessingUnits} \\
+  --project=${projectId}`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          SUB-TAB 6: DATASTREAM ZERO-ETL CDC → BIGQUERY & BIGLAKE ICEBERG
+         =================================================================== */}
+      {activeSubTab === 'DATASTREAM_ZERO_ETL' && (
+        <div className="p-5 rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Activity className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Datastream Serverless Zero-ETL CDC: AlloyDB &amp; Cloud SQL → BigQuery (`max_staleness`) &amp; BigLake Iceberg
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  PGLOGICAL / BINLOG CDC · ZERO DAG MAINTENANCE · AUTO-UPSERT
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Stream every `INSERT`, `UPDATE`, and `DELETE` from **AlloyDB** or **Cloud SQL** directly into **BigQuery Write API (`max_staleness`)** or **BigLake Apache Iceberg** without Airflow DAGs or Kafka brokers:
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                disabled={provisioningCdcTable}
+                onClick={handleProvisionCdcTargetTable}
+                className="px-3 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>
+                  {provisioningCdcTable
+                    ? 'Provisioning CDC Replica Table...'
+                    : `1-Click Provision Live BigQuery CDC Table (${cdcTargetTable})`}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-zinc-50 dark:bg-zinc-900/70 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 font-mono">
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                CDC Source Engine
+              </label>
+              <select
+                value={cdcSourceEngine}
+                onChange={(e) => setCdcSourceEngine(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="ALLOYDB_PG">
+                  AlloyDB for PostgreSQL (pglogical WAL)
+                </option>
+                <option value="CLOUDSQL_PG">
+                  Cloud SQL PostgreSQL 16 (Logical Replication)
+                </option>
+                <option value="CLOUDSQL_MYSQL">
+                  Cloud SQL MySQL 8.4 (GTID Binlog CDC)
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Target BigQuery Dataset
+              </label>
+              <input
+                type="text"
+                value={cdcTargetDataset}
+                onChange={(e) => setCdcTargetDataset(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                Target CDC Table Name
+              </label>
+              <input
+                type="text"
+                value={cdcTargetTable}
+                onChange={(e) => setCdcTargetTable(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] text-zinc-500 mb-1">
+                BigQuery `max_staleness`:{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  {cdcMaxStalenessMins} min (-{Math.min(82, Math.max(25, cdcMaxStalenessMins * 5))}% Merge Slots)
+                </strong>
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={60}
+                step={1}
+                value={cdcMaxStalenessMins}
+                onChange={(e) => setCdcMaxStalenessMins(Number(e.target.value))}
+                className="w-full accent-emerald-600 cursor-pointer mt-1.5"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                  1. BigQuery Primary-Key Upsert Table DDL (`max_staleness = INTERVAL {cdcMaxStalenessMins} MINUTE`)
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenBigQuerySql?.(
+                      `SELECT\n  event_id,\n  event_timestamp,\n  user_id,\n  region,\n  service_name,\n  latency_ms,\n  revenue_usd\nFROM \`${projectId}.${cdcTargetDataset}.${cdcTargetTable}\`\nWHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)\nORDER BY event_timestamp DESC\nLIMIT 25;`,
+                      'Datastream Zero-ETL CDC Live Query'
+                    )
+                  }
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Play className="w-3 h-3" />
+                  <span>Query CDC Replica in BigQuery X-Ray →</span>
+                </button>
+              </div>
+              <pre className="p-3 rounded-[8px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto">
+{`-- BigQuery Storage Write API CDC Target Table with Primary Key Upsert & Tuned Staleness
+CREATE OR REPLACE TABLE \`${projectId}.${cdcTargetDataset}.${cdcTargetTable}\` (
+  event_id STRING NOT NULL,
+  event_timestamp TIMESTAMP NOT NULL,
+  user_id STRING,
+  region STRING,
+  service_name STRING,
+  latency_ms FLOAT64,
+  revenue_usd NUMERIC,
+  PRIMARY KEY (event_id) NOT ENFORCED
+)
+PARTITION BY DATE(event_timestamp)
+CLUSTER BY region, user_id
+OPTIONS (
+  max_staleness = INTERVAL ${cdcMaxStalenessMins} MINUTE,
+  require_partition_filter = TRUE
+);`}
+              </pre>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                  2. Datastream Serverless CDC Stream Provisioning CLI
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onRunInShell?.(
+                      `gcloud datastream streams list --location=${sqlRegion} --project=${projectId}`
+                    )
+                  }
+                  className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Terminal className="w-3 h-3 text-emerald-400" />
+                  <span>Inspect Datastream CDC in Cloud Shell</span>
+                </button>
+              </div>
+              <pre className="p-3 rounded-[8px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto">
+{`# 1. Enable Logical Replication on ${cdcSourceEngine} (${sqlName})
+ALTER SYSTEM SET cloudsql.logical_decoding = 'on';
+SELECT pg_create_logical_replication_slot('datastream_cdc_slot', 'pgoutput');
+
+# 2. Create Serverless Datastream Zero-ETL Stream → BigQuery (${projectId}.${cdcTargetDataset})
+gcloud datastream streams create ${cdcStreamId} \\
+  --location=${sqlRegion} \\
+  --display-name="${cdcStreamId}" \\
+  --source=projects/${projectId}/locations/${sqlRegion}/connectionProfiles/alloydb-cdc-src \\
+  --destination=projects/${projectId}/locations/${sqlRegion}/connectionProfiles/bigquery-lakehouse-dst \\
+  --backfill-all \\
+  --project=${projectId}`}
               </pre>
             </div>
           </div>
