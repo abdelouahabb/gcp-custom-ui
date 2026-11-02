@@ -243,6 +243,7 @@ export default function VmFleetAndSsh({
   const [serialLoading, setSerialLoading] = useState(false);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('ALL');
   const [vmSearchQuery, setVmSearchQuery] = useState('');
+  const [showQuickBlueprints, setShowQuickBlueprints] = useState(false);
   const [vmStatusFilter, setVmStatusFilter] = useState('ALL');
   const [vmMachineFilter, setVmMachineFilter] = useState('ALL');
   const [vmAcceleratorFilter, setVmAcceleratorFilter] = useState('ALL');
@@ -1151,12 +1152,24 @@ export default function VmFleetAndSsh({
           </div>
         </div>
 
-        {/* 1-Tap Production GCE Blueprints Quick-Provision Strip */}
+        {/* 1-Tap Production GCE Blueprints Quick-Provision Strip (Collapsible so Live VMs stay front-and-center) */}
         <div className="pt-2.5 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-              ⚡ 1-Tap Production GCE Blueprints (Instant Live Provisioning or Customize in 6-Stage Architect)
-            </span>
+            <button
+              type="button"
+              onClick={() => setShowQuickBlueprints((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+            >
+              <span>
+                ⚡ 1-Tap Production GCE Blueprints (3 Instant Templates)
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[9.5px]">
+                {showQuickBlueprints || vms.length === 0
+                  ? 'Hide Blueprints ▴'
+                  : 'Show Blueprints ▾'}
+              </span>
+            </button>
+            {(showQuickBlueprints || vms.length === 0) && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono text-zinc-500">
                 Public IPv4 Mode:
@@ -1182,7 +1195,9 @@ export default function VmFleetAndSsh({
                 </button>
               ))}
             </div>
+            )}
           </div>
+          {(showQuickBlueprints || vms.length === 0) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {QUICK_VM_TEMPLATES.map((tpl) => {
               const isDeploying = quickDeployingLabel === tpl.label;
@@ -1255,6 +1270,7 @@ export default function VmFleetAndSsh({
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Full-Width Flat Region Filter Bar + VM Metadata & Attribute Filter Bar */}

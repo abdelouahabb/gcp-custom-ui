@@ -4668,10 +4668,18 @@ function CloudPulseCockpit() {
           (el) => el.getBoundingClientRect().height > 24
         );
         if (visibleKids.length >= 3) {
-          // Check if visibleKids[1] is a sub-tab selector bar/grid (e.g., Revolutionary2026Suite, AwsAzureEnvySuiteStudio)
+          // Only skip visibleKids[1] if visibleKids[1] is genuinely a compact sub-tab selector bar
+          // (and NOT a substantive studio panel with forms, code blocks, or tables)
           const secondKidButtons = visibleKids[1].querySelectorAll('button').length;
           const secondKidHeight = visibleKids[1].getBoundingClientRect().height;
-          if (spec.targetSubTab || (secondKidButtons >= 3 && secondKidHeight < 440)) {
+          const secondKidHasFormOrCode = Boolean(
+            visibleKids[1].querySelector('input, select, textarea, table, pre')
+          );
+          if (
+            secondKidButtons >= 3 &&
+            secondKidHeight < 320 &&
+            !secondKidHasFormOrCode
+          ) {
             targetEl = visibleKids[2];
           } else {
             targetEl = visibleKids[1];
@@ -4714,13 +4722,24 @@ function CloudPulseCockpit() {
         );
         targetEl.classList.add('cloudpulse-target-spotlight-active');
         if (shouldScroll) {
-          targetEl.scrollIntoView({
-            behavior: 'smooth',
-            block:
-              spec.targetElementId || spec.ruleName || spec.isXRay || spec.sqlSeeded || spec.isShellCommand
-                ? 'center'
-                : 'start',
-          });
+          const rect = targetEl.getBoundingClientRect();
+          const isTallPanel = rect.height > window.innerHeight * 0.65;
+          const isAlreadyVisibleNearTop =
+            rect.top >= 56 && rect.top <= window.innerHeight * 0.55;
+          if (!isAlreadyVisibleNearTop) {
+            targetEl.scrollIntoView({
+              behavior: 'smooth',
+              block:
+                !isTallPanel &&
+                (spec.targetElementId ||
+                  spec.ruleName ||
+                  spec.isXRay ||
+                  spec.sqlSeeded ||
+                  spec.isShellCommand)
+                  ? 'center'
+                  : 'start',
+            });
+          }
         }
       }
 
@@ -5079,80 +5098,8 @@ function CloudPulseCockpit() {
       }
     };
 
-    // Delegated listener for in-Studio Sub-Tab / Pillar / Module selector buttons across all 22 Studios
-    const handleWorkspaceSubTabClick = (evt) => {
-      const btn = evt.target?.closest?.('button');
-      if (!btn) return;
-      if (btn.closest('[data-spotlight-breadcrumb]')) return;
-      if (btn.closest('[data-feature-id*="_PIPELINE"]')) return;
-
-      const socPillar = btn.getAttribute('data-soc-pillar');
-      const subTabAttr = btn.getAttribute('data-subtab-id');
-      const featureId = btn.getAttribute('data-feature-id') || '';
-      const isExplicitSubTab =
-        Boolean(socPillar) ||
-        Boolean(subTabAttr) ||
-        featureId.startsWith('BQ_TAB_');
-
-      // Also detect multi-button module selector grids inside the top header/toolbar of any Studio
-      let isHeaderModuleGridBtn = false;
-      if (!isExplicitSubTab) {
-        const mainEl = document.getElementById('cloudpulse-main-workspace');
-        const studioChildren = mainEl
-          ? Array.from(
-              mainEl.querySelectorAll(
-                ':scope > div.space-y-4 > *, :scope > div.space-y-6 > *'
-              )
-            )
-          : [];
-        const studioRoot =
-          studioChildren.length >= 2 ? studioChildren[1] : studioChildren[0];
-        if (
-          studioRoot &&
-          (studioRoot.children?.[0]?.contains(btn) ||
-            studioRoot.children?.[1]?.contains(btn))
-        ) {
-          const parent = btn.parentElement;
-          const siblingBtns =
-            parent?.querySelectorAll(':scope > button')?.length || 0;
-          const parentCls = String(parent?.className || '');
-          const btnText = String(btn.textContent || '')
-            .replace(/\s+/g, ' ')
-            .trim();
-          if (
-            siblingBtns >= 3 &&
-            parentCls.includes('grid') &&
-            btnText.length >= 4 &&
-            !/^(Refresh|Sync|Copy|Download|Close|Clear|Run|Delete|Cancel|Export|Reset)/i.test(
-              btnText
-            )
-          ) {
-            isHeaderModuleGridBtn = true;
-          }
-        }
-      }
-
-      if (!isExplicitSubTab && !isHeaderModuleGridBtn) return;
-
-      const cleanLabel = (
-        socPillar ||
-        subTabAttr ||
-        String(btn.textContent || '')
-          .replace(/\s+/g, ' ')
-          .trim()
-      ).slice(0, 44);
-
-      triggerCrossUiSpotlight({
-        fromTab: activeTabRef.current,
-        targetTab: activeTabRef.current,
-        targetSubTab: socPillar || subTabAttr || cleanLabel,
-        targetElementId: socPillar ? 'soc-active-pillar-panel' : null,
-        targetLabel: `${
-          STUDIO_DISPLAY_NAMES[activeTabRef.current] || activeTabRef.current
-        } → ${cleanLabel}`,
-        badgeText: cleanLabel,
-      });
-    };
+    // In-studio sub-tab clicks swap panels in-place without triggering cross-UI scroll jumps or banners
+    const handleWorkspaceSubTabClick = () => {};
 
     window.addEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
     window.addEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
@@ -6310,16 +6257,16 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('COMPUTE_VM')}
                 title="Provision a live GCP resource (1. Compute Engine VM [Default], 2. VPC Network, 3. Firewall Rule, 4. Cloud Run Service, 5. GKE Cluster, 6. Cloud SQL / AlloyDB, 7. Cloud Storage Bucket, or 8. BigQuery Dataset)"
-                className="inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-6 py-2.5 min-w-[200px] sm:min-w-[235px] text-xs sm:text-sm font-extrabold tracking-tight transition-all shadow-md cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-lg px-4 py-2 text-xs font-extrabold tracking-tight transition-all shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" />
-                <span>Provision Resource</span>
+                <span>+ Provision Resource</span>
               </button>
             </div>
           </div>
 
           {/* Secondary Telemetry & Cockpit Controls Bar (Single-Row Compact Layout) */}
-          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap min-w-0">
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button

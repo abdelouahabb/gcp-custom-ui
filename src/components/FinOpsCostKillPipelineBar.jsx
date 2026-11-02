@@ -49,7 +49,7 @@ export default function FinOpsCostKillPipelineBar({
   const [synthDrawerOpen, setSynthDrawerOpen] = useState(false);
   const [activeArtifactTab, setActiveArtifactTab] = useState('TERRAFORM');
   const [copiedKey, setCopiedKey] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(activeTab !== 'OVERVIEW');
   const barRef = useRef(null);
   const synthDrawerRef = useRef(null);
 
@@ -277,36 +277,62 @@ export default function FinOpsCostKillPipelineBar({
   return (
     <div
       ref={barRef}
-      className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-slate-950/95 via-amber-950/20 to-slate-950/95 p-3.5 shadow-xl"
+      className="rounded-xl border border-zinc-200 dark:border-amber-500/25 bg-white dark:bg-[#14171f] px-3.5 py-2.5 shadow-sm"
     >
       {/* Top Header Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-emerald-500/25 border border-amber-400/40 text-amber-300">
-            <DollarSign className="w-4 h-4" />
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-600 dark:text-amber-300">
+            <DollarSign className="w-3.5 h-3.5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-                6-Stage FinOps, Quota Guard & Startup 10X Cost-Kill Pipeline
-              </span>
-              <span className="rounded-full bg-amber-500/15 border border-amber-400/30 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                Billing & Credits ➔ Free Tier & Zombies ➔ BQ Export SQL ➔ API Quota Cap ➔ Pub/Sub Cost-Kill ➔ GreenOps
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-300">
+                FinOps, Quota Guard & Cost-Kill
               </span>
               {counts.enabledApis !== undefined && (
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-300">
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300">
                   {counts.runningVms || 0} Running VMs · {counts.highBurnApis || 0} Paid APIs · {counts.buckets || 0} GCS · {counts.datasets || 0} BQ
                 </span>
               )}
+              {collapsed && (
+                <div className="hidden xl:flex items-center gap-1 ml-1">
+                  {stages.map((st, idx) => {
+                    const isStSelected = st.id === activeHighlightedStageId;
+                    return (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() =>
+                          handleExecuteAction({
+                            targetTab: st.targetTab,
+                            subTab: st.targetSubTab,
+                          })
+                        }
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                          isStSelected
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-zinc-100 dark:bg-slate-800/80 text-zinc-600 dark:text-slate-300 hover:bg-amber-500/20 hover:text-amber-300'
+                        }`}
+                        title={st.summary}
+                      >
+                        {st.stepNumber || idx + 1}. {st.shortTitle}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <p className="text-[11px] text-slate-400">
-              End-to-end zero-surprise financial guardrail connecting{' '}
-              <strong className="text-slate-200">Billing & Startup 10X Credits</strong>,{' '}
-              <strong className="text-slate-200">Always-Free & Zombie Reaper</strong>,{' '}
-              <strong className="text-slate-200">BigQuery Billing Export SQL</strong>,{' '}
-              <strong className="text-slate-200">Paid API Quota Guards</strong>, and{' '}
-              <strong className="text-slate-200">Pub/Sub Autonomous Cost-Kill</strong>.
-            </p>
+            {!collapsed && (
+              <p className="text-[11px] text-zinc-500 dark:text-slate-400">
+                End-to-end zero-surprise financial guardrail connecting{' '}
+                <strong className="text-zinc-800 dark:text-slate-200">Billing & Startup 10X Credits</strong>,{' '}
+                <strong className="text-zinc-800 dark:text-slate-200">Always-Free & Zombie Reaper</strong>,{' '}
+                <strong className="text-zinc-800 dark:text-slate-200">BigQuery Billing Export SQL</strong>,{' '}
+                <strong className="text-zinc-800 dark:text-slate-200">Paid API Quota Guards</strong>, and{' '}
+                <strong className="text-zinc-800 dark:text-slate-200">Pub/Sub Autonomous Cost-Kill</strong>.
+              </p>
+            )}
           </div>
         </div>
 
