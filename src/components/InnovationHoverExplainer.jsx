@@ -4581,10 +4581,752 @@ function extractButtonDomContext(buttonEl) {
 }
 
 /**
- * Context-aware Domain & Real Use-Case Synthesis Engine.
- * Eliminates generic fallback strings by combining the button's label, tooltip,
- * surrounding card heading, and nearby CLI/SQL/REST code block to explain the
- * exact engineering problem solved, production value, and underlying GCP APIs.
+ * Translates dense cloud/SRE jargon into warm, conversational Layman English
+ * so every hover card is immediately understandable by anyone—from a first-time
+ * startup founder to a principal cloud architect.
+ */
+function humanizeHoverExplanation(info) {
+  if (!info) return null;
+
+  const simplifyText = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/^Introspects\b/i, 'Looks inside')
+      .replace(/^Synthesizes\b/i, 'Builds')
+      .replace(/^Orchestrates\b/i, 'Coordinates')
+      .replace(/^Evaluates\b/i, 'Checks')
+      .replace(/^Inspects\b/i, 'Checks')
+      .replace(/^Audits\b/i, 'Scans and checks')
+      .replace(/^Executes a non-destructive live read-only probe against\b/i, 'Safely checks')
+      .replace(/^Executes a live\b/i, 'Runs a live')
+      .replace(/^Executes\b/i, 'Runs')
+      .replace(/^Provisions\b/i, 'Sets up')
+      .replace(/^Queries\b/i, 'Checks')
+      .replace(/^Correlates\b/i, 'Connects the dots between')
+      .replace(/^Enumerates\b/i, 'Lists all')
+      .replace(/^Aggregates\b/i, 'Brings together')
+      .replace(/^Decommissions\b/i, 'Safely removes')
+      .replace(/\bcontrol-plane mutations\b/gi, 'changes to your cloud setup')
+      .replace(/\bcontrol-plane\b/gi, 'Google Cloud account')
+      .replace(/\bmutating verbs\b/gi, 'change-making commands')
+      .replace(/\bzero risk of unintended production mutations\b/gi, 'zero risk of changing or breaking anything in your live apps')
+      .replace(/\bephemeral\b/gi, 'temporary')
+      .replace(/\btelemetry\b/gi, 'live health & usage stats')
+      .replace(/\bblast-radius\b/gi, 'impact on other connected services')
+      .replace(/\bidempotent\b/gi, 'safe-to-repeat')
+      .replace(/\bmean-time-to-contain \(MTTC\)/gi, 'time needed to stop an attack')
+      .replace(/\bMean Time to Detect \(MTTD\)/gi, 'time to spot a problem')
+      .replace(/\bMean Time to Recover \(MTTR\)/gi, 'time to fix an outage')
+      .replace(/\binvoice shock\b/gi, 'surprise monthly cloud bills')
+      .replace(/\bdata exfiltration\b/gi, 'data theft');
+  };
+
+  return {
+    ...info,
+    whatItDoes: simplifyText(info.whatItDoes),
+    enterpriseValue: simplifyText(info.enterpriseValue),
+  };
+}
+
+/**
+ * Matches concrete button actions FIRST (before any broad studio fallback) and returns
+ * a specific, human, Layman-English explanation tailored to that exact button.
+ * This guarantees that 10 different buttons inside the same card never show the same generic text.
+ */
+function matchSpecificButtonInLaymanTerms(
+  buttonEl,
+  cleanLabel,
+  rawText,
+  rawTitle,
+  combined,
+  headingText,
+  codeSnippet,
+  isMutating
+) {
+  const labelLower = cleanLabel.toLowerCase().trim();
+  const titleLower = (rawTitle || '').toLowerCase().trim();
+  const wherePhrase = headingText ? ` in ${headingText}` : '';
+  const meaningfulTitle =
+    rawTitle && rawTitle.length >= 15 && rawTitle.toLowerCase() !== labelLower ? rawTitle : '';
+
+  // ============================================================================
+  // A. 1-TIME GCE GUEST AGENT & UNLOCKED ZERO-SSH COCKPIT BUTTONS
+  // ============================================================================
+  if (
+    labelLower.includes('1-time install gce agent') ||
+    labelLower.includes('install gce agent') ||
+    titleLower.includes('1-time gce guest agent')
+  ) {
+    return {
+      badge: '1-TIME VM AGENT INSTALLER',
+      title: '⚡ 1-Time Install GCE Guest Agent (Unlocks Zero-SSH Cockpit)',
+      whatItDoes:
+        'Installs Google’s official helper agents (Ops Agent + OS Config) inside your Linux VM in one click—using background metadata injection PLUS live Web-SSH streaming so it works out-of-the-box.',
+      enterpriseValue:
+        'Without this agent, Google Cloud is 100% blind to what happens inside your VM (RAM usage, disk fullness, running processes, and crash logs). Installing it once permanently unlocks live RAM/Disk gauges and 1-click maintenance without needing to SSH in every time!',
+      gcpApis: 'compute.instances.setMetadata (enable-guest-attributes) + Google Cloud Ops Agent',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('gce agent installed') || labelLower.includes('1-time done')) {
+    return {
+      badge: 'AGENT ACTIVE · ZERO-SSH UNLOCKED',
+      title: '✓ GCE Guest Agent Already Installed (1-Time Setup Complete)',
+      whatItDoes:
+        'Shows that Google’s Guest Agent is already installed and running inside this virtual machine. This button is automatically disabled so you never accidentally run the installer twice.',
+      enterpriseValue:
+        'All 4 Zero-SSH Cockpit superpowers (Live RAM & Disk % gauges, Top Processes & Open Ports, Live Syslog Crash Reader, and 1-Click Disk Cleanup) are now permanently unlocked below.',
+      gcpApis: 'google-cloud-ops-agent · google-osconfig-agent (Active)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.startsWith('bundle (') || titleLower.includes('configure which gce guest agents')) {
+    return {
+      badge: 'AGENT BUNDLE CHECKLIST',
+      title: `${cleanLabel} — Choose Which Helper Agents to Install`,
+      whatItDoes:
+        'Opens a simple checklist where you can pick which Google helper agents to include during your 1-time install (Ops Agent for RAM/Disk/Logs, OS Config for patching, GPU Monitor, or SAP Agent).',
+      enterpriseValue:
+        'The recommended 2-agent bundle (Ops Agent + OS Config) is pre-selected by default, and you can toggle optional extras on or off before clicking Install.',
+      gcpApis: 'Google Cloud Ops Agent · OS Config VM Manager · NVIDIA DCGM · SAP Agent',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('sync live agent') || labelLower.includes('refresh telemetry')) {
+    return {
+      badge: 'LIVE INSIDE-VM HEALTH CHECK',
+      title: 'Sync Live Inside-VM Memory, Disk & Process Stats',
+      whatItDoes:
+        'Fetches a fresh, up-to-the-second reading from the agent inside your server—updating real Linux RAM %, disk space used, top running programs, and system logs right now.',
+      enterpriseValue:
+        'Lets you verify whether your server is running out of memory or disk space in 1 second without opening an SSH terminal.',
+      gcpApis: 'POST /api/project/{project}/vms/{vm}/agent-cockpit (monitoring.timeSeries.list)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('top processes & open ports')) {
+    return {
+      badge: 'ZERO-SSH TASK MANAGER',
+      title: '📊 Top Processes & Open Ports (Inside-VM Task Manager)',
+      whatItDoes:
+        'Shows a live table of which programs inside your server are using the most CPU and memory right now, plus which network ports (like 22, 80, 443, 5432) are open and listening.',
+      enterpriseValue:
+        'Works just like opening "Task Manager" or "Activity Monitor" on your cloud server—spot a stuck or memory-hungry program immediately without typing Linux commands.',
+      gcpApis: 'Ops Agent Process Metrics (agent.googleapis.com/processes) & Socket Listener Table',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('live guest syslog') || labelLower.includes('syslog & journal')) {
+    return {
+      badge: 'ZERO-SSH CRASH LOG READER',
+      title: '📜 Live Guest Syslog & Systemd Journal (No SSH Needed)',
+      whatItDoes:
+        'Displays the latest system messages, warnings, and crash logs from inside your Linux server (`/var/log/syslog` and `journalctl`) directly in this card.',
+      enterpriseValue:
+        'When an app or database inside your VM misbehaves, you can read the exact error message in plain view instead of SSHing in and hunting through log files.',
+      gcpApis: 'Cloud Logging Ops Agent Stream (logs/syslog · systemd-journald)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('1-click disk clean & cve') || labelLower.includes('disk clean & cve patching')) {
+    return {
+      badge: 'ZERO-SSH SERVER MAINTENANCE',
+      title: '🛡️ 1-Click Disk Cleanup, Security Patching & Agent Restart',
+      whatItDoes:
+        'Opens three 1-click maintenance actions that clean up junk files when your disk gets full, install Linux security updates, or restart stuck monitoring helpers.',
+      enterpriseValue:
+        'Saves you from having to look up complex Linux cleanup or patching commands when your server disk is filling up or needs security updates.',
+      gcpApis: 'OS Config Patch Jobs & Guest Maintenance Runbooks',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('reclaim disk space')) {
+    return {
+      badge: '1-CLICK DISK SPACE CLEANER',
+      title: '🧹 Reclaim Disk Space (Clear Old Logs, Apt Cache & Temp Files)',
+      whatItDoes:
+        'Safely clears out old rotated system logs (`journalctl --vacuum-size=100M`), leftover package installer files (`apt-get clean`), and unused Docker cache inside your VM.',
+      enterpriseValue:
+        'Frees up gigabytes of wasted disk space in seconds so your server never crashes with a "No space left on device" error—without touching any of your app data.',
+      gcpApis: 'Guest Agent Maintenance Action: reclaim-disk',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('apply os security patches')) {
+    return {
+      badge: '1-CLICK LINUX SECURITY UPDATE',
+      title: '🛡️ Apply OS Security Patches (Unattended CVE Updates)',
+      whatItDoes:
+        'Triggers a safe Linux security update (`unattended-upgrade` / `osconfig patch-jobs`) inside your VM to patch known operating-system vulnerabilities.',
+      enterpriseValue:
+        'Keeps your server protected against newly discovered security holes without requiring you to log in and run manual package updates.',
+      gcpApis: 'osconfig.googleapis.com/v1 (patchJobs.execute) · unattended-upgrade',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('restart guest agents')) {
+    return {
+      badge: 'RESTART MONITORING HELPERS',
+      title: '🔄 Restart Guest Agents (Refresh Ops Agent & OS Config)',
+      whatItDoes:
+        'Restarts the background Google Cloud Ops Agent and OS Config helper services inside your VM without rebooting the server itself.',
+      enterpriseValue:
+        'If your RAM or Disk gauges ever stop updating after a config change, this refreshes the helper service in 2 seconds with zero downtime for your apps.',
+      gcpApis: 'systemctl restart google-cloud-ops-agent google-osconfig-agent',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('stream live in web ssh')) {
+    return {
+      badge: 'WATCH LIVE IN TERMINAL',
+      title: 'Stream Command Live in the Interactive Web-SSH Terminal',
+      whatItDoes:
+        'Opens the built-in Web-SSH terminal on the right and types the exact installation or maintenance command for you so you can watch every line of progress live.',
+      enterpriseValue:
+        'Gives you complete transparency when you want to watch packages download and install step-by-step inside your server.',
+      gcpApis: 'CloudPulse WebSocket SSH Terminal + IAP Tunnel',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  // ============================================================================
+  // B. VM POWER, LIFECYCLE, NETWORK IP & SSH SPLIT CONTROLS
+  // ============================================================================
+  if (labelLower === 'start vm' || labelLower === 'start' || titleLower.includes('start virtual machine')) {
+    return {
+      badge: 'POWER ON SERVER',
+      title: 'Start Virtual Machine (Power On)',
+      whatItDoes:
+        'Turns on this stopped virtual machine so your websites, databases, or background apps on it start running again.',
+      enterpriseValue:
+        'Boots your server in ~20 seconds. Note: hourly charges for CPU and RAM start again as soon as the VM is powered on.',
+      gcpApis: 'POST compute.googleapis.com/compute/v1/.../instances/{vm}/start',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower === 'stop' || labelLower === 'stop vm' || titleLower.includes('gracefully stop vm')) {
+    return {
+      badge: 'SHUT DOWN & SAVE MONEY',
+      title: 'Stop Virtual Machine (Pause Hourly CPU & RAM Billing)',
+      whatItDoes:
+        'Cleanly shuts down this virtual machine—just like turning off a computer—while keeping your hard drive and files safely saved.',
+      enterpriseValue:
+        'Immediately drops your hourly vCPU and RAM charges to $0.00/hr while you aren’t using the server (you only pay pennies for the saved boot disk).',
+      gcpApis: 'POST compute.googleapis.com/compute/v1/.../instances/{vm}/stop',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower === 'reboot' || labelLower === 'reset' || titleLower.includes('hard reset / reboot')) {
+    return {
+      badge: 'RESTART SERVER',
+      title: 'Reboot Virtual Machine (Keep IP & Disk Intact)',
+      whatItDoes:
+        'Restarts this virtual machine right in place—keeping its IP address, attached disks, and configuration untouched.',
+      enterpriseValue:
+        'Quickly recovers a frozen server or finishes applying Linux kernel updates in under 30 seconds.',
+      gcpApis: 'POST compute.googleapis.com/compute/v1/.../instances/{vm}/reset',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower === 'suspend' || titleLower.includes('suspend vm')) {
+    return {
+      badge: 'SLEEP MODE (SAVE RAM TO DISK)',
+      title: 'Suspend Virtual Machine (Like Closing Your Laptop Lid)',
+      whatItDoes:
+        'Pauses your server and saves all currently open memory (RAM) to disk so you can wake it up later in the exact middle of what it was doing.',
+      enterpriseValue:
+        'Stops hourly CPU billing while preserving your open programs and in-memory state so you don’t have to reload everything next morning.',
+      gcpApis: 'POST compute.googleapis.com/compute/v1/.../instances/{vm}/suspend',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower === 'resume' || labelLower === 'resume vm') {
+    return {
+      badge: 'WAKE FROM SLEEP',
+      title: 'Resume Suspended Virtual Machine',
+      whatItDoes:
+        'Wakes up your paused (suspended) server and restores its saved memory so all running programs pick up right where they left off.',
+      enterpriseValue:
+        'Much faster than a full reboot because your applications and caches are already loaded in memory.',
+      gcpApis: 'POST compute.googleapis.com/compute/v1/.../instances/{vm}/resume',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower === 'delete vm' || titleLower.includes('permanently delete vm')) {
+    return {
+      badge: 'PERMANENTLY REMOVE SERVER',
+      title: 'Delete Virtual Machine (Stop All Compute & Disk Billing)',
+      whatItDoes:
+        'Permanently deletes this virtual machine and its boot disk after asking for your confirmation (blocked automatically if Deletion Protection is turned ON).',
+      enterpriseValue:
+        'Completely stops both hourly compute charges and monthly disk storage fees for old test servers you no longer need.',
+      gcpApis: 'DELETE compute.googleapis.com/compute/v1/.../instances/{vm}',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    labelLower === 'protected' ||
+    labelLower === 'unprotected' ||
+    titleLower.includes('deletion protection')
+  ) {
+    const isProtectedNow = labelLower === 'protected';
+    return {
+      badge: 'ACCIDENTAL DELETE SAFETY LOCK',
+      title: isProtectedNow
+        ? '🛡️ Deletion Protection is ON (Click to Unlock)'
+        : '🔓 Deletion Protection is OFF (Click to Lock & Protect VM)',
+      whatItDoes: isProtectedNow
+        ? 'This server currently has its safety lock turned ON—Google Cloud will block anyone from deleting it until you click here to unlock it.'
+        : 'Turns ON Google Cloud’s Deletion Protection lock on this VM so nobody can accidentally delete it from the console, CLI, or Terraform.',
+      enterpriseValue:
+        'Prevents catastrophic "wrong server deleted" accidents on important databases and production machines.',
+      gcpApis: 'POST compute.instances.setDeletionProtection',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('resize machine') || labelLower.includes('apply resize')) {
+    return {
+      badge: 'CHANGE CPU & RAM SIZE',
+      title: 'Resize Machine Type (Upgrade or Downsize CPU & Memory)',
+      whatItDoes:
+        'Lets you pick a smaller, cheaper machine size (like `e2-micro` or `e2-medium`) or a bigger powerhouse size for this VM.',
+      enterpriseValue:
+        'Cuts your monthly bill in half when a server is oversized, or fixes slow performance when an app needs more RAM.',
+      gcpApis: 'POST compute.instances.setMachineType',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('detach ip') || labelLower.includes('attach public ip') || titleLower.includes('accessconfig')) {
+    const isDetaching = labelLower.includes('detach');
+    return {
+      badge: isDetaching ? 'HIDE FROM PUBLIC INTERNET + SAVE $3.65/MO' : 'ASSIGN PUBLIC INTERNET IP',
+      title: isDetaching
+        ? '🔒 Detach Public IPv4 Address (Zero-Trust Private Mode)'
+        : '+ Attach Public IPv4 Address to VM',
+      whatItDoes: isDetaching
+        ? 'Removes the public internet IPv4 address from this VM so bots and hackers on the internet cannot scan or attack it directly.'
+        : 'Assigns a public internet IPv4 address (`external-nat`) to this VM so outside users can connect to it directly.',
+      enterpriseValue: isDetaching
+        ? 'Saves $3.65/month per VM on public IPv4 fees while keeping your server 100% accessible to you via Google’s encrypted IAP SSH tunnel!'
+        : 'Useful when your VM directly serves public web traffic without a Load Balancer in front of it.',
+      gcpApis: isDetaching
+        ? 'POST compute.instances.deleteAccessConfig (nic0)'
+        : 'POST compute.instances.addAccessConfig (nic0)',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('serial port 1') || labelLower.includes('hide serial logs')) {
+    return {
+      badge: 'BOOT & KERNEL RESCUE LOGS',
+      title: 'Read Serial Port 1 Console Logs (Works Even When SSH Is Down)',
+      whatItDoes:
+        'Fetches the raw startup and Linux kernel messages printed to your server’s virtual screen (`ttyS0`) during boot.',
+      enterpriseValue:
+        'Your #1 rescue tool when a VM fails to boot, fills up its disk 100%, or has a broken firewall/SSH config that locks you out.',
+      gcpApis: 'GET compute.instances.getSerialPortOutput (port=1)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower === 'ssh / console' || labelLower === 'web ssh' || titleLower.includes('open interactive web ssh')) {
+    return {
+      badge: 'BROWSER LINUX TERMINAL',
+      title: 'Open Interactive Web-SSH Terminal in Browser',
+      whatItDoes:
+        'Opens a live command-line terminal connected to this Linux server right inside your browser—no terminal app or SSH key setup required on your laptop.',
+      enterpriseValue:
+        'Tunnels safely through Google’s Identity-Aware Proxy (IAP) so you can log in even when your VM has no public IP address.',
+      gcpApis: 'WebSocket SSH PTY · IAP TCP Forwarding (Port 22)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('scp / sftp') || labelLower.includes('sftp files')) {
+    return {
+      badge: 'DRAG-AND-DROP FILE TRANSFER',
+      title: 'Open Visual SCP / SFTP File Manager for This VM',
+      whatItDoes:
+        'Opens a visual folder browser for your server so you can upload files from your computer or download logs and backups with a single click.',
+      enterpriseValue:
+        'Eliminates the headache of typing long `gcloud compute scp` commands just to grab a file or upload a script.',
+      gcpApis: 'SSH SFTP Subsystem over IAP Tunnel',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('127.0.0.1 iap tunnel') || labelLower.includes('iap tunnel')) {
+    return {
+      badge: 'PRIVATE PORT FORWARDING',
+      title: 'Open Private IAP Port-Forwarding Tunnel (Zero Public Firewall Ports)',
+      whatItDoes:
+        'Creates an encrypted bridge to an internal port on your VM (like Postgres `5432`, MySQL `3306`, Redis `6379`, or a private web dashboard on `8080`).',
+      enterpriseValue:
+        'Lets you connect to private databases and internal admin tools running on your VM without ever exposing those ports to the public internet.',
+      gcpApis: 'gcloud compute start-iap-tunnel · IAP TCP Relay',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('migrate → cloud run') || labelLower.includes('migrate to cloud run')) {
+    return {
+      badge: 'VM-TO-SERVERLESS CONVERTER',
+      title: 'Convert This VM into an Auto-Scaling Cloud Run Container',
+      whatItDoes:
+        'Inspects your virtual machine, generates a ready-to-use `Dockerfile`, and prepares a 1-click deployment to Google Cloud Run.',
+      enterpriseValue:
+        'Turns an always-on server that bills you 24/7 into a modern serverless app that manages its own HTTPS and costs $0.00 when nobody is using it.',
+      gcpApis: 'Migrate to Containers (m2c) · Cloud Build · Cloud Run v2',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.includes('33% vm') ||
+    labelLower.includes('42% / 58%') ||
+    labelLower.includes('50% / 50%') ||
+    labelLower.includes('100% full ssh')
+  ) {
+    return {
+      badge: 'WORKSPACE SPLIT LAYOUT',
+      title: `Switch Screen Split Ratio to ${cleanLabel}`,
+      whatItDoes:
+        `Resizes the left VM fleet list and the right Web-SSH terminal panel to the "${cleanLabel}" layout.`,
+      enterpriseValue:
+        'Lets you give your terminal the full width of your screen when reading wide logs, or keep both panels side-by-side while managing multiple servers.',
+      gcpApis: 'CloudPulse Responsive Split-Pane Layout Engine',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  // ============================================================================
+  // C. TOUCH-OPTIMIZED MOBILE CLOUD SHELL & FLOATING DRAWER CONTROLS
+  // ============================================================================
+  if (labelLower.includes('top dock') || titleLower.includes('dock at the top')) {
+    return {
+      badge: 'STEADY TOP TERMINAL DOCK',
+      title: 'Pin Cloud Shell at the Top of the Workspace',
+      whatItDoes:
+        'Places the Cloud Shell terminal at the very top of the Logs & Shell page—above all live log streams.',
+      enterpriseValue:
+        'Guarantees the terminal never jumps or gets pushed down the page when live logs refresh underneath.',
+      gcpApis: 'CloudPulse Docked Terminal Layout',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('floating drawer') || titleLower.includes('draggable floating window')) {
+    return {
+      badge: 'DRAGGABLE FLOATING TERMINAL',
+      title: 'Pop Out Cloud Shell into a Freely Movable Floating Window',
+      whatItDoes:
+        'Detaches the Cloud Shell into a floating window that you can drag by its top bar to any spot on your screen.',
+      enterpriseValue:
+        'Stays visible even as you scroll or switch to other studios, so you can inspect resources and run commands side-by-side.',
+      gcpApis: 'CloudPulse Pointer-Captured Floating Window Manager',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('reset pos') || titleLower.includes('reset floating drawer position')) {
+    return {
+      badge: 'RE-CENTER FLOATING WINDOW',
+      title: 'Snap Floating Cloud Shell Back to Default Corner',
+      whatItDoes:
+        'Moves the floating Cloud Shell window back to its neat default position in the bottom-right corner of your screen.',
+      enterpriseValue:
+        'One-click recovery if you dragged the floating terminal off to the side of your monitor.',
+      gcpApis: 'CloudPulse Floating Window Position Reset',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower === 'minimize' ||
+    labelLower === 'expand' ||
+    titleLower.includes('collapse terminal') ||
+    titleLower.includes('expand terminal')
+  ) {
+    const isMinimizing = labelLower === 'minimize';
+    return {
+      badge: isMinimizing ? 'TUCK TERMINAL AWAY' : 'RESTORE TERMINAL VIEW',
+      title: isMinimizing
+        ? 'Minimize Terminal to a Slim Bar (Keep Session Alive)'
+        : 'Expand Terminal Window Back to Full View',
+      whatItDoes: isMinimizing
+        ? 'Folds the terminal down into a compact single-line header bar while keeping your command history and output running in the background.'
+        : 'Opens the minimized terminal back up so you can see your command output and type new commands.',
+      enterpriseValue:
+        'Gives you back your full screen space in one click without losing your active terminal session.',
+      gcpApis: 'CloudPulse Terminal Viewport State',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  // ============================================================================
+  // D. SECRET MANAGER, CLOUD RUN, FINOPS & SECURITY SPECIFIC CONTROLS
+  // ============================================================================
+  if (
+    (labelLower === 'disable' || labelLower.includes('disable version')) &&
+    (headingText.toLowerCase().includes('secret') || titleLower.includes('secret'))
+  ) {
+    return {
+      badge: 'REVERSIBLE $0.00 SECRET PAUSE',
+      title: 'Disable Secret Version (Pause $0.06/mo Charge Safely)',
+      whatItDoes:
+        'Temporarily turns off this secret version so apps cannot fetch it and Google stops billing the $0.06/month active version fee—without erasing it.',
+      enterpriseValue:
+        'Unlike "Destroy" (which erases the secret forever), "Disable" is 100% reversible: if you discover an older app still needed this key, you can re-enable it in 1 click!',
+      gcpApis: 'POST secretmanager.googleapis.com/v1/.../versions/{v}:disable',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    (labelLower === 'destroy' || labelLower.includes('destroy version')) &&
+    (headingText.toLowerCase().includes('secret') || titleLower.includes('secret'))
+  ) {
+    return {
+      badge: 'PERMANENT CRYPTOGRAPHIC ERASE',
+      title: '⚠️ Permanently Destroy Secret Version (Cannot Be Undone)',
+      whatItDoes:
+        'Irreversibly erases the encrypted password or API key inside this secret version from Google’s servers forever.',
+      enterpriseValue:
+        'Use this when a credential has been leaked or compromised and you want a cryptographic guarantee that nobody can ever read it again.',
+      gcpApis: 'POST secretmanager.googleapis.com/v1/.../versions/{v}:destroy',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    labelLower.includes('scale to $0') ||
+    labelLower.includes('mininstances=0') ||
+    labelLower.includes('scale-to-zero') ||
+    labelLower.includes('cpuidle')
+  ) {
+    return {
+      badge: 'ZERO-IDLE-COST SERVERLESS MODE',
+      title: 'Enable Scale-to-$0 Sleep Mode When Idle (`minInstances=0`)',
+      whatItDoes:
+        'Configures this service to automatically go to sleep when nobody is visiting your app and wake up in milliseconds as soon as a request arrives.',
+      enterpriseValue:
+        'Drops your bill to $0.00/hour overnight, on weekends, and between user visits instead of paying 24/7 for idle servers.',
+      gcpApis: 'PATCH run.googleapis.com/v2/.../services (scaling.minInstanceCount = 0)',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  // ============================================================================
+  // E. UNIVERSAL ACTION BUTTONS (REFRESH, COPY, DOWNLOAD, CLEAR, FILTER, ETC.)
+  //    Ensures common utility buttons explain their exact action in simple terms!
+  // ============================================================================
+  if (
+    labelLower === 'refresh' ||
+    labelLower === 'reload' ||
+    labelLower === 'sync' ||
+    labelLower.startsWith('refresh ') ||
+    labelLower.startsWith('reload ') ||
+    titleLower.startsWith('refresh ')
+  ) {
+    return {
+      badge: 'FETCH LATEST LIVE DATA',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Checks your Google Cloud project right now and reloads the newest live status, metrics, and resources${wherePhrase}.`,
+      enterpriseValue:
+        'Completely safe and free to click anytime—it only reads the latest state from Google Cloud without changing anything.',
+      gcpApis: codeSnippet || `Live Read-Only Sync${wherePhrase}`,
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower === 'clear' ||
+    labelLower === 'clear logs' ||
+    labelLower === 'clear output' ||
+    labelLower === 'clear console' ||
+    labelLower === 'reset filters'
+  ) {
+    return {
+      badge: 'CLEAN UP SCREEN VIEW',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Wipes the old messages or filters currently shown on your screen${wherePhrase} so you can start with a clean view.`,
+      enterpriseValue:
+        'Only clears what is displayed in your browser—it never deletes any real logs or resources inside your Google Cloud account.',
+      gcpApis: 'Browser UI State Reset (Zero Cloud Impact)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower === 'copy' ||
+    labelLower === 'copied' ||
+    labelLower === 'copied!' ||
+    labelLower.startsWith('copy ') ||
+    titleLower.startsWith('copy ')
+  ) {
+    return {
+      badge: 'COPY TO CLIPBOARD',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Copies ${codeSnippet ? `the command \`${codeSnippet.slice(0, 65)}\`` : `this ${cleanLabel.replace(/^copy\s*/i, '') || 'command or snippet'}`} straight to your clipboard with one click.`,
+      enterpriseValue:
+        'Ready to paste directly into your terminal, pull request, or team chat with zero typing mistakes.',
+      gcpApis: codeSnippet || 'One-Click Clipboard Copy',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.startsWith('download') ||
+    labelLower.startsWith('export') ||
+    titleLower.startsWith('download ') ||
+    titleLower.startsWith('export ')
+  ) {
+    return {
+      badge: 'SAVE FILE TO YOUR COMPUTER',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Saves a copy of this ${cleanLabel.replace(/^(download|export)\s*/i, '') || 'file, script, or report'}${wherePhrase} directly to your computer.`,
+      enterpriseValue:
+        'Lets you keep an offline backup, share a compliance report with your team, or commit generated code into Git.',
+      gcpApis: codeSnippet || 'Local File Export & Download',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower === 'cancel' ||
+    labelLower === 'close' ||
+    labelLower === 'dismiss' ||
+    labelLower === 'back' ||
+    labelLower === 'collapse'
+  ) {
+    return {
+      badge: 'CLOSE WITHOUT CHANGES',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Closes this dialog or panel${wherePhrase} without making any changes to your Google Cloud account.`,
+      enterpriseValue:
+        'Safe exit button whenever you just wanted to preview a setting or changed your mind.',
+      gcpApis: 'UI Navigation Only (No Cloud Changes)',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.startsWith('dry-run') ||
+    labelLower.startsWith('dry run') ||
+    labelLower.startsWith('simulate') ||
+    labelLower.startsWith('preview') ||
+    labelLower.startsWith('estimate')
+  ) {
+    return {
+      badge: 'SAFE WHAT-IF PREVIEW',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Runs a safe "what-if" test of "${cleanLabel}"${wherePhrase} to show you what would happen (and how much it would cost or save) before anything is changed for real.`,
+      enterpriseValue:
+        'Lets you catch mistakes, permission errors, or surprise costs upfront with zero risk to your live apps.',
+      gcpApis: codeSnippet || 'Google Cloud Dry-Run & Cost Simulation Engine',
+      safetyMode: 'SIMULATION',
+    };
+  }
+
+  if (
+    labelLower.startsWith('create ') ||
+    labelLower.startsWith('+ create') ||
+    labelLower.startsWith('+ new') ||
+    labelLower.startsWith('provision ') ||
+    labelLower.startsWith('deploy ')
+  ) {
+    return {
+      badge: 'CREATE NEW CLOUD RESOURCE',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Sets up and launches "${cleanLabel.replace(/^(\+\s*)?(create|new|provision|deploy)\s*/i, '') || cleanLabel}"${wherePhrase} in your active Google Cloud project with best-practice security and cost defaults.`,
+      enterpriseValue:
+        'Saves you from filling out 10 pages of complex cloud console forms by applying sensible, production-ready defaults in one step.',
+      gcpApis: codeSnippet || `Google Cloud Provisioning API${wherePhrase}`,
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    labelLower.startsWith('delete ') ||
+    labelLower.startsWith('destroy ') ||
+    labelLower.startsWith('remove ') ||
+    labelLower.startsWith('decommission') ||
+    labelLower.startsWith('prune ')
+  ) {
+    return {
+      badge: 'REMOVE RESOURCE & STOP BILLING',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Removes "${cleanLabel.replace(/^(delete|destroy|remove|prune)\s*/i, '') || cleanLabel}"${wherePhrase} from your Google Cloud project so you stop paying for it.`,
+      enterpriseValue:
+        'Cleans up unused or orphaned cloud resources that would otherwise silently add to your monthly bill.',
+      gcpApis: codeSnippet || `Google Cloud Resource Cleanup${wherePhrase}`,
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    labelLower.startsWith('fix ') ||
+    labelLower.startsWith('auto-fix') ||
+    labelLower.startsWith('remediate') ||
+    labelLower.startsWith('repair ') ||
+    labelLower.startsWith('harden ') ||
+    labelLower.startsWith('enforce ')
+  ) {
+    return {
+      badge: '1-CLICK FIX & PROTECTION',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Automatically fixes this security, reliability, or cost issue ("${cleanLabel}")${wherePhrase} using Google Cloud’s recommended best-practice setting.`,
+      enterpriseValue:
+        'Turns a warning on your dashboard into a solved problem in one click—without writing manual scripts.',
+      gcpApis: codeSnippet || `Automated GCP Remediation${wherePhrase}`,
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Context-aware Domain & Real Use-Case Synthesis Engine (in Plain Layman English).
+ * First checks specific button actions via `matchSpecificButtonInLaymanTerms`, then combines
+ * the button's label, tooltip, surrounding card heading, and nearby code block so every button
+ * has its own clear, plain-English explanation.
  */
 function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitle, combined, isMutating) {
   const { headingText, codeSnippet } = extractButtonDomContext(buttonEl);
@@ -4594,6 +5336,21 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
       ? `${cleanLabel} — ${headingText}`
       : cleanLabel;
   const meaningfulTitle = rawTitle && rawTitle.length >= 12 ? rawTitle : '';
+
+  // 0. Check Specific Button Action First (Guarantees Every Button Has Unique Layman Docs!)
+  const specificLaymanMatch = matchSpecificButtonInLaymanTerms(
+    buttonEl,
+    cleanLabel,
+    rawText,
+    rawTitle,
+    combined,
+    headingText,
+    codeSnippet,
+    isMutating
+  );
+  if (specificLaymanMatch) {
+    return specificLaymanMatch;
+  }
 
   // 1. Live Probe / CLI Execution / Workbench Handoff Controls
   if (
@@ -4607,34 +5364,33 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
       fullContext.includes('gcloud') ||
       fullContext.includes('🔧') ||
       Boolean(codeSnippet && codeSnippet.startsWith('gcloud'));
-    const targetCmd = codeSnippet || (meaningfulTitle.includes('gcloud') ? meaningfulTitle : 'the active Google Cloud control-plane resource');
+    const targetCmd = codeSnippet || (meaningfulTitle.includes('gcloud') ? meaningfulTitle : 'this Google Cloud service');
     return {
-      badge: usesGcloud ? 'LIVE SDK 591.0.0 PROBE (🔧 GCLOUD)' : 'LIVE GCP REST / SOCKET PROBE (⚡ DIRECT)',
+      badge: usesGcloud ? 'SAFE LIVE CHECK (🔧 GCLOUD)' : 'SAFE LIVE CHECK (⚡ DIRECT API)',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Executes a non-destructive live read-only probe against your active GCP project for ${targetCmd}, automatically converting mutating verbs into safe --help syntax verification + companion read-only inventory checks.`,
-      enterpriseValue: usesGcloud
-        ? 'Verifies real project inventory, IAM permissions, and SDK 591.0.0 flag availability in one click—automatically bridging your Online Session OAuth token into CLOUDSDK_AUTH_ACCESS_TOKEN without requiring a local terminal login.'
-        : 'Streams live Google Cloud REST control-plane state and resource health directly into the studio with zero risk of unintended production mutations.',
+        `Runs a 100% safe, read-only check against your Google Cloud project for ${targetCmd}. Even if the command normally makes changes, this probe only checks syntax and lists your existing resources—it will never modify or break anything.`,
+      enterpriseValue:
+        'Lets you verify what is currently running in your account and whether a command works before you ever use it in production.',
       gcpApis: codeSnippet
         ? `${codeSnippet.slice(0, 95)} · Online Session OAuth Bridge`
         : usesGcloud
-        ? 'Google Cloud SDK 591.0.0 (gcloud) · CLOUDSDK_AUTH_ACCESS_TOKEN Bridge'
-        : 'Authenticated Google Cloud REST Control Plane (/api/project/{project}/gcloud-591/probe)',
+        ? 'Google Cloud SDK 591.0.0 (gcloud) · Safe Read-Only Mode'
+        : 'Authenticated Google Cloud REST API (/api/project/{project}/gcloud-591/probe)',
       safetyMode: 'READ_ONLY',
     };
   }
 
   if (combined.includes('load in workbench') || combined.includes('stage in workbench')) {
     return {
-      badge: 'INTERACTIVE PROBE WORKBENCH HANDOFF',
+      badge: 'OPEN IN COMMAND TESTER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Loads "${codeSnippet || cleanLabel}" directly into the top Interactive SDK 591.0.0 Probe Workbench, scrolls to the execution console, and triggers an immediate read-only live probe.`,
+        `Sends "${codeSnippet || cleanLabel}" up into the interactive Command Workbench at the top of the page so you can tweak its options and test it safely.`,
       enterpriseValue:
-        'Lets you customize CLI flags, inspect the structured resource anatomy table, review the official SDK 591.0.0 --help manpage, and test execution against your live project before running in production.',
+        'Great when you want to customize a command, inspect its help manual, or see a clean table of results before running it for real.',
       gcpApis: codeSnippet || 'SDK 591.0.0 Interactive Probe & Dry-Run Workbench',
       safetyMode: 'READ_ONLY',
     };
@@ -4642,39 +5398,39 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (combined.includes('validate syntax') || combined.includes('--help manpage') || combined.includes('sdk 591.0.0 --help')) {
     return {
-      badge: 'SDK 591.0.0 MANPAGE & FLAG VERIFIER',
+      badge: 'OFFICIAL COMMAND MANUAL',
       title: contextSubject,
       whatItDoes:
-        'Executes `<command> --help` against the installed Google Cloud SDK 591.0.0 binary to inspect official release-track availability ([GA], [BETA], [ALPHA]), required positional arguments, and supported flags.',
+        'Opens the official Google Cloud `--help` manual for this command so you can see every valid flag, option, and example.',
       enterpriseValue:
-        'Prevents CI/CD pipeline failures caused by deprecated flags, mismatched alpha/beta release tracks, or syntax typos before any command touches production.',
-      gcpApis: codeSnippet ? `${codeSnippet.slice(0, 85)} --help` : 'gcloud 591.0.0 Local Binary Manpage Inspector',
+        'Saves you from searching documentation websites or guessing whether a flag name is spelled right.',
+      gcpApis: codeSnippet ? `${codeSnippet.slice(0, 85)} --help` : 'gcloud 591.0.0 Built-In Help Manual',
       safetyMode: 'READ_ONLY',
     };
   }
 
   if (combined.includes('live probe & anatomy')) {
     return {
-      badge: 'STRUCTURED ANATOMY & LIVE INVENTORY VIEW',
-      title: 'Live Probe Results, Command Anatomy & Flag Breakdown',
+      badge: 'EASY TABLE & COMMAND BREAKDOWN',
+      title: 'View Results as an Easy Table + Step-by-Step Command Breakdown',
       whatItDoes:
-        'Renders the parsed resource table from your live GCP probe alongside a token-by-token breakdown of the gcloud command, release track, safety classification, and active project bindings.',
+        'Shows your live Google Cloud results in a clean, readable table and breaks the command down word-by-word so you can see what each flag does.',
       enterpriseValue:
-        'Transforms dense CLI terminal output and JSON responses into an actionable engineering table with 1-click command staging.',
-      gcpApis: 'CloudPulse SDK 591.0.0 Anatomy Parser & Live Inventory Normalizer',
+        'Turns complicated terminal output into an easy-to-read visual summary.',
+      gcpApis: 'CloudPulse Visual Command Explainer & Table View',
       safetyMode: 'READ_ONLY',
     };
   }
 
   if (combined.includes('raw json payload')) {
     return {
-      badge: 'RAW CONTROL-PLANE JSON INSPECTOR',
-      title: 'Inspect Raw `--format=json` CLI & REST API Payload',
+      badge: 'RAW TECHNICAL DATA (JSON)',
+      title: 'View Raw JSON Data Returned by Google Cloud',
       whatItDoes:
-        'Displays the unedited JSON array or object returned by Google Cloud REST APIs or `gcloud --format=json`, complete with execution latency, HTTP status, and auth bridge metadata.',
+        'Shows the exact, unedited JSON data that Google Cloud sent back—including response speed and status codes.',
       enterpriseValue:
-        'Gives platform engineers the exact field paths needed to write jq filters, Terraform external data sources, or custom Python/Go automation scripts.',
-      gcpApis: 'gcloud --format=json · Google Cloud REST JSON Serializer',
+        'Helpful when you are writing a script or automation and need to copy the exact field names returned by Google’s API.',
+      gcpApis: 'gcloud --format=json · Google Cloud REST JSON Response',
       safetyMode: 'READ_ONLY',
     };
   }
@@ -4682,13 +5438,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
   // 2. SDK 591.0.0 Specific Capabilities & Studio GCP Advantage Bar Controls
   if (fullContext.includes('worker-pools') || fullContext.includes('worker pool')) {
     return {
-      badge: 'CLOUD RUN WORKER POOLS (BETA · 591.0.0)',
+      badge: 'BACKGROUND QUEUE WORKERS',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Configures or probes non-HTTP pull-based Cloud Run Worker Pools (`gcloud beta run worker-pools`) designed for continuous Pub/Sub, Kafka, and RabbitMQ queue consumers.',
+        `Manages or checks "${cleanLabel}" for Cloud Run Worker Pools—special background containers that pull jobs from a queue (like Pub/Sub or Kafka) without needing a public web URL.`,
       enterpriseValue:
-        'Eliminates public HTTP ingress attack surfaces and dummy health-check ports for background workers while retaining serverless per-second billing.',
+        'More secure and cheaper for background tasks (like video processing or email queues) because there is no public web port for hackers to hit.',
       gcpApis: 'run.googleapis.com/v2/projects/{project}/locations/{region}/workerPools · gcloud beta run worker-pools',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4696,13 +5452,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('agent-registry') || fullContext.includes('agent registry')) {
     return {
-      badge: 'GA AGENT REGISTRY (SDK 591.0.0)',
+      badge: 'APPROVED AI AGENTS DIRECTORY',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Queries or manages the newly promoted GA Google Cloud Agent Registry (`gcloud agent-registry mcp-servers`, `agents`, `skills`, `publishers`, and security `findings`).',
+        `Opens or runs "${cleanLabel}" in Google Cloud’s Agent Registry—your central directory of AI agents, tools, and MCP servers allowed in your project.`,
       enterpriseValue:
-        'Provides a centralized enterprise catalog to govern which autonomous AI agents and Remote MCP servers are approved to operate inside your GCP organization.',
+        'Lets you see every AI agent connected to your cloud account in one place so rogue or unapproved AI tools can’t access your data.',
       gcpApis: 'agentregistry.googleapis.com/v1 · gcloud agent-registry (mcp-servers, agents, skills)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4716,13 +5472,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
     fullContext.includes('server-tls-policies')
   ) {
     return {
-      badge: 'COMPUTE, GKE & NETWORKING (SDK 591.0.0)',
+      badge: 'ZERO-DOWNTIME SERVER UPGRADES',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Configures SDK 591.0.0 Compute & Networking primitives: SPIFFE `AGENT_IDENTITY` VMs, MIG `restart-in-place` (preserving Local SSD & IP), GKE `LIVE_UPDATE_WITHOUT_DRAIN`, Envoy circuit breakers, or Server TLS policies.',
+        `Configures or checks "${cleanLabel}"—keeping your servers and Kubernetes clusters running smoothly during restarts or updates without kicking users off.`,
       enterpriseValue:
-        'Prevents Pod eviction storms during GKE node pool updates, preserves ephemeral Local SSD state during VM restarts, and enforces mTLS + circuit-breaking at the load balancer edge.',
+        'Prevents brief website hiccups when servers restart or update, and stops overloaded backend services from crashing your whole app.',
       gcpApis: 'compute.googleapis.com/v1 · container.googleapis.com/v1 · networksecurity.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4736,13 +5492,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
     fullContext.includes('policy troubleshooter')
   ) {
     return {
-      badge: 'ZERO-TRUST IAM, WIF & PAM (SDK 591.0.0)',
+      badge: 'TEMPORARY ACCESS & PERMISSION FIXER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Inspects or configures Workload Identity Federation `--actor-providers`, Privileged Access Manager (PAM) JIT entitlements, Workspace Key Access client-side encryption, or IAM 403 Policy Troubleshooting.',
+        `Runs "${cleanLabel}" to grant temporary time-limited admin access (Privileged Access Manager) or explain in plain English why a "403 Permission Denied" error happened.`,
       enterpriseValue:
-        'Replaces standing admin roles with time-bound JIT approvals, preserves human actor audit trails across chained AI agent calls, and diagnoses 403 denials in seconds.',
+        'Instead of giving people permanent full-admin keys that could get stolen, they get access for just 1 hour when needed—and you can fix permission errors in seconds.',
       gcpApis: 'iam.googleapis.com/v1 · privilegedaccessmanager.googleapis.com/v1 · policytroubleshooter.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4756,13 +5512,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
     fullContext.includes('asset vet')
   ) {
     return {
-      badge: 'RESILIENCE, CARBON & CAI VETTING (591.0.0)',
+      badge: 'OUTAGE CHECKER & REGION PICKER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Correlates Personalized Service Health datacenter incidents with your active regions, runs Fault Testing resilience drills, ranks regions via Cloud Location Finder, or vets Terraform plans against Org Policies (`gcloud beta asset vet`).',
+        `Runs "${cleanLabel}" to check if Google Cloud itself is having an outage in your region, test how your app handles failures, or pick the greenest/fastest datacenter location.`,
       enterpriseValue:
-        'Distinguishes Google Cloud regional infrastructure outages from your own application bugs in seconds and blocks non-compliant Terraform deployments before `terraform apply`.',
+        'Tells you immediately whether an issue is your code or a Google datacenter problem—saving hours of wasted debugging.',
       gcpApis: 'servicehealth.googleapis.com/v1 · cloudlocationfinder.googleapis.com/v1alpha · cloudasset.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4770,13 +5526,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('model-armor') || fullContext.includes('model armor') || fullContext.includes('sanitize-user-prompt')) {
     return {
-      badge: 'MODEL ARMOR AI GUARDRAILS (GA · 591.0.0)',
+      badge: 'AI SAFETY & PROMPT FIREWALL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Tests or provisions Google Cloud Model Armor templates and Floor Settings (`sanitize-user-prompt`, `sanitize-model-response`) to intercept prompt injections, jailbreaks, malicious URLs, and sensitive PII/credentials.',
+        `Runs "${cleanLabel}" using Google Cloud Model Armor to scan AI prompts and replies for prompt-injection tricks, malicious links, and leaked private data (like credit cards or SSNs).`,
       enterpriseValue:
-        'Enforces mandatory organization-wide LLM safety guardrails at the API boundary so no Vertex AI or Gemini application can be tricked into leaking secrets or executing jailbreaks.',
+        'Acts like a bodyguard in front of your Gemini/AI chatbots so users cannot trick your AI into leaking secrets or breaking rules.',
       gcpApis: 'modelarmor.googleapis.com/v1 · gcloud model-armor (templates, floorsettings, sanitize-user-prompt)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4790,13 +5546,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
     fullContext.includes('design-center')
   ) {
     return {
-      badge: 'DEVELOPER KNOWLEDGE RAG & APP HUB (GA · 591.0.0)',
+      badge: 'OFFICIAL GOOGLE DOCS & APP MAP',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Searches official Google Cloud documentation (`docs.cloud.google.com`) via the Grounded Developer Knowledge API and maps live multi-resource application topologies via App Hub (`apphub.googleapis.com`).',
+        `Uses "${cleanLabel}" to search official Google Cloud documentation live or group your scattered servers and databases into one visual application map (App Hub).`,
       enterpriseValue:
-        'Grounds architectural decisions and CLI synthesis on authoritative Google documentation while organizing flat project resources into logical business applications.',
+        'Gives you answers straight from official Google docs (no AI guessing) and organizes your cloud resources by which business app they belong to.',
       gcpApis: 'developerknowledge.googleapis.com/v1alpha · apphub.googleapis.com/v1 · applicationdesigncenter.googleapis.com',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4804,13 +5560,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('cloudquotas') || fullContext.includes('quota-adjuster') || fullContext.includes('quota adjuster') || fullContext.includes('cloud quotas')) {
     return {
-      badge: 'CLOUD QUOTAS & AUTO-ADJUSTER (BETA · 591.0.0)',
+      badge: 'ACCOUNT LIMIT CHECKER & AUTO-UPGRADER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Audits regional vCPU, GPU, and API rate quotas (`cloudquotas.googleapis.com/v1beta`) and configures the Autonomous Quota Adjuster to automatically request quota increases before utilization hits 80%.',
+        `Runs "${cleanLabel}" to check how close you are to Google Cloud’s CPU, GPU, or API limits—and can automatically request a higher limit before you hit 80%.`,
       enterpriseValue:
-        'Prevents surprise `429 RESOURCE_EXHAUSTED` production outages during traffic spikes or autoscaling events without manual quota ticket toil.',
+        'Prevents your app from suddenly failing to scale during a big traffic spike just because your account hit a default resource cap.',
       gcpApis: 'cloudquotas.googleapis.com/v1beta · gcloud beta quotas (info, preferences, adjuster)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4818,13 +5574,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('audit-manager') || fullContext.includes('auditmanager') || fullContext.includes('compliance-manager') || fullContext.includes('framework-audits')) {
     return {
-      badge: 'AUDIT & COMPLIANCE MANAGER (591.0.0)',
+      badge: '1-CLICK SECURITY AUDIT REPORT',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Runs automated control-plane evidence collection and compliance evaluations against SOC 2 Type II, ISO 27001, PCI-DSS v4.0, HIPAA, and FedRAMP High frameworks.',
+        `Runs "${cleanLabel}" to automatically check your cloud setup against security standards like SOC 2, ISO 27001, HIPAA, and PCI-DSS.`,
       enterpriseValue:
-        'Replaces weeks of manual screenshot and spreadsheet gathering for security auditors with cryptographically verifiable Google Cloud Audit Manager evidence packages.',
+        'Saves weeks of taking manual screenshots and filling out spreadsheets when enterprise customers or auditors ask for security proof.',
       gcpApis: 'auditmanager.googleapis.com/v1 · cloudsecuritycompliance.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4832,42 +5588,14 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('hypercomputer') || fullContext.includes('cluster-director') || fullContext.includes('hypercomputecluster') || fullContext.includes('lustre')) {
     return {
-      badge: 'AI HYPERCOMPUTER & MANAGED LUSTRE (591.0.0)',
+      badge: 'HIGH-SPEED AI GPU SUPERCOMPUTER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Inspects or provisions topology-aware AI Hypercomputer GPU/TPU clusters (`gcloud alpha cluster-director`) paired with sub-millisecond Managed Lustre parallel POSIX file systems (`gcloud lustre instances`).',
+        `Manages or checks "${cleanLabel}" for high-speed AI GPU/TPU clusters and ultra-fast shared Lustre storage designed for training AI models.`,
       enterpriseValue:
-        'Keeps expensive H100/H200/B200 GPUs saturated at >95% compute utilization during checkpoint bursts with up to 1,000 MB/s/TiB parallel storage throughput.',
+        'Keeps expensive AI GPUs fed with data at top speed so they never sit idle waiting for files to load.',
       gcpApis: 'hypercomputecluster.googleapis.com/v1alpha · lustre.googleapis.com/v1',
-      safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
-    };
-  }
-
-  if (fullContext.includes('observability') && (fullContext.includes('bucket') || fullContext.includes('scope') || fullContext.includes('cmek'))) {
-    return {
-      badge: 'OBSERVABILITY SCOPES & CMEK BUCKETS (GA · 591.0.0)',
-      title: contextSubject,
-      whatItDoes:
-        meaningfulTitle ||
-        'Configures cross-project Cloud Observability Trace/Metric Scopes and inspects Customer-Managed Encryption Key (CMEK) settings on regional Cloud Logging buckets.',
-      enterpriseValue:
-        'Enables single-pane distributed tracing across microservice host/service projects while satisfying strict regulatory key-ownership mandates for audit logs.',
-      gcpApis: 'observability.googleapis.com/v1 · logging.googleapis.com/v2/projects/{project}/locations/{loc}/buckets',
-      safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
-    };
-  }
-
-  if (fullContext.includes('orchestration-pipelines') || fullContext.includes('deployment.yaml')) {
-    return {
-      badge: 'DECLARATIVE ORCHESTRATION PIPELINES (BETA · 591.0.0)',
-      title: contextSubject,
-      whatItDoes:
-        meaningfulTitle ||
-        'Validates, compiles, and deploys declarative multi-environment (`dev`, `staging`, `prod`) data and orchestration pipelines (`deployment.yaml`) across BigQuery, Dataform, Dataproc Serverless, and Cloud Composer.',
-      enterpriseValue:
-        'Standardizes data pipeline promotion and resource provisioning through a single declarative YAML manifest validated by the Google Cloud CLI.',
-      gcpApis: 'gcloud beta orchestration-pipelines (validate, deploy, resource-types) · composer.googleapis.com',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
   }
@@ -4875,12 +5603,12 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
   // 3. Studio GCP Advantage Bar Specific Interactive Controls
   if (combined.includes('prove path') || fullContext.includes('connectivity test')) {
     return {
-      badge: 'MATHEMATICAL VPC REACHABILITY PROVER ($0.00)',
+      badge: 'INSTANT NETWORK PATH TESTER ($0.00)',
       title: contextSubject,
       whatItDoes:
-        'Runs a live Network Management Connectivity Test (`reachabilityDetails`) to mathematically prove packet reachability across VPC subnets, firewall rules, routes, and Cloud NAT.',
+        'Tests whether network traffic can successfully travel from Point A to Point B across your VPC networks, subnets, and firewall rules.',
       enterpriseValue:
-        'Pinpoints the exact firewall rule or route dropping traffic in seconds—and costs $0.00 for standard configuration analysis on GCP (compared to $0.10 per reachability test on AWS).',
+        'Tells you in seconds which exact firewall rule or route is blocking a connection—and it is 100% free on Google Cloud (AWS charges $0.10 per test!).',
       gcpApis: 'POST https://networkmanagement.googleapis.com/v1/projects/{project}/locations/global/connectivityTests',
       safetyMode: 'READ_ONLY',
     };
@@ -4888,12 +5616,12 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (combined.includes('add global subnet') || combined.includes('$0 peering')) {
     return {
-      badge: 'GLOBAL SINGLE-VPC SUBNET EXPANSION',
+      badge: 'ADD REGION TO GLOBAL NETWORK ($0 PEERING)',
       title: contextSubject,
       whatItDoes:
-        'Adds a new regional subnet (e.g., `europe-west1` or `asia-northeast1`) directly inside your existing global VPC network with a single API call.',
+        'Adds a new regional slice (subnet)—like Europe or Asia—directly inside your existing Google Cloud network in one click.',
       enterpriseValue:
-        'Exploits Google Cloud’s unique global VPC architecture so VMs and pods across continents communicate over Google’s private fiber with $0.00 VPC peering or Transit Gateway attachment fees.',
+        'On Google Cloud, one VPC network spans the whole planet—so servers in different countries can talk privately without paying extra VPC peering fees.',
       gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/regions/{region}/subnetworks',
       safetyMode: 'LIVE_MUTATION',
     };
@@ -4901,12 +5629,12 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (combined.includes('anycast ipv4') || combined.includes('global anycast')) {
     return {
-      badge: 'GLOBAL ANYCAST EDGE IP ALLOCATOR',
+      badge: 'ONE WORLDWIDE IP ADDRESS',
       title: contextSubject,
       whatItDoes:
-        'Reserves a single global external Anycast IPv4 address announced simultaneously from 180+ Google edge points of presence worldwide.',
+        'Reserves a single global IP address that works across 180+ Google locations worldwide at the same time.',
       enterpriseValue:
-        'Routes every user to the nearest Google fiber ingress point automatically—eliminating regional DNS failover delays and multi-region IP whitelisting complexity.',
+        'Every visitor in the world is automatically routed to the closest Google entry point—making your website faster without complicated DNS setups.',
       gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/addresses',
       safetyMode: 'LIVE_MUTATION',
     };
@@ -4914,13 +5642,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('for system_time as of') || fullContext.includes('time-travel') || fullContext.includes('zero-copy clone')) {
     return {
-      badge: 'BIGQUERY 7-DAY TIME-TRAVEL & $0 ZERO-COPY CLONE',
+      badge: '7-DAY UNDO & $0 TABLE CLONE',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Generates or executes BigQuery 7-day historical point-in-time recovery queries (`FOR SYSTEM_TIME AS OF`) and instant `$0.00` zero-copy table clones (`CREATE TABLE ... CLONE`).',
+        `Uses "${cleanLabel}" to query your BigQuery table as it looked at any moment in the past 7 days, or create an instant test copy of a table for $0.00 extra storage cost.`,
       enterpriseValue:
-        'Recovers accidentally deleted or corrupted rows from any millisecond in the past 7 days without restoring backups, and spins up full-size staging tables with zero additional storage cost.',
+        'If someone accidentally deletes rows or breaks a table, you can recover the exact data from 5 minutes ago without waiting for a backup restore!',
       gcpApis: 'bigquery.googleapis.com/bigquery/v2/projects/{project}/jobs (FOR SYSTEM_TIME AS OF · TABLE CLONE)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4928,28 +5656,28 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('onhostmaintenance') || fullContext.includes('live host migration') || fullContext.includes('borg')) {
     return {
-      badge: 'BORG ZERO-REBOOT LIVE HOST MIGRATION',
+      badge: 'ZERO-REBOOT HARDWARE MAINTENANCE',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        'Verifies or enforces `scheduling.onHostMaintenance = MIGRATE` so Compute Engine transparently live-migrates running VMs across physical host machines during hardware or kernel maintenance.',
+        `Checks or turns on Google’s Live Migration setting ("${cleanLabel}") so your VM quietly moves to a healthy physical machine whenever Google upgrades datacenter hardware.`,
       enterpriseValue:
-        'Eliminates scheduled maintenance reboots and midnight failover pages—keeping stateful databases and long-running connections alive with zero packet loss.',
+        'Your server stays running without rebooting or dropping connections while Google performs hardware maintenance underneath.',
       gcpApis: 'compute.googleapis.com/compute/v1/projects/{project}/zones/{zone}/instances (setScheduling)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
   }
 
-  // 4. Domain-Specific Real Use-Case Synthesis (Covers all 24 Studios & Sub-Modules)
+  // 4. Button-Specific Contextual Synthesis Across Studios (Always Centers on `cleanLabel`)
   if (fullContext.includes('iceberg') || fullContext.includes('biglake') || fullContext.includes('rewrite_data_files') || fullContext.includes('dataproc')) {
     return {
-      badge: isMutating ? 'BIGLAKE ICEBERG LAKEHOUSE ACTION' : 'APACHE ICEBERG LAKEHOUSE PLAYBOOK',
+      badge: isMutating ? 'DATA LAKEHOUSE ACTION' : 'OPEN DATA LAKEHOUSE TOOL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Configures, inspects, or executes Apache Iceberg v2 lakehouse workflow "${cleanLabel}" across BigLake Metastore, BigQuery SQL, and Dataproc Serverless PySpark.`,
+        `Opens or runs "${cleanLabel}" to manage open Parquet/Iceberg data tables stored in Google Cloud Storage and query them with BigQuery or Spark.`,
       enterpriseValue:
-        'Unifies open Parquet/Iceberg storage in `gs://` with sub-second BigQuery SQL governance, row/column masking, small-file compaction, and `$0 DBU` serverless Spark processing.',
+        'Lets you keep your data in open-source file formats inside inexpensive Cloud Storage buckets while still querying it at blazing BigQuery speeds.',
       gcpApis: codeSnippet || 'biglake.googleapis.com/v1 · bigquery.googleapis.com/v2 · dataproc.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4957,13 +5685,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('mcp') || fullContext.includes('json-rpc') || fullContext.includes('tools/list') || fullContext.includes('tools/call')) {
     return {
-      badge: 'OFFICIAL GOOGLE CLOUD REMOTE MCP',
+      badge: 'AI AGENT TOOL CONNECTION (MCP)',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Interacts with official Google-managed Remote MCP servers (\`*.googleapis.com/mcp\`) via JSON-RPC 2.0 to inspect tool schemas, execute grounded agent calls, or export IDE configs for "${cleanLabel}".`,
+        `Runs "${cleanLabel}" to connect or test Google’s official Model Context Protocol (MCP) endpoints so AI assistants can safely read and manage your cloud resources.`,
       enterpriseValue:
-        'Connects Gemini CLI, Claude Code, Cursor, and autonomous SRE/FinOps agents directly to live Google Cloud control planes without maintaining custom wrapper servers.',
+        'Lets tools like Gemini, Claude Code, and Cursor work directly with your real Google Cloud data without custom glue code.',
       gcpApis: codeSnippet || 'POST https://*.googleapis.com/mcp (JSON-RPC 2.0 tools/list & tools/call)',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4971,14 +5699,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('bigquery') || fullContext.includes('dataset') || fullContext.includes('slot') || fullContext.includes('partition') || fullContext.includes('bytes billed')) {
     return {
-      badge: isMutating ? 'BIGQUERY DATA WAREHOUSE ACTION' : 'BIGQUERY FINOPS & SQL ANALYTICS',
+      badge: isMutating ? 'BIGQUERY DATA ACTION' : 'BIGQUERY COST & SQL HELPER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Configures or executes BigQuery analytical workflow "${cleanLabel}"—spanning zero-cost dry-run byte estimation, partition/cluster optimization, ` +
-          'INFORMATION_SCHEMA slot telemetry, or parameterized SQL execution.',
+        `Uses "${cleanLabel}" to inspect, optimize, or run a BigQuery SQL action—checking how much data a query will scan (and what it will cost) before running it.`,
       enterpriseValue:
-        'Prevents runaway `$6.25/TiB` full-table scan bills via pre-execution dry-run guards while accelerating petabyte analytics and BI Engine acceleration.',
+        'Prevents accidental $50+ SQL queries on huge tables by estimating scanned bytes for free first and helping you partition tables cleanly.',
       gcpApis: codeSnippet || 'bigquery.googleapis.com/bigquery/v2/projects/{project}/jobs & datasets',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -4986,14 +5713,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('spanner') || fullContext.includes('truetime') || fullContext.includes('processing unit') || fullContext.includes('property graph') || fullContext.includes('gql')) {
     return {
-      badge: isMutating ? 'CLOUD SPANNER CONTROL ACTION' : 'CLOUD SPANNER TRUETIME & GRAPH',
+      badge: isMutating ? 'CLOUD SPANNER ACTION' : 'CLOUD SPANNER DATABASE TOOL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Operates Cloud Spanner workflow "${cleanLabel}" across granular 100-PU (` +
-          '$65.70/mo) sizing, ISO GQL Property Graphs, ScaNN Vector Search, or zero-impact Change Streams CDC.',
+        `Runs "${cleanLabel}" for Cloud Spanner—letting you right-size capacity down to affordable $65/mo starter units, run graph queries, or inspect database tables.`,
       enterpriseValue:
-        'Delivers 99.999% globally consistent TrueTime ACID transactions alongside native graph traversal and vector RAG in a single database engine.',
+        'Gives you Google’s highest-reliability 99.999% uptime database while keeping capacity scaled to what your budget actually needs.',
       gcpApis: codeSnippet || 'spanner.googleapis.com/v1/projects/{project}/instances & databases',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5001,13 +5727,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('cloud sql') || fullContext.includes('alloydb') || fullContext.includes('pgvector') || fullContext.includes('postgres') || fullContext.includes('mysql')) {
     return {
-      badge: isMutating ? 'CLOUD SQL / ALLOYDB ACTION' : 'RELATIONAL DB & PGVECTOR STUDIO',
+      badge: isMutating ? 'SQL DATABASE ACTION' : 'POSTGRES / MYSQL HELPER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Manages or inspects Cloud SQL / AlloyDB database operation "${cleanLabel}" including Enterprise Plus tier sizing, HNSW pgvector indexing, IAM database authentication, and PITR clone recovery.`,
+        `Runs "${cleanLabel}" for your Cloud SQL or AlloyDB database—helping you manage backups, connection security, AI vector search, or instance sizing.`,
       enterpriseValue:
-        'Ensures sub-millisecond transactional reliability, automated high-availability failover, and keyless IAM database authentication for production applications.',
+        'Keeps your Postgres or MySQL database fast, backed up, and protected without manual database administration toil.',
       gcpApis: codeSnippet || 'sqladmin.googleapis.com/v1/projects/{project}/instances · alloydb.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5015,13 +5741,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('gke') || fullContext.includes('kubernetes') || fullContext.includes('kubectl') || fullContext.includes('node pool') || fullContext.includes('autopilot') || fullContext.includes('pod')) {
     return {
-      badge: isMutating ? 'GKE KUBERNETES CONTROL ACTION' : 'GKE AUTOPILOT & CLUSTER TELEMETRY',
+      badge: isMutating ? 'KUBERNETES (GKE) ACTION' : 'KUBERNETES CLUSTER HELPER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Executes or configures Google Kubernetes Engine (GKE) workflow "${cleanLabel}" across Autopilot/Standard clusters, GPU/Spot node pools, Gateway API routing, or Workload Identity bindings.`,
+        `Uses "${cleanLabel}" to inspect or manage your Google Kubernetes Engine (GKE) cluster, running pods, node pools, or container scaling settings.`,
       enterpriseValue:
-        'Optimizes Kubernetes pod bin-packing, eliminates `$0.10/hr` cluster management fees on Autopilot, and hardens pod-to-GCP authentication without node-level service account keys.',
+        'Helps you run containerized apps reliably without overpaying for idle Kubernetes worker nodes.',
       gcpApis: codeSnippet || 'container.googleapis.com/v1/projects/{project}/locations/{loc}/clusters',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5029,14 +5755,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('cloud run') || fullContext.includes('revision') || fullContext.includes('canary') || fullContext.includes('mininstances') || fullContext.includes('serverless')) {
     return {
-      badge: isMutating ? 'CLOUD RUN v2 CONTROL ACTION' : 'CLOUD RUN SERVERLESS ARCHITECTURE',
+      badge: isMutating ? 'CLOUD RUN APP ACTION' : 'CLOUD RUN SERVERLESS TOOL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Configures or inspects Cloud Run v2 workflow "${cleanLabel}"—covering zero-downtime revision traffic splitting, scale-to-zero (` +
-          'minInstances=0) FinOps tuning, Gen2 sidecars, or NVIDIA L4 GPU attachment.',
+        `Uses "${cleanLabel}" to manage your Cloud Run serverless app—adjusting traffic between versions, tuning auto-scaling, or inspecting container settings.`,
       enterpriseValue:
-        'Enables instant canary rollbacks, eliminates idle container billing overnight, and runs stateless HTTP or pull-worker containers with automatic TLS and autoscaling.',
+        'Lets you deploy and scale web apps or APIs effortlessly while only paying for the exact seconds your code is handling requests.',
       gcpApis: codeSnippet || 'run.googleapis.com/v2/projects/{project}/locations/{region}/services',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5044,13 +5769,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('bucket') || fullContext.includes('cloud storage') || fullContext.includes('gs://') || fullContext.includes('autoclass') || fullContext.includes('worm') || fullContext.includes('retention')) {
     return {
-      badge: isMutating ? 'CLOUD STORAGE CONTROL ACTION' : 'CLOUD STORAGE & DATA GOVERNANCE',
+      badge: isMutating ? 'CLOUD STORAGE BUCKET ACTION' : 'STORAGE & FILE SAFETY TOOL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Manages or audits Cloud Storage bucket workflow "${cleanLabel}" including Public Access Prevention, Autoclass tiering, SEC 17a-4 WORM retention locks, Soft Delete recovery, and FinOps cost labels.`,
+        `Uses "${cleanLabel}" to manage your Cloud Storage buckets—blocking accidental public file sharing, lowering storage costs automatically, or recovering deleted files.`,
       enterpriseValue:
-        'Prevents accidental public data leaks, automates Coldline/Archive storage cost reductions, and guarantees ransomware-proof object immutability.',
+        'Protects your files from accidental public leaks or deletion while automatically moving older files to cheaper storage tiers.',
       gcpApis: codeSnippet || 'storage.googleapis.com/storage/v1/b/{bucket} · gcloud storage buckets',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5058,13 +5783,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('vpc') || fullContext.includes('subnet') || fullContext.includes('firewall') || fullContext.includes('cloud nat') || fullContext.includes('load balanc') || fullContext.includes('psc')) {
     return {
-      badge: isMutating ? 'VPC NETWORKING & FIREWALL ACTION' : 'VPC TOPOLOGY & REACHABILITY',
+      badge: isMutating ? 'NETWORK & FIREWALL ACTION' : 'NETWORK SECURITY & ROUTING',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Inspects or modifies VPC networking control "${cleanLabel}" across global subnets, ingress/egress firewall rules, Private Google Access, Cloud NAT, or Private Service Connect endpoints.`,
+        `Uses "${cleanLabel}" to inspect or update your cloud network, firewall rules, or load balancer routing.`,
       enterpriseValue:
-        'Closes exposed 0.0.0.0/0 SSH/RDP attack vectors, verifies zero-trust network segmentation, and keeps service-to-service traffic entirely on Google’s internal fiber.',
+        'Keeps dangerous open ports locked down while making sure your apps and users can connect smoothly.',
       gcpApis: codeSnippet || 'compute.googleapis.com/compute/v1/projects/{project}/global/networks & firewalls',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5072,13 +5797,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('vm ') || fullContext.includes('compute engine') || fullContext.includes('instance') || fullContext.includes('ssh') || fullContext.includes('sftp') || fullContext.includes('snapshot') || fullContext.includes('boot disk')) {
     return {
-      badge: isMutating ? 'COMPUTE ENGINE VM ACTION' : 'COMPUTE ENGINE & IAP SSH',
+      badge: isMutating ? 'VIRTUAL MACHINE ACTION' : 'SERVER & DISK MANAGEMENT',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Operates Compute Engine instance or disk control "${cleanLabel}"—supporting zero-public-IP IAP SSH/SFTP tunneling, live machine-type rightsizing, Spot VM conversion, or crash-consistent disk snapshots.`,
+        `Uses "${cleanLabel}" to manage, connect to, or back up your Compute Engine virtual machine or its attached hard drive.`,
       enterpriseValue:
-        'Provides interactive terminal access and fleet lifecycle management without exposing public IPv4 addresses or overpaying for idle vCPUs.',
+        'Gives you fast, point-and-click control over your cloud servers without needing to memorize terminal commands.',
       gcpApis: codeSnippet || 'compute.googleapis.com/compute/v1/projects/{project}/zones/{zone}/instances',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5086,13 +5811,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('iam') || fullContext.includes('service account') || fullContext.includes('secret') || fullContext.includes('kms') || fullContext.includes('merkle') || fullContext.includes('oidc')) {
     return {
-      badge: isMutating ? 'ZERO-TRUST IAM & SECRET ACTION' : 'SOVEREIGN IAM & SECRET GOVERNANCE',
+      badge: isMutating ? 'SECURITY & ACCESS ACTION' : 'PERMISSIONS & SECRETS TOOL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Executes zero-trust security workflow "${cleanLabel}" across IAM v3 policy bindings, Service Account key kill-switches, Secret Manager version lifecycle, Cloud KMS encryption, or SHA-256 Merkle drift audits.`,
+        `Uses "${cleanLabel}" to review or update who has access to your cloud project, manage stored passwords/API keys in Secret Manager, or lock down risky service account keys.`,
       enterpriseValue:
-        'Eliminates standing Owner/Editor privileges, neutralizes leaked `.json` service account keys, and prevents broken Secret Manager references from crashing production services.',
+        'Protects your cloud account from leaked keys and over-privileged accounts so only the right people and apps have access.',
       gcpApis: codeSnippet || 'cloudresourcemanager.googleapis.com/v1 · iam.googleapis.com/v1 · secretmanager.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5100,13 +5825,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('soc') || fullContext.includes('mitre') || fullContext.includes('soar') || fullContext.includes('threat') || fullContext.includes('quarantine') || fullContext.includes('guardduty') || fullContext.includes('security center')) {
     return {
-      badge: isMutating ? 'AUTONOMOUS CLOUD SOC SOAR ACTION' : 'CLOUD SOC & MITRE ATT&CK RADAR',
+      badge: isMutating ? 'EMERGENCY SECURITY RESPONSE' : 'SECURITY THREAT DETECTOR',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Runs autonomous Security Operations Center (SOC) workflow "${cleanLabel}"—correlating Cloud Audit Logs, MITRE ATT&CK kill-chains, VPC Flow Logs, and 1-click SOAR containment playbooks.`,
+        `Uses "${cleanLabel}" to spot suspicious activity in your account logs and block potential attackers or compromised keys in one click.`,
       enterpriseValue:
-        'Compresses mean-time-to-contain (MTTC) from hours to seconds when responding to compromised credentials, crypto-mining VMs, or data exfiltration attempts.',
+        'Helps you catch and stop suspicious activity in seconds instead of finding out weeks later.',
       gcpApis: codeSnippet || 'securitycenter.googleapis.com/v1 · logging.googleapis.com/v2 · compute.firewalls',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5114,13 +5839,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('slo') || fullContext.includes('burn rate') || fullContext.includes('war-room') || fullContext.includes('war room') || fullContext.includes('chaos') || fullContext.includes('uptime') || fullContext.includes('dlq') || fullContext.includes('postmortem')) {
     return {
-      badge: isMutating ? 'SRE INCIDENT REMEDIATION' : 'SRE WAR-ROOM & SLO TELEMETRY',
+      badge: isMutating ? 'RELIABILITY FIX ACTION' : 'UPTIME & INCIDENT HELPER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Operates SRE Incident War-Room capability "${cleanLabel}"—tracking multi-window SLO error-budget burn rates (14.4x / 6.0x), synthetic blackbox probes, Pub/Sub DLQ autopsies, and automated blameless postmortems.`,
+        `Uses "${cleanLabel}" to monitor your app’s uptime, trace why errors started happening, or recover failed background messages.`,
       enterpriseValue:
-        'Cuts P1 incident Mean Time to Detect (MTTD) and Mean Time to Recover (MTTR) by correlating config mutations directly with golden-signal error spikes.',
+        'Helps you find and fix the root cause of a slowdown or outage in minutes so your users stay happy.',
       gcpApis: codeSnippet || 'monitoring.googleapis.com/v3 · logging.googleapis.com/v2 · pubsub.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5128,13 +5853,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('log') || fullContext.includes('lql') || fullContext.includes('git blame') || fullContext.includes('stack trace') || fullContext.includes('traceid') || fullContext.includes('_default')) {
     return {
-      badge: isMutating ? 'CLOUD LOGGING SINK / METRIC ACTION' : 'CHRONO-LOG & LQL OBSERVABILITY',
+      badge: isMutating ? 'LOG ROUTING & COST ACTION' : 'SMART LOG SEARCH & DEBUGGER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Executes Cloud Logging v2 diagnostic workflow "${cleanLabel}"—compiling natural language into LQL filters, correlating distributed W3C traceId spans, running live git blame on stack traces, or pruning noisy _Default sink logs.`,
+        `Uses "${cleanLabel}" to search your application logs in plain English, trace an error across services, or filter out noisy logs that waste storage quota.`,
       enterpriseValue:
-        'Accelerates root-cause debugging from raw error logs down to the exact offending git commit while keeping log ingestion inside the 50 GiB/mo Free Tier.',
+        'Finds the exact needle in the haystack when debugging an error while keeping your monthly log storage inside Google’s free 50 GiB tier.',
       gcpApis: codeSnippet || 'logging.googleapis.com/v2/entries:list · cloudtrace.googleapis.com/v2',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5142,13 +5867,13 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('budget') || fullContext.includes('finops') || fullContext.includes('spend') || fullContext.includes('billing') || fullContext.includes('cost') || fullContext.includes('cud') || fullContext.includes('burn')) {
     return {
-      badge: isMutating ? 'FINOPS SPEND CONTROL ACTION' : 'CLOUD BILLING & FINOPS ANALYTICS',
+      badge: isMutating ? 'BILLING PROTECTION ACTION' : 'COST SAVER & BILLING TRACKER',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Evaluates or enforces Cloud FinOps workflow "${cleanLabel}"—projecting 30-day cumulative spend, detecting runaway SKU anomalies, sizing Committed Use Discounts (CUDs), or arming automated budget circuit breakers.`,
+        `Uses "${cleanLabel}" to track your Google Cloud spending, forecast your end-of-month bill, spot wasted money, or set an automatic dollar spending cap.`,
       enterpriseValue:
-        'Eliminates end-of-month cloud invoice shock by surfacing idle resources and enforcing automated dollar thresholds before budgets are breached.',
+        'Protects your wallet from surprise cloud bills and shows you the easiest ways to cut monthly costs.',
       gcpApis: codeSnippet || 'billingbudgets.googleapis.com/v1 · cloudbilling.googleapis.com/v1',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
@@ -5156,64 +5881,50 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
 
   if (fullContext.includes('terraform') || fullContext.includes('hcl') || fullContext.includes('pulumi') || fullContext.includes('gitops') || fullContext.includes('stack')) {
     return {
-      badge: 'CLICKOPS-TO-GITOPS IAC COMPILER',
+      badge: 'TURN LIVE SETUP INTO CODE',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Compiles or reconciles live Google Cloud resource state for "${cleanLabel}" into reproducible Terraform HCL (\`google-provider v6\`), Pulumi TypeScript, or verifiable stack snapshots.`,
+        `Uses "${cleanLabel}" to export your live Google Cloud resources into clean, reusable Terraform or Pulumi code.`,
       enterpriseValue:
-        'Eliminates configuration drift between interactive console operations and your production GitOps infrastructure-as-code repository.',
-      gcpApis: codeSnippet || 'CloudPulse Reverse-Terraform AST Compiler & State Drift Engine',
+        'Lets you back up your infrastructure setup in Git or recreate your exact cloud environment in a new project in minutes.',
+      gcpApis: codeSnippet || 'CloudPulse Reverse-Terraform Compiler & Drift Checker',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
   }
 
-  // 5. Action-Specific Synthesis (Copy/Export, Shell/CLI, Scan/Audit, or Contextual Studio Control)
-  if (combined.includes('copy') || combined.includes('export') || combined.includes('download')) {
-    return {
-      badge: 'REPRODUCIBLE ARTIFACT & CLI EXPORT',
-      title: contextSubject,
-      whatItDoes:
-        meaningfulTitle ||
-        `Exports "${contextSubject}" (${codeSnippet ? `\`${codeSnippet.slice(0, 70)}\`` : 'synthesized CLI runbook, SQL DDL, or JSON/Markdown artifact'}) to your clipboard or local workstation.`,
-      enterpriseValue:
-        'Lets you move verified commands, Terraform blocks, and compliance reports directly into GitHub Actions, GitLab CI, or change-management tickets with zero copy-paste errors.',
-      gcpApis: codeSnippet || 'CloudPulse Artifact Serializer & Clipboard Engine',
-      safetyMode: 'READ_ONLY',
-    };
-  }
-
+  // 5. Shell / Terminal Handoff
   if (combined.includes('shell') || combined.includes('ssh') || combined.includes('terminal') || combined.includes('gcloud')) {
     return {
-      badge: 'INTEGRATED CLOUD SHELL & CLI RUNNER',
+      badge: 'RUN IN BUILT-IN TERMINAL',
       title: contextSubject,
       whatItDoes:
         meaningfulTitle ||
-        `Loads or executes "${contextSubject}" inside the authenticated CloudPulse Web-SSH & Google Cloud SDK terminal session.`,
+        `Loads "${cleanLabel}" into the built-in Cloud Shell terminal so you can run or customize the command directly in your browser.`,
       enterpriseValue:
-        'Provides immediate interactive CLI execution using your active GCP project context and OAuth session without switching windows.',
-      gcpApis: codeSnippet || 'Google Cloud SDK 591.0.0 (gcloud / bq / gsutil) · WebSocket PTY',
+        'Already signed in with your active Google Cloud project—no need to open a separate terminal app on your computer.',
+      gcpApis: codeSnippet || 'Google Cloud SDK 591.0.0 (gcloud / bq / gsutil) · WebSocket Terminal',
       safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
     };
   }
 
-  // Final context-grounded synthesis using headingText, meaningfulTitle, and codeSnippet (no generic boilerplate)
+  // Final friendly, plain-English explanation specific to `cleanLabel`
   return {
     badge: isMutating
-      ? 'AUTHENTICATED GCP CONTROL ACTION'
+      ? 'LIVE CLOUD ACTION'
       : headingText
-      ? `STUDIO WORKFLOW · ${headingText.slice(0, 28).toUpperCase()}`
-      : 'GOOGLE CLOUD ARCHITECTURE CONTROL',
+      ? `OPEN VIEW · ${headingText.slice(0, 26).toUpperCase()}`
+      : 'CLOUD STUDIO CONTROL',
     title: contextSubject,
     whatItDoes:
       meaningfulTitle ||
       (isMutating
-        ? `Executes live Google Cloud control-plane operation "${cleanLabel}"${headingText ? ` within ${headingText}` : ''}${codeSnippet ? ` (\`${codeSnippet.slice(0, 80)}\`)` : ''}.`
-        : `Focuses the active studio on "${cleanLabel}"${headingText ? ` inside ${headingText}` : ''}, loading its live telemetry, architecture parameters, and executable Google Cloud CLI/REST runbooks.`),
+        ? `Runs "${cleanLabel}"${headingText ? ` in ${headingText}` : ''}${codeSnippet ? ` (\`${codeSnippet.slice(0, 75)}\`)` : ''} on your active Google Cloud project.`
+        : `Switches to or opens "${cleanLabel}"${headingText ? ` inside ${headingText}` : ''} so you can view its live details, health status, and ready-to-use actions.`),
     enterpriseValue: isMutating
-      ? `Applies "${cleanLabel}" directly against your active Google Cloud project with pre-execution safety validation, live audit logging, and instant rollback visibility.`
-      : `Gives platform engineers and architects immediate visibility into "${contextSubject}" with copy-ready gcloud CLI commands and live project telemetry before making production changes.`,
-    gcpApis: codeSnippet || (headingText ? `Google Cloud Control Plane · ${headingText.slice(0, 65)}` : 'Authenticated Google Cloud REST & SDK 591.0.0 Control Plane'),
+      ? `Applies "${cleanLabel}" directly to your project with built-in safety checks and an audit trail so you can see the result right away.`
+      : `Completely safe to click—this simply opens "${cleanLabel}" on your screen without changing or billing anything in your cloud account.`,
+    gcpApis: codeSnippet || (headingText ? `Google Cloud Studio · ${headingText.slice(0, 65)}` : 'Authenticated Google Cloud Workspace'),
     safetyMode: isMutating ? 'LIVE_MUTATION' : 'READ_ONLY',
   };
 }
@@ -5444,7 +6155,8 @@ export default function GlobalInnovationHoverExplainer() {
         target.removeAttribute('title');
       }
 
-      const info = resolveFeatureExplanation(target);
+      const rawInfo = resolveFeatureExplanation(target);
+      const info = humanizeHoverExplanation(rawInfo);
       if (!info) {
         setHoverState(null);
         return;
@@ -5541,17 +6253,17 @@ export default function GlobalInnovationHoverExplainer() {
           {isMutation ? (
             <>
               <ShieldCheck className="w-3 h-3 shrink-0" />
-              <span>Live GCP Action</span>
+              <span>⚡ Makes a Live Change</span>
             </>
           ) : isSimulation ? (
             <>
               <Info className="w-3 h-3 shrink-0" />
-              <span>Synthetic Probe vs. Real Rules</span>
+              <span>🧪 Safe What-If Preview</span>
             </>
           ) : (
             <>
               <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>100% Live Telemetry</span>
+              <span>✓ Safe to Click (Read-Only)</span>
             </>
           )}
         </span>
@@ -5562,22 +6274,22 @@ export default function GlobalInnovationHoverExplainer() {
         {info.title}
       </div>
 
-      {/* 1. What It Does (Plain English) */}
+      {/* 1. In Simple Terms (What Clicking This Does) */}
       <div className="space-y-0.5">
         <div className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1">
           <Info className="w-3 h-3 shrink-0" />
-          <span>What It Does (Plain English)</span>
+          <span>In Simple Terms (What Clicking This Does)</span>
         </div>
         <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
           {info.whatItDoes}
         </p>
       </div>
 
-      {/* 2. Why Enterprises Use It */}
+      {/* 2. Why This Helps You (Money, Time & Safety) */}
       {info.enterpriseValue && (
         <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-0.5">
-          <div className="text-[10px] font-mono font-bold uppercase text-zinc-600 dark:text-zinc-400">
-            Enterprise Value &amp; Use Case
+          <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
+            💡 Why This Helps You (Money, Time &amp; Safety)
           </div>
           <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {info.enterpriseValue}
@@ -5589,7 +6301,7 @@ export default function GlobalInnovationHoverExplainer() {
       {info.gcpApis && (
         <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
           <Terminal className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span className="truncate">{info.gcpApis}</span>
+          <span className="truncate">Under the Hood: {info.gcpApis}</span>
         </div>
       )}
     </div>
