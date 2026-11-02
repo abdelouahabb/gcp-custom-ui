@@ -23,6 +23,7 @@ import {
   Globe,
 } from 'lucide-react';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const SQL_TIERS = {
   ENTERPRISE: [
@@ -2691,6 +2692,34 @@ gcloud spanner instances create ${spannerInstanceId} \\
               </div>
             </div>
           </div>
+
+          <MermaidArchitectureDiagram
+            title={`Mermaid ER & Property Graph Schema (${spannerGraphName} · ${spannerConfig} · ${spannerProcessingUnits} PU)`}
+            defaultMode="SPLIT"
+            code={`erDiagram
+  Account {
+    STRING account_id PK
+    STRING owner_name
+    FLOAT64 risk_score
+    STRING region
+    TIMESTAMP created_at
+  }
+  AccountTransfer {
+    STRING account_id PK
+    STRING transfer_id PK
+    STRING to_account_id FK
+    NUMERIC amount_usd
+    TIMESTAMP transfer_ts
+  }
+  ${spannerGraphName.replace(/[^A-Za-z0-9_]/g, '_')} {
+    STRING graph_name PK
+    STRING node_table
+    STRING edge_table
+    INT64 max_hops
+  }
+  Account ||--o{ AccountTransfer : "INTERLEAVE IN PARENT (0-Hop Split)"
+  Account }o--o{ ${spannerGraphName.replace(/[^A-Za-z0-9_]/g, '_')} : "TRANSFERRED (1..${spannerHopDepth} Hops)"`}
+          />
         </div>
       )}
 
@@ -2872,6 +2901,25 @@ gcloud datastream streams create ${cdcStreamId} \\
               </pre>
             </div>
           </div>
+
+          <MermaidArchitectureDiagram
+            title={`Mermaid Zero-ETL CDC & Schema Lineage (${cdcSourceEngine} → ${cdcStreamId} → ${cdcTargetDataset}.${cdcTargetTable})`}
+            defaultMode="SPLIT"
+            code={`flowchart TB
+  subgraph SourceOltp["1. Transactional OLTP Source (${cdcSourceEngine} · ${sqlRegion})"]
+    OltpTable["orders_oltp · PK(order_id) · WAL / Binlog"]
+  end
+  subgraph ZeroEtlStream["2. Serverless Datastream CDC (${cdcStreamId})"]
+    ReplicationSlot["Logical Replication Slot (pgoutput / binlog)"]
+    StorageWriteApi["BigQuery Storage Write API (Auto-Upsert)"]
+  end
+  subgraph LakehouseTarget["3. Analytical Lakehouse (${projectId}.${cdcTargetDataset})"]
+    TargetTable["${cdcTargetTable} · PK(order_id NOT ENFORCED) · max_staleness=${cdcMaxStalenessMins}m"]
+  end
+  OltpTable -->|Sub-Second WAL Capture| ReplicationSlot
+  ReplicationSlot -->|Serverless Auto-Scale| StorageWriteApi
+  StorageWriteApi -->|Background Merge (${cdcTargetFormat})| TargetTable`}
+          />
         </div>
       )}
     </div>

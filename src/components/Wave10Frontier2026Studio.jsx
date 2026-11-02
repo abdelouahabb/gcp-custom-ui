@@ -21,6 +21,7 @@ import {
   Server,
   Terminal,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const SPANNER_CONFIGS = [
   {
@@ -213,6 +214,7 @@ export default function Wave10Frontier2026Studio({
   const [gqlMinBurnUsd, setGqlMinBurnUsd] = useState(100);
   const [gqlCustomQuery, setGqlCustomQuery] = useState('');
   const [gqlLiveResponse, setGqlLiveResponse] = useState(null);
+  const [mermaidSchemaMode, setMermaidSchemaMode] = useState('GRAPH_TOPOLOGY'); // 'GRAPH_TOPOLOGY' | 'ER_SCHEMA'
   const gqlResultRef = useRef(null);
   const [parentTable, setParentTable] = useState('Customers');
   const [childTable, setChildTable] = useState('Orders');
@@ -488,12 +490,88 @@ CREATE OR REPLACE PROPERTY GRAPH FinOpsKnowledgeGraph
       LABEL GRANTS_ACCESS
   );`;
 
+    const safeParent = (parentTable || 'Customers').replace(/[^A-Za-z0-9_]/g, '_');
+    const safeChild = (childTable || 'Orders').replace(/[^A-Za-z0-9_]/g, '_');
+    const safeGrandchild = (grandchildTable || 'OrderLineItems').replace(
+      /[^A-Za-z0-9_]/g,
+      '_'
+    );
+    const primaryNode = activePreset.results[0]?.service_id || 'wallet-ingress-api';
+    const secondaryNode = activePreset.results[1]?.service_id || 'payout-router-svc';
+
+    const mermaidGraphFlowchart = `flowchart TB
+  subgraph PaxosSplit["1. Physical Co-Located INTERLEAVE IN PARENT Split (0-Hop Joins)"]
+    ${safeParent}["${safeParent} · PK(CustomerId) · Split Root"]
+    ${safeChild}["${safeChild} · PK(CustomerId, OrderId) · Interleaved"]
+    ${safeGrandchild}["${safeGrandchild} · PK(CustomerId, OrderId, LineItemId)"]
+  end
+  subgraph PropertyGraph["2. FinOpsKnowledgeGraph · ISO GQL Property Graph Schema"]
+    CloudService["CloudService · PK(service_id) · FLOAT32[768]"]
+    CloudDatabase["CloudDatabase · PK(db_id) · ${spannerName}"]
+    IAMPrincipal["IAMPrincipal · PK(principal_id) · risk_score"]
+  end
+  subgraph LiveGqlTraversal["3. Active ${gqlHopDepth}-Hop ISO GQL Cycle (${selectedGqlPreset})"]
+    OriginNode["${primaryNode} · Burn > $${gqlMinBurnUsd}/mo"]
+    HopNode["${secondaryNode} · Latency < ${gqlMaxLatencyMs}ms"]
+    GraphTarget["${spannerName} · TrueTime Snapshot"]
+  end
+  ${safeParent} -->|INTERLEAVE IN PARENT| ${safeChild}
+  ${safeChild} -->|INTERLEAVE IN PARENT| ${safeGrandchild}
+  CloudService -->|EDGE: CALLS| CloudDatabase
+  IAMPrincipal -->|EDGE: GRANTS_ACCESS| CloudDatabase
+  OriginNode -->|Hop 1..${gqlHopDepth} (<${gqlMaxLatencyMs}ms)| HopNode
+  HopNode -->|Circular Loop ($${(gqlMinBurnUsd * 148.2).toLocaleString('en-US', {
+    maximumFractionDigits: 0,
+  })})| GraphTarget
+  GraphTarget -->|Cycle Closure| OriginNode`;
+
+    const mermaidErDiagram = `erDiagram
+  ${safeParent} {
+    STRING CustomerId PK
+    STRING EnterpriseName
+    TIMESTAMP CreatedAt
+  }
+  ${safeChild} {
+    STRING CustomerId PK
+    STRING OrderId PK
+    FLOAT64 OrderTotalUsd
+    TIMESTAMP CommitTs
+  }
+  ${safeGrandchild} {
+    STRING CustomerId PK
+    STRING OrderId PK
+    INT64 LineItemId PK
+    FLOAT64 AmountUsd
+  }
+  CloudService {
+    STRING service_id PK
+    STRING region
+    FLOAT64 monthly_burn
+    FLOAT32_768 embedding_768
+  }
+  CloudDatabase {
+    STRING db_id PK
+    STRING engine
+    STRING sla_tier
+  }
+  IAMPrincipal {
+    STRING principal_id PK
+    STRING email
+    INT64 risk_score
+  }
+  ${safeParent} ||--o{ ${safeChild} : "INTERLEAVE IN PARENT"
+  ${safeChild} ||--o{ ${safeGrandchild} : "INTERLEAVE IN PARENT"
+  CloudService }o--o{ CloudDatabase : "CALLS (1..${gqlHopDepth} Hops)"
+  IAMPrincipal }o--o{ CloudDatabase : "GRANTS_ACCESS"`;
+
     return {
       cliCmd,
       interleavedDdl,
       activePreset,
       gqlCliCmd,
       federatedBqSql,
+      mermaidGraphFlowchart,
+      mermaidErDiagram,
     };
   }, [
     projectId,
@@ -1618,6 +1696,58 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 value={spannerArtifacts.activePreset.query}
                 onChange={(e) => setGqlCustomQuery(e.target.value)}
                 className="w-full p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-blue-700 dark:text-blue-300 leading-relaxed focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* Interactive Mermaid Data Schema & Property Graph Visualizer */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-extrabold font-mono text-blue-400">
+                    Interactive Mermaid Data Schema &amp; ISO GQL Topology Visualizer
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    Live-compiled from your `{parentTable}` → `{childTable}` → `{grandchildTable}` interleaved hierarchy and `{gqlHopDepth}`-hop `{selectedGqlPreset}` graph query.
+                  </p>
+                </div>
+                <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMermaidSchemaMode('GRAPH_TOPOLOGY')}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                      mermaidSchemaMode === 'GRAPH_TOPOLOGY'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Graph &amp; Cycle Topology (flowchart TB)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMermaidSchemaMode('ER_SCHEMA')}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                      mermaidSchemaMode === 'ER_SCHEMA'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Entity-Relationship Schema (erDiagram)
+                  </button>
+                </div>
+              </div>
+
+              <MermaidArchitectureDiagram
+                code={
+                  mermaidSchemaMode === 'ER_SCHEMA'
+                    ? spannerArtifacts.mermaidErDiagram
+                    : spannerArtifacts.mermaidGraphFlowchart
+                }
+                title={
+                  mermaidSchemaMode === 'ER_SCHEMA'
+                    ? `Mermaid erDiagram: ${parentTable} → ${childTable} → ${grandchildTable} + FinOpsKnowledgeGraph`
+                    : `Mermaid Graph Schema & ${gqlHopDepth}-Hop ISO GQL Cycle (${spannerArtifacts.activePreset.label})`
+                }
+                defaultMode="SPLIT"
               />
             </div>
 

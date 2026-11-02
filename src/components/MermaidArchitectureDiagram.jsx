@@ -31,13 +31,88 @@ export function parseMermaidFlowchart(rawCode = '') {
   const edges = [];
 
   let currentSubgraph = null;
+  let currentErEntity = null;
 
   for (const line of lines) {
-    // Header line: flowchart TB / graph TD / flowchart LR
+    // Header line: flowchart TB / graph TD / flowchart LR / erDiagram
+    if (/^erDiagram/i.test(line)) {
+      direction = 'TB';
+      continue;
+    }
     const dirMatch = line.match(/^(?:flowchart|graph)\s+(TB|TD|BT|RL|LR)/i);
     if (dirMatch) {
       const d = dirMatch[1].toUpperCase();
       direction = d === 'LR' || d === 'RL' ? 'LR' : 'TB';
+      continue;
+    }
+
+    // Inside an erDiagram entity block: `STRING CustomerId PK`
+    if (currentErEntity) {
+      if (line === '}') {
+        const cols = currentErEntity.cols.slice(0, 4).join(', ');
+        const existing = nodeMap.get(currentErEntity.id);
+        const summaryLabel = cols
+          ? `${currentErEntity.id} (${cols}${currentErEntity.cols.length > 4 ? '…' : ''})`
+          : currentErEntity.id;
+        if (existing) {
+          existing.label = summaryLabel;
+        }
+        currentErEntity = null;
+      } else {
+        const parts = line.split(/\s+/);
+        if (parts.length >= 2) {
+          const colType = parts[0];
+          const colName = parts[1];
+          const colKey = parts[2] ? ` ${parts[2]}` : '';
+          currentErEntity.cols.push(`${colName}:${colType}${colKey}`);
+        }
+      }
+      continue;
+    }
+
+    // Start of an erDiagram entity block: `Customers {`
+    const erStartMatch = line.match(/^([A-Za-z0-9_-]+)\s*\{\s*$/);
+    if (erStartMatch) {
+      const id = erStartMatch[1];
+      if (!nodeMap.has(id)) {
+        const nodeObj = {
+          id,
+          label: id,
+          subgraphId: currentSubgraph ? currentSubgraph.id : null,
+        };
+        nodeMap.set(id, nodeObj);
+        if (currentSubgraph) currentSubgraph.nodes.push(nodeObj);
+      }
+      currentErEntity = { id, cols: [] };
+      continue;
+    }
+
+    // ER relationship line: `Customers ||--o{ Orders : "INTERLEAVE IN PARENT"`
+    const erRelMatch = line.match(
+      /^([A-Za-z0-9_-]+)\s+([|o}{]+--[|o}{]+)\s+([A-Za-z0-9_-]+)(?:\s*:\s*["']?([^"']+)["']?)?$/
+    );
+    if (erRelMatch) {
+      const fromId = erRelMatch[1];
+      const card = erRelMatch[2];
+      const toId = erRelMatch[3];
+      const relLabel = (erRelMatch[4] || card).trim();
+      for (const id of [fromId, toId]) {
+        if (!nodeMap.has(id)) {
+          const nodeObj = {
+            id,
+            label: id,
+            subgraphId: currentSubgraph ? currentSubgraph.id : null,
+          };
+          nodeMap.set(id, nodeObj);
+          if (currentSubgraph) currentSubgraph.nodes.push(nodeObj);
+        }
+      }
+      edges.push({
+        id: `${fromId}->${toId}-${edges.length}`,
+        from: fromId,
+        to: toId,
+        label: relLabel,
+      });
       continue;
     }
 
@@ -138,6 +213,18 @@ export function parseMermaidFlowchart(rawCode = '') {
     (n) => !n.subgraphId
   );
 
+  const allNodes = Array.from(nodeMap.values());
+  const chunkedStandaloneLayers = [];
+  if (subgraphs.length === 0 && allNodes.length > 3) {
+    for (let i = 0; i < allNodes.length; i += 3) {
+      chunkedStandaloneLayers.push({
+        id: `SchemaTier_${Math.floor(i / 3) + 1}`,
+        title: `Data Schema & Entity Tier ${Math.floor(i / 3) + 1}`,
+        nodes: allNodes.slice(i, i + 3),
+      });
+    }
+  }
+
   const layers =
     subgraphs.length > 0
       ? [
@@ -152,11 +239,13 @@ export function parseMermaidFlowchart(rawCode = '') {
               ]
             : []),
         ]
+      : chunkedStandaloneLayers.length > 0
+      ? chunkedStandaloneLayers
       : [
           {
             id: 'Architecture',
-            title: 'Live Cloud Architecture Topology',
-            nodes: Array.from(nodeMap.values()),
+            title: 'Live Cloud Architecture & Schema Topology',
+            nodes: allNodes,
           },
         ];
 

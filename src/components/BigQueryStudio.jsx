@@ -30,6 +30,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
+import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 const STUDIO_TABS = [
   {
@@ -3123,6 +3124,39 @@ LIMIT 25;`,
               </div>
             ))}
           </div>
+
+          <MermaidArchitectureDiagram
+            title={`Mermaid BigQuery Lakehouse ER Schema & AI/Vector Lineage (${projectId}.${aiDataset}.${aiTable})`}
+            defaultMode="SPLIT"
+            code={`erDiagram
+  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} {
+    STRING event_id PK
+    TIMESTAMP event_timestamp
+    STRING region
+    STRING service_name
+    FLOAT64 latency_ms
+    FLOAT64 revenue_usd
+    FLOAT64_ARRAY embedding
+  }
+  ScaNN_Vector_Index {
+    STRING index_type PK
+    STRING distance_type
+    INT64 num_leaves
+    INT64 top_k
+  }
+  Vertex_AI_Remote_Model {
+    STRING model_endpoint PK
+    STRING connection_id
+    INT64 horizon_days
+  }
+  Continuous_Streaming_Sink {
+    STRING sink_type PK
+    STRING target_uri
+  }
+  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} ||--o{ ScaNN_Vector_Index : "${aiVectorIndexType} (${aiDistanceType} · Top-${aiTopK})"
+  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} }o--|| Vertex_AI_Remote_Model : "${aiGenerativeModel} + TimesFM (${aiForecastHorizonDays}d)"
+  ${aiTable.replace(/[^A-Za-z0-9_]/g, '_')} ||--o{ Continuous_Streaming_Sink : "EXPORT DATA (${aiContinuousSink})"`}
+          />
         </div>
       )}
     </div>
