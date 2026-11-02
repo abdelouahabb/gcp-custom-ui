@@ -2283,6 +2283,7 @@ function classifyDestructiveAxiosConfig(config) {
           String(body.action || '').toUpperCase()
         )) ||
       rawUrl.includes('/vms/ssh-identity-mode') ||
+      rawUrl.includes('/tunnels/') ||
       rawUrl.includes('/scp/') ||
       rawUrl.includes('/s3-compatible/') ||
       rawUrl.includes('/objects/signed-url') ||
@@ -5447,79 +5448,219 @@ function CloudPulseCockpit() {
     }
   }, [selectedProjectId, showToast]);
 
-  const fetchProjectOverview = useCallback(async (projId, { force = false } = {}) => {
-    if (!projId) return;
-    const swrStorageKey = `cloudpulse_overview_swr_v2_${projId}`;
-    if (!force) {
-      try {
-        const cachedRaw = localStorage.getItem(swrStorageKey);
-        if (cachedRaw) {
-          const parsed = JSON.parse(cachedRaw);
-          if (parsed && parsed.projectId === projId) {
-            setOverview((prev) => prev || parsed);
+  const fetchProjectOverview = useCallback(
+    async (projId, { force = false, silent = false } = {}) => {
+      if (!projId) return;
+      const swrStorageKey = `cloudpulse_overview_swr_v2_${projId}`;
+      if (!force) {
+        try {
+          const cachedRaw = localStorage.getItem(swrStorageKey);
+          if (cachedRaw) {
+            const parsed = JSON.parse(cachedRaw);
+            if (parsed && parsed.projectId === projId) {
+              setOverview((prev) => prev || parsed);
+            }
           }
+        } catch {
+          // Ignore storage read errors
         }
-      } catch {
-        // Ignore storage read errors
       }
-    }
-    setLoadingOverview(true);
-    setErrorBanner(null);
-    const requestUrl = `/api/project/${encodeURIComponent(projId)}/overview${
-      force ? '?force=true' : ''
-    }`;
-    try {
-      let res;
+      if (!silent) {
+        setLoadingOverview(true);
+        setErrorBanner(null);
+      }
+      const requestUrl = `/api/project/${encodeURIComponent(projId)}/overview${
+        force ? '?force=true' : ''
+      }`;
       try {
-        res = await axios.get(requestUrl, { timeout: 15000 });
-      } catch (firstErr) {
-        if (firstErr.response?.status === 401) throw firstErr;
-        await new Promise((r) => setTimeout(r, 450));
-        res = await axios.get(requestUrl, { timeout: 15000 });
+        let res;
+        try {
+          res = await axios.get(requestUrl, { timeout: 15000 });
+        } catch (firstErr) {
+          if (firstErr.response?.status === 401) throw firstErr;
+          await new Promise((r) => setTimeout(r, 450));
+          res = await axios.get(requestUrl, { timeout: 15000 });
+        }
+        setOverview(res.data);
+        try {
+          localStorage.setItem(swrStorageKey, JSON.stringify(res.data));
+        } catch {
+          // Ignore storage quota errors
+        }
+      } catch (err) {
+        if (err.response?.status === 401) {
+          setIsAuthenticated(false);
+        } else if (!silent) {
+          setOverview((prev) =>
+            prev || {
+              projectId: projId,
+              fetchLatencyMs: 0,
+              summary: {
+                totalResources: 0,
+                totalVms: 0,
+                runningVms: 0,
+                cloudRunServices: 0,
+                storageBuckets: 0,
+                bigqueryDatasets: 0,
+                gkeClusters: 0,
+                vpcNetworks: 0,
+                firewallRules: 0,
+                enabledApisCount: 0,
+              },
+              resources: [],
+              vpcs: [],
+              firewalls: [],
+              cloudRunServices: [],
+              enabledApis: [],
+              logs: [],
+            }
+          );
+          setErrorBanner(
+            err.response?.data?.error ||
+              `Failed to fetch live telemetry for project ${projId}`
+          );
+        }
+      } finally {
+        if (!silent) {
+          setLoadingOverview(false);
+        }
       }
-      setOverview(res.data);
-      try {
-        localStorage.setItem(swrStorageKey, JSON.stringify(res.data));
-      } catch {
-        // Ignore storage quota errors
-      }
-    } catch (err) {
-      if (err.response?.status === 401) {
-        setIsAuthenticated(false);
-      } else {
-        setOverview((prev) =>
-          prev || {
-            projectId: projId,
-            fetchLatencyMs: 0,
-            summary: {
-              totalResources: 0,
-              totalVms: 0,
-              runningVms: 0,
-              cloudRunServices: 0,
-              storageBuckets: 0,
-              bigqueryDatasets: 0,
-              gkeClusters: 0,
-              vpcNetworks: 0,
-              firewallRules: 0,
-              enabledApisCount: 0,
+    },
+    []
+  );
+
+  // Immediately reconcile Overview resources with the live VM list from VmFleetAndSsh so deleted VMs never linger as DELETING in Overview
+  const handleSyncLiveVms = useCallback(
+    (liveVmList) => {
+      if (!Array.isArray(liveVmList) || !selectedProjectId) return;
+      setOverview((prev) => {
+        if (!prev || !Array.isArray(prev.resources)) return prev;
+        const currentVmRows = prev.resources.filter(
+          (r) => r.type === 'Compute Engine VM'
+        );
+        const liveSig = liveVmList
+          .map(
+            (v) =>
+              `${v.name}:${v.status === 'RUNNING' ? 'HEALTHY' : v.status}:${
+                v.machineType || ''
+              }`
+          )
+          .sort()
+          .join('|');
+        const currentSig = currentVmRows
+          .map((r) => `${r.name}:${r.status}:${r.machineType || ''}`)
+          .sort()
+          .join('|');
+        if (liveSig === currentSig) return prev;
+
+        const mappedVmRows = liveVmList.map((v) => {
+          const existing = currentVmRows.find((r) => r.name === v.name);
+          const natIp =
+            v.externalIp && v.externalIp !== 'None'
+              ? v.externalIp
+              : 'Internal Only';
+          const netIp = v.internalIp || '10.128.0.2';
+          const machineShort = v.machineType || 'e2-medium';
+          const normalizedStatus =
+            v.status === 'RUNNING' ? 'HEALTHY' : v.status || 'HEALTHY';
+          return {
+            ...(existing || {}),
+            id: existing?.id || `gce-${v.name}`,
+            name: v.name,
+            type: 'Compute Engine VM',
+            category: 'compute',
+            region: v.zone || v.region || 'us-east1-b',
+            zone: v.zone || 'us-east1-b',
+            machineType: machineShort,
+            externalIp: natIp,
+            internalIp: netIp,
+            spotInstance: Boolean(v.spotInstance),
+            diskSizeGb: Number(v.diskSizeGb || 20),
+            status: normalizedStatus,
+            source: 'LIVE_GCP',
+            createdAt:
+              v.createdAt || existing?.createdAt || new Date().toISOString(),
+            storageClass: `${machineShort} (${netIp})`,
+            utilizationScore: v.status === 'RUNNING' ? 45 : 0,
+            monthlyCostUsd: existing?.monthlyCostUsd ?? 24.5,
+            requestsPerMin: v.status === 'RUNNING' ? 120 : 0,
+            p95LatencyMs: 14,
+            uri:
+              v.sshCommand ||
+              `gcloud compute ssh ${v.name} --zone=${v.zone || 'us-east1-b'} --project=${selectedProjectId}`,
+            details: {
+              ...(existing?.details || {}),
+              zone: v.zone || 'us-east1-b',
+              status: v.status || 'RUNNING',
+              internalIp: netIp,
+              externalIp: natIp,
+              machineType: machineShort,
+              spotInstance: Boolean(v.spotInstance),
+              diskSizeGb: Number(v.diskSizeGb || 20),
             },
-            resources: [],
-            vpcs: [],
-            firewalls: [],
-            cloudRunServices: [],
-            enabledApis: [],
-            logs: [],
-          }
+          };
+        });
+
+        const nonVmRows = prev.resources.filter(
+          (r) => r.type !== 'Compute Engine VM'
         );
-        setErrorBanner(
-          err.response?.data?.error ||
-            `Failed to fetch live telemetry for project ${projId}`
-        );
-      }
-    } finally {
-      setLoadingOverview(false);
+        const nextResources = [...mappedVmRows, ...nonVmRows];
+        const nextOverview = {
+          ...prev,
+          summary: {
+            ...(prev.summary || {}),
+            liveVmsCount: liveVmList.length,
+            totalVms: liveVmList.length,
+            totalResourcesCount: nextResources.length,
+          },
+          resources: nextResources,
+        };
+        try {
+          localStorage.setItem(
+            `cloudpulse_overview_swr_v2_${selectedProjectId}`,
+            JSON.stringify(nextOverview)
+          );
+        } catch {
+          // ignore storage quota errors
+        }
+        return nextOverview;
+      });
+    },
+    [selectedProjectId]
+  );
+
+  // Automatically poll Project Overview when any resource in Overview is in a transitional state (DEPROVISIONING, STOPPING, PROVISIONING, STAGING, SUSPENDING)
+  const hasTransitionalOverviewResource = Boolean(
+    overview?.resources?.some((r) =>
+      [
+        'DEPROVISIONING',
+        'STOPPING',
+        'PROVISIONING',
+        'STAGING',
+        'SUSPENDING',
+        'DELETING',
+      ].includes(r?.status)
+    )
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || !selectedProjectId || !hasTransitionalOverviewResource) {
+      return;
     }
-  }, []);
+    if (activeTab === 'OVERVIEW') {
+      fetchProjectOverview(selectedProjectId, { force: true, silent: true });
+    }
+    const timer = setInterval(() => {
+      fetchProjectOverview(selectedProjectId, { force: true, silent: true });
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [
+    isAuthenticated,
+    selectedProjectId,
+    activeTab,
+    hasTransitionalOverviewResource,
+    fetchProjectOverview,
+  ]);
 
   const [gdeSummary, setGdeSummary] = useState(() =>
     summarizeCreditLedger([], 0)
@@ -5824,9 +5965,10 @@ function CloudPulseCockpit() {
           },
         }
       );
-      // Immediately evict deleted resource from client state & sessionStorage SWR cache
+      // Immediately evict deleted resource from client state & sessionStorage/localStorage SWR cache
       try {
         sessionStorage.removeItem(`cloudpulse_overview_swr_v2_${selectedProjectId}`);
+        localStorage.removeItem(`cloudpulse_overview_swr_v2_${selectedProjectId}`);
       } catch {
         // ignore storage quota errors
       }
@@ -7789,7 +7931,13 @@ function CloudPulseCockpit() {
                     account={contextData.account}
                     onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
                     refreshTrigger={vmRefreshTrigger}
-                    onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
+                    onVmDeleted={() =>
+                      fetchProjectOverview(selectedProjectId, {
+                        force: true,
+                        silent: true,
+                      })
+                    }
+                    onSyncLiveVms={handleSyncLiveVms}
                     onRunInShell={handleRunInShell}
                     onSelectTab={handleNavigateStudioTab}
                     onShowToast={showToast}

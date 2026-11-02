@@ -2391,6 +2391,28 @@ app.get('/api/project/:projectId/vms', async (req, res) => {
         apiErr.response?.data?.error?.message || apiErr.message;
     }
 
+    // Keep overviewSwrCache in sync with live VM fleet so deleted or transitioned VMs never linger in Overview
+    if (computeApiEnabled) {
+      const cachedOverview = overviewSwrCache.get(projectId);
+      if (cachedOverview?.payload?.resources) {
+        const cachedVms = cachedOverview.payload.resources.filter(
+          (r) => r.type === 'Compute Engine VM'
+        );
+        const liveVmSig = liveVms
+          .map((v) => `${v.name}:${v.status === 'RUNNING' ? 'HEALTHY' : v.status}`)
+          .sort()
+          .join('|');
+        const cachedVmSig = cachedVms
+          .map((r) => `${r.name}:${r.status}`)
+          .sort()
+          .join('|');
+        if (liveVmSig !== cachedVmSig) {
+          overviewSwrCache.delete(projectId);
+          overviewInFlight.delete(projectId);
+        }
+      }
+    }
+
     res.json({
       projectId,
       computeApiEnabled,
@@ -2414,6 +2436,11 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
     deletionProtection,
   } = req.body || {};
 
+  const invalidateVmOverviewCache = () => {
+    overviewSwrCache.delete(projectId);
+    overviewInFlight.delete(projectId);
+  };
+
   try {
     const { token } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
@@ -2429,6 +2456,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
         projectId,
         { method: 'DELETE', timeout: 5000 }
       );
+      invalidateVmOverviewCache();
       return res.json({
         ok: true,
         message: `Dispatched live Compute Engine DELETE operation for VM ${vmName} in ${zone}.`,
@@ -2453,6 +2481,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
           timeout: 6000,
         }
       );
+      invalidateVmOverviewCache();
       return res.json({
         ok: true,
         message: `Resized VM ${vmName} in ${zone} to machine type ${machineType}!`,
@@ -2472,6 +2501,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
         projectId,
         { method: 'POST', timeout: 5000 }
       );
+      invalidateVmOverviewCache();
       return res.json({
         ok: true,
         message: `Deletion Protection for ${vmName} set to ${
@@ -2507,6 +2537,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
         projectId,
         { method: 'POST', timeout: 6000 }
       );
+      invalidateVmOverviewCache();
       return res.json({
         ok: true,
         message: `Detached Public IPv4 (${accessCfgName}) from ${vmName} (${zone}) — VM is now Private VPC / Cloud IAP Only (--no-address · saves $3.65/mo).`,
@@ -2550,6 +2581,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
           timeout: 6000,
         }
       );
+      invalidateVmOverviewCache();
       return res.json({
         ok: true,
         message: `Attached ${natIP ? `Static Public IPv4 (${natIP})` : 'Ephemeral Public IPv4'} to ${vmName} (${zone}).`,
@@ -2575,6 +2607,7 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
       projectId,
       { method: 'POST', timeout: 5000 }
     );
+    invalidateVmOverviewCache();
 
     res.json({
       ok: true,
@@ -15532,12 +15565,22 @@ app.post('/api/project/:projectId/tunnels/start', async (req, res) => {
       `--project=${projectId}`,
       '--quiet',
     ];
+    // Proactively purge any stale [127.0.0.1]:<localPort> host key from ~/.ssh/known_hosts so switching VMs on the same loopback port never triggers OpenSSH "REMOTE HOST IDENTIFICATION HAS CHANGED"
+    if (cleanRemotePort === 22) {
+      const knownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts');
+      execFile(
+        'ssh-keygen',
+        ['-f', knownHostsPath, '-R', `[127.0.0.1]:${localPort}`],
+        { timeout: 3000 },
+        () => {}
+      );
+    }
     clientSnippets =
       cleanRemotePort === 22
         ? {
-            ssh: `ssh -p ${localPort} -o StrictHostKeyChecking=no 127.0.0.1`,
+            ssh: `ssh -i ~/.ssh/google_compute_engine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${localPort} 127.0.0.1`,
             vscodeRemote: `code --remote ssh-remote+127.0.0.1:${localPort} /home`,
-            scp: `scp -P ${localPort} ./local-file.txt 127.0.0.1:~/`,
+            scp: `scp -i ~/.ssh/google_compute_engine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${localPort} ./local-file.txt 127.0.0.1:~/`,
           }
         : cleanRemotePort === 5432
         ? {

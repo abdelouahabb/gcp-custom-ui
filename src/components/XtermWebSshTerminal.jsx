@@ -103,6 +103,7 @@ export default function XtermWebSshTerminal({
   const fitAddonRef = useRef(null);
   const wsRef = useRef(null);
   const pendingPtyCmdRef = useRef(null);
+  const shellReadyRef = useRef(false);
 
   const [viewMode, setViewModeState] = useState(
     activeViewMode || 'LIVE_SSH_PTY'
@@ -152,7 +153,11 @@ export default function XtermWebSshTerminal({
     const cmdWithNewline = ptyCommandTrigger.cmd.endsWith('\r')
       ? ptyCommandTrigger.cmd
       : `${ptyCommandTrigger.cmd}\r`;
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    if (
+      wsRef.current &&
+      wsRef.current.readyState === WebSocket.OPEN &&
+      shellReadyRef.current
+    ) {
       wsRef.current.send(
         JSON.stringify({ type: 'input', data: cmdWithNewline })
       );
@@ -1823,24 +1828,42 @@ export default function XtermWebSshTerminal({
         const msg = JSON.parse(event.data);
         if (msg.type === 'output' && typeof msg.data === 'string') {
           term.write(msg.data);
+          // Mark shell ready once real PTY output arrives and flush any queued command
+          if (
+            !shellReadyRef.current &&
+            (/[$#%>]\s*$/.test(msg.data) || msg.data.length > 0)
+          ) {
+            shellReadyRef.current = true;
+            if (pendingPtyCmdRef.current && ws.readyState === WebSocket.OPEN) {
+              const toSend = pendingPtyCmdRef.current;
+              pendingPtyCmdRef.current = null;
+              setTimeout(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'input', data: toSend }));
+                  term.focus();
+                }
+              }, 450);
+            }
+          }
         } else if (msg.type === 'status') {
           setConnStatus({
             status: msg.status || 'CONNECTED',
             engine: msg.engine || 'SSH2_PTY',
             message: msg.message || '',
           });
-          if (
-            msg.status === 'CONNECTED' &&
-            pendingPtyCmdRef.current &&
-            ws.readyState === WebSocket.OPEN
-          ) {
-            const toSend = pendingPtyCmdRef.current;
-            pendingPtyCmdRef.current = null;
+          if (msg.status === 'CONNECTED') {
             setTimeout(() => {
-              if (ws.readyState === WebSocket.OPEN) {
+              shellReadyRef.current = true;
+              if (
+                pendingPtyCmdRef.current &&
+                ws.readyState === WebSocket.OPEN
+              ) {
+                const toSend = pendingPtyCmdRef.current;
+                pendingPtyCmdRef.current = null;
                 ws.send(JSON.stringify({ type: 'input', data: toSend }));
+                term.focus();
               }
-            }, 350);
+            }, 900);
           }
         }
       } catch {
@@ -1849,6 +1872,7 @@ export default function XtermWebSshTerminal({
     };
 
     ws.onclose = () => {
+      shellReadyRef.current = false;
       setConnStatus((prev) => ({
         ...prev,
         status: 'DISCONNECTED',

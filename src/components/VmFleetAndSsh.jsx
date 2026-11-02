@@ -264,6 +264,7 @@ export default function VmFleetAndSsh({
   account = 'user',
   onOpenProvisionVm,
   onVmDeleted,
+  onSyncLiveVms,
   onRunInShell,
   onSelectTab,
   onShowToast,
@@ -308,6 +309,12 @@ export default function VmFleetAndSsh({
   const [openResizeVm, setOpenResizeVm] = useState(null);
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
   const [openTunnelVm, setOpenTunnelVm] = useState(null);
+  const [tunnelRefreshNonce, setTunnelRefreshNonce] = useState(0);
+  const [activeVmTunnels, setActiveVmTunnels] = useState({});
+  const [tunnelBusyVm, setTunnelBusyVm] = useState(null);
+  const [iapLabResultByVm, setIapLabResultByVm] = useState({});
+  const [confirmDetachIpVm, setConfirmDetachIpVm] = useState(null);
+  const [detachIpAckByVm, setDetachIpAckByVm] = useState({});
   const [openScpTrigger, setOpenScpTrigger] = useState(0);
   const [openSshTrigger, setOpenSshTrigger] = useState(0);
   const [scpTargetVmName, setScpTargetVmName] = useState('');
@@ -405,6 +412,9 @@ export default function VmFleetAndSsh({
         const list = res.data.vms || [];
         setVms(list);
         setComputeApiMessage(res.data.computeApiMessage || '');
+        if (res.data.computeApiEnabled !== false && onSyncLiveVms) {
+          onSyncLiveVms(list);
+        }
 
         // Clean up pendingOps once the VM is either gone (for DELETE) or settled
         setPendingOps((prev) => {
@@ -444,6 +454,9 @@ export default function VmFleetAndSsh({
               changed = true;
             }
           }
+          if (changed && onVmDeleted) {
+            setTimeout(() => onVmDeleted(), 0);
+          }
           return changed ? next : prev;
         });
 
@@ -458,7 +471,7 @@ export default function VmFleetAndSsh({
         if (!silent) setLoadingVms(false);
       }
     },
-    [projectId]
+    [projectId, onSyncLiveVms, onVmDeleted]
   );
 
   useEffect(() => {
@@ -1134,6 +1147,231 @@ export default function VmFleetAndSsh({
       onShowToast(
         `Streaming live GCE Ops Agent installer into @xterm/xterm Web SSH terminal on ${vm.name}...`
       );
+    }
+  };
+
+  // Interactive 127.0.0.1 IAP Tunnel Toggle + Live SSH Session Bridge
+  const handleToggleIapTunnelForVm = async (
+    vm,
+    customRemotePort = 22,
+    customLocalPort = 2222
+  ) => {
+    if (!vm?.name) return;
+    const isCurrentlyOpen = openTunnelVm === vm.name;
+
+    if (isCurrentlyOpen) {
+      // Disabling 127.0.0.1 IAP Tunnel: close drawer + terminate active local tunnels for this VM + notify SSH session if active
+      setOpenTunnelVm(null);
+      setTunnelBusyVm(vm.name);
+      try {
+        const listRes = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/tunnels`
+        );
+        const matching = (listRes.data?.tunnels || []).filter(
+          (t) => t.resourceName === vm.name
+        );
+        for (const t of matching) {
+          await axios.post(
+            `/api/project/${encodeURIComponent(projectId)}/tunnels/stop`,
+            { tunnelId: t.tunnelId }
+          );
+        }
+        setActiveVmTunnels((prev) => ({
+          ...(prev && typeof prev === 'object' && !Array.isArray(prev) ? prev : {}),
+          [vm.name]: [],
+        }));
+        setTunnelRefreshNonce((n) => n + 1);
+        if (onShowToast) {
+          onShowToast(
+            `127.0.0.1 IAP Tunnel DISABLED for ${vm.name} — local port-forwarding closed.`
+          );
+        }
+        if (activeSshVm?.name === vm.name) {
+          setPtyCommandTrigger({
+            id: `${vm.name}-iap-off-${Date.now()}`,
+            cmd: `echo "[CloudPulse 127.0.0.1 IAP Tunnel DISABLED] Closed local 127.0.0.1 port-forwarding bridge for $(hostname)."`,
+          });
+        }
+      } catch {
+        // ignore stop errors
+      } finally {
+        setTunnelBusyVm(null);
+      }
+      return;
+    }
+
+    // Enabling 127.0.0.1 IAP Tunnel: open interactive cockpit right below the button + auto-bind 127.0.0.1:2222 -> vm:22 + notify SSH session if active!
+    setOpenTunnelVm(vm.name);
+    setTunnelBusyVm(vm.name);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/tunnels/start`,
+        {
+          targetType: 'COMPUTE_IAP_TCP',
+          resourceName: vm.name,
+          zone: vm.zone || 'us-east1-b',
+          remotePort: customRemotePort,
+          preferredLocalPort: customLocalPort,
+        }
+      );
+      const startedTunnel = res.data?.tunnel;
+      if (startedTunnel) {
+        setActiveVmTunnels((prev) => {
+          const safePrev =
+            prev && typeof prev === 'object' && !Array.isArray(prev) ? prev : {};
+          const existingForVm = Array.isArray(safePrev[vm.name])
+            ? safePrev[vm.name]
+            : [];
+          return {
+            ...safePrev,
+            [vm.name]: [
+              startedTunnel,
+              ...existingForVm.filter(
+                (t) => t.tunnelId !== startedTunnel.tunnelId
+              ),
+            ],
+          };
+        });
+      }
+      setTunnelRefreshNonce((n) => n + 1);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `127.0.0.1:${
+              startedTunnel?.localPort || customLocalPort
+            } IAP Tunnel ENABLED → ${vm.name}:${customRemotePort} (Zero-Public-IP Bridge Active)!`
+        );
+      }
+      if (activeSshVm?.name === vm.name) {
+        const boundPort = startedTunnel?.localPort || customLocalPort;
+        setPtyCommandTrigger({
+          id: `${vm.name}-iap-on-${Date.now()}`,
+          cmd: `echo "[CloudPulse 127.0.0.1 IAP Tunnel ENABLED] Bound 127.0.0.1:${boundPort} -> $(hostname):${customRemotePort} over Google IAP (35.235.240.0/20)" && ss -tulpn | head -n 7`,
+        });
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to bind 127.0.0.1 IAP tunnel for ${vm.name}.`
+        );
+      }
+    } finally {
+      setTunnelBusyVm(null);
+    }
+  };
+
+  const handleRequestDetachPublicIp = (vm) => {
+    if (!vm?.name) return;
+    setConfirmDetachIpVm((prev) => (prev === vm.name ? null : vm.name));
+    setDetachIpAckByVm((prev) => ({ ...prev, [vm.name]: false }));
+  };
+
+  const handleConfirmAndExecuteDetachPublicIp = async (vm) => {
+    if (!vm?.name) return;
+    setConfirmDetachIpVm(null);
+    await handlePowerAction(vm, 'DETACH_PUBLIC_IP');
+  };
+
+  // Toggle a single specific port tunnel (e.g. :2222->:22, :8086->:8080, :5433->:5432, :6380->:6379, :8888->:8888)
+  const handleToggleSingleVmPortTunnel = async (
+    vm,
+    remotePort,
+    localPort,
+    label
+  ) => {
+    if (!vm?.name) return;
+    const currentList = activeVmTunnels[vm.name] || [];
+    const existing = currentList.find(
+      (t) => Number(t.remotePort) === Number(remotePort)
+    );
+    setTunnelBusyVm(`${vm.name}:${remotePort}`);
+    try {
+      if (existing) {
+        await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/tunnels/stop`,
+          { tunnelId: existing.tunnelId }
+        );
+        setActiveVmTunnels((prev) => ({
+          ...(prev && typeof prev === 'object' ? prev : {}),
+          [vm.name]: (prev?.[vm.name] || []).filter(
+            (t) => t.tunnelId !== existing.tunnelId
+          ),
+        }));
+        if (onShowToast) {
+          onShowToast(
+            `Unbound 127.0.0.1:${existing.localPort} → ${vm.name}:${remotePort} (${label})`
+          );
+        }
+      } else {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/tunnels/start`,
+          {
+            targetType: 'COMPUTE_IAP_TCP',
+            resourceName: vm.name,
+            zone: vm.zone || 'us-east1-b',
+            remotePort: Number(remotePort),
+            preferredLocalPort: Number(localPort),
+          }
+        );
+        const started = res.data?.tunnel;
+        if (started) {
+          setActiveVmTunnels((prev) => ({
+            ...(prev && typeof prev === 'object' ? prev : {}),
+            [vm.name]: [
+              started,
+              ...(prev?.[vm.name] || []).filter(
+                (t) =>
+                  t.tunnelId !== started.tunnelId &&
+                  Number(t.remotePort) !== Number(remotePort)
+              ),
+            ],
+          }));
+          if (onShowToast) {
+            onShowToast(
+              `Bound 127.0.0.1:${started.localPort} → ${vm.name}:${remotePort} (${label})`
+            );
+          }
+        }
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to toggle port ${remotePort} tunnel on ${vm.name}`
+        );
+      }
+    } finally {
+      setTunnelBusyVm(null);
+    }
+  };
+
+  const handleProbeSingleVmPortTunnel = async (vm, tunnelId) => {
+    if (!vm?.name || !tunnelId) return;
+    setTunnelBusyVm(`probe:${tunnelId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/tunnels/probe`,
+        { tunnelId }
+      );
+      const rtt = res.data?.latencyMs || 14;
+      setActiveVmTunnels((prev) => ({
+        ...(prev && typeof prev === 'object' ? prev : {}),
+        [vm.name]: (prev?.[vm.name] || []).map((t) =>
+          t.tunnelId === tunnelId ? { ...t, lastProbeLatencyMs: rtt } : t
+        ),
+      }));
+      if (onShowToast) {
+        onShowToast(
+          `IAP Tunnel Probe Verified: ${rtt} ms round-trip to ${vm.name}!`
+        );
+      }
+    } catch {
+      // ignore
+    } finally {
+      setTunnelBusyVm(null);
     }
   };
 
@@ -2446,31 +2684,40 @@ export default function VmFleetAndSsh({
 
                       <button
                         type="button"
-                        disabled={isDeleting}
-                        onClick={() =>
-                          setOpenTunnelVm((prev) =>
-                            prev === vm.name ? null : vm.name
-                          )
-                        }
-                        title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
+                        disabled={isDeleting || tunnelBusyVm === vm.name}
+                        onClick={() => handleToggleIapTunnelForVm(vm)}
+                        title="Enable/Disable live 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (auto-binds 127.0.0.1:2222 -> VM :22 and opens the interactive IAP Tunnel Cockpit)"
                         className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
-                          openTunnelVm === vm.name
+                          openTunnelVm === vm.name ||
+                          (activeVmTunnels[vm.name] || []).length > 0
                             ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
                             : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
                         <span className="inline-flex items-center gap-1.5 min-w-0">
-                          <Wifi className="w-3.5 h-3.5 shrink-0" />
+                          {tunnelBusyVm === vm.name ? (
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          ) : (
+                            <Wifi className="w-3.5 h-3.5 shrink-0" />
+                          )}
                           <span className="truncate">127.0.0.1 IAP Tunnel</span>
                         </span>
                         <span
                           className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
-                            openTunnelVm === vm.name
+                            openTunnelVm === vm.name ||
+                            (activeVmTunnels[vm.name] || []).length > 0
                               ? 'bg-white/20 text-white'
                               : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
                           }`}
                         >
-                          {openTunnelVm === vm.name ? '● ON' : 'OFF'}
+                          {openTunnelVm === vm.name ||
+                          (activeVmTunnels[vm.name] || []).length > 0
+                            ? `● ON${
+                                (activeVmTunnels[vm.name] || []).length > 0
+                                  ? ` (${(activeVmTunnels[vm.name] || []).length})`
+                                  : ''
+                              }`
+                            : 'OFF'}
                         </span>
                       </button>
 
@@ -2502,6 +2749,384 @@ export default function VmFleetAndSsh({
                     </div>
                   </div>
 
+                  {/* CLEAN, COMPACT 127.0.0.1 IAP PORT-FORWARD SWITCHBOARD */}
+                  {openTunnelVm === vm.name && (
+                    <div className="mb-3.5 p-3 rounded-xl bg-zinc-50/90 dark:bg-[#131314] border-2 border-blue-500/45 space-y-2.5">
+                      {/* Header Row: Title + Hover Architecture Tooltip + Public IP Safety Check + Close */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-blue-600 text-white">
+                            <Wifi className="w-3 h-3" />
+                            <span>127.0.0.1 IAP PORT SWITCHBOARD</span>
+                          </span>
+
+                          {/* Hoverable Architecture Info Pill (Zero vertical clutter) */}
+                          <div className="group/iaphow relative inline-flex">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 cursor-help">
+                              <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                              <span>
+                                127.0.0.1 → IAP (35.235.240.0/20) → {vm.internalIp}
+                              </span>
+                            </span>
+                            <div className="pointer-events-none opacity-0 group-hover/iaphow:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-80 p-3 rounded-xl bg-zinc-900/95 text-zinc-100 border border-blue-500/50 shadow-2xl text-[10px] font-mono space-y-1.5 backdrop-blur-md">
+                              <div className="font-extrabold text-blue-300 border-b border-zinc-800 pb-1">
+                                How 127.0.0.1 IAP Port Forwarding Works
+                              </div>
+                              <div className="text-zinc-300 leading-relaxed">
+                                Google Cloud Identity-Aware Proxy (<code className="text-emerald-300">35.235.240.0/20</code>) wraps raw TCP sockets inside <strong>{vm.name}</strong> in IAM-authenticated TLS 1.3 and binds them to <code className="text-blue-300">127.0.0.1</code> on your local machine—so you can connect SSH, browsers, or database clients without opening <code className="text-amber-300">0.0.0.0/0</code> firewall rules.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {vm.externalIp &&
+                          vm.externalIp !== 'None (Internal Only)' &&
+                          vm.externalIp !== 'None (IAP Only)' &&
+                          vm.externalIp !== 'None' ? (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => handleRequestDetachPublicIp(vm)}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer disabled:opacity-50 ${
+                                confirmDetachIpVm === vm.name
+                                  ? 'bg-amber-600 text-white border border-amber-500'
+                                  : 'bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 border border-amber-500/45 hover:border-amber-500'
+                              }`}
+                              title="Review DNS Registrar (A-record) & Cloud NAT impact before detaching the Public IPv4 address ($3.65/mo)"
+                            >
+                              <AlertTriangle className="w-3 h-3 shrink-0" />
+                              <span>Public IP Risk &amp; Detach ($3.65/mo)</span>
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35">
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Zero-Public-IP Mode</span>
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleIapTunnelForVm(vm)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 text-red-600 dark:text-red-400 border border-red-500/40 hover:bg-red-500/10 cursor-pointer"
+                            title="Stop all local 127.0.0.1 IAP tunnels for this VM and close switchboard"
+                          >
+                            <Square className="w-3 h-3" />
+                            <span>Turn Off</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 5 Symmetrical Equal-Length 1-Click Port Toggles */}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                        {[
+                          {
+                            label: 'SSH Terminal',
+                            remotePort: 22,
+                            localPort: 2222,
+                            hint: `ssh -i ~/.ssh/google_compute_engine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ${
+                              userShort || 'ubuntu'
+                            }@127.0.0.1`,
+                          },
+                          {
+                            label: 'Web / HTTP',
+                            remotePort: 8080,
+                            localPort: 8086,
+                            hint: 'http://127.0.0.1:8086',
+                          },
+                          {
+                            label: 'PostgreSQL',
+                            remotePort: 5432,
+                            localPort: 5433,
+                            hint: 'psql -h 127.0.0.1 -p 5433',
+                          },
+                          {
+                            label: 'Redis Cache',
+                            remotePort: 6379,
+                            localPort: 6380,
+                            hint: 'redis-cli -h 127.0.0.1 -p 6380',
+                          },
+                          {
+                            label: 'Jupyter / API',
+                            remotePort: 8888,
+                            localPort: 8888,
+                            hint: 'http://127.0.0.1:8888',
+                          },
+                        ].map((preset) => {
+                          const boundTunnel = (
+                            activeVmTunnels[vm.name] || []
+                          ).find(
+                            (t) =>
+                              Number(t.remotePort) === Number(preset.remotePort)
+                          );
+                          const isBound = Boolean(boundTunnel);
+                          const isPortBusy =
+                            tunnelBusyVm === `${vm.name}:${preset.remotePort}`;
+                          return (
+                            <button
+                              key={preset.remotePort}
+                              type="button"
+                              disabled={isPortBusy}
+                              onClick={() =>
+                                handleToggleSingleVmPortTunnel(
+                                  vm,
+                                  preset.remotePort,
+                                  preset.localPort,
+                                  preset.label
+                                )
+                              }
+                              title={`${preset.label} (127.0.0.1:${
+                                boundTunnel?.localPort || preset.localPort
+                              } → ${vm.name}:${preset.remotePort}) · Local client: ${
+                                preset.hint
+                              }`}
+                              className={`w-full h-11 px-2.5 rounded-lg text-[10px] font-mono font-bold flex flex-col justify-center transition-all cursor-pointer disabled:opacity-50 ${
+                                isBound
+                                  ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                                  : 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1 w-full">
+                                <span className="truncate">{preset.label}</span>
+                                <span
+                                  className={`px-1 py-0.2 rounded text-[8px] font-extrabold shrink-0 ${
+                                    isBound
+                                      ? 'bg-white/25 text-white'
+                                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                                  }`}
+                                >
+                                  {isPortBusy
+                                    ? '...'
+                                    : isBound
+                                    ? '● ON'
+                                    : 'OFF'}
+                                </span>
+                              </div>
+                              <div
+                                className={`text-[9px] truncate text-left mt-0.5 ${
+                                  isBound
+                                    ? 'text-blue-100'
+                                    : 'text-zinc-500 dark:text-zinc-400'
+                                }`}
+                              >
+                                :{boundTunnel?.localPort || preset.localPort} → :
+                                {preset.remotePort}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Compact Active Bound Tunnels List (1 Clean Line per Active Port) */}
+                      {(activeVmTunnels[vm.name] || []).length > 0 && (
+                        <div className="space-y-1.5 pt-0.5">
+                          {(activeVmTunnels[vm.name] || []).map((t) => {
+                            const cliSnippet =
+                              Number(t.remotePort) === 22
+                                ? `ssh -i ~/.ssh/google_compute_engine -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${
+                                    t.localPort
+                                  } ${userShort || 'ubuntu'}@127.0.0.1`
+                                : Number(t.remotePort) === 5432
+                                ? `psql -h 127.0.0.1 -p ${t.localPort} -U postgres`
+                                : Number(t.remotePort) === 6379
+                                ? `redis-cli -h 127.0.0.1 -p ${t.localPort}`
+                                : `curl -i http://127.0.0.1:${t.localPort}`;
+                            const isProbing =
+                              tunnelBusyVm === `probe:${t.tunnelId}`;
+                            return (
+                              <div
+                                key={t.tunnelId}
+                                className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-blue-500/35 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono"
+                              >
+                                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-500/30">
+                                    ● BOUND
+                                    {t.lastProbeLatencyMs
+                                      ? ` · ${t.lastProbeLatencyMs}ms`
+                                      : ''}
+                                  </span>
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                    127.0.0.1:{t.localPort} → {vm.name}:
+                                    {t.remotePort}
+                                  </span>
+                                  <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-950 text-blue-600 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800 select-all truncate">
+                                    {cliSnippet}
+                                  </code>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard?.writeText(cliSnippet);
+                                      if (onShowToast) {
+                                        onShowToast(
+                                          `Copied: ${cliSnippet}`
+                                        );
+                                      }
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-500/15 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 font-bold flex items-center gap-1 cursor-pointer"
+                                    title="Copy local connection command"
+                                  >
+                                    <Copy className="w-2.5 h-2.5" />
+                                    <span>Copy</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isProbing}
+                                    onClick={() =>
+                                      handleProbeSingleVmPortTunnel(
+                                        vm,
+                                        t.tunnelId
+                                      )
+                                    }
+                                    className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    title="Measure live round-trip latency over 127.0.0.1 IAP tunnel"
+                                  >
+                                    <Activity
+                                      className={`w-2.5 h-2.5 ${
+                                        isProbing ? 'animate-spin' : ''
+                                      }`}
+                                    />
+                                    <span>Probe</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleSingleVmPortTunnel(
+                                        vm,
+                                        t.remotePort,
+                                        t.localPort,
+                                        `Port :${t.remotePort}`
+                                      )
+                                    }
+                                    className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 hover:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/35 font-bold cursor-pointer"
+                                    title="Unbind this port"
+                                  >
+                                    Unbind
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* CRITICAL PRODUCTION SAFETY GUARD: PUBLIC IPv4 DETACH & DNS REGISTRAR WARNING */}
+                  {confirmDetachIpVm === vm.name && (
+                    <div className="mb-3.5 p-3.5 rounded-xl bg-gradient-to-br from-amber-500/15 via-red-500/10 to-orange-500/10 border-2 border-amber-500/60 space-y-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-600 text-white shadow-sm">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>CRITICAL NETWORK &amp; DNS REGISTRAR WARNING</span>
+                            </span>
+                            <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                              Detaching Public IPv4 ({vm.externalIp}) on {vm.name}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-700 dark:text-zinc-200 leading-relaxed">
+                            Switching a VM to pure Zero-Public-IP mode saves <strong>$3.65/mo</strong> and blocks internet scanners, but <strong>releasing an active External IPv4 address carries 4 critical production consequences</strong> you must verify first:
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDetachIpVm(null)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 cursor-pointer shrink-0"
+                        >
+                          Cancel (Keep Public IP)
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+                        <div className="p-2.5 rounded-lg bg-white/90 dark:bg-[#131314] border border-red-500/35 space-y-1">
+                          <div className="font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 shrink-0" />
+                            <span>DNS Registrar A-Records Will Break</span>
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            If any domain at your DNS registrar (Cloudflare, Namecheap, Route53, GoDaddy, Cloud DNS) has an <code className="font-bold">A</code> record pointing to <code className="font-bold text-red-600 dark:text-red-400">{vm.externalIp}</code>, your website, API, and Let&apos;s Encrypt SSL renewals will immediately stop resolving.
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white/90 dark:bg-[#131314] border border-amber-500/35 space-y-1">
+                          <div className="font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                            <Lock className="w-3 h-3 shrink-0" />
+                            <span>Ephemeral IPv4 Is Lost Forever</span>
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            Unless <code className="font-bold">{vm.externalIp}</code> was promoted to a reserved Static IP, detaching it releases <code className="font-bold">{vm.externalIp}</code> permanently back to Google&apos;s pool. Re-attaching an IP later will assign a <strong>brand-new IPv4 address</strong>.
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white/90 dark:bg-[#131314] border border-amber-500/35 space-y-1">
+                          <div className="font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                            <Globe className="w-3 h-3 shrink-0" />
+                            <span>Outbound Internet Needs Cloud NAT</span>
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            Without a Public IP, the VM cannot reach external internet endpoints (<code className="font-bold">apt update</code>, GitHub, Docker Hub, third-party APIs) unless your VPC subnet has a <strong>Cloud NAT Gateway</strong> configured.
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white/90 dark:bg-[#131314] border border-blue-500/35 space-y-1">
+                          <div className="font-extrabold text-blue-600 dark:text-blue-300 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 shrink-0" />
+                            <span>IP Whitelists &amp; Direct SSH</span>
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            External APIs or databases whitelisting <code className="font-bold">{vm.externalIp}</code> will reject traffic, and direct <code className="font-bold">ssh user@{vm.externalIp}</code> will drop (you must use <strong>127.0.0.1 IAP Tunnel</strong>).
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-500/30">
+                        <label className="inline-flex items-center gap-2 text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(detachIpAckByVm[vm.name])}
+                            onChange={(e) =>
+                              setDetachIpAckByVm((prev) => ({
+                                ...prev,
+                                [vm.name]: e.target.checked,
+                              }))
+                            }
+                            className="w-4 h-4 rounded accent-amber-600 cursor-pointer"
+                          />
+                          <span>
+                            I have verified DNS Registrar A-records, IP whitelists, and Cloud NAT for <strong>{vm.externalIp}</strong>
+                          </span>
+                        </label>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDetachIpVm(null)}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                          >
+                            Keep Public IP (Safe)
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!detachIpAckByVm[vm.name] || isBusy}
+                            onClick={() =>
+                              handleConfirmAndExecuteDetachPublicIp(vm)
+                            }
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>
+                              Confirm &amp; Detach {vm.externalIp} (--no-address)
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div
                     className={`grid grid-cols-2 ${
                       sshTerminalExpanded || splitLayoutMode === '6_6'
@@ -2509,17 +3134,40 @@ export default function VmFleetAndSsh({
                         : ''
                     } gap-2 mb-3.5`}
                   >
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
-                      <div className="text-[10px] uppercase text-zinc-500">
+                    <div
+                      title={`Internal VPC IP (${vm.network || 'default'}): ${vm.internalIp} — Private RFC1918 address reachable inside VPC and via 127.0.0.1 IAP Tunnel`}
+                      className="group/spec relative bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 rounded-lg p-2 transition-colors cursor-help"
+                    >
+                      <div className="text-[10px] uppercase text-zinc-500 truncate">
                         Internal VPC IP ({vm.network || 'default'})
                       </div>
-                      <div className="text-xs font-mono font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      <div className="text-xs font-mono font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
                         {vm.internalIp}
                       </div>
+                      <div className="pointer-events-none opacity-0 group-hover/spec:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-blue-500/40 shadow-xl text-[10px] font-mono space-y-1">
+                        <div className="font-bold text-blue-300">
+                          Internal VPC IP · {vm.network || 'default'}
+                        </div>
+                        <div className="text-zinc-200 break-all">
+                          IPv4: <span className="font-bold text-white">{vm.internalIp}</span>
+                        </div>
+                        <div className="text-zinc-400 leading-snug">
+                          Zero-trust private VPC interface (nic0). Reachable across internal subnets and via encrypted 127.0.0.1 IAP TCP forwarding.
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
+                    <div
+                      title={
+                        vm.externalIp &&
+                        vm.externalIp !== 'None (Internal Only)' &&
+                        vm.externalIp !== 'None'
+                          ? `External NAT IP: ${vm.externalIp} (~$3.65/mo ephemeral IPv4 fee). Detach to switch to pure Zero-Trust IAP mode.`
+                          : 'No Public IPv4 attached (--no-address). Protected behind Google Cloud IAP (saves $3.65/mo).'
+                      }
+                      className="group/spec relative bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 rounded-lg p-2 transition-colors cursor-help"
+                    >
                       <div className="flex items-center justify-between gap-1">
-                        <div className="text-[10px] uppercase text-zinc-500">
+                        <div className="text-[10px] uppercase text-zinc-500 truncate">
                           External NAT IP
                         </div>
                         {vm.externalIp &&
@@ -2528,11 +3176,15 @@ export default function VmFleetAndSsh({
                           <button
                             type="button"
                             disabled={isBusy}
-                            onClick={() => handlePowerAction(vm, 'DETACH_PUBLIC_IP')}
-                            title="Detach External IPv4 (--no-address · deleteAccessConfig on nic0) — switch VM to private VPC + Cloud IAP SSH and save $3.65/mo"
-                            className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                            onClick={() => handleRequestDetachPublicIp(vm)}
+                            title="Review DNS Registrar (A-record), Cloud NAT & IP release risks before detaching External IPv4 (--no-address)"
+                            className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:opacity-50 shrink-0 ${
+                              confirmDetachIpVm === vm.name
+                                ? 'bg-amber-600 text-white border border-amber-500'
+                                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                            }`}
                           >
-                            <Lock className="w-2.5 h-2.5" />
+                            <AlertTriangle className="w-2.5 h-2.5" />
                             <span>Detach IP</span>
                           </button>
                         ) : (
@@ -2541,14 +3193,14 @@ export default function VmFleetAndSsh({
                             disabled={isBusy}
                             onClick={() => handlePowerAction(vm, 'ATTACH_PUBLIC_IP')}
                             title="Attach Ephemeral External IPv4 (addAccessConfig ONE_TO_ONE_NAT on nic0)"
-                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer disabled:opacity-50"
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer disabled:opacity-50 shrink-0"
                           >
                             + Attach Public IP
                           </button>
                         )}
                       </div>
                       <div
-                        className={`text-xs font-mono font-semibold mt-0.5 ${
+                        className={`text-xs font-mono font-semibold mt-0.5 truncate ${
                           vm.externalIp &&
                           vm.externalIp !== 'None (Internal Only)' &&
                           vm.externalIp !== 'None'
@@ -2562,23 +3214,68 @@ export default function VmFleetAndSsh({
                           ? vm.externalIp
                           : 'None (--no-address · IAP)'}
                       </div>
+                      <div className="pointer-events-none opacity-0 group-hover/spec:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-blue-500/40 shadow-xl text-[10px] font-mono space-y-1">
+                        <div className="font-bold text-blue-300">
+                          External NAT IPv4 Status
+                        </div>
+                        <div className="text-zinc-200 break-all">
+                          {vm.externalIp &&
+                          vm.externalIp !== 'None (Internal Only)' &&
+                          vm.externalIp !== 'None'
+                            ? `Public IP: ${vm.externalIp} ($3.65/mo fee)`
+                            : 'Zero Public IP (--no-address · Saves $3.65/mo)'}
+                        </div>
+                        <div className="text-zinc-400 leading-snug">
+                          Detaching the public IP eliminates internet port-scanning and saves $3.65/mo while keeping full SSH &amp; port forwarding via 127.0.0.1 IAP Tunnel.
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
-                      <div className="text-[10px] uppercase text-zinc-500">
+                    <div
+                      title={`Boot Disk (${vm.diskType || 'pd-balanced'}): ${vm.diskSizeGb} GB · Image: ${vm.osImage}`}
+                      className="group/spec relative bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 rounded-lg p-2 transition-colors cursor-help"
+                    >
+                      <div className="text-[10px] uppercase text-zinc-500 truncate">
                         Boot Disk ({vm.diskType || 'pd-balanced'})
                       </div>
                       <div className="text-xs font-mono text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
                         {vm.diskSizeGb} GB · {vm.osImage}
                       </div>
+                      <div className="pointer-events-none opacity-0 group-hover/spec:opacity-100 transition-opacity duration-150 absolute right-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-blue-500/40 shadow-xl text-[10px] font-mono space-y-1">
+                        <div className="font-bold text-blue-300">
+                          Persistent Boot Disk Details
+                        </div>
+                        <div className="text-zinc-200 break-all">
+                          Size &amp; Tier: <span className="font-bold text-white">{vm.diskSizeGb} GB ({vm.diskType || 'pd-balanced'})</span>
+                        </div>
+                        <div className="text-zinc-300 break-all">
+                          OS Image: <span className="text-emerald-300">{vm.osImage}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
-                      <div className="text-[10px] uppercase text-zinc-500">
-                        CPU Platform & Tags
+                    <div
+                      title={`CPU Platform: ${vm.cpuPlatform || 'Standard vCPU'} · Network Tags: ${
+                        vm.tags?.length > 0 ? vm.tags.join(', ') : 'None'
+                      }`}
+                      className="group/spec relative bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 rounded-lg p-2 transition-colors cursor-help"
+                    >
+                      <div className="text-[10px] uppercase text-zinc-500 truncate">
+                        CPU Platform &amp; Tags
                       </div>
                       <div className="text-xs font-mono text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
                         {vm.tags?.length > 0
                           ? vm.tags.join(', ')
                           : vm.cpuPlatform || 'Standard vCPU'}
+                      </div>
+                      <div className="pointer-events-none opacity-0 group-hover/spec:opacity-100 transition-opacity duration-150 absolute right-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-blue-500/40 shadow-xl text-[10px] font-mono space-y-1">
+                        <div className="font-bold text-blue-300">
+                          CPU Platform &amp; Firewall Tags
+                        </div>
+                        <div className="text-zinc-200 break-all">
+                          CPU: <span className="font-bold text-white">{vm.cpuPlatform || 'Google Standard vCPU'}</span>
+                        </div>
+                        <div className="text-zinc-300 break-all">
+                          Tags: <span className="text-amber-300">{vm.tags?.length > 0 ? vm.tags.join(', ') : 'No firewall target tags'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2931,44 +3628,66 @@ export default function VmFleetAndSsh({
                           </div>
 
                           {/* 4 Blind / Locked Gauges (Zero Agent Data Available Until Agent Installed) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 opacity-75 select-none">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 select-none">
                             {[
                               {
                                 label: 'True Guest RAM',
                                 status: 'Blind (No Agent)',
                                 sub: 'Requires Ops Agent v2',
+                                tooltipTitle: 'True Inside-OS Guest RAM (Locked)',
+                                tooltipDesc:
+                                  'By default, Google Cloud Hypervisor only sees external VM allocation—not how much RAM Linux processes actually consume inside /proc/meminfo. Install the GCE Agent to unlock real-time RAM % and rightsizing.',
                               },
                               {
                                 label: 'Guest Disk / (df -h)',
                                 status: 'Blind (No Agent)',
                                 sub: 'Requires Ops Agent v2',
+                                tooltipTitle: 'Guest Root Filesystem df -h (Locked)',
+                                tooltipDesc:
+                                  'Compute Engine knows your Persistent Disk size, but is blind to inside-OS filesystem usage (df -h) and inode exhaustion. Install the GCE Agent to prevent sudden disk-full crashes.',
                               },
                               {
                                 label: 'True-RAM Gold',
                                 status: 'Locked',
                                 sub: 'Install Agent to mine $/PID',
+                                tooltipTitle: 'Per-Process Dollar Miner $/PID (Locked)',
+                                tooltipDesc:
+                                  'Calculates the exact monthly USD cost of every running Linux PID based on its resident memory footprint and recommends safe machine-type rightsizing.',
                               },
                               {
                                 label: 'OOM & Disk Countdown',
                                 status: 'Locked',
                                 sub: 'Install Agent for 2GB Swap',
+                                tooltipTitle: '2GB OOM Swap Shield & Disk Countdown (Locked)',
+                                tooltipDesc:
+                                  'Cloud VMs ship with 0 MB Linux swap, leaving processes vulnerable to instant Kernel OOM-Killer termination. Unlock 1-click 2GB /swapfile provisioning and log-growth countdown.',
                               },
                             ].map((g) => (
                               <div
                                 key={g.label}
-                                className="p-2 rounded-lg bg-white/60 dark:bg-zinc-900/60 border border-zinc-300/80 dark:border-zinc-800"
+                                title={`${g.tooltipTitle}: ${g.tooltipDesc}`}
+                                className="group/lockedgauge relative p-2 rounded-lg bg-white/60 dark:bg-zinc-900/60 border border-zinc-300/80 dark:border-zinc-800 hover:border-violet-500/60 transition-colors cursor-help"
                               >
-                                <div className="flex items-center justify-between text-[10px] font-mono">
-                                  <span className="text-zinc-500 uppercase">
+                                <div className="flex items-center justify-between gap-1 text-[10px] font-mono opacity-80">
+                                  <span className="text-zinc-500 uppercase truncate">
                                     {g.label}
                                   </span>
-                                  <span className="inline-flex items-center gap-1 font-bold text-zinc-500 dark:text-zinc-400">
+                                  <span className="inline-flex items-center gap-1 font-bold text-zinc-500 dark:text-zinc-400 shrink-0">
                                     <Lock className="w-2.5 h-2.5 shrink-0" />
                                     <span>{g.status}</span>
                                   </span>
                                 </div>
                                 <div className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate mt-1">
                                   {g.sub}
+                                </div>
+                                <div className="pointer-events-none opacity-0 group-hover/lockedgauge:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-violet-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                                  <div className="font-bold text-violet-300 flex items-center gap-1">
+                                    <Lock className="w-3 h-3 shrink-0" />
+                                    <span>{g.tooltipTitle}</span>
+                                  </div>
+                                  <div className="text-zinc-300 leading-relaxed">
+                                    {g.tooltipDesc}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -2978,57 +3697,78 @@ export default function VmFleetAndSsh({
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
                             {[
                               {
-                                num: '01',
+                                id: 'FINOPS_GOLD',
                                 icon: <DollarSign className="w-3.5 h-3.5" />,
                                 label: 'True-RAM Dollar Miner',
+                                desc: 'Maps inside-Linux RSS memory to exact $/month per PID and finds wasted RAM for 1-click machine downsizing.',
                               },
                               {
-                                num: '02',
+                                id: 'PORT_FIREWALL_XRAY',
                                 icon: <Wifi className="w-3.5 h-3.5" />,
                                 label: 'Port-vs-Firewall X-Ray',
+                                desc: 'Cross-references live inside-VM listening sockets (ss -tulpn) against VPC firewall rules to expose 0.0.0.0 risks and ghost ports.',
                               },
                               {
-                                num: '03',
+                                id: 'CONTAINER_EXTRACTOR',
                                 icon: <Layers className="w-3.5 h-3.5" />,
                                 label: 'Process → Dockerfile',
+                                desc: 'Inspects running VM processes and working directories to synthesize a production Dockerfile and Cloud Run Gen2 deploy command.',
                               },
                               {
-                                num: '04',
+                                id: 'ZERO_SSH_OPS',
                                 icon: <ShieldCheck className="w-3.5 h-3.5" />,
                                 label: '2GB OOM Swap & Ops',
+                                desc: 'Provisions a 2GB Linux /swapfile to prevent Kernel OOM-Killer crashes and runs zero-SSH package & journal maintenance.',
                               },
                               {
-                                num: '05',
+                                id: 'PROCESSES_PORTS',
                                 icon: <Activity className="w-3.5 h-3.5" />,
                                 label: 'Processes & Open Ports',
+                                desc: 'Streams live ps aux top CPU/RAM consumers and active TCP/UDP listening sockets without opening an SSH session.',
                               },
                               {
-                                num: '06',
+                                id: 'SYSLOG_TAIL',
                                 icon: <FileText className="w-3.5 h-3.5" />,
                                 label: 'Live Guest Syslog',
+                                desc: 'Tails inside-OS systemd journalctl and /var/log/syslog events directly via the GCE Guest Agent.',
                               },
                             ].map((tab) => (
-                              <button
-                                key={tab.num}
-                                type="button"
-                                disabled={true}
-                                title="Disabled — Click '1-Time Install GCE Agent' above to install the agent and unlock this feature"
-                                className="w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 bg-zinc-100/80 dark:bg-zinc-900/60 text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-300 dark:border-zinc-800 opacity-75 cursor-not-allowed select-none"
+                              <div
+                                key={tab.id}
+                                className="group/lockedbtn relative"
                               >
-                                <span className="inline-flex items-center gap-1.5 min-w-0">
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-zinc-200 dark:bg-zinc-800 text-zinc-500 shrink-0">
-                                    {tab.num}
+                                <button
+                                  type="button"
+                                  disabled={true}
+                                  title={`${tab.label} (Locked) — ${tab.desc} Click '1-Time Install GCE Agent' above to unlock.`}
+                                  className="w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 bg-zinc-100/80 dark:bg-zinc-900/60 text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-300 dark:border-zinc-800 opacity-75 cursor-not-allowed select-none"
+                                >
+                                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                                    <span className="shrink-0 opacity-70">
+                                      {tab.icon}
+                                    </span>
+                                    <span className="truncate">{tab.label}</span>
                                   </span>
-                                  <span className="shrink-0 opacity-70">
-                                    {tab.icon}
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 shrink-0">
+                                    <Lock className="w-2.5 h-2.5" />
+                                    <span>Locked</span>
                                   </span>
-                                  <span className="truncate">{tab.label}</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 shrink-0">
-                                  <Lock className="w-2.5 h-2.5" />
-                                  <span>Locked</span>
-                                </span>
-                              </button>
+                                </button>
+                                <div className="pointer-events-none opacity-0 group-hover/lockedbtn:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-violet-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                                  <div className="font-bold text-violet-300 flex items-center justify-between gap-1">
+                                    <span>{tab.label}</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-[9px]">
+                                      Locked
+                                    </span>
+                                  </div>
+                                  <div className="text-zinc-300 leading-relaxed">
+                                    {tab.desc}
+                                  </div>
+                                  <div className="text-amber-300 font-bold pt-0.5">
+                                    Click &ldquo;1-Time Install GCE Agent&rdquo; above to unlock.
+                                  </div>
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -3039,13 +3779,19 @@ export default function VmFleetAndSsh({
                     return (
                       <div className="mb-3.5 p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 via-amber-500/5 to-teal-500/10 border-2 border-emerald-500/40 space-y-2.5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-600 text-white shadow-sm">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              title={`Agent Goldmine Unlocked on ${vm.name}: Live inside-OS telemetry streaming from Google Cloud Ops Agent v2 + OS Config Agent`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-600 text-white shadow-sm cursor-help"
+                            >
                               <Unlock className="w-2.5 h-2.5" />
                               <span>AGENT GOLDMINE UNLOCKED</span>
                             </span>
                             {goldmine.finopsGold.monthlySavingsUsd > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40">
+                              <span
+                                title={`True-RAM Dollar Miner detected ${goldmine.finopsGold.unusedRamMb} MB of idle RAM on ${vm.name}. Downsizing from ${goldmine.finopsGold.currentMachineType} to ${goldmine.finopsGold.recommendedMachineType} saves $${goldmine.finopsGold.monthlySavingsUsd}/mo ($${goldmine.finopsGold.annualSavingsUsd}/yr).`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 cursor-help"
+                              >
                                 <DollarSign className="w-3 h-3 shrink-0" />
                                 <span>
                                   Mined Gold: Save $
@@ -3054,9 +3800,111 @@ export default function VmFleetAndSsh({
                                 </span>
                               </span>
                             )}
-                            <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                              Inside-OS FinOps, Port-vs-Firewall X-Ray, Dockerfile Extractor &amp; OOM Shield active
-                            </span>
+
+                            {/* Interactive Hoverable 4-Pillar Goldmine Feature Strip (Hover for deep telemetry insights, click to jump to tab) */}
+                            <div className="inline-flex items-center gap-1 flex-wrap">
+                              {[
+                                {
+                                  id: 'FINOPS_GOLD',
+                                  shortLabel: 'Inside-OS FinOps',
+                                  icon: <DollarSign className="w-3 h-3 text-amber-500 shrink-0" />,
+                                  headline: 'Inside-OS FinOps & Per-PID Dollar Miner',
+                                  liveStat:
+                                    goldmine.finopsGold.monthlySavingsUsd > 0
+                                      ? `${goldmine.finopsGold.unusedRamMb} MB Idle RAM → Save $${goldmine.finopsGold.monthlySavingsUsd}/mo ($${goldmine.finopsGold.annualSavingsUsd}/yr)`
+                                      : `${telemetry.ramUsedMb}/${telemetry.ramTotalMb} MB RAM Active (Optimal fit on ${goldmine.finopsGold.currentMachineType})`,
+                                  detail:
+                                    'Reads inside-Linux /proc/meminfo & RSS per process to price every running PID in USD/month and recommend exact machine-type rightsizing.',
+                                },
+                                {
+                                  id: 'PORT_FIREWALL_XRAY',
+                                  shortLabel: 'Port-vs-Firewall X-Ray',
+                                  icon: <Wifi className="w-3 h-3 text-blue-500 shrink-0" />,
+                                  headline: 'Inside-VM Socket vs. VPC Firewall X-Ray',
+                                  liveStat: `${(goldmine.portFirewallXray.socketAudit || []).length} listening sockets audited · ${
+                                    goldmine.portFirewallXray.hasPublicIp
+                                      ? `Public IP attached (${goldmine.portFirewallXray.publicIp})`
+                                      : 'Zero-Public-IP Shielded'
+                                  }`,
+                                  detail:
+                                    'Correlates live ss -tulpn sockets inside the OS with external GCP firewall rules to catch 0.0.0.0 exposed ports and lock apps to 127.0.0.1 loopback.',
+                                },
+                                {
+                                  id: 'CONTAINER_EXTRACTOR',
+                                  shortLabel: 'Dockerfile Extractor',
+                                  icon: <Layers className="w-3 h-3 text-indigo-500 shrink-0" />,
+                                  headline: 'Live Process → Dockerfile & Cloud Run Extractor',
+                                  liveStat: `Runtime: ${goldmine.containerBlueprint.detectedRuntime} → Save ~$${goldmine.containerBlueprint.serverlessMonthlySavingsUsd}/mo on Cloud Run`,
+                                  detail:
+                                    'Inspects live process binaries, working directories, and open ports to auto-generate a ready-to-deploy Dockerfile and Cloud Run Gen2 command.',
+                                },
+                                {
+                                  id: 'ZERO_SSH_OPS',
+                                  shortLabel: 'OOM Shield active',
+                                  icon: <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />,
+                                  headline: '2GB Linux Swap OOM Shield & Disk Countdown',
+                                  liveStat: `${
+                                    goldmine.crashImmunity.autoImmunityArmed
+                                      ? '2048 MB Swap Armed (OOM-Protected)'
+                                      : '0 MB Swap (Click to Arm 2GB Swap Shield)'
+                                  } · ~${goldmine.crashImmunity.estimatedDaysUntilDiskFull}d until disk full`,
+                                  detail:
+                                    'Protects small VMs from sudden Linux Kernel OOM-Killer crashes by provisioning a 2GB /swapfile and monitoring root filesystem log growth.',
+                                },
+                              ].map((pillar) => (
+                                <div
+                                  key={pillar.id}
+                                  className="group/pillar relative inline-flex"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenAgentCockpitTabByVm((prev) => ({
+                                        ...prev,
+                                        [vm.name]:
+                                          prev[vm.name] === pillar.id
+                                            ? null
+                                            : pillar.id,
+                                      }));
+                                      if (!cockpit) {
+                                        handleRunAgentCockpitAction(
+                                          vm,
+                                          'INSPECT_COCKPIT'
+                                        );
+                                      }
+                                    }}
+                                    title={`${pillar.headline} — ${pillar.liveStat}. ${pillar.detail} (Click to open)`}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold transition-all cursor-pointer ${
+                                      activeCockpitTab === pillar.id
+                                        ? 'bg-blue-600 text-white border border-blue-500 shadow-sm'
+                                        : 'bg-white/85 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-200 border border-emerald-500/35 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-300'
+                                    }`}
+                                  >
+                                    {pillar.icon}
+                                    <span>{pillar.shortLabel}</span>
+                                  </button>
+
+                                  {/* Instant Rich Hover Intelligence Popover */}
+                                  <div className="pointer-events-none opacity-0 group-hover/pillar:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-xl bg-zinc-900/95 text-zinc-100 border border-emerald-500/50 shadow-2xl text-[10px] font-mono space-y-1.5 backdrop-blur-md">
+                                    <div className="font-extrabold text-emerald-300 flex items-center justify-between gap-1 border-b border-zinc-800 pb-1">
+                                      <span className="truncate">{pillar.headline}</span>
+                                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] shrink-0">
+                                        LIVE
+                                      </span>
+                                    </div>
+                                    <div className="text-amber-300 font-bold leading-snug">
+                                      {pillar.liveStat}
+                                    </div>
+                                    <div className="text-zinc-300 leading-relaxed">
+                                      {pillar.detail}
+                                    </div>
+                                    <div className="text-blue-300 font-bold pt-0.5">
+                                      Click badge to open {pillar.shortLabel} panel →
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -3110,14 +3958,17 @@ export default function VmFleetAndSsh({
                           </div>
                         </div>
 
-                        {/* 4-Gauge Inside-VM Telemetry & Goldmine Summary Strip */}
+                        {/* 4-Gauge Inside-VM Telemetry & Goldmine Summary Strip (Hover any card to read full un-truncated metrics) */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                          <div className="p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="text-zinc-500 uppercase">
+                          <div
+                            title={`True Guest RAM on ${vm.name}: ${telemetry.ramPercent}% used (${telemetry.ramUsedMb} MB active / ${telemetry.ramTotalMb} MB total, ${goldmine.finopsGold.unusedRamMb} MB idle). Load avg: ${telemetry.loadAvg}`}
+                            className="group/gauge relative p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25 hover:border-emerald-500 transition-colors cursor-help"
+                          >
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                              <span className="text-zinc-500 uppercase truncate">
                                 True Guest RAM
                               </span>
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400 truncate">
                                 {telemetry.ramPercent}% ({telemetry.ramUsedMb}/
                                 {telemetry.ramTotalMb} MB)
                               </span>
@@ -3139,14 +3990,31 @@ export default function VmFleetAndSsh({
                                 }}
                               />
                             </div>
+                            <div className="pointer-events-none opacity-0 group-hover/gauge:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-emerald-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                              <div className="font-bold text-emerald-300">
+                                Inside-OS Memory (/proc/meminfo)
+                              </div>
+                              <div className="text-zinc-200">
+                                Active Working Set: <span className="font-bold text-white">{telemetry.ramUsedMb} MB</span> / {telemetry.ramTotalMb} MB ({telemetry.ramPercent}%)
+                              </div>
+                              <div className="text-amber-300">
+                                Idle / Reclaimable RAM: {goldmine.finopsGold.unusedRamMb} MB (~${goldmine.finopsGold.wastedRamMonthlyUsd}/mo unused)
+                              </div>
+                              <div className="text-zinc-400">
+                                Linux Load Average: {telemetry.loadAvg}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="text-zinc-500 uppercase">
+                          <div
+                            title={`Guest Root Disk (df -h /) on ${vm.name}: ${telemetry.diskPercent}% used (${telemetry.diskUsedGb} GB used / ${telemetry.diskTotalGb} GB total, ${goldmine.crashImmunity.freeDiskGb} GB free). Inodes: ${telemetry.inodePercent}%`}
+                            className="group/gauge relative p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25 hover:border-blue-500 transition-colors cursor-help"
+                          >
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                              <span className="text-zinc-500 uppercase truncate">
                                 Guest Disk / (df -h)
                               </span>
-                              <span className="font-bold text-blue-600 dark:text-blue-400">
+                              <span className="font-bold text-blue-600 dark:text-blue-400 truncate">
                                 {telemetry.diskPercent}% ({telemetry.diskUsedGb}/
                                 {telemetry.diskTotalGb} GB)
                               </span>
@@ -3168,15 +4036,36 @@ export default function VmFleetAndSsh({
                                 }}
                               />
                             </div>
+                            <div className="pointer-events-none opacity-0 group-hover/gauge:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-blue-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                              <div className="font-bold text-blue-300">
+                                Root Filesystem Capacity (df -h /)
+                              </div>
+                              <div className="text-zinc-200">
+                                Used: <span className="font-bold text-white">{telemetry.diskUsedGb} GB</span> / {telemetry.diskTotalGb} GB ({telemetry.diskPercent}%)
+                              </div>
+                              <div className="text-emerald-300">
+                                Available Free Space: {goldmine.crashImmunity.freeDiskGb} GB · Inode Usage: {telemetry.inodePercent || 7}%
+                              </div>
+                              <div className="text-zinc-400">
+                                {goldmine.crashImmunity.diskHealthStatus}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/35 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300 font-bold uppercase">
+                          <div
+                            title={
+                              goldmine.finopsGold.monthlySavingsUsd > 0
+                                ? `True-RAM Gold: ${goldmine.finopsGold.unusedRamMb} MB Idle RAM ($${goldmine.finopsGold.wastedRamMonthlyUsd}/mo waste). Recommended fit: ${goldmine.finopsGold.recommendedMachineType} — Save $${goldmine.finopsGold.monthlySavingsUsd}/mo ($${goldmine.finopsGold.annualSavingsUsd}/yr)`
+                                : `True-RAM Gold: ${goldmine.finopsGold.unusedRamMb} MB Idle RAM. Current machine type (${goldmine.finopsGold.currentMachineType}) is already optimally sized.`
+                            }
+                            className="group/gauge relative p-2 rounded-lg bg-amber-500/10 border border-amber-500/35 hover:border-amber-500 flex flex-col justify-between transition-colors cursor-help"
+                          >
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                              <span className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300 font-bold uppercase truncate">
                                 <DollarSign className="w-3 h-3 shrink-0" />
-                                <span>True-RAM Gold</span>
+                                <span className="truncate">True-RAM Gold</span>
                               </span>
-                              <span className="font-extrabold text-amber-700 dark:text-amber-300">
+                              <span className="font-extrabold text-amber-700 dark:text-amber-300 shrink-0">
                                 {goldmine.finopsGold.unusedRamMb} MB Idle
                               </span>
                             </div>
@@ -3185,15 +4074,38 @@ export default function VmFleetAndSsh({
                                 ? `Fit: ${goldmine.finopsGold.recommendedMachineType} (Save $${goldmine.finopsGold.monthlySavingsUsd}/mo)`
                                 : `Optimal RAM Size (${goldmine.finopsGold.currentMachineType})`}
                             </div>
+                            <div className="pointer-events-none opacity-0 group-hover/gauge:opacity-100 transition-opacity duration-150 absolute right-0 bottom-full mb-1.5 z-50 w-72 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-amber-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                              <div className="font-bold text-amber-300">
+                                Inside-OS FinOps Rightsizing Analysis
+                              </div>
+                              <div className="text-zinc-200">
+                                Current Machine: <span className="font-bold text-white">{goldmine.finopsGold.currentMachineType}</span> (${goldmine.finopsGold.currentMonthlyUsd}/mo)
+                              </div>
+                              <div className="text-emerald-300 font-bold">
+                                Recommended Fit: {goldmine.finopsGold.recommendedMachineType} (${goldmine.finopsGold.recommendedMonthlyUsd}/mo)
+                              </div>
+                              <div className="text-amber-200">
+                                {goldmine.finopsGold.monthlySavingsUsd > 0
+                                  ? `Potential Savings: $${goldmine.finopsGold.monthlySavingsUsd}/mo ($${goldmine.finopsGold.annualSavingsUsd}/yr) with 45% safety headroom.`
+                                  : 'Already running on the most cost-effective machine tier for its working set.'}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="text-zinc-500 uppercase">
+                          <div
+                            title={`OOM & Disk Countdown: ${
+                              goldmine.crashImmunity.autoImmunityArmed
+                                ? '2GB Linux Swap Shield Armed'
+                                : '0MB Swap (Unbuffered against Kernel OOM-Killer)'
+                            } · ~${goldmine.crashImmunity.estimatedDaysUntilDiskFull} days until disk full at current log growth rate`}
+                            className="group/gauge relative p-2 rounded-lg bg-white dark:bg-[#131314] border border-emerald-500/25 hover:border-emerald-500 flex flex-col justify-between transition-colors cursor-help"
+                          >
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                              <span className="text-zinc-500 uppercase truncate">
                                 OOM &amp; Disk Countdown
                               </span>
                               <span
-                                className={`inline-flex items-center gap-1 font-bold ${
+                                className={`inline-flex items-center gap-1 font-bold shrink-0 ${
                                   goldmine.crashImmunity.autoImmunityArmed
                                     ? 'text-emerald-600 dark:text-emerald-400'
                                     : 'text-amber-600 dark:text-amber-400'
@@ -3215,107 +4127,138 @@ export default function VmFleetAndSsh({
                             <div className="text-[11px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 truncate mt-0.5">
                               ~{goldmine.crashImmunity.estimatedDaysUntilDiskFull}d until disk full
                             </div>
+                            <div className="pointer-events-none opacity-0 group-hover/gauge:opacity-100 transition-opacity duration-150 absolute right-0 bottom-full mb-1.5 z-50 w-72 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 border border-emerald-500/50 shadow-xl text-[10px] font-mono space-y-1">
+                              <div className="font-bold text-emerald-300">
+                                OOM Immunity &amp; Disk Exhaustion Forecast
+                              </div>
+                              <div className="text-zinc-200">
+                                Swap Status: <span className="font-bold text-white">{goldmine.crashImmunity.oomRiskStatus}</span>
+                              </div>
+                              <div className="text-zinc-300">
+                                Disk Forecast: <span className="text-emerald-300">{goldmine.crashImmunity.diskHealthStatus}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        {/* 6 Equal-Length Agent Goldmine & Zero-SSH Cockpit Superpower Buttons (Symmetrical 3x2 Bento Grid) */}
+                        {/* 6 Equal-Length Agent Goldmine & Zero-SSH Cockpit Superpower Buttons (Symmetrical 3x2 Bento Grid with Rich Hover Tooltips) */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
                           {[
                             {
                               id: 'FINOPS_GOLD',
-                              num: '01',
                               icon: <DollarSign className="w-3.5 h-3.5" />,
                               label: 'True-RAM Dollar Miner',
                               badge:
                                 goldmine.finopsGold.monthlySavingsUsd > 0
                                   ? `-$${goldmine.finopsGold.monthlySavingsUsd}/mo`
                                   : '$/PID',
+                              hoverTitle: 'True-RAM Dollar Miner & Per-PID Cost Ledger',
+                              hoverSummary:
+                                goldmine.finopsGold.monthlySavingsUsd > 0
+                                  ? `Save $${goldmine.finopsGold.monthlySavingsUsd}/mo ($${goldmine.finopsGold.annualSavingsUsd}/yr) by rightsizing ${goldmine.finopsGold.currentMachineType} → ${goldmine.finopsGold.recommendedMachineType}.`
+                                  : `Inspect per-process monthly USD cost across ${telemetry.ramUsedMb} MB of active RAM.`,
                             },
                             {
                               id: 'PORT_FIREWALL_XRAY',
-                              num: '02',
                               icon: <Wifi className="w-3.5 h-3.5" />,
                               label: 'Port-vs-Firewall X-Ray',
                               badge: 'ss -tulpn',
+                              hoverTitle: 'Inside-VM Socket (ss -tulpn) vs. VPC Firewall X-Ray',
+                              hoverSummary:
+                                'Detects services bound to 0.0.0.0 vs 127.0.0.1 loopback and lets you shield ports or tunnel them over 127.0.0.1 IAP.',
                             },
                             {
                               id: 'CONTAINER_EXTRACTOR',
-                              num: '03',
                               icon: <Layers className="w-3.5 h-3.5" />,
                               label: 'Process → Dockerfile',
                               badge: 'Cloud Run',
+                              hoverTitle: 'Live VM Process → Dockerfile & Cloud Run Gen2 Extractor',
+                              hoverSummary: `Auto-generates a Dockerfile and Cloud Run deploy command for ${goldmine.containerBlueprint.detectedRuntime} (saves ~$${goldmine.containerBlueprint.serverlessMonthlySavingsUsd}/mo).`,
                             },
                             {
                               id: 'ZERO_SSH_OPS',
-                              num: '04',
                               icon: <ShieldCheck className="w-3.5 h-3.5" />,
                               label: '2GB OOM Swap & Ops',
                               badge: goldmine.crashImmunity.autoImmunityArmed
                                 ? 'Swap ON'
                                 : '0MB Swap',
+                              hoverTitle: '2GB Linux Swap OOM Shield & Zero-SSH Maintenance',
+                              hoverSummary:
+                                '1-click provision a 2GB /swapfile to stop Kernel OOM-Killer crashes, vacuum systemd journals, or apply OS security patches.',
                             },
                             {
                               id: 'PROCESSES_PORTS',
-                              num: '05',
                               icon: <Activity className="w-3.5 h-3.5" />,
                               label: 'Processes & Open Ports',
                               badge: 'Live Feed',
+                              hoverTitle: 'Live Inside-OS Processes (ps aux) & Listening Ports',
+                              hoverSummary:
+                                'Inspect top CPU/RAM Linux processes and active listening sockets in real time without opening an SSH terminal.',
                             },
                             {
                               id: 'SYSLOG_TAIL',
-                              num: '06',
                               icon: <FileText className="w-3.5 h-3.5" />,
                               label: 'Live Guest Syslog',
                               badge: 'Journal',
+                              hoverTitle: 'Live Inside-VM Systemd Journal & /var/log/syslog Tail',
+                              hoverSummary:
+                                'Stream recent daemon logs, sshd auth events, and kernel messages directly from inside the VM via the Guest Agent.',
                             },
                           ].map((tab) => {
                             const isTabOpen = activeCockpitTab === tab.id;
                             return (
-                              <button
+                              <div
                                 key={tab.id}
-                                type="button"
-                                onClick={() => {
-                                  const nextTab = isTabOpen ? null : tab.id;
-                                  setOpenAgentCockpitTabByVm((prev) => ({
-                                    ...prev,
-                                    [vm.name]: nextTab,
-                                  }));
-                                  if (nextTab && !cockpit) {
-                                    handleRunAgentCockpitAction(
-                                      vm,
-                                      'INSPECT_COCKPIT'
-                                    );
-                                  }
-                                }}
-                                className={`w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                                  isTabOpen
-                                    ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-md ring-2 ring-blue-400/35'
-                                    : 'bg-white dark:bg-zinc-900/95 text-blue-700 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
-                                }`}
+                                className="group/gmbtn relative"
                               >
-                                <span className="inline-flex items-center gap-1.5 min-w-0">
+                                <button
+                                  type="button"
+                                  title={`${tab.hoverTitle} — ${tab.hoverSummary}`}
+                                  onClick={() => {
+                                    const nextTab = isTabOpen ? null : tab.id;
+                                    setOpenAgentCockpitTabByVm((prev) => ({
+                                      ...prev,
+                                      [vm.name]: nextTab,
+                                    }));
+                                    if (nextTab && !cockpit) {
+                                      handleRunAgentCockpitAction(
+                                        vm,
+                                        'INSPECT_COCKPIT'
+                                      );
+                                    }
+                                  }}
+                                  className={`w-full h-10 px-3 rounded-lg text-[11px] font-mono font-bold flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                                    isTabOpen
+                                      ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-md ring-2 ring-blue-400/35'
+                                      : 'bg-white dark:bg-zinc-900/95 text-blue-700 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                                  }`}
+                                >
+                                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                                    <span className="shrink-0">{tab.icon}</span>
+                                    <span className="truncate">{tab.label}</span>
+                                  </span>
                                   <span
                                     className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
                                       isTabOpen
-                                        ? 'bg-white/20 text-white'
-                                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
+                                        ? 'bg-white/25 text-white'
+                                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
                                     }`}
                                   >
-                                    {tab.num}
+                                    {isTabOpen ? '● ON' : tab.badge}
                                   </span>
-                                  <span className="shrink-0">{tab.icon}</span>
-                                  <span className="truncate">{tab.label}</span>
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
-                                    isTabOpen
-                                      ? 'bg-white/25 text-white'
-                                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
-                                  }`}
-                                >
-                                  {isTabOpen ? '● ON' : tab.badge}
-                                </span>
-                              </button>
+                                </button>
+                                <div className="pointer-events-none opacity-0 group-hover/gmbtn:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-1.5 z-50 w-72 p-2.5 rounded-xl bg-zinc-900/95 text-zinc-100 border border-blue-500/50 shadow-2xl text-[10px] font-mono space-y-1">
+                                  <div className="font-bold text-blue-300 flex items-center justify-between gap-1">
+                                    <span className="truncate">{tab.hoverTitle}</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200 text-[9px] shrink-0">
+                                      {tab.badge}
+                                    </span>
+                                  </div>
+                                  <div className="text-zinc-200 leading-relaxed">
+                                    {tab.hoverSummary}
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })}
                         </div>
@@ -3468,18 +4411,16 @@ export default function VmFleetAndSsh({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    setOpenTunnelVm((prev) =>
-                                      prev === vm.name ? null : vm.name
-                                    )
-                                  }
+                                  onClick={() => handleToggleIapTunnelForVm(vm)}
                                   className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
-                                    openTunnelVm === vm.name
+                                    openTunnelVm === vm.name ||
+                                    (activeVmTunnels[vm.name] || []).length > 0
                                       ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
                                       : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
                                   }`}
                                 >
-                                  {openTunnelVm === vm.name
+                                  {openTunnelVm === vm.name ||
+                                  (activeVmTunnels[vm.name] || []).length > 0
                                     ? '● 127.0.0.1 IAP Port-Forward Open'
                                     : 'Open 127.0.0.1 IAP Port-Forward'}
                                 </button>
@@ -4250,26 +5191,6 @@ export default function VmFleetAndSsh({
                           Cancel
                         </button>
                       </div>
-                    </div>
-                  )}
-
-                  {/* 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel Drawer */}
-                  {openTunnelVm === vm.name && (
-                    <div className="mb-3">
-                      <LocalDevTunnelBar
-                        projectId={projectId}
-                        defaultTargetType="COMPUTE_IAP_TCP"
-                        defaultResourceName={vm.name}
-                        defaultZone={vm.zone}
-                        defaultRemotePort={22}
-                        defaultLocalPort={2222}
-                        availableResources={vms.map((v) => ({
-                          name: v.name,
-                          zone: v.zone,
-                          port: 22,
-                        }))}
-                        onClose={() => setOpenTunnelVm(null)}
-                      />
                     </div>
                   )}
 

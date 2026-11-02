@@ -45,6 +45,8 @@ export default function LocalDevTunnelBar({
   defaultLocalPort = 8085,
   defaultDbEngine = 'POSTGRES',
   availableResources = [], // [{ name, region, zone, port, dbEngine, isPublic }]
+  refreshNonce = 0,
+  onTunnelsChange,
   onShowToast,
   onClose,
 }) {
@@ -90,17 +92,21 @@ export default function LocalDevTunnelBar({
       const res = await axios.get(
         `/api/project/${encodeURIComponent(projectId)}/tunnels`
       );
-      setTunnelsData(res.data || { activeCount: 0, tunnels: [] });
+      const data = res.data || { activeCount: 0, tunnels: [] };
+      setTunnelsData(data);
+      if (onTunnelsChange) {
+        onTunnelsChange(data.tunnels || []);
+      }
     } catch {
       // ignore silent poll errors
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, onTunnelsChange]);
 
   useEffect(() => {
     fetchTunnels();
-  }, [fetchTunnels]);
+  }, [fetchTunnels, refreshNonce]);
 
   const handleCopy = (text, key) => {
     navigator.clipboard?.writeText(text);
@@ -235,7 +241,7 @@ export default function LocalDevTunnelBar({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
           <div>
             <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
-              1. Tunnel Engine Mode
+              Tunnel Engine Mode
             </label>
             <select
               value={targetType}
@@ -269,7 +275,7 @@ export default function LocalDevTunnelBar({
 
           <div>
             <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
-              2. Target Resource Name
+              Target Resource Name
             </label>
             {availableResources.length > 0 ? (
               <select
@@ -305,7 +311,7 @@ export default function LocalDevTunnelBar({
 
           <div>
             <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
-              3. {targetType === 'COMPUTE_IAP_TCP' ? 'GCP Zone' : 'GCP Region'}
+              {targetType === 'COMPUTE_IAP_TCP' ? 'GCP Zone' : 'GCP Region'}
             </label>
             <input
               type="text"
@@ -361,24 +367,45 @@ export default function LocalDevTunnelBar({
           </div>
         </div>
 
-        {/* Preset Port Chips */}
+        {/* Preset Port Chips (1-Click Bind & Launch) */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="text-[10px] font-mono text-zinc-500">
-            Quick Port Presets:
+          <span className="text-[10px] font-mono font-bold text-zinc-500">
+            1-Click Bind Port Presets:
           </span>
-          {presets.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => {
-                setPreferredLocalPort(p.localPort);
-                setRemotePort(p.remotePort);
-              }}
-              className="px-2 py-0.5 rounded bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono cursor-pointer"
-            >
-              {p.label}
-            </button>
-          ))}
+          {presets.map((p) => {
+            const isPresetActive =
+              Number(preferredLocalPort) === p.localPort &&
+              Number(remotePort) === p.remotePort;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                disabled={starting}
+                onClick={() => {
+                  setPreferredLocalPort(p.localPort);
+                  setRemotePort(p.remotePort);
+                  if (resourceName.trim()) {
+                    handleStartTunnel({
+                      targetType,
+                      resourceName: resourceName.trim(),
+                      region,
+                      zone,
+                      remotePort: p.remotePort,
+                      preferredLocalPort: p.localPort,
+                      dbEngine,
+                    });
+                  }
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                  isPresetActive
+                    ? 'bg-blue-600 text-white border border-blue-500 shadow-2xs'
+                    : 'bg-white dark:bg-zinc-950 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/40 hover:border-blue-500'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
