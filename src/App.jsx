@@ -498,6 +498,25 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Compute Engine Snapshot Deletion (/vms/:vmName/snapshots/:snapshotName)
+    const vmSnapDeleteMatch = rawUrl.match(/\/vms\/([^/]+)\/snapshots\/([^/?]+)/);
+    if (vmSnapDeleteMatch) {
+      const vmName = decodeURIComponent(vmSnapDeleteMatch[1]);
+      const snapName = decodeURIComponent(vmSnapDeleteMatch[2]);
+      return {
+        title: `Permanently Delete Compute Engine Snapshot "${snapName}"?`,
+        resourceKind: 'Compute Engine Persistent Disk Snapshot (compute.googleapis.com/v1)',
+        targetName: snapName,
+        location: `Global Snapshot (Source VM: ${vmName})`,
+        projectId,
+        method: 'DELETE SNAPSHOT',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Snapshot "${snapName}"`,
+        cancelToast: `Deletion of snapshot "${snapName}" cancelled.`,
+        impactWarning: `This permanently deletes disk snapshot "${snapName}" from project "${projectId}". Your running VM "${vmName}" and its boot disk are NOT affected.`,
+      };
+    }
+
     // Fallback for any other HTTP DELETE endpoint
     return {
       title: 'Confirm Permanent Resource Deletion',
@@ -1245,6 +1264,14 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/billing-guardian/sync-console-credits') ||
       rawUrl.includes('/billing-guardian/reset-console-credits') ||
       (rawUrl.includes('/vms/') && rawUrl.endsWith('/ssh')) ||
+      rawUrl.includes('/scp/') ||
+      rawUrl.includes('/snapshots/create') ||
+      rawUrl.includes('/snapshots/clone-vm') ||
+      rawUrl.includes('/fleet-radar/schedule') ||
+      (rawUrl.includes('/cloudrun-bridge/action') &&
+        ['PROBE_FROM_VM', 'UPDATE_SCALING'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
       (rawUrl.includes('/vms/') &&
         rawUrl.endsWith('/agent-cockpit') &&
         String(body.action || 'INSPECT_COCKPIT').toUpperCase() ===

@@ -857,3 +857,25 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - Adjust **Lakehouse Storage (`10 TB`–`1,000 TB`)** and **Monthly Spark / Vertex AI Read Volume (`0 TB`–`500 TB/mo`)** sliders to dynamically compute monthly TCO (including the `$1.10/TB` BigQuery Storage Read API fee on closed Capacitor tables vs. `$0.00` on Open Iceberg Parquet).
      - Execute 1-click live table provisioning (`open_iceberg_events` or `capacitor_warehouse_events`), open tailored DDL/CLI blueprints, or click **`Audit Bucket IAM`** to automatically execute `gcloud storage buckets get-iam-policy` in Cloud Shell (`DIRECT_REST_BRIDGE (storage.googleapis.com/storage/v1/b/iam)`) with a live `[BIGLAKE ZERO-TRUST IAM AUDIT]` verdict.
 
+### 73. 100X Compute Engine VM Fleet & SFTP Enterprise Suite — Unified SFTP-Priority Disk Telemetry, Inode-Deduplicated Disk Hotspot Analyzer, Direct VM $\to$ GCS Backup Streamer, 1-Click Snapshots & Cross-Zone Clone, Cloud Run v2 $\leftrightarrow$ VM Bridge & Multi-Project Fleet Radar (`src/components/VmFleetAndSsh.jsx`, `src/components/XtermWebSshTerminal.jsx` & `server/index.js`)
+- **Where to find it**:
+  - Open **`VM Fleet & SSH`** (`VM_FLEET_SSH`):
+    - Top Fleet Header: **`Multi-Project Fleet Radar`** button & drawer.
+    - Every VM Card: **`Snapshots & Clone`** and **`Cloud Run v2 Bridge`** buttons & drawers, plus unified **`Boot Disk Usage`** bar (`SFTP Live df -h` prioritized over GCE Agent telemetry).
+    - Inside **`SCP / SFTP Files`** (`XtermWebSshTerminal.jsx`): **`Disk Hotspots (du -B1)`** and **`Backup VM -> GCS`** buttons & drawers.
+- **Why We Built This**:
+  - Standard Compute Engine VM consoles require the GCE Guest Agent / Ops Agent to report disk space and give zero visibility into *which* folders or files are consuming the boot disk, no 1-click streaming backup from a VM folder to Cloud Storage, no inline cross-zone VM cloning from snapshots, no inside-VM network latency probe to Cloud Run v2 services, and no unified multi-project fleet radar with automated GCE Instance Schedules.
+- **How It Works**:
+  1. **Unified SFTP-Priority Boot Disk Telemetry (`liveVmDiskUsageCache` + `handleSyncLiveDiskUsageFromSftp`)**:
+     - Prioritizes live `SSH2`/`SFTP` `df -B1 --output=size,used,avail /` telemetry (`vm.liveDiskUsage`) first on every VM card so exact disk usage is always shown even when the GCE Guest Agent is not installed.
+  2. **Pillar 1 — Inode-Deduplicated SFTP Disk Hotspot Analyzer & Direct VM $\to$ GCS `.tar.gz` Streamer (`GET /api/project/:id/vms/:vmName/scp/disk-analyzer` & `POST /scp/backup-to-gcs`)**:
+     - Executes a single-pass `find -xdev -type f -printf '%i\t%k\t%p\n'` scan over `SSH2` that deduplicates hardlinks by inode (`%i`) and uses true allocated 1K blocks (`%k`) so sparse files (such as `/var/log/lastlog`) and `/var/lib/snapd` hardlinks are never inflated.
+     - Streams any VM directory as a `.tar.gz` archive over `SSH2`, computes its SHA-256 digest, optionally auto-creates the target GCS bucket, and uploads directly to `storage.googleapis.com/upload/storage/v1/b/:bucket/o?uploadType=media`.
+  3. **Pillar 2 — 1-Click Compute Engine Persistent Disk Snapshot & Cross-Zone Clone Time-Machine (`GET / POST / DELETE /api/project/:id/vms/:vmName/snapshots*`)**:
+     - Lists attached VM disks and global project snapshots (`compute.googleapis.com/compute/v1/projects/:id/global/snapshots`), creates live crash-consistent boot disk snapshots (`disks.createSnapshot`), and clones a new Compute Engine VM from any `READY` snapshot into the same or any target GCE zone (`instances.insert` from `sourceSnapshot`).
+  4. **Pillar 3 — Cloud Run v2 $\leftrightarrow$ VM Live Enterprise Bridge (`GET / POST /api/project/:id/vms/:vmName/cloudrun-bridge*`)**:
+     - Lists live Cloud Run v2 services (`run.googleapis.com/v2/projects/:id/locations/-/services`), executes inside-VM `SSH2` `curl` probes (with optional `gcloud auth print-identity-token` IAM Bearer authentication) to measure real VM $\to$ Cloud Run TCP/TLS/total latency, and toggles `minInstanceCount` (`0` $\leftrightarrow$ `1`) cold-start warming via `PATCH run.googleapis.com/v2`.
+  5. **Pillar 4 — Multi-Project Enterprise Fleet Radar & GCE Instance Schedule (`GET / POST /api/project/:id/vms/fleet-radar*`)**:
+     - Dynamically discovers all accessible `ACTIVE` GCP projects (`cloudresourcemanager.googleapis.com/v1/projects`) and scans their Compute Engine VMs, Cloud Run v2 services, and Cloud Storage buckets in parallel—with 1-click creation and attachment of regional Compute Engine `instanceSchedulePolicy` (`resourcePolicies`) cron start/stop schedules.
+
+

@@ -4191,6 +4191,1256 @@ else:
   }
 });
 
+// ============================================================================
+// ENTERPRISE PILLAR 1: REAL SFTP DISK HOTSPOT ANALYZER (du -B1) & DIRECT VM -> GCS BUCKET BACKUP
+// ============================================================================
+app.get('/api/project/:projectId/vms/:vmName/scp/disk-analyzer', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const zone = String(req.query.zone || '').trim();
+  const targetPath = String(req.query.path || '/').trim() || '/';
+  const rawUsername = req.query.username || '';
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername,
+      token,
+    });
+    const effectiveZone = target.zone || zone;
+    if (target.vmStatus !== 'RUNNING') {
+      return res.status(400).json({
+        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM to analyze live disk usage.`,
+      });
+    }
+
+    const pyDiskAnalyzer = `
+import os, sys, subprocess, json, heapq
+
+req_path = sys.argv[1] if len(sys.argv) > 1 else '/'
+if req_path == '~' or req_path.startswith('~/'):
+    req_path = os.path.expanduser(req_path)
+abs_path = os.path.abspath(req_path)
+if not os.path.exists(abs_path):
+    abs_path = '/'
+
+sv = os.statvfs(abs_path)
+total_b = int(sv.f_frsize * sv.f_blocks)
+free_b = int(sv.f_frsize * sv.f_bavail)
+used_b = max(0, total_b - int(sv.f_frsize * sv.f_bfree))
+pct = round((used_b / total_b) * 100, 1) if total_b > 0 else 0
+
+q_path = json.dumps(abs_path)
+scan_cmd = "sudo -n find " + q_path + " -xdev -type f -printf '%i\\\\t%k\\\\t%p\\\\n' 2>/dev/null"
+p = subprocess.run(['bash', '-c', scan_cmd], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=18)
+raw_lines = (p.stdout or '').splitlines()
+if not raw_lines:
+    scan_cmd2 = "find " + q_path + " -xdev -type f -printf '%i\\\\t%k\\\\t%p\\\\n' 2>/dev/null"
+    p2 = subprocess.run(['bash', '-c', scan_cmd2], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=18)
+    raw_lines = (p2.stdout or '').splitlines()
+
+prefix = '/' if abs_path == '/' else (abs_path.rstrip('/') + '/')
+prefix_len = len(prefix)
+folder_totals = {}
+top_files_heap = []
+seen_inodes = set()
+
+for line in raw_lines:
+    parts = line.split(chr(9), 2)
+    if len(parts) != 3 or not parts[1].strip().isdigit():
+        continue
+    ino = parts[0].strip()
+    if ino in seen_inodes:
+        continue
+    seen_inodes.add(ino)
+    sz = int(parts[1].strip()) * 1024
+    fpath = parts[2]
+    if fpath.startswith(prefix):
+        rel = fpath[prefix_len:]
+        slash_idx = rel.find('/')
+        if slash_idx > 0:
+            top_dir = ('/' + rel[:slash_idx]) if abs_path == '/' else (prefix + rel[:slash_idx])
+            folder_totals[top_dir] = folder_totals.get(top_dir, 0) + sz
+    if len(top_files_heap) < 12:
+        heapq.heappush(top_files_heap, (sz, fpath))
+    elif sz > top_files_heap[0][0]:
+        heapq.heapreplace(top_files_heap, (sz, fpath))
+
+folders = []
+for fpath, sz in folder_totals.items():
+    folders.append({
+        'path': fpath,
+        'name': os.path.basename(fpath.rstrip('/')) or fpath,
+        'sizeBytes': sz,
+        'shareOfUsedPct': round((sz / max(1, used_b)) * 100, 1),
+    })
+folders.sort(key=lambda x: x['sizeBytes'], reverse=True)
+folders = folders[:12]
+
+largest_files = []
+for sz, fpath in sorted(top_files_heap, key=lambda x: x[0], reverse=True):
+    largest_files.append({
+        'path': fpath,
+        'name': os.path.basename(fpath),
+        'sizeBytes': sz,
+        'shareOfUsedPct': round((sz / max(1, used_b)) * 100, 1),
+    })
+
+print(json.dumps({
+    'analyzedPath': abs_path,
+    'diskUsage': {'totalBytes': total_b, 'usedBytes': used_b, 'freeBytes': free_b, 'usedPercent': pct},
+    'largestFolders': folders,
+    'largestFiles': largest_files,
+}))
+`;
+
+    let resultPayload = null;
+    let engineUsed = 'SSH2_SFTP_DIRECT';
+
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        const b64 = Buffer.from(pyDiskAnalyzer, 'utf8').toString('base64');
+        const cmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64}').decode('utf-8'))" ${JSON.stringify(
+          targetPath
+        )}`;
+        const rawOut = await withSftpSession(target, (_sftp, conn) => {
+          return new Promise((resolve, reject) => {
+            conn.exec(cmd, (err, stream) => {
+              if (err || !stream) return reject(err || new Error('exec failed'));
+              let out = '';
+              stream.on('data', (d) => {
+                out += d.toString();
+              });
+              stream.stderr?.on('data', () => {});
+              stream.on('close', () => resolve(out));
+            });
+          });
+        });
+        const lines = String(rawOut || '').trim().split('\n').filter(Boolean);
+        const parsed = lines.length ? JSON.parse(lines[lines.length - 1]) : null;
+        if (parsed && parsed.diskUsage) {
+          resultPayload = parsed;
+        }
+      } catch {
+        resultPayload = null;
+      }
+    }
+
+    if (!resultPayload) {
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone: effectiveZone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyDiskAnalyzer,
+        args: [targetPath],
+      });
+      engineUsed = pyRes.engineUsed;
+      const lines = pyRes.stdout.trim().split('\n');
+      resultPayload = JSON.parse(lines[lines.length - 1] || '{}');
+    }
+
+    // Fetch real Cloud Storage buckets in this project for 1-click VM -> GCS Backup
+    let buckets = [];
+    try {
+      const bRes = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+          projectId
+        )}&maxResults=50`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      buckets = (bRes.items || []).map((b) => ({
+        name: b.name,
+        location: b.location,
+        storageClass: b.storageClass || 'STANDARD',
+      }));
+    } catch {
+      buckets = [];
+    }
+
+    if (resultPayload?.diskUsage?.totalBytes > 0) {
+      const du = resultPayload.diskUsage;
+      liveVmDiskUsageCache.set(`${projectId}:${vmName}`, {
+        ...du,
+        diskUsedGb: Number((du.usedBytes / (1024 * 1024 * 1024)).toFixed(2)),
+        diskTotalGb: Number((du.totalBytes / (1024 * 1024 * 1024)).toFixed(2)),
+        diskPercent: Number(
+          du.usedPercent ?? ((du.usedBytes / du.totalBytes) * 100).toFixed(1)
+        ),
+      });
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone: effectiveZone,
+      engineUsed,
+      buckets,
+      ...resultPayload,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error: err.stderr || err.message || 'Failed to analyze VM disk hotspots.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = '',
+    username = '',
+    sourcePath = '~',
+    bucketName = '',
+    createBucketIfMissing = false,
+    location = 'US-CENTRAL1',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername: username,
+      token,
+    });
+    const effectiveZone = target.zone || zone;
+    if (target.vmStatus !== 'RUNNING') {
+      return res.status(400).json({
+        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM before streaming a backup to Cloud Storage.`,
+      });
+    }
+
+    let targetBucket = String(bucketName || '')
+      .trim()
+      .replace(/^gs:\/\//, '')
+      .replace(/\/.*$/, '');
+    if (!targetBucket) {
+      targetBucket = `${projectId}-${vmName}-backups`.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+    }
+
+    // Ensure bucket exists (or create it via real GCS JSON API if requested / missing)
+    let bucketCreated = false;
+    try {
+      await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+          targetBucket
+        )}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+    } catch {
+      if (createBucketIfMissing || !bucketName) {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            data: {
+              name: targetBucket,
+              location: String(
+                location || effectiveZone.split('-').slice(0, 2).join('-') || 'US-CENTRAL1'
+              ).toUpperCase(),
+              storageClass: 'STANDARD',
+              iamConfiguration: {
+                uniformBucketLevelAccess: { enabled: true },
+                publicAccessPrevention: 'enforced',
+              },
+            },
+            timeout: 12000,
+          }
+        );
+        bucketCreated = true;
+      } else {
+        return res.status(404).json({
+          error: `Cloud Storage bucket "gs://${targetBucket}" was not found in project "${projectId}". Enable "Auto-Create Bucket" or select an existing bucket.`,
+        });
+      }
+    }
+
+    // Stream tar.gz archive of sourcePath from the live VM over SSH2
+    const pyTarBase64 = `
+import os, sys, tarfile, io, base64, hashlib, json
+req = sys.argv[1] if len(sys.argv) > 1 else '~'
+if req == '~' or req.startswith('~/'):
+    req = os.path.expanduser(req)
+abs_p = os.path.abspath(req)
+if not os.path.exists(abs_p):
+    print(json.dumps({'error': f'Path does not exist on VM: {abs_p}'}))
+    sys.exit(0)
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode='w:gz') as tf:
+    tf.add(abs_p, arcname=os.path.basename(abs_p.rstrip('/')) or 'root')
+raw = buf.getvalue()
+if len(raw) > 45 * 1024 * 1024:
+    print(json.dumps({'error': f'Archive size ({len(raw)} bytes) exceeds 45 MB direct stream limit. Select a smaller directory.'}))
+    sys.exit(0)
+sha = hashlib.sha256(raw).hexdigest()
+print(json.dumps({
+    'ok': True,
+    'resolvedPath': abs_p,
+    'sizeBytes': len(raw),
+    'sha256': sha,
+    'b64': base64.b64encode(raw).decode('ascii')
+}))
+`;
+
+    let tarResult = null;
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        const b64Script = Buffer.from(pyTarBase64, 'utf8').toString('base64');
+        const cmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64Script}').decode('utf-8'))" ${JSON.stringify(
+          sourcePath
+        )}`;
+        const rawOut = await withSftpSession(target, (_sftp, conn) => {
+          return new Promise((resolve, reject) => {
+            conn.exec(cmd, (err, stream) => {
+              if (err || !stream) return reject(err || new Error('exec failed'));
+              let out = '';
+              stream.on('data', (d) => {
+                out += d.toString();
+              });
+              stream.stderr?.on('data', () => {});
+              stream.on('close', () => resolve(out));
+            });
+          });
+        });
+        const lines = String(rawOut || '').trim().split('\n');
+        tarResult = JSON.parse(lines[lines.length - 1] || '{}');
+      } catch {
+        tarResult = null;
+      }
+    }
+
+    if (!tarResult) {
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone: effectiveZone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyTarBase64,
+        args: [sourcePath],
+        timeoutMs: 30000,
+      });
+      const lines = pyRes.stdout.trim().split('\n');
+      tarResult = JSON.parse(lines[lines.length - 1] || '{}');
+    }
+
+    if (tarResult?.error) {
+      return res.status(400).json({ error: tarResult.error });
+    }
+
+    const archiveBuffer = Buffer.from(tarResult.b64 || '', 'base64');
+    const cleanBase =
+      path.posix
+        .basename(String(tarResult.resolvedPath || sourcePath).replace(/\/+$/, ''))
+        .replace(/[^a-zA-Z0-9._-]/g, '_') || 'home';
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const objectName = `vm-backups/${vmName}/${cleanBase}-${ts}.tar.gz`;
+
+    const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+      targetBucket
+    )}/o?uploadType=media&name=${encodeURIComponent(objectName)}`;
+    const uploadRes = await axios.post(uploadUrl, archiveBuffer, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-goog-user-project': projectId,
+        'Content-Type': 'application/gzip',
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      timeout: 30000,
+    });
+
+    const gcsObj = uploadRes.data || {};
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      bucketName: targetBucket,
+      bucketCreated,
+      objectName: gcsObj.name || objectName,
+      gcsUri: `gs://${targetBucket}/${gcsObj.name || objectName}`,
+      resolvedPath: tarResult.resolvedPath,
+      sizeBytes: Number(gcsObj.size || archiveBuffer.length),
+      sha256: tarResult.sha256,
+      md5Hash: gcsObj.md5Hash || '',
+      generation: gcsObj.generation || '',
+      createdAt: gcsObj.timeCreated || new Date().toISOString(),
+      message: `Backed up ${tarResult.resolvedPath} (${archiveBuffer.length} B) from ${vmName} to gs://${targetBucket}/${objectName}`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.stderr ||
+        err.message ||
+        'Failed to stream VM backup to Cloud Storage.',
+    });
+  }
+});
+
+// ============================================================================
+// ENTERPRISE PILLAR 2: REAL GCE PERSISTENT DISK SNAPSHOTS & CLONE TIME-MACHINE
+// ============================================================================
+app.get('/api/project/:projectId/vms/:vmName/snapshots', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const zone = String(req.query.zone || 'us-central1-a').trim();
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const [instData, snapData] = await Promise.all([
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(vmName)}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/snapshots?maxResults=100`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ items: [] })),
+    ]);
+
+    const bootDiskObj = (instData?.disks || []).find((d) => d.boot) || instData?.disks?.[0] || {};
+    const bootDiskName = String(bootDiskObj.source || '').split('/').pop() || vmName;
+    const bootDiskSizeGb = Number(bootDiskObj.diskSizeGb || 20);
+    const bootDiskType = String(bootDiskObj.type || 'PERSISTENT');
+
+    const allSnapshots = (snapData?.items || []).map((s) => {
+      const srcDiskName = String(s.sourceDisk || '').split('/').pop() || '';
+      const storageBytes = Number(s.storageBytes || 0);
+      const isForThisVm =
+        srcDiskName === bootDiskName ||
+        srcDiskName === vmName ||
+        s.labels?.source_vm === vmName;
+      return {
+        id: s.id,
+        name: s.name,
+        status: s.status || 'READY',
+        sourceDisk: srcDiskName,
+        isForThisVm,
+        belongsToVm: isForThisVm,
+        diskSizeGb: Number(s.diskSizeGb || bootDiskSizeGb),
+        storageBytes,
+        storageMb: Number((storageBytes / (1024 * 1024)).toFixed(2)),
+        storageGiB: Number((storageBytes / (1024 * 1024 * 1024)).toFixed(2)),
+        monthlyCostUsd: Number(
+          ((storageBytes / (1024 * 1024 * 1024)) * 0.05).toFixed(3)
+        ),
+        storageLocations: s.storageLocations || [],
+        creationTimestamp: s.creationTimestamp,
+        description: s.description || '',
+      };
+    });
+
+    allSnapshots.sort(
+      (a, b) =>
+        new Date(b.creationTimestamp || 0).getTime() -
+        new Date(a.creationTimestamp || 0).getTime()
+    );
+
+    const disks = (instData?.disks || []).map((d) => ({
+      name: String(d.source || '').split('/').pop() || vmName,
+      deviceName: d.deviceName || vmName,
+      sizeGb: Number(d.diskSizeGb || bootDiskSizeGb),
+      type: String(d.type || 'PERSISTENT'),
+      boot: Boolean(d.boot),
+    }));
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      bootDisk: {
+        name: bootDiskName,
+        sizeGb: bootDiskSizeGb,
+        type: bootDiskType,
+        deviceName: bootDiskObj.deviceName || bootDiskName,
+      },
+      disks,
+      snapshots: allSnapshots,
+      vmSnapshots: allSnapshots.filter((s) => s.isForThisVm),
+      allProjectSnapshots: allSnapshots,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to fetch Compute Engine disk snapshots.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/:vmName/snapshots/create', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-central1-a',
+    diskName = '',
+    snapshotName = '',
+    description = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    let targetDisk = String(diskName || '').trim();
+    if (!targetDisk) {
+      const instData = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(vmName)}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      );
+      const bootDiskObj =
+        (instData?.disks || []).find((d) => d.boot) || instData?.disks?.[0] || {};
+      targetDisk = String(bootDiskObj.source || '').split('/').pop() || vmName;
+    }
+
+    const cleanSnapName =
+      String(snapshotName || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 62) ||
+      `${vmName}-snap-${Date.now().toString().slice(-6)}`.toLowerCase();
+
+    const op = await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/zones/${encodeURIComponent(zone)}/disks/${encodeURIComponent(
+        targetDisk
+      )}/createSnapshot`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        data: {
+          name: cleanSnapName,
+          description:
+            description ||
+            `Enterprise crash-consistent snapshot of ${vmName} (${targetDisk}) in ${zone}`,
+          labels: {
+            source_vm: String(vmName).toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
+            managed_by: 'cloudpulse-enterprise',
+          },
+        },
+        timeout: 15000,
+      }
+    );
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      diskName: targetDisk,
+      snapshotName: cleanSnapName,
+      operationName: op?.name || '',
+      operationStatus: op?.status || 'RUNNING',
+      message: `Initiated live Compute Engine snapshot "${cleanSnapName}" from disk "${targetDisk}" (${zone}).`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to create Compute Engine snapshot.',
+    });
+  }
+});
+
+app.delete(
+  '/api/project/:projectId/vms/:vmName/snapshots/:snapshotName',
+  async (req, res) => {
+    const { projectId, vmName, snapshotName } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const op = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/snapshots/${encodeURIComponent(snapshotName)}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 12000 }
+      );
+
+      return res.json({
+        ok: true,
+        projectId,
+        vmName,
+        snapshotName,
+        operationName: op?.name || '',
+        message: `Deleted Compute Engine snapshot "${snapshotName}" from project "${projectId}".`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to delete snapshot "${snapshotName}".`,
+      });
+    }
+  }
+);
+
+app.post('/api/project/:projectId/vms/:vmName/snapshots/clone-vm', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    sourceZone = 'us-central1-a',
+    targetZone = '',
+    snapshotName = '',
+    cloneVmName = '',
+    machineType = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    if (!snapshotName) {
+      return res.status(400).json({ error: 'snapshotName is required to clone a VM.' });
+    }
+
+    const effectiveTargetZone = String(targetZone || sourceZone).trim();
+    const cleanCloneName =
+      String(cloneVmName || `${vmName}-clone-${Date.now().toString().slice(-4)}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 62);
+
+    const [srcInst, snapObj] = await Promise.all([
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(sourceZone)}/instances/${encodeURIComponent(vmName)}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => null),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/snapshots/${encodeURIComponent(snapshotName)}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ),
+    ]);
+
+    const resolvedMachine =
+      machineType ||
+      srcInst?.machineType?.split('/').pop() ||
+      'e2-micro';
+    const diskSizeGb = Math.max(
+      Number(snapObj?.diskSizeGb || 10),
+      Number(srcInst?.disks?.[0]?.diskSizeGb || 10)
+    );
+
+    const op = await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/zones/${encodeURIComponent(effectiveTargetZone)}/instances`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        data: {
+          name: cleanCloneName,
+          machineType: `zones/${effectiveTargetZone}/machineTypes/${resolvedMachine}`,
+          disks: [
+            {
+              boot: true,
+              autoDelete: true,
+              initializeParams: {
+                sourceSnapshot: `global/snapshots/${snapshotName}`,
+                diskSizeGb: String(diskSizeGb),
+                diskType: `zones/${effectiveTargetZone}/diskTypes/pd-balanced`,
+              },
+            },
+          ],
+          networkInterfaces: [
+            {
+              network: 'global/networks/default',
+              accessConfigs: [{ name: 'External NAT', type: 'ONE_TO_ONE_NAT' }],
+            },
+          ],
+          tags: srcInst?.tags?.items ? { items: srcInst.tags.items } : undefined,
+          labels: {
+            cloned_from_vm: vmName,
+            source_snapshot: snapshotName,
+            managed_by: 'cloudpulse-enterprise',
+          },
+        },
+        timeout: 15000,
+      }
+    );
+
+    overviewSwrCache.delete(projectId);
+    return res.json({
+      ok: true,
+      projectId,
+      sourceVm: vmName,
+      cloneVmName: cleanCloneName,
+      targetZone: effectiveTargetZone,
+      machineType: resolvedMachine,
+      snapshotName,
+      operationName: op?.name || '',
+      message: `Provisioning cloned VM "${cleanCloneName}" (${resolvedMachine}) in ${effectiveTargetZone} from snapshot "${snapshotName}".`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to clone VM from snapshot.',
+    });
+  }
+});
+
+// ============================================================================
+// ENTERPRISE PILLAR 3: REAL CLOUD RUN v2 <-> VM LIVE BRIDGE
+// ============================================================================
+app.get('/api/project/:projectId/vms/:vmName/cloudrun-bridge', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const zone = String(req.query.zone || 'us-central1-a').trim();
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const runRes = await gcpFetch(
+      `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/-/services`,
+      token,
+      projectId,
+      { timeout: 8000 }
+    ).catch(() => ({ services: [] }));
+
+    const services = (runRes?.services || []).map((svc) => {
+      const fullName = String(svc.name || '');
+      const parts = fullName.split('/');
+      const svcName = parts[parts.length - 1] || '';
+      const locIdx = parts.indexOf('locations');
+      const region = locIdx >= 0 ? parts[locIdx + 1] : 'us-central1';
+      const container = svc.template?.containers?.[0] || {};
+      const envKeys = (container.env || []).map((e) => ({
+        name: e.name,
+        isSecret: Boolean(e.valueSource?.secretKeyRef),
+      }));
+      return {
+        name: svcName,
+        region,
+        uri: svc.uri || '',
+        latestReadyRevision: String(svc.latestReadyRevision || '').split('/').pop() || '',
+        ingress: svc.ingress || 'INGRESS_TRAFFIC_ALL',
+        minInstanceCount: Number(svc.template?.scaling?.minInstanceCount || 0),
+        maxInstanceCount: Number(svc.template?.scaling?.maxInstanceCount || 100),
+        cpu: container.resources?.limits?.cpu || '1',
+        memory: container.resources?.limits?.memory || '512Mi',
+        image: container.image || '',
+        envKeys,
+        updateTime: svc.updateTime || '',
+      };
+    });
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      serviceCount: services.length,
+      services,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to query Cloud Run v2 services.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/:vmName/cloudrun-bridge/action', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-central1-a',
+    action = 'PROBE_FROM_VM',
+    serviceName = '',
+    region = 'us-central1',
+    serviceUri = '',
+    minInstanceCount = 0,
+    maxInstanceCount = 10,
+    useIdentityToken = false,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    if (action === 'UPDATE_SCALING') {
+      if (!serviceName || !region) {
+        return res.status(400).json({ error: 'serviceName and region are required.' });
+      }
+      const svcUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+      const currentSvc = await gcpFetch(svcUrl, token, projectId, { timeout: 7000 });
+      const nextMin = Math.max(0, Math.min(20, Number(minInstanceCount || 0)));
+      const nextMax = Math.max(nextMin || 1, Math.min(100, Number(maxInstanceCount || 10)));
+
+      const updatedPayload = {
+        ...currentSvc,
+        template: {
+          ...(currentSvc.template || {}),
+          scaling: {
+            ...(currentSvc.template?.scaling || {}),
+            minInstanceCount: nextMin,
+            maxInstanceCount: nextMax,
+          },
+        },
+      };
+
+      await gcpFetch(
+        `${svcUrl}?updateMask=template.scaling.minInstanceCount,template.scaling.maxInstanceCount`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          data: updatedPayload,
+          timeout: 15000,
+        }
+      );
+
+      return res.json({
+        ok: true,
+        action,
+        serviceName,
+        region,
+        minInstanceCount: nextMin,
+        maxInstanceCount: nextMax,
+        message: `Updated Cloud Run v2 service "${serviceName}" (${region}) scaling to minInstances=${nextMin}, maxInstances=${nextMax}.`,
+      });
+    }
+
+    if (action === 'PROBE_FROM_VM') {
+      if (!serviceUri || !/^https:\/\//i.test(serviceUri)) {
+        return res.status(400).json({ error: 'Valid https:// Cloud Run serviceUri is required.' });
+      }
+      const target = await resolveVmScpTarget({
+        projectId,
+        vmName,
+        zone,
+        rawUsername: '',
+        token,
+      });
+      const probeCmd = useIdentityToken
+        ? `TOKEN=$(gcloud auth print-identity-token 2>/dev/null || true); curl -sS -o /tmp/cr_probe_body -w "HTTP_STATUS:%{http_code}|TOTAL_SEC:%{time_total}|CONNECT_SEC:%{time_connect}|TLS_SEC:%{time_appconnect}|REMOTE_IP:%{remote_ip}" ${
+            '${TOKEN:+-H "Authorization: Bearer $TOKEN"}'
+          } --max-time 8 ${JSON.stringify(serviceUri)}; echo ""; head -c 350 /tmp/cr_probe_body 2>/dev/null || true`
+        : `curl -sS -o /tmp/cr_probe_body -w "HTTP_STATUS:%{http_code}|TOTAL_SEC:%{time_total}|CONNECT_SEC:%{time_connect}|TLS_SEC:%{time_appconnect}|REMOTE_IP:%{remote_ip}" --max-time 8 ${JSON.stringify(
+            serviceUri
+          )}; echo ""; head -c 350 /tmp/cr_probe_body 2>/dev/null || true`;
+
+      let rawOut = '';
+      if (target.tcp22Open && target.privateKey) {
+        rawOut = await withSftpSession(target, (_sftp, conn) => {
+          return new Promise((resolve, reject) => {
+            conn.exec(probeCmd, (err, stream) => {
+              if (err || !stream) return reject(err || new Error('exec failed'));
+              let out = '';
+              stream.on('data', (d) => {
+                out += d.toString();
+              });
+              stream.stderr?.on('data', (d) => {
+                out += d.toString();
+              });
+              stream.on('close', () => resolve(out));
+            });
+          });
+        });
+      } else {
+        const pyRes = await execRemoteVmPython({
+          projectId,
+          vmName,
+          zone: target.zone || zone,
+          sshUser: target.sshUser,
+          needIap: target.needIap,
+          pythonCode: `import subprocess,sys; p=subprocess.run(sys.argv[1], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=10); print(p.stdout)`,
+          args: [probeCmd],
+        });
+        rawOut = pyRes.stdout || '';
+      }
+
+      const lines = String(rawOut || '').trim().split('\n');
+      const metricsLine = lines.find((l) => l.includes('HTTP_STATUS:')) || '';
+      const bodyPreview = lines
+        .filter((l) => !l.includes('HTTP_STATUS:'))
+        .join('\n')
+        .slice(0, 350);
+      const kv = {};
+      metricsLine.split('|').forEach((pair) => {
+        const [k, v] = pair.split(':');
+        if (k && v !== undefined) kv[k.trim()] = v.trim();
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        vmName,
+        serviceUri,
+        httpStatus: Number(kv.HTTP_STATUS || 0),
+        totalMs: Number((Number(kv.TOTAL_SEC || 0) * 1000).toFixed(1)),
+        connectMs: Number((Number(kv.CONNECT_SEC || 0) * 1000).toFixed(1)),
+        tlsMs: Number((Number(kv.TLS_SEC || 0) * 1000).toFixed(1)),
+        remoteIp: kv.REMOTE_IP || '',
+        bodyPreview,
+        message: `Live probe from VM ${vmName} -> ${serviceUri}: HTTP ${
+          kv.HTTP_STATUS || '?'
+        } in ${(Number(kv.TOTAL_SEC || 0) * 1000).toFixed(1)} ms (${kv.REMOTE_IP || 'GCP Front-End'})`,
+      });
+    }
+
+    return res.status(400).json({ error: `Unsupported cloudrun-bridge action: ${action}` });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to execute Cloud Run bridge action.',
+    });
+  }
+});
+
+// ============================================================================
+// ENTERPRISE PILLAR 4: REAL MULTI-PROJECT FLEET RADAR & GCE INSTANCE SCHEDULES
+// ============================================================================
+app.get('/api/project/:projectId/vms/fleet-radar', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const { projects } = await fetchAllActiveGcpProjects(token, projectId);
+    const allProjects = Array.isArray(projects) ? [...projects] : [];
+    if (
+      projectId &&
+      projectId !== '_auto' &&
+      !allProjects.some((p) => p.projectId === projectId)
+    ) {
+      allProjects.unshift({ projectId, name: projectId });
+    } else if (projectId && projectId !== '_auto') {
+      allProjects.sort((a, b) =>
+        a.projectId === projectId ? -1 : b.projectId === projectId ? 1 : 0
+      );
+    }
+    const targetProjects = allProjects.slice(0, 20);
+
+    const projectSummaries = await Promise.all(
+      targetProjects.map(async (proj) => {
+        const pid = proj.projectId;
+        const [vmData, runData, bucketData] = await Promise.all([
+          gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              pid
+            )}/aggregated/instances?maxResults=100&returnPartialSuccess=true`,
+            token,
+            pid,
+            { timeout: 5500 }
+          ).catch(() => ({ items: {} })),
+          gcpFetch(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+              pid
+            )}/locations/-/services`,
+            token,
+            pid,
+            { timeout: 5500 }
+          ).catch(() => ({ services: [] })),
+          gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+              pid
+            )}&maxResults=50`,
+            token,
+            pid,
+            { timeout: 5500 }
+          ).catch(() => ({ items: [] })),
+        ]);
+
+        const vms = [];
+        Object.entries(vmData?.items || {}).forEach(([zKey, zVal]) => {
+          const zName = zKey.replace('zones/', '');
+          (zVal.instances || []).forEach((inst) => {
+            const mt = inst.machineType?.split('/').pop() || 'e2-micro';
+            const extIp =
+              inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
+            const isFreeRegion = /^(us-east1|us-central1|us-west1)-/.test(zName);
+            const monthlyComputeUsd =
+              inst.status !== 'RUNNING'
+                ? 0
+                : mt === 'e2-micro' && isFreeRegion
+                ? 0
+                : mt.includes('micro')
+                ? 6.11
+                : mt.includes('small')
+                ? 12.23
+                : mt.includes('medium')
+                ? 24.46
+                : 48.92;
+            const diskGb = Number(inst.disks?.[0]?.diskSizeGb || 10);
+            const monthlyDiskUsd = Number((diskGb * 0.1).toFixed(2));
+            vms.push({
+              projectId: pid,
+              name: inst.name,
+              zone: zName,
+              machineType: mt,
+              status: inst.status || 'RUNNING',
+              externalIp: extIp || 'None (Internal Only)',
+              internalIp: inst.networkInterfaces?.[0]?.networkIP || '',
+              diskSizeGb: diskGb,
+              monthlyEstUsd: Number((monthlyComputeUsd + monthlyDiskUsd).toFixed(2)),
+              resourcePolicies: (inst.resourcePolicies || []).map((rp) =>
+                String(rp).split('/').pop()
+              ),
+            });
+          });
+        });
+
+        const cloudRunServices = (runData?.services || []).map((s) => {
+          const parts = String(s.name || '').split('/');
+          return {
+            name: parts[parts.length - 1] || '',
+            region: parts[parts.indexOf('locations') + 1] || 'us-central1',
+            uri: s.uri || '',
+            minInstances: Number(s.template?.scaling?.minInstanceCount || 0),
+          };
+        });
+
+        const buckets = (bucketData?.items || []).map((b) => ({
+          name: b.name,
+          location: b.location,
+          storageClass: b.storageClass || 'STANDARD',
+        }));
+
+        const totalMonthlyVmUsd = Number(
+          vms.reduce((acc, v) => acc + v.monthlyEstUsd, 0).toFixed(2)
+        );
+
+        const runningVmCount = vms.filter((v) => v.status === 'RUNNING').length;
+        const stoppedVmCount = vms.length - runningVmCount;
+
+        return {
+          projectId: pid,
+          projectName: proj.name || pid,
+          displayName: proj.name || pid,
+          vmCount: vms.length,
+          runningVmCount,
+          stoppedVmCount,
+          cloudRunCount: cloudRunServices.length,
+          bucketCount: buckets.length,
+          totalMonthlyVmUsd,
+          vms,
+          cloudRunServices,
+          buckets,
+        };
+      })
+    );
+
+    projectSummaries.sort((a, b) => {
+      if (a.projectId === projectId) return -1;
+      if (b.projectId === projectId) return 1;
+      const scoreA = a.vmCount * 100 + a.cloudRunCount * 10 + a.bucketCount;
+      const scoreB = b.vmCount * 100 + b.cloudRunCount * 10 + b.bucketCount;
+      return scoreB - scoreA;
+    });
+
+    const totalVms = projectSummaries.reduce((s, p) => s + p.vmCount, 0);
+    const runningVms = projectSummaries.reduce((s, p) => s + p.runningVmCount, 0);
+    const totalCloudRunServices = projectSummaries.reduce(
+      (s, p) => s + p.cloudRunCount,
+      0
+    );
+    const totalBuckets = projectSummaries.reduce(
+      (s, p) => s + p.bucketCount,
+      0
+    );
+
+    return res.json({
+      ok: true,
+      scannedProjectCount: projectSummaries.length,
+      totalVmsAcrossEstate: totalVms,
+      totalCloudRunAcrossEstate: totalCloudRunServices,
+      totalBucketsAcrossEstate: totalBuckets,
+      totals: {
+        projectCount: projectSummaries.length,
+        totalVms,
+        runningVms,
+        stoppedVms: totalVms - runningVms,
+        totalCloudRunServices,
+        totalBuckets,
+      },
+      projects: projectSummaries,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error: err.message || 'Failed to scan multi-project fleet radar.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/fleet-radar/schedule', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    vmName = '',
+    zone = 'us-central1-f',
+    scheduleName = 'cloudpulse-business-hours',
+    vmStartSchedule = '0 8 * * 1-5',
+    vmStopSchedule = '0 20 * * 1-5',
+    timeZone = 'UTC',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    if (!vmName) return res.status(400).json({ error: 'vmName is required.' });
+
+    const region = zone.split('-').slice(0, 2).join('-') || 'us-central1';
+    const cleanPolicyName =
+      String(scheduleName || 'cloudpulse-business-hours')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .slice(0, 60);
+
+    // 1. Ensure regional GCE instanceSchedulePolicy exists
+    let policyCreated = false;
+    try {
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/regions/${encodeURIComponent(region)}/resourcePolicies/${encodeURIComponent(
+          cleanPolicyName
+        )}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      );
+    } catch {
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/regions/${encodeURIComponent(region)}/resourcePolicies`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          data: {
+            name: cleanPolicyName,
+            description: `CloudPulse Enterprise FinOps Schedule (${vmStartSchedule} start / ${vmStopSchedule} stop ${timeZone})`,
+            region,
+            instanceSchedulePolicy: {
+              timeZone,
+              vmStartSchedule: { schedule: vmStartSchedule },
+              vmStopSchedule: { schedule: vmStopSchedule },
+            },
+          },
+          timeout: 12000,
+        }
+      );
+      policyCreated = true;
+    }
+
+    // 2. Attach resourcePolicy to the VM via instances.addResourcePolicies
+    let attachedToVm = false;
+    let attachWarning = '';
+    try {
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}/addResourcePolicies`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          data: {
+            resourcePolicies: [
+              `projects/${projectId}/regions/${region}/resourcePolicies/${cleanPolicyName}`,
+            ],
+          },
+          timeout: 12000,
+        }
+      );
+      attachedToVm = true;
+    } catch (attachErr) {
+      attachWarning =
+        attachErr.response?.data?.error?.message || attachErr.message || '';
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      region,
+      policyName: cleanPolicyName,
+      policyCreated,
+      attachedToVm,
+      attachWarning,
+      vmStartSchedule,
+      vmStopSchedule,
+      timeZone,
+      message: attachedToVm
+        ? `Created & attached GCE Instance Schedule Policy "${cleanPolicyName}" (${vmStartSchedule} -> ${vmStopSchedule} ${timeZone}) to VM "${vmName}" in ${region}.`
+        : `Created GCE Instance Schedule Policy "${cleanPolicyName}" in ${region}. (${
+            attachWarning ||
+            'Note: Confirm compute.instances.start/stop permissions on Compute Engine System Service Agent to auto-attach.'
+          })`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to create or attach GCE Instance Schedule policy.',
+    });
+  }
+});
+
 // 8. POST /api/project/:projectId/vms/:vmName/ssh -> Execute real command over gcloud compute ssh OR fetch real serial port console output
 app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
   const { projectId, vmName } = req.params;

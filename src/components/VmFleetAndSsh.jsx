@@ -383,6 +383,35 @@ export default function VmFleetAndSsh({
   const [collapsedAgentSectionByVm, setCollapsedAgentSectionByVm] = useState({});
   const [hiddenVmNames, setHiddenVmNames] = useState([]);
 
+  // Enterprise Pillar 2: Live GCE Disk Snapshots & Clone Time-Machine
+  const [openSnapshotVm, setOpenSnapshotVm] = useState(null);
+  const [snapshotsByVm, setSnapshotsByVm] = useState({});
+  const [snapshotBusyVm, setSnapshotBusyVm] = useState(null);
+  const [newSnapshotName, setNewSnapshotName] = useState('');
+  const [cloneVmNameInput, setCloneVmNameInput] = useState('');
+  const [cloneTargetZone, setCloneTargetZone] = useState('');
+
+  // Enterprise Pillar 3: Live Cloud Run v2 <-> VM Enterprise Bridge
+  const [openCloudRunBridgeVm, setOpenCloudRunBridgeVm] = useState(null);
+  const [cloudRunBridgeByVm, setCloudRunBridgeByVm] = useState({});
+  const [cloudRunBridgeBusy, setCloudRunBridgeBusy] = useState('');
+  const [cloudRunProbeResultByVm, setCloudRunProbeResultByVm] = useState({});
+  const [useIamIdentityTokenForProbe, setUseIamIdentityTokenForProbe] =
+    useState(false);
+
+  // Enterprise Pillar 4: Multi-Project Fleet Radar & GCE Instance Schedules
+  const [showFleetRadar, setShowFleetRadar] = useState(false);
+  const [fleetRadarData, setFleetRadarData] = useState(null);
+  const [fleetRadarLoading, setFleetRadarLoading] = useState(false);
+  const [scheduleBusyVm, setScheduleBusyVm] = useState('');
+  const [scheduleReceiptByVm, setScheduleReceiptByVm] = useState({});
+  const [scheduleForm, setScheduleForm] = useState({
+    policyName: 'cloudpulse-business-hours',
+    startCron: '0 8 * * 1-5',
+    stopCron: '0 20 * * 1-5',
+    timeZone: 'UTC',
+  });
+
   const isVmAgentInstalled = useCallback(
     (vm) => {
       if (!vm?.name) return false;
@@ -1204,6 +1233,327 @@ export default function VmFleetAndSsh({
     handleSyncLiveDiskUsageFromSftp,
   ]);
 
+  // Enterprise Pillar 2 Handlers: Live GCE Snapshots & Clone VM
+  const fetchVmSnapshots = useCallback(
+    async (vm) => {
+      if (!vm?.name || !projectId) return;
+      setSnapshotBusyVm(vm.name);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/vms/${encodeURIComponent(vm.name)}/snapshots`,
+          { params: { zone: vm.zone || 'us-central1-a' } }
+        );
+        setSnapshotsByVm((prev) => ({
+          ...prev,
+          [vm.name]: res.data || {},
+        }));
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to load GCE disk snapshots.'
+          );
+        }
+      } finally {
+        setSnapshotBusyVm(null);
+      }
+    },
+    [projectId, onShowError]
+  );
+
+  const handleToggleSnapshotDrawer = (vm) => {
+    if (!vm?.name) return;
+    if (openSnapshotVm === vm.name) {
+      setOpenSnapshotVm(null);
+      return;
+    }
+    setOpenSnapshotVm(vm.name);
+    setCloneTargetZone(vm.zone || 'us-central1-f');
+    setCloneVmNameInput(`${vm.name}-clone`);
+    setNewSnapshotName(
+      `${vm.name}-snap-${new Date().toISOString().slice(0, 10)}`
+    );
+    fetchVmSnapshots(vm);
+  };
+
+  const handleCreateVmSnapshot = async (vm) => {
+    if (!vm?.name || !projectId) return;
+    setSnapshotBusyVm(vm.name);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/snapshots/create`,
+        {
+          zone: vm.zone || 'us-central1-a',
+          snapshotName: newSnapshotName,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message || `Created snapshot for ${vm.name}!`,
+          'success'
+        );
+      }
+      await fetchVmSnapshots(vm);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to create GCE snapshot.'
+        );
+      }
+    } finally {
+      setSnapshotBusyVm(null);
+    }
+  };
+
+  const handleDeleteVmSnapshot = async (vm, snapshotName) => {
+    if (!vm?.name || !snapshotName || !projectId) return;
+    setSnapshotBusyVm(vm.name);
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/snapshots/${encodeURIComponent(snapshotName)}`
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message || `Deleted snapshot ${snapshotName}.`,
+          'success'
+        );
+      }
+      await fetchVmSnapshots(vm);
+    } catch (err) {
+      if (!err.__cancelledByUser && onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to delete snapshot ${snapshotName}.`
+        );
+      }
+    } finally {
+      setSnapshotBusyVm(null);
+    }
+  };
+
+  const handleCloneVmFromSnapshot = async (vm, snapshotName) => {
+    if (!vm?.name || !snapshotName || !projectId) return;
+    setSnapshotBusyVm(vm.name);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/snapshots/clone-vm`,
+        {
+          sourceZone: vm.zone || 'us-central1-a',
+          targetZone: cloneTargetZone || vm.zone || 'us-central1-a',
+          snapshotName,
+          cloneVmName: cloneVmNameInput || `${vm.name}-clone`,
+          machineType: vm.machineType || 'e2-micro',
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Cloned VM ${res.data?.cloneVmName} from snapshot ${snapshotName}!`,
+          'success'
+        );
+      }
+      setTimeout(() => fetchVms(true), 2500);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to clone VM from snapshot.'
+        );
+      }
+    } finally {
+      setSnapshotBusyVm(null);
+    }
+  };
+
+  // Enterprise Pillar 3 Handlers: Live Cloud Run v2 <-> VM Enterprise Bridge
+  const fetchCloudRunBridgeForVm = useCallback(
+    async (vm) => {
+      if (!vm?.name || !projectId) return;
+      setCloudRunBridgeBusy(`list:${vm.name}`);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/vms/${encodeURIComponent(vm.name)}/cloudrun-bridge`,
+          { params: { zone: vm.zone || 'us-central1-a' } }
+        );
+        setCloudRunBridgeByVm((prev) => ({
+          ...prev,
+          [vm.name]: res.data || {},
+        }));
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to load Cloud Run v2 services.'
+          );
+        }
+      } finally {
+        setCloudRunBridgeBusy('');
+      }
+    },
+    [projectId, onShowError]
+  );
+
+  const handleToggleCloudRunBridge = (vm) => {
+    if (!vm?.name) return;
+    if (openCloudRunBridgeVm === vm.name) {
+      setOpenCloudRunBridgeVm(null);
+      return;
+    }
+    setOpenCloudRunBridgeVm(vm.name);
+    fetchCloudRunBridgeForVm(vm);
+  };
+
+  const handleProbeCloudRunFromVm = async (vm, svc) => {
+    if (!vm?.name || !svc?.uri || !projectId) return;
+    setCloudRunBridgeBusy(`probe:${svc.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/cloudrun-bridge/action`,
+        {
+          zone: vm.zone || 'us-central1-a',
+          action: 'PROBE_FROM_VM',
+          serviceName: svc.name,
+          region: svc.region,
+          serviceUri: svc.uri,
+          useIdentityToken: useIamIdentityTokenForProbe,
+        }
+      );
+      setCloudRunProbeResultByVm((prev) => ({
+        ...prev,
+        [`${vm.name}:${svc.name}`]: res.data || {},
+      }));
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message, 'success');
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to probe Cloud Run service from VM.'
+        );
+      }
+    } finally {
+      setCloudRunBridgeBusy('');
+    }
+  };
+
+  const handleUpdateCloudRunScalingFromVm = async (
+    vm,
+    svc,
+    nextMinInstances
+  ) => {
+    if (!vm?.name || !svc?.name || !projectId) return;
+    setCloudRunBridgeBusy(`scale:${svc.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/cloudrun-bridge/action`,
+        {
+          zone: vm.zone || 'us-central1-a',
+          action: 'UPDATE_SCALING',
+          serviceName: svc.name,
+          region: svc.region,
+          minInstanceCount: nextMinInstances,
+          maxInstanceCount: Math.max(nextMinInstances, svc.maxInstanceCount || 10),
+        }
+      );
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message, 'success');
+      }
+      await fetchCloudRunBridgeForVm(vm);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to update Cloud Run scaling.'
+        );
+      }
+    } finally {
+      setCloudRunBridgeBusy('');
+    }
+  };
+
+  // Enterprise Pillar 4 Handlers: Multi-Project Fleet Radar & GCE Instance Schedule
+  const handleScanMultiProjectFleetRadar = useCallback(async () => {
+    if (!projectId) return;
+    setShowFleetRadar(true);
+    setFleetRadarLoading(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vms/fleet-radar`
+      );
+      setFleetRadarData(res.data || null);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to scan multi-project fleet radar.'
+        );
+      }
+    } finally {
+      setFleetRadarLoading(false);
+    }
+  }, [projectId, onShowError]);
+
+  const handleAttachGceInstanceSchedule = async (vm, targetProjId = projectId) => {
+    if (!vm?.name || !targetProjId) return;
+    setScheduleBusyVm(`${targetProjId}:${vm.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          targetProjId
+        )}/vms/fleet-radar/schedule`,
+        {
+          vmName: vm.name,
+          zone: vm.zone || 'us-central1-f',
+          scheduleName: scheduleForm.policyName || 'cloudpulse-business-hours',
+          vmStartSchedule: scheduleForm.startCron || '0 8 * * 1-5',
+          vmStopSchedule: scheduleForm.stopCron || '0 20 * * 1-5',
+          timeZone: scheduleForm.timeZone || 'UTC',
+        }
+      );
+      setScheduleReceiptByVm((prev) => ({
+        ...prev,
+        [`${targetProjId}:${vm.name}`]: res.data || {},
+      }));
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message, 'success');
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to create/attach GCE Instance Schedule policy.'
+        );
+      }
+    } finally {
+      setScheduleBusyVm('');
+    }
+  };
+
   const handleInstallGceAgentOnVm = async (
     vm,
     agentsOverride = null,
@@ -1873,6 +2223,30 @@ export default function VmFleetAndSsh({
 
             <button
               type="button"
+              onClick={() => {
+                if (showFleetRadar) {
+                  setShowFleetRadar(false);
+                } else {
+                  handleScanMultiProjectFleetRadar();
+                }
+              }}
+              title="Scan all accessible Google Cloud projects in parallel (Compute Engine VMs, Cloud Run v2 Services, GCS Buckets) and attach automated GCE Instance Schedules"
+              className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer ${
+                showFleetRadar
+                  ? 'bg-blue-600 text-white border border-blue-500'
+                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+              }`}
+            >
+              {fleetRadarLoading ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Globe className="w-3.5 h-3.5" />
+              )}
+              <span>Multi-Project Fleet Radar</span>
+            </button>
+
+            <button
+              type="button"
               data-feature-id="VM_REFRESH_FLEET"
               disabled={loadingVms}
               onClick={() => fetchVms(false)}
@@ -1899,6 +2273,208 @@ export default function VmFleetAndSsh({
             </button>
           </div>
         </div>
+
+        {/* PILLAR 4: MULTI-PROJECT ENTERPRISE FLEET RADAR & GCE INSTANCE SCHEDULE (cloudresourcemanager + compute + run + storage + resourcePolicies) */}
+        {showFleetRadar && (
+          <div className="mt-3 p-4 rounded-xl bg-zinc-50/95 dark:bg-[#131314] border-2 border-emerald-500/45 space-y-3 shadow-md">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold bg-emerald-600 text-white">
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>MULTI-PROJECT ENTERPRISE FLEET RADAR & GCE INSTANCE SCHEDULE</span>
+                </span>
+                {fleetRadarData?.totals && (
+                  <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                    Projects: <strong>{fleetRadarData.totals.projectCount}</strong> · VMs:{' '}
+                    <strong>{fleetRadarData.totals.totalVms}</strong> (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      {fleetRadarData.totals.runningVms} RUNNING
+                    </span>
+                    ) · Cloud Run v2: <strong>{fleetRadarData.totals.totalCloudRunServices}</strong> · GCS Buckets:{' '}
+                    <strong>{fleetRadarData.totals.totalBuckets}</strong>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={fleetRadarLoading}
+                  onClick={handleScanMultiProjectFleetRadar}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${fleetRadarLoading ? 'animate-spin' : ''}`} />
+                  <span>Rescan All GCP Projects</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowFleetRadar(false)}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {fleetRadarLoading && !fleetRadarData ? (
+              <div className="py-6 text-center text-xs font-mono text-zinc-500 flex items-center justify-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
+                <span>Scanning active GCP projects in parallel (Compute Engine, Cloud Run v2, Cloud Storage)...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {/* Left 2 Columns: Multi-Project Inventory Table */}
+                <div className="lg:col-span-2 space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {(fleetRadarData?.projects || []).map((proj) => (
+                    <div
+                      key={proj.projectId}
+                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-col gap-1.5"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {proj.projectId}
+                          </span>
+                          {proj.projectName && proj.projectName !== proj.projectId && (
+                            <span className="text-[10px] font-mono text-zinc-500">({proj.projectName})</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 font-bold">
+                            VMs: {proj.vmCount} ({proj.runningVmCount} RUN / {proj.stoppedVmCount} STOP)
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25 font-bold">
+                            Cloud Run: {proj.cloudRunCount}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/25 font-bold">
+                            GCS Buckets: {proj.bucketCount}
+                          </span>
+                        </div>
+                      </div>
+                      {Array.isArray(proj.vms) && proj.vms.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                          {proj.vms.map((pVm) => {
+                            const receipt =
+                              scheduleReceiptByVm[`${proj.projectId}:${pVm.name}`];
+                            return (
+                              <span
+                                key={`${proj.projectId}-${pVm.name}`}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                              >
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    pVm.status === 'RUNNING'
+                                      ? 'bg-emerald-500'
+                                      : 'bg-zinc-400'
+                                  }`}
+                                />
+                                <strong>{pVm.name}</strong>
+                                <span className="text-zinc-400">
+                                  ({pVm.zone} · {pVm.machineType})
+                                </span>
+                                {Array.isArray(pVm.resourcePolicies) &&
+                                  pVm.resourcePolicies.length > 0 && (
+                                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold">
+                                      Policy: {pVm.resourcePolicies.join(', ')}
+                                    </span>
+                                  )}
+                                {receipt?.scheduleName && (
+                                  <span className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
+                                    Attached: {receipt.scheduleName}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={Boolean(scheduleBusyVm)}
+                                  onClick={() =>
+                                    handleAttachGceInstanceSchedule(
+                                      pVm,
+                                      proj.projectId
+                                    )
+                                  }
+                                  className="ml-1 px-1.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-40"
+                                >
+                                  {scheduleBusyVm ===
+                                  `${proj.projectId}:${pVm.name}`
+                                    ? 'Attaching...'
+                                    : '+ Schedule'}
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right Column: Live GCE Instance Schedule Policy Builder (resourcePolicies) */}
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900/90 border border-emerald-500/35 space-y-2.5">
+                  <div className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>GCE Instance Schedule Policy (Auto Start/Stop)</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Creates a real regional Compute Engine <code className="font-mono">instanceSchedulePolicy</code> via{' '}
+                    <code className="font-mono">compute.googleapis.com/compute/v1/projects/{projectId}/regions/.../resourcePolicies</code> and optionally attaches it to a VM.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-0.5">Policy Name</label>
+                      <input
+                        type="text"
+                        value={scheduleForm.policyName}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, policyName: e.target.value }))}
+                        className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-0.5">Timezone</label>
+                      <input
+                        type="text"
+                        value={scheduleForm.timeZone}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, timeZone: e.target.value }))}
+                        className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-0.5">Start Cron (UTC/TZ)</label>
+                      <input
+                        type="text"
+                        value={scheduleForm.startCron}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, startCron: e.target.value }))}
+                        className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-0.5">Stop Cron (UTC/TZ)</label>
+                      <input
+                        type="text"
+                        value={scheduleForm.stopCron}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, stopCron: e.target.value }))}
+                        className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {vms.map((targetVm) => (
+                      <button
+                        key={targetVm.name}
+                        type="button"
+                        disabled={Boolean(scheduleBusyVm)}
+                        onClick={() => handleAttachGceInstanceSchedule(targetVm)}
+                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer disabled:opacity-50"
+                      >
+                        {scheduleBusyVm === `${projectId}:${targetVm.name}`
+                          ? 'Applying...'
+                          : `Attach Schedule -> ${targetVm.name}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Full-Width Flat Region Filter Bar + VM Metadata & Attribute Filter Bar */}
         {vms.length > 0 && (
@@ -2816,7 +3392,7 @@ export default function VmFleetAndSsh({
                     <div
                       className={`w-full grid grid-cols-2 ${
                         sshTerminalExpanded || splitLayoutMode === '6_6'
-                          ? 'sm:grid-cols-4'
+                          ? 'sm:grid-cols-3'
                           : ''
                       } gap-2 pt-1`}
                     >
@@ -2976,8 +3552,408 @@ export default function VmFleetAndSsh({
                           {openMigrateCloudRunVm === vm.name ? '● ON' : 'OFF'}
                         </span>
                       </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleToggleSnapshotDrawer(vm)}
+                        title="1-Click Compute Engine Persistent Disk Snapshot & Clone VM Time-Machine (compute.googleapis.com/compute/v1)"
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                          openSnapshotVm === vm.name
+                            ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                        }`}
+                      >
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          {snapshotBusyVm === vm.name ? (
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          ) : (
+                            <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">Snapshots & Clone</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            openSnapshotVm === vm.name
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {openSnapshotVm === vm.name ? '● ON' : 'OFF'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleToggleCloudRunBridge(vm)}
+                        title="Cloud Run v2 <-> VM Live Enterprise Bridge: Probe inside-VM HTTP latency to Cloud Run services over SSH2 and toggle minInstanceCount cold-start warmer (run.googleapis.com/v2)"
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                          openCloudRunBridgeVm === vm.name
+                            ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm ring-2 ring-blue-400/35'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
+                        }`}
+                      >
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          {cloudRunBridgeBusy === `list:${vm.name}` ? (
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          ) : (
+                            <Rocket className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">Cloud Run v2 Bridge</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            openCloudRunBridgeVm === vm.name
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {openCloudRunBridgeVm === vm.name ? '● ON' : 'OFF'}
+                        </span>
+                      </button>
                     </div>
                   </div>
+
+                  {/* PILLAR 2: 1-CLICK PERSISTENT DISK SNAPSHOT & CLONE VM TIME-MACHINE */}
+                  {openSnapshotVm === vm.name && (
+                    <div className="mb-3.5 p-3.5 rounded-xl bg-zinc-50/95 dark:bg-[#131314] border-2 border-blue-500/45 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-blue-600 text-white">
+                            <HardDrive className="w-3 h-3" />
+                            <span>GCE PERSISTENT DISK SNAPSHOT & CLONE TIME-MACHINE</span>
+                          </span>
+                          <span className="text-[11px] font-mono text-zinc-500">
+                            Disks:{' '}
+                            <strong>
+                              {(snapshotsByVm[vm.name]?.disks || []).length}
+                            </strong>{' '}
+                            · Project Snapshots:{' '}
+                            <strong>
+                              {(snapshotsByVm[vm.name]?.snapshots || []).length}
+                            </strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={snapshotBusyVm === vm.name}
+                            onClick={() => fetchVmSnapshots(vm)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw
+                              className={`w-3 h-3 ${
+                                snapshotBusyVm === vm.name ? 'animate-spin' : ''
+                              }`}
+                            />
+                            <span>Refresh</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={snapshotBusyVm === vm.name}
+                            onClick={() => handleCreateVmSnapshot(vm)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                          >
+                            <PlusCircle className="w-3 h-3" />
+                            <span>
+                              {snapshotBusyVm === vm.name
+                                ? 'Creating Snapshot...'
+                                : '1-Click Snapshot Boot Disk'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOpenSnapshotVm(null)}
+                            className="px-2 py-1 rounded text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Snapshot Name + Clone VM Name + Target Zone Controls */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono bg-white dark:bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                        <div>
+                          <label className="block text-[10px] text-zinc-500 mb-0.5">
+                            New Snapshot Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newSnapshotName}
+                            onChange={(e) => setNewSnapshotName(e.target.value)}
+                            placeholder={`${vm.name}-snap`}
+                            className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-zinc-500 mb-0.5">
+                            Clone New VM Name
+                          </label>
+                          <input
+                            type="text"
+                            value={cloneVmNameInput}
+                            onChange={(e) => setCloneVmNameInput(e.target.value)}
+                            placeholder={`${vm.name}-clone`}
+                            className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-zinc-500 mb-0.5">
+                            Clone Target GCE Zone
+                          </label>
+                          <input
+                            type="text"
+                            value={cloneTargetZone}
+                            onChange={(e) => setCloneTargetZone(e.target.value)}
+                            placeholder={vm.zone || 'us-central1-f'}
+                            className="w-full px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {snapshotBusyVm === vm.name && !snapshotsByVm[vm.name] ? (
+                        <div className="py-4 text-center text-xs font-mono text-zinc-500 flex items-center justify-center gap-2">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                          <span>Querying Compute Engine disks & global snapshots...</span>
+                        </div>
+                      ) : (snapshotsByVm[vm.name]?.snapshots || []).length === 0 ? (
+                        <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                          No Persistent Disk snapshots found in project{' '}
+                          <strong>{projectId}</strong>. Click{' '}
+                          <strong>1-Click Snapshot Boot Disk</strong> above to create a live crash-consistent snapshot of{' '}
+                          <strong>{vm.name}</strong>.
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {(snapshotsByVm[vm.name]?.snapshots || []).map((snap) => (
+                            <div
+                              key={snap.name}
+                              className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                            >
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                    {snap.name}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                      snap.status === 'READY'
+                                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                    }`}
+                                  >
+                                    {snap.status}
+                                  </span>
+                                  {snap.belongsToVm && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                                      THIS VM ({snap.sourceDisk})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-zinc-500">
+                                  Disk Size: <strong>{snap.diskSizeGb} GB</strong> · Compressed:{' '}
+                                  <strong>{snap.storageGiB} GiB</strong> · Created:{' '}
+                                  {snap.creationTimestamp
+                                    ? formatVmDate(snap.creationTimestamp)
+                                    : 'Just now'}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={
+                                    snapshotBusyVm === vm.name || snap.status !== 'READY'
+                                  }
+                                  onClick={() => handleCloneVmFromSnapshot(vm, snap.name)}
+                                  className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer disabled:opacity-40"
+                                >
+                                  Clone New VM
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={snapshotBusyVm === vm.name}
+                                  onClick={() => handleDeleteVmSnapshot(vm, snap.name)}
+                                  className="px-2 py-1 rounded text-[10px] font-mono font-bold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 cursor-pointer disabled:opacity-40"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* PILLAR 3: CLOUD RUN V2 <-> VM LIVE ENTERPRISE BRIDGE */}
+                  {openCloudRunBridgeVm === vm.name && (
+                    <div className="mb-3.5 p-3.5 rounded-xl bg-zinc-50/95 dark:bg-[#131314] border-2 border-purple-500/45 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-purple-600 text-white">
+                            <Rocket className="w-3 h-3" />
+                            <span>CLOUD RUN V2 &lt;-&gt; {vm.name.toUpperCase()} LIVE BRIDGE</span>
+                          </span>
+                          <span className="text-[11px] font-mono text-zinc-500">
+                            Services in <strong>{projectId}</strong>:{' '}
+                            <strong>
+                              {(cloudRunBridgeByVm[vm.name]?.services || []).length}
+                            </strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setUseIamIdentityTokenForProbe((prev) => !prev)
+                            }
+                            title="Attach a live Google Cloud IAM Identity Token (gcloud auth print-identity-token) in Authorization: Bearer when probing IAM-protected Cloud Run v2 services from inside the VM"
+                            className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                              useIamIdentityTokenForProbe
+                                ? 'bg-blue-600 text-white border-blue-500'
+                                : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
+                            }`}
+                          >
+                            {useIamIdentityTokenForProbe
+                              ? 'IAM Bearer Token: ON'
+                              : 'IAM Bearer Token: OFF'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={cloudRunBridgeBusy === `list:${vm.name}`}
+                            onClick={() => fetchCloudRunBridgeForVm(vm)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw
+                              className={`w-3 h-3 ${
+                                cloudRunBridgeBusy === `list:${vm.name}` ? 'animate-spin' : ''
+                              }`}
+                            />
+                            <span>Refresh Cloud Run v2</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOpenCloudRunBridgeVm(null)}
+                            className="px-2 py-1 rounded text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+
+                      {cloudRunBridgeBusy === `list:${vm.name}` && !cloudRunBridgeByVm[vm.name] ? (
+                        <div className="py-4 text-center text-xs font-mono text-zinc-500 flex items-center justify-center gap-2">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-500" />
+                          <span>Querying run.googleapis.com/v2/projects/{projectId}/locations/-/services...</span>
+                        </div>
+                      ) : (cloudRunBridgeByVm[vm.name]?.services || []).length === 0 ? (
+                        <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                          No Cloud Run v2 services found in project{' '}
+                          <strong>{projectId}</strong>. Use{' '}
+                          <strong>Migrate -&gt; Cloud Run</strong> on this VM card to deploy a live Cloud Run v2 service.
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                          {(cloudRunBridgeByVm[vm.name]?.services || []).map((svc) => {
+                            const probeKey = `${vm.name}:${svc.name}`;
+                            const probeResult = cloudRunProbeResultByVm[probeKey];
+                            const isBusy =
+                              cloudRunBridgeBusy === `probe:${svc.name}` ||
+                              cloudRunBridgeBusy === `scale:${svc.name}`;
+                            return (
+                              <div
+                                key={svc.fullName || svc.name}
+                                className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="space-y-0.5 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                        {svc.name}
+                                      </span>
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25">
+                                        {svc.region}
+                                      </span>
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                                        min={svc.minInstanceCount} / max={svc.maxInstanceCount}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 truncate">
+                                      URI:{' '}
+                                      <a
+                                        href={svc.uri}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 underline"
+                                      >
+                                        {svc.uri}
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                    <button
+                                      type="button"
+                                      disabled={isBusy || vm.status !== 'RUNNING'}
+                                      onClick={() => handleProbeCloudRunFromVm(vm, svc)}
+                                      title="Execute a live HTTP curl probe from inside this VM over SSH2 to measure real VM -> Cloud Run network & TLS latency"
+                                      className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-40"
+                                    >
+                                      {cloudRunBridgeBusy === `probe:${svc.name}`
+                                        ? 'Probing via SSH2...'
+                                        : 'Probe from VM (SSH2)'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() =>
+                                        handleUpdateCloudRunScalingFromVm(
+                                          vm,
+                                          svc,
+                                          svc.minInstanceCount > 0 ? 0 : 1
+                                        )
+                                      }
+                                      title="Update real Cloud Run v2 minInstanceCount via PATCH run.googleapis.com/v2"
+                                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold cursor-pointer disabled:opacity-40 ${
+                                        svc.minInstanceCount > 0
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
+                                      }`}
+                                    >
+                                      {svc.minInstanceCount > 0
+                                        ? 'Warm (min=1) -> Scale to $0'
+                                        : 'Keep Warm (min=1)'}
+                                    </button>
+                                  </div>
+                                </div>
+                                {probeResult && (
+                                  <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono flex flex-wrap items-center gap-3">
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                      HTTP {probeResult.httpStatus || probeResult.httpCode || 'ERR'}
+                                    </span>
+                                    <span>
+                                      Total: <strong>{probeResult.totalMs} ms</strong>
+                                    </span>
+                                    <span>
+                                      Connect: <strong>{probeResult.connectMs} ms</strong>
+                                    </span>
+                                    <span>
+                                      TLS: <strong>{probeResult.tlsMs} ms</strong>
+                                    </span>
+                                    {probeResult.remoteIp && (
+                                      <span>
+                                        Edge IP: <strong>{probeResult.remoteIp}</strong>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* CLEAN, COMPACT 127.0.0.1 IAP PORT-FORWARD SWITCHBOARD */}
                   {openTunnelVm === vm.name && (

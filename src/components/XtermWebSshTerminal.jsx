@@ -316,6 +316,15 @@ export default function XtermWebSshTerminal({
   const [scpRenameTarget, setScpRenameTarget] = useState(null); // { path, name, newName }
   const [scpChecksumResult, setScpChecksumResult] = useState(null); // { path, name, sha256, md5, sizeBytes, lineCount }
   const [copiedShaPath, setCopiedShaPath] = useState('');
+  const [showDiskAnalyzer, setShowDiskAnalyzer] = useState(false);
+  const [diskAnalyzerData, setDiskAnalyzerData] = useState(null);
+  const [diskAnalyzerLoading, setDiskAnalyzerLoading] = useState(false);
+  const [showGcsBackupDrawer, setShowGcsBackupDrawer] = useState(false);
+  const [gcsBackupBucket, setGcsBackupBucket] = useState('');
+  const [gcsBackupSourcePath, setGcsBackupSourcePath] = useState('');
+  const [gcsBackupAutoCreate, setGcsBackupAutoCreate] = useState(true);
+  const [gcsBackupReceipt, setGcsBackupReceipt] = useState(null);
+  const [gcsBackupBusy, setGcsBackupBusy] = useState(false);
 
   const appendTransferHistory = useCallback((item) => {
     setScpTransferHistory((prev) =>
@@ -1637,6 +1646,100 @@ export default function XtermWebSshTerminal({
     }
   };
 
+  const handleRunDiskHotspotAnalyzer = async (targetPathOverride = null) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm?.name || !projectId) return;
+    const analyzeTarget = targetPathOverride || scpPath || '/';
+    setShowDiskAnalyzer(true);
+    setDiskAnalyzerLoading(true);
+    setScpError('');
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/disk-analyzer`,
+        {
+          params: {
+            zone: targetVm.zone || '',
+            username: customUsername || defaultUsername || 'ubuntu',
+            path: analyzeTarget,
+          },
+        }
+      );
+      const data = res.data || {};
+      setDiskAnalyzerData(data);
+      if (data.diskUsage) {
+        setScpDiskUsage(data.diskUsage);
+        if (onDiskUsageLoaded) {
+          onDiskUsageLoaded(targetVm.name, data.diskUsage);
+        }
+      }
+      if (
+        !gcsBackupBucket &&
+        Array.isArray(data.buckets) &&
+        data.buckets.length > 0
+      ) {
+        setGcsBackupBucket(data.buckets[0].name);
+      }
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run live VM disk hotspot analyzer.'
+      );
+    } finally {
+      setDiskAnalyzerLoading(false);
+    }
+  };
+
+  const handleStreamVmBackupToGcs = async (sourceOverride = null) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm?.name || !projectId) return;
+    const pathToBackup =
+      sourceOverride || gcsBackupSourcePath || scpPath || '~';
+    setGcsBackupBusy(true);
+    setScpError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/backup-to-gcs`,
+        {
+          zone: targetVm.zone || '',
+          username: customUsername || defaultUsername || 'ubuntu',
+          sourcePath: pathToBackup,
+          bucketName: gcsBackupBucket,
+          createBucketIfMissing: gcsBackupAutoCreate,
+        }
+      );
+      const data = res.data || {};
+      setGcsBackupReceipt(data);
+      if (data.bucketName && !gcsBackupBucket) {
+        setGcsBackupBucket(data.bucketName);
+      }
+      appendTransferHistory({
+        direction: 'VM -> GCS',
+        fileName: data.gcsUri || data.objectName,
+        remotePath: data.resolvedPath || pathToBackup,
+        sizeBytes: data.sizeBytes || 0,
+        durationMs: 0,
+        engineUsed: 'GCS_DIRECT_STREAM',
+        sha256: data.sha256 || '',
+      });
+      setScpStatusMsg(
+        data.message || `Streamed backup to ${data.gcsUri}!`
+      );
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to stream VM directory backup to Cloud Storage.'
+      );
+    } finally {
+      setGcsBackupBusy(false);
+    }
+  };
+
   const cloudRunSshCli = cloudRunService
     ? `gcloud beta run services ssh ${cloudRunService.name} --region=${
         cloudRunService.region || 'us-east1'
@@ -2787,6 +2890,57 @@ export default function XtermWebSshTerminal({
 
                     <button
                       type="button"
+                      onClick={() => {
+                        if (showDiskAnalyzer) {
+                          setShowDiskAnalyzer(false);
+                        } else {
+                          handleRunDiskHotspotAnalyzer('/');
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        showDiskAnalyzer
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
+                      title="Run real du -B1 -x & find on the VM to inspect largest folders and files consuming root disk space"
+                    >
+                      <HardDrive className="w-3 h-3" />
+                      <span>
+                        {showDiskAnalyzer
+                          ? '● Disk Hotspots (du -B1)'
+                          : 'Disk Hotspots (du -B1)'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextOpen = !showGcsBackupDrawer;
+                        setShowGcsBackupDrawer(nextOpen);
+                        if (nextOpen) {
+                          setGcsBackupSourcePath(scpPath || '~');
+                          if (!diskAnalyzerData) {
+                            handleRunDiskHotspotAnalyzer(scpPath || '/');
+                          }
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                        showGcsBackupDrawer
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
+                      }`}
+                      title="Stream any VM directory directly into a Google Cloud Storage bucket (gs://) as a SHA-256 verified .tar.gz archive"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>
+                        {showGcsBackupDrawer
+                          ? '● Backup VM → GCS'
+                          : 'Backup VM → GCS'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setShowScpHistory((v) => !v)}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                         showScpHistory
@@ -2954,6 +3108,273 @@ export default function XtermWebSshTerminal({
                   </div>
                 )}
               </div>
+
+              {/* Enterprise Disk Hotspot Analyzer (Real du -B1 & Largest Files) */}
+              {showDiskAnalyzer && (
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border-2 border-blue-500/45 p-3 space-y-2.5 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-extrabold">
+                        LIVE DISK HOTSPOT ANALYZER (du -B1)
+                      </span>
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        Path: {diskAnalyzerData?.analyzedPath || scpPath || '/'}
+                      </span>
+                      {diskAnalyzerData?.diskUsage && (
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          Used: {formatBytes(diskAnalyzerData.diskUsage.usedBytes)}{' '}
+                          / {formatBytes(diskAnalyzerData.diskUsage.totalBytes)} (
+                          {diskAnalyzerData.diskUsage.usedPercent}%)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={diskAnalyzerLoading}
+                        onClick={() => handleRunDiskHotspotAnalyzer('/')}
+                        className="px-2 py-1 rounded bg-white dark:bg-zinc-950 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Scan / (Root)
+                      </button>
+                      <button
+                        type="button"
+                        disabled={diskAnalyzerLoading}
+                        onClick={() => handleRunDiskHotspotAnalyzer(scpPath || '~')}
+                        className="px-2 py-1 rounded bg-white dark:bg-zinc-950 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Scan Current ({scpPath})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDiskAnalyzer(false)}
+                        className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  {diskAnalyzerLoading ? (
+                    <div className="py-4 text-center text-zinc-500 flex items-center justify-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                      <span>
+                        Executing live du -B1 -x &amp; find on{' '}
+                        {(activeVm || focusedVm)?.name}...
+                      </span>
+                    </div>
+                  ) : diskAnalyzerData ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                      <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                        <div className="text-[10px] font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                          Largest Directories (du -B1 --max-depth=1)
+                        </div>
+                        {(diskAnalyzerData.largestFolders || []).length === 0 ? (
+                          <div className="text-[11px] text-zinc-500">
+                            No subdirectories found in {diskAnalyzerData.analyzedPath}.
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {(diskAnalyzerData.largestFolders || []).map((f) => (
+                              <div
+                                key={f.path}
+                                className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                              >
+                                <div className="flex items-center justify-between gap-2 text-[11px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => fetchScpDirectory(f.path)}
+                                    className="font-bold text-blue-600 dark:text-blue-400 hover:underline truncate text-left cursor-pointer"
+                                    title={`Click to open ${f.path} in SFTP browser`}
+                                  >
+                                    {f.path}
+                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                      {formatBytes(f.sizeBytes)}
+                                    </span>
+                                    <span className="text-[10px] text-zinc-500">
+                                      ({f.shareOfUsedPct}%)
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRunDiskHotspotAnalyzer(f.path)
+                                      }
+                                      className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 text-[9px] font-bold cursor-pointer"
+                                      title={`Drill down into ${f.path}`}
+                                    >
+                                      Drill
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="w-full h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-500 rounded-full"
+                                    style={{
+                                      width: `${Math.min(
+                                        100,
+                                        Math.max(4, f.shareOfUsedPct || 2)
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                        <div className="text-[10px] font-extrabold uppercase text-amber-600 dark:text-amber-400">
+                          Top 10 Largest Files (find -xdev -type f)
+                        </div>
+                        {(diskAnalyzerData.largestFiles || []).length === 0 ? (
+                          <div className="text-[11px] text-zinc-500">
+                            No files found in {diskAnalyzerData.analyzedPath}.
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {(diskAnalyzerData.largestFiles || []).map((file) => (
+                              <div
+                                key={file.path}
+                                className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[11px]"
+                              >
+                                <span
+                                  className="truncate text-zinc-700 dark:text-zinc-300"
+                                  title={file.path}
+                                >
+                                  {file.path}
+                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                                    {formatBytes(file.sizeBytes)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleOpenScpFilePreview({
+                                        name: file.name,
+                                        path: file.path,
+                                        sizeBytes: file.sizeBytes,
+                                      })
+                                    }
+                                    className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-[9px] font-bold cursor-pointer"
+                                  >
+                                    Inspect
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Enterprise Direct VM -> Cloud Storage (gs://) Backup Streamer */}
+              {showGcsBackupDrawer && (
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border-2 border-emerald-500/45 p-3 space-y-2.5 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-extrabold">
+                        DIRECT VM → CLOUD STORAGE (gs://) ARCHIVE STREAMER
+                      </span>
+                      <span className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                        Streams real <code>.tar.gz</code> from{' '}
+                        <strong>{(activeVm || focusedVm)?.name}</strong> to{' '}
+                        <code>storage.googleapis.com</code> with SHA-256 verification
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowGcsBackupDrawer(false)}
+                      className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Source Directory / File on VM
+                      </label>
+                      <input
+                        type="text"
+                        value={gcsBackupSourcePath || scpPath || '~'}
+                        onChange={(e) => setGcsBackupSourcePath(e.target.value)}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Target GCS Bucket (gs://)
+                      </label>
+                      <input
+                        type="text"
+                        list="scp-gcs-buckets-list"
+                        value={gcsBackupBucket}
+                        onChange={(e) => setGcsBackupBucket(e.target.value)}
+                        placeholder={`${projectId}-${
+                          (activeVm || focusedVm)?.name || 'vm'
+                        }-backups`}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                      />
+                      <datalist id="scp-gcs-buckets-list">
+                        {(diskAnalyzerData?.buckets || []).map((b) => (
+                          <option key={b.name} value={b.name}>
+                            {b.name} ({b.location})
+                          </option>
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gcsBackupAutoCreate}
+                          onChange={(e) =>
+                            setGcsBackupAutoCreate(e.target.checked)
+                          }
+                        />
+                        <span>Auto-create bucket</span>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={gcsBackupBusy}
+                        onClick={() => handleStreamVmBackupToGcs()}
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        {gcsBackupBusy
+                          ? 'Streaming to GCS...'
+                          : 'Stream .tar.gz → GCS'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {gcsBackupReceipt && (
+                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/35 space-y-1 text-[11px]">
+                      <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2 flex-wrap">
+                        <span>{gcsBackupReceipt.message}</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px]">
+                          {formatBytes(gcsBackupReceipt.sizeBytes)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-zinc-600 dark:text-zinc-300 flex flex-wrap items-center gap-3">
+                        <span>
+                          URI: <code>{gcsBackupReceipt.gcsUri}</code>
+                        </span>
+                        <span>
+                          SHA-256: <code>{gcsBackupReceipt.sha256?.slice(0, 24)}…</code>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Multi-Select Batch Operations Bar */}
               {scpSelectedPaths.length > 0 && (
