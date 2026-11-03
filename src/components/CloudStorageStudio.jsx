@@ -165,6 +165,11 @@ export default function CloudStorageStudio({
         const list = res.data?.buckets || [];
         setBuckets(list);
         if (
+          initialBucketName &&
+          list.some((b) => b.name === initialBucketName)
+        ) {
+          setSelectedBucketName(initialBucketName);
+        } else if (
           list.length > 0 &&
           !list.some((b) => b.name === selectedBucketName)
         ) {
@@ -246,7 +251,7 @@ export default function CloudStorageStudio({
     if (initialBucketName) {
       setSelectedBucketName(initialBucketName);
     }
-  }, [initialBucketName]);
+  }, [initialBucketName, subTabNonce]);
 
   useEffect(() => {
     if (initialObjectName && (initialBucketName || selectedBucket?.name)) {
@@ -257,7 +262,7 @@ export default function CloudStorageStudio({
         { bucketNameOverride: targetBucket }
       );
     }
-  }, [initialObjectName, initialBucketName]);
+  }, [initialObjectName, initialBucketName, subTabNonce]);
 
   useEffect(() => {
     if (

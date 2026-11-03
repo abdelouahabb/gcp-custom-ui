@@ -4345,7 +4345,13 @@ print(json.dumps({
       resultPayload = JSON.parse(lines[lines.length - 1] || '{}');
     }
 
-    // Fetch real Cloud Storage buckets in this project for 1-click VM -> GCS Backup
+    // Fetch real Cloud Storage buckets in this project for 1-click VM -> GCS Backup (prioritizing same-region $0 egress buckets)
+    const vmRegion =
+      String(effectiveZone || '')
+        .split('-')
+        .slice(0, 2)
+        .join('-')
+        .toUpperCase() || 'US-CENTRAL1';
     let buckets = [];
     try {
       const bRes = await gcpFetch(
@@ -4356,11 +4362,17 @@ print(json.dumps({
         projectId,
         { timeout: 5000 }
       );
-      buckets = (bRes.items || []).map((b) => ({
-        name: b.name,
-        location: b.location,
-        storageClass: b.storageClass || 'STANDARD',
-      }));
+      buckets = (bRes.items || [])
+        .map((b) => {
+          const loc = String(b.location || '').toUpperCase();
+          return {
+            name: b.name,
+            location: loc,
+            storageClass: b.storageClass || 'STANDARD',
+            sameRegion: loc === vmRegion,
+          };
+        })
+        .sort((a, b) => Number(b.sameRegion) - Number(a.sameRegion));
     } catch {
       buckets = [];
     }
@@ -4382,6 +4394,7 @@ print(json.dumps({
       projectId,
       vmName,
       zone: effectiveZone,
+      vmRegion,
       engineUsed,
       buckets,
       ...resultPayload,
@@ -4393,15 +4406,17 @@ print(json.dumps({
   }
 });
 
-app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, res) => {
+app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs/preflight', async (req, res) => {
   const { projectId, vmName } = req.params;
   const {
     zone = '',
     username = '',
     sourcePath = '~',
+    sourcePaths = null,
+    keepExactName = true,
+    objectPrefix = '',
     bucketName = '',
-    createBucketIfMissing = false,
-    location = 'US-CENTRAL1',
+    entryHints = [],
   } = req.body || {};
 
   try {
@@ -4416,24 +4431,38 @@ app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, re
       token,
     });
     const effectiveZone = target.zone || zone;
-    if (target.vmStatus !== 'RUNNING') {
-      return res.status(400).json({
-        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM before streaming a backup to Cloud Storage.`,
-      });
-    }
+    const vmRegion =
+      String(effectiveZone || '')
+        .split('-')
+        .slice(0, 2)
+        .join('-')
+        .toUpperCase() || 'US-CENTRAL1';
+
+    const requestedPaths = (
+      Array.isArray(sourcePaths) && sourcePaths.length > 0
+        ? sourcePaths
+        : String(sourcePath || '~')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+    ).slice(0, 25);
+    if (requestedPaths.length === 0) requestedPaths.push('~');
 
     let targetBucket = String(bucketName || '')
       .trim()
       .replace(/^gs:\/\//, '')
       .replace(/\/.*$/, '');
     if (!targetBucket) {
-      targetBucket = `${projectId}-${vmName}-backups`.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+      targetBucket = `${projectId}-${vmName}-${vmRegion.toLowerCase()}-backups`
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, '-')
+        .slice(0, 63);
     }
 
-    // Ensure bucket exists (or create it via real GCS JSON API if requested / missing)
-    let bucketCreated = false;
+    let bucketExists = false;
+    let bucketLocation = vmRegion;
     try {
-      await gcpFetch(
+      const existingMeta = await gcpFetch(
         `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
           targetBucket
         )}`,
@@ -4441,9 +4470,237 @@ app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, re
         projectId,
         { timeout: 5000 }
       );
+      bucketExists = true;
+      bucketLocation = String(existingMeta?.location || vmRegion).toUpperCase();
+    } catch {
+      bucketExists = false;
+      bucketLocation = vmRegion;
+    }
+
+    const hintMap = new Map(
+      (Array.isArray(entryHints) ? entryHints : []).map((h) => [
+        String(h?.path || ''),
+        h,
+      ])
+    );
+
+    const cleanPrefix = String(objectPrefix || '')
+      .trim()
+      .replace(/^\/+|\/+$/g, '');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+
+    const targets = await Promise.all(
+      requestedPaths.map(async (rawP) => {
+        const cleanP = String(rawP || '~').trim();
+        const hint = hintMap.get(cleanP);
+        const baseName =
+          path.posix.basename(cleanP.replace(/\/+$/, '')) ||
+          (cleanP === '~' ? target.sshUser || 'home' : 'root');
+        const isKnownDir =
+          hint?.type === 'dir' ||
+          cleanP === '~' ||
+          cleanP === '/' ||
+          cleanP.endsWith('/');
+        const isKnownFile = hint?.type === 'file';
+
+        const candidateFileObj = cleanPrefix
+          ? `${cleanPrefix}/${baseName}`
+          : baseName;
+        const candidateDirObj = cleanPrefix
+          ? `${cleanPrefix}/${
+              baseName.endsWith('.tar.gz') ? baseName : `${baseName}.tar.gz`
+            }`
+          : baseName.endsWith('.tar.gz')
+          ? baseName
+          : `${baseName}.tar.gz`;
+
+        let primaryObjName = isKnownDir
+          ? candidateDirObj
+          : isKnownFile
+          ? candidateFileObj
+          : candidateFileObj;
+
+        if (keepExactName === false) {
+          const cleanBase =
+            String(baseName || 'backup').replace(/[^a-zA-Z0-9._-]/g, '_') ||
+            'backup';
+          primaryObjName = `${
+            cleanPrefix || `vm-backups/${vmName}`
+          }/${cleanBase}-${ts}${isKnownDir ? '.tar.gz' : ''}`;
+        }
+
+        let existingMeta = null;
+        let matchedObjectName = primaryObjName;
+
+        if (bucketExists && keepExactName !== false) {
+          const candidatesToCheck = isKnownDir
+            ? [candidateDirObj]
+            : isKnownFile
+            ? [candidateFileObj]
+            : [candidateFileObj, candidateDirObj];
+
+          for (const cand of candidatesToCheck) {
+            try {
+              const objMeta = await gcpFetch(
+                `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  targetBucket
+                )}/o/${encodeURIComponent(cand)}`,
+                token,
+                projectId,
+                { timeout: 4000 }
+              );
+              if (objMeta && objMeta.name) {
+                existingMeta = objMeta;
+                matchedObjectName = objMeta.name;
+                break;
+              }
+            } catch {
+              // Object does not exist under this candidate name
+            }
+          }
+        }
+
+        return {
+          sourcePath: cleanP,
+          baseName,
+          isDirectory: isKnownDir,
+          vmSizeBytes: Number(hint?.sizeBytes || 0),
+          objectName: matchedObjectName,
+          gcsUri: `gs://${targetBucket}/${matchedObjectName}`,
+          existsInGcs: Boolean(existingMeta),
+          existingGcsSizeBytes: existingMeta ? Number(existingMeta.size || 0) : 0,
+          existingGcsUpdatedAt: existingMeta
+            ? existingMeta.updated || existingMeta.timeCreated || ''
+            : '',
+          existingGcsMd5: existingMeta ? existingMeta.md5Hash || '' : '',
+          existingGcsGeneration: existingMeta ? existingMeta.generation || '' : '',
+        };
+      })
+    );
+
+    const collisions = targets.filter((t) => t.existsInGcs);
+    const sameRegionZeroEgress = bucketLocation === vmRegion;
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      vmZone: effectiveZone,
+      vmRegion,
+      bucketName: targetBucket,
+      bucketExists,
+      bucketLocation,
+      sameRegionZeroEgress,
+      egressPolicy: sameRegionZeroEgress
+        ? `Same-Region (${vmRegion}) · $0.00/GB Free Internal Transfer`
+        : `Cross-Region (${vmRegion} → ${bucketLocation}) · Standard Egress Applies`,
+      targets,
+      collisionCount: collisions.length,
+      hasCollision: collisions.length > 0,
+      collisions,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to run GCS backup preflight check.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = '',
+    username = '',
+    sourcePath = '~',
+    sourcePaths = null,
+    keepExactName = true,
+    archiveSingleFile = false,
+    objectPrefix = '',
+    bucketName = '',
+    createBucketIfMissing = false,
+    location = '',
+    collisionResolution = 'OVERWRITE', // 'PROMPT' | 'OVERWRITE' | 'KEEP_BOTH'
+    allowOverwrite = true,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername: username,
+      token,
+    });
+    const effectiveZone = target.zone || zone;
+    const vmRegion =
+      String(effectiveZone || '')
+        .split('-')
+        .slice(0, 2)
+        .join('-')
+        .toUpperCase() || 'US-CENTRAL1';
+    const desiredLocation = String(location || vmRegion).toUpperCase();
+
+    if (target.vmStatus !== 'RUNNING') {
+      return res.status(400).json({
+        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM before streaming a backup to Cloud Storage.`,
+      });
+    }
+
+    // Normalize requested paths (supports array of selected paths or single/comma-separated path)
+    const requestedPaths = (
+      Array.isArray(sourcePaths) && sourcePaths.length > 0
+        ? sourcePaths
+        : String(sourcePath || '~')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+    ).slice(0, 25);
+    if (requestedPaths.length === 0) {
+      requestedPaths.push('~');
+    }
+
+    let targetBucket = String(bucketName || '')
+      .trim()
+      .replace(/^gs:\/\//, '')
+      .replace(/\/.*$/, '');
+    if (!targetBucket) {
+      targetBucket = `${projectId}-${vmName}-${vmRegion.toLowerCase()}-backups`
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, '-')
+        .slice(0, 63);
+    }
+
+    // Ensure bucket exists in the same region as the VM (to guarantee $0.00 intra-region transfer)
+    let bucketCreated = false;
+    let bucketLocation = desiredLocation;
+    try {
+      const existingMeta = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+          targetBucket
+        )}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      bucketLocation = String(existingMeta?.location || desiredLocation).toUpperCase();
+      // If no explicit bucketName was requested and an old default bucket exists in a different region, switch to a same-region bucket
+      if (!bucketName && bucketLocation !== vmRegion) {
+        const regionalBucket = `${projectId}-${vmName}-${vmRegion.toLowerCase()}-backups`
+          .toLowerCase()
+          .replace(/[^a-z0-9-_]/g, '-')
+          .slice(0, 63);
+        targetBucket = regionalBucket;
+        throw new Error('Switch to same-region bucket');
+      }
     } catch {
       if (createBucketIfMissing || !bucketName) {
-        await gcpFetch(
+        const createdMeta = await gcpFetch(
           `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
             projectId
           )}`,
@@ -4453,9 +4710,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, re
             method: 'POST',
             data: {
               name: targetBucket,
-              location: String(
-                location || effectiveZone.split('-').slice(0, 2).join('-') || 'US-CENTRAL1'
-              ).toUpperCase(),
+              location: desiredLocation,
               storageClass: 'STANDARD',
               iamConfiguration: {
                 uniformBucketLevelAccess: { enabled: true },
@@ -4466,6 +4721,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, re
           }
         );
         bucketCreated = true;
+        bucketLocation = String(createdMeta?.location || desiredLocation).toUpperCase();
       } else {
         return res.status(404).json({
           error: `Cloud Storage bucket "gs://${targetBucket}" was not found in project "${projectId}". Enable "Auto-Create Bucket" or select an existing bucket.`,
@@ -4473,40 +4729,71 @@ app.post('/api/project/:projectId/vms/:vmName/scp/backup-to-gcs', async (req, re
       }
     }
 
-    // Stream tar.gz archive of sourcePath from the live VM over SSH2
-    const pyTarBase64 = `
-import os, sys, tarfile, io, base64, hashlib, json
-req = sys.argv[1] if len(sys.argv) > 1 else '~'
-if req == '~' or req.startswith('~/'):
-    req = os.path.expanduser(req)
-abs_p = os.path.abspath(req)
-if not os.path.exists(abs_p):
-    print(json.dumps({'error': f'Path does not exist on VM: {abs_p}'}))
-    sys.exit(0)
-buf = io.BytesIO()
-with tarfile.open(fileobj=buf, mode='w:gz') as tf:
-    tf.add(abs_p, arcname=os.path.basename(abs_p.rstrip('/')) or 'root')
-raw = buf.getvalue()
-if len(raw) > 45 * 1024 * 1024:
-    print(json.dumps({'error': f'Archive size ({len(raw)} bytes) exceeds 45 MB direct stream limit. Select a smaller directory.'}))
-    sys.exit(0)
-sha = hashlib.sha256(raw).hexdigest()
-print(json.dumps({
-    'ok': True,
-    'resolvedPath': abs_p,
-    'sizeBytes': len(raw),
-    'sha256': sha,
-    'b64': base64.b64encode(raw).decode('ascii')
-}))
+    // Stream selected file(s) or folder(s) from the live VM over SSH2 keeping exact names
+    const pyBackupPayload = `
+import os, sys, tarfile, io, base64, hashlib, json, mimetypes
+raw_req = sys.argv[1] if len(sys.argv) > 1 else ''
+archive_single = (sys.argv[2] == '1') if len(sys.argv) > 2 else False
+try:
+    decoded_req = base64.b64decode(raw_req).decode('utf-8')
+    paths = json.loads(decoded_req)
+    if not isinstance(paths, list) or not paths:
+        paths = [str(decoded_req)]
+except Exception:
+    paths = [str(raw_req or '~')]
+
+items = []
+total_bytes = 0
+for p in paths:
+    req = str(p or '~').strip()
+    if req == '~' or req.startswith('~/'):
+        req = os.path.expanduser(req)
+    abs_p = os.path.abspath(req)
+    if not os.path.exists(abs_p):
+        print(json.dumps({'error': f'Path does not exist on VM: {abs_p}'}))
+        sys.exit(0)
+    is_dir = os.path.isdir(abs_p)
+    base_name = os.path.basename(abs_p.rstrip('/')) or 'root'
+    if not is_dir and not archive_single:
+        with open(abs_p, 'rb') as fh:
+            raw = fh.read()
+        exact_name = base_name
+        mime_type, _ = mimetypes.guess_type(exact_name)
+        content_type = mime_type or 'application/octet-stream'
+    else:
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode='w:gz') as tf:
+            tf.add(abs_p, arcname=base_name)
+        raw = buf.getvalue()
+        exact_name = base_name if base_name.endswith('.tar.gz') else f'{base_name}.tar.gz'
+        content_type = 'application/gzip'
+    total_bytes += len(raw)
+    if total_bytes > 45 * 1024 * 1024:
+        print(json.dumps({'error': f'Backup payload size ({total_bytes} bytes) exceeds 45 MB direct stream limit. Select smaller files or directories.'}))
+        sys.exit(0)
+    sha = hashlib.sha256(raw).hexdigest()
+    items.append({
+        'resolvedPath': abs_p,
+        'isDirectory': is_dir,
+        'baseName': base_name,
+        'exactName': exact_name,
+        'contentType': content_type,
+        'sizeBytes': len(raw),
+        'sha256': sha,
+        'b64': base64.b64encode(raw).decode('ascii')
+    })
+
+print(json.dumps({'ok': True, 'items': items}))
 `;
 
-    let tarResult = null;
+    let pyParsed = null;
+    const b64PathsArg = Buffer.from(JSON.stringify(requestedPaths), 'utf8').toString('base64');
+    const archiveSingleArg = archiveSingleFile ? '1' : '0';
+
     if (target.tcp22Open && target.privateKey) {
       try {
-        const b64Script = Buffer.from(pyTarBase64, 'utf8').toString('base64');
-        const cmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64Script}').decode('utf-8'))" ${JSON.stringify(
-          sourcePath
-        )}`;
+        const b64Script = Buffer.from(pyBackupPayload, 'utf8').toString('base64');
+        const cmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64Script}').decode('utf-8'))" '${b64PathsArg}' '${archiveSingleArg}'`;
         const rawOut = await withSftpSession(target, (_sftp, conn) => {
           return new Promise((resolve, reject) => {
             conn.exec(cmd, (err, stream) => {
@@ -4521,69 +4808,160 @@ print(json.dumps({
           });
         });
         const lines = String(rawOut || '').trim().split('\n');
-        tarResult = JSON.parse(lines[lines.length - 1] || '{}');
+        pyParsed = JSON.parse(lines[lines.length - 1] || '{}');
       } catch {
-        tarResult = null;
+        pyParsed = null;
       }
     }
 
-    if (!tarResult) {
+    if (!pyParsed) {
       const pyRes = await execRemoteVmPython({
         projectId,
         vmName,
         zone: effectiveZone,
         sshUser: target.sshUser,
         needIap: target.needIap,
-        pythonCode: pyTarBase64,
-        args: [sourcePath],
+        pythonCode: pyBackupPayload,
+        args: [b64PathsArg, archiveSingleArg],
         timeoutMs: 30000,
       });
       const lines = pyRes.stdout.trim().split('\n');
-      tarResult = JSON.parse(lines[lines.length - 1] || '{}');
+      pyParsed = JSON.parse(lines[lines.length - 1] || '{}');
     }
 
-    if (tarResult?.error) {
-      return res.status(400).json({ error: tarResult.error });
+    if (pyParsed?.error) {
+      return res.status(400).json({ error: pyParsed.error });
     }
 
-    const archiveBuffer = Buffer.from(tarResult.b64 || '', 'base64');
-    const cleanBase =
-      path.posix
-        .basename(String(tarResult.resolvedPath || sourcePath).replace(/\/+$/, ''))
-        .replace(/[^a-zA-Z0-9._-]/g, '_') || 'home';
+    const items = Array.isArray(pyParsed?.items) ? pyParsed.items : [];
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'No files or directories found to back up.' });
+    }
+
+    const cleanPrefix = String(objectPrefix || '')
+      .trim()
+      .replace(/^\/+|\/+$/g, '');
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const objectName = `vm-backups/${vmName}/${cleanBase}-${ts}.tar.gz`;
+    const uploadedObjects = [];
 
-    const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
-      targetBucket
-    )}/o?uploadType=media&name=${encodeURIComponent(objectName)}`;
-    const uploadRes = await axios.post(uploadUrl, archiveBuffer, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'x-goog-user-project': projectId,
-        'Content-Type': 'application/gzip',
-      },
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      timeout: 30000,
-    });
+    for (const item of items) {
+      const payloadBuffer = Buffer.from(item.b64 || '', 'base64');
+      let objectName = '';
+      if (keepExactName !== false && collisionResolution !== 'KEEP_BOTH') {
+        objectName = cleanPrefix
+          ? `${cleanPrefix}/${item.exactName}`
+          : item.exactName;
+      } else if (collisionResolution === 'KEEP_BOTH') {
+        const exact = String(item.exactName || item.baseName || 'backup');
+        const renamed = exact.endsWith('.tar.gz')
+          ? `${exact.slice(0, -7)}-${ts}.tar.gz`
+          : exact.includes('.')
+          ? `${exact.slice(0, exact.lastIndexOf('.'))}-${ts}${exact.slice(
+              exact.lastIndexOf('.')
+            )}`
+          : `${exact}-${ts}`;
+        objectName = cleanPrefix ? `${cleanPrefix}/${renamed}` : renamed;
+      } else {
+        const cleanBase =
+          String(item.baseName || 'backup').replace(/[^a-zA-Z0-9._-]/g, '_') || 'backup';
+        const ext = item.contentType === 'application/gzip' ? '.tar.gz' : '';
+        objectName = `${cleanPrefix || `vm-backups/${vmName}`}/${cleanBase}-${ts}${ext}`;
+      }
 
-    const gcsObj = uploadRes.data || {};
+      // If allowOverwrite is false or collisionResolution is PROMPT, verify object does not already exist
+      if (allowOverwrite === false || collisionResolution === 'PROMPT') {
+        try {
+          const existingObj = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              targetBucket
+            )}/o/${encodeURIComponent(objectName)}`,
+            token,
+            projectId,
+            { timeout: 4000 }
+          );
+          if (existingObj && existingObj.name) {
+            return res.status(409).json({
+              collisionDetected: true,
+              bucketName: targetBucket,
+              objectName: existingObj.name,
+              gcsUri: `gs://${targetBucket}/${existingObj.name}`,
+              existingSizeBytes: Number(existingObj.size || 0),
+              existingUpdatedAt: existingObj.updated || existingObj.timeCreated || '',
+              error: `Object "gs://${targetBucket}/${existingObj.name}" already exists in the bucket (${existingObj.size || 0} B). Please confirm whether to Overwrite or Keep Both.`,
+            });
+          }
+        } catch {
+          // 404 Not Found means safe to upload without collision
+        }
+      }
+
+      const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+        targetBucket
+      )}/o?uploadType=media&name=${encodeURIComponent(objectName)}`;
+      const uploadRes = await axios.post(uploadUrl, payloadBuffer, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-goog-user-project': projectId,
+          'Content-Type': item.contentType || 'application/octet-stream',
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: 30000,
+      });
+
+      const gcsObj = uploadRes.data || {};
+      const finalObjName = gcsObj.name || objectName;
+      uploadedObjects.push({
+        objectName: finalObjName,
+        gcsUri: `gs://${targetBucket}/${finalObjName}`,
+        resolvedPath: item.resolvedPath,
+        isDirectory: Boolean(item.isDirectory),
+        contentType: item.contentType,
+        sizeBytes: Number(gcsObj.size || payloadBuffer.length),
+        sha256: item.sha256,
+        md5Hash: gcsObj.md5Hash || '',
+        generation: gcsObj.generation || '',
+        createdAt: gcsObj.timeCreated || new Date().toISOString(),
+      });
+    }
+
+    const primary = uploadedObjects[0];
+    const totalSizeBytes = uploadedObjects.reduce((acc, o) => acc + (o.sizeBytes || 0), 0);
+
+    const sameRegionZeroEgress = bucketLocation === vmRegion;
+
     return res.json({
       ok: true,
       projectId,
       vmName,
+      vmZone: effectiveZone,
+      vmRegion,
       bucketName: targetBucket,
+      bucketLocation,
+      sameRegionZeroEgress,
+      egressPolicy: sameRegionZeroEgress
+        ? `Same-Region (${vmRegion}) · $0.00/GB Free Internal Transfer`
+        : `Cross-Region (${vmRegion} → ${bucketLocation}) · Standard Egress Applies`,
       bucketCreated,
-      objectName: gcsObj.name || objectName,
-      gcsUri: `gs://${targetBucket}/${gcsObj.name || objectName}`,
-      resolvedPath: tarResult.resolvedPath,
-      sizeBytes: Number(gcsObj.size || archiveBuffer.length),
-      sha256: tarResult.sha256,
-      md5Hash: gcsObj.md5Hash || '',
-      generation: gcsObj.generation || '',
-      createdAt: gcsObj.timeCreated || new Date().toISOString(),
-      message: `Backed up ${tarResult.resolvedPath} (${archiveBuffer.length} B) from ${vmName} to gs://${targetBucket}/${objectName}`,
+      keepExactName: keepExactName !== false,
+      collisionResolution,
+      objectName: primary.objectName,
+      gcsUri:
+        uploadedObjects.length === 1
+          ? primary.gcsUri
+          : `gs://${targetBucket}/ (${uploadedObjects.map((o) => o.objectName).join(', ')})`,
+      resolvedPath: uploadedObjects.map((o) => o.resolvedPath).join(', '),
+      isDirectory: primary.isDirectory,
+      sizeBytes: totalSizeBytes,
+      sha256: primary.sha256,
+      md5Hash: primary.md5Hash,
+      generation: primary.generation,
+      createdAt: primary.createdAt,
+      uploadedObjects,
+      message:
+        uploadedObjects.length === 1
+          ? `Backed up ${primary.resolvedPath} (${totalSizeBytes} B) from ${vmName} (${vmRegion}) to ${primary.gcsUri} (${bucketLocation})`
+          : `Backed up ${uploadedObjects.length} items (${totalSizeBytes} B) from ${vmName} (${vmRegion}) to gs://${targetBucket}/ (${bucketLocation})`,
     });
   } catch (err) {
     return res.status(400).json({

@@ -322,9 +322,24 @@ export default function XtermWebSshTerminal({
   const [showGcsBackupDrawer, setShowGcsBackupDrawer] = useState(false);
   const [gcsBackupBucket, setGcsBackupBucket] = useState('');
   const [gcsBackupSourcePath, setGcsBackupSourcePath] = useState('');
+  const [gcsBackupKeepExactName, setGcsBackupKeepExactName] = useState(true);
+  const [gcsBackupObjectPrefix, setGcsBackupObjectPrefix] = useState('');
   const [gcsBackupAutoCreate, setGcsBackupAutoCreate] = useState(true);
   const [gcsBackupReceipt, setGcsBackupReceipt] = useState(null);
   const [gcsBackupBusy, setGcsBackupBusy] = useState(false);
+  const [gcsBackupPreflight, setGcsBackupPreflight] = useState(null);
+  const [gcsBackupPreflightBusy, setGcsBackupPreflightBusy] = useState(false);
+  const [gcsBackupConfirmModal, setGcsBackupConfirmModal] = useState(null);
+
+  // Automatically sync GCS backup source path with SFTP file/folder selection (or current directory if none selected)
+  useEffect(() => {
+    setGcsBackupPreflight(null);
+    if (scpSelectedPaths.length > 0) {
+      setGcsBackupSourcePath(scpSelectedPaths.join(', '));
+    } else if (scpPath) {
+      setGcsBackupSourcePath(scpPath);
+    }
+  }, [scpSelectedPaths, scpPath]);
 
   const appendTransferHistory = useCallback((item) => {
     setScpTransferHistory((prev) =>
@@ -1692,12 +1707,102 @@ export default function XtermWebSshTerminal({
     }
   };
 
-  const handleStreamVmBackupToGcs = async (sourceOverride = null) => {
+  const resolveEffectiveGcsBackupPaths = (sourceOverride = null) => {
+    return Array.isArray(sourceOverride)
+      ? sourceOverride
+      : typeof sourceOverride === 'string' && sourceOverride.trim()
+      ? [sourceOverride.trim()]
+      : scpSelectedPaths.length > 0 &&
+        (!gcsBackupSourcePath ||
+          gcsBackupSourcePath === scpSelectedPaths.join(', '))
+      ? scpSelectedPaths
+      : String(gcsBackupSourcePath || scpPath || '~')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+  };
+
+  const handleRunGcsBackupPreflight = async (
+    sourceOverride = null,
+    openConfirmModal = false
+  ) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm?.name || !projectId) return null;
+
+    const effectivePaths = resolveEffectiveGcsBackupPaths(sourceOverride);
+    if (typeof sourceOverride === 'string' && sourceOverride.trim()) {
+      setGcsBackupSourcePath(sourceOverride.trim());
+    } else if (Array.isArray(sourceOverride) && sourceOverride.length > 0) {
+      setGcsBackupSourcePath(sourceOverride.join(', '));
+    }
+
+    setGcsBackupPreflightBusy(true);
+    setScpError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/backup-to-gcs/preflight`,
+        {
+          zone: targetVm.zone || '',
+          username: customUsername || defaultUsername || 'ubuntu',
+          sourcePath: effectivePaths[0] || scpPath || '~',
+          sourcePaths: effectivePaths,
+          keepExactName: gcsBackupKeepExactName,
+          objectPrefix: gcsBackupObjectPrefix,
+          bucketName: gcsBackupBucket,
+          entryHints: (scpEntries || []).map((e) => ({
+            path: e.path,
+            type: e.type,
+            sizeBytes: e.sizeBytes,
+          })),
+        }
+      );
+      const data = res.data || {};
+      setGcsBackupPreflight(data);
+      if (data.bucketName && !gcsBackupBucket) {
+        setGcsBackupBucket(data.bucketName);
+      }
+      if (openConfirmModal) {
+        setGcsBackupConfirmModal({
+          effectivePaths,
+          preflight: data,
+          collisionResolution: data.hasCollision ? 'KEEP_BOTH' : 'OVERWRITE',
+        });
+      }
+      return data;
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to verify GCS bucket URI & collision status.'
+      );
+      return null;
+    } finally {
+      setGcsBackupPreflightBusy(false);
+    }
+  };
+
+  const handleStreamVmBackupToGcs = async (
+    sourceOverride = null,
+    collisionResolutionOverride = 'OVERWRITE'
+  ) => {
     const targetVm = activeVm || focusedVm;
     if (!targetVm?.name || !projectId) return;
-    const pathToBackup =
-      sourceOverride || gcsBackupSourcePath || scpPath || '~';
+
+    const effectivePaths = resolveEffectiveGcsBackupPaths(sourceOverride);
+
+    const pathToBackup = effectivePaths.join(', ') || scpPath || '~';
+    if (typeof sourceOverride === 'string' && sourceOverride.trim()) {
+      setGcsBackupSourcePath(sourceOverride.trim());
+    } else if (Array.isArray(sourceOverride) && sourceOverride.length > 0) {
+      setGcsBackupSourcePath(sourceOverride.join(', '));
+    }
+
     setGcsBackupBusy(true);
+    if (effectivePaths.length === 1) {
+      setScpActionBusy(`gcs:${effectivePaths[0]}`);
+    }
     setScpError('');
     try {
       const res = await axios.post(
@@ -1707,19 +1812,28 @@ export default function XtermWebSshTerminal({
         {
           zone: targetVm.zone || '',
           username: customUsername || defaultUsername || 'ubuntu',
-          sourcePath: pathToBackup,
+          sourcePath: effectivePaths[0] || pathToBackup,
+          sourcePaths: effectivePaths,
+          keepExactName: gcsBackupKeepExactName,
+          objectPrefix: gcsBackupObjectPrefix,
           bucketName: gcsBackupBucket,
           createBucketIfMissing: gcsBackupAutoCreate,
+          collisionResolution: collisionResolutionOverride || 'OVERWRITE',
+          allowOverwrite: collisionResolutionOverride !== 'PROMPT',
         }
       );
       const data = res.data || {};
       setGcsBackupReceipt(data);
+      setGcsBackupConfirmModal(null);
+      setGcsBackupPreflight(null);
       if (data.bucketName && !gcsBackupBucket) {
         setGcsBackupBucket(data.bucketName);
       }
       appendTransferHistory({
         direction: 'VM -> GCS',
         fileName: data.gcsUri || data.objectName,
+        bucketName: data.bucketName || gcsBackupBucket,
+        objectName: data.objectName || '',
         remotePath: data.resolvedPath || pathToBackup,
         sizeBytes: data.sizeBytes || 0,
         durationMs: 0,
@@ -1733,10 +1847,35 @@ export default function XtermWebSshTerminal({
       setScpError(
         err.response?.data?.error ||
           err.message ||
-          'Failed to stream VM directory backup to Cloud Storage.'
+          'Failed to stream VM file/directory backup to Cloud Storage.'
       );
     } finally {
       setGcsBackupBusy(false);
+      setScpActionBusy('');
+    }
+  };
+
+  const handleBrowseInGcsStudio = (bucketName, objectName = '') => {
+    const resolvedBucket = String(
+      bucketName ||
+        gcsBackupReceipt?.bucketName ||
+        gcsBackupBucket ||
+        `${projectId}-${(activeVm || focusedVm)?.name || 'vm'}-${
+          String((activeVm || focusedVm)?.zone || '')
+            .split('-')
+            .slice(0, 2)
+            .join('-')
+            .toLowerCase() || 'regional'
+        }-backups`
+    )
+      .trim()
+      .replace(/^gs:\/\//, '')
+      .replace(/\/.*$/, '');
+    if (onSelectTab) {
+      onSelectTab('CLOUD_STORAGE', 'OBJECTS', {
+        bucketName: resolvedBucket,
+        objectName: String(objectName || '').trim(),
+      });
     }
   };
 
@@ -2918,7 +3057,11 @@ export default function XtermWebSshTerminal({
                         const nextOpen = !showGcsBackupDrawer;
                         setShowGcsBackupDrawer(nextOpen);
                         if (nextOpen) {
-                          setGcsBackupSourcePath(scpPath || '~');
+                          const preferredSource =
+                            scpSelectedPaths.length > 0
+                              ? scpSelectedPaths.join(', ')
+                              : scpPath || '~';
+                          setGcsBackupSourcePath(preferredSource);
                           if (!diskAnalyzerData) {
                             handleRunDiskHotspotAnalyzer(scpPath || '/');
                           }
@@ -2929,12 +3072,20 @@ export default function XtermWebSshTerminal({
                           ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
                           : 'bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500'
                       }`}
-                      title="Stream any VM directory directly into a Google Cloud Storage bucket (gs://) as a SHA-256 verified .tar.gz archive"
+                      title="Stream selected SFTP file(s)/folder(s) or current directory directly into a Google Cloud Storage bucket (gs://) keeping their exact name with SHA-256 verification"
                     >
                       <Upload className="w-3 h-3" />
                       <span>
                         {showGcsBackupDrawer
-                          ? '● Backup VM → GCS'
+                          ? scpSelectedPaths.length === 1
+                            ? `● Backup "${scpSelectedPaths[0].split('/').pop()}" → GCS`
+                            : scpSelectedPaths.length > 1
+                            ? `● Backup Selected (${scpSelectedPaths.length}) → GCS`
+                            : '● Backup VM → GCS'
+                          : scpSelectedPaths.length === 1
+                          ? `Backup "${scpSelectedPaths[0].split('/').pop()}" → GCS`
+                          : scpSelectedPaths.length > 1
+                          ? `Backup Selected (${scpSelectedPaths.length}) → GCS`
                           : 'Backup VM → GCS'}
                       </span>
                     </button>
@@ -3280,38 +3431,101 @@ export default function XtermWebSshTerminal({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-extrabold">
-                        DIRECT VM → CLOUD STORAGE (gs://) ARCHIVE STREAMER
+                        DIRECT VM → CLOUD STORAGE (gs://) BACKUP STREAMER
                       </span>
-                      <span className="text-[11px] text-zinc-600 dark:text-zinc-300">
-                        Streams real <code>.tar.gz</code> from{' '}
-                        <strong>{(activeVm || focusedVm)?.name}</strong> to{' '}
-                        <code>storage.googleapis.com</code> with SHA-256 verification
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
+                        SAME-REGION (
+                        {String((activeVm || focusedVm)?.zone || '')
+                          .split('-')
+                          .slice(0, 2)
+                          .join('-')
+                          .toUpperCase() || 'AUTO'}
+                        ) · $0.00/GB EGRESS FEE
                       </span>
+                      {scpSelectedPaths.length > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold">
+                          Synced with {scpSelectedPaths.length} Selected Item
+                          {scpSelectedPaths.length > 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold">
+                          Current Directory ({scpPath || '~'})
+                        </span>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowGcsBackupDrawer(false)}
-                      className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
-                    >
-                      Close
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {onSelectTab && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleBrowseInGcsStudio(
+                              gcsBackupReceipt?.bucketName || gcsBackupBucket,
+                              gcsBackupReceipt?.objectName || ''
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/45 hover:border-blue-500 text-[10px] font-extrabold cursor-pointer"
+                          title="Open this bucket & backed-up object directly in the Cloud Storage (gs://) Studio"
+                        >
+                          <Folder className="w-3 h-3" />
+                          <span>Browse in GCS →</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowGcsBackupDrawer(false)}
+                        className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
-                        Source Directory / File on VM
-                      </label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <label className="block text-[10px] font-bold uppercase text-zinc-500">
+                          Selected File(s) / Folder on VM (Auto-Synced with SFTP Checkboxes)
+                        </label>
+                        <div className="flex items-center gap-1">
+                          {scpSelectedPaths.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setGcsBackupSourcePath(
+                                  scpSelectedPaths.join(', ')
+                                )
+                              }
+                              className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[9px] font-bold cursor-pointer"
+                            >
+                              Use Selected ({scpSelectedPaths.length})
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setGcsBackupSourcePath(scpPath || '~')
+                            }
+                            className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[9px] font-bold cursor-pointer"
+                          >
+                            Use Folder ({scpPath || '~'})
+                          </button>
+                        </div>
+                      </div>
                       <input
                         type="text"
-                        value={gcsBackupSourcePath || scpPath || '~'}
+                        value={
+                          gcsBackupSourcePath ||
+                          (scpSelectedPaths.length > 0
+                            ? scpSelectedPaths.join(', ')
+                            : scpPath || '~')
+                        }
                         onChange={(e) => setGcsBackupSourcePath(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 font-mono"
                       />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
-                        Target GCS Bucket (gs://)
+                        Same-Region GCS Bucket (gs://)
                       </label>
                       <input
                         type="text"
@@ -3320,18 +3534,58 @@ export default function XtermWebSshTerminal({
                         onChange={(e) => setGcsBackupBucket(e.target.value)}
                         placeholder={`${projectId}-${
                           (activeVm || focusedVm)?.name || 'vm'
+                        }-${
+                          String((activeVm || focusedVm)?.zone || '')
+                            .split('-')
+                            .slice(0, 2)
+                            .join('-')
+                            .toLowerCase() || 'regional'
                         }-backups`}
                         className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
                       />
                       <datalist id="scp-gcs-buckets-list">
                         {(diskAnalyzerData?.buckets || []).map((b) => (
                           <option key={b.name} value={b.name}>
-                            {b.name} ({b.location})
+                            {b.name} ({b.location}
+                            {b.sameRegion
+                              ? ' · SAME REGION · $0.00 EGRESS'
+                              : ' · Cross-Region'}
+                            )
                           </option>
                         ))}
                       </datalist>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                        Optional Bucket Subfolder
+                      </label>
+                      <input
+                        type="text"
+                        value={gcsBackupObjectPrefix}
+                        onChange={(e) =>
+                          setGcsBackupObjectPrefix(e.target.value)
+                        }
+                        placeholder="Root of bucket (exact name)"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-700 dark:text-zinc-200 font-bold cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gcsBackupKeepExactName}
+                          onChange={(e) => {
+                            setGcsBackupKeepExactName(e.target.checked);
+                            setGcsBackupPreflight(null);
+                          }}
+                        />
+                        <span>
+                          Keep exact file/folder name in GCS (files upload raw, folders as &lt;name&gt;.tar.gz)
+                        </span>
+                      </label>
                       <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-600 dark:text-zinc-300 cursor-pointer">
                         <input
                           type="checkbox"
@@ -3340,33 +3594,183 @@ export default function XtermWebSshTerminal({
                             setGcsBackupAutoCreate(e.target.checked)
                           }
                         />
-                        <span>Auto-create bucket</span>
+                        <span>Auto-create bucket in VM&apos;s exact region</span>
                       </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
-                        disabled={gcsBackupBusy}
-                        onClick={() => handleStreamVmBackupToGcs()}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        disabled={gcsBackupPreflightBusy || gcsBackupBusy}
+                        onClick={() => handleRunGcsBackupPreflight(null, false)}
+                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        title="Check if the target gs:// URI already exists in the Cloud Storage bucket before backing up"
+                      >
+                        {gcsBackupPreflightBusy
+                          ? 'Checking gs:// URI...'
+                          : '1. Check GCS URI / Collision'}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={gcsBackupBusy || gcsBackupPreflightBusy}
+                        onClick={() => handleRunGcsBackupPreflight(null, true)}
+                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                       >
                         {gcsBackupBusy
                           ? 'Streaming to GCS...'
-                          : 'Stream .tar.gz → GCS'}
+                          : scpSelectedPaths.length === 1
+                          ? `2. Backup "${scpSelectedPaths[0].split('/').pop()}" → GCS`
+                          : scpSelectedPaths.length > 1
+                          ? `2. Backup ${scpSelectedPaths.length} Selected Items → GCS`
+                          : `2. Backup "${(gcsBackupSourcePath || scpPath || '~')
+                              .replace(/\/+$/, '')
+                              .split('/')
+                              .pop() || 'root'}" → GCS`}
                       </button>
                     </div>
                   </div>
 
+                  {/* Pre-Flight GCS URI & Collision Check Report */}
+                  {gcsBackupPreflight && (
+                    <div
+                      className={`p-2.5 rounded-lg border space-y-1.5 text-[11px] ${
+                        gcsBackupPreflight.hasCollision
+                          ? 'bg-amber-500/10 border-amber-500/45'
+                          : 'bg-blue-500/10 border-blue-500/35'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span
+                          className={`font-extrabold ${
+                            gcsBackupPreflight.hasCollision
+                              ? 'text-amber-700 dark:text-amber-300'
+                              : 'text-blue-700 dark:text-blue-300'
+                          }`}
+                        >
+                          {gcsBackupPreflight.hasCollision
+                            ? `Collision Warning: ${gcsBackupPreflight.collisionCount} object(s) already share the exact same gs:// URI in bucket "${gcsBackupPreflight.bucketName}"`
+                            : `URI Check Passed: Target gs:// URI is available in "${gcsBackupPreflight.bucketName}" (${gcsBackupPreflight.egressPolicy})`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGcsBackupConfirmModal({
+                              effectivePaths: (
+                                gcsBackupPreflight.targets || []
+                              ).map((t) => t.sourcePath),
+                              preflight: gcsBackupPreflight,
+                              collisionResolution:
+                                gcsBackupPreflight.hasCollision
+                                  ? 'KEEP_BOTH'
+                                  : 'OVERWRITE',
+                            })
+                          }
+                          className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                        >
+                          Open Backup Confirmation Modal →
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        {(gcsBackupPreflight.targets || []).map((t) => (
+                          <div
+                            key={t.sourcePath}
+                            className="flex flex-wrap items-center justify-between gap-2 text-[10px] bg-white/70 dark:bg-zinc-950/70 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                                {t.sourcePath}
+                              </span>
+                              <span className="text-zinc-400">→</span>
+                              <code className="text-blue-600 dark:text-blue-400 font-bold">
+                                {t.gcsUri}
+                              </code>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {t.existsInGcs ? (
+                                <>
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold">
+                                    EXISTS IN BUCKET (
+                                    {formatBytes(t.existingGcsSizeBytes)})
+                                  </span>
+                                  {onSelectTab && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleBrowseInGcsStudio(
+                                          gcsBackupPreflight.bucketName,
+                                          t.objectName
+                                        )
+                                      }
+                                      className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold cursor-pointer"
+                                    >
+                                      Browse Existing in GCS →
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-extrabold">
+                                  NEW URI (No Collision)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {gcsBackupReceipt && (
-                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/35 space-y-1 text-[11px]">
+                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/35 space-y-1.5 text-[11px]">
                       <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2 flex-wrap">
                         <span>{gcsBackupReceipt.message}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px]">
-                          {formatBytes(gcsBackupReceipt.sizeBytes)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px]">
+                            {formatBytes(gcsBackupReceipt.sizeBytes)}
+                          </span>
+                          {onSelectTab && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleBrowseInGcsStudio(
+                                  gcsBackupReceipt.bucketName,
+                                  gcsBackupReceipt.objectName
+                                )
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer"
+                              title={`Redirect to Cloud Storage Studio and open ${gcsBackupReceipt.gcsUri}`}
+                            >
+                              <Folder className="w-3 h-3" />
+                              <span>Browse in GCS →</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="text-[10px] text-zinc-600 dark:text-zinc-300 flex flex-wrap items-center gap-3">
                         <span>
-                          URI: <code>{gcsBackupReceipt.gcsUri}</code>
+                          URI:{' '}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleBrowseInGcsStudio(
+                                gcsBackupReceipt.bucketName,
+                                gcsBackupReceipt.objectName
+                              )
+                            }
+                            className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            title="Click to browse this object inside the Cloud Storage (gs://) Studio"
+                          >
+                            {gcsBackupReceipt.gcsUri}
+                          </button>
                         </span>
+                        <span>
+                          Object Name: <code>{gcsBackupReceipt.objectName}</code>
+                        </span>
+                        {gcsBackupReceipt.egressPolicy && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                            {gcsBackupReceipt.egressPolicy}
+                          </span>
+                        )}
                         <span>
                           SHA-256: <code>{gcsBackupReceipt.sha256?.slice(0, 24)}…</code>
                         </span>
@@ -3376,27 +3780,245 @@ export default function XtermWebSshTerminal({
                 </div>
               )}
 
+              {/* Pre-Backup Confirmation & Collision Guard Modal */}
+              {gcsBackupConfirmModal && (
+                <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-zinc-900 border-2 border-emerald-500/50 shadow-2xl p-4 space-y-3 text-xs">
+                    <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-extrabold">
+                          CONFIRM VM → CLOUD STORAGE (gs://) BACKUP
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                          {gcsBackupConfirmModal.preflight?.egressPolicy ||
+                            'Same-Region · $0.00/GB Egress'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setGcsBackupConfirmModal(null)}
+                        className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-bold text-zinc-700 dark:text-zinc-200">
+                        Target GCS Bucket:{' '}
+                        <code className="text-emerald-600 dark:text-emerald-400">
+                          gs://{gcsBackupConfirmModal.preflight?.bucketName}
+                        </code>{' '}
+                        ({gcsBackupConfirmModal.preflight?.bucketLocation})
+                      </div>
+
+                      <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                        {(
+                          gcsBackupConfirmModal.preflight?.targets || []
+                        ).map((t) => (
+                          <div
+                            key={t.sourcePath}
+                            className={`p-2 rounded-lg border flex flex-wrap items-center justify-between gap-2 ${
+                              t.existsInGcs
+                                ? 'bg-amber-500/10 border-amber-500/45'
+                                : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800'
+                            }`}
+                          >
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="font-mono font-bold text-zinc-900 dark:text-white truncate">
+                                VM: {t.sourcePath}{' '}
+                                {t.isDirectory ? '(Directory → .tar.gz)' : '(File → Raw)'}
+                              </div>
+                              <div className="text-[10px] font-mono text-blue-600 dark:text-blue-400 truncate">
+                                GCS: {t.gcsUri}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {t.existsInGcs ? (
+                                <>
+                                  <span className="px-2 py-0.5 rounded bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold">
+                                    ALREADY EXISTS (
+                                    {formatBytes(t.existingGcsSizeBytes)})
+                                  </span>
+                                  {onSelectTab && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setGcsBackupConfirmModal(null);
+                                        handleBrowseInGcsStudio(
+                                          gcsBackupConfirmModal.preflight
+                                            ?.bucketName,
+                                          t.objectName
+                                        );
+                                      }}
+                                      className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold cursor-pointer"
+                                    >
+                                      Browse in GCS →
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold">
+                                  NEW URI · Safe
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {gcsBackupConfirmModal.preflight?.hasCollision && (
+                      <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/45 space-y-2">
+                        <div className="font-extrabold text-amber-700 dark:text-amber-300 text-[11px] flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>
+                            File/Folder Already Exists at the Same gs:// URI! Choose how to proceed:
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 text-[11px]">
+                          <label className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="gcs-collision-mode"
+                              checked={
+                                gcsBackupConfirmModal.collisionResolution ===
+                                'KEEP_BOTH'
+                              }
+                              onChange={() =>
+                                setGcsBackupConfirmModal((prev) => ({
+                                  ...prev,
+                                  collisionResolution: 'KEEP_BOTH',
+                                }))
+                              }
+                            />
+                            <div>
+                              <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                                Keep Both (Recommended — Zero Overwrite)
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                Appends a timestamp suffix to the new backup so the existing GCS object is preserved untouched.
+                              </div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="gcs-collision-mode"
+                              checked={
+                                gcsBackupConfirmModal.collisionResolution ===
+                                'OVERWRITE'
+                              }
+                              onChange={() =>
+                                setGcsBackupConfirmModal((prev) => ({
+                                  ...prev,
+                                  collisionResolution: 'OVERWRITE',
+                                }))
+                              }
+                            />
+                            <div>
+                              <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                                Overwrite Existing Object at Same gs:// URI
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                Replaces the existing object in GCS with a new generation keeping the exact same name.
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => setGcsBackupConfirmModal(null)}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={gcsBackupBusy}
+                        onClick={() =>
+                          handleStreamVmBackupToGcs(
+                            gcsBackupConfirmModal.effectivePaths,
+                            gcsBackupConfirmModal.collisionResolution
+                          )
+                        }
+                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {gcsBackupBusy
+                          ? 'Streaming Backup to GCS...'
+                          : gcsBackupConfirmModal.preflight?.hasCollision &&
+                            gcsBackupConfirmModal.collisionResolution ===
+                              'OVERWRITE'
+                          ? 'Confirm Overwrite & Backup → GCS'
+                          : gcsBackupConfirmModal.preflight?.hasCollision &&
+                            gcsBackupConfirmModal.collisionResolution ===
+                              'KEEP_BOTH'
+                          ? 'Confirm Keep Both & Backup → GCS'
+                          : 'Confirm & Stream Backup → GCS'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Multi-Select Batch Operations Bar */}
               {scpSelectedPaths.length > 0 && (
                 <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/35 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold">
                       {scpSelectedPaths.length} Selected
                     </span>
-                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 font-bold">
-                      Batch SCP / SFTP Operations:
+                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 font-bold truncate max-w-[340px]">
+                      {scpSelectedPaths
+                        .map((p) => p.split('/').pop())
+                        .join(', ')}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={
+                        Boolean(scpActionBusy) ||
+                        gcsBackupBusy ||
+                        gcsBackupPreflightBusy
+                      }
+                      onClick={() => {
+                        setShowGcsBackupDrawer(true);
+                        setGcsBackupSourcePath(scpSelectedPaths.join(', '));
+                        handleRunGcsBackupPreflight(scpSelectedPaths, true);
+                      }}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer disabled:opacity-50 ${
+                        gcsBackupBusy
+                          ? 'bg-blue-600 text-white border-2 border-blue-500 shadow-sm'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                      }`}
+                      title="Stream the selected file(s) or folder(s) directly to Google Cloud Storage (gs://) keeping their exact name"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>
+                        {gcsBackupBusy
+                          ? 'Backing up to GCS...'
+                          : scpSelectedPaths.length === 1
+                          ? `Backup "${scpSelectedPaths[0].split('/').pop()}" → GCS`
+                          : `Backup Selected (${scpSelectedPaths.length}) → GCS`}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       disabled={Boolean(scpActionBusy)}
                       onClick={() =>
                         handleDownloadScpTarGz(
                           scpSelectedPaths,
-                          `${(activeVm || focusedVm)?.name}-selected-${
-                            scpSelectedPaths.length
-                          }.tar.gz`
+                          scpSelectedPaths.length === 1
+                            ? `${scpSelectedPaths[0].split('/').pop()}.tar.gz`
+                            : `${(activeVm || focusedVm)?.name}-selected-${
+                                scpSelectedPaths.length
+                              }.tar.gz`
                         )
                       }
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer disabled:opacity-50 ${
@@ -3645,15 +4267,46 @@ export default function XtermWebSshTerminal({
                             >
                               {h.direction}
                             </span>
-                            <span className="font-bold text-zinc-900 dark:text-white truncate max-w-[220px]">
-                              {h.fileName}
-                            </span>
+                            {h.direction === 'VM -> GCS' && onSelectTab ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleBrowseInGcsStudio(
+                                    h.bucketName,
+                                    h.objectName
+                                  )
+                                }
+                                className="font-bold text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[220px] cursor-pointer"
+                                title="Click to browse this backup in the Cloud Storage Studio"
+                              >
+                                {h.fileName}
+                              </button>
+                            ) : (
+                              <span className="font-bold text-zinc-900 dark:text-white truncate max-w-[220px]">
+                                {h.fileName}
+                              </span>
+                            )}
                             <span className="text-zinc-500">
                               ({formatBytes(h.sizeBytes)} ·{' '}
                               {formatBytes(h.speedBps)}/s)
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
+                            {h.direction === 'VM -> GCS' && onSelectTab && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleBrowseInGcsStudio(
+                                    h.bucketName,
+                                    h.objectName
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-extrabold cursor-pointer"
+                                title="Redirect to Cloud Storage Studio and inspect this object"
+                              >
+                                Browse in GCS →
+                              </button>
+                            )}
                             {h.sha256 && (
                               <button
                                 type="button"
@@ -4033,6 +4686,8 @@ export default function XtermWebSshTerminal({
                           const isRowReading =
                             scpActionBusy === `preview:${entry.path}` ||
                             scpActionBusy === `tail:${entry.path}`;
+                          const isRowGcsBackingUp =
+                            scpActionBusy === `gcs:${entry.path}`;
                           const isRowBusy =
                             isRowDeleting ||
                             isRowHashing ||
@@ -4041,7 +4696,8 @@ export default function XtermWebSshTerminal({
                             isRowExtracting ||
                             isRowChmodding ||
                             isRowRenaming ||
-                            isRowReading;
+                            isRowReading ||
+                            isRowGcsBackingUp;
                           const isPendingDeleteConfirm =
                             scpConfirmDeletePath === entry.path &&
                             !isRowDeleting;
@@ -4053,6 +4709,8 @@ export default function XtermWebSshTerminal({
                             ? 'Deleting from VM...'
                             : isRowHashing
                             ? 'Computing SHA-256 & MD5...'
+                            : isRowGcsBackingUp
+                            ? 'Backing up → GCS...'
                             : isRowExtracting
                             ? 'Extracting archive...'
                             : isRowArchiving
@@ -4296,6 +4954,33 @@ export default function XtermWebSshTerminal({
                                         </button>
                                         <button
                                           type="button"
+                                          disabled={
+                                            isRowBusy ||
+                                            gcsBackupBusy ||
+                                            gcsBackupPreflightBusy
+                                          }
+                                          onClick={() => {
+                                            setScpSelectedPaths([entry.path]);
+                                            setGcsBackupSourcePath(entry.path);
+                                            setShowGcsBackupDrawer(true);
+                                            handleRunGcsBackupPreflight(
+                                              entry.path,
+                                              true
+                                            );
+                                          }}
+                                          className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer disabled:opacity-40 ${
+                                            isRowGcsBackingUp
+                                              ? 'bg-blue-600 text-white border border-blue-500 shadow-sm'
+                                              : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                                          }`}
+                                          title={`Check gs:// URI & confirm backup of folder "${entry.name}" to Google Cloud Storage (${entry.name}.tar.gz)`}
+                                        >
+                                          {isRowGcsBackingUp
+                                            ? '→ GCS...'
+                                            : '→ GCS'}
+                                        </button>
+                                        <button
+                                          type="button"
                                           disabled={isRowBusy}
                                           onClick={() =>
                                             handleDownloadScpTarGz(
@@ -4439,6 +5124,34 @@ export default function XtermWebSshTerminal({
                                             <span>Run</span>
                                           </button>
                                         )}
+
+                                        <button
+                                          type="button"
+                                          disabled={
+                                            isRowBusy ||
+                                            gcsBackupBusy ||
+                                            gcsBackupPreflightBusy
+                                          }
+                                          onClick={() => {
+                                            setScpSelectedPaths([entry.path]);
+                                            setGcsBackupSourcePath(entry.path);
+                                            setShowGcsBackupDrawer(true);
+                                            handleRunGcsBackupPreflight(
+                                              entry.path,
+                                              true
+                                            );
+                                          }}
+                                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer disabled:opacity-40 ${
+                                            isRowGcsBackingUp
+                                              ? 'bg-blue-600 text-white border border-blue-500 shadow-sm'
+                                              : 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30'
+                                          }`}
+                                          title={`Check gs:// URI & confirm backup of file "${entry.name}" to Google Cloud Storage (${entry.name})`}
+                                        >
+                                          {isRowGcsBackingUp
+                                            ? '→ GCS...'
+                                            : '→ GCS'}
+                                        </button>
 
                                         <button
                                           type="button"
