@@ -57376,21 +57376,43 @@ spec:
           ? rawCliAnswerObj.references
           : []),
       ];
-      const extractedRefUrls = rawRefs
-        .map((r) => {
-          if (typeof r === 'string') return r;
-          if (typeof r === 'object' && r !== null) {
-            return (
-              r.uri ||
-              r.url ||
-              r.chunkInfo?.documentMetadata?.uri ||
-              r.documentMetadata?.uri ||
-              null
-            );
+
+      const groundedReferencesMap = new Map();
+      rawRefs.forEach((r) => {
+        if (!r || typeof r !== 'object') return;
+        const chunk = r.documentReference?.documentChunk || r.documentChunk || r;
+        const doc = chunk?.document || r.documentMetadata || r;
+        const uri =
+          doc?.uri ||
+          r.uri ||
+          r.url ||
+          r.chunkInfo?.documentMetadata?.uri ||
+          null;
+        if (typeof uri === 'string' && uri.startsWith('http')) {
+          const cleanSnippet = String(chunk?.content || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 260);
+          if (!groundedReferencesMap.has(uri)) {
+            groundedReferencesMap.set(uri, {
+              title: doc?.title || uri.split('/').pop() || 'Google Cloud Documentation',
+              uri,
+              description: doc?.description || '',
+              updateTime: doc?.updateTime ? String(doc.updateTime).slice(0, 10) : null,
+              relevanceScore:
+                typeof chunk?.relevanceScore === 'number'
+                  ? chunk.relevanceScore
+                  : null,
+              snippet: cleanSnippet,
+            });
           }
-          return null;
-        })
-        .filter((u) => typeof u === 'string' && u.startsWith('http'));
+        }
+      });
+      const groundedReferences = Array.from(groundedReferencesMap.values()).slice(
+        0,
+        6
+      );
+      const extractedRefUrls = groundedReferences.map((g) => g.uri);
 
       const citations = Array.from(
         new Set([
@@ -57419,6 +57441,7 @@ spec:
           architecturalPillars,
           extractedCliCommands,
           citations,
+          groundedReferences,
           rawCliData: dkAnswerRes.data || null,
         },
         liveTopologyGraph: {

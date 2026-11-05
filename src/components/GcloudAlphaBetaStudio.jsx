@@ -69,6 +69,421 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   );
 }
 
+function renderInlineMarkdownTokens(text) {
+  if (!text || typeof text !== 'string') return null;
+  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^)]+\))/g;
+  const parts = text.split(pattern);
+  return parts.map((part, idx) => {
+    if (!part) return null;
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong
+          key={idx}
+          className="font-extrabold text-zinc-900 dark:text-white"
+        >
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+      return (
+        <code
+          key={idx}
+          className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-mono text-[10.5px]"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    const linkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
+    if (linkMatch) {
+      return (
+        <a
+          key={idx}
+          href={linkMatch[2]}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 dark:text-blue-400 underline hover:text-blue-500 font-semibold"
+        >
+          {linkMatch[1]} ↗
+        </a>
+      );
+    }
+    return <React.Fragment key={idx}>{part}</React.Fragment>;
+  });
+}
+
+function GroundedKnowledgeRichRenderer({ grounded }) {
+  if (!grounded) return null;
+
+  const rawCandidate =
+    grounded.synthesizedResponse ||
+    grounded.groundedSynthesis ||
+    grounded.answerText ||
+    grounded.answer ||
+    grounded.rawCliData?.answer?.answerText ||
+    '';
+
+  const rawText =
+    typeof rawCandidate === 'string'
+      ? rawCandidate.trim()
+      : typeof rawCandidate === 'object' && rawCandidate !== null
+      ? String(
+          rawCandidate.answerText ||
+            rawCandidate.text ||
+            rawCandidate.summary ||
+            ''
+        ).trim()
+      : '';
+
+  // Extract rich references from groundedReferences OR rawCliData.answer.references
+  const derivedReferences = React.useMemo(() => {
+    if (
+      Array.isArray(grounded.groundedReferences) &&
+      grounded.groundedReferences.length > 0
+    ) {
+      return grounded.groundedReferences;
+    }
+    const rawRefs =
+      grounded.rawCliData?.answer?.references || grounded.references || [];
+    if (!Array.isArray(rawRefs) || rawRefs.length === 0) return [];
+    const map = new Map();
+    rawRefs.forEach((r) => {
+      if (!r || typeof r !== 'object') return;
+      const chunk = r.documentReference?.documentChunk || r.documentChunk || r;
+      const doc = chunk?.document || r.documentMetadata || r;
+      const uri = doc?.uri || r.uri || r.url || null;
+      if (typeof uri === 'string' && uri.startsWith('http') && !map.has(uri)) {
+        const snippet = String(chunk?.content || '')
+          .replace(/###\s+/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 220);
+        map.set(uri, {
+          title:
+            doc?.title || uri.split('/').pop() || 'Google Cloud Documentation',
+          uri,
+          description: doc?.description || '',
+          updateTime: doc?.updateTime ? String(doc.updateTime).slice(0, 10) : null,
+          relevanceScore:
+            typeof chunk?.relevanceScore === 'number'
+              ? chunk.relevanceScore
+              : null,
+          snippet,
+        });
+      }
+    });
+    return Array.from(map.values()).slice(0, 4);
+  }, [grounded]);
+
+  // Parse Markdown lines (`### Heading`, `* **Key:** Value`, sub-bullets)
+  const parsedMarkdown = React.useMemo(() => {
+    if (!rawText) return { mode: 'EMPTY' };
+
+    const hasMarkdownStructure =
+      rawText.includes('\n') &&
+      (/^#{1,4}\s+/m.test(rawText) || /^\s*[*-]\s+/m.test(rawText));
+
+    if (hasMarkdownStructure) {
+      const lines = rawText.split(/\r?\n/);
+      const introParagraphs = [];
+      const sections = [];
+      let currentSection = null;
+
+      lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        const headingMatch = trimmed.match(/^#{1,4}\s+(.+)$/);
+        if (headingMatch) {
+          currentSection = {
+            title: headingMatch[1].replace(/\*\*/g, '').trim(),
+            items: [],
+          };
+          sections.push(currentSection);
+          return;
+        }
+
+        const subBulletMatch = line.match(/^(\s{2,}|\t+)[*-]\s+(.+)$/);
+        if (subBulletMatch) {
+          if (!currentSection) {
+            currentSection = {
+              title: 'Grounded Key Findings',
+              items: [],
+            };
+            sections.push(currentSection);
+          }
+          const lastItem =
+            currentSection.items[currentSection.items.length - 1];
+          if (lastItem) {
+            lastItem.subItems.push(subBulletMatch[2].trim());
+          } else {
+            currentSection.items.push({
+              keyLabel: null,
+              body: subBulletMatch[2].trim(),
+              subItems: [],
+            });
+          }
+          return;
+        }
+
+        const topBulletMatch = trimmed.match(/^[*-]\s+(.+)$/);
+        if (topBulletMatch) {
+          if (!currentSection) {
+            currentSection = {
+              title: 'Grounded Architecture Guidance',
+              items: [],
+            };
+            sections.push(currentSection);
+          }
+          const bulletContent = topBulletMatch[1].trim();
+          // Match `**Key Label:** Rest of text` or `**Key Label**: Rest of text`
+          const kvMatch =
+            bulletContent.match(/^\*\*([^*:]+):\*\*\s*(.*)$/) ||
+            bulletContent.match(/^\*\*([^*:]+)\*\*:\s*(.*)$/);
+          if (kvMatch) {
+            currentSection.items.push({
+              keyLabel: kvMatch[1].trim(),
+              body: kvMatch[2].trim(),
+              subItems: [],
+            });
+          } else {
+            currentSection.items.push({
+              keyLabel: null,
+              body: bulletContent,
+              subItems: [],
+            });
+          }
+          return;
+        }
+
+        if (!currentSection) {
+          introParagraphs.push(trimmed);
+        } else {
+          currentSection.items.push({
+            keyLabel: null,
+            body: trimmed,
+            subItems: [],
+          });
+        }
+      });
+
+      return {
+        mode: 'MARKDOWN_SECTIONS',
+        introParagraphs,
+        sections,
+      };
+    }
+
+    // Check for numbered synthesis `(1) ...; (2) ...; (3) ...`
+    if (rawText.includes('(1)') && rawText.includes('(2)')) {
+      const firstIdx = rawText.indexOf('(1)');
+      const intro = firstIdx > 0 ? rawText.slice(0, firstIdx).trim() : '';
+      const rest = rawText.slice(Math.max(0, firstIdx));
+      const numberedParts = rest
+        .split(/(?=\(\d+\)\s*)/g)
+        .map((s) => s.replace(/;\s*$/, '').trim())
+        .filter(Boolean);
+      return {
+        mode: 'NUMBERED_SYNTHESIS',
+        intro,
+        numberedParts,
+      };
+    }
+
+    return {
+      mode: 'PLAIN',
+      text: rawText,
+    };
+  }, [rawText]);
+
+  return (
+    <div className="space-y-3.5">
+      {parsedMarkdown.mode === 'MARKDOWN_SECTIONS' && (
+        <>
+          {parsedMarkdown.introParagraphs.length > 0 && (
+            <div className="p-3 rounded-xl bg-blue-500/[0.07] dark:bg-blue-500/10 border border-blue-500/25 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1">
+                {parsedMarkdown.introParagraphs.map((p, idx) => (
+                  <p key={idx}>{renderInlineMarkdownTokens(p)}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div
+            className={`grid grid-cols-1 ${
+              parsedMarkdown.sections.length >= 2 ? 'lg:grid-cols-2' : ''
+            } gap-3.5`}
+          >
+            {parsedMarkdown.sections.map((sec, sIdx) => {
+              const isPrimaryCard = sIdx % 2 === 0;
+              return (
+                <div
+                  key={`${sec.title}-${sIdx}`}
+                  className={`rounded-xl border p-4 space-y-3 ${
+                    isPrimaryCard
+                      ? 'border-blue-500/35 bg-gradient-to-b from-blue-500/[0.05] to-transparent dark:from-blue-950/25 dark:to-zinc-900/60'
+                      : 'border-emerald-500/35 bg-gradient-to-b from-emerald-500/[0.05] to-transparent dark:from-emerald-950/25 dark:to-zinc-900/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`p-1.5 rounded-lg ${
+                          isPrimaryCard
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                      </span>
+                      <h5 className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                        {sec.title}
+                      </h5>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold ${
+                        isPrimaryCard
+                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      }`}
+                    >
+                      {sec.items.length} Dimensions
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {sec.items.map((item, iIdx) => (
+                      <div
+                        key={iIdx}
+                        className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/90 space-y-1.5"
+                      >
+                        <div className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                          {item.keyLabel && (
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 mr-2 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wide ${
+                                isPrimaryCard
+                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              }`}
+                            >
+                              {item.keyLabel}
+                            </span>
+                          )}
+                          <span>{renderInlineMarkdownTokens(item.body)}</span>
+                        </div>
+
+                        {item.subItems.length > 0 && (
+                          <ul className="pl-3 pt-1 space-y-1 border-l-2 border-emerald-500/35">
+                            {item.subItems.map((sub, subIdx) => (
+                              <li
+                                key={subIdx}
+                                className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed flex items-start gap-1.5"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                                <span>{renderInlineMarkdownTokens(sub)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {parsedMarkdown.mode === 'NUMBERED_SYNTHESIS' && (
+        <div className="space-y-2.5">
+          {parsedMarkdown.intro && (
+            <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/25 text-xs font-mono font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>{parsedMarkdown.intro.replace(/:\s*$/, '')}</span>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {parsedMarkdown.numberedParts.map((part, idx) => {
+              const cleaned = part.replace(/^\(\d+\)\s*/, '');
+              return (
+                <div
+                  key={idx}
+                  className="p-3 rounded-xl bg-blue-500/[0.05] dark:bg-zinc-900/80 border border-blue-500/25 space-y-1.5"
+                >
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[9.5px] font-mono font-extrabold">
+                    PILLAR #{idx + 1}
+                  </span>
+                  <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    {renderInlineMarkdownTokens(cleaned)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {parsedMarkdown.mode === 'PLAIN' && (
+        <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
+          {renderInlineMarkdownTokens(parsedMarkdown.text)}
+        </div>
+      )}
+
+      {/* Grounded Official Documentation Chunk Cards (from developerknowledge.googleapis.com references) */}
+      {derivedReferences.length > 0 && (
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>
+                Retrieved Official Documentation Chunks ({derivedReferences.length} Grounded Docs)
+              </span>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {derivedReferences.map((ref, idx) => (
+              <div
+                key={`${ref.uri}-${idx}`}
+                className="p-3 rounded-xl border border-blue-500/25 bg-zinc-50/90 dark:bg-zinc-900/70 space-y-1.5 flex flex-col justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <a
+                      href={ref.uri}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-400 hover:underline truncate"
+                    >
+                      {ref.title} ↗
+                    </a>
+                    {ref.updateTime && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-mono font-bold shrink-0">
+                        Updated {ref.updateTime}
+                      </span>
+                    )}
+                  </div>
+                  {ref.snippet && (
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                      {ref.snippet}
+                    </p>
+                  )}
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 truncate pt-1">
+                  {ref.uri}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const STUDIO_TABS = [
   // CORE RUNTIME, AGENT IDENTITY & RESILIENCE
   {
@@ -3819,25 +4234,7 @@ spec:
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
-                {(() => {
-                  const raw =
-                    activeGrounded.synthesizedResponse ||
-                    activeGrounded.groundedSynthesis ||
-                    activeGrounded.answerText ||
-                    activeGrounded.answer;
-                  if (typeof raw === 'string') return raw;
-                  if (typeof raw === 'object' && raw !== null) {
-                    return (
-                      raw.answerText ||
-                      raw.text ||
-                      raw.summary ||
-                      JSON.stringify(raw)
-                    );
-                  }
-                  return '';
-                })()}
-              </div>
+              <GroundedKnowledgeRichRenderer grounded={activeGrounded} />
 
               {/* 3 Architectural Decision Pillar Cards */}
               {Array.isArray(activeGrounded.architecturalPillars) && (
@@ -6518,25 +6915,9 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
                   {lastReceipt.groundedAnswer.groundingSource}
                 </span>
               </div>
-              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                {(() => {
-                  const raw =
-                    lastReceipt.groundedAnswer.synthesizedResponse ||
-                    lastReceipt.groundedAnswer.groundedSynthesis ||
-                    lastReceipt.groundedAnswer.answerText ||
-                    lastReceipt.groundedAnswer.answer;
-                  if (typeof raw === 'string') return raw;
-                  if (typeof raw === 'object' && raw !== null) {
-                    return (
-                      raw.answerText ||
-                      raw.text ||
-                      raw.summary ||
-                      JSON.stringify(raw)
-                    );
-                  }
-                  return '';
-                })()}
-              </p>
+              <GroundedKnowledgeRichRenderer
+                grounded={lastReceipt.groundedAnswer}
+              />
               {Array.isArray(lastReceipt.groundedAnswer.citations) && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {lastReceipt.groundedAnswer.citations.map((cite, idx) => {
