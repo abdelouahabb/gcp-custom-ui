@@ -79,6 +79,7 @@ import OrbitalControlPlaneDrawer, {
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
+import ManagedSparkStudio from './components/ManagedSparkStudio';
 import BillingAccountCreditGuardian, {
   summarizeCreditLedger,
   syncAndAggregateBillingIndexedDb,
@@ -4405,22 +4406,29 @@ function classifyDestructiveAxiosConfig(config) {
         rawUrl.includes('/wave10/action') ||
         rawUrl.includes('/quantum-nexus/action') ||
         rawUrl.includes('/data-engineer/action') ||
+        rawUrl.includes('/managed-spark/action') ||
         rawUrl.includes('/aws-azure-parity/action')
       ) {
         const studioLabel = rawUrl.includes('/wave10/')
           ? 'Spanner Graph & Frontier Database Studio'
           : rawUrl.includes('/quantum-nexus/')
           ? 'Quantum-Resilient & Sovereign KMS Studio'
+          : rawUrl.includes('/managed-spark/')
+          ? 'Managed Service for Apache Spark & Serverless Studio'
           : rawUrl.includes('/data-engineer/')
           ? 'Data Engineering & Medallion Lakehouse Studio'
           : 'AWS & Azure Enterprise Parity Studio';
         const friendlyAct = act.replace(/_/g, ' ');
         const targetObj =
+          body.batchId ||
+          body.sessionId ||
+          body.templateId ||
           body.instanceId ||
           body.databaseId ||
           body.datasetId ||
           body.tableId ||
           body.bucketName ||
+          body.stagingBucket ||
           body.keyName ||
           body.groupName ||
           body.name ||
@@ -4442,7 +4450,7 @@ function classifyDestructiveAxiosConfig(config) {
           confirmLabel: `Confirm & Run "${friendlyAct}"`,
           cancelToast: `Action "${friendlyAct}" cancelled.`,
           whatHappensNext: `1. Connects to Google Cloud APIs for project "${projectId}" (${studioLabel}).\n2. Executes "${friendlyAct}" targeting "${targetObj}" and records the result in the Flight Recorder.`,
-          costWarning: `BILLING & COST NOTICE: Metadata, IAM, tag/label, and SQL DDL table definitions cost $0.00/mo; if provisioning dedicated database compute (such as Cloud Spanner processing units), hourly compute charges apply until deleted.`,
+          costWarning: `BILLING & COST NOTICE: Dataproc Serverless batches incur $0.00/hr idle cost and bill only per-second for active DCU-hours and shuffle storage during execution; IAM & Session Template configurations cost $0.00/mo.`,
           impactWarning: `Runs "${friendlyAct}" on "${targetObj}" in project "${projectId}".`,
         };
       }
@@ -4583,6 +4591,8 @@ function CloudPulseCockpit() {
   );
   const [dataEngineerSubTab, setDataEngineerSubTab] =
     useState('ICEBERG_50_MATRIX');
+  const [managedSparkSubTab, setManagedSparkSubTab] =
+    useState('SERVERLESS_BATCHES');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
@@ -4622,6 +4632,7 @@ function CloudPulseCockpit() {
     BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
     BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
     DATA_ENGINEER_STUDIO: 'Data Engineering & Medallion Studio',
+    MANAGED_SPARK_STUDIO: 'Managed Service for Apache Spark & Serverless Studio',
     CLOUD_SQL_STUDIO: 'Cloud SQL & AlloyDB Studio',
     WAVE9_STUDIO: 'Cloud Build & Supply Chain Studio',
     WAVE10_FRONTIER: 'Cloud Spanner Graph & Frontier DB Studio',
@@ -5055,6 +5066,8 @@ function CloudPulseCockpit() {
       ? 'INNOVATION_LAB'
       : tabId === 'DATA_ENGINEER'
       ? 'DATA_ENGINEER_STUDIO'
+      : tabId === 'MANAGED_SPARK' || tabId === 'SPARK' || tabId === 'DATAPROC_SPARK'
+      ? 'MANAGED_SPARK_STUDIO'
       : tabId === 'BIGQUERY' || tabId === 'BIGQUERY_LAKEHOUSE'
       ? 'BIGQUERY_STUDIO'
       : tabId === 'BIGLAKE'
@@ -5103,6 +5116,7 @@ function CloudPulseCockpit() {
       'FUNCTIONS_STUDIO',
       'CLOUD_SQL_STUDIO',
       'DATA_ENGINEER_STUDIO',
+      'MANAGED_SPARK_STUDIO',
       'BIGQUERY_STUDIO',
       'BIGLAKE_STUDIO',
       'WAVE10_FRONTIER',
@@ -5137,6 +5151,8 @@ function CloudPulseCockpit() {
       setAlibabaHuaweiSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
       setDataEngineerSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'MANAGED_SPARK_STUDIO') {
+      setManagedSparkSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'BIGQUERY_STUDIO') {
@@ -6245,6 +6261,13 @@ function CloudPulseCockpit() {
       label: 'Data Engineer',
       tip: '2026 Data Engineering Studio (GCloud SDK 591.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
       icon: Layers,
+    },
+    {
+      id: 'MANAGED_SPARK_STUDIO',
+      group: 'DATA_AI',
+      label: 'Managed Spark',
+      tip: 'Google Cloud Managed Service for Apache Spark & Dataproc Serverless Studio: Serverless Spark 3.5 Batches ($0/hr Idle), Interactive ManagedSparkSession (Spark Connect) Notebooks, sparkApplications Stage/SQL Diagnostics, GCS Driver Output RCA & 7-Role Spark IAM Doctor',
+      icon: Flame,
     },
     {
       id: 'BIGQUERY_STUDIO',
@@ -7652,6 +7675,43 @@ function CloudPulseCockpit() {
                     persona="DATA_ENG"
                     projectId={selectedProjectId}
                     studioContextLabel="Data Engineering Studio · Column Lineage, DLQ & Spark"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'MANAGED_SPARK_STUDIO' && (
+                <div className="space-y-4">
+                  <DataLakehouseAiPipelineBar
+                    projectId={selectedProjectId}
+                    activeTab={activeTab}
+                    onOpenProvision={handleOpenProvision}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
+                  <ManagedSparkStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={managedSparkSubTab}
+                    subTabNonce={studioSubTabNonce}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={handleOpenBigQuerySql}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Managed Service for Apache Spark · Serverless Batches, Spark Connect & RCA"
                     defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)

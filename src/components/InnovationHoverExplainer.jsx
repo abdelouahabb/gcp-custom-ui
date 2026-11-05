@@ -174,6 +174,56 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'dataform.googleapis.com · dataproc.googleapis.com · bigquery.googleapis.com',
     safetyMode: 'READ_ONLY',
   },
+  MANAGED_SPARK_STUDIO: {
+    badge: 'MANAGED SPARK 3.5 & SPARK CONNECT',
+    title: 'Managed Service for Apache Spark & Dataproc Serverless Studio',
+    whatItDoes:
+      'Submits zero-cluster Dataproc Serverless Spark 3.5 batches ($0/hr idle), launches Interactive ManagedSparkSession (Spark Connect) notebooks over BigLake Iceberg & BigQuery Storage Read Arrow streams, and inspects sparkApplications stages/SQL & GCS driver logs.',
+    enterpriseValue:
+      'Eliminates 24/7 idle Spark cluster spend (-95% cost), prevents Driver OOM crashes via static broadcast/toPandas linting, and diagnoses stage skew or executor failures without a Persistent History Server.',
+    gcpApis: 'dataproc.googleapis.com/v1 (batches, sessions, sessionTemplates, sparkApplications) · biglake · storage',
+    safetyMode: 'READ_ONLY',
+  },
+  SPARK_TAB_SERVERLESS_BATCHES: {
+    badge: 'SERVERLESS SPARK 3.5 COCKPIT',
+    title: 'Dataproc Serverless Batches, Interactive Sessions & Live Cluster Fleet',
+    whatItDoes:
+      'Discovers live Serverless batches, Spark Connect sessions, and GCE clusters across regions, auto-stages PySpark scripts to Cloud Storage, and submits runtime 2.2 (Spark 3.5) batches with Adaptive Query Execution.',
+    enterpriseValue:
+      'Replaces $350+/mo 24/7 idle Hadoop/Spark clusters with per-second serverless execution that scales to $0.00/hr the instant a batch completes.',
+    gcpApis: 'dataproc.googleapis.com/v1/projects/{project}/locations/{region}/batches & sessions',
+    safetyMode: 'READ_ONLY',
+  },
+  SPARK_TAB_SPARK_CONNECT_NOTEBOOKS: {
+    badge: 'MANAGEDSPARKSESSION & .IPYNB',
+    title: 'Interactive Spark Connect Notebook (.ipynb) & Production PySpark (.py) Generator',
+    whatItDoes:
+      'Synthesizes downloadable Jupyter notebooks using ManagedSparkSession (google-cloud-spark-connect) and Session Templates alongside standalone PySpark batch scripts for BigLake Iceberg, BigQuery Arrow, and Cloud Spanner.',
+    enterpriseValue:
+      'Guarantees notebooks execute on elastic cloud executors rather than a local single-node JVM (.master("local")), with built-in broadcast join and driver aggregation guardrails.',
+    gcpApis: 'dataproc.googleapis.com/v1/projects/{project}/locations/{region}/sessionTemplates',
+    safetyMode: 'READ_ONLY',
+  },
+  SPARK_TAB_TROUBLESHOOTING_RCA: {
+    badge: '3-PILLAR SPARK RCA',
+    title: 'SparkApplications Stage/Executor/SQL Inspector & Bounded GCS Driver Log Tail',
+    whatItDoes:
+      'Queries the Dataproc Serverless sparkApplications REST API for stage, task, executor, and SQL plan metrics while streaming the last 32 KB of GCS driveroutput and Cloud Logging entries.',
+    enterpriseValue:
+      'Pinpoints Driver/Executor OutOfMemoryError, 403 IAM permission gaps, 404 missing URIs, and shuffle skew without maintaining a Persistent History Server.',
+    gcpApis: 'dataproc.googleapis.com/v1/.../sparkApplications:searchStages & :searchSqlQueries · logging.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  SPARK_TAB_OPTIMIZER_AND_IAM: {
+    badge: 'PYSPARK LINTER & IAM DOCTOR',
+    title: 'Pre-Submission PySpark Anti-Pattern Linter & 7-Role Spark IAM Doctor',
+    whatItDoes:
+      'Audits PySpark code for .master("local"), unbounded .toPandas()/.collect(), missing F.broadcast() joins, and inline pip install, while verifying the 7 required IAM roles on the Dataproc runtime Service Account.',
+    enterpriseValue:
+      'Catches OOM and 403 Permission Denied failures before a batch is submitted to production.',
+    gcpApis: 'cloudresourcemanager.googleapis.com/v1/projects/{project}:getIamPolicy & :setIamPolicy',
+    safetyMode: 'READ_ONLY',
+  },
   BIGLAKE_STUDIO: {
     badge: 'OPEN ICEBERG LAKEHOUSE',
     title: 'BigLake Studio — Apache Iceberg REST Catalogs, Compaction & Cross-Cloud Omni',

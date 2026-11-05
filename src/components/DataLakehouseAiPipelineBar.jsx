@@ -105,6 +105,12 @@ function inferLakehouseTabFromNodeId(nodeId = '', label = '') {
       subtitle: 'Click to open Functions & Eventarc / Pub/Sub Studio',
     };
   }
+  if (id.startsWith('SPK') || text.includes('SPARK') || text.includes('DATAPROC')) {
+    return {
+      targetTab: 'MANAGED_SPARK_STUDIO',
+      subtitle: 'Click to open Managed Service for Apache Spark Studio',
+    };
+  }
   if (id.startsWith('BL') || text.includes('BIGLAKE') || text.includes('ICEBERG')) {
     return { targetTab: 'BIGLAKE_STUDIO', subtitle: 'Click to open BigLake Iceberg Studio' };
   }
@@ -747,7 +753,9 @@ export default function DataLakehouseAiPipelineBar({
 
   const homeStage =
     stages.find((s) => s.targetTab === activeTab) ||
-    (activeTab === 'WAVE10_FRONTIER'
+    (activeTab === 'MANAGED_SPARK_STUDIO'
+      ? stages.find((s) => s.id === 'STAGE_4_DATAFORM_AIRFLOW')
+      : activeTab === 'WAVE10_FRONTIER'
       ? stages.find((s) => s.id === 'STAGE_2_BIGLAKE_FEDERATION')
       : stages.find((s) => s.secondaryTab === activeTab)) ||
     stages[0];
@@ -802,6 +810,20 @@ export default function DataLakehouseAiPipelineBar({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onSelectTab && (
+            <button
+              type="button"
+              onClick={() => navigateOrScrollToStudio('MANAGED_SPARK_STUDIO', 'SERVERLESS_BATCHES')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                activeTab === 'MANAGED_SPARK_STUDIO'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Managed Spark 3.5 Studio</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {

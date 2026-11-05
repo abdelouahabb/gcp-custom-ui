@@ -39370,6 +39370,11 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     if (targetUri && String(targetUri).startsWith('https://')) {
       const pingRes = await axios.post(targetUri, cloudEventEnvelope.data, {
         headers: {
@@ -39747,6 +39752,11 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     if (!token && action !== 'EXECUTE_SPANNER_GQL') {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
@@ -40138,6 +40148,1207 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         `Wave-10 action ${action} failed.`,
+    });
+  }
+});
+
+// ============================================================================
+// ★ MANAGED SERVICE FOR APACHE SPARK & DATAPROC SERVERLESS STUDIO
+// - Live Discovery: Serverless Batches, Interactive Sessions (Spark Connect),
+//   Session Templates, Dataproc Clusters, Jobs, IAM Role Readiness & Cloud Logs
+// - 3-Pillar RCA Inspector: batch stateMessage + sparkApplications Stages/SQL +
+//   GCS driveroutput stream + Cloud Logging
+// - Live PySpark Script Upload to GCS + Serverless Spark 3.5 Batch Submission
+// ============================================================================
+const REQUIRED_SPARK_IAM_ROLES = [
+  {
+    role: 'roles/dataproc.worker',
+    title: 'Dataproc Worker',
+    purpose: 'Required by Dataproc Serverless & Cluster executors to run stages, heartbeat, and stage shuffle files.',
+  },
+  {
+    role: 'roles/biglake.admin',
+    title: 'BigLake Admin',
+    purpose: 'Required for reading/writing BigLake Managed Iceberg tables via BigLakeMetastoreCatalog.',
+  },
+  {
+    role: 'roles/bigquery.jobUser',
+    title: 'BigQuery Job User',
+    purpose: 'Required to initiate BigQuery connector read/write jobs from Spark.',
+  },
+  {
+    role: 'roles/bigquery.dataEditor',
+    title: 'BigQuery Data Editor',
+    purpose: 'Required to write transformed Spark DataFrames into BigQuery & BigLake tables.',
+  },
+  {
+    role: 'roles/bigquery.readSessionUser',
+    title: 'BigQuery Read Session User',
+    purpose: 'Required for high-throughput parallel gRPC Arrow streams via the BigQuery Storage Read API.',
+  },
+  {
+    role: 'roles/storage.objectUser',
+    title: 'Storage Object User',
+    purpose: 'Required to read/write Parquet/Iceberg data and staging artifacts in gs:// buckets.',
+  },
+  {
+    role: 'roles/spanner.databaseUser',
+    title: 'Cloud Spanner Database User',
+    purpose: 'Required when federated PySpark jobs read/write operational graph or relational data in Spanner.',
+  },
+];
+
+app.get('/api/project/:projectId/managed-spark/overview', async (req, res) => {
+  const { projectId } = req.params;
+  const requestedRegion = String(req.query.region || 'us-central1').trim();
+  const scanRegions = Array.from(
+    new Set([requestedRegion, 'us-central1', 'us-east1', 'europe-west1'])
+  );
+
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
+
+    // 1. Discover project number / default compute service account, API enablement, buckets, BQ datasets, IAM policy, and logs in parallel
+    const [
+      projectMetaRes,
+      dataprocSvcRes,
+      biglakeSvcRes,
+      bucketsRes,
+      bqDatasetsRes,
+      iamPolicyRes,
+      sparkLogsRes,
+      ...regionalResults
+    ] = await Promise.all([
+      gcpApiRequest({
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}`,
+        token,
+        quotaProject: projectId,
+      }).catch(() => null),
+      gcpApiRequest({
+        url: `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services/dataproc.googleapis.com`,
+        token,
+        quotaProject: projectId,
+      }).catch(() => null),
+      gcpApiRequest({
+        url: `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services/biglake.googleapis.com`,
+        token,
+        quotaProject: projectId,
+      }).catch(() => null),
+      gcpApiRequest({
+        url: `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+          projectId
+        )}&maxResults=50`,
+        token,
+        quotaProject: projectId,
+      }).catch(() => ({ items: [] })),
+      gcpApiRequest({
+        url: `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets?maxResults=50`,
+        token,
+        quotaProject: projectId,
+      }).catch(() => ({ datasets: [] })),
+      gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: {},
+      }).catch(() => ({ bindings: [] })),
+      gcpApiRequest({
+        method: 'POST',
+        url: 'https://logging.googleapis.com/v2/entries:list',
+        token,
+        quotaProject: projectId,
+        data: {
+          resourceNames: [`projects/${projectId}`],
+          filter:
+            'resource.type="cloud_dataproc_batch" OR resource.type="cloud_dataproc_session" OR resource.type="cloud_dataproc_cluster"',
+          orderBy: 'timestamp desc',
+          pageSize: 30,
+        },
+      }).catch(() => ({ entries: [] })),
+      ...scanRegions.map(async (reg) => {
+        const [batchesData, sessionsData, templatesData, clustersData, jobsData, biglakeData] =
+          await Promise.all([
+            gcpApiRequest({
+              url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(reg)}/batches?pageSize=40`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ batches: [] })),
+            gcpApiRequest({
+              url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(reg)}/sessions?pageSize=30`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ sessions: [] })),
+            gcpApiRequest({
+              url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(reg)}/sessionTemplates?pageSize=30`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ sessionTemplates: [] })),
+            gcpApiRequest({
+              url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/regions/${encodeURIComponent(reg)}/clusters?pageSize=30`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ clusters: [] })),
+            gcpApiRequest({
+              url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/regions/${encodeURIComponent(reg)}/jobs?pageSize=30`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ jobs: [] })),
+            gcpApiRequest({
+              url: `https://biglake.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(reg)}/catalogs`,
+              token,
+              quotaProject: projectId,
+            }).catch(() => ({ catalogs: [] })),
+          ]);
+        return {
+          region: reg,
+          batches: Array.isArray(batchesData?.batches) ? batchesData.batches : [],
+          sessions: Array.isArray(sessionsData?.sessions) ? sessionsData.sessions : [],
+          sessionTemplates: Array.isArray(templatesData?.sessionTemplates)
+            ? templatesData.sessionTemplates
+            : [],
+          clusters: Array.isArray(clustersData?.clusters) ? clustersData.clusters : [],
+          jobs: Array.isArray(jobsData?.jobs) ? jobsData.jobs : [],
+          biglakeCatalogs: Array.isArray(biglakeData?.catalogs) ? biglakeData.catalogs : [],
+        };
+      }),
+    ]);
+
+    const projectNumber = projectMetaRes?.projectNumber || '';
+    const defaultComputeSa = projectNumber
+      ? `${projectNumber}-compute@developer.gserviceaccount.com`
+      : '';
+    const resolvedSa = await resolveRuntimeServiceAccount(
+      projectId,
+      token,
+      defaultComputeSa
+    ).catch(() => defaultComputeSa);
+
+    const batches = [];
+    const sessions = [];
+    const sessionTemplates = [];
+    const clusters = [];
+    const clusterJobs = [];
+    const biglakeCatalogs = [];
+
+    for (const regBlock of regionalResults) {
+      const reg = regBlock.region;
+      for (const b of regBlock.batches) {
+        const shortId = String(b.name || '').split('/').pop() || 'batch';
+        const batchType = b.pysparkBatch
+          ? 'PYSPARK'
+          : b.sparkBatch
+          ? 'SPARK_JAR'
+          : b.sparkRBatch
+          ? 'SPARK_R'
+          : b.sparkSqlBatch
+          ? 'SPARK_SQL'
+          : 'PYSPARK';
+        const mainUri =
+          b.pysparkBatch?.mainPythonFileUri ||
+          b.sparkBatch?.mainJarFileUri ||
+          b.sparkBatch?.mainClass ||
+          b.sparkSqlBatch?.queryFileUri ||
+          '';
+        const milliDcuSeconds = Number(
+          b.runtimeInfo?.approximateUsage?.milliDcuSeconds || 0
+        );
+        const shuffleStorageGbSeconds = Number(
+          b.runtimeInfo?.approximateUsage?.shuffleStorageGbSeconds || 0
+        );
+        const dcuHours = milliDcuSeconds / (1000 * 3600);
+        const shuffleGbMonths = shuffleStorageGbSeconds / (3600 * 24 * 30);
+        const estimatedCostUsd = Number(
+          (dcuHours * 0.06 + shuffleGbMonths * 0.12).toFixed(4)
+        );
+        batches.push({
+          id: shortId,
+          fullName: b.name,
+          uuid: b.uuid || '',
+          region: reg,
+          batchType,
+          state: b.state || 'UNKNOWN',
+          stateMessage: b.stateMessage || '',
+          stateTime: b.stateTime || b.createTime || null,
+          createTime: b.createTime || null,
+          creator: b.creator || '',
+          runtimeVersion: b.runtimeConfig?.version || '2.2',
+          properties: b.runtimeConfig?.properties || {},
+          mainUri,
+          args:
+            b.pysparkBatch?.args ||
+            b.sparkBatch?.args ||
+            [],
+          serviceAccount:
+            b.environmentConfig?.executionConfig?.serviceAccount ||
+            resolvedSa ||
+            'Default Compute SA',
+          subnetworkUri:
+            b.environmentConfig?.executionConfig?.subnetworkUri || 'default',
+          outputUri: b.runtimeInfo?.outputUri || '',
+          diagnosticOutputUri: b.runtimeInfo?.diagnosticOutputUri || '',
+          endpoints: b.runtimeInfo?.endpoints || {},
+          milliDcuSeconds,
+          shuffleStorageGbSeconds,
+          estimatedCostUsd,
+        });
+      }
+
+      for (const s of regBlock.sessions) {
+        const shortId = String(s.name || '').split('/').pop() || 'session';
+        sessions.push({
+          id: shortId,
+          fullName: s.name,
+          uuid: s.uuid || '',
+          region: reg,
+          state: s.state || 'UNKNOWN',
+          stateMessage: s.stateMessage || '',
+          createTime: s.createTime || null,
+          creator: s.creator || '',
+          runtimeVersion: s.runtimeConfig?.version || '2.2',
+          sessionTemplate: s.sessionTemplate || null,
+          jupyterDisplayName: s.jupyterSession?.displayName || shortId,
+          kernel: s.jupyterSession?.kernel || 'PYTHON',
+          endpoints: s.runtimeInfo?.endpoints || {},
+          serviceAccount:
+            s.environmentConfig?.executionConfig?.serviceAccount ||
+            resolvedSa ||
+            'Default Compute SA',
+        });
+      }
+
+      for (const t of regBlock.sessionTemplates) {
+        const shortId = String(t.name || '').split('/').pop() || 'template';
+        sessionTemplates.push({
+          id: shortId,
+          fullName: t.name,
+          region: reg,
+          description: t.description || '',
+          createTime: t.createTime || null,
+          updateTime: t.updateTime || null,
+          runtimeVersion: t.runtimeConfig?.version || '2.2',
+          properties: t.runtimeConfig?.properties || {},
+          jupyterDisplayName: t.jupyterSession?.displayName || shortId,
+          kernel: t.jupyterSession?.kernel || 'PYTHON',
+          maxIdleDuration:
+            t.environmentConfig?.executionConfig?.idleTtl ||
+            t.environmentConfig?.executionConfig?.ttl ||
+            '3600s',
+        });
+      }
+
+      for (const c of regBlock.clusters) {
+        const masterType =
+          c.config?.masterConfig?.machineTypeUri?.split('/').pop() || 'n2-standard-4';
+        const workerType =
+          c.config?.workerConfig?.machineTypeUri?.split('/').pop() || 'n2-standard-4';
+        const workerCount = Number(c.config?.workerConfig?.numInstances || 2);
+        const secondaryWorkers = Number(
+          c.config?.secondaryWorkerConfig?.numInstances || 0
+        );
+        clusters.push({
+          clusterName: c.clusterName,
+          clusterUuid: c.clusterUuid || '',
+          region: reg,
+          state: c.status?.state || 'UNKNOWN',
+          stateStartTime: c.status?.stateStartTime || null,
+          imageVersion: c.config?.softwareConfig?.imageVersion || '2.2-debian12',
+          masterType,
+          workerType,
+          workerCount,
+          secondaryWorkers,
+          stagingBucket: c.config?.configBucket || c.config?.tempBucket || '',
+          enableHttpPortAccess: Boolean(
+            c.config?.endpointConfig?.enableHttpPortAccess
+          ),
+          httpPorts: c.config?.endpointConfig?.httpPorts || {},
+        });
+      }
+
+      for (const j of regBlock.jobs) {
+        clusterJobs.push({
+          jobId: j.reference?.jobId || j.jobUuid || 'job',
+          region: reg,
+          clusterName: j.placement?.clusterName || '',
+          jobType: j.pysparkJob
+            ? 'PYSPARK'
+            : j.sparkJob
+            ? 'SPARK'
+            : j.sparkSqlJob
+            ? 'SPARK_SQL'
+            : 'SPARK',
+          state: j.status?.state || 'UNKNOWN',
+          details: j.status?.details || '',
+          startTime: j.status?.stateStartTime || null,
+          driverOutputResourceUri: j.driverOutputResourceUri || '',
+        });
+      }
+
+      for (const cat of regBlock.biglakeCatalogs) {
+        biglakeCatalogs.push({
+          name: String(cat.name || '').split('/').pop() || 'catalog',
+          fullName: cat.name,
+          region: reg,
+          createTime: cat.createTime || null,
+        });
+      }
+    }
+
+    batches.sort(
+      (a, b) =>
+        new Date(b.createTime || 0).getTime() -
+        new Date(a.createTime || 0).getTime()
+    );
+    sessions.sort(
+      (a, b) =>
+        new Date(b.createTime || 0).getTime() -
+        new Date(a.createTime || 0).getTime()
+    );
+
+    const buckets = (bucketsRes?.items || []).map((b) => ({
+      name: b.name,
+      location: b.location,
+      storageClass: b.storageClass,
+    }));
+
+    const datasets = (bqDatasetsRes?.datasets || []).map((d) => ({
+      datasetId: d.datasetReference?.datasetId || d.id,
+      location: d.location || 'US',
+    }));
+
+    // Evaluate IAM bindings for the runtime Service Account
+    const bindings = Array.isArray(iamPolicyRes?.bindings)
+      ? iamPolicyRes.bindings
+      : [];
+    const saMember = resolvedSa ? `serviceAccount:${resolvedSa}` : '';
+    const iamRoleMatrix = REQUIRED_SPARK_IAM_ROLES.map((spec) => {
+      const boundMembers =
+        bindings.find((b) => b.role === spec.role)?.members || [];
+      const hasExactRole = saMember ? boundMembers.includes(saMember) : false;
+      // Also check broader owner/editor/storage.admin fallback
+      const hasAdminFallback =
+        saMember &&
+        bindings.some(
+          (b) =>
+            ['roles/owner', 'roles/editor'].includes(b.role) &&
+            (b.members || []).includes(saMember)
+        );
+      return {
+        ...spec,
+        granted: Boolean(hasExactRole || hasAdminFallback),
+        grantedViaAdmin: Boolean(!hasExactRole && hasAdminFallback),
+        serviceAccount: resolvedSa || 'Not detected',
+      };
+    });
+
+    const recentLogs = (sparkLogsRes?.entries || []).map((e) => ({
+      insertId: e.insertId,
+      timestamp: e.timestamp,
+      severity: e.severity || 'INFO',
+      resourceType: e.resource?.type || 'cloud_dataproc_batch',
+      batchOrClusterId:
+        e.resource?.labels?.batch_id ||
+        e.resource?.labels?.session_id ||
+        e.resource?.labels?.cluster_name ||
+        'spark',
+      location: e.resource?.labels?.location || e.resource?.labels?.region || requestedRegion,
+      message:
+        e.textPayload ||
+        e.jsonPayload?.message ||
+        e.jsonPayload?.msg ||
+        JSON.stringify(e.jsonPayload || {}),
+    }));
+
+    return res.json({
+      projectId,
+      primaryRegion: requestedRegion,
+      scannedRegions: scanRegions,
+      apiStatus: {
+        dataprocEnabled: dataprocSvcRes?.state === 'ENABLED',
+        biglakeEnabled: biglakeSvcRes?.state === 'ENABLED',
+      },
+      runtimeServiceAccount: resolvedSa || defaultComputeSa || null,
+      batches,
+      sessions,
+      sessionTemplates,
+      clusters,
+      clusterJobs,
+      buckets,
+      datasets,
+      biglakeCatalogs,
+      iamRoleMatrix,
+      recentLogs,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to load Managed Spark Studio telemetry.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/managed-spark/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action,
+    region = 'us-central1',
+    batchId,
+    sessionId,
+    templateId,
+    mainPythonFileUri,
+    pythonScriptContent,
+    stagingBucket,
+    scriptObjectName,
+    args = [],
+    runtimeVersion = '2.2',
+    properties = {},
+    serviceAccount,
+    rolesToBind = [],
+  } = req.body || {};
+
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
+
+    // 0. ENABLE_SPARK_APIS (Enables dataproc.googleapis.com & biglake.googleapis.com)
+    if (action === 'ENABLE_SPARK_APIS') {
+      await Promise.all([
+        gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/services/dataproc.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        }),
+        gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/services/biglake.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        }).catch(() => null),
+      ]);
+      recordFlightEvent(projectId, {
+        action: 'ENABLE_SPARK_APIS',
+        resourceType: 'SERVICE_USAGE_API',
+        resourceName: 'dataproc.googleapis.com + biglake.googleapis.com',
+        region: 'global',
+        summary: `Enabled Managed Spark (dataproc.googleapis.com) & BigLake APIs on ${projectId}`,
+      });
+      return res.json({
+        ok: true,
+        message: `Enabled Google Cloud Managed Spark (dataproc.googleapis.com) & BigLake (biglake.googleapis.com) APIs in ${projectId}.`,
+      });
+    }
+
+    // 1. SUBMIT_SERVERLESS_BATCH (Optionally stages Python script to GCS first & auto-creates staging bucket if missing)
+    if (action === 'SUBMIT_SERVERLESS_BATCH') {
+      const cleanBatchId = String(
+        batchId || `spark-serverless-${Date.now().toString().slice(-6)}`
+      )
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+
+      let resolvedMainPythonUri = String(mainPythonFileUri || '').trim();
+
+      // If inline PySpark code + stagingBucket are provided, ensure bucket exists and upload the script to GCS first
+      if (pythonScriptContent && stagingBucket) {
+        const cleanBucket = String(stagingBucket)
+          .replace(/^gs:\/\//, '')
+          .split('/')[0]
+          .trim();
+        const objectPath = String(
+          scriptObjectName || `spark-jobs/${cleanBatchId}.py`
+        ).replace(/^\/+/, '');
+
+        // Ensure the staging bucket exists (auto-create with Uniform Bucket-Level Access in region if 404)
+        try {
+          await gcpApiRequest({
+            url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              cleanBucket
+            )}`,
+            token,
+            quotaProject: projectId,
+          });
+        } catch {
+          await gcpApiRequest({
+            method: 'POST',
+            url: `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+              projectId
+            )}`,
+            token,
+            quotaProject: projectId,
+            data: {
+              name: cleanBucket,
+              location: String(region || 'us-central1').toUpperCase(),
+              storageClass: 'STANDARD',
+              iamConfiguration: {
+                uniformBucketLevelAccess: { enabled: true },
+                publicAccessPrevention: 'enforced',
+              },
+            },
+          }).catch(() => null);
+        }
+
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+            cleanBucket
+          )}/o?uploadType=media&name=${encodeURIComponent(objectPath)}`,
+          token,
+          quotaProject: projectId,
+          headers: {
+            'Content-Type': 'text/x-python',
+          },
+          data: String(pythonScriptContent),
+        });
+        resolvedMainPythonUri = `gs://${cleanBucket}/${objectPath}`;
+      }
+
+      if (!resolvedMainPythonUri) {
+        return res.status(400).json({
+          error:
+            'A gs:// PySpark script URI or staging bucket + script content is required to submit a Dataproc Serverless batch.',
+        });
+      }
+
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        serviceAccount
+      );
+
+      const mergedProps = {
+        'spark.sql.adaptive.enabled': 'true',
+        'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+        ...(properties || {}),
+      };
+
+      const op = await gcpApiRequest({
+        method: 'POST',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/batches?batchId=${encodeURIComponent(cleanBatchId)}`,
+        token,
+        quotaProject: projectId,
+        data: {
+          runtimeConfig: {
+            version: String(runtimeVersion || '2.2'),
+            properties: mergedProps,
+          },
+          ...(runtimeSa
+            ? {
+                environmentConfig: {
+                  executionConfig: {
+                    serviceAccount: runtimeSa,
+                  },
+                },
+              }
+            : {}),
+          pysparkBatch: {
+            mainPythonFileUri: resolvedMainPythonUri,
+            ...(Array.isArray(args) && args.length > 0 ? { args } : {}),
+          },
+        },
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'SUBMIT_SERVERLESS_BATCH',
+        resourceType: 'DATAPROC_SERVERLESS_BATCH',
+        resourceName: cleanBatchId,
+        region,
+        summary: `Submitted Managed Spark Serverless Batch ${cleanBatchId} (${resolvedMainPythonUri}) in ${region}`,
+      });
+
+      return res.json({
+        ok: true,
+        batchId: cleanBatchId,
+        region,
+        mainPythonFileUri: resolvedMainPythonUri,
+        serviceAccount: runtimeSa || null,
+        operation: op?.name || null,
+        message: `Submitted Dataproc Serverless PySpark 3.5 Batch "${cleanBatchId}" in ${region} (${resolvedMainPythonUri}).`,
+      });
+    }
+
+    // 2. CREATE_SESSION_TEMPLATE (For ManagedSparkSession / Spark Connect Notebooks)
+    if (action === 'CREATE_SESSION_TEMPLATE') {
+      const cleanTemplateId = String(
+        templateId || `spark-connect-template-${Date.now().toString().slice(-4)}`
+      )
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        serviceAccount
+      );
+
+      const templateBody = {
+        name: `projects/${projectId}/locations/${region}/sessionTemplates/${cleanTemplateId}`,
+        description:
+          'Managed Spark Connect Interactive Session Template (Spark 3.5 + BigLake Iceberg + AQE)',
+        runtimeConfig: {
+          version: String(runtimeVersion || '2.2'),
+          properties: {
+            'spark.sql.adaptive.enabled': 'true',
+            'spark.sql.autoBroadcastJoinThreshold': '104857600',
+            ...(properties || {}),
+          },
+        },
+        jupyterSession: {
+          displayName: cleanTemplateId,
+          kernel: 'PYTHON',
+        },
+        environmentConfig: {
+          executionConfig: {
+            idleTtl: '3600s',
+            ...(runtimeSa ? { serviceAccount: runtimeSa } : {}),
+          },
+        },
+      };
+
+      const created = await gcpApiRequest({
+        method: 'POST',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/sessionTemplates?sessionTemplateId=${encodeURIComponent(cleanTemplateId)}`,
+        token,
+        quotaProject: projectId,
+        data: templateBody,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'CREATE_SESSION_TEMPLATE',
+        resourceType: 'DATAPROC_SESSION_TEMPLATE',
+        resourceName: cleanTemplateId,
+        region,
+        summary: `Created Dataproc Serverless Session Template ${cleanTemplateId} in ${region}`,
+      });
+
+      return res.json({
+        ok: true,
+        templateId: cleanTemplateId,
+        fullName:
+          created?.name ||
+          `projects/${projectId}/locations/${region}/sessionTemplates/${cleanTemplateId}`,
+        message: `Created Serverless Spark Session Template "${cleanTemplateId}" in ${region}. Ready for ManagedSparkSession() in Python/Notebooks!`,
+      });
+    }
+
+    // 3. CREATE_INTERACTIVE_SESSION (Live Serverless Spark Connect Session)
+    if (action === 'CREATE_INTERACTIVE_SESSION') {
+      const cleanSessionId = String(
+        sessionId || `spark-session-${Date.now().toString().slice(-5)}`
+      )
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        serviceAccount
+      );
+
+      const op = await gcpApiRequest({
+        method: 'POST',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/sessions?sessionId=${encodeURIComponent(cleanSessionId)}`,
+        token,
+        quotaProject: projectId,
+        data: {
+          runtimeConfig: {
+            version: String(runtimeVersion || '2.2'),
+            properties: {
+              'spark.sql.adaptive.enabled': 'true',
+              ...(properties || {}),
+            },
+          },
+          jupyterSession: {
+            displayName: cleanSessionId,
+            kernel: 'PYTHON',
+          },
+          environmentConfig: {
+            executionConfig: {
+              idleTtl: '3600s',
+              ...(runtimeSa ? { serviceAccount: runtimeSa } : {}),
+            },
+          },
+        },
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'CREATE_INTERACTIVE_SESSION',
+        resourceType: 'DATAPROC_INTERACTIVE_SESSION',
+        resourceName: cleanSessionId,
+        region,
+        summary: `Launched Interactive Spark Connect Session ${cleanSessionId} in ${region}`,
+      });
+
+      return res.json({
+        ok: true,
+        sessionId: cleanSessionId,
+        operation: op?.name || null,
+        message: `Launching Interactive Managed Spark Session "${cleanSessionId}" in ${region}.`,
+      });
+    }
+
+    // 4. INSPECT_BATCH_DIAGNOSTICS (3-Pillar Evidence Model: Batch Meta + sparkApplications Stages/SQL + GCS Driver Output + Cloud Logs)
+    if (action === 'INSPECT_BATCH_DIAGNOSTICS') {
+      const targetBatchId = String(batchId || '').trim();
+      if (!targetBatchId) {
+        return res.status(400).json({ error: 'batchId is required for diagnostics.' });
+      }
+
+      const [batchMeta, appsSearchRes, batchLogsRes] = await Promise.all([
+        gcpApiRequest({
+          url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            region
+          )}/batches/${encodeURIComponent(targetBatchId)}`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            region
+          )}/batches/${encodeURIComponent(
+            targetBatchId
+          )}/sparkApplications:search`,
+          token,
+          quotaProject: projectId,
+        }).catch(() => ({ sparkApplications: [] })),
+        gcpApiRequest({
+          method: 'POST',
+          url: 'https://logging.googleapis.com/v2/entries:list',
+          token,
+          quotaProject: projectId,
+          data: {
+            resourceNames: [`projects/${projectId}`],
+            filter: `resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="${targetBatchId}"`,
+            orderBy: 'timestamp desc',
+            pageSize: 40,
+          },
+        }).catch(() => ({ entries: [] })),
+      ]);
+
+      const sparkApps = Array.isArray(appsSearchRes?.sparkApplications)
+        ? appsSearchRes.sparkApplications
+        : [];
+      let stages = [];
+      let executors = [];
+      let sqlQueries = [];
+      let jobs = [];
+
+      if (sparkApps.length > 0) {
+        const firstAppName = sparkApps[0].name; // projects/.../locations/.../batches/.../sparkApplications/...
+        const [stagesRes, execRes, sqlRes, jobsRes] = await Promise.all([
+          gcpApiRequest({
+            url: `https://dataproc.googleapis.com/v1/${firstAppName}:searchStages`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ sparkWrapperObjects: [] })),
+          gcpApiRequest({
+            url: `https://dataproc.googleapis.com/v1/${firstAppName}:searchExecutorSummary`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ sparkWrapperObjects: [] })),
+          gcpApiRequest({
+            url: `https://dataproc.googleapis.com/v1/${firstAppName}:searchSqlQueries`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ sparkWrapperObjects: [] })),
+          gcpApiRequest({
+            url: `https://dataproc.googleapis.com/v1/${firstAppName}:searchJobs`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ sparkWrapperObjects: [] })),
+        ]);
+        stages = stagesRes?.sparkWrapperObjects || stagesRes?.stages || [];
+        executors = execRes?.sparkWrapperObjects || execRes?.executors || [];
+        sqlQueries = sqlRes?.sparkWrapperObjects || sqlRes?.sqlQueries || [];
+        jobs = jobsRes?.sparkWrapperObjects || jobsRes?.jobs || [];
+      }
+
+      // Stream tail of GCS driveroutput if outputUri is present (bounded to last 32 KB so we never buffer giant files)
+      let driverOutputTail = '';
+      const rawOutputUri = String(batchMeta?.runtimeInfo?.outputUri || '').trim();
+      if (rawOutputUri.startsWith('gs://')) {
+        const withoutScheme = rawOutputUri.slice(5);
+        const slashIdx = withoutScheme.indexOf('/');
+        if (slashIdx > 0) {
+          const outBucket = withoutScheme.slice(0, slashIdx);
+          const outPrefix = withoutScheme.slice(slashIdx + 1).replace(/\/+$/, '');
+          const candidateObj = outPrefix.endsWith('.000000000')
+            ? outPrefix
+            : `${outPrefix}.000000000`;
+          try {
+            const rawText = await gcpApiRequest({
+              url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                outBucket
+              )}/o/${encodeURIComponent(candidateObj)}?alt=media`,
+              token,
+              quotaProject: projectId,
+              headers: {
+                Range: 'bytes=-32768',
+              },
+            });
+            driverOutputTail =
+              typeof rawText === 'string'
+                ? rawText
+                : JSON.stringify(rawText, null, 2);
+          } catch {
+            // Try listing objects with prefix if .000000000 wasn't exact
+            try {
+              const listObjs = await gcpApiRequest({
+                url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  outBucket
+                )}/o?prefix=${encodeURIComponent(outPrefix)}&maxResults=5`,
+                token,
+                quotaProject: projectId,
+              });
+              const firstObj = listObjs?.items?.[0]?.name;
+              if (firstObj) {
+                const rawText = await gcpApiRequest({
+                  url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                    outBucket
+                  )}/o/${encodeURIComponent(firstObj)}?alt=media`,
+                  token,
+                  quotaProject: projectId,
+                  headers: {
+                    Range: 'bytes=-32768',
+                  },
+                });
+                driverOutputTail =
+                  typeof rawText === 'string'
+                    ? rawText
+                    : JSON.stringify(rawText, null, 2);
+              }
+            } catch {
+              driverOutputTail = '';
+            }
+          }
+        }
+      }
+
+      const logEntries = (batchLogsRes?.entries || []).map((e) => ({
+        timestamp: e.timestamp,
+        severity: e.severity || 'INFO',
+        message:
+          e.textPayload ||
+          e.jsonPayload?.message ||
+          JSON.stringify(e.jsonPayload || {}),
+      }));
+
+      // Synthesize automated RCA findings based on real stateMessage, logs, and driverOutputTail
+      const combinedEvidence = [
+        batchMeta?.stateMessage || '',
+        driverOutputTail,
+        ...logEntries.map((l) => l.message),
+      ].join('\n');
+
+      const rcaFindings = [];
+      if (/OutOfMemoryError|Java heap space|Container killed.*memory|OOM/i.test(combinedEvidence)) {
+        rcaFindings.push({
+          category: 'OOM / Memory Pressure',
+          severity: 'CRITICAL',
+          evidence: 'Detected OutOfMemoryError / container memory exhaustion in driver or executor telemetry.',
+          remediation:
+            'Increase spark.driver.memory / spark.executor.memory, replace unaggregated .toPandas()/.collect() with Spark transformations, or broadcast small lookup tables.',
+        });
+      }
+      if (/PERMISSION_DENIED|403 Forbidden|AccessDeniedException|does not have/i.test(combinedEvidence)) {
+        rcaFindings.push({
+          category: 'IAM & Data Governance (403)',
+          severity: 'HIGH',
+          evidence: 'Detected PERMISSION_DENIED / 403 Forbidden accessing GCS, BigQuery, or BigLake.',
+          remediation:
+            'Grant roles/dataproc.worker, roles/biglake.admin, roles/bigquery.readSessionUser, and roles/storage.objectUser to the batch runtime service account.',
+        });
+      }
+      if (/FileNotFoundException|NoSuchKey|NotFound: 404/i.test(combinedEvidence)) {
+        rcaFindings.push({
+          category: 'Missing Input / Artifact (404)',
+          severity: 'HIGH',
+          evidence: 'Detected FileNotFoundException / 404 NotFound on gs:// URI or BigQuery table.',
+          remediation:
+            'Verify mainPythonFileUri, staging bucket path, and target dataset.table existence in the same region.',
+        });
+      }
+      if (/ModuleNotFoundError|ImportError|No module named/i.test(combinedEvidence)) {
+        rcaFindings.push({
+          category: 'Dependency & Runtime Environment',
+          severity: 'MEDIUM',
+          evidence: 'Detected Python ModuleNotFoundError / ImportError on Spark executors.',
+          remediation:
+            'Pass required PyPI packages via --properties="spark.dataproc.pip.packages=pkg==1.0" or a custom container image instead of inline pip install.',
+        });
+      }
+      if (rcaFindings.length === 0) {
+        rcaFindings.push({
+          category: batchMeta?.state === 'FAILED' ? 'Batch Execution Failure' : 'Healthy Execution Profile',
+          severity: batchMeta?.state === 'FAILED' ? 'HIGH' : 'INFO',
+          evidence:
+            batchMeta?.stateMessage ||
+            `Batch state is ${batchMeta?.state || 'UNKNOWN'} with ${sparkApps.length} Spark application(s) recorded.`,
+          remediation:
+            batchMeta?.state === 'FAILED'
+              ? 'Inspect the GCS driveroutput tail and Cloud Logging entries below for the first Python traceback or Py4JJavaError.'
+              : 'Adaptive Query Execution (AQE) and Serverless dynamic scaling active.',
+        });
+      }
+
+      return res.json({
+        ok: true,
+        batchId: targetBatchId,
+        region,
+        batch: {
+          state: batchMeta?.state || 'UNKNOWN',
+          stateMessage: batchMeta?.stateMessage || '',
+          stateHistory: batchMeta?.stateHistory || [],
+          createTime: batchMeta?.createTime || null,
+          stateTime: batchMeta?.stateTime || null,
+          runtimeVersion: batchMeta?.runtimeConfig?.version || '2.2',
+          properties: batchMeta?.runtimeConfig?.properties || {},
+          outputUri: batchMeta?.runtimeInfo?.outputUri || '',
+          diagnosticOutputUri: batchMeta?.runtimeInfo?.diagnosticOutputUri || '',
+          approximateUsage: batchMeta?.runtimeInfo?.approximateUsage || {},
+        },
+        sparkApplications: sparkApps,
+        stages,
+        executors,
+        sqlQueries,
+        jobs,
+        driverOutputTail,
+        logEntries,
+        rcaFindings,
+      });
+    }
+
+    // 5. BIND_SPARK_IAM_ROLES (Grants missing Spark / BigLake / BigQuery Storage Read API roles to runtime SA)
+    if (action === 'BIND_SPARK_IAM_ROLES') {
+      const targetSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        serviceAccount
+      );
+      if (!targetSa) {
+        return res.status(400).json({
+          error: 'Could not determine runtime Service Account for IAM binding.',
+        });
+      }
+      const roles =
+        Array.isArray(rolesToBind) && rolesToBind.length > 0
+          ? rolesToBind
+          : REQUIRED_SPARK_IAM_ROLES.map((r) => r.role);
+
+      const currentPolicy = await gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: {},
+      });
+
+      const bindings = Array.isArray(currentPolicy?.bindings)
+        ? [...currentPolicy.bindings]
+        : [];
+      const memberStr = `serviceAccount:${targetSa}`;
+
+      for (const roleName of roles) {
+        const existing = bindings.find((b) => b.role === roleName);
+        if (existing) {
+          existing.members = Array.from(
+            new Set([...(existing.members || []), memberStr])
+          );
+        } else {
+          bindings.push({
+            role: roleName,
+            members: [memberStr],
+          });
+        }
+      }
+
+      await gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}:setIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: {
+          policy: {
+            ...currentPolicy,
+            bindings,
+          },
+        },
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'BIND_SPARK_IAM_ROLES',
+        resourceType: 'PROJECT_IAM_POLICY',
+        resourceName: targetSa,
+        region: 'global',
+        summary: `Bound ${roles.length} Managed Spark / BigLake / BigQuery Storage Read IAM roles to ${targetSa}`,
+      });
+
+      return res.json({
+        ok: true,
+        serviceAccount: targetSa,
+        rolesBound: roles,
+        message: `Granted ${roles.length} Managed Spark & BigLake IAM role(s) to ${targetSa}.`,
+      });
+    }
+
+    // 6. DELETE_BATCH
+    if (action === 'DELETE_BATCH') {
+      const targetBatchId = String(batchId || '').trim();
+      if (!targetBatchId) {
+        return res.status(400).json({ error: 'batchId is required.' });
+      }
+      await gcpApiRequest({
+        method: 'DELETE',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/batches/${encodeURIComponent(targetBatchId)}`,
+        token,
+        quotaProject: projectId,
+      });
+      recordFlightEvent(projectId, {
+        action: 'DELETE_BATCH',
+        resourceType: 'DATAPROC_SERVERLESS_BATCH',
+        resourceName: targetBatchId,
+        region,
+        summary: `Deleted Dataproc Serverless Batch ${targetBatchId} in ${region}`,
+      });
+      return res.json({
+        ok: true,
+        batchId: targetBatchId,
+        message: `Deleted Dataproc Serverless Batch "${targetBatchId}" (${region}).`,
+      });
+    }
+
+    // 7. DELETE_SESSION
+    if (action === 'DELETE_SESSION') {
+      const targetSessionId = String(sessionId || '').trim();
+      if (!targetSessionId) {
+        return res.status(400).json({ error: 'sessionId is required.' });
+      }
+      await gcpApiRequest({
+        method: 'DELETE',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/sessions/${encodeURIComponent(targetSessionId)}`,
+        token,
+        quotaProject: projectId,
+      });
+      recordFlightEvent(projectId, {
+        action: 'DELETE_SESSION',
+        resourceType: 'DATAPROC_INTERACTIVE_SESSION',
+        resourceName: targetSessionId,
+        region,
+        summary: `Deleted Interactive Spark Session ${targetSessionId} in ${region}`,
+      });
+      return res.json({
+        ok: true,
+        sessionId: targetSessionId,
+        message: `Terminated & deleted Interactive Spark Session "${targetSessionId}" (${region}).`,
+      });
+    }
+
+    // 8. DELETE_SESSION_TEMPLATE
+    if (action === 'DELETE_SESSION_TEMPLATE') {
+      const targetTemplateId = String(templateId || '').trim();
+      if (!targetTemplateId) {
+        return res.status(400).json({ error: 'templateId is required.' });
+      }
+      await gcpApiRequest({
+        method: 'DELETE',
+        url: `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/sessionTemplates/${encodeURIComponent(targetTemplateId)}`,
+        token,
+        quotaProject: projectId,
+      });
+      return res.json({
+        ok: true,
+        templateId: targetTemplateId,
+        message: `Deleted Session Template "${targetTemplateId}" (${region}).`,
+      });
+    }
+
+    return res.status(400).json({
+      error: `Unknown Managed Spark action: ${action}`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        `Managed Spark action ${action} failed.`,
     });
   }
 });
@@ -55540,6 +56751,11 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
   const region = String(req.query.region || 'us-central1').trim();
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
 
     // 1. Inspect installed gcloud SDK + alpha/beta component versions & parallel REST discovery
     const [
@@ -55971,6 +57187,11 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
 
     // Pre-Flight API Enablement Map: ONLY auto-enable APIs for explicit mutating/deployment actions (NEVER on read-only SCAN / INSPECT / QUERY / TROUBLESHOOT actions!)
     const REQUIRED_APIS_BY_ACTION = {
@@ -59460,6 +60681,11 @@ app.get('/api/project/:projectId/wave11/overview', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
 
     const [
       pipelinesSettled,
@@ -59897,6 +61123,11 @@ app.post('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, res)
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const t0 = Date.now();
 
     // Ensure Cloud Deploy API is enabled first
@@ -60044,6 +61275,11 @@ app.delete('/api/project/:projectId/wave11/clouddeploy/pipeline', async (req, re
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const t0 = Date.now();
     await gcpApiRequest({
       method: 'DELETE',
@@ -60121,6 +61357,11 @@ app.patch('/api/project/:projectId/wave11/firestore/database', async (req, res) 
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const updateMaskParts = [];
     const payload = {};
 
@@ -60204,6 +61445,11 @@ app.post('/api/project/:projectId/wave11/recommender/action', async (req, res) =
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     let currentEtag = etag;
     if (!currentEtag) {
       const recGet = await gcpApiRequest({
@@ -60270,6 +61516,11 @@ app.post('/api/project/:projectId/wave11/firestore/database', async (req, res) =
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     try {
       await gcpApiRequest({
         method: 'POST',
@@ -60347,6 +61598,11 @@ app.post('/api/project/:projectId/wave11/firestore/documents', async (req, res) 
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const enrichedPayload = {
       ...payload,
       updatedBy: 'CloudPulse 2026 Wave 11 Studio',
@@ -60426,6 +61682,11 @@ app.delete('/api/project/:projectId/wave11/firestore/documents', async (req, res
 
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     await gcpApiRequest({
       method: 'DELETE',
       url: `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
@@ -60472,6 +61733,11 @@ app.get('/api/multi-project/compare', async (req, res) => {
   ).trim();
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const defaultProject = currentProjectId || (await resolveHostDefaultProject());
     const { projects: allActiveProjects, activeToken } =
       await fetchAllActiveGcpProjects(token, defaultProject);
@@ -79315,6 +80581,11 @@ app.post(
 app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
   try {
     const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        error: 'No active Google Cloud session token found.',
+      });
+    }
     const preferredProject = String(
       req.query.projectId || (await resolveHostDefaultProject()) || ''
     ).trim();

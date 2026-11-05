@@ -137,6 +137,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-managed-spark-studio',
+        category: 'Data, Lakehouse & Managed Spark',
+        title: 'Open Managed Service for Apache Spark & Dataproc Serverless Studio',
+        subtitle: 'Submit $0/hr Idle Serverless Spark 3.5 Batches, generate ManagedSparkSession (Spark Connect) .ipynb notebooks on BigLake Iceberg, inspect sparkApplications Stages/SQL & GCS driver logs, and audit 7 Spark IAM roles',
+        keywords: 'managed spark apache spark dataproc serverless pyspark spark connect managedsparksession notebook ipynb biglake iceberg broadcast join toPandas oom rca sparkapplications driveroutput',
+        badge: 'MANAGED SPARK 3.5',
+        badgeColor: 'text-orange-700 dark:text-orange-300 bg-orange-500/15 border-orange-500/30',
+        icon: Zap,
+        run: () => {
+          onSelectTab('MANAGED_SPARK_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-startup-10x-mentor-studio',
         category: 'Startup 10X (Google for Startups Mentor)',
         title: 'Open Dedicated Startup 10X Menu — Google for Startups Scale & Bottleneck Radar',

@@ -188,7 +188,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('src/components/CloudRunFleetManager')) {
               return 'studio-cloudrun';
             }
-            if (id.includes('src/components/DataEngineeringStudio')) {
+            if (
+              id.includes('src/components/DataEngineeringStudio') ||
+              id.includes('src/components/ManagedSparkStudio')
+            ) {
               return 'studio-data-engineering';
             }
             if (

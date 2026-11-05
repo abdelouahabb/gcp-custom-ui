@@ -81,6 +81,18 @@
     - `GLOBAL_LOAD_TEST`: Simultaneous 10-region GFE Anycast `:443 · <RTT>ms` fan-out constellation across all continents.
     - `Lens` (`Traffic`, `CFE %`, `Spot $`) and `Layers` (`Fiber`, `Zones`, `IAP Tunnel`, `RTT Laser`) immediately update all visible region pills and zone rings even at `1.0x` zoom.
 
+### F. Managed Service for Apache Spark & Dataproc Serverless Studio (`MANAGED_SPARK_STUDIO`)
+- **Files**:
+  - [`src/components/ManagedSparkStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ManagedSparkStudio.jsx)
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L40145-L41320)
+  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L6258-L6272)
+- **Capabilities**:
+  - **Live Multi-Region Fleet Discovery (`GET /api/project/:id/managed-spark/overview`)**: Discovers Dataproc Serverless Batches (`locations/:region/batches`), Interactive Spark Connect Sessions (`locations/:region/sessions`), Session Templates (`locations/:region/sessionTemplates`), GCE Clusters (`regions/:region/clusters`), `dataproc.googleapis.com` / `biglake.googleapis.com` API status, and 7-Role Spark IAM readiness.
+  - **1-Click Serverless Spark 3.5 Batch Staging & Submission (`SUBMIT_SERVERLESS_BATCH`)**: Automatically ensures the regional GCS staging bucket exists (with Uniform Bucket-Level Access), uploads the PySpark `.py` script, and submits a Runtime `2.2` (Spark 3.5) batch with Adaptive Query Execution (`spark.sql.adaptive.enabled=true`) and 1-click **`Browse in GCS →`** deep-linking.
+  - **Interactive `ManagedSparkSession` (Spark Connect) `.ipynb` & `.py` Studio**: Generates downloadable Jupyter notebooks (`from google.cloud.managed_spark_connect import ManagedSparkSession`) and Session Templates (`CREATE_SESSION_TEMPLATE`).
+  - **3-Pillar SparkApplications & Driver Log RCA (`INSPECT_BATCH_DIAGNOSTICS`)**: Queries `sparkApplications` (`:search`, `:searchStages`, `:searchExecutorSummary`, `:searchSqlQueries`, `:searchJobs`) and streams a bounded 32 KB `Range` tail of GCS `driveroutput.000000000` + Cloud Logging entries.
+  - **Pre-Submission PySpark Linter & 7-Role IAM Doctor**: Static analyzer catching `.master("local")`, unbounded `.toPandas()`/`.collect()`, missing `F.broadcast()`, raw `print()`, and inline `pip install`, paired with 1-click IAM role binding (`BIND_SPARK_IAM_ROLES`).
+
 ---
 
 ## 4. Next Steps When Resuming in `agy` CLI

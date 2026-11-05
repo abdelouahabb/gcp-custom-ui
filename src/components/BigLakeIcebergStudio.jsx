@@ -1234,23 +1234,37 @@ OPTIONS (
             </p>
           </div>
 
-          <button
-            type="button"
-            data-feature-id="BIGLAKE_SYNC_BTN"
-            disabled={loadingCatalogs}
-            onClick={() => {
-              fetchBigLakeCatalogs();
-              fetchBucketsAndDatasets();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${
-                loadingCatalogs ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
-              }`}
-            />
-            <span>Sync BigLake</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() =>
+                  onNavigateTab('MANAGED_SPARK_STUDIO', 'SERVERLESS_BATCHES')
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono font-bold border border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Managed Spark 3.5 →</span>
+              </button>
+            )}
+            <button
+              type="button"
+              data-feature-id="BIGLAKE_SYNC_BTN"
+              disabled={loadingCatalogs}
+              onClick={() => {
+                fetchBigLakeCatalogs();
+                fetchBucketsAndDatasets();
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${
+                  loadingCatalogs ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
+                }`}
+              />
+              <span>Sync BigLake</span>
+            </button>
+          </div>
         </div>
 
         {/* 4 KPI Summary Cards */}

@@ -2637,7 +2637,14 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 </span>
               </button>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.('MANAGED_SPARK_STUDIO', 'SERVERLESS_BATCHES')}
+                  className="px-2.5 py-1.5 rounded-md bg-orange-500/15 hover:bg-orange-500/25 text-[10px] font-mono font-bold text-orange-600 dark:text-orange-300 border border-orange-500/30 cursor-pointer"
+                >
+                  Managed Spark Studio →
+                </button>
                 <button
                   type="button"
                   onClick={() => setActiveSubTab('ICEBERG_50_MATRIX')}
