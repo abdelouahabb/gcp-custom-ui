@@ -3819,9 +3819,24 @@ spec:
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                {activeGrounded.synthesizedResponse ||
-                  activeGrounded.groundedSynthesis}
+              <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                {(() => {
+                  const raw =
+                    activeGrounded.synthesizedResponse ||
+                    activeGrounded.groundedSynthesis ||
+                    activeGrounded.answerText ||
+                    activeGrounded.answer;
+                  if (typeof raw === 'string') return raw;
+                  if (typeof raw === 'object' && raw !== null) {
+                    return (
+                      raw.answerText ||
+                      raw.text ||
+                      raw.summary ||
+                      JSON.stringify(raw)
+                    );
+                  }
+                  return '';
+                })()}
               </div>
 
               {/* 3 Architectural Decision Pillar Cards */}
@@ -3964,17 +3979,26 @@ spec:
                     <span className="text-[10px] font-mono font-bold uppercase text-zinc-400">
                       Grounded Citations:
                     </span>
-                    {activeGrounded.citations.map((cite) => (
-                      <a
-                        key={cite}
-                        href={cite}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10.5px] font-mono text-blue-600 dark:text-blue-300 underline"
-                      >
-                        {cite} ↗
-                      </a>
-                    ))}
+                    {activeGrounded.citations.map((cite, idx) => {
+                      const url =
+                        typeof cite === 'string'
+                          ? cite
+                          : cite?.uri ||
+                            cite?.url ||
+                            cite?.chunkInfo?.documentMetadata?.uri ||
+                            'https://cloud.google.com/docs';
+                      return (
+                        <a
+                          key={`${url}-${idx}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10.5px] font-mono text-blue-600 dark:text-blue-300 underline"
+                        >
+                          {url} ↗
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
             </div>
@@ -6494,23 +6518,47 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
                   {lastReceipt.groundedAnswer.groundingSource}
                 </span>
               </div>
-              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                {lastReceipt.groundedAnswer.synthesizedResponse ||
-                  lastReceipt.groundedAnswer.groundedSynthesis}
+              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                {(() => {
+                  const raw =
+                    lastReceipt.groundedAnswer.synthesizedResponse ||
+                    lastReceipt.groundedAnswer.groundedSynthesis ||
+                    lastReceipt.groundedAnswer.answerText ||
+                    lastReceipt.groundedAnswer.answer;
+                  if (typeof raw === 'string') return raw;
+                  if (typeof raw === 'object' && raw !== null) {
+                    return (
+                      raw.answerText ||
+                      raw.text ||
+                      raw.summary ||
+                      JSON.stringify(raw)
+                    );
+                  }
+                  return '';
+                })()}
               </p>
               {Array.isArray(lastReceipt.groundedAnswer.citations) && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {lastReceipt.groundedAnswer.citations.map((cite) => (
-                    <a
-                      key={cite}
-                      href={cite}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-0.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300 underline"
-                    >
-                      {cite} ↗
-                    </a>
-                  ))}
+                  {lastReceipt.groundedAnswer.citations.map((cite, idx) => {
+                    const url =
+                      typeof cite === 'string'
+                        ? cite
+                        : cite?.uri ||
+                          cite?.url ||
+                          cite?.chunkInfo?.documentMetadata?.uri ||
+                          'https://cloud.google.com/docs';
+                    return (
+                      <a
+                        key={`${url}-${idx}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-0.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300 underline"
+                      >
+                        {url} ↗
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </div>

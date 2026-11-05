@@ -56889,13 +56889,27 @@ spec:
         qLower.includes('gpu') ||
         qLower.includes('tpu');
 
-      const rawCliAnswerText =
+      const rawCliAnswerObj =
         typeof dkAnswerRes.data === 'object' && dkAnswerRes.data !== null
-          ? dkAnswerRes.data.answer ||
-            dkAnswerRes.data.synthesizedResponse ||
-            dkAnswerRes.data.groundedSynthesis ||
-            dkAnswerRes.data.text ||
+          ? dkAnswerRes.data
+          : null;
+      const rawCliAnswerCandidate =
+        typeof rawCliAnswerObj?.answer === 'string'
+          ? rawCliAnswerObj.answer
+          : typeof rawCliAnswerObj?.answer === 'object' &&
+            rawCliAnswerObj?.answer !== null
+          ? rawCliAnswerObj.answer.answerText ||
+            rawCliAnswerObj.answer.text ||
+            rawCliAnswerObj.answer.summary ||
             ''
+          : rawCliAnswerObj?.answerText ||
+            rawCliAnswerObj?.synthesizedResponse ||
+            rawCliAnswerObj?.groundedSynthesis ||
+            rawCliAnswerObj?.text ||
+            '';
+      const rawCliAnswerText =
+        typeof rawCliAnswerCandidate === 'string'
+          ? rawCliAnswerCandidate.trim()
           : '';
 
       const defaultSynthesis = isZeroTrustQuery
@@ -57351,11 +57365,41 @@ spec:
         .digest('hex')
         .slice(0, 16)}`;
 
-      const citations = [
-        'https://docs.cloud.google.com/run/docs/worker-pools',
-        'https://docs.cloud.google.com/application-design-center/docs/overview',
-        'https://cloud.google.com/sdk/docs/release-notes',
+      const rawRefs = [
+        ...(Array.isArray(rawCliAnswerObj?.answer?.references)
+          ? rawCliAnswerObj.answer.references
+          : []),
+        ...(Array.isArray(rawCliAnswerObj?.answer?.citations)
+          ? rawCliAnswerObj.answer.citations
+          : []),
+        ...(Array.isArray(rawCliAnswerObj?.references)
+          ? rawCliAnswerObj.references
+          : []),
       ];
+      const extractedRefUrls = rawRefs
+        .map((r) => {
+          if (typeof r === 'string') return r;
+          if (typeof r === 'object' && r !== null) {
+            return (
+              r.uri ||
+              r.url ||
+              r.chunkInfo?.documentMetadata?.uri ||
+              r.documentMetadata?.uri ||
+              null
+            );
+          }
+          return null;
+        })
+        .filter((u) => typeof u === 'string' && u.startsWith('http'));
+
+      const citations = Array.from(
+        new Set([
+          ...extractedRefUrls,
+          'https://docs.cloud.google.com/run/docs/worker-pools',
+          'https://docs.cloud.google.com/application-design-center/docs/overview',
+          'https://cloud.google.com/sdk/docs/release-notes',
+        ])
+      ).slice(0, 6);
 
       return res.json({
         success: true,
