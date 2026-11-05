@@ -33,6 +33,133 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'managed-service-for-apache-spark-and-dataproc-serverless-studio',
+    wave: '2026 LAKEHOUSE & SPARK · MANAGED SERVICE FOR APACHE SPARK, DATAPROC SERVERLESS BATCHES, SPARK CONNECT NOTEBOOKS & DRIVER LOG RCA',
+    title:
+      'Managed Service for Apache Spark & Dataproc Serverless Studio — Scale-to-Zero Spark 3.5 Batches, Interactive ManagedSparkSession Notebooks, 3-Pillar Driver Log RCA & Pre-Submission PySpark Linter',
+    badge: 'MANAGED SPARK TAB (NEXT TO DATA STUDIO) + LAKEHOUSE PIPELINE BAR',
+    badgeColor:
+      'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/40',
+    icon: Cpu,
+    targetTab: 'MANAGED_SPARK_STUDIO',
+    problemSolved:
+      'Running Apache Spark on traditional persistent clusters wastes thousands of dollars on idle master/worker VMs, while submitting Dataproc Serverless batches from the standard console requires manual GCS staging bucket creation, manual PySpark script uploads, hunting through deeply nested gs://.../driveroutput.000000000 blobs when jobs fail with Exit Code 1 or Executor OOM, and debugging cryptic missing IAM roles (roles/dataproc.worker, BigQuery Storage Read/Write APIs, and BigLake Iceberg catalog permissions).',
+    howItWorks: [
+      'Live Multi-Region Spark Fleet & Lakehouse Discovery (GET /api/project/:id/managed-spark/overview): Queries dataproc.googleapis.com/v1 across Serverless Batches (locations/:region/batches), Interactive Spark Connect Sessions (locations/:region/sessions), Session Templates (locations/:region/sessionTemplates), GCE Clusters (regions/:region/clusters), BigLake Catalogs, GCS staging buckets, BigQuery datasets, API enablement status, and a 7-Role Spark IAM Readiness Matrix.',
+      '1-Click Serverless Spark 3.5 Batch Staging & Submission (SUBMIT_SERVERLESS_BATCH): Choose from 4 production PySpark 3.5 / Runtime 2.2 blueprints (BigQuery Medallion ETL, BigLake Apache Iceberg REST Catalog ACID Upsert, Vertex AI Gemini Batch Enrichment, or Distributed PySpark MLlib) or edit your own script inline. Automatically ensures the regional GCS staging bucket exists with Uniform Bucket-Level Access, uploads the .py script to gs://<bucket>/spark-jobs/, and submits the Serverless Batch with Adaptive Query Execution (spark.sql.adaptive.enabled=true) and a 1-click "Browse in GCS ->" deep-link.',
+      'Interactive ManagedSparkSession (Spark Connect) .ipynb & .py Studio (SPARK_CONNECT_NOTEBOOKS + CREATE_SESSION_TEMPLATE): Generates downloadable Jupyter .ipynb notebooks and .py scripts powered by google.cloud.managed_spark_connect.ManagedSparkSession (Spark Connect sub-5-second interactive kernel startup with $0.00/hr idle cost when closed) and provisions reusable Dataproc Serverless Session Templates.',
+      '3-Pillar SparkApplications & Bounded 32 KB GCS Driver Log RCA (INSPECT_BATCH_DIAGNOSTICS): Combines (1)Batch Control-Plane State & stateMessage, (2) Native Dataproc sparkApplications REST telemetry (:search, :searchStages, :searchExecutorSummary, :searchSqlQueries, :searchJobs for GC pause, shuffle spill, and skew diagnostics), and (3) a bounded 32 KB HTTP Range tail of gs://.../driveroutput.000000000 + Cloud Logging entries so megabyte driver logs never freeze the browser.',
+      'Pre-Submission PySpark Linter & 7-Role Spark IAM Auto-Doctor (OPTIMIZER_AND_IAM + BIND_SPARK_IAM_ROLES): Static analyzer catching .master("local") overrides, unbounded .toPandas()/.collect() driver OOM traps, missing F.broadcast() hints, raw print() buffering, and inline pip install anti-patterns, paired with 1-click IAM role binding for the Dataproc VM Service Account.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/managed-spark/overview (dataproc.googleapis.com/v1 batches, sessions, sessionTemplates, clusters + biglake + storage + bigquery + cloudresourcemanager)',
+      'POST /api/project/:id/managed-spark/action (ENABLE_SPARK_APIS | SUBMIT_SERVERLESS_BATCH | CREATE_SESSION_TEMPLATE | CREATE_INTERACTIVE_SESSION | INSPECT_BATCH_DIAGNOSTICS | BIND_SPARK_IAM_ROLES | DELETE_BATCH | DELETE_SESSION | DELETE_SESSION_TEMPLATE)',
+      'dataproc.googleapis.com/v1/projects/:id/locations/:region/batches/:batchId/sparkApplications (:search, :searchStages, :searchExecutorSummary, :searchSqlQueries)',
+    ],
+    billingImpact:
+      'Dataproc Serverless for Apache Spark bills strictly per second of active DCU / Shuffle storage during batch execution and drops to $0.00/hr the instant the batch finishes; all mutating actions are protected by the Mandatory Pre-Execution Confirmation Gatekeeper.',
+  },
+  {
+    id: 'cloud-storage-sweep-keep-bucket-selective-batch-delete-and-sftp-backup',
+    wave: '2026 CLOUD STORAGE & SFTP · SWEEP BUCKET (KEEP BUCKET INTACT), SELECTIVE BATCH DELETION & SFTP-TO-GCS SAME-REGION ($0.00/GB) BACKUP',
+    title:
+      'Cloud Storage Sweep (Keep Bucket Intact), Selective Multi-Object & Multi-Bucket Batch Deletion & SFTP-to-GCS Same-Region ($0.00/GB Egress) Backup Streamer',
+    badge: 'CLOUD STORAGE STUDIO (BUCKETS & OBJECT WORKBENCH) + VM SFTP BROWSER',
+    badgeColor:
+      'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
+    icon: HardDrive,
+    targetTab: 'CLOUD_STORAGE',
+    problemSolved:
+      'Deleting and recreating a Cloud Storage bucket just to clear its contents breaks IAM bindings, CORS policies, Lifecycle rules, KMS CMEK keys, and active Cloud Run Gen2 GCS FUSE mounts—and risks global bucket-name squatting. Meanwhile, engineers needed multi-checkbox selective deletion for specific objects, virtual folders, and buckets, plus a 1-click way to stream files/folders from a Compute Engine VM SFTP session into a same-region GCS bucket at $0.00/GB network egress.',
+    howItWorks: [
+      'Per-Bucket & Multi-Bucket "Sweep Bucket (Keep Bucket Intact)" vs. "Empty & Delete" (POST /api/project/:id/storage/buckets/:b/sweep & POST /api/project/:id/storage/buckets/batch-action): Purges all live and noncurrent object generations (?versions=true) inside one or more selected buckets while keeping the bucket resource itself 100% intact (preserving IAM, Public Access Prevention, CORS, Lifecycle, KMS, and Cloud Run FUSE mounts).',
+      'Selective Multi-Object & Virtual Folder Batch Deletion in Object Workbench (POST /api/project/:id/storage/buckets/:b/objects/batch-delete): Check any combination of individual objects and virtual folder rows (folder/) in GcsObjectWorkbench.jsx and click "Delete Selected (N)" right next to "Bundle .tar (N)", or click "Sweep Bucket (N) / Sweep Folder" to empty only the active prefix.',
+      'Selection-Aware VM SFTP-to-GCS Same-Region ($0.00/GB Egress) Backup Streamer (POST /api/project/:id/vms/:name/sftp/backup-to-gcs/preflight & /backup-to-gcs): Selecting files or folders in the VM SFTP browser automatically syncs the source path and preserves the exact file or directory name on the target gs:// URI, defaults to a bucket in the VM’s exact GCP region for $0.00/GB intra-region transfer, runs a 2-step gs:// URI collision preflight check (Keep Both vs. Overwrite), and provides a 1-click "Browse in GCS ->" deep-link directly into the Object Workbench.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/storage/buckets/:bucketName/sweep & POST /api/project/:id/storage/buckets/batch-action',
+      'POST /api/project/:id/storage/buckets/:bucketName/objects/batch-delete (storage.googleapis.com/storage/v1/b/:b/o?versions=true)',
+      'POST /api/project/:id/vms/:vmName/sftp/backup-to-gcs/preflight & POST /api/project/:id/vms/:vmName/sftp/backup-to-gcs',
+    ],
+    billingImpact:
+      'Sweeping obsolete objects and noncurrent versions immediately stops monthly GCS GB-month storage charges while same-region VM-to-GCS streaming incurs $0.00/GB network egress; every sweep and batch deletion is gated by the global confirmation modal.',
+  },
+  {
+    id: 'chrono-log-4-pillar-devops-sre-logging-command-hub',
+    wave: '2026 OBSERVABILITY & SRE · 4-PILLAR 100X DEVOPS & SRE LOGGING COMMAND HUB, LIVE VM JOURNALCTL SSH & SAME-REGION LOG-TO-GCS ARCHIVE',
+    title:
+      '4-Pillar 100X DevOps & SRE Logging Command Hub — Multi-Project Error Radar, Live VM OS journalctl/dmesg Inspector, Same-Region Log-to-GCS JSONL Archive & 1-Tap Log-to-Metric Alert Synthesizer',
+    badge: 'LOGS & CLOUD SHELL TAB (CHRONO-LOG TIME-MACHINE)',
+    badgeColor:
+      'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+    icon: Terminal,
+    targetTab: 'LOGS_SHELL',
+    problemSolved:
+      'During an incident, SREs and DevOps engineers waste precious minutes switching between projects to find where errors are spiking, SSHing into VMs to inspect inside-OS journalctl/dmesg/container logs that never reach Cloud Logging, manually configuring Cloud Logging Sinks or _Default bucket retention, and clicking through multiple Monitoring screens to turn a log query into a metric and alert policy.',
+    howItWorks: [
+      'Pillar 1 — Multi-Project Error Radar & 16-Preset DevOps/SRE Filter Library (POST /api/project/:id/chrono-logs/multi-project-radar): Scans all discovered GCP projects in parallel for live ERROR/CRITICAL counts and provides 16 1-click LQL presets across Cloud Run (5xx crashes, cold starts, OOMs), GCE VMs (Serial Console kernel panics, sshd auth, Guest Agent), Cloud Audit (IAM changes, destructive deletes), VPC Firewall drops, GKE CrashLoopBackOff, and Cloud SQL deadlocks.',
+      'Pillar 2 — Live VM OS journalctl / dmesg / Container & Systemd Unit Inspector (POST /api/project/:id/chrono-logs/vm-live-journal): Connects directly to running Compute Engine VMs over SSH to stream real inside-Linux journalctl, dmesg -T, /var/log/syslog, auth.log sshd events, docker/containerd logs, failed systemd units, and top CPU/RAM processes.',
+      'Pillar 3 — Same-Region ($0.00/GB) Log-to-GCS JSONL Archive & Log Sink / Bucket Retention Studio (POST /api/project/:id/chrono-logs/export-to-gcs/preflight, /export-to-gcs & /sinks-buckets/action): Archives filtered log streams into compressed or raw JSONL objects in a same-region GCS bucket with 2-step collision preflight and a 1-click "Browse in GCS ->" deep-link, and manages live Cloud Logging Sinks (logging.googleapis.com/v2/projects/:id/sinks) and _Default / _Required log bucket retention days.',
+      'Pillar 4 — 1-Tap Log-to-Metric & Cloud Monitoring Alert Policy Synthesizer (POST /api/project/:id/chrono-logs/alert-policies/action): Turns any active LQL filter into a real Cloud Logging log-based counter metric and a live Cloud Monitoring Alert Policy (monitoring.googleapis.com/v3/projects/:id/alertPolicies) in a single click.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/chrono-logs/multi-project-radar & POST /api/project/:id/chrono-logs/vm-live-journal',
+      'POST /api/project/:id/chrono-logs/export-to-gcs/preflight & POST /api/project/:id/chrono-logs/export-to-gcs',
+      'GET & POST /api/project/:id/chrono-logs/sinks-buckets & /sinks-buckets/action (logging.googleapis.com/v2 sinks & buckets)',
+      'GET & POST /api/project/:id/chrono-logs/alert-policies & /alert-policies/action (logging.googleapis.com/v2/projects/:id/metrics + monitoring.googleapis.com/v3/projects/:id/alertPolicies)',
+    ],
+    billingImpact:
+      'Cloud Logging includes 50 GiB/project/month Always Free ingestion and 30-day _Default retention; archiving logs to a same-region Standard/Coldline/Archive GCS bucket incurs $0.00/GB intra-region transfer cost.',
+  },
+  {
+    id: 'global-map-live-gce-vm-ssh-auth-log-geo-telemetry-and-4-scenarios',
+    wave: '2026 GLOBAL NETWORK MAP · LIVE GCE VM SSH & /VAR/LOG/AUTH.LOG GEO-TELEMETRY STRIP + 4-SCENARIO MODE OVERLAYS',
+    title:
+      'Global Network World Map — Inside-VM SSH & /var/log/auth.log Geo-Telemetry Collector, Always-Visible Live SSH Tunnel Beam & 4 Interactive Scenario Mode Overlays',
+    badge: 'GLOBAL MAP TAB (40 REGIONS & 121 ZONES)',
+    badgeColor:
+      'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40',
+    icon: Globe,
+    targetTab: 'GLOBAL_MAP',
+    problemSolved:
+      'Standard cloud network maps only show coarse regional health checks and cannot visualize live SSH sessions or brute-force probes happening inside your Compute Engine VMs (/var/log/auth.log and ss -tnH), nor do they let operators switch between distinct visual telemetry scenarios (Live Cloud Logs & Sockets, SSH Brute-Force Defense, IAP Zero-Trust Tunneling, and 10-Region Global Load Fan-Out) with synchronized Lens and Layer controls at 1.0x zoom.',
+    howItWorks: [
+      'Inside-VM SSH & Serial Console Log Collector (collectLiveVmSshTelemetryForMap in GET /api/project/:id/global-map/live-telemetry): Connects to running GCE VMs over SSH (with Serial Port 1 fallback) to parse live /var/log/auth.log and /var/log/secure (accepted sshd logins and blocked [preauth] brute-force probes), active ss -tnH state established :22 sockets, and who, geo-locating every remote IP to its origin country and coordinates via resolveRemoteIpGeo.',
+      'Always-Visible Live GCE SSH Tunnel Beam & Telemetry Strip (GlobalNetworkWorldMap.jsx): Renders a standing emerald "LIVE GCE SSH:22" arc from YOU to the running VM region plus geo-located red "SSH:<COUNTRY>" probe origin pins on the 1200x560 SVG world map, paired with an interactive Live GCE VM SSH & /var/log/auth.log Telemetry Strip directly below the map.',
+      '4 Distinct Scenario Mode Overlays + Synchronized Lens & Layers: Switch seamlessly between (1) LIVE_MIX (balanced 3-way stream of live GCE SSH + Cloud Logs, 10-region TLS 1.3 sockets, and FIBER subsea backbone packets incrementing FIBER: N), (2) SSH_BRUTEFORCE (standing red perimeter attack vectors from /var/log/auth.log probe countries + live :22/:3389 firewall audit), (3) IAP_ZERO_TRUST (2-hop YOU -> IAP EDGE 35.235.240.0/20 -> VM Region :22 overlay comparing IAP:22 ALLOW vs. 0.0.0.0/0:22), and (4) GLOBAL_LOAD_TEST (simultaneous 10-region GFE Anycast :443 fan-out constellation), while Lens (Traffic, CFE %, Spot $) and Layers (Fiber, Zones, IAP Tunnel, RTT Laser) immediately update all visible region pills and zone rings even at 1.0x zoom.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/global-map/live-telemetry?scenarioMode=LIVE_MIX|SSH_BRUTEFORCE|IAP_ZERO_TRUST|GLOBAL_LOAD_TEST',
+      'compute.googleapis.com/compute/v1 (instances, getSerialPortOutput, firewalls) + logging.googleapis.com/v2/entries:list + Direct SSH2 /var/log/auth.log & ss -tnH probe',
+    ],
+    billingImpact:
+      '100% $0.00/mo read-only telemetry over existing SSH/Serial Console channels, Cloud Logging APIs, and regional TLS 1.3 socket handshakes.',
+  },
+  {
+    id: 'gde-mode-7-shield-live-demo-and-xterm-stream-privacy-engine',
+    wave: '2026 STREAMER & INSTRUCTOR PRIVACY · GDE MODE (ALT+G) 7-SHIELD ZERO-FLASH DOM, SVG & LIVE XTERM.JS WEB-SSH REDACTOR',
+    title:
+      'GDE Mode (Alt+G) 7-Shield Live Demo & Screen-Share Privacy Engine — Derived POSIX/OS-Login Username & /home/<user> Redaction, Zero-Flash Synchronous MutationObserver & Live Xterm.js PTY Secret Shield',
+    badge: 'TOP HEADER (GDE MODE / ALT+G) + ALL 27 STUDIOS + WEB-SSH TERMINAL',
+    badgeColor:
+      'bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40',
+    icon: ShieldCheck,
+    targetTab: 'OVERVIEW',
+    problemSolved:
+      'When Google Developer Experts (GDEs), DevRel engineers, and instructors screen-share or record live cloud demos, sensitive identifiers leak in unexpected places beyond plain text nodes—such as derived Linux usernames in /home/<user> SFTP paths, <svg> text labels inside Mermaid/ECharts diagrams, native browser title/placeholder tooltips, unfocused <input> fields, and live WebSocket PTY streams inside the Xterm.js Web-SSH terminal.',
+    howItWorks: [
+      'Derived SSH / OS-Login Username & /home/<user> Redaction (GdeStreamerPrivacyShield.jsx): Automatically derives local and OS-Login POSIX usernames from the authenticated accountEmail and masks /home/<user>, /Users/<user>, <user>@<host>, and su - <user> across the SFTP File Browser, Disk Hotspot Analyzer, and VM journalctl streams.',
+      'Zero-Flash Synchronous MutationObserver + <svg> + title/placeholder + Unfocused <input> Masking: Redacts DOM text mutations synchronously before browser paint (0ms flash), masks <svg> <text>/<tspan> nodes in Mermaid and ECharts, redacts native title and placeholder attributes, and visually masks unfocused text <input> values while preserving 100% of underlying React state and live GCP REST API calls.',
+      'Live Xterm.js Web-SSH PTY Stream Redaction & 7th Secret Shield (XtermWebSshTerminal.jsx): Intercepts live WebSocket term.write(...) terminal output and command banners in real time and masks ya29.••• OAuth2 access tokens, AIza••• API keys, Bearer eyJ••• JWTs, and SHA256:••• SSH key fingerprints alongside emails, Billing Account IDs, 12-digit Project Numbers, public IPv4s, and dollar credit balances.',
+    ],
+    apisUsed: [
+      '100% Client-Side Synchronous DOM MutationObserver + Xterm.js PTY Stream Interceptor (window.__CLOUDPULSE_REDACT_TEXT__)',
+      'Works across all 27 Primary Studios, Hover Explainers, Mermaid/ECharts SVGs, SFTP File Browser & Web-SSH Terminal',
+    ],
+    billingImpact:
+      '100% client-side privacy engine ($0.00/mo, zero network overhead, and zero mutation of real GCP API payloads).',
+  },
+  {
     id: 'cloud-recycle-bin-30d-and-honest-recovery-guarantees',
     wave: '2026 SRE & GOVERNANCE · 30-DAY CLOUD RECYCLE BIN, DISABLED API RESTORER & HONEST RECOVERY VS. EMPTY SHELL RE-CREATION',
     title:
@@ -1930,7 +2057,7 @@ export default function InteractiveDocsGuide({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search documentation (e.g. 'hibernate', 'terraform', 'zombie', 'teleport', 'billing', 'gpu')..."
+              placeholder="Search documentation (e.g. 'spark', 'sweep', 'journalctl', 'sftp', 'hibernate', 'terraform', 'gpu')..."
               className="w-full h-9 bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-10 pr-4 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -1948,6 +2075,14 @@ export default function InteractiveDocsGuide({
             >
               {[
                 { id: 'ALL', label: `All Innovations (${DOC_SECTIONS.length})` },
+                { id: 'LAKEHOUSE & SPARK', label: 'Managed Spark & Dataproc Serverless' },
+                { id: 'CLOUD STORAGE & SFTP', label: 'Storage Sweep & SFTP-to-GCS Backup' },
+                { id: 'OBSERVABILITY & SRE', label: '4-Pillar DevOps & SRE Logging Hub' },
+                { id: 'GLOBAL NETWORK MAP', label: 'Global Map · Live SSH & 4 Scenarios' },
+                { id: 'STREAMER & INSTRUCTOR PRIVACY', label: 'GDE Mode (Alt+G) 7-Shield Privacy' },
+                { id: 'RECYCLE BIN', label: '30-Day Cloud Recycle Bin' },
+                { id: 'STARTUP', label: 'Startup 10X Mentor Studio' },
+                { id: 'WAVE 20', label: 'Wave 20 · Cloud IDS/IPS & DPI' },
                 { id: 'WAVE 5', label: 'Wave 5 · Cloud Brain & SKU' },
                 { id: 'WAVE 4', label: 'Wave 4 · Global Map (40 Regions)' },
                 { id: 'WAVE 3', label: 'Wave 3 · Orbital HUD' },
