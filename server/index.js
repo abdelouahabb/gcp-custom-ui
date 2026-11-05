@@ -80885,6 +80885,10 @@ function resolveCountryNameFromIso2(iso2) {
   }
 }
 
+let cachedLiveClientRawIp = null;
+const remoteIpGeoCache = new Map();
+const vmSshMapTelemetryCache = new Map();
+
 async function resolveLiveClientOrigin(req) {
   if (
     cachedLiveClientOrigin &&
@@ -80896,6 +80900,7 @@ async function resolveLiveClientOrigin(req) {
     const resp = await axios.get('https://ipwho.is/', { timeout: 2800 });
     const d = resp.data;
     if (d && d.success !== false && typeof d.latitude === 'number') {
+      if (d.ip) cachedLiveClientRawIp = String(d.ip).trim();
       const iso2 = String(d.country_code || '').toUpperCase();
       cachedLiveClientOrigin = {
         ip: 'IP Hidden (Privacy Mode)',
@@ -80924,6 +80929,7 @@ async function resolveLiveClientOrigin(req) {
       const resp2 = await axios.get('https://ipinfo.io/json', { timeout: 2500 });
       const d2 = resp2.data;
       if (d2 && d2.loc) {
+        if (d2.ip) cachedLiveClientRawIp = String(d2.ip).trim();
         const [latS, lonS] = String(d2.loc).split(',');
         const iso2 = String(d2.country || '').toUpperCase();
         cachedLiveClientOrigin = {
@@ -80978,6 +80984,711 @@ async function resolveLiveClientOrigin(req) {
     domain: '',
     timezone: clientTz,
     source: 'SYSTEM_TIMEZONE_GEOLOCATION',
+  };
+}
+
+async function resolveRemoteIpGeo(rawIpInput, clientOrigin) {
+  const cleanIp = String(rawIpInput || '')
+    .trim()
+    .replace(/^::ffff:/i, '');
+  const isPrivateOrLocal =
+    !cleanIp ||
+    cleanIp === '127.0.0.1' ||
+    cleanIp === '::1' ||
+    cleanIp.startsWith('10.') ||
+    cleanIp.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(cleanIp);
+
+  if (
+    isPrivateOrLocal ||
+    (cachedLiveClientRawIp && cleanIp === cachedLiveClientRawIp)
+  ) {
+    return {
+      ip: cleanIp || 'Client Workstation',
+      isMyClient: true,
+      city: clientOrigin?.city || 'Client Workstation',
+      region: clientOrigin?.region || '',
+      country: clientOrigin?.country || 'Local',
+      countryCode: clientOrigin?.countryCode || 'LOC',
+      lat: typeof clientOrigin?.lat === 'number' ? clientOrigin.lat : 36.7538,
+      lon: typeof clientOrigin?.lon === 'number' ? clientOrigin.lon : 3.0588,
+      asn: clientOrigin?.asn || 'AS-LIVE',
+      isp: clientOrigin?.isp || 'Live Workstation Egress',
+    };
+  }
+
+  // Google Cloud Identity-Aware Proxy (IAP) TCP Forwarding CIDR 35.235.240.0/20
+  if (cleanIp.startsWith('35.235.240.')) {
+    return {
+      ip: cleanIp,
+      isMyClient: false,
+      city: 'Google IAP Edge Proxy',
+      region: 'Global Edge',
+      country: 'United States',
+      countryCode: 'US',
+      lat: 39.0438,
+      lon: -77.4874,
+      asn: 'AS15169',
+      isp: 'Google Cloud Identity-Aware Proxy (35.235.240.0/20)',
+    };
+  }
+
+  const cached = remoteIpGeoCache.get(cleanIp);
+  if (cached && Date.now() - cached.at < 6 * 60 * 60 * 1000) {
+    return cached.data;
+  }
+
+  try {
+    const resp = await axios.get(
+      `https://ipwho.is/${encodeURIComponent(cleanIp)}`,
+      { timeout: 1800 }
+    );
+    const d = resp.data;
+    if (d && d.success !== false && typeof d.latitude === 'number') {
+      const iso2 = String(d.country_code || '').toUpperCase() || 'UN';
+      const isSameCityAsClient =
+        !cachedLiveClientRawIp &&
+        clientOrigin?.countryCode === iso2 &&
+        clientOrigin?.city &&
+        String(d.city || '').toLowerCase() ===
+          String(clientOrigin.city).toLowerCase();
+      if (isSameCityAsClient) {
+        cachedLiveClientRawIp = cleanIp;
+      }
+      const geoData = {
+        ip: cleanIp,
+        isMyClient: Boolean(
+          isSameCityAsClient || cleanIp === cachedLiveClientRawIp
+        ),
+        city: d.city || d.capital || 'External Host',
+        region: d.region || '',
+        country: d.country || resolveCountryNameFromIso2(iso2),
+        countryCode: iso2,
+        lat: Number(d.latitude.toFixed(4)),
+        lon: Number(d.longitude.toFixed(4)),
+        asn: d.connection?.asn ? `AS${d.connection.asn}` : 'AS-EXT',
+        isp: d.connection?.isp || d.connection?.org || 'External Network',
+      };
+      remoteIpGeoCache.set(cleanIp, { at: Date.now(), data: geoData });
+      return geoData;
+    }
+  } catch {
+    // Fallback to ipinfo.io
+  }
+
+  try {
+    const resp2 = await axios.get(
+      `https://ipinfo.io/${encodeURIComponent(cleanIp)}/json`,
+      { timeout: 1800 }
+    );
+    const d2 = resp2.data;
+    if (d2 && d2.loc) {
+      const [latS, lonS] = String(d2.loc).split(',');
+      const iso2 = String(d2.country || '').toUpperCase() || 'UN';
+      const geoData = {
+        ip: cleanIp,
+        isMyClient: Boolean(
+          cachedLiveClientRawIp && cleanIp === cachedLiveClientRawIp
+        ),
+        city: d2.city || 'External Host',
+        region: d2.region || '',
+        country: resolveCountryNameFromIso2(iso2),
+        countryCode: iso2,
+        lat: Number(Number(latS).toFixed(4)),
+        lon: Number(Number(lonS).toFixed(4)),
+        asn: String(d2.org || '').split(' ')[0] || 'AS-EXT',
+        isp:
+          String(d2.org || '').replace(/^AS\d+\s*/, '') || 'External Network',
+      };
+      remoteIpGeoCache.set(cleanIp, { at: Date.now(), data: geoData });
+      return geoData;
+    }
+  } catch {
+    // Fallback below
+  }
+
+  const fallbackGeo = {
+    ip: cleanIp,
+    isMyClient: false,
+    city: 'External Internet Host',
+    region: '',
+    country: 'External Origin',
+    countryCode: 'EXT',
+    lat: 50.1109,
+    lon: 8.6821,
+    asn: 'AS-EXT',
+    isp: 'Public Internet Scanner',
+  };
+  remoteIpGeoCache.set(cleanIp, { at: Date.now(), data: fallbackGeo });
+  return fallbackGeo;
+}
+
+const PY_VM_SSH_MAP_COLLECTOR = `
+import subprocess, json, re, datetime
+
+def run_sh(cmd, timeout=3):
+    try:
+        p = subprocess.run(['bash', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        return (p.stdout or '').strip()
+    except Exception:
+        return ''
+
+now_iso = datetime.datetime.utcnow().isoformat() + 'Z'
+
+# 1. Active interactive PTY SSH sessions ('who', 'ps -eo user,tty,comm', 'ss -tnH')
+who_raw = run_sh("who 2>/dev/null", timeout=2)
+ps_pts_raw = run_sh("ps -eo user:32,tty,comm 2>/dev/null", timeout=2)
+ss_raw = run_sh("ss -tnH state established '( sport = :22 )' 2>/dev/null || ss -tn state established 2>/dev/null | grep ':22 '", timeout=2)
+
+active_sessions = []
+seen_pty = set()
+
+for ln in who_raw.splitlines():
+    ln = ln.strip()
+    if not ln:
+        continue
+    ip_m = re.search(r'\\((\\d+\\.\\d+\\.\\d+\\.\\d+)\\)', ln)
+    parts = ln.split()
+    if len(parts) >= 2 and parts[1].startswith('pts/'):
+        user = parts[0]
+        tty = parts[1]
+        ip_clean = ip_m.group(1) if ip_m else ''
+        login_ts = ' '.join(parts[2:4]) if len(parts) >= 4 else now_iso
+        key = f"{user}:{tty}:{ip_clean}"
+        if key not in seen_pty:
+            seen_pty.add(key)
+            active_sessions.append({
+                'sshUser': user,
+                'tty': tty,
+                'remoteIp': ip_clean,
+                'remotePort': 22,
+                'loginTime': login_ts,
+                'sessionType': 'INTERACTIVE_PTY',
+                'rawLine': ln,
+            })
+
+# Check established TCP :22 sockets in 'ss -tnH'
+peer_counts = {}
+peer_ports = {}
+for ln in ss_raw.splitlines():
+    ep_matches = re.findall(r'(\\d+\\.\\d+\\.\\d+\\.\\d+):(\\d+)', ln)
+    if len(ep_matches) >= 2:
+        pip, pport = ep_matches[-1]
+        peer_counts[pip] = peer_counts.get(pip, 0) + 1
+        peer_ports.setdefault(pip, []).append(int(pport) if pport.isdigit() else 22)
+
+# Any process attached to pts/* means an interactive terminal is open
+pts_list = []
+for ln in ps_pts_raw.splitlines():
+    parts = ln.split()
+    if len(parts) >= 2 and parts[1].startswith('pts/'):
+        pts_list.append((parts[0], parts[1]))
+
+# Backfill remoteIp on any 'who' session that didn't have an IP in parentheses
+default_peer_ip = next(iter(peer_counts.keys()), '')
+for s in active_sessions:
+    if not s['remoteIp'] and default_peer_ip:
+        s['remoteIp'] = default_peer_ip
+        s['remotePort'] = peer_ports.get(default_peer_ip, [22])[0]
+
+for pip, cnt in peer_counts.items():
+    already_in_who = any(s['remoteIp'] == pip for s in active_sessions)
+    if not already_in_who:
+        u_name = pts_list[0][0] if pts_list else 'abdelouahab'
+        u_tty = pts_list[0][1] if pts_list else ('pts/0' if cnt >= 2 else 'ssh:22')
+        p_port = peer_ports.get(pip, [22])[0]
+        active_sessions.append({
+            'sshUser': u_name,
+            'tty': u_tty,
+            'remoteIp': pip,
+            'remotePort': p_port,
+            'loginTime': now_iso,
+            'sessionType': 'INTERACTIVE_PTY' if (pts_list or cnt >= 2) else 'ESTABLISHED_SSH_SOCKET',
+            'rawLine': f"ESTAB TCP:22 <-> {pip}:{p_port} ({u_name}@{u_tty}, {cnt} active socket(s))",
+        })
+
+# 2. Read real sshd / sshd-session lines from /var/log/auth.log, /var/log/secure, or journalctl (using || so only 1 command runs)
+auth_cmd = (
+    "grep -E 'sshd|sshd-session' /var/log/auth.log 2>/dev/null | tail -n 180 || "
+    "sudo -n grep -E 'sshd|sshd-session' /var/log/auth.log 2>/dev/null | tail -n 180 || "
+    "sudo -n grep -E 'sshd|sshd-session' /var/log/secure 2>/dev/null | tail -n 180 || "
+    "sudo -n journalctl -q _COMM=sshd _COMM=sshd-session -u ssh -u sshd -n 140 --no-pager -o short-iso 2>/dev/null"
+)
+auth_raw = run_sh(auth_cmd, timeout=4)
+
+parsed_events = {}
+order_keys = []
+
+for raw_ln in auth_raw.splitlines():
+    ln = raw_ln.strip()
+    if not ln:
+        continue
+    # Strip leading file path if grep printed '/var/log/auth.log:...'
+    if ln.startswith('/var/log/'):
+         parts_c = ln.split(':', 1)
+         if len(parts_c) == 2:
+             ln = parts_c[1].strip()
+
+    ts_match = re.match(r'^(\\d{4}-\\d{2}-\\d{2}T\\S+|\\w{3}\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2})\\s+(\\S+)\\s+([^:]+):\\s*(.*)$', ln)
+    ts_str = now_iso
+    msg = ln
+    if ts_match:
+        ts_cand, _host, _proc, msg_cand = ts_match.groups()
+        msg = msg_cand.strip()
+        if 'T' in ts_cand:
+            ts_str = ts_cand
+
+    ev_kind = None
+    disp = None
+    sev = 'INFO'
+    ssh_user = 'unknown'
+    rem_ip = None
+    rem_port = 22
+    summary = None
+
+    m_acc = re.search(r'Accepted\\s+(\\S+)\\s+for\\s+(\\S+)\\s+from\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)', msg)
+    m_inv = re.search(r'Invalid user\\s+(\\S*)\\s+from\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)', msg)
+    m_disc_inv = re.search(r'Disconnected from invalid user\\s+(\\S*)\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)', msg)
+    m_preauth = re.search(r'(Connection closed|Connection reset|Disconnected from)\\s+(?:by\\s+)?(?:authenticating|invalid)\\s+user\\s+(\\S+)\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)\\s*\\[preauth\\]', msg)
+    m_preauth_no_user = re.search(r'(Connection closed|Connection reset|Disconnected from)\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)\\s*\\[preauth\\]', msg)
+    m_fail = re.search(r'Failed password for (?:invalid user )?(\\S+)\\s+from\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)', msg)
+    m_disc_ok = re.search(r'Disconnected from user\\s+(\\S+)\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+port\\s+(\\d+)', msg)
+
+    if m_acc:
+        method, ssh_user, rem_ip, p_s = m_acc.groups()
+        rem_port = int(p_s)
+        ev_kind = 'SSH_AUTH_ACCEPTED'
+        disp = 'ALLOWED'
+        sev = 'INFO'
+        summary = f"Accepted {method} for {ssh_user} from {rem_ip}:{rem_port}"
+    elif m_inv:
+        u_raw, rem_ip, p_s = m_inv.groups()
+        ssh_user = u_raw or 'invalid'
+        rem_port = int(p_s)
+        ev_kind = 'SSH_INVALID_USER_PREAUTH'
+        disp = 'DENIED'
+        sev = 'WARNING'
+        summary = f"Blocked SSH Invalid user '{ssh_user}' from {rem_ip}:{rem_port} [preauth]"
+    elif m_disc_inv:
+        u_raw, rem_ip, p_s = m_disc_inv.groups()
+        ssh_user = u_raw or 'invalid'
+        rem_port = int(p_s)
+        ev_kind = 'SSH_INVALID_USER_PREAUTH'
+        disp = 'DENIED'
+        sev = 'WARNING'
+        summary = f"Rejected invalid user '{ssh_user}' from {rem_ip}:{rem_port} [preauth]"
+    elif m_preauth:
+        act, ssh_user, rem_ip, p_s = m_preauth.groups()
+        rem_port = int(p_s)
+        ev_kind = 'SSH_PREAUTH_REJECTED'
+        disp = 'DENIED'
+        sev = 'WARNING'
+        summary = f"{act} authenticating user '{ssh_user}' from {rem_ip}:{rem_port} [preauth]"
+    elif m_preauth_no_user:
+        act, rem_ip, p_s = m_preauth_no_user.groups()
+        ssh_user = 'scanner'
+        rem_port = int(p_s)
+        ev_kind = 'SSH_PREAUTH_REJECTED'
+        disp = 'DENIED'
+        sev = 'WARNING'
+        summary = f"{act} from {rem_ip}:{rem_port} [preauth]"
+    elif m_fail:
+        ssh_user, rem_ip, p_s = m_fail.groups()
+        rem_port = int(p_s)
+        ev_kind = 'SSH_FAILED_PASSWORD'
+        disp = 'DENIED'
+        sev = 'ERROR'
+        summary = f"Failed SSH password for '{ssh_user}' from {rem_ip}:{rem_port}"
+    elif m_disc_ok:
+        ssh_user, rem_ip, p_s = m_disc_ok.groups()
+        rem_port = int(p_s)
+        ev_kind = 'SSH_SESSION_DISCONNECTED'
+        disp = 'ALLOWED'
+        sev = 'INFO'
+        summary = f"SSH session closed for {ssh_user} from {rem_ip}:{rem_port}"
+
+    if rem_ip and ev_kind:
+        dedup_key = f"{rem_ip}:{ev_kind}:{ssh_user}"
+        if dedup_key not in parsed_events:
+            order_keys.append(dedup_key)
+            parsed_events[dedup_key] = {
+                'eventKind': ev_kind,
+                'disposition': disp,
+                'severity': sev,
+                'sshUser': ssh_user,
+                'remoteIp': rem_ip,
+                'remotePort': rem_port,
+                'timestamp': ts_str,
+                'summary': summary,
+                'rawLine': ln,
+                'occurrences': 1,
+            }
+        else:
+            parsed_events[dedup_key]['timestamp'] = ts_str
+            parsed_events[dedup_key]['remotePort'] = rem_port
+            parsed_events[dedup_key]['summary'] = summary
+            parsed_events[dedup_key]['rawLine'] = ln
+            parsed_events[dedup_key]['occurrences'] += 1
+
+events_list = [parsed_events[k] for k in reversed(order_keys)]
+
+print(json.dumps({
+    'activeSessions': active_sessions,
+    'sshEvents': events_list[:25],
+    'establishedTcp22Count': sum(peer_counts.values()),
+}))
+`;
+
+async function collectLiveVmSshTelemetryForMap({
+  projectId,
+  vms,
+  token,
+  clientOrigin,
+  forceRefresh = false,
+}) {
+  let candidateVms = (Array.isArray(vms) ? vms : [])
+    .filter((v) => v.status === 'RUNNING')
+    .map((v) => ({ ...v, projectId }));
+
+  // If the currently selected project has 0 running VMs, check other discovered projects of the user
+  if (candidateVms.length === 0 && token) {
+    try {
+      const allProjects = await discoverAllUserProjects(token);
+      const otherProjs = allProjects
+        .map((p) => p.projectId)
+        .filter((pid) => pid && pid !== projectId)
+        .slice(0, 6);
+      const aggList = await Promise.all(
+        otherProjs.map((pid) =>
+          gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              pid
+            )}/aggregated/instances?maxResults=20`,
+            token,
+            pid,
+            { timeout: 3200 }
+          )
+            .then((res) => ({ pid, items: res?.items || {} }))
+            .catch(() => ({ pid, items: {} }))
+        )
+      );
+      for (const { pid, items } of aggList) {
+        for (const [scopeKey, scopeVal] of Object.entries(items)) {
+          const zone = scopeKey.replace('zones/', '');
+          for (const inst of scopeVal.instances || []) {
+            if (inst.status === 'RUNNING') {
+              candidateVms.push({
+                projectId: pid,
+                name: inst.name,
+                zone,
+                region: zone.split('-').slice(0, 2).join('-'),
+                machineType: (inst.machineType || '').split('/').pop(),
+                status: inst.status,
+                internalIp: inst.networkInterfaces?.[0]?.networkIP || null,
+                externalIp:
+                  inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP ||
+                  null,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore cross-project fallback errors
+    }
+  }
+
+  const runningVms = candidateVms.slice(0, 3);
+  if (runningVms.length === 0) {
+    return {
+      monitoredVms: [],
+      activeSshSessions: [],
+      sshLogEvents: [],
+    };
+  }
+
+  const perVmResults = await Promise.all(
+    runningVms.map(async (vm) => {
+      const vmProj = vm.projectId || projectId;
+      const cacheKey = `${vmProj}:${vm.zone}:${vm.name}`;
+      const cached = vmSshMapTelemetryCache.get(cacheKey);
+      if (!forceRefresh && cached && Date.now() - cached.at < 18 * 1000) {
+        return cached.data;
+      }
+
+      let rawPayload = null;
+      let engineUsed = 'SSH2_DIRECT_AUTH_LOG';
+
+      try {
+        const target = await resolveVmScpTarget({
+          projectId: vmProj,
+          vmName: vm.name,
+          zone: vm.zone,
+          rawUsername: '',
+          token,
+        });
+        if (target.vmStatus === 'RUNNING' && target.tcp22Open && target.privateKey) {
+          const b64Py = Buffer.from(PY_VM_SSH_MAP_COLLECTOR, 'utf8').toString(
+            'base64'
+          );
+          const cmd = `python3 -c "import base64; exec(base64.b64decode('${b64Py}').decode('utf-8'))"`;
+          const rawOut = await withSftpSession(target, (_sftp, conn) => {
+            return new Promise((resolve, reject) => {
+              const timer = setTimeout(
+                () => reject(new Error('SSH collector timeout')),
+                4500
+              );
+              conn.exec(cmd, (err, stream) => {
+                if (err || !stream) {
+                  clearTimeout(timer);
+                  return reject(err || new Error('SSH exec failed'));
+                }
+                let out = '';
+                stream.on('data', (d) => {
+                  out += d.toString();
+                });
+                stream.stderr?.on('data', () => {});
+                stream.on('close', () => {
+                  clearTimeout(timer);
+                  resolve(out);
+                });
+              });
+            });
+          });
+          const lines = String(rawOut || '')
+            .trim()
+            .split('\n')
+            .filter(Boolean);
+          if (lines.length > 0) {
+            rawPayload = JSON.parse(lines[lines.length - 1]);
+          }
+        }
+      } catch {
+        rawPayload = null;
+      }
+
+      // Fallback to GCE Serial Port 1 output if direct SSH was unavailable
+      if (!rawPayload) {
+        try {
+          engineUsed = 'GCE_SERIAL_PORT_1';
+          const serialRes = await gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+              vmProj
+            )}/zones/${encodeURIComponent(
+              vm.zone
+            )}/instances/${encodeURIComponent(vm.name)}/serialPort?port=1`,
+            token,
+            vmProj,
+            { timeout: 3500 }
+          );
+          const contents = String(serialRes?.contents || '');
+          const sshLines = contents
+            .split('\n')
+            .filter((ln) => /sshd|Accepted|Invalid user|preauth/i.test(ln))
+            .slice(-30);
+          const serialEvents = [];
+          for (const ln of sshLines) {
+            const mIp = ln.match(/(\d+\.\d+\.\d+\.\d+)/);
+            if (mIp) {
+              const isDeny = /Invalid user|Failed|preauth|reset|closed/i.test(
+                ln
+              );
+              serialEvents.push({
+                eventKind: isDeny
+                  ? 'SSH_PREAUTH_REJECTED'
+                  : 'SSH_AUTH_ACCEPTED',
+                disposition: isDeny ? 'DENIED' : 'ALLOWED',
+                severity: isDeny ? 'WARNING' : 'INFO',
+                sshUser: 'gce-ssh',
+                remoteIp: mIp[1],
+                remotePort: 22,
+                timestamp: new Date().toISOString(),
+                summary: ln.trim().slice(-140),
+                rawLine: ln.trim(),
+                occurrences: 1,
+              });
+            }
+          }
+          rawPayload = {
+            activeSessions: [],
+            sshEvents: serialEvents.reverse(),
+            establishedTcp22Count: 0,
+          };
+        } catch {
+          rawPayload = {
+            activeSessions: [],
+            sshEvents: [],
+            establishedTcp22Count: 0,
+          };
+        }
+      }
+
+      const activeSessionsRaw = Array.isArray(rawPayload?.activeSessions)
+        ? rawPayload.activeSessions
+        : [];
+      const sshEventsRaw = Array.isArray(rawPayload?.sshEvents)
+        ? rawPayload.sshEvents
+        : [];
+
+      // Collect unique remote IPs to geo-locate in parallel
+      const uniqueIps = [
+        ...new Set(
+          [
+            ...activeSessionsRaw.map((s) => s.remoteIp),
+            ...sshEventsRaw.map((e) => e.remoteIp),
+          ].filter(Boolean)
+        ),
+      ];
+      const ipGeoPairs = await Promise.all(
+        uniqueIps.map(async (ip) => [
+          ip,
+          await resolveRemoteIpGeo(ip, clientOrigin),
+        ])
+      );
+      const ipGeoMap = Object.fromEntries(ipGeoPairs);
+
+      const enrichedActiveSessions = activeSessionsRaw.map((s, idx) => {
+        const geo = ipGeoMap[s.remoteIp] || {
+          ip: s.remoteIp,
+          isMyClient: true,
+          city: clientOrigin?.city || 'Client Workstation',
+          country: clientOrigin?.country || 'Local',
+          countryCode: clientOrigin?.countryCode || 'LOC',
+          lat: clientOrigin?.lat ?? 36.7538,
+          lon: clientOrigin?.lon ?? 3.0588,
+          asn: clientOrigin?.asn || 'AS-LIVE',
+          isp: clientOrigin?.isp || 'Live Egress',
+        };
+        return {
+          id: `ssh-active-${vm.name}-${s.tty}-${idx}`,
+          projectId: vmProj,
+          vmName: vm.name,
+          zone: vm.zone,
+          region: vm.region,
+          vmExternalIp: vm.externalIp,
+          vmInternalIp: vm.internalIp,
+          sshUser: s.sshUser,
+          tty: s.tty,
+          remoteIp: geo.isMyClient ? 'YOUR_WORKSTATION_IP' : s.remoteIp,
+          rawRemoteIp: s.remoteIp,
+          remotePort: s.remotePort || 22,
+          destPort: 22,
+          loginTime: s.loginTime,
+          sessionType: s.sessionType,
+          isMyClient: Boolean(geo.isMyClient),
+          sourceCity: geo.city,
+          sourceCountry: geo.country,
+          sourceCountryCode: geo.countryCode,
+          sourceLat: geo.lat,
+          sourceLon: geo.lon,
+          sourceAsn: geo.asn,
+          sourceIsp: geo.isp,
+          summary: `ACTIVE SSH SESSION (${s.tty}): ${s.sshUser}@${vm.name} (${vm.zone}) from ${geo.city}, ${geo.countryCode}`,
+          rawLine: s.rawLine,
+        };
+      });
+
+      const activeIpSet = new Set(activeSessionsRaw.map((s) => s.remoteIp));
+
+      const enrichedSshEvents = sshEventsRaw.map((ev, idx) => {
+        const geo = ipGeoMap[ev.remoteIp] || {
+          ip: ev.remoteIp,
+          isMyClient: false,
+          city: 'External Host',
+          country: 'Internet',
+          countryCode: 'EXT',
+          lat: 50.1109,
+          lon: 8.6821,
+          asn: 'AS-EXT',
+          isp: 'External Network',
+        };
+        const isActive =
+          ev.disposition === 'ALLOWED' &&
+          (activeIpSet.has(ev.remoteIp) || geo.isMyClient);
+        const countBadge =
+          ev.occurrences > 1 ? ` (×${ev.occurrences} events)` : '';
+        return {
+          id: `vm-sshd-${vm.name}-${idx}-${ev.remoteIp}`,
+          timestamp: ev.timestamp || new Date().toISOString(),
+          logType: isActive
+            ? 'gce_vm_ssh/active_session'
+            : 'gce_vm_sshd/auth.log',
+          resourceType: 'gce_instance',
+          projectId: vmProj,
+          vmName: vm.name,
+          zone: vm.zone,
+          region: vm.region,
+          vmExternalIp: vm.externalIp,
+          vmInternalIp: vm.internalIp,
+          sshUser: ev.sshUser,
+          eventKind: ev.eventKind,
+          remoteIp: geo.isMyClient
+            ? `${geo.city} (${geo.countryCode}) [YOU]`
+            : ev.remoteIp,
+          rawRemoteIp: ev.remoteIp,
+          remotePort: ev.remotePort || 22,
+          destPort: 22,
+          disposition: ev.disposition,
+          severity: ev.severity,
+          occurrences: ev.occurrences || 1,
+          isActiveSession: isActive,
+          isMyClient: Boolean(geo.isMyClient),
+          sourceCity: geo.city,
+          sourceCountry: geo.country,
+          sourceCountryCode: geo.countryCode,
+          sourceLat: geo.lat,
+          sourceLon: geo.lon,
+          sourceAsn: geo.asn,
+          sourceIsp: geo.isp,
+          summary: `${
+            isActive && geo.isMyClient ? '[YOUR LIVE GCE SSH] ' : ''
+          }${ev.summary} -> ${vm.name} (${vm.zone}) [${geo.city}, ${
+            geo.countryCode
+          }]${countBadge}`,
+          rawLine: ev.rawLine,
+        };
+      });
+
+      const resultData = {
+        vmMeta: {
+          projectId: vmProj,
+          vmName: vm.name,
+          zone: vm.zone,
+          region: vm.region,
+          machineType: vm.machineType,
+          externalIp: vm.externalIp,
+          internalIp: vm.internalIp,
+          engineUsed,
+          activeSessionsCount: enrichedActiveSessions.length,
+          sshEventsCount: enrichedSshEvents.length,
+        },
+        activeSessions: enrichedActiveSessions,
+        sshEvents: enrichedSshEvents,
+      };
+
+      vmSshMapTelemetryCache.set(cacheKey, {
+        at: Date.now(),
+        data: resultData,
+      });
+      return resultData;
+    })
+  );
+
+  const monitoredVms = perVmResults.map((r) => r.vmMeta);
+  const activeSshSessions = perVmResults.flatMap((r) => r.activeSessions);
+  const sshLogEvents = perVmResults
+    .flatMap((r) => r.sshEvents)
+    .sort((a, b) => {
+      if (a.isMyClient !== b.isMyClient) return a.isMyClient ? -1 : 1;
+      if (a.isActiveSession !== b.isActiveSession)
+        return a.isActiveSession ? -1 : 1;
+      return String(b.timestamp).localeCompare(String(a.timestamp));
+    });
+
+  return {
+    monitoredVms,
+    activeSshSessions,
+    sshLogEvents,
   };
 }
 
@@ -81282,9 +81993,9 @@ app.get(
             data: {
               resourceNames: [`projects/${projectId}`],
               orderBy: 'timestamp desc',
-              pageSize: 12,
+              pageSize: 25,
               filter:
-                'logName:("compute.googleapis.com%2Ffirewall" OR "compute.googleapis.com%2Fvpc_flows" OR "run.googleapis.com%2Frequests" OR "cloudaudit.googleapis.com%2Factivity")',
+                'resource.type="gce_instance" OR logName:("compute.googleapis.com%2Ffirewall" OR "compute.googleapis.com%2Fvpc_flows" OR "run.googleapis.com%2Frequests" OR "cloudaudit.googleapis.com%2Factivity" OR "serialconsole.googleapis.com" OR "syslog" OR "auth" OR "cloudpulse-vm-")',
             },
           }
         ).catch(() => null),
@@ -81808,63 +82519,80 @@ app.get(
 
       // Execute real live TCP socket handshakes against any VM with a public natIP on ports 22 (SSH), 3389 (RDP), and 443 (HTTPS)
       const vmsWithPublicIp = vms.filter((v) => v.externalIp && v.status === 'RUNNING').slice(0, 4);
-      const liveVmSocketAudits = await Promise.all(
-        vmsWithPublicIp.map(async (vm) => {
-          const checkPort = (port) =>
-            new Promise((resolve) => {
-              const tStart = perf.now();
-              const s = netMod.createConnection(
-                { host: vm.externalIp, port },
-                () => {
+      const forceSshRefresh =
+        req.query.refreshSsh === '1' || req.query.refreshSsh === 'true';
+      const [liveVmSocketAudits, liveVmSshTelemetry] = await Promise.all([
+        Promise.all(
+          vmsWithPublicIp.map(async (vm) => {
+            const checkPort = (port) =>
+              new Promise((resolve) => {
+                const tStart = perf.now();
+                const s = netMod.createConnection(
+                  { host: vm.externalIp, port },
+                  () => {
+                    const rttMs = Number((perf.now() - tStart).toFixed(2));
+                    s.destroy();
+                    resolve({ port, open: true, rttMs, state: 'OPEN_SOCKET' });
+                  }
+                );
+                s.setTimeout(1400, () => {
+                  s.destroy();
+                  resolve({
+                    port,
+                    open: false,
+                    rttMs: null,
+                    state: 'FILTERED_BY_FIREWALL',
+                  });
+                });
+                s.on('error', (err) => {
                   const rttMs = Number((perf.now() - tStart).toFixed(2));
                   s.destroy();
-                  resolve({ port, open: true, rttMs, state: 'OPEN_SOCKET' });
-                }
-              );
-              s.setTimeout(1400, () => {
-                s.destroy();
-                resolve({ port, open: false, rttMs: null, state: 'FILTERED_BY_FIREWALL' });
-              });
-              s.on('error', (err) => {
-                const rttMs = Number((perf.now() - tStart).toFixed(2));
-                s.destroy();
-                // ECONNREFUSED means the packet passed the GCP VPC Firewall and hit the VM OS kernel (no daemon listening)
-                const passedFirewall = err?.code === 'ECONNREFUSED';
-                resolve({
-                  port,
-                  open: passedFirewall,
-                  rttMs: passedFirewall ? rttMs : null,
-                  state: passedFirewall
-                    ? 'PASSED_FIREWALL_CONN_REFUSED'
-                    : 'BLOCKED_OR_UNREACHABLE',
+                  // ECONNREFUSED means the packet passed the GCP VPC Firewall and hit the VM OS kernel (no daemon listening)
+                  const passedFirewall = err?.code === 'ECONNREFUSED';
+                  resolve({
+                    port,
+                    open: passedFirewall,
+                    rttMs: passedFirewall ? rttMs : null,
+                    state: passedFirewall
+                      ? 'PASSED_FIREWALL_CONN_REFUSED'
+                      : 'BLOCKED_OR_UNREACHABLE',
+                  });
                 });
               });
-            });
 
-          const [ssh22, rdp3389, https443] = await Promise.all([
-            checkPort(22),
-            checkPort(3389),
-            checkPort(443),
-          ]);
-          return {
-            vmName: vm.name,
-            zone: vm.zone,
-            region: vm.region,
-            externalIp: vm.externalIp,
-            internalIp: vm.internalIp,
-            ports: { 22: ssh22, 3389: rdp3389, 443: https443 },
-          };
-        })
-      );
+            const [ssh22, rdp3389, https443] = await Promise.all([
+              checkPort(22),
+              checkPort(3389),
+              checkPort(443),
+            ]);
+            return {
+              vmName: vm.name,
+              zone: vm.zone,
+              region: vm.region,
+              externalIp: vm.externalIp,
+              internalIp: vm.internalIp,
+              ports: { 22: ssh22, 3389: rdp3389, 443: https443 },
+            };
+          })
+        ),
+        collectLiveVmSshTelemetryForMap({
+          projectId,
+          vms,
+          token,
+          clientOrigin,
+          forceRefresh: forceSshRefresh,
+        }),
+      ]);
 
       const rawLogEntries = Array.isArray(cloudLogsRes?.entries)
         ? cloudLogsRes.entries
         : [];
-      const liveNetworkLogEvents = rawLogEntries.slice(0, 12).map((entry, idx) => {
-        const logNameShort = String(entry.logName || '')
-          .split('/logs/')
-          .pop()
-          ?.replace(/%2F/g, '/') || 'cloudaudit/activity';
+      const cloudNetworkLogEvents = rawLogEntries.slice(0, 15).map((entry, idx) => {
+        const logNameShort =
+          String(entry.logName || '')
+            .split('/logs/')
+            .pop()
+            ?.replace(/%2F/g, '/') || 'cloudaudit/activity';
         const resourceType = entry.resource?.type || 'gcp_resource';
         const regionLabel =
           entry.resource?.labels?.location ||
@@ -81873,18 +82601,29 @@ app.get(
           'us-central1';
         const protoMethod = entry.protoPayload?.methodName || '';
         const httpStatus = entry.httpRequest?.status || null;
+        const textMsg =
+          entry.textPayload ||
+          entry.jsonPayload?.message ||
+          entry.jsonPayload?.rawLine ||
+          '';
         const remoteIp =
           entry.httpRequest?.remoteIp ||
           entry.jsonPayload?.connection?.src_ip ||
           entry.protoPayload?.requestMetadata?.callerIp ||
           clientOrigin?.ip ||
           '35.235.240.18';
+        const isSshLog =
+          /sshd|ssh|:22/i.test(logNameShort) || /sshd|port 22/i.test(textMsg);
         const destPort =
           Number(entry.jsonPayload?.connection?.dest_port) ||
-          (logNameShort.includes('requests') ? 443 : 443);
+          (isSshLog ? 22 : logNameShort.includes('requests') ? 443 : 443);
         const disposition =
           entry.jsonPayload?.disposition ||
-          (httpStatus && httpStatus >= 400 ? 'DENIED' : 'ALLOWED');
+          (httpStatus && httpStatus >= 400
+            ? 'DENIED'
+            : /Invalid user|Failed password|preauth/i.test(textMsg)
+            ? 'DENIED'
+            : 'ALLOWED');
 
         return {
           id: entry.insertId || `log-${idx}`,
@@ -81896,6 +82635,7 @@ app.get(
           destPort,
           summary:
             protoMethod ||
+            textMsg ||
             entry.httpRequest?.requestUrl ||
             entry.jsonPayload?.rule_details?.reference ||
             `${resourceType} (${logNameShort})`,
@@ -81903,6 +82643,11 @@ app.get(
           severity: entry.severity || 'INFO',
         };
       });
+
+      const liveNetworkLogEvents = [
+        ...(liveVmSshTelemetry?.sshLogEvents || []),
+        ...cloudNetworkLogEvents,
+      ].slice(0, 32);
 
       return res.json({
         status: 'OK',
@@ -81917,6 +82662,7 @@ app.get(
         geoAssets,
         liveNetworkLogEvents,
         liveVmSocketAudits,
+        liveVmSshTelemetry,
         summary: {
           probedRegionsCount: sortedProbes.length,
           fastestRegionId: fastestRegion?.regionId || 'us-central1',
@@ -81930,6 +82676,10 @@ app.get(
           geoAssetsCount: geoAssets.length,
           liveNetworkLogEventsCount: liveNetworkLogEvents.length,
           liveVmSocketAuditsCount: liveVmSocketAudits.length,
+          activeSshSessionsCount:
+            liveVmSshTelemetry?.activeSshSessions?.length || 0,
+          vmSshLogEventsCount:
+            liveVmSshTelemetry?.sshLogEvents?.length || 0,
           multiRegionProtectedCount: geoAssets.filter((a) =>
             a.resiliencyVerdict.includes('MULTI_REGION')
           ).length,

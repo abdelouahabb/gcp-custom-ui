@@ -30,6 +30,7 @@ import {
   Move,
   Navigation,
   HelpCircle,
+  Terminal,
 } from 'lucide-react';
 import {
   WORLD_COUNTRY_PATHS,
@@ -2146,16 +2147,23 @@ export default function GlobalNetworkWorldMap({
   }, []);
 
   const fetchLiveGeoTelemetry = useCallback(
-    async (showToastMsg = false, focusRegObj = null) => {
+    async (showToastMsg = false, focusRegObj = null, forceSshRefresh = false) => {
       if (!projectId) return;
       setGeoLoading(true);
       if (showToastMsg) {
-        showMapBanner('Probing live GCP regional TCP/TLS 1.3 endpoints & Cloud Logging...');
+        showMapBanner(
+          forceSshRefresh
+            ? 'Refreshing live GCE VM SSH sessions & /var/log/auth.log telemetry...'
+            : 'Probing live GCP regional TCP/TLS 1.3 endpoints, GCE VM SSH & Cloud Logging...'
+        );
       }
       try {
         const tz =
           Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         const params = new URLSearchParams({ tz });
+        if (forceSshRefresh) {
+          params.set('refreshSsh', '1');
+        }
         if (focusRegObj && focusRegObj.id) {
           params.set('focusRegion', focusRegObj.id);
           params.set('focusCity', focusRegObj.city || focusRegObj.id);
@@ -2174,11 +2182,18 @@ export default function GlobalNetworkWorldMap({
           const rtt =
             res.data.fastestRegion.regionalRttMs ||
             res.data.fastestRegion.totalRttMs;
-          const summaryMsg = `Probed ${
-            res.data?.regionalSocketProbes?.length || 10
-          } live GCP regional endpoints: Fastest is ${
-            res.data.fastestRegion.regionId
-          } (${rtt}ms Region RTT · ${res.data.fastestRegion.tcpMs}ms Edge TCP)`;
+          const sshCount =
+            res.data?.liveVmSshTelemetry?.sshLogEvents?.length || 0;
+          const activeSsh =
+            res.data?.liveVmSshTelemetry?.activeSshSessions?.length || 0;
+          const summaryMsg =
+            sshCount > 0
+              ? `Live GCE SSH Telemetry: ${activeSsh} active SSH session(s) & ${sshCount} /var/log/auth.log events mapped · Fastest region: ${res.data.fastestRegion.regionId} (${rtt}ms RTT)`
+              : `Probed ${
+                  res.data?.regionalSocketProbes?.length || 10
+                } live GCP regional endpoints: Fastest is ${
+                  res.data.fastestRegion.regionId
+                } (${rtt}ms Region RTT · ${res.data.fastestRegion.tcpMs}ms Edge TCP)`;
           showMapBanner(summaryMsg);
           onShowToast?.(summaryMsg);
         }
@@ -3076,29 +3091,38 @@ export default function GlobalNetworkWorldMap({
       });
     });
 
-    // 2. Real Cloud Logging / Cloud Audit Entries (logging.v2/entries:list)
+    // 2. Real GCE VM SSH (/var/log/auth.log & active PTY) + Cloud Logging Entries
     logs.forEach((ev, idx) => {
       const matchedReg =
         GCP_GLOBAL_REGIONS.find((r) => ev.region?.startsWith(r.id)) ||
         selectedRegion ||
         GCP_GLOBAL_REGIONS[4];
+      const hasGeo =
+        typeof ev.sourceLat === 'number' && typeof ev.sourceLon === 'number';
+      const srcPt =
+        ev.isMyClient || !hasGeo
+          ? { x: liveClientOriginNode.x, y: liveClientOriginNode.y }
+          : projectLatLon(ev.sourceLat, ev.sourceLon);
       const arc = buildArcPath(
-        liveClientOriginNode.x,
-        liveClientOriginNode.y,
+        srcPt.x,
+        srcPt.y,
         matchedReg.x,
         matchedReg.y
       );
       const logPort = Number(ev.destPort || 443);
+      const isVmSsh =
+        String(ev.logType || '').includes('gce_vm_ssh') || logPort === 22;
       const fwEval = evaluatePacketAgainstFirewalls(
         {
-          sourceIp: ev.remoteIp || liveClientOriginNode.evalIp,
+          sourceIp:
+            ev.rawRemoteIp || ev.remoteIp || liveClientOriginNode.evalIp,
           protocol: 'tcp',
           port: logPort,
         },
         firewalls
       );
       const rttMs = computeRegionLiveRttMs(matchedReg);
-      events.push({
+      const entryObj = {
         id: `tm-log-${idx}`,
         timestamp: ev.timestamp
           ? new Date(ev.timestamp).toLocaleTimeString()
@@ -3107,24 +3131,44 @@ export default function GlobalNetworkWorldMap({
         summary: ev.summary || `${ev.logType} -> ${matchedReg.id}`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
-        targetZone: matchedReg.zones?.[0],
+        targetZone: ev.zone || matchedReg.zones?.[0],
+        vmName: ev.vmName || null,
+        sshUser: ev.sshUser || null,
+        rawLine: ev.rawLine || null,
+        isMyClient: Boolean(ev.isMyClient),
+        isActiveSession: Boolean(ev.isActiveSession),
         verdict: ev.disposition === 'DENIED' ? 'DENY' : 'ALLOW',
         sourceIp: ev.remoteIp || liveClientOriginNode.ip,
-        sourceLabel: 'Cloud Audit Log (logging.v2)',
+        sourceLabel: isVmSsh
+          ? ev.isMyClient
+            ? `YOU (${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode}) · Live GCE SSH`
+            : `${ev.sourceCity || 'External'}, ${
+                ev.sourceCountryCode || 'EXT'
+              } (${ev.sourceIsp || 'SSH Probe'})`
+          : 'Cloud Audit Log (logging.v2)',
         protocol: 'tcp',
         port: logPort,
-        ruleName: ev.logType || fwEval.ruleName,
+        ruleName: isVmSsh
+          ? ev.disposition === 'DENIED'
+            ? `OpenSSH sshd [preauth] Guard (${ev.vmName || 'GCE VM'})`
+            : `${fwEval.ruleName} + OpenSSH PublicKey (${ev.vmName || 'GCE VM'})`
+          : ev.logType || fwEval.ruleName,
         priority: fwEval.priority,
         latencyMs: rttMs,
-        sourceType: 'AUDIT_LOG',
-        x1: liveClientOriginNode.x,
-        y1: liveClientOriginNode.y,
+        sourceType: isVmSsh ? 'VM_SSH_LOG' : 'AUDIT_LOG',
+        x1: srcPt.x,
+        y1: srcPt.y,
         x2: matchedReg.x,
         y2: matchedReg.y,
         cx: arc.cx,
         cy: arc.cy,
         arcD: arc.d,
-      });
+      };
+      if (isVmSsh && ev.isActiveSession) {
+        events.unshift(entryObj);
+      } else {
+        events.push(entryObj);
+      }
     });
 
     // 3. Live Regional TCP/TLS 1.3 Socket Handshakes
@@ -3197,20 +3241,25 @@ export default function GlobalNetworkWorldMap({
     if (timeMachineFilter === 'DENY') {
       return liveTimeMachineEvents.filter((ev) => ev.verdict === 'DENY');
     }
+    if (timeMachineFilter === 'VM_SSH') {
+      return liveTimeMachineEvents.filter(
+        (ev) => ev.sourceType === 'VM_SSH_LOG' || Number(ev.port) === 22
+      );
+    }
     if (timeMachineFilter === 'AUDIT_TLS') {
       return liveTimeMachineEvents.filter(
-        (ev) => ev.sourceType === 'AUDIT_LOG' || ev.sourceType === 'TLS_SOCKET'
+        (ev) =>
+          ev.sourceType === 'VM_SSH_LOG' ||
+          ev.sourceType === 'AUDIT_LOG' ||
+          ev.sourceType === 'TLS_SOCKET'
       );
     }
     return liveTimeMachineEvents;
   }, [liveTimeMachineEvents, timeMachineFilter]);
 
-  // Background 15s live socket & Cloud Audit refresh when viewing the Time-Machine in Live Stream mode
+  // Background 15s live GCE VM SSH, regional socket & Cloud Logging refresh while running
   useEffect(() => {
-    if (
-      active10xDockTab !== 'AUDIT_TIME_MACHINE' ||
-      isLogFeedLocked
-    ) {
+    if ((!isRunning && active10xDockTab !== 'AUDIT_TIME_MACHINE') || isLogFeedLocked) {
       return undefined;
     }
     const timer = setInterval(() => {
@@ -3218,7 +3267,7 @@ export default function GlobalNetworkWorldMap({
       fetchLiveGeoTelemetry(false);
     }, 15000);
     return () => clearInterval(timer);
-  }, [active10xDockTab, isLogFeedLocked, fetchLiveGeoTelemetry]);
+  }, [isRunning, active10xDockTab, isLogFeedLocked, fetchLiveGeoTelemetry]);
 
   const timeMachineActiveEvent = useMemo(() => {
     if (inspectedTimeMachineEvent) {
@@ -3608,36 +3657,75 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
         liveSocketProbes[seq % Math.max(liveSocketProbes.length, 1)] ||
         null;
 
-      // 1. LIVE_MIX: Replay real Cloud Logging entries (`logging.v2/entries:list`) & real Regional TCP/TLS 1.3 Socket Handshakes
+      const vmSshEvents =
+        liveGeoTelemetry?.liveVmSshTelemetry?.sshLogEvents || [];
+      const myLiveSshSessionEvent =
+        vmSshEvents.find((e) => e.isMyClient && e.disposition === 'ALLOWED') ||
+        null;
+
+      // 1. LIVE_MIX: Balanced 3-Way Real Telemetry Mix:
+      //    (a) Real GCE VM SSH (/var/log/auth.log & active PTY) + Cloud Logging entries
+      //    (b) Live 10-Region TCP/TLS 1.3 Socket Handshakes from YOUR location
+      //    (c) Cross-Region Google Subsea Fiber Backbone Mesh packets (increments FIBER counter)
       if (!overrideSpec?.originId && effectiveMode === 'LIVE_MIX') {
-        if (liveLogEvents.length > 0 && seq % 2 === 0) {
-          const logEv = liveLogEvents[seq % liveLogEvents.length];
+        const mixSlot = seq % 3;
+
+        // Slot 0: Real GCE VM SSH / Cloud Logging event
+        if (mixSlot === 0 && liveLogEvents.length > 0) {
+          const logEv =
+            myLiveSshSessionEvent && seq % 6 === 0
+              ? myLiveSshSessionEvent
+              : liveLogEvents[Math.floor(seq / 3) % liveLogEvents.length];
           const logRegId =
             GCP_GLOBAL_REGIONS.find((r) => logEv.region?.startsWith(r.id))?.id ||
             targetReg.id;
           const logTargetReg =
             GCP_GLOBAL_REGIONS.find((r) => r.id === logRegId) || targetReg;
+          const hasGeo =
+            typeof logEv.sourceLat === 'number' &&
+            typeof logEv.sourceLon === 'number';
+          const srcPt =
+            logEv.isMyClient || !hasGeo
+              ? { x: liveClientOriginNode.x, y: liveClientOriginNode.y }
+              : projectLatLon(logEv.sourceLat, logEv.sourceLon);
           const arc = buildArcPath(
-            liveClientOriginNode.x,
-            liveClientOriginNode.y,
+            srcPt.x,
+            srcPt.y,
             logTargetReg.x,
             logTargetReg.y
           );
           const verdict = logEv.disposition === 'DENIED' ? 'DENY' : 'ALLOW';
+          const isVmSsh =
+            String(logEv.logType || '').includes('gce_vm_ssh') ||
+            Number(logEv.destPort) === 22;
           return {
             id,
             kind: verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
-            sourceLabel: `Cloud Log (${logEv.logType})`,
+            sourceLabel: isVmSsh
+              ? logEv.isMyClient
+                ? `YOUR LIVE GCE SSH (${logEv.sshUser || 'ssh'}@${
+                    logEv.vmName || 'vm'
+                  })`
+                : `SSH Probe [${logEv.sourceCity || 'Ext'}, ${
+                    logEv.sourceCountryCode || 'EXT'
+                  }]`
+              : `Cloud Log (${logEv.logType})`,
             sourceIp: logEv.remoteIp || liveClientOriginNode.ip,
+            sourceCountryCode:
+              logEv.sourceCountryCode || liveClientOriginNode.countryCode,
+            isVmSsh,
+            isMyClient: Boolean(logEv.isMyClient),
+            vmName: logEv.vmName || null,
+            sshUser: logEv.sshUser || null,
             targetRegionId: logTargetReg.id,
-            targetZone: logTargetReg.zones[0],
+            targetZone: logEv.zone || logTargetReg.zones[0],
             protocol: 'tcp',
             port: logEv.destPort || 443,
             verdict,
             ruleName: logEv.summary || logEv.logType,
             priority: 1000,
-            x1: liveClientOriginNode.x,
-            y1: liveClientOriginNode.y,
+            x1: srcPt.x,
+            y1: srcPt.y,
             x2: logTargetReg.x,
             y2: logTargetReg.y,
             cx: arc.cx,
@@ -3649,8 +3737,70 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           };
         }
 
+        // Slot 2: Cross-Region Subsea Fiber Backbone Packet (kind: 'BACKBONE')
+        if (mixSlot === 2) {
+          const fiberSourcePool =
+            survivingActiveIds.length > 0
+              ? survivingActiveIds
+              : ['us-central1', 'europe-west1', 'us-east1', 'asia-northeast1'];
+          const bbSrcId =
+            fiberSourcePool[Math.floor(seq / 3) % fiberSourcePool.length] ||
+            'us-central1';
+          const bbSrcReg =
+            GCP_GLOBAL_REGIONS.find((r) => r.id === bbSrcId) ||
+            GCP_GLOBAL_REGIONS[5];
+          const peerPool = (bbSrcReg.backbonePeers || []).filter(
+            (pid) => !severedRegions.includes(pid)
+          );
+          const bbDstId =
+            peerPool[seq % Math.max(peerPool.length, 1)] || 'europe-west1';
+          const bbDstReg =
+            GCP_GLOBAL_REGIONS.find((r) => r.id === bbDstId) ||
+            GCP_GLOBAL_REGIONS[14];
+          const bbArc = buildArcPath(
+            bbSrcReg.x,
+            bbSrcReg.y,
+            bbDstReg.x,
+            bbDstReg.y
+          );
+          const bbKm = calculateGreatCircleKm(
+            bbSrcReg.lat,
+            bbSrcReg.lon,
+            bbDstReg.lat,
+            bbDstReg.lon
+          );
+          const bbFiberKm = Math.max(120, Math.round(bbKm * 1.22));
+          const bbRttMs = Math.max(4, Math.round((bbFiberKm / 200) * 2 + 4));
+          return {
+            id,
+            kind: 'BACKBONE',
+            sourceRegionId: bbSrcReg.id,
+            sourceLabel: `Fiber ${bbSrcReg.id}`,
+            sourceIp: `Subsea DWDM (${bbFiberKm.toLocaleString()}km)`,
+            targetRegionId: bbDstReg.id,
+            targetZone: bbDstReg.zones[0],
+            protocol: 'fiber',
+            port: 443,
+            verdict: 'ALLOW',
+            ruleName: `Google Subsea Backbone (${bbSrcReg.id} ⇄ ${bbDstReg.id})`,
+            priority: 100,
+            x1: bbSrcReg.x,
+            y1: bbSrcReg.y,
+            x2: bbDstReg.x,
+            y2: bbDstReg.y,
+            cx: bbArc.cx,
+            cy: bbArc.cy,
+            arcD: bbArc.d,
+            progress: 0,
+            speed: 0.092 * simSpeed * tickScale,
+            latencyMs: bbRttMs,
+          };
+        }
+
+        // Slot 1 (or fallback): Live Regional TCP/TLS 1.3 Socket Handshake
         if (liveSocketProbes.length > 0) {
-          const probe = liveSocketProbes[seq % liveSocketProbes.length];
+          const probe =
+            liveSocketProbes[Math.floor(seq / 2) % liveSocketProbes.length];
           const probeReg =
             GCP_GLOBAL_REGIONS.find((r) => r.id === probe.regionId) || targetReg;
           const arc = buildArcPath(
@@ -3687,11 +3837,17 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
         }
       }
 
-      // 2. SSH_BRUTEFORCE: Real TCP :22/:3389 VM Socket Audit + Live VPC Firewall Rule Evaluation (`compute.v1/firewalls`)
-      // 3. IAP_ZERO_TRUST: Real Google IAP Range (`35.235.240.0/20`) vs Live Client Origin against `compute.v1/firewalls`
-      // 4. GLOBAL_LOAD_TEST: Real Concurrent 10-Region TLS 1.3 Edge Socket Handshakes (:443)
-      if (!overrideSpec?.originId && effectiveMode === 'GLOBAL_LOAD_TEST' && liveSocketProbes.length > 0) {
-        const probe = liveSocketProbes[seq % liveSocketProbes.length];
+      // 4. GLOBAL_LOAD_TEST: Real Concurrent 10-Region TLS 1.3 Edge Socket Handshakes (:443) + Subsea Backbone Relay
+      if (
+        !overrideSpec?.originId &&
+        effectiveMode === 'GLOBAL_LOAD_TEST' &&
+        liveSocketProbes.length > 0
+      ) {
+        const probeIdx =
+          overrideSpec?.probeIndex !== undefined
+            ? overrideSpec.probeIndex
+            : seq;
+        const probe = liveSocketProbes[probeIdx % liveSocketProbes.length];
         const probeReg =
           GCP_GLOBAL_REGIONS.find((r) => r.id === probe.regionId) || targetReg;
         const httpsEval = evaluatePacketAgainstFirewalls(
@@ -3713,10 +3869,10 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           sourceIp: `GFE ${probe.resolvedIp || '130.211.0.22'} (AS15169)`,
           targetRegionId: probeReg.id,
           targetZone: probeReg.zones[0],
-          protocol: 'tcp',
+          protocol: 'tls1.3',
           port: 443,
           verdict: httpsEval.verdict,
-          ruleName: `${httpsEval.ruleName} (${rtt}ms Region RTT / ${probe.tcpMs}ms Edge TCP)`,
+          ruleName: `GFE Edge Handshake -> ${probe.regionId} (${rtt}ms Region RTT / ${probe.tcpMs}ms TCP)`,
           priority: httpsEval.priority,
           x1: liveClientOriginNode.x,
           y1: liveClientOriginNode.y,
@@ -3726,19 +3882,78 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           cy: arc.cy,
           arcD: arc.d,
           progress: 0,
-          speed: 0.088 * simSpeed * tickScale,
-          latencyMs: probe.tcpMs || 14,
+          speed: 0.095 * simSpeed * tickScale,
+          latencyMs: rtt,
         };
       }
 
-      if (!overrideSpec?.originId && effectiveMode === 'SSH_BRUTEFORCE' && liveVmSockets.length > 0 && seq % 2 === 0) {
+      // 2. SSH_BRUTEFORCE: Real /var/log/auth.log SSH Events + TCP :22/:3389 VM Socket Audit
+      if (
+        !overrideSpec?.originId &&
+        effectiveMode === 'SSH_BRUTEFORCE' &&
+        vmSshEvents.length > 0 &&
+        (liveVmSockets.length === 0 || seq % 4 !== 3)
+      ) {
+        const sshEv = vmSshEvents[seq % vmSshEvents.length];
+        const vmReg =
+          GCP_GLOBAL_REGIONS.find((r) => sshEv.region?.startsWith(r.id)) ||
+          targetReg;
+        const hasGeo =
+          typeof sshEv.sourceLat === 'number' &&
+          typeof sshEv.sourceLon === 'number';
+        const srcPt =
+          sshEv.isMyClient || !hasGeo
+            ? { x: liveClientOriginNode.x, y: liveClientOriginNode.y }
+            : projectLatLon(sshEv.sourceLat, sshEv.sourceLon);
+        const arc = buildArcPath(srcPt.x, srcPt.y, vmReg.x, vmReg.y);
+        const verdict = sshEv.disposition === 'DENIED' ? 'DENY' : 'ALLOW';
+        return {
+          id,
+          kind: verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
+          sourceLabel: sshEv.isMyClient
+            ? `YOUR LIVE GCE SSH (${sshEv.sshUser}@${sshEv.vmName})`
+            : `/var/log/auth.log [${sshEv.sourceCity}, ${sshEv.sourceCountryCode}]`,
+          sourceIp: sshEv.remoteIp,
+          sourceCountryCode: sshEv.sourceCountryCode,
+          isVmSsh: true,
+          isMyClient: Boolean(sshEv.isMyClient),
+          vmName: sshEv.vmName,
+          sshUser: sshEv.sshUser,
+          targetRegionId: vmReg.id,
+          targetZone: sshEv.zone || vmReg.zones[0],
+          protocol: 'tcp',
+          port: 22,
+          verdict,
+          ruleName: sshEv.summary,
+          priority: 1000,
+          x1: srcPt.x,
+          y1: srcPt.y,
+          x2: vmReg.x,
+          y2: vmReg.y,
+          cx: arc.cx,
+          cy: arc.cy,
+          arcD: arc.d,
+          progress: 0,
+          speed: 0.088 * simSpeed * tickScale,
+          latencyMs: matchedSocketProbe?.tcpMs || 22,
+        };
+      }
+
+      if (
+        !overrideSpec?.originId &&
+        effectiveMode === 'SSH_BRUTEFORCE' &&
+        liveVmSockets.length > 0
+      ) {
         const vmAudit = liveVmSockets[seq % liveVmSockets.length];
         const vmReg =
           GCP_GLOBAL_REGIONS.find((r) => r.id === vmAudit.region) || targetReg;
-        const portToCheck = seq % 3 === 0 ? 3389 : 22;
-        const portRes = vmAudit.ports?.[portToCheck] || { open: false, state: 'FILTERED_BY_FIREWALL' };
+        const portToCheck = seq % 2 === 0 ? 3389 : 22;
+        const portRes = vmAudit.ports?.[portToCheck] || {
+          open: false,
+          state: 'FILTERED_BY_FIREWALL',
+        };
         const fwEval = evaluatePacketAgainstFirewalls(
-          { sourceIp: '0.0.0.0', protocol: 'tcp', port: portToCheck },
+          { sourceIp: '185.220.101.44', protocol: 'tcp', port: portToCheck },
           firewalls
         );
         const arc = buildArcPath(
@@ -3750,7 +3965,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
         return {
           id,
           kind: fwEval.verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
-          sourceLabel: `Live VM Socket (${vmAudit.vmName})`,
+          sourceLabel: `VM Socket Audit (${vmAudit.vmName} :${portToCheck})`,
           sourceIp: vmAudit.externalIp,
           targetRegionId: vmReg.id,
           targetZone: vmAudit.zone,
@@ -3770,6 +3985,99 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
           speed: 0.088 * simSpeed * tickScale,
           latencyMs: portRes.rttMs || matchedSocketProbe?.tcpMs || 22,
         };
+      }
+
+      // 3. IAP_ZERO_TRUST: Dedicated 2-Hop Cloud IAP (35.235.240.0/20) vs Public Internet (0.0.0.0/0) Firewall Audit
+      if (!overrideSpec?.originId && effectiveMode === 'IAP_ZERO_TRUST') {
+        const iapOrigin = GLOBAL_CLIENT_ORIGINS[0]; // Google Cloud IAP Proxy (35.235.240.0/20)
+        const activeVmRegionId =
+          liveGeoTelemetry?.liveVmSshTelemetry?.activeSshSessions?.[0]?.region ||
+          liveGeoTelemetry?.liveVmSocketAudits?.[0]?.region ||
+          survivingActiveIds[0] ||
+          targetReg.id;
+        const iapTargetReg =
+          GCP_GLOBAL_REGIONS.find((r) => activeVmRegionId?.startsWith(r.id)) ||
+          targetReg;
+
+        if (seq % 2 === 0) {
+          // Hop A: Authorized Google Cloud IAP Tunnel (35.235.240.18 -> VM :22)
+          const iapEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '35.235.240.18', protocol: 'tcp', port: 22 },
+            firewalls
+          );
+          const iapArc = buildArcPath(
+            iapOrigin.x,
+            iapOrigin.y,
+            iapTargetReg.x,
+            iapTargetReg.y
+          );
+          return {
+            id,
+            kind: iapEval.verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
+            sourceLabel: 'Cloud IAP Proxy (35.235.240.0/20)',
+            sourceIp: '35.235.240.18 (IAP TCP Forwarding)',
+            isIapTunnel: true,
+            targetRegionId: iapTargetReg.id,
+            targetZone: iapTargetReg.zones[0],
+            protocol: 'iap-ssh',
+            port: 22,
+            verdict: iapEval.verdict,
+            ruleName: `IAP Zero-Trust: ${iapEval.ruleName}`,
+            priority: iapEval.priority,
+            x1: iapOrigin.x,
+            y1: iapOrigin.y,
+            x2: iapTargetReg.x,
+            y2: iapTargetReg.y,
+            cx: iapArc.cx,
+            cy: iapArc.cy,
+            arcD: iapArc.d,
+            progress: 0,
+            speed: 0.088 * simSpeed * tickScale,
+            latencyMs: matchedSocketProbe?.tcpMs || 19,
+          };
+        } else {
+          // Hop B: Direct Public Internet 0.0.0.0/0 Exposure Check against Port :22
+          const pubOrigin =
+            GLOBAL_CLIENT_ORIGINS.find((o) => o.kind === 'THREAT_SCANNER') ||
+            effectiveClientOrigins[0];
+          const pubEval = evaluatePacketAgainstFirewalls(
+            { sourceIp: '185.220.101.44', protocol: 'tcp', port: 22 },
+            firewalls
+          );
+          const pubArc = buildArcPath(
+            pubOrigin.x,
+            pubOrigin.y,
+            iapTargetReg.x,
+            iapTargetReg.y
+          );
+          return {
+            id,
+            kind: pubEval.verdict === 'DENY' ? 'DENIED' : 'ALLOWED',
+            sourceLabel: 'Public 0.0.0.0/0 Audit',
+            sourceIp: '185.220.101.44 (Direct Public IP)',
+            isPublicAudit: true,
+            targetRegionId: iapTargetReg.id,
+            targetZone: iapTargetReg.zones[0],
+            protocol: 'public-ssh',
+            port: 22,
+            verdict: pubEval.verdict,
+            ruleName:
+              pubEval.verdict === 'ALLOW'
+                ? `EXPOSED 0.0.0.0/0 (${pubEval.ruleName})`
+                : `LOCKED Zero-Trust (${pubEval.ruleName})`,
+            priority: pubEval.priority,
+            x1: pubOrigin.x,
+            y1: pubOrigin.y,
+            x2: iapTargetReg.x,
+            y2: iapTargetReg.y,
+            cx: pubArc.cx,
+            cy: pubArc.cy,
+            arcD: pubArc.d,
+            progress: 0,
+            speed: 0.088 * simSpeed * tickScale,
+            latencyMs: 36,
+          };
+        }
       }
 
       // Deterministic evaluation against your 100% real `compute.v1/firewalls` rules from your real client origin or Google IAP CIDR
@@ -3928,29 +4236,77 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
     maxConcurrentPackets,
   ]);
 
-  // Switch scenario mode AND immediately launch a live 6-packet wave + update HUD/logs
+  // Switch scenario mode AND immediately launch a live mode-specific packet wave + update HUD/logs/overlays
   const handleSelectSimMode = useCallback(
     (nextMode) => {
       setSimMode(nextMode);
       setMapLens('TRAFFIC');
       setDvrScrubIndex(0);
       setIsRunning(true);
-      if (nextMode === 'IAP_ZERO_TRUST') {
+
+      const probesCount =
+        liveGeoTelemetry?.regionalSocketProbes?.length || 10;
+      const sshEventsCount =
+        liveGeoTelemetry?.liveVmSshTelemetry?.sshLogEvents?.length || 0;
+      const activeSshCount =
+        liveGeoTelemetry?.liveVmSshTelemetry?.activeSshSessions?.length || 0;
+      const fastestReg =
+        liveGeoTelemetry?.fastestRegion?.regionId || 'europe-west9';
+      const fastestRtt =
+        liveGeoTelemetry?.fastestRegion?.regionalRttMs ||
+        liveGeoTelemetry?.fastestRegion?.totalRttMs ||
+        34;
+
+      if (nextMode === 'LIVE_MIX') {
+        setShowSubseaBackbone(true);
+        setTimeMachineFilter('ALL');
+        showMapBanner(
+          `MODE: Live Cloud Logs & Regional Sockets — Streaming ${activeSshCount} active GCE SSH session(s), ${sshEventsCount} /var/log/auth.log events, ${probesCount}-region TLS 1.3 sockets & Subsea Fiber`
+        );
+      } else if (nextMode === 'SSH_BRUTEFORCE') {
+        setCustomPort(22);
+        setCustomOriginId('my-live-client');
+        setTimeMachineFilter('VM_SSH');
+        showMapBanner(
+          `MODE: Live SSH/RDP Perimeter Socket Audit — Replaying ${sshEventsCount} /var/log/auth.log SSH probes & auditing live VM TCP :22/:3389 against ${firewalls.length} VPC firewall rules`
+        );
+      } else if (nextMode === 'IAP_ZERO_TRUST') {
         setShowHybridTunnel(true);
+        setCustomOriginId('iap-proxy');
+        setCustomPort(22);
+        setTimeMachineFilter('ALL');
+        showMapBanner(
+          `MODE: Live IAP Zero-Trust CIDR Audit — Auditing Google Cloud IAP TCP Forwarding (35.235.240.0/20) vs Public 0.0.0.0/0 on Port :22`
+        );
+      } else if (nextMode === 'GLOBAL_LOAD_TEST') {
+        setZoom(1);
+        setCameraCenter({ x: 600, y: 280 });
+        setIsRegionPinnedOnMap(false);
+        setCustomPort(443);
+        setTimeMachineFilter('AUDIT_TLS');
+        showMapBanner(
+          `MODE: Live ${probesCount}-Region GFE Edge Handshakes — Simultaneous TLS 1.3 :443 fan-out across all continents (Fastest: ${fastestReg} at ${fastestRtt}ms RTT)`
+        );
       }
 
-      const burstCount = Math.min(6, maxConcurrentPackets);
+      const burstCount =
+        nextMode === 'GLOBAL_LOAD_TEST'
+          ? Math.min(probesCount, 10)
+          : Math.max(6, maxConcurrentPackets);
       const burstPackets = Array.from({ length: burstCount }, (_, idx) => {
-        const pkt = spawnSimulatedPacket({ modeOverride: nextMode });
+        const pkt = spawnSimulatedPacket({
+          modeOverride: nextMode,
+          probeIndex: idx,
+        });
         return {
           ...pkt,
-          progress: Number((0.12 + idx * 0.11).toFixed(2)),
+          progress: Number((0.08 + (idx % 6) * 0.13).toFixed(2)),
         };
       });
 
       setInFlightPackets(burstPackets);
 
-      const newRings = burstPackets.slice(0, 3).map((pkt) => {
+      const newRings = burstPackets.slice(0, 4).map((pkt) => {
         const interceptThreshold = pkt.verdict === 'DENY' ? 0.86 : 1.0;
         const impactPoint = pointOnQuadraticBezier(
           pkt.x1,
@@ -3992,7 +4348,13 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
         ...logs.slice(0, 10),
       ]);
     },
-    [maxConcurrentPackets, spawnSimulatedPacket]
+    [
+      maxConcurrentPackets,
+      spawnSimulatedPacket,
+      liveGeoTelemetry,
+      firewalls.length,
+      showMapBanner,
+    ]
   );
 
   // Throttled Animation & Spawner Loop (respects tickIntervalMs, maxConcurrentPackets, and document.hidden)
@@ -5972,18 +6334,24 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   featureId: 'GLOBAL_MAP_LENS_TRAFFIC',
                   icon: Activity,
                   label: 'Traffic',
+                  banner:
+                    'MAP LENS: Live Network Traffic & VPC Firewall Telemetry across all 40 GCP regions',
                 },
                 {
                   id: 'CARBON_GRID',
                   featureId: 'GLOBAL_MAP_LENS_CARBON',
                   icon: Leaf,
                   label: 'CFE %',
+                  banner:
+                    'MAP LENS: Google Cloud 24/7 Carbon-Free Energy (CFE %) & Grid Intensity (gCO2/kWh) across all 40 regions',
                 },
                 {
                   id: 'SPOT_ARBITRAGE',
                   featureId: 'GLOBAL_MAP_LENS_SPOT',
                   icon: Cpu,
                   label: 'Spot $',
+                  banner:
+                    'MAP LENS: Live GCE Spot VM Hourly Pricing Arbitrage ($/hr savings) across all 40 regions',
                 },
               ].map((lens) => {
                 const LensIcon = lens.icon;
@@ -5992,7 +6360,10 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     key={lens.id}
                     type="button"
                     data-feature-id={lens.featureId}
-                    onClick={() => setMapLens(lens.id)}
+                    onClick={() => {
+                      setMapLens(lens.id);
+                      showMapBanner(lens.banner);
+                    }}
                     className={`inline-flex items-center gap-1 h-6 px-2 rounded-md transition-colors cursor-pointer ${
                       mapLens === lens.id
                         ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold'
@@ -6014,7 +6385,15 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_FIBER_MESH"
-                onClick={() => setShowSubseaBackbone(!showSubseaBackbone)}
+                onClick={() => {
+                  const next = !showSubseaBackbone;
+                  setShowSubseaBackbone(next);
+                  showMapBanner(
+                    next
+                      ? 'LAYER ON: Google Cloud Subsea & Terrestrial Fiber Backbone Mesh displayed'
+                      : 'LAYER OFF: Subsea Fiber Backbone Mesh hidden'
+                  );
+                }}
                 className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showSubseaBackbone
                     ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
@@ -6028,7 +6407,15 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_ZONES_TOGGLE"
-                onClick={() => setShowZoneRings((prev) => !prev)}
+                onClick={() => {
+                  const next = !showZoneRings;
+                  setShowZoneRings(next);
+                  showMapBanner(
+                    next
+                      ? 'LAYER ON: Orbiting Availability Zone Constellations (-a, -b, -c, -f) expanded on active & probed regions'
+                      : 'LAYER OFF: Orbiting Availability Zone Constellations collapsed'
+                  );
+                }}
                 className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showZoneRings
                     ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
@@ -6042,7 +6429,15 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_HYBRID_TUNNEL"
-                onClick={() => setShowHybridTunnel(!showHybridTunnel)}
+                onClick={() => {
+                  const next = !showHybridTunnel;
+                  setShowHybridTunnel(next);
+                  showMapBanner(
+                    next
+                      ? `LAYER ON: Cloud IAP Zero-Trust & Hybrid Uplink Tunnel (${liveClientOriginNode.city} ➔ ${selectedRegion.id}) displayed`
+                      : 'LAYER OFF: Cloud IAP Zero-Trust & Hybrid Uplink Tunnel hidden'
+                  );
+                }}
                 className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showHybridTunnel
                     ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
@@ -6056,7 +6451,15 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_FIBER_LASER"
-                onClick={() => setRouteAnalyzerEnabled(!routeAnalyzerEnabled)}
+                onClick={() => {
+                  const next = !routeAnalyzerEnabled;
+                  setRouteAnalyzerEnabled(next);
+                  showMapBanner(
+                    next
+                      ? `LAYER ON: Subsea Optical RTT Laser (${routeTelemetry.src.id} ⇄ ${routeTelemetry.dst.id} · ${routeTelemetry.rttMs}ms RTT) active`
+                      : 'LAYER OFF: Subsea Optical RTT Laser hidden'
+                  );
+                }}
                 className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer font-bold transition-colors ${
                   routeAnalyzerEnabled
                     ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300'
@@ -6477,17 +6880,392 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   );
                 })}
 
-              {/* Live Client Workstation Uplink Beam (Client Origin -> Selected GCP Region) — Clean Arc Without Overlapping Midpoint Text */}
-              {showHybridTunnel && isRegionPinnedOnMap && (
-                <path
-                  d={clientUplinkTelemetry.arc.d}
-                  fill="none"
-                  stroke="#f9ab00"
-                  strokeWidth={1.8 * invScale}
-                  strokeDasharray="5 3"
-                  strokeOpacity="0.72"
-                />
+              {/* Live Client Workstation / Cloud IAP Hybrid Tunnel Overlay (Always responds to IAP Tunnel layer toggle) */}
+              {showHybridTunnel && (
+                <g className="pointer-events-none">
+                  <path
+                    d={clientUplinkTelemetry.arc.d}
+                    fill="none"
+                    stroke="#f9ab00"
+                    strokeWidth={3.8 * invScale}
+                    strokeOpacity="0.16"
+                  />
+                  <path
+                    d={clientUplinkTelemetry.arc.d}
+                    fill="none"
+                    stroke="#f9ab00"
+                    strokeWidth={1.8 * invScale}
+                    strokeDasharray="5 3"
+                    strokeOpacity="0.82"
+                  />
+                  <g
+                    transform={`translate(${clientUplinkTelemetry.mid.x}, ${
+                      clientUplinkTelemetry.mid.y - 11
+                    }) scale(${invScale})`}
+                  >
+                    <rect
+                      x={-72}
+                      y={-7}
+                      width={144}
+                      height={13}
+                      rx={3.5}
+                      fill="#1c1404"
+                      fillOpacity="0.93"
+                      stroke="#f9ab00"
+                      strokeWidth="0.9"
+                    />
+                    <text
+                      y={1.6}
+                      textAnchor="middle"
+                      fill="#fde68a"
+                      fontSize="5.7"
+                      fontWeight="bold"
+                      fontFamily="monospace"
+                    >
+                      {`IAP TUNNEL (35.235.240.0/20) ➔ ${selectedRegion.id}`}
+                    </text>
+                  </g>
+                </g>
               )}
+
+              {/* Scenario Mode 3 Overlay: 2-Hop Cloud IAP Zero-Trust Architecture (YOU ➔ Google IAP Edge 35.235.240.0/20 ➔ VM Region :22) */}
+              {simMode === 'IAP_ZERO_TRUST' &&
+                (() => {
+                  const iapOrigin = GLOBAL_CLIENT_ORIGINS[0];
+                  const activeVmRegionId =
+                    liveGeoTelemetry?.liveVmSshTelemetry?.activeSshSessions?.[0]
+                      ?.region ||
+                    liveGeoTelemetry?.liveVmSocketAudits?.[0]?.region ||
+                    activeRegionIds[0] ||
+                    selectedRegion.id;
+                  const iapTargetReg =
+                    GCP_GLOBAL_REGIONS.find((r) =>
+                      String(activeVmRegionId).startsWith(r.id)
+                    ) || selectedRegion;
+                  if (!iapOrigin || !iapTargetReg) return null;
+                  const hop1Arc = buildArcPath(
+                    liveClientOriginNode.x,
+                    liveClientOriginNode.y,
+                    iapOrigin.x,
+                    iapOrigin.y
+                  );
+                  const hop2Arc = buildArcPath(
+                    iapOrigin.x,
+                    iapOrigin.y,
+                    iapTargetReg.x,
+                    iapTargetReg.y
+                  );
+                  return (
+                    <g className="pointer-events-none">
+                      <path
+                        d={hop1Arc.d}
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth={2 * invScale}
+                        strokeDasharray="4 2.5"
+                        strokeOpacity="0.88"
+                      />
+                      <path
+                        d={hop2Arc.d}
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth={2.4 * invScale}
+                        strokeDasharray="5 2.5"
+                        strokeOpacity="0.95"
+                      />
+                      <g
+                        transform={`translate(${iapOrigin.x}, ${iapOrigin.y}) scale(${invScale})`}
+                      >
+                        <circle
+                          r={10}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="1.2"
+                          strokeDasharray="2.5 2"
+                        />
+                        <circle
+                          r={5}
+                          fill="#0284c7"
+                          stroke="#020617"
+                          strokeWidth="1.2"
+                        />
+                        <rect
+                          x={-68}
+                          y={-20}
+                          width={136}
+                          height={12}
+                          rx={3}
+                          fill="#041e3a"
+                          fillOpacity="0.95"
+                          stroke="#38bdf8"
+                          strokeWidth="0.9"
+                        />
+                        <text
+                          y={-12}
+                          textAnchor="middle"
+                          fill="#7dd3fc"
+                          fontSize="5.7"
+                          fontWeight="bold"
+                          fontFamily="monospace"
+                        >
+                          IAP EDGE · 35.235.240.0/20
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })()}
+
+              {/* Scenario Mode 4 Overlay: Global Multi-Region GFE TLS 1.3 Anycast Fan-Out Constellation */}
+              {simMode === 'GLOBAL_LOAD_TEST' &&
+                (liveGeoTelemetry?.regionalSocketProbes || []).map((probe) => {
+                  const pReg = GCP_GLOBAL_REGIONS.find(
+                    (r) => r.id === probe.regionId
+                  );
+                  if (!pReg) return null;
+                  const fanArc = buildArcPath(
+                    liveClientOriginNode.x,
+                    liveClientOriginNode.y,
+                    pReg.x,
+                    pReg.y
+                  );
+                  const fanMid = pointOnQuadraticBezier(
+                    liveClientOriginNode.x,
+                    liveClientOriginNode.y,
+                    fanArc.cx,
+                    fanArc.cy,
+                    pReg.x,
+                    pReg.y,
+                    0.56
+                  );
+                  const rtt =
+                    probe.regionalRttMs ||
+                    probe.totalRttMs ||
+                    probe.tcpMs ||
+                    25;
+                  return (
+                    <g
+                      key={`gfe-fanout-${probe.regionId}`}
+                      className="pointer-events-none"
+                    >
+                      <path
+                        d={fanArc.d}
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth={1.5 * invScale}
+                        strokeDasharray="3 3"
+                        strokeOpacity="0.65"
+                      />
+                      <g
+                        transform={`translate(${fanMid.x}, ${fanMid.y}) scale(${invScale})`}
+                      >
+                        <rect
+                          x={-28}
+                          y={-5.5}
+                          width={56}
+                          height={10.5}
+                          rx={2.5}
+                          fill="#041e3a"
+                          fillOpacity="0.9"
+                          stroke="#38bdf8"
+                          strokeWidth="0.7"
+                        />
+                        <text
+                          y={1.5}
+                          textAnchor="middle"
+                          fill="#bae6fd"
+                          fontSize="5.2"
+                          fontWeight="bold"
+                          fontFamily="monospace"
+                        >
+                          {`:443 · ${rtt}ms`}
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
+
+              {/* Always-Visible Live GCE VM SSH Session Tunnel Beam (YOU -> Running VM Region from /var/log/auth.log & ss -tnH) */}
+              {(() => {
+                const activeSsh =
+                  liveGeoTelemetry?.liveVmSshTelemetry?.activeSshSessions?.[0] ||
+                  (
+                    liveGeoTelemetry?.liveVmSshTelemetry?.sshLogEvents || []
+                  ).find((e) => e.isMyClient && e.disposition === 'ALLOWED');
+                if (!activeSsh) return null;
+                const vmReg =
+                  GCP_GLOBAL_REGIONS.find((r) =>
+                    String(activeSsh.region || '').startsWith(r.id)
+                  ) || selectedRegion;
+                if (!vmReg) return null;
+                const sshArc = buildArcPath(
+                  liveClientOriginNode.x,
+                  liveClientOriginNode.y,
+                  vmReg.x,
+                  vmReg.y
+                );
+                const sshMid = pointOnQuadraticBezier(
+                  liveClientOriginNode.x,
+                  liveClientOriginNode.y,
+                  sshArc.cx,
+                  sshArc.cy,
+                  vmReg.x,
+                  vmReg.y,
+                  0.48
+                );
+                return (
+                  <g
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      focusOnRegion(vmReg.id, 2.8);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <path
+                      d={sshArc.d}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth={4.5 * invScale}
+                      strokeOpacity="0.22"
+                    />
+                    <path
+                      d={sshArc.d}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth={2.1 * invScale}
+                      strokeDasharray="6 3"
+                      strokeOpacity="0.92"
+                    />
+                    <g
+                      transform={`translate(${sshMid.x}, ${sshMid.y}) scale(${invScale})`}
+                    >
+                      <rect
+                        x={-76}
+                        y={-7.5}
+                        width={152}
+                        height={14}
+                        rx={3.5}
+                        fill="#022c22"
+                        fillOpacity="0.94"
+                        stroke="#10b981"
+                        strokeWidth="1"
+                      />
+                      <text
+                        y={1.8}
+                        textAnchor="middle"
+                        fill="#6ee7b7"
+                        fontSize="5.9"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {`LIVE GCE SSH:22 · ${activeSsh.sshUser || 'ssh'}@${
+                          activeSsh.vmName || 'vm'
+                        } (${activeSsh.zone || vmReg.id})`}
+                      </text>
+                    </g>
+                  </g>
+                );
+              })()}
+
+              {/* Real /var/log/auth.log External SSH Probe Origin Nodes (+ Standing Perimeter Vectors in SSH_BRUTEFORCE Mode) */}
+              {(() => {
+                const extSshEvents = (
+                  liveGeoTelemetry?.liveVmSshTelemetry?.sshLogEvents || []
+                ).filter(
+                  (e) =>
+                    !e.isMyClient &&
+                    typeof e.sourceLat === 'number' &&
+                    typeof e.sourceLon === 'number'
+                );
+                const uniqueByCountryOrIp = [];
+                const seenKeys = new Set();
+                for (const ev of extSshEvents) {
+                  const k = `${ev.sourceLat.toFixed(1)},${ev.sourceLon.toFixed(
+                    1
+                  )}`;
+                  if (!seenKeys.has(k)) {
+                    seenKeys.add(k);
+                    uniqueByCountryOrIp.push(ev);
+                  }
+                }
+                return uniqueByCountryOrIp.slice(0, 8).map((ev) => {
+                  const pt = projectLatLon(ev.sourceLat, ev.sourceLon);
+                  const targetVmReg =
+                    GCP_GLOBAL_REGIONS.find((r) =>
+                      String(ev.region || '').startsWith(r.id)
+                    ) || selectedRegion;
+                  const probeArc =
+                    simMode === 'SSH_BRUTEFORCE' && targetVmReg
+                      ? buildArcPath(pt.x, pt.y, targetVmReg.x, targetVmReg.y)
+                      : null;
+                  return (
+                    <g key={`ssh-ext-origin-${ev.id}`}>
+                      {probeArc && (
+                        <path
+                          d={probeArc.d}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth={1.35 * invScale}
+                          strokeDasharray="3 2.5"
+                          strokeOpacity="0.62"
+                          className="pointer-events-none"
+                        />
+                      )}
+                      <g
+                        transform={`translate(${pt.x}, ${pt.y}) scale(${invScale})`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const tmMatch = liveTimeMachineEvents.find((t) =>
+                            t.summary?.includes(ev.rawRemoteIp || ev.remoteIp)
+                          );
+                          if (tmMatch) {
+                            setInspectedTimeMachineEvent(tmMatch);
+                            setActive10xDockTab('AUDIT_TIME_MACHINE');
+                          }
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <circle
+                          r={simMode === 'SSH_BRUTEFORCE' ? 10 : 7.5}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth={simMode === 'SSH_BRUTEFORCE' ? '1.4' : '1'}
+                          strokeDasharray="2 1.5"
+                          opacity="0.88"
+                        />
+                        <circle
+                          r={3.8}
+                          fill="#ef4444"
+                          stroke="#020617"
+                          strokeWidth="1.1"
+                        >
+                          <title>{`/var/log/auth.log SSH Probe: ${ev.summary} · ${ev.sourceCity}, ${ev.sourceCountry} (${ev.sourceAsn} ${ev.sourceIsp})`}</title>
+                        </circle>
+                        <rect
+                          x={-22}
+                          y={-15.5}
+                          width={44}
+                          height={9.5}
+                          rx={2.5}
+                          fill="#1f090d"
+                          fillOpacity="0.92"
+                          stroke="#ef4444"
+                          strokeWidth="0.8"
+                        />
+                        <text
+                          y={-8.8}
+                          textAnchor="middle"
+                          fill="#fca5a5"
+                          fontSize="5.4"
+                          fontWeight="bold"
+                          fontFamily="monospace"
+                        >
+                          {`SSH:${ev.sourceCountryCode || 'EXT'}`}
+                        </text>
+                      </g>
+                    </g>
+                  );
+                });
+              })()}
 
               {/* Always-Visible Live Client Origin Radar Beacon ("YOU ARE HERE") */}
               <g
@@ -6758,8 +7536,25 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           fontWeight="bold"
                           fontFamily="monospace"
                         >
-                          {pkt.reroutedFrom ? `⇄FAILOVER ` : ''}
-                          {pkt.protocol}:{pkt.port || 'echo'}
+                          {pkt.reroutedFrom
+                            ? `⇄FAILOVER `
+                            : pkt.kind === 'BACKBONE'
+                            ? `FIBER ⇄ ${pkt.targetRegionId}`
+                            : pkt.isIapTunnel
+                            ? `IAP:22 ALLOW`
+                            : pkt.isPublicAudit
+                            ? pkt.verdict === 'ALLOW'
+                              ? `0.0.0.0/0:22 EXPOSED`
+                              : `0.0.0.0/0:22 LOCKED`
+                            : pkt.isVmSsh
+                            ? pkt.verdict === 'ALLOW'
+                              ? `SSH:22 ALLOW (${pkt.sshUser || 'you'})`
+                              : `SSH:22 BLOCK [${
+                                  pkt.sourceCountryCode || 'EXT'
+                                }]`
+                            : pkt.protocol === 'tls1.3'
+                            ? `GFE:443 (${pkt.latencyMs}ms)`
+                            : `${pkt.protocol}:${pkt.port || 'echo'}`}
                         </text>
                       )}
                     </g>
@@ -6882,6 +7677,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               {sortedRegionsForRender.map((reg) => {
                 const workloads = regionWorkloadsMap[reg.id];
                 const hasWorkloads = (workloads?.totalCount || 0) > 0;
+                const isProbedRegion = (
+                  liveGeoTelemetry?.regionalSocketProbes || []
+                ).some((p) => p.regionId === reg.id);
                 const isSelected = isRegionPinnedOnMap && selectedRegionId === reg.id;
                 const isHovered = hoveredRegionId === reg.id;
                 const isSevered = severedRegions.includes(reg.id);
@@ -6892,15 +7690,21 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 const isFocusedNode =
                   isSelected || isHovered || isSevered || hasSeveredZone;
 
-                // Always expand Availability Zone constellation when a region or any of its zones is severed, or when selected
+                // Always expand Availability Zone constellation when a region or any of its zones is severed, or when Zones layer toggle is ON
                 const shouldRenderZones =
                   isSevered ||
                   hasSeveredZone ||
                   (showZoneRings &&
-                    (isSelected || (!spotlightMode && zoom >= 2.2)));
+                    (isSelected ||
+                      isHovered ||
+                      hasWorkloads ||
+                      isProbedRegion ||
+                      zoom >= 1.6));
                 const showDetailedZones = shouldRenderZones;
                 const zoneOrbitRadius =
-                  isSelected || isSevered || hasSeveredZone ? 22 : 14;
+                  isSelected || isSevered || hasSeveredZone || hasWorkloads
+                    ? 20
+                    : 13;
 
                 // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Unselected when no region is pinned = crisp 0.9, Dimmed when a region is pinned
                 const nodeOpacity = isFocusedNode
@@ -6919,11 +7723,12 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                   ? 0.9
                   : 0.62;
 
-                // In Spotlight Mode, hide rectangular text pills on unselected neighbor nodes to eliminate dense cluster overlap
+                // Show label pills on focused nodes, active workloads, or when viewing CFE % / Spot $ Lenses
                 const shouldShowLabelPill =
                   isFocusedNode ||
                   !spotlightMode ||
-                  (hasWorkloads && zoom < 2.0);
+                  hasWorkloads ||
+                  (mapLens !== 'TRAFFIC' && isProbedRegion);
 
                 // Determine core node color based on active Map Lens (Traffic / Carbon / Spot)
                 let lensColor = '#475569';
@@ -6966,10 +7771,18 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     ? zoneOrbitRadius + 11
                     : 15
                   : reg.labelOffset?.dy ?? 14;
+                const spotRateStr = (
+                  0.018 +
+                  (100 - reg.cfePercent) * 0.0002
+                ).toFixed(3);
                 const displayLabelText = isSevered
                   ? `${reg.name} [OUTAGE]`
                   : hasSeveredZone
                   ? `${reg.name} [ZONE DOWN]`
+                  : mapLens === 'CARBON_GRID'
+                  ? `${reg.name} · ${reg.cfePercent}% CFE`
+                  : mapLens === 'SPOT_ARBITRAGE'
+                  ? `${reg.name} · -$${spotRateStr}/h`
                   : reg.name;
                 const pillWidth = Math.max(displayLabelText.length * 4.3, 50);
 
@@ -7394,6 +8207,216 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
               </span>
             </div>
           </div>
+
+          {/* ================================================================= */}
+          {/* LIVE GCE VM SSH SESSIONS & /var/log/auth.log TELEMETRY STRIP      */}
+          {/* ================================================================= */}
+          {(() => {
+            const sshTel = liveGeoTelemetry?.liveVmSshTelemetry;
+            const monitoredVms = sshTel?.monitoredVms || [];
+            const activeSshList = sshTel?.activeSshSessions || [];
+            const sshLogs = sshTel?.sshLogEvents || [];
+            if (
+              monitoredVms.length === 0 &&
+              activeSshList.length === 0 &&
+              sshLogs.length === 0
+            ) {
+              return null;
+            }
+            const primaryVm = monitoredVms[0] || null;
+            const mySession =
+              activeSshList[0] ||
+              sshLogs.find((e) => e.isMyClient && e.disposition === 'ALLOWED') ||
+              null;
+            const allowedCount = sshLogs.filter(
+              (e) => e.disposition === 'ALLOWED'
+            ).length;
+            const blockedCount = sshLogs.filter(
+              (e) => e.disposition === 'DENIED'
+            ).length;
+
+            return (
+              <div className="px-3 py-2 bg-emerald-500/[0.06] dark:bg-[#06111a] border-t border-zinc-200 dark:border-zinc-800/90 font-mono text-[10.5px] space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 font-extrabold text-[9.5px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <Terminal className="w-3 h-3" />
+                      <span>
+                        LIVE GCE VM SSH &amp; /var/log/auth.log STREAM
+                      </span>
+                    </span>
+                    {primaryVm && (
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-extrabold text-zinc-800 dark:text-zinc-200">
+                        VM: {primaryVm.vmName} ({primaryVm.zone}) ·{' '}
+                        {primaryVm.externalIp || primaryVm.internalIp}
+                      </span>
+                    )}
+                    {mySession && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                        Connected: {mySession.sshUser}@{mySession.vmName} from{' '}
+                        {mySession.sourceCity}, {mySession.sourceCountryCode} (
+                        {mySession.tty || 'tcp:22'})
+                      </span>
+                    )}
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      <strong className="text-emerald-600 dark:text-emerald-400">
+                        {allowedCount} Allowed
+                      </strong>{' '}
+                      ·{' '}
+                      <strong className="text-red-500">
+                        {blockedCount} Blocked [preauth]
+                      </strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {primaryVm && (
+                      <button
+                        type="button"
+                        onClick={() => focusOnRegion(primaryVm.region, 3.0)}
+                        className="h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                      >
+                        Focus VM Region ({primaryVm.region})
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTimeMachineFilter('VM_SSH');
+                        setActive10xDockTab('AUDIT_TIME_MACHINE');
+                        xrayDockRef.current?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'center',
+                        });
+                      }}
+                      className="h-6 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                    >
+                      Inspect All ({sshLogs.length}) SSH Logs
+                    </button>
+                    <button
+                      type="button"
+                      disabled={geoLoading}
+                      onClick={() => fetchLiveGeoTelemetry(true, null, true)}
+                      className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-extrabold text-[9.5px] cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${geoLoading ? 'animate-spin' : ''}`}
+                      />
+                      <span>Refresh VM SSH</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Interactive Live SSH Event Pills (Click any event to trace its arc on the World Map) */}
+                {sshLogs.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {sshLogs.slice(0, 6).map((ev) => {
+                      const isAllow = ev.disposition === 'ALLOWED';
+                      return (
+                        <button
+                          key={ev.id}
+                          type="button"
+                          onClick={() => {
+                            const matchedReg =
+                              GCP_GLOBAL_REGIONS.find((r) =>
+                                String(ev.region || '').startsWith(r.id)
+                              ) || selectedRegion;
+                            const hasGeo =
+                              typeof ev.sourceLat === 'number' &&
+                              typeof ev.sourceLon === 'number';
+                            const srcPt =
+                              ev.isMyClient || !hasGeo
+                                ? {
+                                    x: liveClientOriginNode.x,
+                                    y: liveClientOriginNode.y,
+                                  }
+                                : projectLatLon(ev.sourceLat, ev.sourceLon);
+                            const arc = buildArcPath(
+                              srcPt.x,
+                              srcPt.y,
+                              matchedReg.x,
+                              matchedReg.y
+                            );
+                            const pkt = {
+                              id: `ssh-manual-${Date.now()}`,
+                              kind: isAllow ? 'ALLOWED' : 'DENIED',
+                              sourceLabel: ev.isMyClient
+                                ? `YOUR LIVE GCE SSH (${ev.sshUser}@${ev.vmName})`
+                                : `SSH Probe [${ev.sourceCity}, ${ev.sourceCountryCode}]`,
+                              sourceIp: ev.remoteIp,
+                              sourceCountryCode: ev.sourceCountryCode,
+                              isVmSsh: true,
+                              isMyClient: Boolean(ev.isMyClient),
+                              vmName: ev.vmName,
+                              sshUser: ev.sshUser,
+                              targetRegionId: matchedReg.id,
+                              targetZone: ev.zone || matchedReg.zones[0],
+                              protocol: 'tcp',
+                              port: 22,
+                              verdict: isAllow ? 'ALLOW' : 'DENY',
+                              ruleName: ev.summary,
+                              priority: 1000,
+                              x1: srcPt.x,
+                              y1: srcPt.y,
+                              x2: matchedReg.x,
+                              y2: matchedReg.y,
+                              cx: arc.cx,
+                              cy: arc.cy,
+                              arcD: arc.d,
+                              progress: 0,
+                              speed: 0.085 * simSpeed,
+                              latencyMs: 22,
+                            };
+                            setInFlightPackets((prev) => [
+                              ...prev.slice(-(maxConcurrentPackets - 1)),
+                              pkt,
+                            ]);
+                            const tmMatch = liveTimeMachineEvents.find(
+                              (t) =>
+                                t.summary === ev.summary ||
+                                t.rawLine === ev.rawLine
+                            );
+                            if (tmMatch) {
+                              setInspectedTimeMachineEvent(tmMatch);
+                              setActive10xDockTab('AUDIT_TIME_MACHINE');
+                            }
+                          }}
+                          title={`${ev.summary}\nRaw /var/log/auth.log: ${ev.rawLine}\nClick to fire & inspect this SSH trajectory arc on the World Map`}
+                          className={`shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9.5px] font-bold cursor-pointer transition-colors ${
+                            isAllow
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+                              : 'bg-red-500/10 border-red-500/35 text-red-700 dark:text-red-300 hover:bg-red-500/20'
+                          }`}
+                        >
+                          <span
+                            className={`px-1 rounded text-[8.5px] font-extrabold ${
+                              isAllow
+                                ? 'bg-emerald-500/25 text-emerald-600 dark:text-emerald-200'
+                                : 'bg-red-500/25 text-red-600 dark:text-red-200'
+                            }`}
+                          >
+                            {isAllow ? 'SSH ALLOW' : 'SSH BLOCK'}
+                          </span>
+                          <span>
+                            {ev.isMyClient
+                              ? `YOU (${ev.sourceCity}, ${ev.sourceCountryCode})`
+                              : `${ev.rawRemoteIp || ev.remoteIp} [${
+                                  ev.sourceCity
+                                }, ${ev.sourceCountryCode}]`}
+                          </span>
+                          <span className="opacity-70">→</span>
+                          <span>
+                            {ev.sshUser}@{ev.vmName}:22
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ================================================================= */}
           {/* UNIFIED 3-PILLAR 10X ORBITAL COMMAND DOCK BELOW WORLD MAP         */}
@@ -8344,6 +9367,14 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                         </div>
                       </div>
                     </div>
+                    {timeMachineActiveEvent.rawLine && (
+                      <div className="p-2 rounded-lg bg-zinc-950 text-emerald-300 border border-emerald-500/30 text-[9.5px] font-mono overflow-x-auto">
+                        <span className="text-zinc-400 font-bold mr-2">
+                          Raw VM /var/log/auth.log:
+                        </span>
+                        <code>{timeMachineActiveEvent.rawLine}</code>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -8361,6 +9392,16 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                       </span>
                       {[
                         { id: 'ALL', label: `All (${liveTimeMachineEvents.length})` },
+                        {
+                          id: 'VM_SSH',
+                          label: `GCE SSH & auth.log (${
+                            liveTimeMachineEvents.filter(
+                              (e) =>
+                                e.sourceType === 'VM_SSH_LOG' ||
+                                Number(e.port) === 22
+                            ).length
+                          })`,
+                        },
                         {
                           id: 'ALLOW',
                           label: `Allow (${
@@ -8382,6 +9423,7 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                           label: `Cloud Audit & TLS (${
                             liveTimeMachineEvents.filter(
                               (e) =>
+                                e.sourceType === 'VM_SSH_LOG' ||
                                 e.sourceType === 'AUDIT_LOG' ||
                                 e.sourceType === 'TLS_SOCKET'
                             ).length

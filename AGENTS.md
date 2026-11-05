@@ -67,8 +67,22 @@
   - **Zero-Flash Synchronous `MutationObserver` + `<svg>` + `title`/`placeholder` + Unfocused `<input>` Masking**: Redacts DOM mutations synchronously before browser paint (`0ms` flash), masks `<svg>` `<text>`/`<tspan>` in Mermaid/ECharts, redacts native `title`/`placeholder` attributes, and visually masks unfocused text `<input>`/`.value` properties while preserving 100% of React state and live GCP API calls.
   - **Live Xterm.js Web-SSH PTY Stream Redaction & 7th Secret Shield**: Redacts live WebSocket `term.write(...)` terminal streams in real time and masks `ya29.•••` OAuth tokens, `AIza•••` API keys, `Bearer eyJ•••` JWTs, and `SHA256:•••` SSH fingerprints.
 
+### E. Global Network World Map — Live GCE VM SSH & `/var/log/auth.log` Geo-Telemetry + 4-Scenario Mode Overlays
+- **Files**:
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L80888-L82740)
+  - [`src/components/GlobalNetworkWorldMap.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GlobalNetworkWorldMap.jsx)
+- **Capabilities**:
+  - **Inside-VM SSH & Serial Console Log Collector (`collectLiveVmSshTelemetryForMap`)**: Connects to running GCE VMs via SSH (with Serial Port 1 fallback) to parse live `/var/log/auth.log` (`sshd` accepted & blocked `[preauth]` events), `ss -tnH state established` active SSH sessions, and `who`, geo-locating every remote IP with `resolveRemoteIpGeo`.
+  - **Always-Visible Live GCE SSH Tunnel Beam & Telemetry Strip**: Draws a live emerald `LIVE GCE SSH:22` arc from `YOU` to the running VM region plus geo-located red `SSH:<COUNTRY>` probe origin nodes on the SVG map, paired with a 1-click **Live GCE VM SSH & `/var/log/auth.log` Telemetry Strip** below the map.
+  - **4 Distinct Scenario Mode Overlays + Lens & Layer Synchronization**:
+    - `LIVE_MIX`: Balanced 3-way stream (live GCE SSH + Cloud Logs, 10-region TLS 1.3 sockets, and `FIBER ⇄` subsea backbone packets incrementing `FIBER: N`).
+    - `SSH_BRUTEFORCE`: Standing red perimeter attack vectors from `/var/log/auth.log` probe countries into the VM region + live `:22/:3389` socket audit.
+    - `IAP_ZERO_TRUST`: 2-Hop `IAP EDGE · 35.235.240.0/20` SVG overlay (`YOU ➔ IAP Edge ➔ VM Region :22`) comparing `IAP:22 ALLOW` vs `0.0.0.0/0:22`.
+    - `GLOBAL_LOAD_TEST`: Simultaneous 10-region GFE Anycast `:443 · <RTT>ms` fan-out constellation across all continents.
+    - `Lens` (`Traffic`, `CFE %`, `Spot $`) and `Layers` (`Fiber`, `Zones`, `IAP Tunnel`, `RTT Laser`) immediately update all visible region pills and zone rings even at `1.0x` zoom.
+
 ---
 
 ## 4. Next Steps When Resuming in `agy` CLI
-1. Review or test the **4-Pillar DevOps & SRE Logging Command Hub** ([`src/components/LogStreamerAndShell.jsx`](file:///home/abdelouahab/gcp-ui/src/components/LogStreamerAndShell.jsx)) and **Cloud Storage Sweep & Selective Batch Deletion** ([`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx), [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx)).
-2. Update [`README.md`](file:///home/abdelouahab/gcp-ui/README.md) and [`docs/REVOLUTIONARY_FEATURES_GUIDE.md`](file:///home/abdelouahab/gcp-ui/docs/REVOLUTIONARY_FEATURES_GUIDE.md) when ready to commit & push the latest changes.
+1. Review or test the **Global Network World Map** ([`src/components/GlobalNetworkWorldMap.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GlobalNetworkWorldMap.jsx)), **4-Pillar DevOps & SRE Logging Command Hub** ([`src/components/LogStreamerAndShell.jsx`](file:///home/abdelouahab/gcp-ui/src/components/LogStreamerAndShell.jsx)), and **Cloud Storage Sweep & Selective Batch Deletion** ([`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx), [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx)).
+2. Update [`README.md`](file:///home/abdelouahab/gcp-ui/README.md) and [`docs/REVOLUTIONARY_FEATURES_GUIDE.md`](file:///home/abdelouahab/gcp-ui/docs/REVOLUTIONARY_FEATURES_GUIDE.md) when ready.
