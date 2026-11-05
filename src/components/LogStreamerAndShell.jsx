@@ -94,6 +94,7 @@ export default function LogStreamerAndShell({
   initialCommand = '',
   initialCommandNonce = 0,
   initialLogExplorerSpec = null,
+  onSelectTab,
   onRefreshLogs,
   onAskCopilot,
   onOpenRecycleBin,
@@ -288,6 +289,42 @@ export default function LogStreamerAndShell({
   const [expandedAuditId, setExpandedAuditId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  // --- 100X DevOps & SRE Logging Command Hub State (4 Live Pillars) ---
+  const [devopsHubData, setDevopsHubData] = useState(null);
+  const [loadingDevopsHub, setLoadingDevopsHub] = useState(false);
+  const [activeDevopsPillar, setActiveDevopsPillar] = useState(null); // 'VM_JOURNAL' | 'GCS_EXPORT' | 'SINKS_BUCKETS' | 'ALERT_POLICIES' | null
+
+  // Pillar 1: Inside-VM Live SSH `journalctl` / `/var/log/*` / `dmesg` Surgeon
+  const [selectedJournalVm, setSelectedJournalVm] = useState('');
+  const [journalSourceType, setJournalSourceType] = useState('SYSTEMD_ERRORS');
+  const [journalGrepFilter, setJournalGrepFilter] = useState('');
+  const [vmJournalData, setVmJournalData] = useState(null);
+  const [loadingVmJournal, setLoadingVmJournal] = useState(false);
+
+  // Pillar 2: 1-Click Log Archiver -> Same-Region GCS (`gs://` JSONL + 2-Step Collision Guard + Confirmation Modal)
+  const [gcsExportScope, setGcsExportScope] = useState('CURRENT_STREAM'); // 'CURRENT_STREAM' | 'PINNED_ONLY' | 'VM_JOURNAL'
+  const [gcsExportBucket, setGcsExportBucket] = useState('');
+  const [gcsExportObjectName, setGcsExportObjectName] = useState('');
+  const [gcsExportPreflight, setGcsExportPreflight] = useState(null);
+  const [checkingGcsExportPreflight, setCheckingGcsExportPreflight] = useState(false);
+  const [gcsExportConfirmModal, setGcsExportConfirmModal] = useState(null);
+  const [gcsExportCollisionMode, setGcsExportCollisionMode] = useState('KEEP_BOTH'); // 'KEEP_BOTH' | 'OVERWRITE'
+  const [executingGcsExport, setExecutingGcsExport] = useState(false);
+  const [gcsExportReceipt, setGcsExportReceipt] = useState(null);
+
+  // Pillar 3: Live Cloud Logging Sinks & Log Buckets (Retention + Analytics)
+  const [sinkNameInput, setSinkNameInput] = useState('');
+  const [sinkDestType, setSinkDestType] = useState('GCS_BUCKET'); // 'GCS_BUCKET' | 'BIGQUERY_DATASET'
+  const [sinkDestTarget, setSinkDestTarget] = useState('');
+  const [sinkFilterInput, setSinkFilterInput] = useState('');
+  const [savingSinkOrBucket, setSavingSinkOrBucket] = useState(false);
+
+  // Pillar 4: 1-Click Cloud Monitoring Log-Match Alert Policies
+  const [alertDisplayNameInput, setAlertDisplayNameInput] = useState('');
+  const [alertLqlFilterInput, setAlertLqlFilterInput] = useState('severity>=ERROR');
+  const [alertRateLimitSec, setAlertRateLimitSec] = useState(300);
+  const [savingAlertPolicy, setSavingAlertPolicy] = useState(false);
+
   const focusResultsStream = useCallback(() => {
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     setResultsFlashActive(true);
@@ -442,8 +479,382 @@ export default function LogStreamerAndShell({
     }
   }, [projectId, auditServiceFilter]);
 
+  const fetchDevopsSreHub = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingDevopsHub(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/devops-sre-hub`
+      );
+      setDevopsHubData(res.data);
+      const vms = res.data?.vms || [];
+      if (!selectedJournalVm && vms.length > 0) {
+        const running = vms.find((v) => v.status === 'RUNNING') || vms[0];
+        setSelectedJournalVm(running.name);
+      }
+      const defReg = (res.data?.defaultRegion || 'US-CENTRAL1').toLowerCase();
+      if (!gcsExportBucket) {
+        const sameRegBucket = (res.data?.gcsBuckets || []).find((b) => b.sameRegion);
+        setGcsExportBucket(
+          sameRegBucket?.name || `${projectId}-sre-logs-${defReg}`.slice(0, 62)
+        );
+      }
+      if (!gcsExportObjectName) {
+        setGcsExportObjectName(`sre-logs-${projectId}.jsonl`);
+      }
+      if (!sinkDestTarget) {
+        const sameRegBucket = (res.data?.gcsBuckets || []).find((b) => b.sameRegion);
+        setSinkDestTarget(
+          sameRegBucket?.name || `${projectId}-sre-sink-${defReg}`.slice(0, 62)
+        );
+      }
+    } catch {
+      // ignore background error
+    } finally {
+      setLoadingDevopsHub(false);
+    }
+  }, [projectId, selectedJournalVm, gcsExportBucket, gcsExportObjectName, sinkDestTarget]);
+
+  const handleBrowseInCloudStorage = useCallback(
+    (bucketName, objectName = '') => {
+      const cleanBucket = String(bucketName || '')
+        .replace(/^gs:\/\//i, '')
+        .split('/')[0]
+        .trim();
+      if (!cleanBucket) return;
+      if (typeof onSelectTab === 'function') {
+        onSelectTab('CLOUD_STORAGE', 'OBJECTS', {
+          bucketName: cleanBucket,
+          objectName: String(objectName || '').trim(),
+        });
+        if (onShowToast) {
+          onShowToast(
+            `Redirected to Cloud Storage Studio → gs://${cleanBucket}${
+              objectName ? `/${objectName}` : ''
+            }`
+          );
+        }
+      }
+    },
+    [onSelectTab, onShowToast]
+  );
+
+  const handleFetchVmLiveJournal = useCallback(
+    async (overrides = {}) => {
+      const targetVmName =
+        overrides.vmName !== undefined ? overrides.vmName : selectedJournalVm;
+      if (!projectId || !targetVmName) return;
+      const vmObj = (devopsHubData?.vms || []).find((v) => v.name === targetVmName);
+      const srcType =
+        overrides.sourceType !== undefined ? overrides.sourceType : journalSourceType;
+      const grepPat =
+        overrides.grepFilter !== undefined ? overrides.grepFilter : journalGrepFilter;
+      const ingest = Boolean(overrides.ingestToCloudLogging);
+
+      setLoadingVmJournal(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/chrono-logs/vm-live-journal`,
+          {
+            vmName: targetVmName,
+            zone: vmObj?.zone || '',
+            sourceType: srcType,
+            grepFilter: grepPat,
+            linesLimit: 80,
+            ingestToCloudLogging: ingest,
+          }
+        );
+        setVmJournalData(res.data);
+        if (ingest && res.data?.ingestedCount > 0) {
+          if (onShowToast) {
+            onShowToast(
+              `Bridged & wrote ${res.data.ingestedCount} inside-VM "${targetVmName}" journalctl entries into Cloud Logging (${res.data.cloudLoggingLql}).`
+            );
+          }
+          await fetchChronoLogs({
+            lqlFilter: res.data.cloudLoggingLql,
+            notifyUser: true,
+          });
+        } else if (overrides.notifyUser && onShowToast) {
+          onShowToast(
+            `Streamed ${res.data?.entriesCount || 0} live inside-VM "${targetVmName}" lines (${srcType}) via ${res.data?.engineUsed || 'SSH2'}.`
+          );
+        }
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to stream inside-VM journalctl logs.'
+          );
+        }
+      } finally {
+        setLoadingVmJournal(false);
+      }
+    },
+    [
+      projectId,
+      selectedJournalVm,
+      devopsHubData?.vms,
+      journalSourceType,
+      journalGrepFilter,
+      onShowToast,
+      onShowError,
+      fetchChronoLogs,
+    ]
+  );
+
+  const getEntriesForGcsExportScope = useCallback(
+    (scopeOverride) => {
+      const sc = scopeOverride || gcsExportScope;
+      if (sc === 'VM_JOURNAL') {
+        return vmJournalData?.entries || [];
+      }
+      const allPool = chronoData?.entries || [];
+      if (sc === 'PINNED_ONLY') {
+        return allPool.filter((e) => pinnedLogIds.includes(e.id));
+      }
+      return allPool;
+    },
+    [gcsExportScope, vmJournalData?.entries, chronoData?.entries, pinnedLogIds]
+  );
+
+  const handlePreflightGcsLogExport = useCallback(
+    async (overrides = {}) => {
+      if (!projectId) return null;
+      const targetBucket =
+        (overrides.bucketName !== undefined ? overrides.bucketName : gcsExportBucket) ||
+        `${projectId}-sre-logs-${(devopsHubData?.defaultRegion || 'US-CENTRAL1').toLowerCase()}`.slice(
+          0,
+          62
+        );
+      const targetObj =
+        (overrides.objectName !== undefined
+          ? overrides.objectName
+          : gcsExportObjectName) || `sre-logs-${projectId}.jsonl`;
+      setCheckingGcsExportPreflight(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/chrono-logs/export-to-gcs/preflight`,
+          {
+            bucketName: targetBucket,
+            objectName: targetObj,
+            location: devopsHubData?.defaultRegion || 'US-CENTRAL1',
+          }
+        );
+        setGcsExportPreflight(res.data);
+        if (overrides.notifyUser && onShowToast) {
+          if (res.data?.hasCollision) {
+            onShowToast(
+              `URI Collision Detected: ${res.data.gcsUri} already exists (${res.data.existingGcsSizeBytes || 0} bytes). Choose Keep Both or Overwrite.`
+            );
+          } else {
+            onShowToast(
+              `Pre-Flight Check Passed: ${res.data?.gcsUri} is available in ${res.data?.bucketLocation || 'same region'} ($0.00/GB Egress).`
+            );
+          }
+        }
+        return res.data;
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to check GCS URI collision.'
+          );
+        }
+        return null;
+      } finally {
+        setCheckingGcsExportPreflight(false);
+      }
+    },
+    [
+      projectId,
+      gcsExportBucket,
+      gcsExportObjectName,
+      devopsHubData?.defaultRegion,
+      onShowToast,
+      onShowError,
+    ]
+  );
+
+  const handleOpenGcsLogExportConfirmModal = useCallback(
+    async (overrides = {}) => {
+      if (overrides.scope) setGcsExportScope(overrides.scope);
+      if (overrides.objectName) setGcsExportObjectName(overrides.objectName);
+      setActiveDevopsPillar('GCS_EXPORT');
+      const pf = await handlePreflightGcsLogExport({
+        bucketName: overrides.bucketName ?? gcsExportBucket,
+        objectName: overrides.objectName ?? gcsExportObjectName,
+        notifyUser: false,
+      });
+      if (pf) {
+        setGcsExportCollisionMode('KEEP_BOTH');
+        setGcsExportConfirmModal({
+          ...pf,
+          scope: overrides.scope || gcsExportScope,
+          customEntries: overrides.customEntries || null,
+        });
+      }
+    },
+    [
+      gcsExportBucket,
+      gcsExportObjectName,
+      gcsExportScope,
+      handlePreflightGcsLogExport,
+    ]
+  );
+
+  const handleExecuteGcsLogExport = useCallback(
+    async (collisionResolutionOverride) => {
+      if (!projectId || executingGcsExport) return;
+      const scope = gcsExportConfirmModal?.scope || gcsExportScope;
+      const entriesToExport =
+        gcsExportConfirmModal?.customEntries || getEntriesForGcsExportScope(scope);
+      if (!entriesToExport || entriesToExport.length === 0) {
+        if (onShowError) {
+          onShowError('No log entries in the selected scope to export.');
+        }
+        return;
+      }
+      const resMode = collisionResolutionOverride || gcsExportCollisionMode || 'KEEP_BOTH';
+      setExecutingGcsExport(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/chrono-logs/export-to-gcs`,
+          {
+            bucketName: gcsExportConfirmModal?.bucketName || gcsExportBucket,
+            objectName: gcsExportConfirmModal?.objectName || gcsExportObjectName,
+            location: devopsHubData?.defaultRegion || 'US-CENTRAL1',
+            createBucketIfMissing: true,
+            collisionResolution: resMode,
+            exportScope: scope,
+            lqlFilter:
+              customLqlInput ||
+              chronoData?.compiledQuery?.effectiveLql ||
+              'severity>=DEFAULT',
+            entries: entriesToExport,
+          }
+        );
+        setGcsExportReceipt(res.data);
+        setGcsExportConfirmModal(null);
+        setGcsExportPreflight(null);
+        fetchDevopsSreHub();
+        if (onShowToast) {
+          onShowToast(
+            `Exported ${res.data?.entryCount || entriesToExport.length} log entries to ${res.data?.gcsUri} (SHA-256: ${String(
+              res.data?.sha256 || ''
+            ).slice(0, 12)}…).`
+          );
+        }
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to export logs to Cloud Storage.'
+          );
+        }
+      } finally {
+        setExecutingGcsExport(false);
+      }
+    },
+    [
+      projectId,
+      executingGcsExport,
+      gcsExportConfirmModal,
+      gcsExportScope,
+      getEntriesForGcsExportScope,
+      gcsExportCollisionMode,
+      gcsExportBucket,
+      gcsExportObjectName,
+      devopsHubData?.defaultRegion,
+      customLqlInput,
+      chronoData?.compiledQuery?.effectiveLql,
+      fetchDevopsSreHub,
+      onShowToast,
+      onShowError,
+    ]
+  );
+
+  const handleSinkOrBucketAction = useCallback(
+    async (payload) => {
+      if (!projectId || savingSinkOrBucket) return;
+      setSavingSinkOrBucket(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/chrono-logs/sinks-buckets/action`,
+          {
+            location: devopsHubData?.defaultRegion || 'US-CENTRAL1',
+            ...payload,
+          }
+        );
+        if (onShowToast) {
+          onShowToast(res.data?.message || 'Updated Cloud Logging Sink / Bucket.');
+        }
+        await fetchDevopsSreHub();
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to update Cloud Logging Sink or Log Bucket.'
+          );
+        }
+      } finally {
+        setSavingSinkOrBucket(false);
+      }
+    },
+    [
+      projectId,
+      savingSinkOrBucket,
+      devopsHubData?.defaultRegion,
+      fetchDevopsSreHub,
+      onShowToast,
+      onShowError,
+    ]
+  );
+
+  const handleAlertPolicyAction = useCallback(
+    async (payload) => {
+      if (!projectId || savingAlertPolicy) return;
+      setSavingAlertPolicy(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/chrono-logs/alert-policies/action`,
+          payload
+        );
+        if (onShowToast) {
+          onShowToast(res.data?.message || 'Updated Cloud Monitoring Alert Policy.');
+        }
+        await fetchDevopsSreHub();
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to execute Cloud Monitoring Alert Policy action.'
+          );
+        }
+      } finally {
+        setSavingAlertPolicy(false);
+      }
+    },
+    [projectId, savingAlertPolicy, fetchDevopsSreHub, onShowToast, onShowError]
+  );
+
+  const openQuickAlertPolicyFromEntryOrLql = useCallback((lql, titleHint = '') => {
+    const cleanFilter = String(lql || 'severity>=ERROR').trim();
+    setAlertLqlFilterInput(cleanFilter);
+    setAlertDisplayNameInput(
+      titleHint || `SRE Log Alert: ${cleanFilter.slice(0, 48)}`
+    );
+    setActiveDevopsPillar('ALERT_POLICIES');
+  }, []);
+
   useEffect(() => {
     fetchChronoLogs();
+    fetchDevopsSreHub();
   }, [projectId]);
 
   useEffect(() => {
@@ -1637,6 +2048,1134 @@ export default function LogStreamerAndShell({
             </div>
           </div>
         </div>
+
+        {/* ===================================================================
+            100X DEVOPS & SRE LOGGING COMMAND HUB (4 LIVE PILLARS)
+            1. Inside-VM Zero-Agent SSH `journalctl` / `/var/log/*` / `dmesg` Surgeon
+            2. 1-Click Log Archiver -> Same-Region GCS (`gs://` JSONL + 2-Step Collision Guard + Browse in GCS)
+            3. Live Cloud Logging Sinks & Log Buckets (`30d–3,650d` Retention + BigQuery Analytics)
+            4. 1-Click Cloud Monitoring Log-Match Alert Policy Provisioner (`alertPolicies`)
+           =================================================================== */}
+        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                100X DEVOPS &amp; SRE LOGGING COMMAND HUB
+              </span>
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Zero-Agent VM Journalctl SSH · Same-Region ($0/GB) GCS Log Vault · Sinks &amp; Retention · Live Alert Policies
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={fetchDevopsSreHub}
+              disabled={loadingDevopsHub}
+              className="px-2.5 py-1 rounded-md bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3 h-3 ${loadingDevopsHub ? 'animate-spin' : ''}`}
+              />
+              <span>Refresh SRE Hub</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {[
+              {
+                id: 'VM_JOURNAL',
+                title: '01 · Inside-VM SSH Journalctl',
+                subtitle: `${
+                  (devopsHubData?.vms || []).filter((v) => v.status === 'RUNNING')
+                    .length
+                }/${(devopsHubData?.vms || []).length} Running VMs · Zero-Agent /var/log & dmesg`,
+                icon: Terminal,
+              },
+              {
+                id: 'GCS_EXPORT',
+                title: '02 · Export Logs → GCS (gs://)',
+                subtitle: `Same-Region (${
+                  devopsHubData?.defaultRegion || 'US-CENTRAL1'
+                }) $0/GB Egress · 2-Step Collision Guard`,
+                icon: Database,
+              },
+              {
+                id: 'SINKS_BUCKETS',
+                title: '03 · Log Sinks & Retention',
+                subtitle: `${devopsHubData?.logSinks?.length || 2} Sinks · ${
+                  devopsHubData?.logBuckets?.length || 2
+                } Log Buckets (30d–3650d + BQ)`,
+                icon: Layers,
+              },
+              {
+                id: 'ALERT_POLICIES',
+                title: '04 · 1-Click Log Alert Policies',
+                subtitle: `${
+                  devopsHubData?.alertPolicies?.length || 0
+                } Active Policies · conditionMatchedLog`,
+                icon: ShieldAlert,
+              },
+            ].map((p) => {
+              const Icon = p.icon;
+              const isActive = activeDevopsPillar === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    const next = isActive ? null : p.id;
+                    setActiveDevopsPillar(next);
+                    if (next === 'VM_JOURNAL' && !vmJournalData && selectedJournalVm) {
+                      handleFetchVmLiveJournal({ vmName: selectedJournalVm });
+                    }
+                    if (next === 'SINKS_BUCKETS' && !sinkFilterInput) {
+                      setSinkFilterInput(
+                        customLqlInput ||
+                          chronoData?.compiledQuery?.effectiveLql ||
+                          'severity>=ERROR'
+                      );
+                    }
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start justify-between gap-2 ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      : 'bg-white dark:bg-[#202124] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-xs font-extrabold">
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{p.title}</span>
+                    </div>
+                    <div
+                      className={`text-[10px] truncate ${
+                        isActive
+                          ? 'text-blue-100'
+                          : 'text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {p.subtitle}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold shrink-0">
+                    {isActive ? '▴' : '▾'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* PILLAR 1 DRAWER: INSIDE-VM ZERO-AGENT SSH `journalctl` / `/var/log/*` / `dmesg` SURGEON */}
+          {activeDevopsPillar === 'VM_JOURNAL' && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-blue-500/40 space-y-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                    ZERO-AGENT INSIDE-LINUX SSH LOG SURGEON
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Stream `journalctl`, `/var/log/auth.log`, `/var/log/syslog` &amp; `dmesg` Directly Over SSH2 (Even Without Ops Agent)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {typeof onSelectTab === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectTab('VM_FLEET_SSH')}
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10.5px] font-bold cursor-pointer"
+                    >
+                      Open VM Fleet &amp; SFTP →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveDevopsPillar(null)}
+                    className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    1. Select Compute Engine VM
+                  </label>
+                  <select
+                    value={selectedJournalVm}
+                    onChange={(e) => {
+                      setSelectedJournalVm(e.target.value);
+                      handleFetchVmLiveJournal({
+                        vmName: e.target.value,
+                        notifyUser: true,
+                      });
+                    }}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    {(devopsHubData?.vms || []).length === 0 ? (
+                      <option value="">No VMs found in {projectId}</option>
+                    ) : (
+                      (devopsHubData?.vms || []).map((vm) => (
+                        <option key={vm.name} value={vm.name}>
+                          {vm.name} ({vm.zone} · {vm.status})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    2. Inside-Linux Log Stream
+                  </label>
+                  <select
+                    value={journalSourceType}
+                    onChange={(e) => {
+                      setJournalSourceType(e.target.value);
+                      handleFetchVmLiveJournal({
+                        sourceType: e.target.value,
+                        notifyUser: true,
+                      });
+                    }}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="SYSTEMD_ERRORS">
+                      Systemd Errors &amp; Warnings (journalctl -p 0..4)
+                    </option>
+                    <option value="AUTH_SECURITY">
+                      SSH Auth &amp; Sudo Security (/var/log/auth.log)
+                    </option>
+                    <option value="KERNEL_OOM_DMESG">
+                      Kernel &amp; OOM Killer (dmesg -T)
+                    </option>
+                    <option value="SYSLOG_TAIL">
+                      Full Syslog Tail (/var/log/syslog)
+                    </option>
+                    <option value="DOCKER_KUBELET">
+                      Docker / Containerd / Kubelet Runtime
+                    </option>
+                    <option value="FAILED_UNITS">
+                      Failed Systemd Units (systemctl --failed)
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    3. Regex / Keyword Grep Filter
+                  </label>
+                  <input
+                    type="text"
+                    value={journalGrepFilter}
+                    onChange={(e) => setJournalGrepFilter(e.target.value)}
+                    placeholder="e.g. sshd|error|oom|denied"
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div className="flex items-end gap-1.5">
+                  <button
+                    type="button"
+                    disabled={loadingVmJournal || !selectedJournalVm}
+                    onClick={() => handleFetchVmLiveJournal({ notifyUser: true })}
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {loadingVmJournal ? 'Streaming via SSH...' : 'Stream VM Logs'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loadingVmJournal || !selectedJournalVm}
+                    onClick={() =>
+                      handleFetchVmLiveJournal({
+                        ingestToCloudLogging: true,
+                        notifyUser: true,
+                      })
+                    }
+                    title="Bridge inside-VM journalctl lines into Google Cloud Logging (entries:write)"
+                    className="py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    → Cloud Logging
+                  </button>
+                </div>
+              </div>
+
+              {vmJournalData?.vitals && (
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[10.5px]">
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">VM Uptime</div>
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                      {vmJournalData.vitals.uptime || 'up'}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Inside-VM RAM</div>
+                    <div className="font-bold text-blue-600 dark:text-blue-400">
+                      {vmJournalData.vitals.memorySummary || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Root Disk (/)</div>
+                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {vmJournalData.vitals.rootDiskSummary || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Failed Systemd Units</div>
+                    <div
+                      className={`font-extrabold ${
+                        vmJournalData.vitals.failedUnitsCount > 0
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {vmJournalData.vitals.failedUnitsCount || 0} units
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Kernel OOM Kills</div>
+                    <div
+                      className={`font-extrabold ${
+                        vmJournalData.vitals.oomKillEventsCount > 0
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {vmJournalData.vitals.oomKillEventsCount || 0} events
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">SSH Failed Logins</div>
+                    <div
+                      className={`font-extrabold ${
+                        vmJournalData.vitals.recentSshFailedCount > 0
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {vmJournalData.vitals.recentSshFailedCount || 0} recent
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {vmJournalData && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <span className="text-zinc-500">
+                      Streamed <strong>{vmJournalData.entriesCount || 0}</strong> lines from{' '}
+                      <strong>{vmJournalData.vmName}</strong> ({vmJournalData.zone}) via{' '}
+                      <code>{vmJournalData.engineUsed}</code>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleOpenGcsLogExportConfirmModal({
+                          scope: 'VM_JOURNAL',
+                          objectName: `vm-${vmJournalData.vmName}-${journalSourceType.toLowerCase()}.jsonl`,
+                          customEntries: vmJournalData.entries || [],
+                        })
+                      }
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                    >
+                      Archive These VM Logs → Same-Region GCS (gs://)
+                    </button>
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#131314] divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+                    {(vmJournalData.entries || []).length === 0 ? (
+                      <div className="p-4 text-center text-zinc-500">
+                        No matching lines returned for {journalSourceType}.
+                      </div>
+                    ) : (
+                      (vmJournalData.entries || []).map((ln) => (
+                        <div
+                          key={ln.id}
+                          className="p-2 flex flex-wrap items-start justify-between gap-2 text-[11px]"
+                        >
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            {getSeverityBadge(ln.severity)}
+                            <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">
+                              [{ln.unit}
+                              {ln.pid ? `:${ln.pid}` : ''}]
+                            </span>
+                            <span className="text-zinc-900 dark:text-zinc-100 break-all">
+                              {ln.message}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 shrink-0">
+                            {String(ln.timestamp || '').slice(0, 19)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PILLAR 2 DRAWER: 1-CLICK LOG ARCHIVER -> SAME-REGION GCS (`gs://` JSONL + 2-STEP COLLISION GUARD + BROWSE IN GCS) */}
+          {activeDevopsPillar === 'GCS_EXPORT' && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-blue-500/40 space-y-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold">
+                    SAME-REGION ({devopsHubData?.defaultRegion || 'US-CENTRAL1'}) · $0.00/GB EGRESS
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    1-Click Forensic Log Bundle Exporter to Cloud Storage (`gs://` NDJSON / `.jsonl` + SHA-256 Digest)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {gcsExportBucket && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleBrowseInCloudStorage(
+                          gcsExportBucket,
+                          gcsExportReceipt?.objectName || gcsExportObjectName
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                    >
+                      Browse in GCS →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveDevopsPillar(null)}
+                    className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    1. Log Export Scope
+                  </label>
+                  <select
+                    value={gcsExportScope}
+                    onChange={(e) => {
+                      const nextScope = e.target.value;
+                      setGcsExportScope(nextScope);
+                      setGcsExportPreflight(null);
+                      if (nextScope === 'PINNED_ONLY') {
+                        setGcsExportObjectName(`pinned-incident-logs-${projectId}.jsonl`);
+                      } else if (nextScope === 'VM_JOURNAL') {
+                        setGcsExportObjectName(
+                          `vm-${selectedJournalVm || 'instance'}-journal.jsonl`
+                        );
+                      } else {
+                        setGcsExportObjectName(`sre-logs-${projectId}.jsonl`);
+                      }
+                    }}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="CURRENT_STREAM">
+                      Current Filtered Cloud Logging Stream ({chronoEntries.length} entries)
+                    </option>
+                    <option value="PINNED_ONLY">
+                      Pinned Incident Bookmarks Only ({pinnedLogIds.length} entries)
+                    </option>
+                    <option value="VM_JOURNAL">
+                      Inside-VM SSH Journalctl Stream ({vmJournalData?.entries?.length || 0} lines)
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    2. Target Same-Region GCS Bucket ($0.00/GB Egress)
+                  </label>
+                  <input
+                    type="text"
+                    value={gcsExportBucket}
+                    onChange={(e) => {
+                      setGcsExportBucket(e.target.value);
+                      setGcsExportPreflight(null);
+                    }}
+                    placeholder={`${projectId}-sre-logs-us-central1`}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  {(devopsHubData?.gcsBuckets || []).length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      {(devopsHubData?.gcsBuckets || []).slice(0, 4).map((b) => (
+                        <button
+                          key={b.name}
+                          type="button"
+                          onClick={() => {
+                            setGcsExportBucket(b.name);
+                            setGcsExportPreflight(null);
+                          }}
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] border cursor-pointer ${
+                            gcsExportBucket === b.name
+                              ? 'bg-blue-600 text-white border-blue-500 font-bold'
+                              : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          gs://{b.name} {b.sameRegion ? '[$0 EGRESS]' : `(${b.location})`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">
+                    3. Exact Object Filename (.jsonl)
+                  </label>
+                  <input
+                    type="text"
+                    value={gcsExportObjectName}
+                    onChange={(e) => {
+                      setGcsExportObjectName(e.target.value);
+                      setGcsExportPreflight(null);
+                    }}
+                    placeholder={`sre-logs-${projectId}.jsonl`}
+                    className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="text-[11px] text-zinc-500">
+                  Target URI:{' '}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleBrowseInCloudStorage(gcsExportBucket, gcsExportObjectName)
+                    }
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                  >
+                    gs://{gcsExportBucket || `${projectId}-sre-logs`}/
+                    {gcsExportObjectName || `sre-logs-${projectId}.jsonl`}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={checkingGcsExportPreflight}
+                    onClick={() => handlePreflightGcsLogExport({ notifyUser: true })}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-bold cursor-pointer"
+                  >
+                    {checkingGcsExportPreflight
+                      ? 'Checking gs:// URI...'
+                      : '1. Check GCS URI / Collision'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={checkingGcsExportPreflight || executingGcsExport}
+                    onClick={() => handleOpenGcsLogExportConfirmModal()}
+                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer shadow-sm"
+                  >
+                    2. Export &quot;{gcsExportObjectName || 'logs.jsonl'}&quot; → GCS
+                  </button>
+                </div>
+              </div>
+
+              {gcsExportPreflight && (
+                <div
+                  className={`p-3 rounded-lg border flex flex-wrap items-center justify-between gap-2 text-[11px] ${
+                    gcsExportPreflight.hasCollision
+                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-800 dark:text-amber-200'
+                      : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-800 dark:text-emerald-200'
+                  }`}
+                >
+                  <div>
+                    <strong>
+                      {gcsExportPreflight.hasCollision
+                        ? 'COLLISION WARNING — OBJECT ALREADY EXISTS AT SAME gs:// URI:'
+                        : 'PRE-FLIGHT PASSED — ZERO URI COLLISION:'}
+                    </strong>{' '}
+                    <code>{gcsExportPreflight.gcsUri}</code>{' '}
+                    {gcsExportPreflight.hasCollision
+                      ? `(${gcsExportPreflight.existingGcsSizeBytes || 0} bytes · updated ${
+                          gcsExportPreflight.existingUpdated || 'recently'
+                        })`
+                      : `is available in ${gcsExportPreflight.bucketLocation} ($0.00/GB Egress).`}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleBrowseInCloudStorage(
+                        gcsExportPreflight.bucketName,
+                        gcsExportPreflight.objectName
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Browse in GCS →
+                  </button>
+                </div>
+              )}
+
+              {gcsExportReceipt && (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-900 dark:text-emerald-200">
+                  <div className="space-y-0.5">
+                    <div className="font-extrabold">
+                      ✓ EXPORTED {gcsExportReceipt.entryCount} LOG ENTRIES TO{' '}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleBrowseInCloudStorage(
+                            gcsExportReceipt.bucketName,
+                            gcsExportReceipt.objectName
+                          )
+                        }
+                        className="underline hover:text-blue-500 cursor-pointer"
+                      >
+                        {gcsExportReceipt.gcsUri}
+                      </button>
+                    </div>
+                    <div className="text-[10px] opacity-85">
+                      Size: {gcsExportReceipt.sizeBytes} bytes · Region:{' '}
+                      {gcsExportReceipt.bucketLocation} ($0.00/GB Egress) · SHA-256:{' '}
+                      <code>{gcsExportReceipt.sha256}</code>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleBrowseInCloudStorage(
+                        gcsExportReceipt.bucketName,
+                        gcsExportReceipt.objectName
+                      )
+                    }
+                    className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Browse in GCS →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PILLAR 3 DRAWER: LIVE CLOUD LOGGING SINKS & LOG BUCKETS (RETENTION 30d–3650d + BIGQUERY LOG ANALYTICS) */}
+          {activeDevopsPillar === 'SINKS_BUCKETS' && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-blue-500/40 space-y-3.5 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                    CLOUD LOGGING ROUTER, SINKS &amp; LOG BUCKETS ARCHITECT
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Manage Log Bucket Retention (`30d`–`3,650d`), Enable BigQuery Log Analytics &amp; Route Live Sinks to GCS or BigQuery
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveDevopsPillar(null)}
+                  className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10.5px] font-bold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              {/* Part A: Live Cloud Logging Buckets (Retention & BigQuery Log Analytics) */}
+              <div className="space-y-2">
+                <div className="text-[11px] font-extrabold uppercase text-zinc-500">
+                  A. Live Cloud Logging Buckets (`logging.googleapis.com/v2/projects/{projectId}/locations/-/buckets`)
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {(devopsHubData?.logBuckets || []).map((b) => (
+                    <div
+                      key={b.name}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {b.bucketId}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                            {b.location}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                            Retention: {b.retentionDays}d
+                          </span>
+                          {b.analyticsEnabled && (
+                            <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 text-[10px] font-bold">
+                              BQ Log Analytics ON
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10.5px] text-zinc-500">
+                          {b.bucketId === '_Required'
+                            ? 'Admin Activity & System Event logs (Fixed 400-day free retention)'
+                            : 'Configurable retention (1–3,650 days) + SQL Log Analytics'}
+                        </div>
+                      </div>
+
+                      {b.bucketId !== '_Required' && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {[30, 90, 365].map((days) => (
+                            <button
+                              key={days}
+                              type="button"
+                              disabled={savingSinkOrBucket}
+                              onClick={() =>
+                                handleSinkOrBucketAction({
+                                  action: 'UPDATE_BUCKET_RETENTION',
+                                  bucketId: b.bucketId,
+                                  bucketLocation: b.location,
+                                  retentionDays: days,
+                                  analyticsEnabled: true,
+                                })
+                              }
+                              className={`px-2 py-1 rounded text-[10px] font-bold border cursor-pointer ${
+                                b.retentionDays === days
+                                  ? 'bg-blue-600 text-white border-blue-500'
+                                  : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                              }`}
+                            >
+                              {days}d + Analytics
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Part B: Provision a New Live Cloud Logging Sink -> GCS or BigQuery */}
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                <div className="text-[11px] font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
+                  B. Provision Live Cloud Logging Sink (`POST /v2/projects/{projectId}/sinks?uniqueWriterIdentity=true`)
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={sinkNameInput}
+                    onChange={(e) => setSinkNameInput(e.target.value)}
+                    placeholder="Sink name (e.g. prod-error-gcs-sink)"
+                    className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <select
+                    value={sinkDestType}
+                    onChange={(e) => {
+                      const nextType = e.target.value;
+                      setSinkDestType(nextType);
+                      if (nextType === 'BIGQUERY_DATASET') {
+                        setSinkDestTarget(
+                          devopsHubData?.bigqueryDatasets?.[0]?.datasetId ||
+                            'cloudpulse_sre_logs'
+                        );
+                      } else {
+                        setSinkDestTarget(
+                          devopsHubData?.gcsBuckets?.[0]?.name ||
+                            `${projectId}-sre-sink-logs`
+                        );
+                      }
+                    }}
+                    className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="GCS_BUCKET">
+                      Route to Same-Region Cloud Storage Bucket (gs://)
+                    </option>
+                    <option value="BIGQUERY_DATASET">
+                      Route to BigQuery Dataset (Real-Time SQL Streaming)
+                    </option>
+                  </select>
+                  <input
+                    type="text"
+                    value={sinkDestTarget}
+                    onChange={(e) => setSinkDestTarget(e.target.value)}
+                    placeholder={
+                      sinkDestType === 'BIGQUERY_DATASET'
+                        ? 'Dataset ID (auto-created if missing)'
+                        : 'Bucket name (auto-created if missing)'
+                    }
+                    className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingSinkOrBucket}
+                    onClick={() =>
+                      handleSinkOrBucketAction({
+                        action: 'CREATE_OR_UPDATE_SINK',
+                        sinkName:
+                          sinkNameInput ||
+                          `cloudpulse-sre-${sinkDestType === 'BIGQUERY_DATASET' ? 'bq' : 'gcs'}-sink`,
+                        destinationType: sinkDestType,
+                        destinationTarget: sinkDestTarget,
+                        filter:
+                          sinkFilterInput ||
+                          customLqlInput ||
+                          chronoData?.compiledQuery?.effectiveLql ||
+                          'severity>=ERROR',
+                      })
+                    }
+                    className="py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {savingSinkOrBucket ? 'Provisioning Sink...' : '+ Create & Bind Sink IAM'}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={sinkFilterInput}
+                  onChange={(e) => setSinkFilterInput(e.target.value)}
+                  placeholder="LQL Routing Filter (e.g. severity>=ERROR OR resource.type=&quot;cloud_run_revision&quot;)"
+                  className="w-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                />
+
+                {/* Active Sinks Table */}
+                <div className="space-y-1.5 pt-1">
+                  {(devopsHubData?.logSinks || []).map((sk) => {
+                    const isGcsDest = sk.destination.startsWith('storage.googleapis.com/');
+                    const gcsBucketFromSink = isGcsDest
+                      ? sk.destination.replace('storage.googleapis.com/', '').split('/')[0]
+                      : '';
+                    return (
+                      <div
+                        key={sk.name}
+                        className="p-2.5 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px]"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                              {sk.name}
+                            </span>
+                            <span className="text-blue-600 dark:text-blue-400 font-bold truncate">
+                              ➔ {sk.destination}
+                            </span>
+                            {sk.exclusionsCount > 0 && (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                                {sk.exclusionsCount} Exclusions
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 truncate">
+                            Filter: <code>{sk.filter || '(All non-excluded logs)'}</code>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isGcsDest && gcsBucketFromSink && (
+                            <button
+                              type="button"
+                              onClick={() => handleBrowseInCloudStorage(gcsBucketFromSink)}
+                              className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                            >
+                              Browse in GCS →
+                            </button>
+                          )}
+                          {!sk.isBuiltIn && (
+                            <button
+                              type="button"
+                              disabled={savingSinkOrBucket}
+                              onClick={() =>
+                                handleSinkOrBucketAction({
+                                  action: 'DELETE_SINK',
+                                  sinkName: sk.name,
+                                })
+                              }
+                              className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
+                            >
+                              Delete Sink
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PILLAR 4 DRAWER: 1-CLICK LIVE CLOUD MONITORING LOG-MATCH ALERT POLICIES (`alertPolicies`) */}
+          {activeDevopsPillar === 'ALERT_POLICIES' && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-blue-500/40 space-y-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-extrabold mr-2">
+                    LIVE `monitoring.googleapis.com/v3/projects/{projectId}/alertPolicies`
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Turn Any LQL Filter or Error Signature into a Real Cloud Monitoring Log-Match Alert Policy
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveDevopsPillar(null)}
+                  className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10.5px] font-bold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <input
+                  type="text"
+                  value={alertDisplayNameInput}
+                  onChange={(e) => setAlertDisplayNameInput(e.target.value)}
+                  placeholder="Alert Policy Name (e.g. Cloud Run 5xx Spike Alert)"
+                  className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                />
+                <input
+                  type="text"
+                  value={alertLqlFilterInput}
+                  onChange={(e) => setAlertLqlFilterInput(e.target.value)}
+                  placeholder="LQL Condition (e.g. severity>=ERROR)"
+                  className="md:col-span-2 bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                />
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={alertRateLimitSec}
+                    onChange={(e) => setAlertRateLimitSec(Number(e.target.value))}
+                    className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value={300}>5m Cooldown</option>
+                    <option value={900}>15m Cooldown</option>
+                    <option value={3600}>1h Cooldown</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={savingAlertPolicy}
+                    onClick={() =>
+                      handleAlertPolicyAction({
+                        action: 'CREATE_LOG_ALERT_POLICY',
+                        displayName:
+                          alertDisplayNameInput ||
+                          `CloudPulse SRE Alert — ${(alertLqlFilterInput || 'severity>=ERROR').slice(0, 38)}`,
+                        lqlFilter: alertLqlFilterInput || 'severity>=ERROR',
+                        rateLimitSeconds: alertRateLimitSec,
+                      })
+                    }
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {savingAlertPolicy ? 'Creating...' : '+ Create Alert'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                {(devopsHubData?.alertPolicies || []).length === 0 ? (
+                  <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] text-zinc-500 text-center">
+                    No Cloud Monitoring Alert Policies found in {projectId}. Click &quot;+ Create Alert&quot; above to provision one live!
+                  </div>
+                ) : (
+                  (devopsHubData?.alertPolicies || []).map((pol) => (
+                    <div
+                      key={pol.name}
+                      className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px]"
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                              pol.enabled
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-zinc-300/40 dark:bg-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {pol.enabled ? 'ENABLED' : 'DISABLED'}
+                          </span>
+                          <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {pol.displayName}
+                          </span>
+                          {pol.isLogMatchAlert && (
+                            <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[9.5px] font-bold">
+                              conditionMatchedLog
+                            </span>
+                          )}
+                        </div>
+                        {pol.filter && (
+                          <div className="text-[10px] text-zinc-500 truncate">
+                            Filter: <code>{pol.filter}</code>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {pol.filter && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomLqlInput(pol.filter);
+                              fetchChronoLogs({
+                                lqlFilter: pol.filter,
+                                notifyUser: true,
+                              });
+                            }}
+                            className="px-2 py-1 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-bold cursor-pointer"
+                          >
+                            Test LQL
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={savingAlertPolicy}
+                          onClick={() =>
+                            handleAlertPolicyAction({
+                              action: 'TOGGLE_ALERT_POLICY',
+                              policyName: pol.name,
+                              enabled: !pol.enabled,
+                            })
+                          }
+                          className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        >
+                          {pol.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingAlertPolicy}
+                          onClick={() =>
+                            handleAlertPolicyAction({
+                              action: 'DELETE_ALERT_POLICY',
+                              policyName: pol.name,
+                            })
+                          }
+                          className="px-2 py-1 rounded bg-red-500/15 text-red-600 dark:text-red-400 text-[10px] font-bold cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* MANDATORY PRE-EXPORT CONFIRMATION & GCS URI COLLISION GUARD MODAL */}
+        {gcsExportConfirmModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-[#1e1f23] border-2 border-blue-500/50 shadow-2xl p-5 space-y-4 font-mono text-xs">
+              <div className="flex items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                    PRE-EXPORT CONFIRMATION &amp; GCS URI COLLISION GUARD
+                  </span>
+                  <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
+                    Confirm Forensic Log Export to Same-Region Cloud Storage (`$0.00/GB` Egress)
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGcsExportConfirmModal(null)}
+                  className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Target GCS URI:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {gcsExportConfirmModal.gcsUri}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Bucket Location / Egress:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {gcsExportConfirmModal.bucketLocation} · $0.00/GB Intra-Region Transfer
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Entries to Export:</span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    {(
+                      gcsExportConfirmModal.customEntries ||
+                      getEntriesForGcsExportScope(gcsExportConfirmModal.scope)
+                    ).length}{' '}
+                    structured JSONL records
+                  </span>
+                </div>
+              </div>
+
+              {gcsExportConfirmModal.hasCollision ? (
+                <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 space-y-2.5 text-[11px]">
+                  <div className="font-extrabold text-amber-800 dark:text-amber-200">
+                    ⚠ COLLISION DETECTED: `{gcsExportConfirmModal.gcsUri}` ALREADY EXISTS ({gcsExportConfirmModal.existingGcsSizeBytes || 0} bytes)
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-start gap-2 p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gcsLogCollisionMode"
+                        checked={gcsExportCollisionMode === 'KEEP_BOTH'}
+                        onChange={() => setGcsExportCollisionMode('KEEP_BOTH')}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <div className="font-bold text-emerald-700 dark:text-emerald-400">
+                          Keep Both (Recommended — Zero Overwrite)
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          Saves new export as <code>{gcsExportConfirmModal.keepBothGcsUri}</code>
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-2 p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gcsLogCollisionMode"
+                        checked={gcsExportCollisionMode === 'OVERWRITE'}
+                        onChange={() => setGcsExportCollisionMode('OVERWRITE')}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <div className="font-bold text-amber-700 dark:text-amber-400">
+                          Overwrite Existing Object at Same `gs://` URI
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          Replaces <code>{gcsExportConfirmModal.gcsUri}</code> in place
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-200 font-bold">
+                  ✓ Pre-Flight Verified: `{gcsExportConfirmModal.gcsUri}` does not exist yet — zero overwrite risk.
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleBrowseInCloudStorage(
+                      gcsExportConfirmModal.bucketName,
+                      gcsExportConfirmModal.objectName
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-bold cursor-pointer"
+                >
+                  Browse in GCS →
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGcsExportConfirmModal(null)}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={executingGcsExport}
+                    onClick={() => handleExecuteGcsLogExport(gcsExportCollisionMode)}
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {executingGcsExport
+                      ? 'Uploading JSONL to GCS...'
+                      : gcsExportConfirmModal.hasCollision &&
+                        gcsExportCollisionMode === 'KEEP_BOTH'
+                      ? 'Confirm & Keep Both → GCS'
+                      : 'Confirm & Export → GCS'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pillar 3: Bi-Directional Natural Language <-> LQL + BigQuery Log Analytics SQL Bar */}
         <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
@@ -3713,6 +5252,34 @@ export default function LogStreamerAndShell({
                               className="px-2 py-1 rounded bg-blue-600/15 hover:bg-blue-600/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
                             >
                               Trace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openQuickAlertPolicyFromEntryOrLql(
+                                  `resource.type="${entry.resourceType}" AND severity>="${entry.severity}"`,
+                                  `SRE Alert: ${entry.serviceName} (${entry.severity})`
+                                )
+                              }
+                              title="Create a live Cloud Monitoring Log-Match Alert Policy for this service & severity"
+                              className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              + Alert
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleOpenGcsLogExportConfirmModal({
+                                  scope: 'SINGLE_LOG_ENTRY',
+                                  objectName: `log-${String(entry.serviceName || 'event')
+                                    .replace(/[^a-zA-Z0-9_-]/g, '-')}-${String(entry.id || '1').slice(-8)}.jsonl`,
+                                  customEntries: [entry],
+                                })
+                              }
+                              title="Export this log entry to Same-Region Cloud Storage (gs://) with 2-Step Collision Guard"
+                              className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              → GCS
                             </button>
                             {entry.severity !== 'INFO' && (
                               <button

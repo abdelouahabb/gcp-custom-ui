@@ -21000,6 +21000,1112 @@ app.post('/api/project/:projectId/chrono-logs/exclusion', async (req, res) => {
 });
 
 // ============================================================================
+// 100X DEVOPS & SRE LOGGING SUITE (4 LIVE PILLARS):
+// 1. Inside-VM Zero-Agent SSH `journalctl` / `/var/log/*` / `dmesg` Streamer
+// 2. 1-Click Log Archiver -> Same-Region GCS (`gs://` JSONL + 2-Step Collision Guard)
+// 3. Live Cloud Logging Sinks, Log Buckets (Retention/Analytics) & Router Architect
+// 4. 1-Click Cloud Monitoring Log-Match Alert Policy Provisioner (`alertPolicies`)
+// ============================================================================
+app.get('/api/project/:projectId/chrono-logs/devops-sre-hub', async (req, res) => {
+  const { projectId } = req.params;
+  const { token } = await resolveRequestAuth(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated.' });
+  }
+
+  try {
+    const [vmsRes, bucketsRes, sinksRes, logBucketsRes, alertsRes, bqDatasetsRes] =
+      await Promise.allSettled([
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/aggregated/instances?maxResults=50`,
+          token,
+          projectId,
+          { timeout: 7000 }
+        ),
+        gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}&maxResults=50`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+        gcpFetch(
+          `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/sinks?pageSize=50`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+        gcpFetch(
+          `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/-/buckets?pageSize=50`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+        gcpFetch(
+          `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(
+            projectId
+          )}/alertPolicies?pageSize=50`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets?maxResults=50`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+      ]);
+
+    const vms = [];
+    if (vmsRes.status === 'fulfilled' && vmsRes.value?.items) {
+      for (const [, scopeData] of Object.entries(vmsRes.value.items)) {
+        for (const inst of scopeData?.instances || []) {
+          const zone = String(inst.zone || '').split('/').pop() || 'us-central1-a';
+          const region = zone.split('-').slice(0, 2).join('-').toUpperCase() || 'US-CENTRAL1';
+          const nic = inst.networkInterfaces?.[0] || {};
+          vms.push({
+            name: inst.name,
+            zone,
+            region,
+            status: inst.status || 'UNKNOWN',
+            machineType: String(inst.machineType || '').split('/').pop() || 'e2-medium',
+            internalIp: nic.networkIP || '',
+            externalIp: nic.accessConfigs?.[0]?.natIP || '',
+          });
+        }
+      }
+    }
+    vms.sort((a, b) => (a.status === 'RUNNING' ? -1 : 1) - (b.status === 'RUNNING' ? -1 : 1));
+
+    const defaultRegion =
+      vms.find((v) => v.status === 'RUNNING')?.region ||
+      vms[0]?.region ||
+      'US-CENTRAL1';
+
+    const gcsBuckets =
+      bucketsRes.status === 'fulfilled' && Array.isArray(bucketsRes.value?.items)
+        ? bucketsRes.value.items
+            .map((b) => {
+              const loc = String(b.location || 'US').toUpperCase();
+              return {
+                name: b.name,
+                location: loc,
+                storageClass: b.storageClass || 'STANDARD',
+                sameRegion: loc === defaultRegion,
+              };
+            })
+            .sort((a, b) => Number(b.sameRegion) - Number(a.sameRegion))
+        : [];
+
+    const logSinks =
+      sinksRes.status === 'fulfilled' && Array.isArray(sinksRes.value?.sinks)
+        ? sinksRes.value.sinks.map((s) => ({
+            name: s.name,
+            destination: s.destination || '',
+            filter: s.filter || '',
+            disabled: Boolean(s.disabled),
+            writerIdentity: s.writerIdentity || '',
+            exclusionsCount: Array.isArray(s.exclusions) ? s.exclusions.length : 0,
+            exclusions: Array.isArray(s.exclusions) ? s.exclusions : [],
+            isBuiltIn: s.name === '_Required' || s.name === '_Default',
+          }))
+        : [];
+
+    const logBuckets =
+      logBucketsRes.status === 'fulfilled' && Array.isArray(logBucketsRes.value?.buckets)
+        ? logBucketsRes.value.buckets.map((b) => {
+            const parts = String(b.name || '').split('/');
+            const bucketId = parts[parts.length - 1] || '_Default';
+            const locIdx = parts.indexOf('locations');
+            const location = locIdx >= 0 && parts[locIdx + 1] ? parts[locIdx + 1] : 'global';
+            return {
+              name: b.name,
+              bucketId,
+              location,
+              description: b.description || '',
+              retentionDays: Number(b.retentionDays || 30),
+              locked: Boolean(b.locked),
+              analyticsEnabled: Boolean(b.analyticsEnabled),
+              lifecycleState: b.lifecycleState || 'ACTIVE',
+            };
+          })
+        : [];
+
+    const alertPolicies =
+      alertsRes.status === 'fulfilled' && Array.isArray(alertsRes.value?.alertPolicies)
+        ? alertsRes.value.alertPolicies.map((p) => {
+            const cond = p.conditions?.[0] || {};
+            const logFilter =
+              cond.conditionMatchedLog?.filter ||
+              cond.conditionThreshold?.filter ||
+              '';
+            return {
+              name: p.name,
+              policyId: String(p.name || '').split('/').pop(),
+              displayName: p.displayName || 'Unnamed Alert Policy',
+              enabled: p.enabled?.value !== undefined ? Boolean(p.enabled.value) : Boolean(p.enabled ?? true),
+              combiner: p.combiner || 'OR',
+              isLogMatchAlert: Boolean(cond.conditionMatchedLog),
+              conditionDisplayName: cond.displayName || 'Alert Condition',
+              filter: logFilter,
+              documentationContent: p.documentation?.content || '',
+              autoClose: p.alertStrategy?.autoClose || '604800s',
+              rateLimitPeriod: p.alertStrategy?.notificationRateLimit?.period || '300s',
+            };
+          })
+        : [];
+
+    const bigqueryDatasets =
+      bqDatasetsRes.status === 'fulfilled' && Array.isArray(bqDatasetsRes.value?.datasets)
+        ? bqDatasetsRes.value.datasets
+            .map((d) => ({
+              datasetId: d.datasetReference?.datasetId || '',
+              location: d.location || 'US',
+            }))
+            .filter((d) => d.datasetId && !d.datasetId.startsWith('_'))
+        : [];
+
+    return res.json({
+      projectId,
+      defaultRegion,
+      vms,
+      gcsBuckets,
+      logSinks,
+      logBuckets,
+      alertPolicies,
+      bigqueryDatasets,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to load DevOps & SRE Logging Hub telemetry.',
+    });
+  }
+});
+
+// PILLAR 1: Inside-VM Live `journalctl` / `/var/log/*` / `dmesg` Zero-Agent SSH Log Streamer
+app.post('/api/project/:projectId/chrono-logs/vm-live-journal', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    vmName = '',
+    zone = '',
+    sourceType = 'SYSTEMD_ERRORS', // 'SYSTEMD_ERRORS' | 'AUTH_SECURITY' | 'KERNEL_OOM_DMESG' | 'SYSLOG_TAIL' | 'DOCKER_KUBELET' | 'FAILED_UNITS'
+    grepFilter = '',
+    linesLimit = 80,
+    ingestToCloudLogging = false,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    if (!vmName) {
+      return res.status(400).json({ error: 'Please select a Compute Engine VM to inspect.' });
+    }
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername: '',
+      token,
+    });
+    const effectiveZone = target.zone || zone || 'us-central1-a';
+    const vmRegion =
+      effectiveZone.split('-').slice(0, 2).join('-').toUpperCase() || 'US-CENTRAL1';
+
+    if (target.vmStatus !== 'RUNNING') {
+      return res.status(400).json({
+        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM to stream live inside-Linux journalctl & /var/log files.`,
+      });
+    }
+
+    const pyVmJournalCollector = `
+import os, sys, subprocess, json, base64, re, datetime
+
+b64_arg = sys.argv[1] if len(sys.argv) > 1 else ''
+cfg = json.loads(base64.b64decode(b64_arg).decode('utf-8')) if b64_arg else {}
+src_type = cfg.get('sourceType', 'SYSTEMD_ERRORS')
+grep_pat = (cfg.get('grepFilter') or '').strip()
+limit = max(20, min(200, int(cfg.get('linesLimit') or 80)))
+
+def run_sh(cmd, timeout=10):
+    try:
+        p = subprocess.run(['bash', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        return (p.stdout or '').strip()
+    except Exception as e:
+        return ''
+
+if src_type == 'AUTH_SECURITY':
+    cmd = f"sudo -n tail -n {limit} /var/log/auth.log 2>/dev/null || sudo -n tail -n {limit} /var/log/secure 2>/dev/null || sudo -n journalctl _COMM=sshd _COMM=sudo -n {limit} --no-pager -o short-iso 2>/dev/null || journalctl -n {limit} --no-pager -o short-iso"
+elif src_type == 'KERNEL_OOM_DMESG':
+    cmd = f"sudo -n dmesg -T 2>/dev/null | tail -n {limit} || dmesg 2>/dev/null | tail -n {limit} || sudo -n journalctl -k -n {limit} --no-pager -o short-iso"
+elif src_type == 'SYSLOG_TAIL':
+    cmd = f"sudo -n tail -n {limit} /var/log/syslog 2>/dev/null || sudo -n tail -n {limit} /var/log/messages 2>/dev/null || sudo -n journalctl -n {limit} --no-pager -o short-iso"
+elif src_type == 'DOCKER_KUBELET':
+    cmd = f"sudo -n journalctl -u docker -u containerd -u kubelet -n {limit} --no-pager -o short-iso 2>/dev/null || sudo -n tail -n {limit} /var/log/syslog 2>/dev/null"
+elif src_type == 'FAILED_UNITS':
+    cmd = f"(systemctl --failed --no-pager --no-legend; echo '---'; sudo -n journalctl -p 0..3 -n {limit} --no-pager -o short-iso 2>/dev/null || journalctl -p 0..3 -n {limit} --no-pager -o short-iso)"
+else:
+    cmd = f"sudo -n journalctl -p 0..4 -n {limit} --no-pager -o short-iso 2>/dev/null || journalctl -p 0..4 -n {limit} --no-pager -o short-iso 2>/dev/null || sudo -n tail -n {limit} /var/log/syslog 2>/dev/null"
+
+raw_out = run_sh(cmd, timeout=12)
+raw_lines = [ln for ln in raw_out.splitlines() if ln.strip()]
+
+if grep_pat:
+    try:
+        rx = re.compile(grep_pat, re.IGNORECASE)
+        raw_lines = [ln for ln in raw_lines if rx.search(ln)]
+    except Exception:
+        raw_lines = [ln for ln in raw_lines if grep_pat.lower() in ln.lower()]
+
+uptime_str = run_sh("uptime -p 2>/dev/null || uptime", timeout=4)
+failed_units_raw = run_sh("systemctl --failed --no-pager --no-legend 2>/dev/null", timeout=4)
+failed_units = [u.split()[0] for u in failed_units_raw.splitlines() if u.strip()]
+oom_kills = run_sh("sudo -n dmesg 2>/dev/null | grep -i -E 'Out of memory|Killed process' | tail -n 5", timeout=4)
+ssh_fails = run_sh("sudo -n grep -i 'Failed password' /var/log/auth.log 2>/dev/null | tail -n 10", timeout=4)
+
+mem_info = 'N/A'
+try:
+    m_map = {}
+    with open('/proc/meminfo', 'r') as mf:
+        for mln in mf:
+            parts = mln.split(':')
+            if len(parts) == 2:
+                m_map[parts[0].strip()] = int(parts[1].strip().split()[0])
+    tot_mb = max(1, m_map.get('MemTotal', 0) // 1024)
+    avail_mb = m_map.get('MemAvailable', m_map.get('MemFree', 0)) // 1024
+    used_mb = max(0, tot_mb - avail_mb)
+    mem_info = f"{used_mb}/{tot_mb} MB ({round((used_mb * 100.0) / tot_mb, 1)}%)"
+except Exception:
+    pass
+
+disk_info = 'N/A'
+try:
+    sv = os.statvfs('/')
+    tot_gb = round((sv.f_frsize * sv.f_blocks) / (1024**3), 1)
+    used_gb = round((sv.f_frsize * (sv.f_blocks - sv.f_bfree)) / (1024**3), 1)
+    pct_d = round((used_gb / max(0.1, tot_gb)) * 100, 1)
+    disk_info = f"{used_gb}/{tot_gb} GB ({pct_d}%)"
+except Exception:
+    pass
+
+entries = []
+now_iso = datetime.datetime.utcnow().isoformat() + 'Z'
+for idx, ln in enumerate(reversed(raw_lines[-limit:])):
+    sev = 'INFO'
+    low = ln.lower()
+    if any(k in low for k in ['panic', 'fatal', 'out of memory', 'killed process', 'emerg', 'crit', 'segfault']):
+        sev = 'CRITICAL'
+    elif any(k in low for k in ['error', 'failed', 'denied', 'invalid user', 'refused', 'exception', 'err']):
+        sev = 'ERROR'
+    elif any(k in low for k in ['warn', 'timeout', 'retry', 'deprecated', ' throttling']):
+        sev = 'WARNING'
+
+    unit = src_type.lower()
+    pid = ''
+    msg = ln
+    m = re.match(r'^(\\S+)\\s+(\\S+)\\s+([^:\\[\\s]+)(?:\\[(\\d+)\\])?:\\s*(.*)$', ln)
+    ts = now_iso
+    if m:
+        ts_cand, _host, unit_cand, pid_cand, msg_cand = m.groups()
+        unit = unit_cand
+        pid = pid_cand or ''
+        msg = msg_cand
+        if 'T' in ts_cand:
+            ts = ts_cand
+
+    entries.append({
+        'id': f'vm-log-{idx+1}',
+        'timestamp': ts,
+        'severity': sev,
+        'unit': unit,
+        'pid': pid,
+        'message': msg,
+        'rawLine': ln,
+    })
+
+print(json.dumps({
+    'sourceType': src_type,
+    'commandExecuted': cmd,
+    'vitals': {
+        'uptime': uptime_str,
+        'memorySummary': mem_info,
+        'rootDiskSummary': disk_info,
+        'failedSystemdUnits': failed_units,
+        'failedUnitsCount': len(failed_units),
+        'oomKillEventsCount': len([x for x in oom_kills.splitlines() if x.strip()]),
+        'recentSshFailedCount': len([x for x in ssh_fails.splitlines() if x.strip()]),
+    },
+    'entriesCount': len(entries),
+    'entries': entries,
+}))
+`;
+
+    const b64Cfg = Buffer.from(
+      JSON.stringify({ sourceType, grepFilter, linesLimit }),
+      'utf8'
+    ).toString('base64');
+
+    let payload = null;
+    let engineUsed = 'SSH2_DIRECT_JOURNAL';
+
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        const b64Py = Buffer.from(pyVmJournalCollector, 'utf8').toString('base64');
+        const cmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64Py}').decode('utf-8'))" '${b64Cfg}'`;
+        const rawOut = await withSftpSession(target, (_sftp, conn) => {
+          return new Promise((resolve, reject) => {
+            conn.exec(cmd, (err, stream) => {
+              if (err || !stream) return reject(err || new Error('SSH exec failed'));
+              let out = '';
+              stream.on('data', (d) => {
+                out += d.toString();
+              });
+              stream.stderr?.on('data', () => {});
+              stream.on('close', () => resolve(out));
+            });
+          });
+        });
+        const lines = String(rawOut || '').trim().split('\n').filter(Boolean);
+        payload = lines.length ? JSON.parse(lines[lines.length - 1]) : null;
+      } catch {
+        payload = null;
+      }
+    }
+
+    if (!payload) {
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone: effectiveZone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyVmJournalCollector,
+        args: [b64Cfg],
+      });
+      engineUsed = pyRes.engineUsed;
+      const lines = pyRes.stdout.trim().split('\n').filter(Boolean);
+      payload = JSON.parse(lines[lines.length - 1] || '{}');
+    }
+
+    // Optional: 1-Click Ingest Inside-VM Logs into Cloud Logging (`entries:write`)
+    let ingestedCount = 0;
+    const logStreamName = `projects/${projectId}/logs/cloudpulse-vm-${vmName.toLowerCase()}`;
+    if (ingestToCloudLogging && Array.isArray(payload?.entries) && payload.entries.length > 0) {
+      const batch = payload.entries.slice(0, 30).map((e) => ({
+        logName: logStreamName,
+        resource: {
+          type: 'gce_instance',
+          labels: {
+            project_id: projectId,
+            instance_id: vmName,
+            zone: effectiveZone,
+          },
+        },
+        severity: e.severity === 'CRITICAL' ? 'CRITICAL' : e.severity === 'ERROR' ? 'ERROR' : e.severity === 'WARNING' ? 'WARNING' : 'INFO',
+        jsonPayload: {
+          vmName,
+          zone: effectiveZone,
+          sourceType,
+          unit: e.unit,
+          pid: e.pid,
+          message: e.message,
+          rawLine: e.rawLine,
+          bridgedBy: 'CloudPulse Zero-Agent SSH Log Surgeon',
+        },
+      }));
+      await gcpFetch(
+        `https://logging.googleapis.com/v2/entries:write`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { entries: batch },
+          timeout: 8000,
+        }
+      );
+      ingestedCount = batch.length;
+    }
+
+    return res.json({
+      projectId,
+      vmName,
+      zone: effectiveZone,
+      vmRegion,
+      engineUsed,
+      ingestedToCloudLogging: Boolean(ingestToCloudLogging),
+      ingestedCount,
+      cloudLoggingLql: `logName="${logStreamName}"`,
+      ...payload,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to stream live inside-VM journalctl logs.',
+    });
+  }
+});
+
+// PILLAR 2A: Pre-Flight Collision Check for Exporting Logs to Same-Region GCS (`gs://`)
+app.post('/api/project/:projectId/chrono-logs/export-to-gcs/preflight', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    bucketName = '',
+    objectName = '',
+    location = 'US-CENTRAL1',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const desiredLocation = String(location || 'US-CENTRAL1').trim().toUpperCase();
+    const cleanBucket =
+      String(bucketName || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '-') ||
+      `${projectId}-sre-logs-${desiredLocation.toLowerCase()}`.slice(0, 62);
+
+    const cleanObjectName =
+      String(objectName || '')
+        .trim()
+        .replace(/^\/+/, '') ||
+      `forensic-logs-${projectId}.jsonl`;
+
+    let bucketExists = false;
+    let bucketLocation = desiredLocation;
+    try {
+      const bMeta = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(cleanBucket)}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      if (bMeta && bMeta.name) {
+        bucketExists = true;
+        bucketLocation = String(bMeta.location || desiredLocation).toUpperCase();
+      }
+    } catch {
+      bucketExists = false;
+    }
+
+    let existsInGcs = false;
+    let existingGcsSizeBytes = null;
+    let existingUpdated = null;
+    if (bucketExists) {
+      try {
+        const objMeta = await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            cleanBucket
+          )}/o/${encodeURIComponent(cleanObjectName)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+        if (objMeta && objMeta.name) {
+          existsInGcs = true;
+          existingGcsSizeBytes = Number(objMeta.size || 0);
+          existingUpdated = objMeta.updated || null;
+        }
+      } catch {
+        existsInGcs = false;
+      }
+    }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const keepBothObjectName = cleanObjectName.endsWith('.jsonl')
+      ? `${cleanObjectName.slice(0, -6)}-${stamp}.jsonl`
+      : `${cleanObjectName}-${stamp}`;
+
+    return res.json({
+      ok: true,
+      projectId,
+      bucketName: cleanBucket,
+      bucketExists,
+      bucketLocation,
+      sameRegionZeroEgress: true,
+      objectName: cleanObjectName,
+      gcsUri: `gs://${cleanBucket}/${cleanObjectName}`,
+      hasCollision: existsInGcs,
+      existsInGcs,
+      existingGcsSizeBytes,
+      existingUpdated,
+      keepBothObjectName,
+      keepBothGcsUri: `gs://${cleanBucket}/${keepBothObjectName}`,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to preflight GCS log export target.',
+    });
+  }
+});
+
+// PILLAR 2B: Execute 1-Click Log Export -> Same-Region GCS (`gs://` JSONL / NDJSON Bundle)
+app.post('/api/project/:projectId/chrono-logs/export-to-gcs', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    bucketName = '',
+    objectName = '',
+    location = 'US-CENTRAL1',
+    createBucketIfMissing = true,
+    collisionResolution = 'KEEP_BOTH', // 'KEEP_BOTH' | 'OVERWRITE'
+    exportScope = 'CURRENT_STREAM',
+    lqlFilter = '',
+    entries = [],
+  } = req.body || {};
+
+  try {
+    const { token, account } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const desiredLocation = String(location || 'US-CENTRAL1').trim().toUpperCase();
+    const cleanBucket =
+      String(bucketName || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '-') ||
+      `${projectId}-sre-logs-${desiredLocation.toLowerCase()}`.slice(0, 62);
+
+    let baseObjectName =
+      String(objectName || '')
+        .trim()
+        .replace(/^\/+/, '') ||
+      `forensic-logs-${projectId}.jsonl`;
+    if (!baseObjectName.endsWith('.jsonl') && !baseObjectName.endsWith('.json')) {
+      baseObjectName = `${baseObjectName}.jsonl`;
+    }
+
+    // 1. Ensure target Cloud Storage bucket exists
+    let bucketCreated = false;
+    let bucketLocation = desiredLocation;
+    try {
+      const bMeta = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(cleanBucket)}`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      );
+      if (bMeta?.location) {
+        bucketLocation = String(bMeta.location).toUpperCase();
+      }
+    } catch {
+      if (!createBucketIfMissing) {
+        return res.status(404).json({
+          error: `Bucket gs://${cleanBucket} does not exist.`,
+        });
+      }
+      await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            name: cleanBucket,
+            location: desiredLocation,
+            storageClass: 'STANDARD',
+            iamConfiguration: {
+              uniformBucketLevelAccess: { enabled: true },
+              publicAccessPrevention: 'enforced',
+            },
+          },
+          timeout: 10000,
+        }
+      );
+      bucketCreated = true;
+    }
+
+    // 2. Check collision
+    let finalObjectName = baseObjectName;
+    if (collisionResolution === 'KEEP_BOTH') {
+      try {
+        const existingObj = await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            cleanBucket
+          )}/o/${encodeURIComponent(baseObjectName)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+        if (existingObj && existingObj.name) {
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          finalObjectName = baseObjectName.endsWith('.jsonl')
+            ? `${baseObjectName.slice(0, -6)}-${stamp}.jsonl`
+            : `${baseObjectName}-${stamp}`;
+        }
+      } catch {
+        // Object does not exist
+      }
+    }
+
+    // 3. Serialize NDJSON / JSONL forensic log bundle with SHA-256 header line
+    const exportedLines = (Array.isArray(entries) ? entries : []).map((e) =>
+      JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        projectId,
+        exportScope,
+        lqlFilter,
+        exportedBy: account || 'authenticated-sre',
+        ...e,
+      })
+    );
+    const bodyText = exportedLines.join('\n') + '\n';
+    const bodyBuffer = Buffer.from(bodyText, 'utf8');
+    const sha256 = crypto.createHash('sha256').update(bodyBuffer).digest('hex');
+
+    // 4. Upload to Cloud Storage
+    const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+      cleanBucket
+    )}/o?uploadType=media&name=${encodeURIComponent(finalObjectName)}`;
+
+    const uploadResp = await axios.post(uploadUrl, bodyBuffer, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-goog-user-project': projectId,
+        'Content-Type': 'application/x-ndjson',
+      },
+      timeout: 20000,
+    });
+
+    return res.json({
+      ok: true,
+      projectId,
+      bucketName: cleanBucket,
+      bucketCreated,
+      bucketLocation,
+      objectName: finalObjectName,
+      gcsUri: `gs://${cleanBucket}/${finalObjectName}`,
+      entryCount: exportedLines.length,
+      sizeBytes: Number(uploadResp.data?.size || bodyBuffer.length),
+      sha256,
+      generation: uploadResp.data?.generation || null,
+      exportedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to export logs to Cloud Storage.',
+    });
+  }
+});
+
+// PILLAR 3: Live Cloud Logging Sinks & Log Buckets (Retention + Analytics) Architect
+app.post('/api/project/:projectId/chrono-logs/sinks-buckets/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'CREATE_OR_UPDATE_SINK', // 'CREATE_OR_UPDATE_SINK' | 'DELETE_SINK' | 'UPDATE_BUCKET_RETENTION'
+    sinkName = '',
+    destinationType = 'GCS_BUCKET', // 'GCS_BUCKET' | 'BIGQUERY_DATASET'
+    destinationTarget = '',
+    location = 'US-CENTRAL1',
+    filter = '',
+    description = 'Provisioned via CloudPulse 100X DevOps & SRE Logging Studio',
+    bucketId = '_Default',
+    bucketLocation = 'global',
+    retentionDays = 90,
+    analyticsEnabled = true,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    if (action === 'DELETE_SINK') {
+      if (!sinkName || sinkName === '_Default' || sinkName === '_Required') {
+        return res.status(400).json({ error: 'Cannot delete built-in _Default or _Required sinks.' });
+      }
+      await gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/sinks/${encodeURIComponent(sinkName)}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      return res.json({
+        ok: true,
+        action,
+        deletedSink: sinkName,
+        message: `Deleted Cloud Logging Sink "${sinkName}".`,
+      });
+    }
+
+    if (action === 'UPDATE_BUCKET_RETENTION') {
+      const cleanDays = Math.max(1, Math.min(3650, Number(retentionDays) || 30));
+      const updateMask =
+        bucketId === '_Default'
+          ? 'retentionDays,analyticsEnabled'
+          : 'retentionDays';
+      const updatedBucket = await gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          bucketLocation || 'global'
+        )}/buckets/${encodeURIComponent(bucketId)}?updateMask=${updateMask}`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            retentionDays: cleanDays,
+            ...(bucketId === '_Default' ? { analyticsEnabled: Boolean(analyticsEnabled) } : {}),
+          },
+          timeout: 10000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action,
+        bucketId,
+        retentionDays: updatedBucket?.retentionDays || cleanDays,
+        analyticsEnabled: Boolean(updatedBucket?.analyticsEnabled ?? analyticsEnabled),
+        message: `Updated Log Bucket "${bucketId}" retention to ${cleanDays} days (Log Analytics: ${
+          analyticsEnabled ? 'ENABLED' : 'UNCHANGED'
+        }).`,
+      });
+    }
+
+    // CREATE_OR_UPDATE_SINK
+    const cleanSinkName =
+      String(sinkName || `cloudpulse-sre-sink-${Date.now().toString().slice(-4)}`)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '-')
+        .slice(0, 60);
+
+    const desiredLoc = String(location || 'US-CENTRAL1').trim().toUpperCase();
+    let destinationUri = '';
+    let resolvedTargetName = String(destinationTarget || '').trim();
+
+    if (destinationType === 'BIGQUERY_DATASET') {
+      const cleanDataset =
+        resolvedTargetName.replace(/[^a-zA-Z0-9_]/g, '_') || 'cloudpulse_sre_logs';
+      resolvedTargetName = cleanDataset;
+      // Ensure BigQuery dataset exists
+      try {
+        await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets/${encodeURIComponent(cleanDataset)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+      } catch {
+        await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              datasetReference: { projectId, datasetId: cleanDataset },
+              location: desiredLoc,
+              description: 'CloudPulse SRE Log Sink Analytics Dataset',
+            },
+            timeout: 8000,
+          }
+        );
+      }
+      destinationUri = `bigquery.googleapis.com/projects/${projectId}/datasets/${cleanDataset}`;
+    } else {
+      const cleanBucket =
+        resolvedTargetName.toLowerCase().replace(/[^a-z0-9._-]/g, '-') ||
+        `${projectId}-sre-sink-${desiredLoc.toLowerCase()}`.slice(0, 62);
+      resolvedTargetName = cleanBucket;
+      try {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(cleanBucket)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+      } catch {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              name: cleanBucket,
+              location: desiredLoc,
+              storageClass: 'STANDARD',
+              iamConfiguration: {
+                uniformBucketLevelAccess: { enabled: true },
+                publicAccessPrevention: 'enforced',
+              },
+            },
+            timeout: 10000,
+          }
+        );
+      }
+      destinationUri = `storage.googleapis.com/${cleanBucket}`;
+    }
+
+    let sinkRes = null;
+    try {
+      sinkRes = await gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/sinks?uniqueWriterIdentity=true`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            name: cleanSinkName,
+            destination: destinationUri,
+            filter: String(filter || '').trim(),
+            description,
+          },
+          timeout: 10000,
+        }
+      );
+    } catch {
+      sinkRes = await gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/sinks/${encodeURIComponent(
+          cleanSinkName
+        )}?uniqueWriterIdentity=true&updateMask=destination,filter,description`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            name: cleanSinkName,
+            destination: destinationUri,
+            filter: String(filter || '').trim(),
+            description,
+          },
+          timeout: 10000,
+        }
+      );
+    }
+
+    // Automatically bind the sink's writerIdentity on the destination GCS bucket if applicable
+    let writerIamGranted = false;
+    const writerIdentity = sinkRes?.writerIdentity || '';
+    if (destinationType === 'GCS_BUCKET' && writerIdentity) {
+      try {
+        const iamPol = await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            resolvedTargetName
+          )}/iam`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        );
+        const bindings = Array.isArray(iamPol?.bindings) ? [...iamPol.bindings] : [];
+        const role = 'roles/storage.objectCreator';
+        const existingRole = bindings.find((b) => b.role === role);
+        if (existingRole) {
+          if (!existingRole.members.includes(writerIdentity)) {
+            existingRole.members.push(writerIdentity);
+          }
+        } else {
+          bindings.push({ role, members: [writerIdentity] });
+        }
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            resolvedTargetName
+          )}/iam`,
+          token,
+          projectId,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: { ...iamPol, bindings },
+            timeout: 7000,
+          }
+        );
+        writerIamGranted = true;
+      } catch {
+        writerIamGranted = false;
+      }
+    }
+
+    return res.json({
+      ok: true,
+      action,
+      sink: {
+        name: sinkRes?.name || cleanSinkName,
+        destination: sinkRes?.destination || destinationUri,
+        filter: sinkRes?.filter || filter,
+        writerIdentity,
+        writerIamGranted,
+      },
+      destinationType,
+      destinationTarget: resolvedTargetName,
+      message: `Cloud Logging Sink "${cleanSinkName}" active -> ${destinationUri}${
+        writerIamGranted ? ' (writerIdentity IAM automatically granted)' : ''
+      }.`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to execute Cloud Logging Sink / Bucket operation.',
+    });
+  }
+});
+
+// PILLAR 4: 1-Click Cloud Monitoring Log-Match Alert Policy Provisioner (`alertPolicies`)
+app.post('/api/project/:projectId/chrono-logs/alert-policies/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'CREATE_LOG_ALERT_POLICY', // 'CREATE_LOG_ALERT_POLICY' | 'TOGGLE_ALERT_POLICY' | 'DELETE_ALERT_POLICY'
+    policyName = '',
+    displayName = '',
+    lqlFilter = 'severity>=ERROR',
+    rateLimitSeconds = 300,
+    autoCloseSeconds = 604800,
+    enabled = true,
+    runbookMarkdown = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    if (action === 'DELETE_ALERT_POLICY') {
+      if (!policyName) return res.status(400).json({ error: 'policyName is required.' });
+      const fullPath = policyName.startsWith('projects/')
+        ? policyName
+        : `projects/${projectId}/alertPolicies/${policyName}`;
+      await gcpFetch(
+        `https://monitoring.googleapis.com/v3/${fullPath}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      return res.json({
+        ok: true,
+        action,
+        deletedPolicy: fullPath,
+        message: `Deleted Cloud Monitoring Alert Policy "${fullPath.split('/').pop()}".`,
+      });
+    }
+
+    if (action === 'TOGGLE_ALERT_POLICY') {
+      if (!policyName) return res.status(400).json({ error: 'policyName is required.' });
+      const fullPath = policyName.startsWith('projects/')
+        ? policyName
+        : `projects/${projectId}/alertPolicies/${policyName}`;
+      const updated = await gcpFetch(
+        `https://monitoring.googleapis.com/v3/${fullPath}?updateMask=enabled`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { name: fullPath, enabled: Boolean(enabled) },
+          timeout: 8000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action,
+        policy: updated,
+        message: `Alert Policy "${updated?.displayName || fullPath.split('/').pop()}" is now ${
+          enabled ? 'ENABLED' : 'DISABLED'
+        }.`,
+      });
+    }
+
+    // CREATE_LOG_ALERT_POLICY
+    const cleanTitle =
+      String(displayName || '').trim() ||
+      `CloudPulse SRE Log Alert — ${(lqlFilter || 'severity>=ERROR').slice(0, 42)}`;
+    const cleanFilter = String(lqlFilter || 'severity>=ERROR').trim();
+    const docContent =
+      String(runbookMarkdown || '').trim() ||
+      `### CloudPulse 2026 Automated SRE Log-Match Alert\n- **Project**: \`${projectId}\`\n- **Matched LQL Filter**: \`${cleanFilter}\`\n- **Triage Action**: Open CloudPulse **Logs & Cloud Shell** -> inspect the +-30s causal window and Drain3 cluster signature.`;
+
+    const createdPolicy = await gcpFetch(
+      `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(
+        projectId
+      )}/alertPolicies`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          displayName: cleanTitle,
+          combiner: 'OR',
+          enabled: true,
+          documentation: {
+            content: docContent,
+            mimeType: 'text/markdown',
+          },
+          conditions: [
+            {
+              displayName: `LQL Match: ${cleanFilter.slice(0, 65)}`,
+              conditionMatchedLog: {
+                filter: cleanFilter,
+              },
+            },
+          ],
+          alertStrategy: {
+            notificationRateLimit: {
+              period: `${Math.max(60, Number(rateLimitSeconds) || 300)}s`,
+            },
+            autoClose: `${Math.max(1800, Number(autoCloseSeconds) || 604800)}s`,
+          },
+        },
+        timeout: 10000,
+      }
+    );
+
+    return res.json({
+      ok: true,
+      action,
+      policy: {
+        name: createdPolicy?.name,
+        policyId: String(createdPolicy?.name || '').split('/').pop(),
+        displayName: createdPolicy?.displayName || cleanTitle,
+        filter: cleanFilter,
+        enabled: true,
+      },
+      message: `Created live Cloud Monitoring Log-Match Alert Policy "${cleanTitle}" (${String(
+        createdPolicy?.name || ''
+      )
+        .split('/')
+        .pop()}).`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to execute Cloud Monitoring Alert Policy operation.',
+    });
+  }
+});
+
+// ============================================================================
 // INNOVATION #4: LIVE GCP API QUOTA SATURATION & HTTP 429 OUTAGE EARLY-WARNING RADAR
 // (`compute.googleapis.com/v1/projects/:id` + `run.googleapis.com/v2` +
 //  `secretmanager.googleapis.com/v1` + `serviceusage.googleapis.com/v1beta1`)
@@ -26971,6 +28077,362 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to empty and delete gs://${bucketName}`,
+      });
+    }
+  }
+);
+
+// 8b. 1-Tap Sweep / Empty Bucket (Keep Bucket Intact, Purge All Objects or Folder Prefix)
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/sweep',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const prefix = String(req.body?.prefix || '').trim();
+    const includeVersions = req.body?.includeVersions !== false;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const queryParts = [
+        includeVersions ? 'versions=true' : 'versions=false',
+        'maxResults=1000',
+      ];
+      if (prefix) {
+        queryParts.push(`prefix=${encodeURIComponent(prefix)}`);
+      }
+
+      const listRes = await gcpHttp.get(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+          bucketName
+        )}/o?${queryParts.join('&')}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-goog-user-project': projectId,
+          },
+          timeout: 10000,
+        }
+      );
+
+      const items = listRes.data?.items || [];
+      let purgedCount = 0;
+      let purgedBytes = 0;
+
+      for (let i = 0; i < items.length; i += 20) {
+        const batch = items.slice(i, i + 20);
+        await Promise.allSettled(
+          batch.map((obj) => {
+            markArtifactDeleting(`${bucketName}/${obj.name}`);
+            return gcpHttp
+              .delete(
+                `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  bucketName
+                )}/o/${encodeURIComponent(obj.name)}${
+                  includeVersions && obj.generation
+                    ? `?generation=${encodeURIComponent(obj.generation)}`
+                    : ''
+                }`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'x-goog-user-project': projectId,
+                  },
+                  timeout: 6000,
+                }
+              )
+              .then(() => {
+                purgedCount += 1;
+                purgedBytes += Number(obj.size || 0);
+              });
+          })
+        );
+      }
+
+      recordFlightEvent(projectId, {
+        actionType: prefix ? 'STORAGE_FOLDER_SWEEP' : 'STORAGE_BUCKET_SWEEP_KEEP',
+        title: prefix
+          ? `Swept folder gs://${bucketName}/${prefix} (${purgedCount} objects deleted)`
+          : `Swept bucket gs://${bucketName} (${purgedCount} objects deleted, bucket preserved)`,
+        targetName: prefix ? `${bucketName}/${prefix}` : bucketName,
+        region: 'GLOBAL',
+        undoable: false,
+      });
+
+      res.json({
+        ok: true,
+        bucketName,
+        prefix: prefix || null,
+        keptBucket: true,
+        purgedCount,
+        purgedBytes,
+        message: prefix
+          ? `Swept folder gs://${bucketName}/${prefix} — deleted ${purgedCount} object(s)!`
+          : `Swept gs://${bucketName} clean — deleted ${purgedCount} object(s) while keeping bucket gs://${bucketName} intact!`,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to sweep gs://${bucketName}`,
+      });
+    }
+  }
+);
+
+// 8c. Selective Multi-Object & Multi-Folder Batch Delete inside a Bucket
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/objects/batch-delete',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const rawObjectNames = Array.isArray(req.body?.objectNames)
+      ? req.body.objectNames.filter(Boolean)
+      : [];
+    const rawPrefixes = Array.isArray(req.body?.prefixes)
+      ? req.body.prefixes.filter(Boolean)
+      : [];
+
+    if (rawObjectNames.length === 0 && rawPrefixes.length === 0) {
+      return res.status(400).json({
+        error: 'Select at least one object or folder prefix to delete.',
+      });
+    }
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const targetsSet = new Set(rawObjectNames.map((n) => String(n)));
+
+      // Expand any selected folder prefixes into concrete object names
+      for (const pfx of rawPrefixes) {
+        const cleanPrefix = String(pfx).trim();
+        if (!cleanPrefix) continue;
+        const listRes = await gcpHttp
+          .get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o?prefix=${encodeURIComponent(cleanPrefix)}&maxResults=1000`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 8000,
+            }
+          )
+          .catch(() => ({ data: { items: [] } }));
+        for (const item of listRes.data?.items || []) {
+          if (item?.name) targetsSet.add(item.name);
+        }
+      }
+
+      const allObjectNames = Array.from(targetsSet);
+      let deletedCount = 0;
+      const errors = [];
+
+      for (let i = 0; i < allObjectNames.length; i += 20) {
+        const batch = allObjectNames.slice(i, i + 20);
+        await Promise.allSettled(
+          batch.map((objName) => {
+            markArtifactDeleting(`${bucketName}/${objName}`);
+            return gcpHttp
+              .delete(
+                `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  bucketName
+                )}/o/${encodeURIComponent(objName)}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'x-goog-user-project': projectId,
+                  },
+                  timeout: 6000,
+                }
+              )
+              .then(() => {
+                deletedCount += 1;
+              })
+              .catch((e) => {
+                errors.push({
+                  objectName: objName,
+                  error: e.response?.data?.error?.message || e.message,
+                });
+              });
+          })
+        );
+      }
+
+      recordFlightEvent(projectId, {
+        actionType: 'STORAGE_OBJECTS_BATCH_DELETE',
+        title: `Batch-deleted ${deletedCount} selected object(s) from gs://${bucketName}`,
+        targetName: bucketName,
+        region: 'GLOBAL',
+        undoable: false,
+      });
+
+      res.json({
+        ok: true,
+        bucketName,
+        requestedCount: allObjectNames.length,
+        deletedCount,
+        failedCount: errors.length,
+        errors: errors.slice(0, 10),
+        message: `Deleted ${deletedCount} of ${allObjectNames.length} selected object(s) from gs://${bucketName}!`,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to batch-delete objects from gs://${bucketName}`,
+      });
+    }
+  }
+);
+
+// 8d. Multi-Bucket Fleet Batch Action (SWEEP_KEEP_BUCKETS or EMPTY_AND_DELETE_BUCKETS)
+app.post(
+  '/api/project/:id/storage/buckets/batch-action',
+  async (req, res) => {
+    const { id: projectId } = req.params;
+    const bucketNames = Array.isArray(req.body?.bucketNames)
+      ? req.body.bucketNames.map((b) => String(b).trim()).filter(Boolean)
+      : [];
+    const mode = String(req.body?.mode || 'SWEEP_KEEP_BUCKETS').toUpperCase();
+
+    if (bucketNames.length === 0) {
+      return res.status(400).json({
+        error: 'Select at least one Cloud Storage bucket.',
+      });
+    }
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const results = [];
+      let totalObjectsPurged = 0;
+      let bucketsDeleted = 0;
+
+      for (const bName of bucketNames) {
+        try {
+          if (mode === 'EMPTY_AND_DELETE_BUCKETS') {
+            markArtifactDeleting(`bucket:${bName}`);
+          }
+          const listRes = await gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bName
+            )}/o?versions=true&maxResults=1000`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 8000,
+            }
+          );
+          const items = listRes.data?.items || [];
+          let purgedInBucket = 0;
+
+          for (let i = 0; i < items.length; i += 20) {
+            const batch = items.slice(i, i + 20);
+            await Promise.allSettled(
+              batch.map((obj) => {
+                markArtifactDeleting(`${bName}/${obj.name}`);
+                return gcpHttp
+                  .delete(
+                    `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                      bName
+                    )}/o/${encodeURIComponent(obj.name)}${
+                      obj.generation
+                        ? `?generation=${encodeURIComponent(obj.generation)}`
+                        : ''
+                    }`,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        'x-goog-user-project': projectId,
+                      },
+                      timeout: 5000,
+                    }
+                  )
+                  .then(() => {
+                    purgedInBucket += 1;
+                    totalObjectsPurged += 1;
+                  });
+              })
+            );
+          }
+
+          if (mode === 'EMPTY_AND_DELETE_BUCKETS') {
+            await gcpHttp.delete(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                bName
+              )}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'x-goog-user-project': projectId,
+                },
+                timeout: 8000,
+              }
+            );
+            bucketsDeleted += 1;
+          }
+
+          results.push({
+            bucketName: bName,
+            ok: true,
+            purgedObjects: purgedInBucket,
+            bucketDeleted: mode === 'EMPTY_AND_DELETE_BUCKETS',
+          });
+        } catch (bErr) {
+          results.push({
+            bucketName: bName,
+            ok: false,
+            error: bErr.response?.data?.error?.message || bErr.message,
+          });
+        }
+      }
+
+      recordFlightEvent(projectId, {
+        actionType:
+          mode === 'EMPTY_AND_DELETE_BUCKETS'
+            ? 'STORAGE_FLEET_BATCH_DELETE'
+            : 'STORAGE_FLEET_BATCH_SWEEP',
+        title:
+          mode === 'EMPTY_AND_DELETE_BUCKETS'
+            ? `Emptied & deleted ${bucketsDeleted}/${bucketNames.length} selected bucket(s) (${totalObjectsPurged} objects purged)`
+            : `Swept ${bucketNames.length} selected bucket(s) clean (${totalObjectsPurged} objects purged, buckets preserved)`,
+        targetName: bucketNames.join(', '),
+        region: 'GLOBAL',
+        undoable: false,
+      });
+
+      res.json({
+        ok: true,
+        mode,
+        totalBuckets: bucketNames.length,
+        bucketsDeleted,
+        totalObjectsPurged,
+        results,
+        message:
+          mode === 'EMPTY_AND_DELETE_BUCKETS'
+            ? `Emptied and permanently deleted ${bucketsDeleted}/${bucketNames.length} selected bucket(s) (${totalObjectsPurged} objects purged)!`
+            : `Swept ${bucketNames.length} selected bucket(s) clean — purged ${totalObjectsPurged} object(s) while keeping all buckets intact!`,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to execute multi-bucket batch action.',
       });
     }
   }

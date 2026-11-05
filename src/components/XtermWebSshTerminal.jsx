@@ -5,6 +5,10 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import {
+  loadGdePrivacyConfig,
+  redactTextForGdeMode,
+} from './GdeStreamerPrivacyShield';
+import {
   Terminal,
   Wifi,
   WifiOff,
@@ -2084,7 +2088,11 @@ export default function XtermWebSshTerminal({
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === 'output' && typeof msg.data === 'string') {
-          term.write(msg.data);
+          const gdeCfg = loadGdePrivacyConfig();
+          const displayOutput = gdeCfg?.enabled
+            ? redactTextForGdeMode(msg.data, gdeCfg)
+            : msg.data;
+          term.write(displayOutput);
           // Mark shell ready once real PTY output arrives and flush any queued command
           if (
             !shellReadyRef.current &&
@@ -2124,7 +2132,11 @@ export default function XtermWebSshTerminal({
           }
         }
       } catch {
-        term.write(String(event.data));
+        const gdeCfg = loadGdePrivacyConfig();
+        const rawStr = String(event.data);
+        term.write(
+          gdeCfg?.enabled ? redactTextForGdeMode(rawStr, gdeCfg) : rawStr
+        );
       }
     };
 

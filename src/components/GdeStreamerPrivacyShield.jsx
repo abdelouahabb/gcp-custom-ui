@@ -11,10 +11,21 @@ const DEFAULT_CONFIG = {
   hideProjectIds: false,
   hidePublicIps: true,
   hideCreditBalances: true,
+  hideSecretsAndKeys: true,
   creditShieldMigratedV2: true,
   instructorAlias: 'gde-instructor@google-cloud-demo.dev',
   projectAliasPrefix: 'gde-demo-project',
 };
+
+let latestGdeRuntimeContext = {
+  accountEmail: '',
+  projects: [],
+  selectedProjectId: '',
+};
+
+export function getActiveGdeRuntimeContext() {
+  return latestGdeRuntimeContext;
+}
 
 export function loadGdePrivacyConfig() {
   try {
@@ -61,29 +72,99 @@ function isTeachingOrPrivateIp(ip) {
   return false;
 }
 
+const SYSTEM_SAFE_USERNAMES = new Set([
+  'root',
+  'ubuntu',
+  'debian',
+  'admin',
+  'user',
+  'users',
+  'home',
+  'gcloud',
+  'google',
+  'cloud',
+  'cloudpulse',
+  'docker',
+  'containerd',
+  'systemd',
+  'nobody',
+  'nogroup',
+  'www-data',
+  'nginx',
+  'postgres',
+  'mysql',
+  'redis',
+  'node',
+  'python',
+  'java',
+  'gde-instructor',
+  'gde_instructor',
+]);
+
 /**
  * Pure string redactor for GDE Tutorial / Screen-Share Mode.
- * Replaces personal emails, service account project numbers, Cloud Billing Account IDs,
- * GCP project numbers, public IPs, and remaining credit / bonus dollar balances.
+ * Replaces personal emails, derived SSH/OS-Login usernames, /home/<user> paths,
+ * service account project numbers, Cloud Billing Account IDs, GCP project numbers,
+ * public IPv4/IPv6s, OAuth/API secrets, and remaining credit / bonus dollar balances.
  */
-export function redactTextForGdeMode(text, cfg, context = {}) {
-  if (!cfg?.enabled || !text || typeof text !== 'string') return text;
+export function redactTextForGdeMode(text, cfg, context = null) {
+  const activeCfg = cfg || loadGdePrivacyConfig();
+  if (!activeCfg?.enabled || !text || typeof text !== 'string') return text;
 
+  const ctx = context || latestGdeRuntimeContext || {};
   let out = text;
   const aliasEmail =
-    (cfg.instructorAlias || '').trim() || 'gde-instructor@google-cloud-demo.dev';
+    (activeCfg.instructorAlias || '').trim() ||
+    'gde-instructor@google-cloud-demo.dev';
+  const aliasUser =
+    (aliasEmail.split('@')[0] || 'gde-instructor').replace(
+      /[^a-zA-Z0-9_-]/g,
+      '-'
+    ) || 'gde-instructor';
 
-  // 1. Exact authenticated user account email
-  if (cfg.hideEmails && context.accountEmail) {
-    const cleanEmail = String(context.accountEmail).trim();
+  // 1. Exact authenticated user account email + derived SSH / OS-Login POSIX usernames
+  if (activeCfg.hideEmails && ctx.accountEmail) {
+    const cleanEmail = String(ctx.accountEmail).trim();
     if (cleanEmail && cleanEmail.includes('@')) {
       const reExact = new RegExp(escapeRegExp(cleanEmail), 'gi');
       out = out.replace(reExact, aliasEmail);
+
+      const rawLocal = cleanEmail.split('@')[0] || '';
+      const sanitizedLocal = rawLocal.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const osLoginPosix = cleanEmail
+        .replace(/[^a-zA-Z0-9]/g, '_')
+        .toLowerCase();
+
+      if (osLoginPosix.length >= 4) {
+        out = out.replace(
+          new RegExp(escapeRegExp(osLoginPosix), 'gi'),
+          `${aliasUser.replace(/-/g, '_')}_iam`
+        );
+      }
+      for (const candidateUser of [rawLocal, sanitizedLocal]) {
+        if (
+          candidateUser &&
+          candidateUser.length >= 3 &&
+          !SYSTEM_SAFE_USERNAMES.has(candidateUser.toLowerCase())
+        ) {
+          const escUser = escapeRegExp(candidateUser);
+          // Mask /home/<user>, /Users/<user>, user@host, su - <user>, and standalone username tokens
+          out = out.replace(
+            new RegExp(`(\\/home\\/|\\/Users\\/)${escUser}(?=\\/|\\b|$)`, 'gi'),
+            `$1${aliasUser}`
+          );
+          out = out.replace(
+            new RegExp(`\\b${escUser}(?=@[a-zA-Z0-9._-]+)`, 'gi'),
+            aliasUser
+          );
+          out = out.replace(new RegExp(`\\b${escUser}\\b`, 'gi'), aliasUser);
+        }
+      }
     }
   }
 
-  // 2. General email addresses & GCP Service Account emails
-  if (cfg.hideEmails) {
+  // 2. General email addresses, GCP Service Account emails & generic /home/<personal_user> paths
+  if (activeCfg.hideEmails) {
     out = out.replace(
       /\b([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/g,
       (full, localPart, domain) => {
@@ -101,10 +182,18 @@ export function redactTextForGdeMode(text, cfg, context = {}) {
         return aliasEmail;
       }
     );
+    // Redact any non-system /home/<username> directory path in SFTP, Disk Hotspot Analyzer, and journalctl
+    out = out.replace(
+      /(\/home\/)([a-zA-Z0-9._-]{3,32})(?=\/|\s|$|['",:;)\]])/g,
+      (full, prefix, userDir) => {
+        if (SYSTEM_SAFE_USERNAMES.has(userDir.toLowerCase())) return full;
+        return `${prefix}${aliasUser}`;
+      }
+    );
   }
 
   // 3. Cloud Billing Account IDs (e.g., 01ABCD-23EFGH-45IJKL or billingAccounts/01ABCD-23EFGH-45IJKL)
-  if (cfg.hideBillingIds) {
+  if (activeCfg.hideBillingIds) {
     out = out.replace(
       /\b([0-9A-Fa-f]{6})-([0-9A-Fa-f]{6})-([0-9A-Fa-f]{6})\b/g,
       '01GDE•-••••••-TUTOR1'
@@ -115,28 +204,50 @@ export function redactTextForGdeMode(text, cfg, context = {}) {
     );
   }
 
-  // 4. GCP Project Numbers (#123456789012 or projects/123456789012)
-  if (cfg.hideProjectNumbers) {
+  // 4. GCP Project Numbers (#123456789012, projects/123456789012, Cloud Run URLs, Service Agents)
+  if (activeCfg.hideProjectNumbers) {
     out = out.replace(/#(\d{9,14})\b/g, '#9900••••••01');
     out = out.replace(/projects\/(\d{9,14})\b/g, 'projects/9900••••••01');
+    out = out.replace(/service-(\d{9,14})@/g, 'service-9900••••••01@');
+    out = out.replace(/\b(\d{9,14})-compute@/g, '9900••••••01-compute@');
+    out = out.replace(
+      /-(\d{9,14})(\.[a-z0-9-]+\.run\.app)\b/gi,
+      '-9900••••••01$2'
+    );
+    if (Array.isArray(ctx.projects)) {
+      ctx.projects.forEach((proj) => {
+        const pnum = String(proj?.projectNumber || '').trim();
+        if (pnum && pnum.length >= 8) {
+          out = out.replace(
+            new RegExp(`\\b${escapeRegExp(pnum)}\\b`, 'g'),
+            '9900••••••01'
+          );
+        }
+      });
+    }
   }
 
-  // 5. Optional: Active GCP Project IDs (e.g. my-personal-project-123 -> gde-demo-project-1)
-  if (cfg.hideProjectIds && Array.isArray(context.projects)) {
-    context.projects.forEach((proj, idx) => {
-      const pid = proj?.projectId;
-      if (!pid || pid.length < 4) return;
-      const replacement =
-        idx === 0
-          ? cfg.projectAliasPrefix || 'gde-demo-project'
-          : `${cfg.projectAliasPrefix || 'gde-demo-project'}-${idx + 1}`;
-      const reProj = new RegExp(`\\b${escapeRegExp(pid)}\\b`, 'g');
-      out = out.replace(reProj, replacement);
+  // 5. Optional: Active GCP Project IDs (matches inside gs:// bucket names, Cloud Run URLs & log streams)
+  if (activeCfg.hideProjectIds && Array.isArray(ctx.projects)) {
+    const sortedProjects = [...ctx.projects]
+      .map((proj, idx) => ({
+        projectId: proj?.projectId,
+        alias:
+          idx === 0
+            ? activeCfg.projectAliasPrefix || 'gde-demo-project'
+            : `${activeCfg.projectAliasPrefix || 'gde-demo-project'}-${idx + 1}`,
+      }))
+      .filter((p) => p.projectId && p.projectId.length >= 4)
+      .sort((a, b) => b.projectId.length - a.projectId.length);
+
+    sortedProjects.forEach(({ projectId: pid, alias }) => {
+      const reProj = new RegExp(escapeRegExp(pid), 'gi');
+      out = out.replace(reProj, alias);
     });
   }
 
-  // 6. Public IPv4 Addresses (preserves 127.0.0.1, 0.0.0.0, 10.x, 192.168.x, and IAP 35.235.240.x)
-  if (cfg.hidePublicIps) {
+  // 6. Public IPv4, Public IPv6 & Reverse-DNS GCE Hostnames (preserves 127.0.0.1, 0.0.0.0, 10.x, 192.168.x, and IAP 35.235.240.x)
+  if (activeCfg.hidePublicIps) {
     out = out.replace(
       /\b((?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})\b/g,
       (fullIp) => {
@@ -145,10 +256,42 @@ export function redactTextForGdeMode(text, cfg, context = {}) {
         return `${octets[0]}.•••.•••.${octets[3]}`;
       }
     );
+    // Reverse-DNS IPv4 hostnames in GCE/ISP logs (e.g. 34-120-55-99.googleusercontent.com)
+    out = out.replace(
+      /\b(\d{1,3})-(\d{1,3})-(\d{1,3})-(\d{1,3})(\.[a-zA-Z0-9.-]+\.(?:googleusercontent\.com|compute\.internal|bc\.googleusercontent\.com))\b/gi,
+      '$1-•••-•••-$4$5'
+    );
+    // Public IPv6 addresses (e.g. 2600:1901:0:1234::1 or 2001:4860:4860::8888)
+    out = out.replace(
+      /\b([0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\b/g,
+      (fullIpv6) => {
+        const lower = fullIpv6.toLowerCase();
+        if (lower === '::1' || lower.startsWith('fe80:') || lower.startsWith('fd')) {
+          return fullIpv6;
+        }
+        const parts = fullIpv6.split(':').filter(Boolean);
+        if (parts.length < 3) return fullIpv6;
+        return `${parts[0]}:••••:••••:${parts[parts.length - 1]}`;
+      }
+    );
   }
 
-  // 7. Hide remaining credit / bonus / dollar balances during public streams
-  if (cfg.hideCreditBalances !== false) {
+  // 7. Live OAuth2 Access Tokens, GCP API Keys, Bearer JWTs & SSH Key Fingerprints in Logs / SFTP / Terminal
+  if (activeCfg.hideSecretsAndKeys !== false) {
+    out = out.replace(/\bya29\.[0-9A-Za-z._-]{12,}\b/g, 'ya29.••••••[GDE-SHIELD]');
+    out = out.replace(/\bAIza[0-9A-Za-z_-]{28,}\b/g, 'AIza••••••[GDE-SHIELD]');
+    out = out.replace(
+      /\b(Bearer\s+)eyJ[0-9A-Za-z._-]{16,}\b/gi,
+      '$1eyJ••••••[GDE-SHIELD]'
+    );
+    out = out.replace(
+      /\bSHA256:[0-9A-Za-z+/=]{16,}\b/g,
+      'SHA256:••••••[GDE-SHIELD]'
+    );
+  }
+
+  // 8. Hide remaining credit / bonus / dollar balances during public streams (preserves $0 / $0.00 free-tier badges)
+  if (activeCfg.hideCreditBalances !== false) {
     out = out.replace(
       /Remaining Bonus:\s*\$[0-9,.]+/gi,
       'Remaining Bonus: $•••.••'
@@ -176,7 +319,22 @@ export default function GdeStreamerPrivacyShield({
   const popoverRef = useRef(null);
   const textNodeCacheRef = useRef(new WeakMap());
   const modifiedNodesRef = useRef(new Set());
+  const attrCacheRef = useRef(new WeakMap());
+  const modifiedAttrElementsRef = useRef(new Set());
+  const inputCacheRef = useRef(new WeakMap());
+  const modifiedInputsRef = useRef(new Set());
   const isMutatingRef = useRef(false);
+
+  latestGdeRuntimeContext = {
+    accountEmail,
+    projects:
+      Array.isArray(projects) && projects.length > 0
+        ? projects
+        : selectedProjectId
+        ? [{ projectId: selectedProjectId }]
+        : [],
+    selectedProjectId,
+  };
 
   const updateConfig = useCallback(
     (patch) => {
@@ -187,6 +345,9 @@ export default function GdeStreamerPrivacyShield({
         };
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:gde-mode-change', { detail: next })
+          );
         } catch {
           // ignore storage quota errors
         }
@@ -225,14 +386,40 @@ export default function GdeStreamerPrivacyShield({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [updateConfig]);
 
-  // Global DOM TextNode Redaction Engine (runs post-commit via rAF, zero work when disabled)
+  // Global DOM TextNode, Attribute & Unfocused Input Redaction Engine (Zero-Flash Synchronous MutationObserver)
   useEffect(() => {
     const cache = textNodeCacheRef.current;
     const modifiedNodes = modifiedNodesRef.current;
+    const attrCache = attrCacheRef.current;
+    const modifiedAttrEls = modifiedAttrElementsRef.current;
+    const inputCache = inputCacheRef.current;
+    const modifiedInputs = modifiedInputsRef.current;
 
-    // When disabled, restore any previously redacted text nodes and exit immediately
+    const setNativeInputValue = (el, val) => {
+      try {
+        const proto =
+          el.tagName === 'TEXTAREA'
+            ? window.HTMLTextAreaElement?.prototype
+            : window.HTMLInputElement?.prototype;
+        const setter =
+          proto && Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) {
+          setter.call(el, val);
+        } else {
+          el.value = val;
+        }
+      } catch {
+        el.value = val;
+      }
+    };
+
+    // When disabled, restore any previously redacted text nodes, attributes, and input values immediately
     if (!config.enabled) {
-      if (modifiedNodes.size > 0) {
+      if (
+        modifiedNodes.size > 0 ||
+        modifiedAttrEls.size > 0 ||
+        modifiedInputs.size > 0
+      ) {
         isMutatingRef.current = true;
         try {
           modifiedNodes.forEach((node) => {
@@ -246,6 +433,34 @@ export default function GdeStreamerPrivacyShield({
             }
           });
           modifiedNodes.clear();
+
+          modifiedAttrEls.forEach((el) => {
+            const aEntry = attrCache.get(el);
+            if (!aEntry) return;
+            for (const attrName of ['title', 'placeholder']) {
+              const slot = aEntry[attrName];
+              if (
+                slot &&
+                slot.original !== undefined &&
+                el.getAttribute(attrName) === slot.lastMasked
+              ) {
+                el.setAttribute(attrName, slot.original);
+              }
+            }
+          });
+          modifiedAttrEls.clear();
+
+          modifiedInputs.forEach((el) => {
+            const iEntry = inputCache.get(el);
+            if (
+              iEntry &&
+              iEntry.originalValue !== undefined &&
+              el.value === iEntry.lastMaskedValue
+            ) {
+              setNativeInputValue(el, iEntry.originalValue);
+            }
+          });
+          modifiedInputs.clear();
         } finally {
           isMutatingRef.current = false;
         }
@@ -269,9 +484,28 @@ export default function GdeStreamerPrivacyShield({
       'NOSCRIPT',
       'TEXTAREA',
       'INPUT',
-      'SVG',
       'PATH',
+      'DEFS',
+      'CLIPPATH',
+      'LINEARGRADIENT',
+      'RADIALGRADIENT',
       'CANVAS',
+    ]);
+
+    const NON_TEXT_INPUT_TYPES = new Set([
+      'checkbox',
+      'radio',
+      'range',
+      'number',
+      'password',
+      'file',
+      'color',
+      'date',
+      'time',
+      'datetime-local',
+      'hidden',
+      'submit',
+      'button',
     ]);
 
     const processTextNode = (node) => {
@@ -282,7 +516,7 @@ export default function GdeStreamerPrivacyShield({
       if (SKIP_TAGS.has(tag)) return;
       if (
         parent.closest(
-          'svg, canvas, script, style, textarea, input, .xterm, [data-gde-ignore="true"]'
+          'canvas, script, style, textarea, input, defs, .xterm, [data-gde-ignore="true"]'
         )
       ) {
         return;
@@ -328,6 +562,79 @@ export default function GdeStreamerPrivacyShield({
       }
     };
 
+    const processElementNode = (el) => {
+      if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
+      if (el.closest('[data-gde-ignore="true"], .xterm')) return;
+
+      // 1. Redact native title & placeholder attributes
+      for (const attrName of ['title', 'placeholder']) {
+        if (el.hasAttribute(attrName)) {
+          const currentAttr = el.getAttribute(attrName) || '';
+          if (currentAttr.length >= 3) {
+            let aEntry = attrCache.get(el);
+            if (!aEntry) {
+              aEntry = {};
+              attrCache.set(el, aEntry);
+            }
+            let slot = aEntry[attrName];
+            if (!slot) {
+              slot = { original: currentAttr, lastMasked: currentAttr };
+              aEntry[attrName] = slot;
+            } else if (currentAttr !== slot.lastMasked) {
+              slot.original = currentAttr;
+            }
+            const maskedAttr = redactTextForGdeMode(
+              slot.original,
+              config,
+              contextObj
+            );
+            if (maskedAttr !== currentAttr) {
+              slot.lastMasked = maskedAttr;
+              el.setAttribute(attrName, maskedAttr);
+              modifiedAttrEls.add(el);
+            } else {
+              slot.lastMasked = currentAttr;
+            }
+          }
+        }
+      }
+
+      // 2. Visually mask unfocused text <input> and <textarea> values without firing React onChange
+      const tag = (el.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (
+          tag === 'INPUT' &&
+          NON_TEXT_INPUT_TYPES.has((el.type || 'text').toLowerCase())
+        ) {
+          return;
+        }
+        if (document.activeElement === el) return;
+        const currentVal = el.value || '';
+        if (currentVal.length < 3) return;
+
+        let iEntry = inputCache.get(el);
+        if (!iEntry) {
+          iEntry = { originalValue: currentVal, lastMaskedValue: currentVal };
+          inputCache.set(el, iEntry);
+        } else if (currentVal !== iEntry.lastMaskedValue) {
+          iEntry.originalValue = currentVal;
+        }
+
+        const maskedVal = redactTextForGdeMode(
+          iEntry.originalValue,
+          config,
+          contextObj
+        );
+        if (maskedVal !== currentVal) {
+          iEntry.lastMaskedValue = maskedVal;
+          setNativeInputValue(el, maskedVal);
+          modifiedInputs.add(el);
+        } else {
+          iEntry.lastMaskedValue = currentVal;
+        }
+      }
+    };
+
     const walkSubtree = (rootNode) => {
       if (!rootNode || isMutatingRef.current) return;
       isMutatingRef.current = true;
@@ -337,13 +644,18 @@ export default function GdeStreamerPrivacyShield({
           return;
         }
         if (rootNode.nodeType !== Node.ELEMENT_NODE) return;
+        processElementNode(rootNode);
         const walker = document.createTreeWalker(
           rootNode,
-          NodeFilter.SHOW_TEXT
+          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
         );
         let n = walker.nextNode();
         while (n) {
-          processTextNode(n);
+          if (n.nodeType === Node.TEXT_NODE) {
+            processTextNode(n);
+          } else if (n.nodeType === Node.ELEMENT_NODE) {
+            processElementNode(n);
+          }
           n = walker.nextNode();
         }
       } finally {
@@ -351,28 +663,76 @@ export default function GdeStreamerPrivacyShield({
       }
     };
 
-    let rafId = requestAnimationFrame(() => {
-      walkSubtree(document.body);
-    });
+    // Restore original value when user focuses an input to edit, and re-mask on blur
+    const handleFocusIn = (e) => {
+      const el = e.target;
+      if (!el || !modifiedInputs.has(el)) return;
+      const iEntry = inputCache.get(el);
+      if (
+        iEntry &&
+        iEntry.originalValue !== undefined &&
+        el.value === iEntry.lastMaskedValue
+      ) {
+        isMutatingRef.current = true;
+        try {
+          setNativeInputValue(el, iEntry.originalValue);
+        } finally {
+          isMutatingRef.current = false;
+        }
+      }
+    };
 
-    let debounceTimer = null;
-    const observer = new MutationObserver(() => {
+    const handleFocusOut = (e) => {
+      const el = e.target;
+      if (!el || isMutatingRef.current) return;
+      isMutatingRef.current = true;
+      try {
+        processElementNode(el);
+      } finally {
+        isMutatingRef.current = false;
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn, true);
+    document.addEventListener('focusout', handleFocusOut, true);
+
+    // Run immediately and synchronously on mount/update so zero unmasked frames paint
+    walkSubtree(document.body);
+
+    const observer = new MutationObserver((mutations) => {
       if (isMutatingRef.current) return;
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        walkSubtree(document.body);
-      }, 60);
+      for (let i = 0; i < mutations.length; i += 1) {
+        const m = mutations[i];
+        if (m.type === 'characterData') {
+          walkSubtree(m.target);
+        } else if (m.type === 'attributes') {
+          if (m.target && m.target.nodeType === Node.ELEMENT_NODE) {
+            isMutatingRef.current = true;
+            try {
+              processElementNode(m.target);
+            } finally {
+              isMutatingRef.current = false;
+            }
+          }
+        } else if (m.addedNodes && m.addedNodes.length > 0) {
+          for (let j = 0; j < m.addedNodes.length; j += 1) {
+            walkSubtree(m.addedNodes[j]);
+          }
+        }
+      }
     });
 
     observer.observe(document.body, {
       subtree: true,
       childList: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ['title', 'placeholder', 'value'],
     });
 
     return () => {
-      cancelAnimationFrame(rafId);
-      if (debounceTimer) clearTimeout(debounceTimer);
+      document.removeEventListener('focusin', handleFocusIn, true);
+      document.removeEventListener('focusout', handleFocusOut, true);
       observer.disconnect();
     };
   }, [config, accountEmail, projects, selectedProjectId]);
@@ -384,6 +744,7 @@ export default function GdeStreamerPrivacyShield({
     config.hideProjectIds,
     config.hidePublicIps,
     config.hideCreditBalances,
+    config.hideSecretsAndKeys !== false,
   ].filter(Boolean).length;
 
   return (
@@ -469,8 +830,8 @@ export default function GdeStreamerPrivacyShield({
             {[
               {
                 key: 'hideEmails',
-                label: 'Hide Personal & IAM Emails',
-                desc: 'Replaces your email & masks service account project numbers',
+                label: 'Hide Emails, SSH Users & /home Paths',
+                desc: 'Masks personal/IAM emails, SSH usernames & /home/<user> paths',
               },
               {
                 key: 'hideBillingIds',
@@ -480,25 +841,33 @@ export default function GdeStreamerPrivacyShield({
               {
                 key: 'hideProjectNumbers',
                 label: 'Hide GCP Project Numbers',
-                desc: 'Masks 12-digit project numbers (#418293... -> #9900••••••01)',
+                desc: 'Masks 12-digit project numbers in IDs, Cloud Run URLs & SAs',
               },
               {
                 key: 'hidePublicIps',
-                label: 'Hide External / Public IPv4s',
+                label: 'Hide External / Public IPv4 & IPv6',
                 desc: 'Masks VM/LB public IPs while keeping 10.x & IAP ranges readable',
+              },
+              {
+                key: 'hideSecretsAndKeys',
+                label: 'Mask OAuth Tokens, API Keys & SSH Keys',
+                desc: 'Masks ya29.•••, AIza•••, Bearer JWTs & SHA256:••• in logs/SSH',
               },
               {
                 key: 'hideProjectIds',
                 label: 'Mask Project IDs with Demo Alias',
-                desc: 'Visually replaces project IDs with gde-demo-project',
+                desc: 'Visually replaces project IDs across text & gs:// bucket URIs',
               },
               {
                 key: 'hideCreditBalances',
                 label: 'Mask Exact Credit / Dollar Balances',
-                desc: 'Masks large dollar balances ($1,240.00 -> $•,•••.••)',
+                desc: 'Masks dollar balances ($1,240.00 -> $•••.••; keeps $0.00 badges)',
               },
             ].map((item) => {
-              const checked = Boolean(config[item.key]);
+              const checked =
+                item.key === 'hideSecretsAndKeys'
+                  ? config[item.key] !== false
+                  : Boolean(config[item.key]);
               return (
                 <label
                   key={item.key}
@@ -543,7 +912,7 @@ export default function GdeStreamerPrivacyShield({
             </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 dark:text-zinc-400 pt-1">
-              <span>{activeShieldCount}/6 Privacy Shields Selected</span>
+              <span>{activeShieldCount}/7 Privacy Shields Selected</span>
               <button
                 type="button"
                 onClick={() => setPopoverOpen(false)}

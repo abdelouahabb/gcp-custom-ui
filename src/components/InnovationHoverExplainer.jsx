@@ -6331,17 +6331,17 @@ export default function GlobalInnovationHoverExplainer() {
           {isMutation ? (
             <>
               <ShieldCheck className="w-3 h-3 shrink-0" />
-              <span>⚡ Makes a Live Change</span>
+              <span>Makes a Live Change</span>
             </>
           ) : isSimulation ? (
             <>
               <Info className="w-3 h-3 shrink-0" />
-              <span>🧪 Safe What-If Preview</span>
+              <span>Safe What-If Preview</span>
             </>
           ) : (
             <>
               <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>✓ Safe to Click (Read-Only)</span>
+              <span>Safe to Click (Read-Only)</span>
             </>
           )}
         </span>
@@ -6367,7 +6367,7 @@ export default function GlobalInnovationHoverExplainer() {
       {info.enterpriseValue && (
         <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-0.5">
           <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
-            💡 Why This Helps You (Money, Time &amp; Safety)
+            Why This Helps You (Money, Time &amp; Safety)
           </div>
           <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
             {info.enterpriseValue}

@@ -1341,13 +1341,124 @@ export default function GcsObjectWorkbench({
     }
   };
 
-  // Feature 5: Multi-Object .tar Bundle Downloader
+  // Feature 5: Multi-Object .tar Bundle Downloader & Selective Batch / Sweep Deletion
   const handleToggleSelectObject = (objName) => {
     setSelectedObjectNames((prev) =>
       prev.includes(objName)
         ? prev.filter((n) => n !== objName)
         : [...prev, objName]
     );
+  };
+
+  // Toggle selection of all objects inside a virtual folder prefix
+  const handleToggleSelectFolderPrefix = (folderPrefix) => {
+    const folderObjects = objects
+      .filter((o) => String(o.name || '').startsWith(folderPrefix))
+      .map((o) => o.name);
+    if (folderObjects.length === 0) return;
+    setSelectedObjectNames((prev) => {
+      const allAlreadyIn = folderObjects.every((n) => prev.includes(n));
+      if (allAlreadyIn) {
+        return prev.filter((n) => !folderObjects.includes(n));
+      }
+      return Array.from(new Set([...prev, ...folderObjects]));
+    });
+  };
+
+  // Selective Batch Delete of Checked Objects
+  const handleBatchDeleteSelectedObjects = async () => {
+    if (!selectedBucket || selectedObjectNames.length === 0) return;
+    setBusyKey('batch-del-selected');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/batch-delete`,
+        {
+          objectNames: selectedObjectNames,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Deleted ${selectedObjectNames.length} selected object(s) from gs://${selectedBucket.name}!`
+        );
+      }
+      if (
+        inspectedObject?.objectName &&
+        selectedObjectNames.includes(inspectedObject.objectName)
+      ) {
+        setInspectedObject(null);
+      }
+      setSelectedObjectNames([]);
+      await fetchObjects(selectedBucket.name);
+      if (fetchBuckets) fetchBuckets({ silent: true });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to delete selected objects.'
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // Sweep / Empty Entire Bucket (Keep Bucket Intact) or Delete Virtual Folder Prefix
+  const handleSweepBucketOrFolder = async (folderPrefix = '') => {
+    if (!selectedBucket) return;
+    const cleanPrefix = String(folderPrefix || '').trim();
+    const key = cleanPrefix ? `sweep-folder-${cleanPrefix}` : 'sweep-bucket';
+    setBusyKey(key);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(selectedBucket.name)}/sweep`,
+        {
+          prefix: cleanPrefix || undefined,
+          includeVersions: true,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            (cleanPrefix
+              ? `Deleted folder gs://${selectedBucket.name}/${cleanPrefix}!`
+              : `Swept bucket gs://${selectedBucket.name} clean while keeping the bucket intact!`)
+        );
+      }
+      if (cleanPrefix) {
+        setSelectedObjectNames((prev) =>
+          prev.filter((n) => !String(n).startsWith(cleanPrefix))
+        );
+        if (
+          inspectedObject?.objectName &&
+          String(inspectedObject.objectName).startsWith(cleanPrefix)
+        ) {
+          setInspectedObject(null);
+        }
+      } else {
+        setSelectedObjectNames([]);
+        setInspectedObject(null);
+        setCurrentFolderPrefix('');
+      }
+      await fetchObjects(selectedBucket.name);
+      if (fetchBuckets) fetchBuckets({ silent: true });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to sweep gs://${selectedBucket.name}${
+              cleanPrefix ? `/${cleanPrefix}` : ''
+            }`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   const handleDownloadSelectedBundle = async () => {
@@ -2510,56 +2621,133 @@ export default function GcsObjectWorkbench({
               <Upload className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
             </div>
 
-            {explorerItems.files.length > 0 && (
-              <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10px]">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allVisibleNames = explorerItems.files.map(
-                        (f) => f.name
-                      );
-                      const allSelected = allVisibleNames.every((n) =>
-                        selectedObjectNames.includes(n)
-                      );
-                      setSelectedObjectNames(allSelected ? [] : allVisibleNames);
-                    }}
-                    className="px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <CheckSquare className="w-3 h-3 text-blue-500" />
-                    <span>
-                      {selectedObjectNames.length > 0
-                        ? `Selected (${selectedObjectNames.length})`
-                        : 'Select All'}
-                    </span>
-                  </button>
-                  {selectedObjectNames.length > 0 && (
+            {(explorerItems.files.length > 0 ||
+              explorerItems.folders.length > 0 ||
+              objects.length > 0) && (
+              <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 text-[10px]">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setSelectedObjectNames([])}
-                      className="px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
+                      onClick={() => {
+                        const visibleFileNames = explorerItems.files.map(
+                          (f) => f.name
+                        );
+                        const folderFileNames = explorerItems.folders.flatMap(
+                          (fld) =>
+                            objects
+                              .filter((o) =>
+                                String(o.name || '').startsWith(fld.fullPrefix)
+                              )
+                              .map((o) => o.name)
+                        );
+                        const allInView = Array.from(
+                          new Set([...visibleFileNames, ...folderFileNames])
+                        );
+                        const allSelected =
+                          allInView.length > 0 &&
+                          allInView.every((n) =>
+                            selectedObjectNames.includes(n)
+                          );
+                        setSelectedObjectNames(allSelected ? [] : allInView);
+                      }}
+                      className="px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
                     >
-                      Clear
+                      <CheckSquare className="w-3 h-3 text-blue-500" />
+                      <span>
+                        {selectedObjectNames.length > 0
+                          ? `Selected (${selectedObjectNames.length})`
+                          : 'Select All'}
+                      </span>
                     </button>
-                  )}
+                    {selectedObjectNames.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedObjectNames([])}
+                        className="px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={
+                      objects.length === 0 ||
+                      busyKey ===
+                        (currentFolderPrefix
+                          ? `sweep-folder-${currentFolderPrefix}`
+                          : 'sweep-bucket')
+                    }
+                    onClick={() =>
+                      handleSweepBucketOrFolder(currentFolderPrefix || '')
+                    }
+                    title={
+                      currentFolderPrefix
+                        ? `Sweep and delete all objects inside folder /${currentFolderPrefix}`
+                        : `Sweep and empty all ${objects.length} object(s) in gs://${selectedBucket?.name} while keeping the bucket intact`
+                    }
+                    className="px-2 py-1 rounded-md bg-amber-500/15 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
+                  >
+                    <RefreshCw
+                      className={`w-3 h-3 ${
+                        busyKey ===
+                        (currentFolderPrefix
+                          ? `sweep-folder-${currentFolderPrefix}`
+                          : 'sweep-bucket')
+                          ? 'animate-spin'
+                          : ''
+                      }`}
+                    />
+                    <span>
+                      {currentFolderPrefix
+                        ? `Sweep Folder`
+                        : `Sweep Bucket (${objects.length})`}
+                    </span>
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={
-                    selectedObjectNames.length === 0 || bundlingDownload
-                  }
-                  onClick={handleDownloadSelectedBundle}
-                  title="Package selected objects into a single POSIX .tar archive and download"
-                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
-                >
-                  <Archive className="w-3 h-3" />
-                  <span>
-                    {bundlingDownload
-                      ? 'Packing .tar...'
-                      : `Bundle .tar (${selectedObjectNames.length})`}
-                  </span>
-                </button>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    disabled={
+                      selectedObjectNames.length === 0 || bundlingDownload
+                    }
+                    onClick={handleDownloadSelectedBundle}
+                    title="Package selected objects into a single POSIX .tar archive and download"
+                    className="w-full py-1.5 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate"
+                  >
+                    <Archive className="w-3 h-3 shrink-0" />
+                    <span className="truncate">
+                      {bundlingDownload
+                        ? 'Packing .tar...'
+                        : `Bundle .tar (${selectedObjectNames.length})`}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      selectedObjectNames.length === 0 ||
+                      busyKey === 'batch-del-selected'
+                    }
+                    onClick={handleBatchDeleteSelectedObjects}
+                    title="Permanently delete only the selected objects by choice"
+                    className={`w-full py-1.5 px-2 rounded-md font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate border ${
+                      selectedObjectNames.length > 0
+                        ? 'bg-red-500/15 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border-red-500/40'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <Trash2 className="w-3 h-3 shrink-0" />
+                    <span className="truncate">
+                      {busyKey === 'batch-del-selected'
+                        ? 'Deleting...'
+                        : `Delete Selected (${selectedObjectNames.length})`}
+                    </span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -2606,23 +2794,66 @@ export default function GcsObjectWorkbench({
               )}
 
               {/* Virtual Folder Rows */}
-              {explorerItems.folders.map((folder) => (
-                <div
-                  key={folder.fullPrefix}
-                  onClick={() => setCurrentFolderPrefix(folder.fullPrefix)}
-                  className="py-2.5 px-2.5 flex items-center justify-between gap-2 text-xs hover:bg-blue-500/[0.08] rounded-lg cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
-                      {folder.name}/
-                    </span>
+              {explorerItems.folders.map((folder) => {
+                const folderObjNames = objects
+                  .filter((o) =>
+                    String(o.name || '').startsWith(folder.fullPrefix)
+                  )
+                  .map((o) => o.name);
+                const isFolderChecked =
+                  folderObjNames.length > 0 &&
+                  folderObjNames.every((n) => selectedObjectNames.includes(n));
+                return (
+                  <div
+                    key={folder.fullPrefix}
+                    onClick={() => setCurrentFolderPrefix(folder.fullPrefix)}
+                    className="py-2.5 px-2.5 flex items-center justify-between gap-2 text-xs hover:bg-blue-500/[0.08] rounded-lg cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSelectFolderPrefix(folder.fullPrefix);
+                        }}
+                        title={`Select all ${folder.count} object(s) inside folder ${folder.name}/`}
+                        className="text-zinc-400 hover:text-blue-500 shrink-0 cursor-pointer"
+                      >
+                        {isFolderChecked ? (
+                          <CheckSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Square className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        {folder.name}/
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center gap-1.5 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="text-[10px] text-zinc-500">
+                        {folder.count} item(s) · {formatBytes(folder.totalBytes)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={
+                          busyKey === `sweep-folder-${folder.fullPrefix}`
+                        }
+                        onClick={() =>
+                          handleSweepBucketOrFolder(folder.fullPrefix)
+                        }
+                        title={`Delete folder ${folder.name}/ and all ${folder.count} object(s) inside it`}
+                        className="p-1.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-zinc-500 shrink-0">
-                    {folder.count} item(s) · {formatBytes(folder.totalBytes)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Object File Rows */}
               {explorerItems.files.map((o) => {

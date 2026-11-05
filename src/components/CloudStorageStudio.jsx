@@ -92,6 +92,7 @@ export default function CloudStorageStudio({
   const [buckets, setBuckets] = useState([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
   const [selectedBucketName, setSelectedBucketName] = useState(initialBucketName || '');
+  const [selectedBucketNames, setSelectedBucketNames] = useState([]);
   const [busyKey, setBusyKey] = useState(null);
 
   // Object Browser & Editor State
@@ -479,12 +480,93 @@ export default function CloudStorageStudio({
           res.data?.message || `Deleted bucket gs://${bucket.name} and all objects!`
         );
       }
+      setSelectedBucketNames((prev) => prev.filter((n) => n !== bucket.name));
       await fetchBuckets();
       if (onRefreshGlobal) onRefreshGlobal();
     } catch (err) {
       if (onShowError) {
         onShowError(
           err.response?.data?.error || `Failed to delete gs://${bucket.name}`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // 1-Tap Sweep Bucket (Keep Bucket Intact, Empty All Objects)
+  const handleSweepBucketKeepIntact = async (bucket) => {
+    setBusyKey(`sweep-${bucket.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(bucket.name)}/sweep`,
+        { includeVersions: true }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Swept gs://${bucket.name} clean while keeping the bucket intact!`
+        );
+      }
+      await fetchBuckets();
+      if (selectedBucket?.name === bucket.name) {
+        await fetchObjects(bucket.name);
+      }
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || `Failed to sweep gs://${bucket.name}`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // Toggle Multi-Bucket Selection Checkbox
+  const handleToggleSelectBucket = (bucketName) => {
+    setSelectedBucketNames((prev) =>
+      prev.includes(bucketName)
+        ? prev.filter((b) => b !== bucketName)
+        : [...prev, bucketName]
+    );
+  };
+
+  // Multi-Bucket Fleet Batch Action (Sweep Keep vs. Empty & Delete)
+  const handleBatchBucketsAction = async (mode = 'SWEEP_KEEP_BUCKETS') => {
+    if (selectedBucketNames.length === 0) return;
+    setBusyKey(`batch-${mode}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/batch-action`,
+        {
+          bucketNames: selectedBucketNames,
+          mode,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Completed ${mode} across ${selectedBucketNames.length} bucket(s)!`
+        );
+      }
+      if (mode === 'EMPTY_AND_DELETE_BUCKETS') {
+        setSelectedBucketNames([]);
+      }
+      await fetchBuckets();
+      if (selectedBucket?.name) {
+        await fetchObjects(selectedBucket.name, { silent: true });
+      }
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to execute multi-bucket batch action.'
         );
       }
     } finally {
@@ -1333,29 +1415,130 @@ export default function CloudStorageStudio({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {buckets.map((b) => {
-                const isSelected = selectedBucket?.name === b.name;
-                const isHardened =
-                  b.publicAccessPrevention === 'enforced' &&
-                  b.uniformBucketLevelAccess &&
-                  b.versioningEnabled;
-                return (
-                  <div
-                    key={b.name}
-                    onClick={() => setSelectedBucketName(b.name)}
-                    className={`p-4 rounded-2xl border transition-all space-y-3 font-mono cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-500/[0.05] border-blue-500 shadow-md'
-                        : 'bg-white dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+            <>
+              {/* Multi-Bucket Fleet Selection & Sweep / Delete Bar */}
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedBucketNames.length === buckets.length) {
+                        setSelectedBucketNames([]);
+                      } else {
+                        setSelectedBucketNames(buckets.map((b) => b.name));
+                      }
+                    }}
+                    className={`h-8 px-3 rounded-md border font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                      selectedBucketNames.length > 0 &&
+                      selectedBucketNames.length === buckets.length
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
                     }`}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                            gs://{b.name}
-                          </span>
+                    <Check className="w-3.5 h-3.5" />
+                    {selectedBucketNames.length === buckets.length
+                      ? `Unselect All (${buckets.length})`
+                      : `Select All Buckets (${buckets.length})`}
+                  </button>
+
+                  {selectedBucketNames.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBucketNames([])}
+                      className="h-8 px-2.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer"
+                    >
+                      Clear ({selectedBucketNames.length} chosen)
+                    </button>
+                  )}
+
+                  <span className="text-[11px] text-zinc-500">
+                    Check any bucket(s) below to sweep objects clean (while keeping buckets) or delete chosen buckets in bulk.
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    disabled={
+                      selectedBucketNames.length === 0 ||
+                      busyKey === 'batch-SWEEP_KEEP_BUCKETS'
+                    }
+                    onClick={() => handleBatchBucketsAction('SWEEP_KEEP_BUCKETS')}
+                    title="Deletes all objects inside the selected buckets while keeping the buckets and their IAM/Lifecycle settings intact"
+                    className={`h-8 px-3 rounded-md font-extrabold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
+                      selectedBucketNames.length > 0
+                        ? 'bg-amber-500/15 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border-amber-500/40'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        busyKey === 'batch-SWEEP_KEEP_BUCKETS' ? 'animate-spin' : ''
+                      }`}
+                    />
+                    {busyKey === 'batch-SWEEP_KEEP_BUCKETS'
+                      ? 'Sweeping Selected...'
+                      : `Sweep Selected Buckets (Keep Buckets) (${selectedBucketNames.length})`}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      selectedBucketNames.length === 0 ||
+                      busyKey === 'batch-EMPTY_AND_DELETE_BUCKETS'
+                    }
+                    onClick={() =>
+                      handleBatchBucketsAction('EMPTY_AND_DELETE_BUCKETS')
+                    }
+                    title="Empties and permanently deletes all selected buckets"
+                    className={`h-8 px-3 rounded-md font-extrabold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
+                      selectedBucketNames.length > 0
+                        ? 'bg-red-500/15 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border-red-500/40'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {busyKey === 'batch-EMPTY_AND_DELETE_BUCKETS'
+                      ? 'Deleting Selected...'
+                      : `Empty & Delete Selected (${selectedBucketNames.length})`}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {buckets.map((b) => {
+                  const isSelected = selectedBucket?.name === b.name;
+                  const isCheckedForBatch = selectedBucketNames.includes(b.name);
+                  const isHardened =
+                    b.publicAccessPrevention === 'enforced' &&
+                    b.uniformBucketLevelAccess &&
+                    b.versioningEnabled;
+                  return (
+                    <div
+                      key={b.name}
+                      onClick={() => setSelectedBucketName(b.name)}
+                      className={`p-4 rounded-2xl border transition-all space-y-3 font-mono cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-500/[0.05] border-blue-500 shadow-md'
+                          : isCheckedForBatch
+                          ? 'bg-blue-500/[0.03] border-blue-500/60'
+                          : 'bg-white dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <input
+                              type="checkbox"
+                              checked={isCheckedForBatch}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={() => handleToggleSelectBucket(b.name)}
+                              title={`Select gs://${b.name} for batch sweep or deletion`}
+                              className="w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                            />
+                            <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                              gs://{b.name}
+                            </span>
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
                             {b.location} ({b.locationType})
                           </span>
@@ -1502,7 +1685,7 @@ export default function CloudStorageStudio({
 
                     {/* 1-Tap Equal-Width Action Bar */}
                     <div
-                      className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1.5"
+                      className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
@@ -1547,6 +1730,25 @@ export default function CloudStorageStudio({
 
                       <button
                         type="button"
+                        disabled={busyKey === `sweep-${b.name}`}
+                        onClick={() => handleSweepBucketKeepIntact(b)}
+                        className="w-full h-8 px-2 rounded-md bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
+                        title="Sweeps and deletes all objects inside gs://bucket while keeping the bucket itself intact"
+                      >
+                        <RefreshCw
+                          className={`w-3 h-3 shrink-0 ${
+                            busyKey === `sweep-${b.name}` ? 'animate-spin' : ''
+                          }`}
+                        />
+                        <span className="truncate">
+                          {busyKey === `sweep-${b.name}`
+                            ? 'Sweeping...'
+                            : 'Sweep Bucket'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
                         disabled={busyKey === `delete-${b.name}`}
                         onClick={() => handleEmptyAndDeleteBucket(b)}
                         className="w-full h-8 px-2 rounded-md bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
@@ -1564,6 +1766,7 @@ export default function CloudStorageStudio({
                 );
               })}
             </div>
+            </>
           )}
         </div>
       )}

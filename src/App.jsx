@@ -548,6 +548,87 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Cloud Storage Sweep Bucket (Keep Bucket Intact, Delete All Objects or Folder Prefix)
+    const sweepBucketMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/sweep/);
+    if (sweepBucketMatch) {
+      const bucket = decodeURIComponent(sweepBucketMatch[1]);
+      const prefix = String(body.prefix || '').trim();
+      return {
+        title: prefix
+          ? `Sweep & Delete Folder "gs://${bucket}/${prefix}"`
+          : `Sweep & Empty Bucket "gs://${bucket}" (Keep Bucket Intact)`,
+        resourceKind: prefix
+          ? 'Cloud Storage Virtual Folder (Recursive Object Purge)'
+          : 'Cloud Storage Bucket Sweep (Objects Only — Bucket Preserved)',
+        targetName: prefix ? `gs://${bucket}/${prefix}` : `gs://${bucket}/*`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: 'POST (SWEEP OBJECTS)',
+        endpoint: rawUrl,
+        impactWarning: prefix
+          ? `This will permanently delete all objects inside folder prefix "gs://${bucket}/${prefix}". Bucket "gs://${bucket}" and objects outside "${prefix}" remain untouched.`
+          : `This will permanently delete ALL objects and historical versions inside "gs://${bucket}" so the bucket becomes completely empty (0 B), while keeping the bucket "gs://${bucket}" itself intact (preserving its IAM, CORS, Lifecycle, and FUSE mount configuration).`,
+      };
+    }
+
+    // Cloud Storage Selective Multi-Object Batch Delete
+    const batchDeleteObjectsMatch = rawUrl.match(
+      /\/storage\/buckets\/([^/]+)\/objects\/batch-delete/
+    );
+    if (batchDeleteObjectsMatch) {
+      const bucket = decodeURIComponent(batchDeleteObjectsMatch[1]);
+      const objList = Array.isArray(body.objectNames) ? body.objectNames : [];
+      const pfxList = Array.isArray(body.prefixes) ? body.prefixes : [];
+      const totalSelected = objList.length + pfxList.length;
+      const previewNames = [
+        ...pfxList.map((p) => `[Folder] ${p}`),
+        ...objList,
+      ]
+        .slice(0, 4)
+        .join(', ');
+      return {
+        title: `Delete ${totalSelected} Selected Item(s) from gs://${bucket}`,
+        resourceKind: 'Cloud Storage Selective Batch Object Deletion',
+        targetName: `gs://${bucket} (${totalSelected} selected: ${previewNames}${
+          totalSelected > 4 ? '...' : ''
+        })`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: 'POST (BATCH DELETE OBJECTS)',
+        endpoint: rawUrl,
+        impactWarning: `You are about to permanently delete ${objList.length} selected object(s)${
+          pfxList.length > 0 ? ` and ${pfxList.length} folder prefix(es)` : ''
+        } from bucket "gs://${bucket}". Unselected objects and the bucket itself remain intact.`,
+      };
+    }
+
+    // Cloud Storage Multi-Bucket Fleet Batch Action (Sweep Keep vs. Empty & Delete)
+    if (rawUrl.includes('/storage/buckets/batch-action')) {
+      const bList = Array.isArray(body.bucketNames) ? body.bucketNames : [];
+      const mode = String(body.mode || 'SWEEP_KEEP_BUCKETS').toUpperCase();
+      const isDeleteBuckets = mode === 'EMPTY_AND_DELETE_BUCKETS';
+      return {
+        title: isDeleteBuckets
+          ? `Empty & Permanently Delete ${bList.length} Selected Bucket(s)`
+          : `Sweep & Empty ${bList.length} Selected Bucket(s) (Keep Buckets Intact)`,
+        resourceKind: isDeleteBuckets
+          ? 'Cloud Storage Multi-Bucket Recursive Purge & Destruction'
+          : 'Cloud Storage Multi-Bucket Object Sweep (Buckets Preserved)',
+        targetName: bList.map((b) => `gs://${b}`).join(', '),
+        location: 'Global / Multi-Region',
+        projectId,
+        method: `POST (${mode})`,
+        endpoint: rawUrl,
+        impactWarning: isDeleteBuckets
+          ? `DANGER: This will permanently empty AND destroy ${bList.length} selected bucket(s): ${bList
+              .map((b) => `gs://${b}`)
+              .join(', ')}. This cannot be undone.`
+          : `This will permanently delete all objects inside ${bList.length} selected bucket(s) (${bList
+              .map((b) => `gs://${b}`)
+              .join(', ')}) while keeping every bucket and its governance settings intact.`,
+      };
+    }
+
     // Compute Engine VM Power -> DELETE, DETACH_PUBLIC_IP, ATTACH_PUBLIC_IP
     const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/power/);
     if (vmPowerMatch && String(body.action || '').toUpperCase() === 'DELETE') {
@@ -8215,6 +8296,7 @@ function CloudPulseCockpit() {
                     initialCommand={shellSeedCommand}
                     initialCommandNonce={shellSeedNonce}
                     initialLogExplorerSpec={logExplorerSeedSpec}
+                    onSelectTab={handleNavigateStudioTab}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
                     onOpenRecycleBin={() => handleNavigateStudioTab('RECYCLE_BIN')}
