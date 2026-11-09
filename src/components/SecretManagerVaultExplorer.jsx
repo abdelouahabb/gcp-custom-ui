@@ -42,6 +42,9 @@ export default function SecretManagerVaultExplorer({
   // Per-secret inline rotation editor: { [secretId]: { open: boolean, newValue: string, disableOld: boolean } }
   const [rotateEditors, setRotateEditors] = useState({});
 
+  // Per-secret visual deletion lifecycle state: { [secretId]: 'DELETING' | 'SHREDDED' }
+  const [deletingSecretStatus, setDeletingSecretStatus] = useState({});
+
   // New secret creation drawer
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newSecretId, setNewSecretId] = useState('');
@@ -291,6 +294,10 @@ export default function SecretManagerVaultExplorer({
 
   const handleDeleteSecret = async (secretId) => {
     setBusyKey(`del-${secretId}`);
+    setDeletingSecretStatus((prev) => ({
+      ...prev,
+      [secretId]: 'DELETING',
+    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -308,8 +315,30 @@ export default function SecretManagerVaultExplorer({
             `Deleted secret "${secretId}" from Google Cloud Secret Manager!`
         );
       }
-      await fetchSecretsInventory(true);
+      setDeletingSecretStatus((prev) => ({
+        ...prev,
+        [secretId]: 'SHREDDED',
+      }));
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setVaultData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          secrets: (prev.secrets || []).filter((s) => s.shortName !== secretId),
+        };
+      });
+      setDeletingSecretStatus((prev) => {
+        const next = { ...prev };
+        delete next[secretId];
+        return next;
+      });
+      fetchSecretsInventory(true);
     } catch (err) {
+      setDeletingSecretStatus((prev) => {
+        const next = { ...prev };
+        delete next[secretId];
+        return next;
+      });
       if (
         err?.isDestructiveCancelled ||
         err?.message === 'DESTRUCTIVE_ACTION_CANCELLED'
@@ -590,16 +619,50 @@ export default function SecretManagerVaultExplorer({
               newValue: '',
               disableOld: true,
             };
+            const delPhase = deletingSecretStatus[sid];
+            const isDeletingKey =
+              busyKey === `del-${sid}` || delPhase === 'DELETING';
+            const isShreddedKey = delPhase === 'SHREDDED';
 
             return (
               <div
                 key={sid}
-                className={`p-3 rounded-xl border space-y-2.5 ${
-                  isHighlighted
+                className={`p-3 rounded-xl border space-y-2.5 transition-all duration-300 ${
+                  isShreddedKey
+                    ? 'border-emerald-500 bg-emerald-500/10 opacity-60 scale-[0.99]'
+                    : isDeletingKey
+                    ? 'border-red-500 bg-red-500/10 dark:bg-red-950/30 ring-1 ring-red-500/50 animate-pulse'
+                    : isHighlighted
                     ? 'bg-emerald-500/5 border-emerald-500/50'
                     : 'bg-zinc-50/70 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
+                {(isDeletingKey || isShreddedKey) && (
+                  <div
+                    className={`px-2.5 py-1.5 rounded flex items-center justify-between gap-2 text-[10.5px] font-bold border ${
+                      isShreddedKey
+                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-red-500/20 border-red-500/40 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isShreddedKey ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-500 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {isShreddedKey
+                          ? `✓ KEY "${primaryKeyTitle}" (${sid}) PERMANENTLY DELETED FROM SECRET MANAGER`
+                          : `DELETING SECRET KEY "${primaryKeyTitle}" & ALL VERSIONS FROM SECRET MANAGER...`}
+                      </span>
+                    </div>
+                    <code className="text-[9.5px] opacity-80 shrink-0">
+                      DELETE /v1/projects/{activeSecretProject}/secrets/{sid}
+                    </code>
+                  </div>
+                )}
+
                 {/* Top row: Non-Wrapping Identity Left + Pinned Action Toolbar Right */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -607,10 +670,24 @@ export default function SecretManagerVaultExplorer({
                       <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span
                         title={sid}
-                        className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs truncate max-w-full"
+                        className={`font-extrabold text-xs truncate max-w-full ${
+                          isDeletingKey || isShreddedKey
+                            ? 'line-through text-red-600 dark:text-red-400'
+                            : 'text-zinc-900 dark:text-zinc-100'
+                        }`}
                       >
                         {primaryKeyTitle}
                       </span>
+                      {isDeletingKey && (
+                        <span className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[9.5px] font-extrabold shrink-0">
+                          DELETING KEY...
+                        </span>
+                      )}
+                      {isShreddedKey && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-extrabold shrink-0">
+                          DELETED
+                        </span>
+                      )}
                       {isDlpVaulted && (
                         <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-bold shrink-0">
                           DLP VAULTED
@@ -715,13 +792,33 @@ export default function SecretManagerVaultExplorer({
                     <button
                       type="button"
                       data-feature-id="SM_EXPLORER_DELETE_SECRET_BTN"
-                      disabled={busyKey === `del-${sid}`}
+                      disabled={isDeletingKey || isShreddedKey}
                       onClick={() => handleDeleteSecret(sid)}
                       title={`Delete secret "${sid}" and all of its versions from Google Cloud Secret Manager (protected by confirmation modal)`}
-                      className="w-[74px] h-7 px-2 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50"
+                      className={`w-[86px] h-7 px-2 rounded text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap border transition-all ${
+                        isShreddedKey
+                          ? 'bg-emerald-600 text-white border-emerald-500'
+                          : isDeletingKey
+                          ? 'bg-red-600 text-white border-red-500'
+                          : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'
+                      }`}
                     >
-                      <Trash2 className="w-3 h-3 shrink-0" />
-                      <span>Delete</span>
+                      {isShreddedKey ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>Deleted</span>
+                        </>
+                      ) : isDeletingKey ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
+                          <span>Deleting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-3 h-3 shrink-0" />
+                          <span>Delete</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

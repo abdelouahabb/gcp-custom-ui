@@ -579,6 +579,7 @@ export default function GcsObjectWorkbench({
 
   // Rename / Move / Cross-Bucket Copy Inline State
   const [showRenameBar, setShowRenameBar] = useState(false);
+  const [showAccessDrawer, setShowAccessDrawer] = useState(false);
   const [renameTargetBucket, setRenameTargetBucket] = useState('');
   const [renameTargetPath, setRenameTargetPath] = useState('');
   const [renameDeleteSource, setRenameDeleteSource] = useState(true);
@@ -2596,228 +2597,304 @@ export default function GcsObjectWorkbench({
   };
 
   return (
-    <div className="space-y-4 font-mono">
-      {/* Top Studio Control Bar: Breadcrumbs, + New Object from Template & Layout Ratio Switcher */}
-      <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <FolderOpen className="w-4 h-4 text-blue-500" />
-          <button
-            type="button"
-            onClick={() => setCurrentFolderPrefix('')}
-            className="text-xs font-extrabold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-          >
-            gs://{selectedBucket?.name || '(Select Bucket)'}
-          </button>
-          {folderBreadcrumbs.map((bc) => (
-            <React.Fragment key={bc.prefix}>
-              <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+    <div className="space-y-3 font-sans">
+      {/* Unified Top Studio Command Bar: Bucket Switcher, Path Breadcrumbs, Primary CTAs & 6-Studio Pipeline Strip */}
+      <div className="p-3 rounded-xl bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 space-y-2.5 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          {/* Left: Bucket Selector + Interactive Path Breadcrumbs */}
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+            {buckets.length > 1 && typeof onSelectBucket === 'function' ? (
+              <select
+                value={selectedBucket?.name || ''}
+                onChange={(e) => {
+                  onSelectBucket(e.target.value);
+                  setCurrentFolderPrefix('');
+                }}
+                title="Switch active Cloud Storage bucket"
+                className="h-7 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+              >
+                {buckets.map((b) => (
+                  <option key={b.name} value={b.name}>
+                    gs://{b.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
               <button
                 type="button"
-                onClick={() => setCurrentFolderPrefix(bc.prefix)}
-                className="text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:text-blue-500 cursor-pointer"
+                onClick={() => setCurrentFolderPrefix('')}
+                className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                {bc.label}/
+                gs://{selectedBucket?.name || '(Select Bucket)'}
               </button>
-            </React.Fragment>
-          ))}
-          {inspectedObject && (
-            <>
-              <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-                {inspectedObject.objectName.split('/').pop()}
-              </span>
-            </>
-          )}
-        </div>
+            )}
 
-        {/* Right Controls: + New Object / Templates + Asymmetric Layout Split Selector */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => {
-              setComposerPath(
-                `${currentFolderPrefix}config/runtime-manifest.json`
-              );
-              setShowComposerBar((v) => !v);
-            }}
-            className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>+ New Object / Template</span>
-          </button>
-
-          <label className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm">
-            <Upload className="w-3.5 h-3.5" />
-            <span>{uploadingBatch ? 'Uploading...' : 'Upload File(s)'}</span>
-            <input
-              type="file"
-              multiple
-              onChange={(e) => {
-                handleMultiFileUpload(e.target.files);
-                e.target.value = '';
-              }}
-              disabled={uploadingBatch || !selectedBucket}
-              className="hidden"
-            />
-          </label>
-
-          {/* Layout Split Ratio Selector */}
-          <div className="hidden lg:flex items-center gap-1 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 text-[10px]">
-            {[
-              { id: 'COMPACT_LEFT', label: '33% / 67%' },
-              { id: 'BALANCED_LEFT', label: '42% / 58%' },
-              { id: 'EQUAL_SPLIT', label: '50% / 50%' },
-              { id: 'FULL_STUDIO', label: '100% Full Studio' },
-            ].map((r) => (
+            {currentFolderPrefix && (
               <button
-                key={r.id}
                 type="button"
-                onClick={() => setLayoutRatio(r.id)}
-                className={`px-2 py-1 rounded-md font-bold cursor-pointer transition-all ${
-                  layoutRatio === r.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
+                onClick={() => setCurrentFolderPrefix('')}
+                className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-[10px] font-mono font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer"
+                title="Return to bucket root"
               >
-                {r.label}
+                /root
               </button>
+            )}
+
+            {folderBreadcrumbs.map((bc) => (
+              <React.Fragment key={bc.prefix}>
+                <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => setCurrentFolderPrefix(bc.prefix)}
+                  className="text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 hover:text-amber-500 cursor-pointer"
+                >
+                  {bc.label}/
+                </button>
+              </React.Fragment>
             ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Connected GCP Pipeline & Security Bridge (Cross-Studio Deep-Links) */}
-      {selectedBucket && (
-        <div className="p-2.5 rounded-xl bg-zinc-50/90 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-[11px]">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-              <span className="px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[9.5px] font-extrabold uppercase">
-                Connected Studios
-              </span>
-              <span className="truncate">
-                Active target:{' '}
-                <strong className="text-zinc-900 dark:text-zinc-100">
-                  gs://{selectedBucket.name}
-                  {inspectedObject?.name ? `/${inspectedObject.name}` : ''}
-                </strong>
-              </span>
+            {inspectedObject && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-300 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/35 truncate max-w-[260px]">
+                  {inspectedObject.objectName.split('/').pop()}
+                </span>
+              </>
+            )}
+
+            <span className="ml-1 px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-semibold text-zinc-500">
+              {objects.length} object(s)
+            </span>
+          </div>
+
+          {/* Right Controls: Upload File(s) Primary CTA + New Object Template + Layout Split Switcher */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 shadow-2xs transition-colors">
+              <Upload className="w-3.5 h-3.5 shrink-0" />
+              <span>{uploadingBatch ? 'Uploading...' : 'Upload File(s)'}</span>
+              <input
+                type="file"
+                multiple
+                onChange={(e) => {
+                  handleMultiFileUpload(e.target.files);
+                  e.target.value = '';
+                }}
+                disabled={uploadingBatch || !selectedBucket}
+                className="hidden"
+              />
+            </label>
+
+            <button
+              type="button"
+              aria-pressed={showComposerBar}
+              onClick={() => {
+                setComposerPath(
+                  `${currentFolderPrefix}config/runtime-manifest.json`
+                );
+                setShowComposerBar((v) => !v);
+              }}
+              className={`h-8 px-3 rounded-md border text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-all ${
+                showComposerBar
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/60'
+                  : 'bg-zinc-100 dark:bg-zinc-900 hover:border-amber-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+              }`}
+            >
+              <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>+ New Object / Template</span>
+            </button>
+
+            {/* Layout Split Ratio Selector (Unified Warm-Amber Segmented Control) */}
+            <div
+              role="tablist"
+              aria-label="Workspace Split Layout"
+              className="cp-segmented-menu hidden lg:flex items-center gap-1 p-0.5 rounded-lg text-[11px]"
+            >
+              {[
+                { id: 'COMPACT_LEFT', label: '33% / 67%' },
+                { id: 'BALANCED_LEFT', label: '42% / 58%' },
+                { id: 'EQUAL_SPLIT', label: '50% / 50%' },
+                { id: 'FULL_STUDIO', label: '100% Full IDE' },
+              ].map((r) => {
+                const active = layoutRatio === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setLayoutRatio(r.id)}
+                    className={`h-7 px-2 rounded-md font-semibold cursor-pointer transition-all ${
+                      active
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5 w-full">
-            {[
-              {
-                key: 'QUERY_BQ',
-                icon: Code,
-                label: 'Query in BigQuery SQL',
-                title:
-                  'Open BigQuery Studio with an External Table query for this bucket/object',
-                onClick: () => {
-                  if (!onOpenBigQuerySql) return;
-                  const objName = inspectedObject?.name || '*.parquet';
-                  const extFormat = objName.toLowerCase().endsWith('.parquet')
-                    ? 'PARQUET'
-                    : objName.toLowerCase().endsWith('.csv')
-                    ? 'CSV'
-                    : 'JSON';
-                  const safeTbl = selectedBucket.name
-                    .replace(/[^a-zA-Z0-9_]/g, '_')
-                    .slice(0, 32);
-                  const sql = `-- Auto-generated BigQuery External Lakehouse Table for gs://${selectedBucket.name}/${objName}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics.${safeTbl}_ext\`\nOPTIONS (\n  format = '${extFormat}',\n  uris = ['gs://${selectedBucket.name}/${objName}']\n);\n\nSELECT * FROM \`${projectId}.analytics.${safeTbl}_ext\` LIMIT 100;`;
-                  onOpenBigQuerySql(sql);
-                },
-              },
-              {
-                key: 'BIGLAKE_ICEBERG',
-                icon: Globe,
-                label: 'BigLake Iceberg',
-                title:
-                  'Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio',
-                onClick: () =>
-                  onNavigateStudio && onNavigateStudio('BIGLAKE_ICEBERG'),
-              },
-              {
-                key: 'MANAGED_SPARK_35',
-                icon: Zap,
-                label: 'Managed Spark 3.5',
-                title:
-                  'Open Managed Service for Apache Spark 3.5 Studio with this bucket/object pre-wired for Serverless PySpark or Spark Connect',
-                onClick: () =>
-                  onNavigateStudio &&
-                  onNavigateStudio('MANAGED_SPARK_STUDIO', 'SPARK_CONNECT_NOTEBOOKS', {
-                    bucketName: selectedBucket?.name || '',
-                    objectName:
-                      inspectedObject?.name || currentFolderPrefix || '',
-                  }),
-              },
-              {
-                key: 'MEDALLION_ELT',
-                icon: FileCode,
-                label: 'Medallion ELT',
-                title:
-                  'Build a Bronze-Silver-Gold Medallion pipeline from this bucket',
-                onClick: () =>
-                  onNavigateStudio && onNavigateStudio('DATA_PIPELINES'),
-              },
-              {
-                key: 'RAM_DLP_XRAY',
-                icon: ShieldAlert,
-                label: 'RAM DLP X-Ray',
-                title:
-                  'Scan this bucket in-memory for leaked secrets, API keys, and PII',
-                onClick: () =>
-                  onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY'),
-              },
-              {
-                key: 'S3_MINIO_IMPORT',
-                icon: Upload,
-                label: 'S3 / MinIO Import',
-                title:
-                  'Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket',
-                onClick: () =>
-                  onSwitchStorageSubTab &&
-                  onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT'),
-              },
-            ].map((item) => {
-              const ItemIcon = item.icon || Terminal;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={item.onClick}
-                  title={item.title}
-                  className="w-full h-9 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="p-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
-                      <ItemIcon className="w-3 h-3" />
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                  <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
-                    →
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
-      )}
+
+        {/* Connected 6-Studio Pipeline Strip (Balanced 6-Column Single-Row Grid) */}
+        {selectedBucket && (
+          <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800/80 flex flex-col xl:flex-row xl:items-center gap-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 shrink-0">
+              Open Target In:
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 w-full">
+              {[
+                {
+                  key: 'QUERY_BQ',
+                  icon: Code,
+                  label: 'BigQuery SQL',
+                  title:
+                    'Open BigQuery Studio with an External Table query for this bucket/object',
+                  onClick: () => {
+                    if (!onOpenBigQuerySql) return;
+                    const objName = inspectedObject?.name || '*.parquet';
+                    const extFormat = objName.toLowerCase().endsWith('.parquet')
+                      ? 'PARQUET'
+                      : objName.toLowerCase().endsWith('.csv')
+                      ? 'CSV'
+                      : 'JSON';
+                    const safeTbl = selectedBucket.name
+                      .replace(/[^a-zA-Z0-9_]/g, '_')
+                      .slice(0, 32);
+                    const sql = `-- Auto-generated BigQuery External Lakehouse Table for gs://${selectedBucket.name}/${objName}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics.${safeTbl}_ext\`\nOPTIONS (\n  format = '${extFormat}',\n  uris = ['gs://${selectedBucket.name}/${objName}']\n);\n\nSELECT * FROM \`${projectId}.analytics.${safeTbl}_ext\` LIMIT 100;`;
+                    onOpenBigQuerySql(
+                      sql,
+                      `External Table Query (gs://${selectedBucket.name}/${objName})`,
+                      {
+                        hasUnsavedWarning: Boolean(
+                          previewAnalysis?.hasUnsavedChanges
+                        ),
+                      }
+                    );
+                  },
+                },
+                {
+                  key: 'BIGLAKE_ICEBERG',
+                  icon: Globe,
+                  label: 'BigLake Iceberg',
+                  title:
+                    'Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio',
+                  onClick: () =>
+                    onNavigateStudio &&
+                    onNavigateStudio('BIGLAKE_ICEBERG', 'METASTORE_CATALOGS', {
+                      bucketName: selectedBucket?.name || '',
+                      objectName:
+                        inspectedObject?.name || currentFolderPrefix || '',
+                      hasUnsavedWarning: Boolean(
+                        previewAnalysis?.hasUnsavedChanges
+                      ),
+                    }),
+                },
+                {
+                  key: 'MANAGED_SPARK_35',
+                  icon: Zap,
+                  label: 'Managed Spark 3.5',
+                  title:
+                    'Open Managed Service for Apache Spark 3.5 Studio with this bucket/object pre-wired for Serverless PySpark or Spark Connect',
+                  onClick: () =>
+                    onNavigateStudio &&
+                    onNavigateStudio(
+                      'MANAGED_SPARK_STUDIO',
+                      'SPARK_CONNECT_NOTEBOOKS',
+                      {
+                        bucketName: selectedBucket?.name || '',
+                        objectName:
+                          inspectedObject?.name || currentFolderPrefix || '',
+                        hasUnsavedWarning: Boolean(
+                          previewAnalysis?.hasUnsavedChanges
+                        ),
+                      }
+                    ),
+                },
+                {
+                  key: 'MEDALLION_ELT',
+                  icon: FileCode,
+                  label: 'Medallion ELT',
+                  title:
+                    'Build a Bronze-Silver-Gold Medallion pipeline from this bucket',
+                  onClick: () =>
+                    onNavigateStudio &&
+                    onNavigateStudio('DATA_PIPELINES', 'MEDALLION_ELT', {
+                      bucketName: selectedBucket?.name || '',
+                      objectName:
+                        inspectedObject?.name || currentFolderPrefix || '',
+                      hasUnsavedWarning: Boolean(
+                        previewAnalysis?.hasUnsavedChanges
+                      ),
+                    }),
+                },
+                {
+                  key: 'RAM_DLP_XRAY',
+                  icon: ShieldAlert,
+                  label: 'RAM DLP X-Ray',
+                  title:
+                    'Scan this bucket in-memory for leaked secrets, API keys, and PII',
+                  onClick: () =>
+                    onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY'),
+                },
+                {
+                  key: 'S3_MINIO_IMPORT',
+                  icon: Upload,
+                  label: 'S3 / MinIO Import',
+                  title:
+                    'Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket',
+                  onClick: () =>
+                    onSwitchStorageSubTab &&
+                    onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT'),
+                },
+              ].map((item) => {
+                const ItemIcon = item.icon || Terminal;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={item.onClick}
+                    title={item.title}
+                    className="w-full h-8 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 hover:border-amber-500/60 dark:hover:border-amber-400/60 text-zinc-700 dark:text-zinc-200 text-[11px] font-medium transition-all cursor-pointer flex items-center justify-between gap-1.5"
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <ItemIcon className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    <span className="text-zinc-400 dark:text-zinc-500 text-[10px] shrink-0">
+                      →
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Collapsible New Object & Data Engineering Template Composer */}
       {showComposerBar && (
         <form
           onSubmit={handleCreateFromComposer}
-          className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-500/[0.06] border border-emerald-500/40 space-y-3"
+          className="p-4 rounded-xl bg-white dark:bg-[#1b1c1f] border border-amber-500/50 space-y-3 shadow-xs"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-              <FileCode className="w-4 h-4" />
+            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <FileCode className="w-4 h-4 text-amber-500" />
               <span>
-                Create New Object in gs://{selectedBucket?.name} (or Load a Preset Template)
+                Create New Object in{' '}
+                <code className="font-mono text-amber-600 dark:text-amber-300">
+                  gs://{selectedBucket?.name}
+                </code>{' '}
+                (or Load a Preset Template)
               </span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-zinc-500 font-bold">Templates:</span>
+              <span className="text-[10px] text-zinc-500 font-semibold">
+                Templates:
+              </span>
               {OBJECT_TEMPLATES.map((tpl) => (
                 <button
                   key={tpl.id}
@@ -2827,7 +2904,7 @@ export default function GcsObjectWorkbench({
                     setComposerContentType(tpl.contentType);
                     setComposerBody(tpl.body);
                   }}
-                  className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-emerald-500/30 hover:border-emerald-500 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/60 text-[10.5px] font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer"
                 >
                   {tpl.label}
                 </button>
@@ -2835,7 +2912,7 @@ export default function GcsObjectWorkbench({
               <button
                 type="button"
                 onClick={() => setShowComposerBar(false)}
-                className="px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold cursor-pointer ml-2"
+                className="px-2.5 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 text-[10.5px] font-semibold cursor-pointer ml-1"
               >
                 Close
               </button>
@@ -2848,12 +2925,12 @@ export default function GcsObjectWorkbench({
               value={composerPath}
               onChange={(e) => setComposerPath(e.target.value)}
               placeholder="path/to/object.json"
-              className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3 py-1.5 font-bold"
+              className="h-9 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-3 font-mono font-bold"
             />
             <select
               value={composerContentType}
               onChange={(e) => setComposerContentType(e.target.value)}
-              className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3 py-1.5"
+              className="h-9 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-3 font-mono"
             >
               <option value="application/json">application/json</option>
               <option value="text/csv; charset=utf-8">text/csv</option>
@@ -2866,7 +2943,7 @@ export default function GcsObjectWorkbench({
             <select
               value={composerStorageClass}
               onChange={(e) => setComposerStorageClass(e.target.value)}
-              className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3 py-1.5 font-bold text-blue-500"
+              className="h-9 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-3 font-mono font-bold text-blue-500"
             >
               <option value="STANDARD">STANDARD (Hot)</option>
               <option value="NEARLINE">NEARLINE (30d)</option>
@@ -2879,14 +2956,14 @@ export default function GcsObjectWorkbench({
             rows={5}
             value={composerBody}
             onChange={(e) => setComposerBody(e.target.value)}
-            className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl p-3 text-xs font-mono"
+            className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono"
           />
 
           <div className="flex justify-end gap-2">
             <button
               type="submit"
               disabled={busyKey === 'create-composer-obj' || !selectedBucket}
-              className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className="h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
             >
               {busyKey === 'create-composer-obj'
                 ? 'Creating in GCS...'
@@ -2897,7 +2974,7 @@ export default function GcsObjectWorkbench({
       )}
 
       {/* Main Master-Detail Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* ================================================================ */}
         {/* LEFT PANEL: VIRTUAL FOLDER TREE, SEARCH & DRAG-DROP UPLOADER     */}
         {/* ================================================================ */}
@@ -2914,230 +2991,218 @@ export default function GcsObjectWorkbench({
               handleMultiFileUpload(e.dataTransfer.files);
             }
           }}
-          className={`${leftColSpanClass} p-4 rounded-2xl bg-white dark:bg-zinc-900/85 border transition-all space-y-3 ${
+          className={`${leftColSpanClass} p-3.5 rounded-xl bg-white dark:bg-[#1b1c1f] border transition-all space-y-2.5 ${
             isDraggingOver
-              ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/[0.05]'
+              ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/[0.04]'
               : 'border-zinc-200 dark:border-zinc-800'
           }`}
         >
-          {/* Explorer Mode Switcher + Versions Toggle */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 text-[10px]">
-              <button
-                type="button"
-                onClick={() => setExplorerMode('FOLDER')}
-                className={`px-2.5 py-1 rounded-md font-bold cursor-pointer ${
-                  explorerMode === 'FOLDER'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-zinc-500'
-                }`}
-              >
-                Folders
-              </button>
-              <button
-                type="button"
-                onClick={() => setExplorerMode('FLAT')}
-                className={`px-2.5 py-1 rounded-md font-bold cursor-pointer ${
-                  explorerMode === 'FLAT'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-zinc-500'
-                }`}
-              >
-                Flat ({objects.length})
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setShowAllVersions((v) => !v)}
-                className={`px-2 py-1 rounded-md text-[10px] font-bold border cursor-pointer ${
-                  showAllVersions
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
-                    : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-500 border-zinc-300 dark:border-zinc-800'
-                }`}
-              >
-                {showAllVersions ? 'All Versions' : 'Live Only'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fetchObjects(selectedBucket?.name)}
-                className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-blue-500 cursor-pointer"
-                title="Refresh objects"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${loadingObjects ? 'animate-spin' : ''}`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Search & Sort Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="sm:col-span-2 relative">
+          {/* Compact Toolbar Row 1: Search + Sort + Refresh */}
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1 min-w-0">
               <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
               <input
                 type="text"
-                placeholder="Search objects by name..."
+                placeholder="Filter objects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-8 pr-2.5 py-1.5 text-[11px]"
+                className="w-full h-8 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-2.5 text-xs"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-2 py-1.5 text-[10px] font-bold"
+              className="h-8 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 text-[11px] font-semibold cursor-pointer shrink-0"
+              title="Sort objects"
             >
-              <option value="NAME_ASC">Sort: Name</option>
-              <option value="SIZE_DESC">Sort: Largest</option>
-              <option value="UPDATED_DESC">Sort: Newest</option>
+              <option value="NAME_ASC">Name</option>
+              <option value="SIZE_DESC">Largest</option>
+              <option value="UPDATED_DESC">Newest</option>
             </select>
+            <button
+              type="button"
+              onClick={() => fetchObjects(selectedBucket?.name)}
+              className="h-8 w-8 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-blue-500 inline-flex items-center justify-center cursor-pointer shrink-0"
+              title="Refresh objects"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loadingObjects ? 'animate-spin' : ''}`}
+              />
+            </button>
           </div>
 
-          {/* Drag-and-Drop Hint + Multi-Object Bundle Download Bar */}
-          <div className="space-y-2">
-            <div className="px-3 py-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/50 text-[10px] text-zinc-500 flex items-center justify-between">
-              <span>
-                Drop files here to upload to{' '}
-                <strong className="text-blue-500">
-                  /{currentFolderPrefix || ''}
-                </strong>
-              </span>
-              <Upload className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          {/* Compact Toolbar Row 2: Folders/Flat Switcher + Select All + Versions + Sweep */}
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+            <div className="flex items-center gap-1.5">
+              <div
+                role="tablist"
+                aria-label="Object Explorer Hierarchy Mode"
+                className="cp-segmented-menu flex items-center gap-0.5 p-0.5 rounded-lg text-[11px]"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={explorerMode === 'FOLDER'}
+                  onClick={() => setExplorerMode('FOLDER')}
+                  className={`h-6 px-2 rounded-md font-semibold cursor-pointer ${
+                    explorerMode === 'FOLDER'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  Folders
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={explorerMode === 'FLAT'}
+                  onClick={() => setExplorerMode('FLAT')}
+                  className={`h-6 px-2 rounded-md font-semibold cursor-pointer ${
+                    explorerMode === 'FLAT'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  Flat ({objects.length})
+                </button>
+              </div>
+
+              <button
+                type="button"
+                aria-pressed={showAllVersions}
+                onClick={() => setShowAllVersions((v) => !v)}
+                className={`h-7 px-2 rounded-md text-[10.5px] font-semibold border cursor-pointer ${
+                  showAllVersions
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/50'
+                    : 'bg-zinc-50 dark:bg-zinc-950 text-zinc-500 border-zinc-200 dark:border-zinc-800'
+                }`}
+                title="Toggle archived object generations"
+              >
+                {showAllVersions ? 'All Versions' : 'Live Only'}
+              </button>
             </div>
 
             {(explorerItems.files.length > 0 ||
               explorerItems.folders.length > 0 ||
               objects.length > 0) && (
-              <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 text-[10px]">
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const visibleFileNames = explorerItems.files.map(
-                          (f) => f.name
-                        );
-                        const folderFileNames = explorerItems.folders.flatMap(
-                          (fld) =>
-                            objects
-                              .filter((o) =>
-                                String(o.name || '').startsWith(fld.fullPrefix)
-                              )
-                              .map((o) => o.name)
-                        );
-                        const allInView = Array.from(
-                          new Set([...visibleFileNames, ...folderFileNames])
-                        );
-                        const allSelected =
-                          allInView.length > 0 &&
-                          allInView.every((n) =>
-                            selectedObjectNames.includes(n)
-                          );
-                        setSelectedObjectNames(allSelected ? [] : allInView);
-                      }}
-                      className="px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <CheckSquare className="w-3 h-3 text-blue-500" />
-                      <span>
-                        {selectedObjectNames.length > 0
-                          ? `Selected (${selectedObjectNames.length})`
-                          : 'Select All'}
-                      </span>
-                    </button>
-                    {selectedObjectNames.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedObjectNames([])}
-                        className="px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const visibleFileNames = explorerItems.files.map(
+                      (f) => f.name
+                    );
+                    const folderFileNames = explorerItems.folders.flatMap(
+                      (fld) =>
+                        objects
+                          .filter((o) =>
+                            String(o.name || '').startsWith(fld.fullPrefix)
+                          )
+                          .map((o) => o.name)
+                    );
+                    const allInView = Array.from(
+                      new Set([...visibleFileNames, ...folderFileNames])
+                    );
+                    const allSelected =
+                      allInView.length > 0 &&
+                      allInView.every((n) => selectedObjectNames.includes(n));
+                    setSelectedObjectNames(allSelected ? [] : allInView);
+                  }}
+                  className="h-7 px-2 rounded-md bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-semibold cursor-pointer inline-flex items-center gap-1 hover:border-amber-500/50"
+                >
+                  <CheckSquare className="w-3 h-3 text-amber-500" />
+                  <span>
+                    {selectedObjectNames.length > 0
+                      ? `All (${selectedObjectNames.length})`
+                      : 'Select All'}
+                  </span>
+                </button>
 
-                  <button
-                    type="button"
-                    disabled={
-                      objects.length === 0 ||
+                <button
+                  type="button"
+                  disabled={
+                    objects.length === 0 ||
+                    busyKey ===
+                      (currentFolderPrefix
+                        ? `sweep-folder-${currentFolderPrefix}`
+                        : 'sweep-bucket')
+                  }
+                  onClick={() =>
+                    handleSweepBucketOrFolder(currentFolderPrefix || '')
+                  }
+                  title={
+                    currentFolderPrefix
+                      ? `Sweep and delete all objects inside folder /${currentFolderPrefix}`
+                      : `Sweep and empty all ${objects.length} object(s) in gs://${selectedBucket?.name} while keeping the bucket intact`
+                  }
+                  className="h-7 px-2 rounded-md bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 text-[10.5px] font-semibold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 ${
                       busyKey ===
-                        (currentFolderPrefix
-                          ? `sweep-folder-${currentFolderPrefix}`
-                          : 'sweep-bucket')
-                    }
-                    onClick={() =>
-                      handleSweepBucketOrFolder(currentFolderPrefix || '')
-                    }
-                    title={
-                      currentFolderPrefix
-                        ? `Sweep and delete all objects inside folder /${currentFolderPrefix}`
-                        : `Sweep and empty all ${objects.length} object(s) in gs://${selectedBucket?.name} while keeping the bucket intact`
-                    }
-                    className="px-2 py-1 rounded-md bg-amber-500/15 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
-                  >
-                    <RefreshCw
-                      className={`w-3 h-3 ${
-                        busyKey ===
-                        (currentFolderPrefix
-                          ? `sweep-folder-${currentFolderPrefix}`
-                          : 'sweep-bucket')
-                          ? 'animate-spin'
-                          : ''
-                      }`}
-                    />
-                    <span>
-                      {currentFolderPrefix
-                        ? `Sweep Folder`
-                        : `Sweep Bucket (${objects.length})`}
-                    </span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    disabled={
-                      selectedObjectNames.length === 0 || bundlingDownload
-                    }
-                    onClick={handleDownloadSelectedBundle}
-                    title="Package selected objects into a single POSIX .tar archive and download"
-                    className="w-full py-1.5 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate"
-                  >
-                    <Archive className="w-3 h-3 shrink-0" />
-                    <span className="truncate">
-                      {bundlingDownload
-                        ? 'Packing .tar...'
-                        : `Bundle .tar (${selectedObjectNames.length})`}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={
-                      selectedObjectNames.length === 0 ||
-                      busyKey === 'batch-del-selected'
-                    }
-                    onClick={handleBatchDeleteSelectedObjects}
-                    title="Permanently delete only the selected objects by choice"
-                    className={`w-full py-1.5 px-2 rounded-md font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate border ${
-                      selectedObjectNames.length > 0
-                        ? 'bg-red-500/15 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border-red-500/40'
-                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                      (currentFolderPrefix
+                        ? `sweep-folder-${currentFolderPrefix}`
+                        : 'sweep-bucket')
+                        ? 'animate-spin'
+                        : ''
                     }`}
-                  >
-                    <Trash2 className="w-3 h-3 shrink-0" />
-                    <span className="truncate">
-                      {busyKey === 'batch-del-selected'
-                        ? 'Deleting...'
-                        : `Delete Selected (${selectedObjectNames.length})`}
-                    </span>
-                  </button>
-                </div>
+                  />
+                  <span>
+                    {currentFolderPrefix ? 'Sweep Folder' : 'Sweep'}
+                  </span>
+                </button>
               </div>
             )}
           </div>
+
+          {/* Contextual Multi-Object Selection Action Bar (Appears when 1+ objects are checked) */}
+          {selectedObjectNames.length > 0 && (
+            <div className="p-2 rounded-lg bg-amber-500/[0.08] border border-amber-500/40 space-y-1.5 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-700 dark:text-amber-300">
+                  {selectedObjectNames.length} object(s) selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedObjectNames([])}
+                  className="text-[10.5px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 font-semibold cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  disabled={bundlingDownload}
+                  onClick={handleDownloadSelectedBundle}
+                  title="Package selected objects into a single POSIX .tar archive and download"
+                  className="w-full h-7 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate"
+                >
+                  <Archive className="w-3 h-3 shrink-0" />
+                  <span className="truncate">
+                    {bundlingDownload
+                      ? 'Packing .tar...'
+                      : `Bundle .tar (${selectedObjectNames.length})`}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={busyKey === 'batch-del-selected'}
+                  onClick={handleBatchDeleteSelectedObjects}
+                  title="Permanently delete only the selected objects by choice"
+                  className="w-full h-7 px-2 rounded-md bg-red-500/15 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/40 font-semibold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40 transition-colors truncate"
+                >
+                  <Trash2 className="w-3 h-3 shrink-0" />
+                  <span className="truncate">
+                    {busyKey === 'batch-del-selected'
+                      ? 'Deleting...'
+                      : `Delete (${selectedObjectNames.length})`}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Object & Virtual Folder List */}
           {loadingObjects ? (
@@ -3147,21 +3212,21 @@ export default function GcsObjectWorkbench({
           ) : explorerItems.folders.length === 0 &&
             explorerItems.files.length === 0 ? (
             <div className="p-6 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-center space-y-2">
-              <div className="text-xs font-bold text-zinc-500">
+              <div className="text-xs font-semibold text-zinc-500">
                 No objects in /{currentFolderPrefix}
               </div>
               {currentFolderPrefix && (
                 <button
                   type="button"
                   onClick={() => setCurrentFolderPrefix('')}
-                  className="px-3 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold cursor-pointer"
+                  className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-[11px] font-semibold cursor-pointer"
                 >
                   Return to Bucket Root
                 </button>
               )}
             </div>
           ) : (
-            <div className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80 max-h-[520px] overflow-y-auto pr-0.5">
+            <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/70 max-h-[560px] overflow-y-auto pr-0.5">
               {/* Up One Folder Row */}
               {explorerMode === 'FOLDER' && currentFolderPrefix && (
                 <button
@@ -3173,7 +3238,7 @@ export default function GcsObjectWorkbench({
                       lastSlash >= 0 ? `${trimmed.slice(0, lastSlash + 1)}` : ''
                     );
                   }}
-                  className="w-full py-2 px-2.5 flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-md cursor-pointer"
+                  className="w-full py-2 px-2.5 flex items-center gap-2 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-md cursor-pointer"
                 >
                   <CornerLeftUp className="w-3.5 h-3.5" />
                   <span>.. (Up to parent folder)</span>
@@ -3194,7 +3259,7 @@ export default function GcsObjectWorkbench({
                   <div
                     key={folder.fullPrefix}
                     onClick={() => setCurrentFolderPrefix(folder.fullPrefix)}
-                    className="py-2.5 px-2.5 flex items-center justify-between gap-2 text-xs hover:bg-blue-500/[0.08] rounded-lg cursor-pointer transition-colors"
+                    className="py-2 px-2.5 flex items-center justify-between gap-2 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-900/80 rounded-lg cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <button
@@ -3204,16 +3269,16 @@ export default function GcsObjectWorkbench({
                           handleToggleSelectFolderPrefix(folder.fullPrefix);
                         }}
                         title={`Select all ${folder.count} object(s) inside folder ${folder.name}/`}
-                        className="text-zinc-400 hover:text-blue-500 shrink-0 cursor-pointer"
+                        className="text-zinc-400 hover:text-amber-500 shrink-0 cursor-pointer"
                       >
                         {isFolderChecked ? (
-                          <CheckSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <CheckSquare className="w-3.5 h-3.5 text-amber-500" />
                         ) : (
                           <Square className="w-3.5 h-3.5" />
                         )}
                       </button>
                       <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                      <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
                         {folder.name}/
                       </span>
                     </div>
@@ -3221,8 +3286,8 @@ export default function GcsObjectWorkbench({
                       className="flex items-center gap-1.5 shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="text-[10px] text-zinc-500">
-                        {folder.count} item(s) · {formatBytes(folder.totalBytes)}
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        {folder.count} · {formatBytes(folder.totalBytes)}
                       </span>
                       <button
                         type="button"
@@ -3233,7 +3298,7 @@ export default function GcsObjectWorkbench({
                           handleSweepBucketOrFolder(folder.fullPrefix)
                         }
                         title={`Delete folder ${folder.name}/ and all ${folder.count} object(s) inside it`}
-                        className="p-1.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
+                        className="p-1 rounded-md text-zinc-400 hover:bg-red-500/15 hover:text-red-500 cursor-pointer transition-colors"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -3242,7 +3307,7 @@ export default function GcsObjectWorkbench({
                 );
               })}
 
-              {/* Object File Rows */}
+              {/* Object File Rows (Warm-Amber Selection Highlight for Active Inspected Object) */}
               {explorerItems.files.map((o) => {
                 const isInspected = inspectedObject?.objectName === o.name;
                 const isChecked = selectedObjectNames.includes(o.name);
@@ -3256,47 +3321,53 @@ export default function GcsObjectWorkbench({
                   <div
                     key={`${o.name}-${o.generation}`}
                     onClick={() => handleInspectObject(o)}
-                    className={`py-2.5 px-2.5 flex items-center justify-between gap-2 text-xs transition-all cursor-pointer rounded-xl ${
+                    className={`py-2 px-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs transition-all cursor-pointer rounded-lg border ${
                       isInspected
-                        ? 'bg-blue-600/15 border border-blue-500/40 shadow-sm'
-                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-950/60'
+                        ? 'bg-amber-500/[0.12] border-amber-500/80 shadow-2xs'
+                        : 'border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900/70'
                     }`}
                   >
-                    <div className="min-w-0 flex-1 flex items-start gap-2">
+                    <div className="min-w-0 flex items-start gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleSelectObject(o.name);
                         }}
-                        title="Select object for multi-file .tar bundle download"
-                        className="mt-0.5 text-zinc-400 hover:text-blue-500 shrink-0 cursor-pointer"
+                        title="Select object for batch download or deletion"
+                        className="mt-0.5 text-zinc-400 hover:text-amber-500 shrink-0 cursor-pointer"
                       >
                         {isChecked ? (
-                          <CheckSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <CheckSquare className="w-3.5 h-3.5 text-amber-500" />
                         ) : (
                           <Square className="w-3.5 h-3.5" />
                         )}
                       </button>
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <div className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 min-w-0">
+                          <FileText
+                            className={`w-3.5 h-3.5 shrink-0 ${
+                              isInspected
+                                ? 'text-amber-500'
+                                : 'text-blue-500 dark:text-blue-400'
+                            }`}
+                          />
                           <span className="truncate" title={o.name}>
                             {displayName}
                           </span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold shrink-0">
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold">
                             {fmt}
                           </span>
-                        </div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                           <span>{formatBytes(o.size)}</span>
                           <span>·</span>
-                          <span className="text-blue-500 font-bold">
+                          <span className="text-zinc-600 dark:text-zinc-400">
                             {o.storageClass}
                           </span>
                           {o.timeDeleted && (
-                            <span className="px-1 rounded-full bg-amber-500/20 text-amber-400">
-                              ARCHIVED GEN
+                            <span className="px-1 rounded bg-amber-500/20 text-amber-400">
+                              ARCHIVED
                             </span>
                           )}
                         </div>
@@ -3322,7 +3393,7 @@ export default function GcsObjectWorkbench({
                             onShowToast(`Copied Authenticated HTTPS URL: ${url}`);
                           }
                         }}
-                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors"
                         title="Copy Authenticated HTTPS URL (https://storage.cloud.google.com/...)"
                       >
                         {copiedKey === `row-url-${o.name}` ? (
@@ -3335,7 +3406,7 @@ export default function GcsObjectWorkbench({
                       <button
                         type="button"
                         onClick={() => handleDownloadObject(o.name)}
-                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors"
                         title="Download object to laptop"
                       >
                         <Download className="w-3 h-3" />
@@ -3347,7 +3418,7 @@ export default function GcsObjectWorkbench({
                         disabled={
                           busyKey === `obj-del-${o.name}-${o.generation}`
                         }
-                        className="p-1.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
+                        className="p-1.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer transition-colors"
                         title="Delete object"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -3358,32 +3429,61 @@ export default function GcsObjectWorkbench({
               })}
             </div>
           )}
+
+          {/* Subtle Drag & Drop Upload Footer */}
+          <div className="px-2.5 py-1.5 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 text-[10px] text-zinc-500 flex items-center justify-between">
+            <span className="truncate">
+              Drag &amp; drop files here to upload into{' '}
+              <code className="font-mono text-amber-600 dark:text-amber-400">
+                /{currentFolderPrefix || ''}
+              </code>
+            </span>
+            <Upload className="w-3 h-3 text-zinc-400 shrink-0" />
+          </div>
         </div>
 
         {/* ================================================================ */}
         {/* RIGHT PANEL: MULTI-FORMAT PREVIEW, PRO CODE EDITOR & DIFF STUDIO */}
         {/* ================================================================ */}
         <div
-          className={`${rightColSpanClass} p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 space-y-3`}
+          className={`${rightColSpanClass} p-4 rounded-xl bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 space-y-3`}
         >
           {loadingInspect ? (
             <div className="p-12 text-center text-xs text-zinc-500 animate-pulse">
-              Streaming object payload & magic signature from Google Cloud Storage...
+              Streaming object payload &amp; magic signature from Google Cloud Storage...
             </div>
           ) : !inspectedObject ? (
             <div className="p-10 text-center space-y-3">
-              <Eye className="w-8 h-8 text-blue-500 mx-auto" />
-              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                Select any Object in gs://{selectedBucket?.name} to Inspect, Preview & Edit
+              <Eye className="w-8 h-8 text-amber-500 mx-auto" />
+              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Select any Object in{' '}
+                <code className="font-mono text-amber-600 dark:text-amber-300">
+                  gs://{selectedBucket?.name}
+                </code>{' '}
+                to Inspect, Preview &amp; Edit
               </div>
-              <p className="text-xs text-zinc-500 max-w-lg mx-auto">
-                Supports interactive **CSV / TSV / JSONL Data Grids**, **JSON Schema & Path Trees**, **Live Markdown / SVG Rendering**, **Zoomable Image Canvas**, **Jupyter Notebook Viewer**, **Parquet / Binary Hex X-Ray**, and **Side-by-Side Diffs**.
+              <p className="text-xs text-zinc-500 max-w-lg mx-auto leading-relaxed">
+                Supports interactive CSV / TSV / JSONL Data Grids, JSON Schema &amp; Path Trees, Live Markdown / SVG Rendering, Zoomable Image Canvas, Jupyter Notebook Viewer, Parquet / Binary Hex X-Ray, and Side-by-Side Diffs.
               </p>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center justify-center gap-2">
+                <label className="h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File(s)</span>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => {
+                      handleMultiFileUpload(e.target.files);
+                      e.target.value = '';
+                    }}
+                    disabled={uploadingBatch || !selectedBucket}
+                    className="hidden"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowComposerBar(true)}
-                  className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer"
+                  className="h-9 px-4 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-amber-500/60 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold cursor-pointer"
                 >
                   + Create New Object from Template
                 </button>
@@ -3391,53 +3491,103 @@ export default function GcsObjectWorkbench({
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Studio Object Header Bar */}
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white break-all">
+              {/* 1. Compact Studio Object Header Bar */}
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2.5">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-white break-all">
                       gs://{inspectedObject.bucketName}/{inspectedObject.objectName}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopyText(
+                          inspectedObject.gsUri ||
+                            `gs://${inspectedObject.bucketName}/${inspectedObject.objectName}`,
+                          'hdr-gs-uri'
+                        )
+                      }
+                      className="p-1 rounded bg-zinc-200/70 dark:bg-zinc-800 hover:text-amber-500 text-zinc-500 cursor-pointer"
+                      title="Copy gs:// URI"
+                    >
+                      {copiedKey === 'hdr-gs-uri' ? (
+                        <Check className="w-3 h-3 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
                       {activeFormat}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                      Gen #{String(inspectedObject.metadata?.generation || '').slice(-6)}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAccessDrawer((v) => !v)}
+                      title="Click to configure Public/Private IAM & ACL Access or copy HTTPS URIs"
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-md border font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                        inspectedObject.isPublic
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/40'
+                          : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-amber-500/60'
+                      }`}
+                    >
+                      {inspectedObject.isPublic ? (
+                        <>
+                          <Globe className="w-3 h-3" />
+                          <span>PUBLIC ({inspectedObject.publicAccessScope || 'allUsers'})</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3 h-3" />
+                          <span>PRIVATE</span>
+                        </>
+                      )}
+                    </button>
                     {previewAnalysis.hasUnsavedChanges && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-extrabold border border-amber-500/40">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-500 font-bold border border-amber-500/40">
                         UNSAVED EDITS
                       </span>
                     )}
                   </div>
-                  <div className="text-[10px] text-zinc-500 mt-1">
-                    {inspectedObject.metadata?.contentType} ·{' '}
-                    {formatBytes(inspectedObject.metadata?.size)} · Class:{' '}
-                    <strong className="text-blue-500">
+                  <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-1.5 flex-wrap">
+                    <span>{formatBytes(inspectedObject.metadata?.size)}</span>
+                    <span>·</span>
+                    <span>{inspectedObject.metadata?.contentType}</span>
+                    <span>·</span>
+                    <strong className="text-zinc-700 dark:text-zinc-300">
                       {inspectedObject.metadata?.storageClass}
-                    </strong>{' '}
-                    · MD5: {inspectedObject.metadata?.md5Hash || 'n/a'}
+                    </strong>
+                    <span>·</span>
+                    <span>
+                      Gen #{String(inspectedObject.metadata?.generation || '').slice(-6)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Top Right Object Actions: Equal-Width Action Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 shrink-0">
+                {/* Top Right Object Actions Toolbar */}
+                <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                   <button
                     type="button"
-                    onClick={() =>
-                      handleDownloadObject(inspectedObject.objectName)
-                    }
-                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
-                    title="Download full object to laptop"
+                    aria-pressed={showAccessDrawer}
+                    onClick={() => setShowAccessDrawer((v) => !v)}
+                    className={`h-8 px-2.5 rounded-md border text-[11px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1 transition-all ${
+                      showAccessDrawer
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/60'
+                        : 'bg-white dark:bg-zinc-950 hover:border-amber-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                    title="Share object, toggle Public/Private access, or copy HTTPS URLs"
                   >
-                    <Download className="w-3.5 h-3.5 shrink-0" />
-                    <span>Download</span>
+                    <Link className="w-3.5 h-3.5 shrink-0" />
+                    <span>Share &amp; URIs</span>
                   </button>
 
                   <button
                     type="button"
+                    aria-pressed={showRenameBar}
                     onClick={() => setShowRenameBar((v) => !v)}
-                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    className={`h-8 px-2.5 rounded-md border text-[11px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1 transition-all ${
+                      showRenameBar
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/60'
+                        : 'bg-white dark:bg-zinc-950 hover:border-amber-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                    }`}
                     title="Rename, move, duplicate, or copy across buckets"
                   >
                     <Edit3 className="w-3.5 h-3.5 shrink-0" />
@@ -3447,11 +3597,23 @@ export default function GcsObjectWorkbench({
                   <button
                     type="button"
                     onClick={() =>
+                      handleDownloadObject(inspectedObject.objectName)
+                    }
+                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-amber-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1"
+                    title="Download full object to laptop"
+                  >
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span>Download</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
                       setLayoutRatio((r) =>
                         r === 'FULL_STUDIO' ? 'COMPACT_LEFT' : 'FULL_STUDIO'
                       )
                     }
-                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-950 hover:border-amber-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Toggle Full-Width Editor Workspace"
                   >
                     {layoutRatio === 'FULL_STUDIO' ? (
@@ -3474,7 +3636,7 @@ export default function GcsObjectWorkbench({
                       disabled={
                         busyKey === `save-obj-${inspectedObject.objectName}`
                       }
-                      className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs"
+                      className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-2xs"
                     >
                       <Save className="w-3.5 h-3.5 shrink-0" />
                       <span>
@@ -3486,6 +3648,488 @@ export default function GcsObjectWorkbench({
                   )}
                 </div>
               </div>
+
+              {/* 2. Primary Studio Mode Switcher Tabs (Immediately Below Header with Warm-Amber Active Selection) */}
+              <div
+                role="tablist"
+                aria-label="Object Workbench Studio Modes"
+                className="cp-segmented-menu grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-1.5 p-1 rounded-[10px] text-xs"
+              >
+                {inspectedObject.isTextLike && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={studioMode === 'SPLIT'}
+                    onClick={() => setStudioMode('SPLIT')}
+                    className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                      studioMode === 'SPLIT'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    }`}
+                  >
+                    <Columns className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Split View</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={studioMode === 'PREVIEW'}
+                  onClick={() => setStudioMode('PREVIEW')}
+                  className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                    studioMode === 'PREVIEW'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  <Table className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Preview ({activeFormat})</span>
+                </button>
+
+                {inspectedObject.isTextLike && (
+                  <>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={studioMode === 'EDITOR'}
+                      onClick={() => setStudioMode('EDITOR')}
+                      className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                        studioMode === 'EDITOR'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                      }`}
+                    >
+                      <Code className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Code Editor</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={studioMode === 'DIFF'}
+                      onClick={() => setStudioMode('DIFF')}
+                      className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                        studioMode === 'DIFF'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                      }`}
+                    >
+                      <GitCompare className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        Diff Changes
+                        {previewAnalysis.hasUnsavedChanges ? ' ●' : ''}
+                      </span>
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={studioMode === 'VERSIONS'}
+                  onClick={() => setStudioMode('VERSIONS')}
+                  className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                    studioMode === 'VERSIONS'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Versions &amp; Restore</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={studioMode === 'METADATA'}
+                  onClick={() => setStudioMode('METADATA')}
+                  className={`w-full h-8 px-2.5 rounded-[7px] font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-all ${
+                    studioMode === 'METADATA'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Access, URLs &amp; Holds</span>
+                </button>
+              </div>
+
+              {/* Feature 3: Collapsible Server-Side Move, Rename, Duplicate & Cross-Bucket Copy Bar */}
+              {showRenameBar && (
+                <form
+                  onSubmit={handleRenameOrCopyObject}
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-amber-500/40 space-y-2.5 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      Server-Side Object Move, Rename, Duplicate &amp; Cross-Bucket Copy (Zero Egress)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowRenameBar(false)}
+                      className="text-[10.5px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-semibold cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-semibold block mb-1">
+                        Destination Bucket
+                      </label>
+                      <select
+                        value={renameTargetBucket || selectedBucket?.name || ''}
+                        onChange={(e) => setRenameTargetBucket(e.target.value)}
+                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 text-xs font-mono font-bold"
+                      >
+                        {(buckets.length > 0 ? buckets : [selectedBucket].filter(Boolean)).map(
+                          (b) => (
+                            <option key={b.name} value={b.name}>
+                              gs://{b.name} ({b.location})
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-semibold block mb-1">
+                        Destination Object Key / Path
+                      </label>
+                      <input
+                        type="text"
+                        value={renameTargetPath}
+                        onChange={(e) => setRenameTargetPath(e.target.value)}
+                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <label className="flex items-center gap-1.5 text-[11px] cursor-pointer h-8 px-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={renameDeleteSource}
+                          onChange={(e) => setRenameDeleteSource(e.target.checked)}
+                        />
+                        <span className="truncate">
+                          {renameDeleteSource ? 'Move (Delete Source)' : 'Copy (Keep Source)'}
+                        </span>
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={busyKey === `rename-${inspectedObject.objectName}`}
+                        className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] cursor-pointer shrink-0"
+                      >
+                        {renameDeleteSource ? 'Move / Rename' : 'Copy Object'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* Collapsible Google Cloud Console Public Access & HTTPS URI Generator (Shown when Share & URIs drawer is toggled OR inside Access, URLs & Holds tab) */}
+              {(showAccessDrawer || studioMode === 'METADATA') &&
+                (() => {
+                  const encObj = String(inspectedObject.objectName || '')
+                    .split('/')
+                    .map((s) => encodeURIComponent(s))
+                    .join('/');
+                  const publicUrl =
+                    inspectedObject.publicHttpsUrl ||
+                    `https://storage.googleapis.com/${encodeURIComponent(
+                      inspectedObject.bucketName
+                    )}/${encObj}`;
+                  const authConsoleUrl =
+                    inspectedObject.authenticatedHttpsUrl ||
+                    `https://storage.cloud.google.com/${encodeURIComponent(
+                      inspectedObject.bucketName
+                    )}/${encObj}`;
+                  const gsUri =
+                    inspectedObject.gsUri ||
+                    `gs://${inspectedObject.bucketName}/${inspectedObject.objectName}`;
+                  const isPub = Boolean(inspectedObject.isPublic);
+
+                  const scopeDetails =
+                    publicScopeMode === 'OBJECT_ACL'
+                      ? {
+                          badge: 'LEAST-PRIVILEGE · SINGLE OBJECT ONLY (ACL)',
+                          badgeClass:
+                            'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+                          boxClass:
+                            'bg-emerald-500/[0.06] border-emerald-500/30 text-emerald-800 dark:text-emerald-200',
+                          btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+                          btnLabel: 'Expose Single Object Only (Object ACL)',
+                          summary: `Grants Fine-Grained ACL (entity: allUsers, role: READER) ONLY on ${inspectedObject.objectName}. Other objects in gs://${inspectedObject.bucketName} stay private.`,
+                          cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
+                        }
+                      : publicScopeMode === 'BUCKET_IAM'
+                      ? {
+                          badge: 'BUCKET-WIDE PUBLIC READ · UNIFORM IAM',
+                          badgeClass:
+                            'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40',
+                          boxClass:
+                            'bg-amber-500/[0.07] border-amber-500/35 text-amber-800 dark:text-amber-200',
+                          btnClass: 'bg-amber-600 hover:bg-amber-700 text-white',
+                          btnLabel: 'Expose Bucket via Uniform IAM (allUsers)',
+                          summary: `Keeps Uniform Bucket-Level Access (UBLA) enabled and binds allUsers -> roles/storage.objectViewer on gs://${inspectedObject.bucketName} (makes all objects in this bucket publicly readable).`,
+                          cli: `gcloud storage buckets add-iam-policy-binding gs://${inspectedObject.bucketName} --member=allUsers --role=roles/storage.objectViewer`,
+                        }
+                      : {
+                          badge: 'SMART AUTO-NEGOTIATION (ACL -> IAM)',
+                          badgeClass:
+                            'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/40',
+                          boxClass:
+                            'bg-blue-500/[0.06] border-blue-500/30 text-blue-800 dark:text-blue-200',
+                          btnClass: 'bg-blue-600 hover:bg-blue-700 text-white',
+                          btnLabel: 'Convert to Public & Enable HTTPS URI (Auto)',
+                          summary: `Automatically relaxes Public Access Prevention to 'inherited' and applies per-object ACL if allowed, or falls back to Uniform Bucket IAM on gs://${inspectedObject.bucketName}.`,
+                          cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
+                        };
+
+                  return (
+                    <div
+                      className={`p-3 rounded-xl border space-y-2.5 text-xs transition-all ${
+                        isPub
+                          ? 'bg-emerald-500/[0.07] border-emerald-500/40'
+                          : 'bg-zinc-50/90 dark:bg-zinc-900/75 border-zinc-200 dark:border-zinc-800'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isPub ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              <span>
+                                PUBLIC ON INTERNET (
+                                {inspectedObject.publicAccessScope || 'allUsers'})
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
+                              <Lock className="w-3 h-3" />
+                              <span>PRIVATE (Zero-Trust Protected)</span>
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-0.5 rounded-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
+                          >
+                            {scopeDetails.badge}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <select
+                            value={publicScopeMode}
+                            onChange={(e) => {
+                              const nextMode = e.target.value;
+                              setPublicScopeMode(nextMode);
+                            }}
+                            className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold cursor-pointer"
+                            title="Choose how public access is granted in GCS"
+                          >
+                            <option value="AUTO">
+                              Mode: Auto (Object ACL or Bucket IAM)
+                            </option>
+                            <option value="OBJECT_ACL">
+                              Mode: Single Object Only (Fine-Grained ACL)
+                            </option>
+                            <option value="BUCKET_IAM">
+                              Mode: Uniform Bucket IAM (allUsers ObjectViewer)
+                            </option>
+                          </select>
+
+                          {isPub ? (
+                            <button
+                              type="button"
+                              disabled={
+                                busyKey === `pub-${inspectedObject.objectName}`
+                              }
+                              onClick={() => handleTogglePublicAccess(false)}
+                              className="px-3 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Lock className="w-3 h-3" />
+                              <span>
+                                {busyKey === `pub-${inspectedObject.objectName}`
+                                  ? 'Revoking...'
+                                  : 'Make Private (Revoke Public URI)'}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={
+                                busyKey === `pub-${inspectedObject.objectName}`
+                              }
+                              onClick={() => handleTogglePublicAccess(true)}
+                              className={`px-3 py-1 rounded-md text-[11px] font-semibold cursor-pointer inline-flex items-center gap-1.5 shadow-2xs disabled:opacity-50 transition-colors ${scopeDetails.btnClass}`}
+                            >
+                              <Unlock className="w-3 h-3" />
+                              <span>
+                                {busyKey === `pub-${inspectedObject.objectName}`
+                                  ? 'Converting to Public...'
+                                  : scopeDetails.btnLabel}
+                              </span>
+                            </button>
+                          )}
+
+                          {showAccessDrawer && studioMode !== 'METADATA' && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAccessDrawer(false)}
+                              className="px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 text-[10.5px] font-semibold cursor-pointer"
+                            >
+                              Hide
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Visual Policy Blast-Radius & CLI Preview Box */}
+                      <div
+                        className={`p-2.5 rounded-lg border text-[11px] flex flex-wrap items-center justify-between gap-2 transition-all ${scopeDetails.boxClass}`}
+                      >
+                        <div className="space-y-0.5 flex-1 min-w-[240px]">
+                          <div className="font-semibold">{scopeDetails.summary}</div>
+                          <div className="text-[10px] opacity-80 font-mono truncate">
+                            Equivalent CLI: <code>{scopeDetails.cli}</code>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopyText(scopeDetails.cli, 'pub-mode-cli')
+                          }
+                          className="px-2 py-1 rounded bg-white/80 dark:bg-zinc-950/80 border border-zinc-300 dark:border-zinc-800 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
+                        >
+                          {copiedKey === 'pub-mode-cli' ? (
+                            <Check className="w-3 h-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          <span>
+                            {copiedKey === 'pub-mode-cli'
+                              ? 'Copied CLI'
+                              : 'Copy Mode CLI'}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Official GCS URIs */}
+                      <div
+                        className={`grid grid-cols-1 ${
+                          isPub ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+                        } gap-2 text-[11px] font-mono`}
+                      >
+                        {isPub && (
+                          <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/40 flex items-center justify-between gap-1.5">
+                            <div className="min-w-0">
+                              <div className="text-[9px] uppercase font-sans font-bold text-emerald-600 dark:text-emerald-400">
+                                Public HTTPS URL (storage.googleapis.com)
+                              </div>
+                              <code
+                                className="text-zinc-800 dark:text-zinc-200 truncate block"
+                                title={publicUrl}
+                              >
+                                {publicUrl}
+                              </code>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopyText(publicUrl, 'pub-https-uri')
+                                }
+                                className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                                title="Copy Public HTTPS URL"
+                              >
+                                {copiedKey === 'pub-https-uri' ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              <a
+                                href={publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-emerald-500"
+                                title="Open Public HTTPS URL in new tab"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
+                          <div className="min-w-0">
+                            <div className="text-[9px] uppercase font-sans font-bold text-blue-500">
+                              Authenticated URL (storage.cloud.google.com)
+                            </div>
+                            <code
+                              className="text-zinc-800 dark:text-zinc-200 truncate block"
+                              title={authConsoleUrl}
+                            >
+                              {authConsoleUrl}
+                            </code>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyText(authConsoleUrl, 'auth-https-uri')
+                              }
+                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                              title="Copy Authenticated Browser URL"
+                            >
+                              {copiedKey === 'auth-https-uri' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <a
+                              href={authConsoleUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500"
+                              title="Open Authenticated Console URL in new tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
+                          <div className="min-w-0">
+                            <div className="text-[9px] uppercase font-sans font-bold text-zinc-400">
+                              Cloud Storage URI (gs://)
+                            </div>
+                            <code
+                              className="text-zinc-800 dark:text-zinc-200 truncate block"
+                              title={gsUri}
+                            >
+                              {gsUri}
+                            </code>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(gsUri, 'gs-uri')}
+                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                              title="Copy gs:// URI"
+                            >
+                              {copiedKey === 'gs-uri' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
               {/* Feature 5: Glass-Box Real-Time Client-Side Secret & PII Pre-Save Guardrail + Secret Manager Vault & Redaction Ledger */}
               {inspectedObject.isTextLike &&
@@ -4001,466 +4645,6 @@ export default function GcsObjectWorkbench({
                     )}
                   </div>
                 )}
-
-              {/* Feature 3: Upgraded In-Place Rename, Move, Duplicate & Cross-Bucket Server-Side Copy Bar */}
-              {showRenameBar && (
-                <form
-                  onSubmit={handleRenameOrCopyObject}
-                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                      Server-Side Object Move, Rename, Duplicate &amp; Cross-Bucket Copy (Zero Egress)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowRenameBar(false)}
-                      className="text-[10px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div>
-                      <label className="text-[10px] text-zinc-500 font-bold block mb-1">
-                        Destination Bucket
-                      </label>
-                      <select
-                        value={renameTargetBucket || selectedBucket?.name || ''}
-                        onChange={(e) => setRenameTargetBucket(e.target.value)}
-                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 text-xs font-bold"
-                      >
-                        {(buckets.length > 0 ? buckets : [selectedBucket].filter(Boolean)).map(
-                          (b) => (
-                            <option key={b.name} value={b.name}>
-                              gs://{b.name} ({b.location})
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-zinc-500 font-bold block mb-1">
-                        Destination Object Key / Path
-                      </label>
-                      <input
-                        type="text"
-                        value={renameTargetPath}
-                        onChange={(e) => setRenameTargetPath(e.target.value)}
-                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
-                      />
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <label className="flex items-center gap-1.5 text-[11px] cursor-pointer h-8 px-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={renameDeleteSource}
-                          onChange={(e) => setRenameDeleteSource(e.target.checked)}
-                        />
-                        <span className="truncate">
-                          {renameDeleteSource ? 'Move (Delete Source)' : 'Copy (Keep Source)'}
-                        </span>
-                      </label>
-                      <button
-                        type="submit"
-                        disabled={busyKey === `rename-${inspectedObject.objectName}`}
-                        className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer shrink-0"
-                      >
-                        {renameDeleteSource ? 'Move / Rename' : 'Copy Object'}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              )}
-
-              {/* Google Cloud Console Public Access & HTTPS URI Generator Bar */}
-              {(() => {
-                const encObj = String(inspectedObject.objectName || '')
-                  .split('/')
-                  .map((s) => encodeURIComponent(s))
-                  .join('/');
-                const publicUrl =
-                  inspectedObject.publicHttpsUrl ||
-                  `https://storage.googleapis.com/${encodeURIComponent(
-                    inspectedObject.bucketName
-                  )}/${encObj}`;
-                const authConsoleUrl =
-                  inspectedObject.authenticatedHttpsUrl ||
-                  `https://storage.cloud.google.com/${encodeURIComponent(
-                    inspectedObject.bucketName
-                  )}/${encObj}`;
-                const gsUri =
-                  inspectedObject.gsUri ||
-                  `gs://${inspectedObject.bucketName}/${inspectedObject.objectName}`;
-                const isPub = Boolean(inspectedObject.isPublic);
-
-                const scopeDetails =
-                  publicScopeMode === 'OBJECT_ACL'
-                    ? {
-                        badge: 'LEAST-PRIVILEGE · SINGLE OBJECT ONLY (ACL)',
-                        badgeClass:
-                          'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
-                        boxClass:
-                          'bg-emerald-500/[0.06] border-emerald-500/30 text-emerald-800 dark:text-emerald-200',
-                        btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-                        btnLabel: 'Expose Single Object Only (Object ACL)',
-                        summary: `Grants Fine-Grained ACL (entity: allUsers, role: READER) ONLY on ${inspectedObject.objectName}. Other objects in gs://${inspectedObject.bucketName} stay private.`,
-                        cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
-                      }
-                    : publicScopeMode === 'BUCKET_IAM'
-                    ? {
-                        badge: 'BUCKET-WIDE PUBLIC READ · UNIFORM IAM',
-                        badgeClass:
-                          'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40',
-                        boxClass:
-                          'bg-amber-500/[0.07] border-amber-500/35 text-amber-800 dark:text-amber-200',
-                        btnClass: 'bg-amber-600 hover:bg-amber-700 text-white',
-                        btnLabel: 'Expose Bucket via Uniform IAM (allUsers)',
-                        summary: `Keeps Uniform Bucket-Level Access (UBLA) enabled and binds allUsers -> roles/storage.objectViewer on gs://${inspectedObject.bucketName} (makes all objects in this bucket publicly readable).`,
-                        cli: `gcloud storage buckets add-iam-policy-binding gs://${inspectedObject.bucketName} --member=allUsers --role=roles/storage.objectViewer`,
-                      }
-                    : {
-                        badge: 'SMART AUTO-NEGOTIATION (ACL -> IAM)',
-                        badgeClass:
-                          'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/40',
-                        boxClass:
-                          'bg-blue-500/[0.06] border-blue-500/30 text-blue-800 dark:text-blue-200',
-                        btnClass: 'bg-blue-600 hover:bg-blue-700 text-white',
-                        btnLabel: 'Convert to Public & Enable HTTPS URI (Auto)',
-                        summary: `Automatically relaxes Public Access Prevention to 'inherited' and applies per-object ACL if allowed, or falls back to Uniform Bucket IAM on gs://${inspectedObject.bucketName}.`,
-                        cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
-                      };
-
-                return (
-                  <div
-                    className={`p-3 rounded-xl border space-y-2.5 text-xs transition-all ${
-                      isPub
-                        ? 'bg-emerald-500/[0.07] border-emerald-500/40'
-                        : 'bg-zinc-50/90 dark:bg-zinc-900/75 border-zinc-200 dark:border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {isPub ? (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
-                            <Globe className="w-3 h-3" />
-                            <span>
-                              PUBLIC ON INTERNET (
-                              {inspectedObject.publicAccessScope || 'allUsers'})
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
-                            <Lock className="w-3 h-3" />
-                            <span>PRIVATE (Zero-Trust Protected)</span>
-                          </span>
-                        )}
-                        <span
-                          className={`px-2 py-0.5 rounded-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
-                        >
-                          {scopeDetails.badge}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <select
-                          value={publicScopeMode}
-                          onChange={(e) => {
-                            const nextMode = e.target.value;
-                            setPublicScopeMode(nextMode);
-                          }}
-                          className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer"
-                          title="Choose how public access is granted in GCS"
-                        >
-                          <option value="AUTO">
-                            Mode: Auto (Object ACL or Bucket IAM)
-                          </option>
-                          <option value="OBJECT_ACL">
-                            Mode: Single Object Only (Fine-Grained ACL)
-                          </option>
-                          <option value="BUCKET_IAM">
-                            Mode: Uniform Bucket IAM (allUsers ObjectViewer)
-                          </option>
-                        </select>
-
-                        {isPub ? (
-                          <button
-                            type="button"
-                            disabled={
-                              busyKey === `pub-${inspectedObject.objectName}`
-                            }
-                            onClick={() => handleTogglePublicAccess(false)}
-                            className="px-3 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
-                          >
-                            <Lock className="w-3 h-3" />
-                            <span>
-                              {busyKey === `pub-${inspectedObject.objectName}`
-                                ? 'Revoking...'
-                                : 'Make Private (Revoke Public URI)'}
-                            </span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={
-                              busyKey === `pub-${inspectedObject.objectName}`
-                            }
-                            onClick={() => handleTogglePublicAccess(true)}
-                            className={`px-3 py-1 rounded-md text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors ${scopeDetails.btnClass}`}
-                          >
-                            <Unlock className="w-3 h-3" />
-                            <span>
-                              {busyKey === `pub-${inspectedObject.objectName}`
-                                ? 'Converting to Public...'
-                                : scopeDetails.btnLabel}
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Visual Policy Blast-Radius & CLI Preview Box that updates dynamically when Mode Select changes */}
-                    <div
-                      className={`p-2.5 rounded-lg border text-[11px] flex flex-wrap items-center justify-between gap-2 transition-all ${scopeDetails.boxClass}`}
-                    >
-                      <div className="space-y-0.5 flex-1 min-w-[240px]">
-                        <div className="font-bold">{scopeDetails.summary}</div>
-                        <div className="text-[10px] opacity-80 font-mono truncate">
-                          Equivalent CLI: <code>{scopeDetails.cli}</code>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCopyText(scopeDetails.cli, 'pub-mode-cli')
-                        }
-                        className="px-2 py-1 rounded bg-white/80 dark:bg-zinc-950/80 border border-zinc-300 dark:border-zinc-800 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
-                      >
-                        {copiedKey === 'pub-mode-cli' ? (
-                          <Check className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                        <span>
-                          {copiedKey === 'pub-mode-cli'
-                            ? 'Copied CLI'
-                            : 'Copy Mode CLI'}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Official GCS URIs: Only show Public HTTPS URL when the object is actually Public (isPub === true) */}
-                    <div
-                      className={`grid grid-cols-1 ${
-                        isPub ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
-                      } gap-2 text-[11px]`}
-                    >
-                      {/* 1. Public HTTPS URI — ONLY rendered when the object is Public */}
-                      {isPub && (
-                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/40 flex items-center justify-between gap-1.5">
-                          <div className="min-w-0">
-                            <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
-                              Public HTTPS URL (storage.googleapis.com)
-                            </div>
-                            <code
-                              className="text-zinc-800 dark:text-zinc-200 truncate block"
-                              title={publicUrl}
-                            >
-                              {publicUrl}
-                            </code>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleCopyText(publicUrl, 'pub-https-uri')
-                              }
-                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
-                              title="Copy Public HTTPS URL"
-                            >
-                              {copiedKey === 'pub-https-uri' ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                            <a
-                              href={publicUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-emerald-500"
-                              title="Open Public HTTPS URL in new tab"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 2. Authenticated Console HTTPS URI (Always works via Google Cloud session) */}
-                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
-                        <div className="min-w-0">
-                          <div className="text-[9px] uppercase font-bold text-blue-500">
-                            Authenticated URL (storage.cloud.google.com)
-                          </div>
-                          <code
-                            className="text-zinc-800 dark:text-zinc-200 truncate block"
-                            title={authConsoleUrl}
-                          >
-                            {authConsoleUrl}
-                          </code>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyText(authConsoleUrl, 'auth-https-uri')
-                            }
-                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
-                            title="Copy Authenticated Browser URL"
-                          >
-                            {copiedKey === 'auth-https-uri' ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          <a
-                            href={authConsoleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500"
-                            title="Open Authenticated Console URL in new tab"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* 3. Native gs:// URI */}
-                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
-                        <div className="min-w-0">
-                          <div className="text-[9px] uppercase font-bold text-zinc-400">
-                            Cloud Storage URI (gs://)
-                          </div>
-                          <code
-                            className="text-zinc-800 dark:text-zinc-200 truncate block"
-                            title={gsUri}
-                          >
-                            {gsUri}
-                          </code>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyText(gsUri, 'gs-uri')}
-                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
-                            title="Copy gs:// URI"
-                          >
-                            {copiedKey === 'gs-uri' ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Studio Mode Switcher Tabs (Equal-Width 6-Column Grid) */}
-              <div className="border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 text-[11px]">
-                  {inspectedObject.isTextLike && (
-                    <button
-                      type="button"
-                      onClick={() => setStudioMode('SPLIT')}
-                      className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                        studioMode === 'SPLIT'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                      }`}
-                    >
-                      <Columns className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Split View</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setStudioMode('PREVIEW')}
-                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                      studioMode === 'PREVIEW'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                    }`}
-                  >
-                    <Table className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Preview ({activeFormat})</span>
-                  </button>
-
-                  {inspectedObject.isTextLike && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setStudioMode('EDITOR')}
-                        className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                          studioMode === 'EDITOR'
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                        }`}
-                      >
-                        <Code className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">Code Editor</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setStudioMode('DIFF')}
-                        className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                          studioMode === 'DIFF'
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                        }`}
-                      >
-                        <GitCompare className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          Diff Changes
-                          {previewAnalysis.hasUnsavedChanges ? ' ●' : ''}
-                        </span>
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setStudioMode('VERSIONS')}
-                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                      studioMode === 'VERSIONS'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Versions &amp; Restore</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStudioMode('METADATA')}
-                    className={`w-full h-9 px-2.5 rounded-md font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
-                      studioMode === 'METADATA'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
-                    }`}
-                  >
-                    <Key className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Signed URLs &amp; Holds</span>
-                  </button>
-                </div>
-              </div>
 
               {/* MODE 1: SPLIT VIEW (LEFT CODE EDITOR + RIGHT SMART PREVIEW) */}
               {studioMode === 'SPLIT' && inspectedObject.isTextLike && (

@@ -13,6 +13,7 @@ import {
   Terminal,
   Copy,
   Check,
+  CheckCircle2,
   AlertTriangle,
   Sparkles,
   UserCheck,
@@ -170,6 +171,7 @@ export default function SovereignTimeMachineIamStudio({
   const [rotateDisableOld, setRotateDisableOld] = useState(true);
   const [grantSaBySecret, setGrantSaBySecret] = useState({});
   const [secretActionBusy, setSecretActionBusy] = useState(null);
+  const [deletingSecretStatus, setDeletingSecretStatus] = useState({}); // { [secretId]: 'DELETING' | 'SHREDDED' }
   const [secretCategoryFilter, setSecretCategoryFilter] = useState('ALL'); // 'ALL' | 'DLP' | 'APP'
   const [secretSearchQuery, setSecretSearchQuery] = useState('');
   const [peekedSecrets, setPeekedSecrets] = useState({}); // { [secretId]: { value, version, masked, crc32c, showRaw } }
@@ -256,25 +258,28 @@ export default function SovereignTimeMachineIamStudio({
     [projectId, selectedBaselineId, onTriggerToast]
   );
 
-  const fetchVaultStudio = useCallback(async () => {
-    if (!projectId) return;
-    setLoadingVault(true);
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/sovereign/secrets-kms`
-      );
-      setVaultData(res.data);
-    } catch (err) {
-      if (onTriggerToast) {
-        onTriggerToast(
-          err.response?.data?.error ||
-            'Failed to load Secret Manager & KMS status'
+  const fetchVaultStudio = useCallback(
+    async (silent = false) => {
+      if (!projectId) return;
+      if (!silent) setLoadingVault(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/sovereign/secrets-kms`
         );
+        setVaultData(res.data);
+      } catch (err) {
+        if (onTriggerToast && !silent) {
+          onTriggerToast(
+            err.response?.data?.error ||
+              'Failed to load Secret Manager & KMS status'
+          );
+        }
+      } finally {
+        if (!silent) setLoadingVault(false);
       }
-    } finally {
-      setLoadingVault(false);
-    }
-  }, [projectId, onTriggerToast]);
+    },
+    [projectId, onTriggerToast]
+  );
 
   useEffect(() => {
     if (activeSubTab === 'IAM_SURGEON') fetchIamSurgeon();
@@ -749,8 +754,14 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Updated version v${version}`);
       }
-      await fetchVaultStudio();
+      await fetchVaultStudio(true);
     } catch (err) {
+      if (
+        err?.isDestructiveCancelled ||
+        err?.message === 'DESTRUCTIVE_ACTION_CANCELLED'
+      ) {
+        return;
+      }
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
@@ -806,6 +817,10 @@ export default function SovereignTimeMachineIamStudio({
 
   const handleDeleteSecret = async (targetSecretId) => {
     setSecretActionBusy(`DELETE:${targetSecretId}`);
+    setDeletingSecretStatus((prev) => ({
+      ...prev,
+      [targetSecretId]: 'DELETING',
+    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -826,8 +841,39 @@ export default function SovereignTimeMachineIamStudio({
         delete next[targetSecretId];
         return next;
       });
-      await fetchVaultStudio();
+      setDeletingSecretStatus((prev) => ({
+        ...prev,
+        [targetSecretId]: 'SHREDDED',
+      }));
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setVaultData((prev) => {
+        if (!prev) return prev;
+        const nextSecrets = (prev.secrets || []).filter(
+          (item) => item.secretId !== targetSecretId
+        );
+        return {
+          ...prev,
+          secrets: nextSecrets,
+        };
+      });
+      setDeletingSecretStatus((prev) => {
+        const next = { ...prev };
+        delete next[targetSecretId];
+        return next;
+      });
+      fetchVaultStudio(true);
     } catch (err) {
+      setDeletingSecretStatus((prev) => {
+        const next = { ...prev };
+        delete next[targetSecretId];
+        return next;
+      });
+      if (
+        err?.isDestructiveCancelled ||
+        err?.message === 'DESTRUCTIVE_ACTION_CANCELLED'
+      ) {
+        return;
+      }
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || `Failed to delete ${targetSecretId}`
@@ -3122,6 +3168,29 @@ export default function SovereignTimeMachineIamStudio({
                         Dedicated Secret Manager Lifecycle &amp; Rotation Studio (
                         {vaultData?.secrets?.length || 0} Secrets)
                       </span>
+                      {Object.entries(deletingSecretStatus).map(
+                        ([delSid, phase]) => (
+                          <span
+                            key={delSid}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold inline-flex items-center gap-1 ${
+                              phase === 'SHREDDED'
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-red-600 text-white animate-pulse'
+                            }`}
+                          >
+                            {phase === 'SHREDDED' ? (
+                              <CheckCircle2 className="w-3 h-3 shrink-0" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
+                            )}
+                            <span>
+                              {phase === 'SHREDDED'
+                                ? `Deleted "${delSid}"`
+                                : `Deleting "${delSid}"...`}
+                            </span>
+                          </span>
+                        )
+                      )}
                       {vaultData?.activeSecretProject && (
                         <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
                           Project: {vaultData.activeSecretProject}
@@ -3369,6 +3438,10 @@ export default function SovereignTimeMachineIamStudio({
                           secretActionBusy === `GRANT:${s.secretId}`;
                         const deleteBusy =
                           secretActionBusy === `DELETE:${s.secretId}`;
+                        const delPhase = deletingSecretStatus[s.secretId]; // 'DELETING' | 'SHREDDED' | undefined
+                        const isDeletingKey =
+                          deleteBusy || delPhase === 'DELETING';
+                        const isShreddedKey = delPhase === 'SHREDDED';
                         const schedBusy =
                           secretActionBusy === `SCHED:${s.secretId}`;
                         const reloadBusy =
@@ -3381,12 +3454,43 @@ export default function SovereignTimeMachineIamStudio({
                         return (
                           <div
                             key={s.name}
-                            className={`rounded-[10px] border transition-all overflow-hidden ${
-                              isExpanded
+                            className={`rounded-[10px] border transition-all duration-300 overflow-hidden ${
+                              isShreddedKey
+                                ? 'border-emerald-500 bg-emerald-500/10 opacity-60 scale-[0.99]'
+                                : isDeletingKey
+                                ? 'border-red-500 bg-red-500/10 dark:bg-red-950/30 ring-1 ring-red-500/50 animate-pulse'
+                                : isExpanded
                                 ? 'border-blue-500/60 bg-zinc-50/90 dark:bg-zinc-900/90 shadow-md'
                                 : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 hover:border-zinc-300 dark:hover:border-zinc-700'
                             }`}
                           >
+                            {/* LIVE VISUAL DELETION BANNER WHEN DELETING OR SHREDDED */}
+                            {(isDeletingKey || isShreddedKey) && (
+                              <div
+                                className={`px-3 py-1.5 flex items-center justify-between gap-2 text-[10.5px] font-mono font-bold border-b ${
+                                  isShreddedKey
+                                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-red-500/20 border-red-500/40 text-red-700 dark:text-red-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {isShreddedKey ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  ) : (
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-500 shrink-0" />
+                                  )}
+                                  <span className="truncate">
+                                    {isShreddedKey
+                                      ? `✓ KEY "${meta.primaryTitle}" (${s.secretId}) & ALL VERSIONS PERMANENTLY DELETED FROM SECRET MANAGER`
+                                      : `DELETING SECRET KEY "${meta.primaryTitle}" & ALL VERSIONS FROM SECRET MANAGER...`}
+                                  </span>
+                                </div>
+                                <code className="text-[9.5px] opacity-80 shrink-0">
+                                  DELETE /v1/projects/{activeSmProject}/secrets/{s.secretId}
+                                </code>
+                              </div>
+                            )}
+
                             {/* TIER 1: Non-Wrapping Header Row (Identity Left + Pinned Action Toolbar Right) */}
                             <div className="p-3 flex items-start justify-between gap-3 text-xs font-mono">
                               <div className="min-w-0 flex-1">
@@ -3394,10 +3498,24 @@ export default function SovereignTimeMachineIamStudio({
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span
                                     title={s.secretId}
-                                    className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] truncate max-w-full"
+                                    className={`font-extrabold text-xs sm:text-[13px] truncate max-w-full ${
+                                      isDeletingKey || isShreddedKey
+                                        ? 'line-through text-red-600 dark:text-red-400'
+                                        : 'text-zinc-900 dark:text-zinc-100'
+                                    }`}
                                   >
                                     {meta.primaryTitle}
                                   </span>
+                                  {isDeletingKey && (
+                                    <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[9.5px] font-extrabold shrink-0">
+                                      DELETING KEY...
+                                    </span>
+                                  )}
+                                  {isShreddedKey && (
+                                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-extrabold shrink-0">
+                                      DELETED
+                                    </span>
+                                  )}
                                   <span
                                     className={`px-2 py-0.5 rounded text-[9.5px] font-bold shrink-0 ${
                                       meta.isDlpVaulted
@@ -3421,7 +3539,11 @@ export default function SovereignTimeMachineIamStudio({
                                   </span>
                                   <code
                                     title={s.secretId}
-                                    className="truncate block text-zinc-600 dark:text-zinc-400 bg-zinc-200/60 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800"
+                                    className={`truncate block bg-zinc-200/60 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 ${
+                                      isDeletingKey || isShreddedKey
+                                        ? 'line-through text-red-500'
+                                        : 'text-zinc-600 dark:text-zinc-400'
+                                    }`}
                                   >
                                     {s.secretId}
                                   </code>
@@ -3442,7 +3564,9 @@ export default function SovereignTimeMachineIamStudio({
                               <div className="shrink-0 flex items-center gap-1.5">
                                 <button
                                   type="button"
-                                  disabled={peekBusy}
+                                  disabled={
+                                    peekBusy || isDeletingKey || isShreddedKey
+                                  }
                                   onClick={() =>
                                     handlePeekSecretVersion(
                                       s.secretId,
@@ -3472,11 +3596,12 @@ export default function SovereignTimeMachineIamStudio({
 
                                 <button
                                   type="button"
+                                  disabled={isDeletingKey || isShreddedKey}
                                   onClick={() =>
                                     handleCopy(smUri, `sm:// URI (${s.secretId})`)
                                   }
                                   title={`Copy canonical Secret Manager URI: ${smUri}`}
-                                  className="w-[68px] h-7 px-2 rounded bg-white dark:bg-[#1a2130] hover:bg-zinc-100 dark:hover:bg-[#232c40] text-zinc-800 dark:text-zinc-100 border border-zinc-300 dark:border-[#323d56] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap"
+                                  className="w-[68px] h-7 px-2 rounded bg-white dark:bg-[#1a2130] hover:bg-zinc-100 dark:hover:bg-[#232c40] text-zinc-800 dark:text-zinc-100 border border-zinc-300 dark:border-[#323d56] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50"
                                 >
                                   <Copy className="w-3 h-3 shrink-0" />
                                   <span>sm://</span>
@@ -3484,12 +3609,13 @@ export default function SovereignTimeMachineIamStudio({
 
                                 <button
                                   type="button"
+                                  disabled={isDeletingKey || isShreddedKey}
                                   onClick={() =>
                                     setExpandedSecretId(
                                       isExpanded ? null : s.secretId
                                     )
                                   }
-                                  className={`w-[138px] h-7 px-2 rounded text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center justify-center whitespace-nowrap ${
+                                  className={`w-[138px] h-7 px-2 rounded text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center justify-center whitespace-nowrap disabled:opacity-50 ${
                                     isExpanded
                                       ? 'bg-blue-600 text-white border-blue-500'
                                       : 'bg-white dark:bg-[#1a2130] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-100 border-zinc-300 dark:border-[#323d56]'
@@ -3502,12 +3628,33 @@ export default function SovereignTimeMachineIamStudio({
 
                                 <button
                                   type="button"
-                                  disabled={deleteBusy}
+                                  disabled={isDeletingKey || isShreddedKey}
                                   onClick={() => handleDeleteSecret(s.secretId)}
                                   title={`Permanently delete secret "${s.secretId}" and all its versions. WARNING: This does NOT revert Cloud Run back to plaintext — the secret value will disappear forever!`}
-                                  className="w-7 h-7 rounded bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 cursor-pointer inline-flex items-center justify-center disabled:opacity-50 shrink-0"
+                                  className={`w-[86px] h-7 px-2 rounded text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0 transition-all ${
+                                    isShreddedKey
+                                      ? 'bg-emerald-600 text-white border-emerald-500'
+                                      : isDeletingKey
+                                      ? 'bg-red-600 text-white border-red-500'
+                                      : 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/30'
+                                  }`}
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  {isShreddedKey ? (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                                      <span>Deleted</span>
+                                    </>
+                                  ) : isDeletingKey ? (
+                                    <>
+                                      <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
+                                      <span>Deleting...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Trash2 className="w-3 h-3 shrink-0" />
+                                      <span>Delete</span>
+                                    </>
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -3766,9 +3913,17 @@ export default function SovereignTimeMachineIamStudio({
                                                       )
                                                     }
                                                     title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
-                                                    className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                                                    className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                                                   >
-                                                    Disable ($0/mo)
+                                                    {secretActionBusy ===
+                                                    `VER:${s.secretId}:${v.version}:DISABLE` ? (
+                                                      <>
+                                                        <RefreshCw className="w-2.5 h-2.5 animate-spin shrink-0" />
+                                                        <span>Disabling...</span>
+                                                      </>
+                                                    ) : (
+                                                      <span>Disable ($0/mo)</span>
+                                                    )}
                                                   </button>
                                                 ) : (
                                                   <button
@@ -3784,9 +3939,17 @@ export default function SovereignTimeMachineIamStudio({
                                                       )
                                                     }
                                                     title={`Re-enable version ${v.version} for live workload access`}
-                                                    className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
+                                                    className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                                                   >
-                                                    Enable
+                                                    {secretActionBusy ===
+                                                    `VER:${s.secretId}:${v.version}:ENABLE` ? (
+                                                      <>
+                                                        <RefreshCw className="w-2.5 h-2.5 animate-spin shrink-0" />
+                                                        <span>Enabling...</span>
+                                                      </>
+                                                    ) : (
+                                                      <span>Enable</span>
+                                                    )}
                                                   </button>
                                                 )}
 
@@ -3803,9 +3966,26 @@ export default function SovereignTimeMachineIamStudio({
                                                     )
                                                   }
                                                   title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
-                                                  className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
+                                                  className={`px-2 py-0.5 rounded border text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 ${
+                                                    secretActionBusy ===
+                                                    `VER:${s.secretId}:${v.version}:DESTROY`
+                                                      ? 'bg-red-600 text-white border-red-500'
+                                                      : 'bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border-red-500/30'
+                                                  }`}
                                                 >
-                                                  Destroy v{v.version}
+                                                  {secretActionBusy ===
+                                                  `VER:${s.secretId}:${v.version}:DESTROY` ? (
+                                                    <>
+                                                      <RefreshCw className="w-2.5 h-2.5 animate-spin shrink-0" />
+                                                      <span>
+                                                        Destroying v{v.version}...
+                                                      </span>
+                                                    </>
+                                                  ) : (
+                                                    <span>
+                                                      Destroy v{v.version}
+                                                    </span>
+                                                  )}
                                                 </button>
                                               </div>
                                             )}

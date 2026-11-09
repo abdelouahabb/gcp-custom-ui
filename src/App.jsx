@@ -205,13 +205,19 @@ function classifyDestructiveAxiosConfig(config) {
       const jobName = decodeURIComponent(runJobMatch[2]);
       return {
         title: `Permanently Delete Cloud Run v2 Batch Job "${jobName}"`,
+        headerBadge: 'Cloud Run v2 Batch Job Teardown Gatekeeper',
+        targetLabel: 'Target Cloud Run v2 Batch Job Definition',
         resourceKind: 'Cloud Run v2 Batch Job (run.googleapis.com/v2)',
         targetName: jobName,
         location: region,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE BATCH JOB',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Batch Job "${jobName}"`,
+        cancelToast: `Deletion of Cloud Run Batch Job "${jobName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes the scheduled/on-demand Cloud Run v2 Batch Job "${jobName}" in ${region}. Any Cloud Storage FUSE bucket mounted by the job and your container image in Artifact Registry remain 100% untouched.`,
         whatHappensNext: `1. Calls DELETE https://run.googleapis.com/v2/projects/${projectId}/locations/${region}/jobs/${jobName}.\n2. Removes the batch job definition and execution history while keeping any mounted Cloud Storage FUSE bucket (gs://...) and Artifact Registry container image safe.`,
+        costWarning: `ZERO IDLE / TEARDOWN COST ($0.00/HR): Cloud Run Batch Jobs bill only per vCPU-second while tasks execute. Deleting "${jobName}" ensures no scheduled triggers can launch future billable executions.`,
         impactWarning: `This will permanently delete Cloud Run v2 Batch Job "${jobName}" in ${region} (${projectId}). Any attached Cloud Storage FUSE bucket remains intact.`,
       };
     }
@@ -225,26 +231,35 @@ function classifyDestructiveAxiosConfig(config) {
       if (rType === 'Cloud Run Service' || rTypeUpper.includes('CLOUD_RUN')) {
         return {
           title: `Decommission Cloud Run v2 Service "${rName}" (${rRegion})`,
-          resourceKind: 'Cloud Run v2 Serverless Service',
+          headerBadge: 'Cloud Run v2 Serverless Service Teardown Gatekeeper',
+          targetLabel: 'Target Cloud Run v2 Serverless Service',
+          resourceKind: 'Cloud Run v2 Serverless Service (run.googleapis.com/v2)',
           targetName: rName,
           location: rRegion,
           projectId,
-          method: 'DELETE',
+          method: 'DELETE SERVICE',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Service "${rName}"`,
+          cancelToast: `Decommissioning of Cloud Run service "${rName}" cancelled.`,
           laymanSummary: `In Plain English: This shuts down and removes the web app or API service "${rName}" in ${rRegion}. Its public web link (.run.app) will stop working immediately, and you won't be billed for it anymore. Your Docker image in Artifact Registry and any Cloud Storage buckets are NOT deleted.`,
           whatHappensNext: `1. Calls DELETE https://run.googleapis.com/v2/projects/${projectId}/locations/${rRegion}/services/${rName}.\n2. Drains the HTTPS .run.app ingress endpoint and terminates all revisions in ${rRegion}.\n3. Preserves your container image in Artifact Registry and any attached Cloud Storage FUSE disk bucket unless explicitly marked for cleanup.`,
+          costWarning: `SERVERLESS BILLING STOP ($0.00/HR AFTER DELETION): Deleting "${rName}" immediately stops any warm minInstanceCount compute charges while keeping Artifact Registry images intact.`,
           impactWarning: `This will permanently terminate Cloud Run service "${rName}" (${rRegion}) and its HTTPS endpoint in project "${projectId}".`,
         };
       }
       if (rTypeUpper.includes('FIREWALL')) {
         return {
           title: `Permanently Delete VPC Firewall Rule "${rName}"`,
+          headerBadge: 'VPC Andromeda Firewall Rule Deletion Gatekeeper',
+          targetLabel: 'Target VPC Firewall Rule',
           resourceKind: 'Compute Engine VPC Firewall Rule (compute.googleapis.com/v1)',
           targetName: rName,
           location: 'Global VPC Perimeter',
           projectId,
           method: 'DELETE FIREWALL RULE',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Firewall Rule "${rName}"`,
+          cancelToast: `Deletion of VPC firewall rule "${rName}" cancelled.`,
           laymanSummary: `In Plain English: Think of a firewall rule like a security guard at a building door. Deleting rule "${rName}" removes that specific allow/block rule from your network immediately. If it was an ALLOW rule, traffic it permitted will now be blocked; if it was a DENY quarantine shield, traffic it blocked will be allowed again.`,
           whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${rName}.\n2. Google Cloud's Andromeda virtual network switch immediately removes "${rName}" from packet evaluation across all VMs.\n3. Records the deletion in Cloud Audit Logs.`,
           costWarning: `ZERO COST IMPACT ($0.00/MO): Deleting a VPC firewall rule is 100% free ($0.00/mo).`,
@@ -254,12 +269,16 @@ function classifyDestructiveAxiosConfig(config) {
       if (rTypeUpper.includes('VPC') || rTypeUpper.includes('NETWORK')) {
         return {
           title: `Permanently Delete VPC Network "${rName}"`,
+          headerBadge: 'Google Cloud VPC Network Teardown Gatekeeper',
+          targetLabel: 'Target VPC Virtual Network',
           resourceKind: 'Google Cloud VPC Network (compute.googleapis.com/v1)',
           targetName: rName,
           location: 'Global VPC Backbone',
           projectId,
           method: 'DELETE VPC NETWORK',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete VPC Network "${rName}"`,
+          cancelToast: `Deletion of VPC network "${rName}" cancelled.`,
           laymanSummary: `In Plain English: This deletes the private virtual network "${rName}" from your project. Google Cloud will only allow this if no virtual machines, GKE clusters, or subnets are still plugged into it.`,
           whatHappensNext: `1. Verifies that all subnetworks and firewall rules inside "${rName}" are cleared.\n2. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks/${rName}.\n3. Removes the virtual network routing table from project "${projectId}".`,
           costWarning: `ZERO COST IMPACT ($0.00/MO): Deleting an unused VPC network is free ($0.00/mo).`,
@@ -269,12 +288,16 @@ function classifyDestructiveAxiosConfig(config) {
       if (rTypeUpper.includes('BUCKET') || rTypeUpper.includes('STORAGE')) {
         return {
           title: `Permanently Delete Cloud Storage Bucket "gs://${rName}"`,
+          headerBadge: 'Cloud Storage Bucket Deletion Gatekeeper',
+          targetLabel: 'Target Cloud Storage Bucket',
           resourceKind: 'Cloud Storage Bucket (storage.googleapis.com/v1)',
           targetName: `gs://${rName}`,
           location: rRegion,
           projectId,
           method: 'DELETE BUCKET',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Bucket "gs://${rName}"`,
+          cancelToast: `Deletion of bucket "gs://${rName}" cancelled.`,
           laymanSummary: `In Plain English: This permanently deletes the cloud folder/bucket "gs://${rName}" and stops any monthly storage charges for it. Unless Soft-Delete (7–90 day Recycle Bin) is enabled on this bucket, the bucket and its contents are gone for good.`,
           whatHappensNext: `1. Calls DELETE https://storage.googleapis.com/storage/v1/b/${rName} on project "${projectId}".\n2. Releases the global bucket name "${rName}" and halts storage billing.`,
           costWarning: `FINOPS SAVINGS: Deleting "gs://${rName}" immediately stops monthly per-GB Cloud Storage charges ($0.020/GB-mo Standard).`,
@@ -284,12 +307,16 @@ function classifyDestructiveAxiosConfig(config) {
       if (rTypeUpper.includes('VM') || rTypeUpper.includes('INSTANCE') || rTypeUpper.includes('COMPUTE')) {
         return {
           title: `Permanently Delete Compute Engine VM "${rName}" (${rRegion})`,
+          headerBadge: 'Compute Engine VM & Boot Disk Teardown Gatekeeper',
+          targetLabel: 'Target Compute Engine Virtual Machine',
           resourceKind: 'Compute Engine Virtual Machine (compute.googleapis.com/v1)',
           targetName: rName,
           location: rRegion,
           projectId,
           method: 'DELETE VM',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete VM "${rName}"`,
+          cancelToast: `Deletion of Compute Engine VM "${rName}" cancelled.`,
           laymanSummary: `In Plain English: This permanently shuts down and destroys the virtual computer "${rName}" and its attached boot hard drive in ${rRegion}. You immediately stop paying hourly CPU/RAM and monthly disk charges, but any files inside the VM that weren't backed up to Cloud Storage will be erased forever.`,
           whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${rRegion}/instances/${rName}.\n2. Terminates the virtual machine and deletes its auto-delete boot persistent disk.\n3. Halts all hourly vCPU/RAM and boot disk billing.`,
           costWarning: `FINOPS SAVINGS: Permanently stops hourly VM compute charges and monthly boot disk storage charges in "${rRegion}".`,
@@ -298,14 +325,19 @@ function classifyDestructiveAxiosConfig(config) {
       }
       return {
         title: `Permanently Delete ${rType} "${rName}"`,
+        headerBadge: `${rType} Resource Teardown Gatekeeper`,
+        targetLabel: `Target ${rType} Resource`,
         resourceKind: rType,
         targetName: rName,
         location: rRegion,
         projectId,
         method: 'DELETE',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete "${rName}"`,
+        cancelToast: `Deletion of "${rName}" cancelled.`,
         laymanSummary: `In Plain English: This permanently deletes the ${rType} named "${rName}" (${rRegion}) from your Google Cloud project "${projectId}" and stops any ongoing billing for it. Once deleted, its internal data cannot be undone unless you have a backup.`,
         whatHappensNext: `1. Sends an authenticated HTTP DELETE request to Google Cloud's control plane for ${rType} "${rName}" (${rRegion}).\n2. Permanently removes "${rName}" and halts any associated runtime or storage charges.`,
+        costWarning: `RESOURCE BILLING STOP ($0.00/HR AFTER DELETION): Deleting "${rName}" stops all active runtime or storage charges for this resource.`,
         impactWarning: `This action will permanently delete the ${rType} "${rName}" (${rRegion}) from Google Cloud project "${projectId}". Associated data, endpoints, or network bindings cannot be recovered once destroyed.`,
       };
     }
@@ -320,14 +352,21 @@ function classifyDestructiveAxiosConfig(config) {
         new URLSearchParams(rawUrl.split('?')[1] || '').get('objectName') ||
         'selected-object';
       return {
-        title: 'Permanently Delete Cloud Storage Object',
-        resourceKind: 'GCS Object',
+        title: `Permanently Delete Cloud Storage Object "${objName}"?`,
+        headerBadge: 'Cloud Storage Object Deletion Gatekeeper',
+        targetLabel: 'Target Cloud Storage Object URI',
+        resourceKind: 'Cloud Storage Object (storage.googleapis.com/storage/v1)',
         targetName: `gs://${bucket}/${objName}`,
         location: bucket,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE OBJECT',
         endpoint: rawUrl,
-        impactWarning: `This will permanently delete object "${objName}" from bucket "gs://${bucket}". Unless Object Versioning or a WORM Retention Lock is active on this bucket, this file cannot be recovered.`,
+        confirmLabel: `Confirm & Delete "${objName}"`,
+        cancelToast: `Deletion of "gs://${bucket}/${objName}" cancelled.`,
+        laymanSummary: `In Plain English: Deletes file "${objName}" from Cloud Storage bucket "gs://${bucket}". If Soft-Delete (7–90d Recycle Bin) or Object Versioning is active on "gs://${bucket}", you can still restore this file from the Version Time-Machine / Trash Vault; otherwise, it is erased immediately.`,
+        whatHappensNext: `1. Calls DELETE https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(objName)} on project "${projectId}".\n2. Removes the live object generation (or moves it to the Soft-Delete / Noncurrent Generation ledger if enabled).\n3. Refreshes the Object Workbench file browser.`,
+        costWarning: `STORAGE BILLING REDUCTION: Deleting live objects stops active $/GB-month Standard/Nearline/Coldline storage billing for "${objName}".`,
+        impactWarning: `This will delete object "${objName}" from bucket "gs://${bucket}". Unless Object Versioning, Soft-Delete, or a WORM Retention Lock is active on this bucket, this file cannot be recovered.`,
       };
     }
 
@@ -336,13 +375,20 @@ function classifyDestructiveAxiosConfig(config) {
     if (bqMatch) {
       const datasetId = decodeURIComponent(bqMatch[1]);
       return {
-        title: 'Permanently Delete BigQuery Dataset & All Tables',
-        resourceKind: 'BigQuery Dataset',
+        title: `Permanently Delete BigQuery Dataset "${datasetId}" & All Tables?`,
+        headerBadge: 'BigQuery Recursive Dataset Teardown Gatekeeper',
+        targetLabel: 'Target BigQuery Dataset & Contained Tables/Views',
+        resourceKind: 'BigQuery Dataset (bigquery.googleapis.com/bigquery/v2)',
         targetName: `${projectId}:${datasetId}`,
         location: 'Multi-Region / Regional',
         projectId,
-        method: 'DELETE',
+        method: 'DELETE DATASET (RECURSIVE)',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Dataset "${datasetId}"`,
+        cancelToast: `Deletion of BigQuery dataset "${datasetId}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes the entire BigQuery dataset folder "${datasetId}" along with every table, SQL view, ML model, and row of data inside it. Any Looker Studio dashboards or scheduled queries reading from "${datasetId}" will immediately stop working.`,
+        whatHappensNext: `1. Calls DELETE https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${datasetId}?deleteContents=true.\n2. Drops all tables, views, routines, and stored analytical partitions inside "${datasetId}".\n3. Refreshes the BigQuery Lakehouse Studio inventory.`,
+        costWarning: `BIGQUERY STORAGE BILLING STOP ($0.00/MO AFTER DELETION): Dropping "${datasetId}" immediately stops active ($0.02/GiB-mo) and long-term ($0.01/GiB-mo) table storage charges.`,
         impactWarning: `This executes a forced recursive deletion (deleteContents=true) on BigQuery dataset "${datasetId}", permanently destroying all tables, views, routines, and stored analytical data inside it.`,
       };
     }
@@ -353,13 +399,20 @@ function classifyDestructiveAxiosConfig(config) {
       const loc = decodeURIComponent(blMatch[1]);
       const catalogId = decodeURIComponent(blMatch[2]);
       return {
-        title: 'Permanently Delete BigLake Metastore Catalog',
-        resourceKind: 'BigLake Catalog',
-        targetName: catalogId,
+        title: `Permanently Delete BigLake Iceberg Catalog "${catalogId}"?`,
+        headerBadge: 'BigLake Iceberg Metastore Teardown Gatekeeper',
+        targetLabel: 'Target BigLake Metastore Catalog',
+        resourceKind: 'BigLake Metastore Catalog (biglake.googleapis.com/v1)',
+        targetName: `${catalogId} (${loc})`,
         location: loc,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE BIGLAKE CATALOG',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Catalog "${catalogId}"`,
+        cancelToast: `Deletion of BigLake catalog "${catalogId}" cancelled.`,
+        laymanSummary: `In Plain English: Removes the BigLake Iceberg catalog registration "${catalogId}" in ${loc}. Your underlying Parquet data files stored inside Cloud Storage (gs://) are NOT deleted, only the catalog metadata pointer.`,
+        whatHappensNext: `1. Removes any child Iceberg database/table metadata registrations inside "${catalogId}".\n2. Calls DELETE https://biglake.googleapis.com/v1/projects/${projectId}/locations/${loc}/catalogs/${catalogId}.\n3. Refreshes the BigLake & Apache Iceberg Studio inventory.`,
+        costWarning: `ZERO COST IMPACT ($0.00/MO): BigLake Metastore catalog registrations incur $0.00/mo in management fees; underlying GCS Parquet storage remains untouched.`,
         impactWarning: `This will permanently delete BigLake Metastore Catalog "${catalogId}" in ${loc} (${projectId}). Iceberg table metadata registrations inside this catalog will be removed.`,
       };
     }
@@ -369,13 +422,20 @@ function classifyDestructiveAxiosConfig(config) {
     if (sqlMatch) {
       const instanceName = decodeURIComponent(sqlMatch[1]);
       return {
-        title: 'Permanently Delete Cloud SQL Database Instance',
-        resourceKind: 'Cloud SQL Instance',
+        title: `Permanently Delete Cloud SQL Database Instance "${instanceName}"?`,
+        headerBadge: 'Cloud SQL Relational Database Teardown Gatekeeper',
+        targetLabel: 'Target Cloud SQL Instance & Storage Volume',
+        resourceKind: 'Cloud SQL Instance (sqladmin.googleapis.com/v1)',
         targetName: instanceName,
         location: 'Regional Relational DB',
         projectId,
-        method: 'DELETE',
+        method: 'DELETE CLOUD SQL',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Destroy Cloud SQL "${instanceName}"`,
+        cancelToast: `Deletion of Cloud SQL instance "${instanceName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently destroys the managed relational database server "${instanceName}", including all SQL schemas, tables, user accounts, and automated instance backups. Hourly vCPU/RAM and SSD storage billing stops immediately.`,
+        whatHappensNext: `1. Calls DELETE https://sqladmin.googleapis.com/v1/projects/${projectId}/instances/${instanceName}.\n2. Terminates primary/standby database VMs, releases Private Service Connect / IP endpoints, and shreds the SSD storage volume.\n3. Halts all hourly Cloud SQL compute and storage charges.`,
+        costWarning: `FINOPS SAVINGS ($0.00/HR AFTER DELETION): Deleting Cloud SQL instance "${instanceName}" immediately stops 24/7 relational database vCPU, RAM, HA, and SSD storage billing.`,
         impactWarning: `This will permanently destroy Cloud SQL instance "${instanceName}", including all relational databases, users, and automatic backups associated with the instance.`,
       };
     }
@@ -386,13 +446,20 @@ function classifyDestructiveAxiosConfig(config) {
       const region = decodeURIComponent(alloyMatch[1]);
       const clusterId = decodeURIComponent(alloyMatch[2]);
       return {
-        title: 'Permanently Delete AlloyDB PostgreSQL Cluster',
-        resourceKind: 'AlloyDB Cluster',
-        targetName: clusterId,
+        title: `Permanently Delete AlloyDB PostgreSQL Cluster "${clusterId}" (${region})?`,
+        headerBadge: 'AlloyDB PostgreSQL Cluster Teardown Gatekeeper',
+        targetLabel: 'Target AlloyDB Cluster & Instances',
+        resourceKind: 'AlloyDB Cluster (alloydb.googleapis.com/v1)',
+        targetName: `${clusterId} (${region})`,
         location: region,
         projectId,
-        method: 'DELETE',
+        method: 'FORCE DELETE ALLOYDB',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete AlloyDB "${clusterId}"`,
+        cancelToast: `Deletion of AlloyDB cluster "${clusterId}" cancelled.`,
+        laymanSummary: `In Plain English: Force-deletes your AlloyDB PostgreSQL cluster "${clusterId}" in ${region}, tearing down its primary compute node, any HTAP read-pool nodes, and its regional storage volume so hourly cluster billing drops to $0.00/hr.`,
+        whatHappensNext: `1. Calls DELETE https://alloydb.googleapis.com/v1/projects/${projectId}/locations/${region}/clusters/${clusterId}?force=true.\n2. Terminates all primary and read-pool instances and releases the regional storage volume.\n3. Refreshes the Cloud SQL & AlloyDB Studio inventory.`,
+        costWarning: `FINOPS SAVINGS ($0.00/HR AFTER TEARDOWN): Deleting AlloyDB cluster "${clusterId}" immediately stops high-performance vCPU/RAM node and regional storage charges.`,
         impactWarning: `This will force-delete AlloyDB cluster "${clusterId}" in ${region}, tearing down its primary instance, read pool nodes, and cluster storage volume.`,
       };
     }
@@ -405,13 +472,20 @@ function classifyDestructiveAxiosConfig(config) {
       const location = decodeURIComponent(arRepoMatch[1]);
       const repoId = decodeURIComponent(arRepoMatch[2]);
       return {
-        title: 'Permanently Delete Artifact Registry Repository & All Images',
-        resourceKind: 'Artifact Registry Repository',
-        targetName: repoId,
+        title: `Permanently Delete Artifact Registry Repository "${repoId}" & All Images?`,
+        headerBadge: 'Artifact Registry Repository Teardown Gatekeeper',
+        targetLabel: 'Target Artifact Registry Container Repository',
+        resourceKind: 'Artifact Registry Repository (artifactregistry.googleapis.com/v1)',
+        targetName: `${repoId} (${location})`,
         location,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE REPOSITORY',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Repository "${repoId}"`,
+        cancelToast: `Deletion of Artifact Registry repository "${repoId}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes the Docker/OCI container repository "${repoId}" in ${location} along with every container image digest, tag, and SBOM attestation stored inside it. Any Cloud Run or GKE service that tries to pull a new image from "${repoId}" will fail until re-pushed.`,
+        whatHappensNext: `1. Calls DELETE https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${location}/repositories/${repoId}.\n2. Purges all container image layers, tags, and vulnerability scan records in "${repoId}".\n3. Stops monthly per-GB Artifact Registry storage charges beyond the 0.5 GB free tier.`,
+        costWarning: `STORAGE BILLING STOP ($0.00/MO AFTER DELETION): Deleting repository "${repoId}" eliminates all $0.10/GB-month container image storage charges.`,
         impactWarning: `This will permanently delete Artifact Registry repository "${repoId}" in ${location} (${projectId}) and destroy all container images, tags, and SBOM artifacts stored inside it.`,
       };
     }
@@ -422,13 +496,20 @@ function classifyDestructiveAxiosConfig(config) {
       const location = decodeURIComponent(gkeMatch[1]);
       const clusterName = decodeURIComponent(gkeMatch[2]);
       return {
-        title: 'Permanently Delete GKE Kubernetes Cluster',
-        resourceKind: 'GKE Cluster',
-        targetName: clusterName,
+        title: `Permanently Delete GKE Kubernetes Cluster "${clusterName}" (${location})?`,
+        headerBadge: 'Google Kubernetes Engine (GKE) Cluster Teardown Gatekeeper',
+        targetLabel: 'Target GKE Kubernetes Cluster',
+        resourceKind: 'GKE Cluster (container.googleapis.com/v1)',
+        targetName: `${clusterName} (${location})`,
         location,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE GKE CLUSTER',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete GKE Cluster "${clusterName}"`,
+        cancelToast: `Deletion of GKE cluster "${clusterName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently tears down Kubernetes cluster "${clusterName}" in ${location}, terminating all running Pods, Deployments, Services, and worker nodes so all hourly GKE compute and cluster management charges stop immediately.`,
+        whatHappensNext: `1. Calls DELETE https://container.googleapis.com/v1/projects/${projectId}/locations/${location}/clusters/${clusterName}.\n2. Drains and terminates all Autopilot/Standard worker nodes and Kubernetes control-plane endpoints.\n3. Halts all hourly node compute and GKE cluster management billing.`,
+        costWarning: `FINOPS SAVINGS ($0.00/HR AFTER TEARDOWN): Deleting GKE cluster "${clusterName}" immediately stops worker node vCPU/RAM/GPU charges and the $0.10/hr cluster management fee (first zonal/Autopilot cluster is covered by the GKE Free Tier).`,
         impactWarning: `This will permanently delete GKE cluster "${clusterName}" (${location}), terminating all running Kubernetes deployments, pods, services, and node pools.`,
       };
     }
@@ -437,29 +518,44 @@ function classifyDestructiveAxiosConfig(config) {
       const clusterName = body.clusterName || params.clusterName || 'gke-cluster';
       const location = body.location || params.location || 'us-central1';
       return {
-        title: 'Permanently Delete GKE Kubernetes Cluster',
-        resourceKind: 'GKE Cluster',
-        targetName: clusterName,
+        title: `Permanently Delete GKE Kubernetes Cluster "${clusterName}" (${location})?`,
+        headerBadge: 'Google Kubernetes Engine (GKE) Cluster Teardown Gatekeeper',
+        targetLabel: 'Target GKE Kubernetes Cluster',
+        resourceKind: 'GKE Cluster (container.googleapis.com/v1)',
+        targetName: `${clusterName} (${location})`,
         location,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE GKE CLUSTER',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete GKE Cluster "${clusterName}"`,
+        cancelToast: `Deletion of GKE cluster "${clusterName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently tears down Kubernetes cluster "${clusterName}" in ${location}, terminating all running Pods, Deployments, and worker node pools so hourly GKE compute billing drops to $0.00/hr.`,
+        whatHappensNext: `1. Calls DELETE https://container.googleapis.com/v1/projects/${projectId}/locations/${location}/clusters/${clusterName}.\n2. Terminates all running Kubernetes workloads, node pools, and control plane endpoints.\n3. Stops all ongoing GKE compute and management charges.`,
+        costWarning: `FINOPS SAVINGS ($0.00/HR AFTER TEARDOWN): Terminating GKE cluster "${clusterName}" stops all worker node vCPU/RAM/GPU and persistent disk billing.`,
         impactWarning: `This will permanently delete GKE cluster "${clusterName}" (${location}), terminating all running Kubernetes workloads and control plane endpoints.`,
       };
     }
 
     if (rawUrl.includes('/wave11/firestore/documents')) {
+      const dbId = body.databaseId || params.databaseId || '(default)';
       const colId = params.collectionId || body.collectionId || 'cloudpulse_deployments';
       const docId = params.documentId || body.documentId || 'selected-doc';
       return {
-        title: 'Permanently Delete Cloud Firestore Document',
-        resourceKind: 'Firestore NoSQL Document',
-        targetName: `${colId}/${docId}`,
-        location: params.databaseId || '(default)',
+        title: `Permanently Delete Firestore Document "${colId}/${docId}"?`,
+        headerBadge: 'Cloud Firestore NoSQL Document Deletion Gatekeeper',
+        targetLabel: 'Target Cloud Firestore Document Path',
+        laymanSummary: `In Plain English: Deletes the single NoSQL JSON document "${docId}" inside collection "${colId}" of your "${dbId}" Firestore database. Other documents in the collection are untouched.`,
+        resourceKind: 'Cloud Firestore Native Document (firestore.googleapis.com/v1)',
+        targetName: `${dbId} / ${colId} / ${docId}`,
+        location: dbId,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE DOCUMENT',
         endpoint: rawUrl,
-        impactWarning: `This will permanently delete document "${colId}/${docId}" from Cloud Firestore database "${params.databaseId || '(default)'}" in project "${projectId}".`,
+        confirmLabel: `Confirm & Delete Document "${docId}"`,
+        cancelToast: `Deletion of Firestore document "${colId}/${docId}" cancelled.`,
+        whatHappensNext: `1. Calls DELETE https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}/documents/${colId}/${docId}.\n2. Removes document "${docId}" while keeping collection "${colId}" and sibling documents intact.\n3. Refreshes the Firestore document inspector.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Cloud Firestore includes 20,000 free document deletes/day and 1 GiB of free storage.`,
+        impactWarning: `This will permanently delete document "${colId}/${docId}" from Cloud Firestore database "${dbId}" in project "${projectId}".`,
       };
     }
 
@@ -469,13 +565,20 @@ function classifyDestructiveAxiosConfig(config) {
       const region = decodeURIComponent(fnMatch[1]);
       const fnName = decodeURIComponent(fnMatch[2]);
       return {
-        title: 'Permanently Delete Cloud Function',
-        resourceKind: 'Cloud Function (Gen2 / Gen1)',
-        targetName: fnName,
+        title: `Permanently Delete Cloud Function "${fnName}" (${region})?`,
+        headerBadge: 'Cloud Functions Gen2 / Eventarc Teardown Gatekeeper',
+        targetLabel: 'Target Cloud Function & Eventarc Trigger',
+        resourceKind: 'Cloud Function Gen2 (cloudfunctions.googleapis.com/v2)',
+        targetName: `${fnName} (${region})`,
         location: region,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE FUNCTION',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Function "${fnName}"`,
+        cancelToast: `Deletion of Cloud Function "${fnName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes serverless Cloud Function "${fnName}" in ${region} and disconnects its HTTPS endpoint or Eventarc event trigger so it can no longer be invoked.`,
+        whatHappensNext: `1. Calls DELETE https://cloudfunctions.googleapis.com/v2/projects/${projectId}/locations/${region}/functions/${fnName}.\n2. Tears down the underlying Cloud Run Gen2 service and unbinds any attached Eventarc trigger.\n3. Refreshes the Cloud Functions & Eventarc Studio inventory.`,
+        costWarning: `SERVERLESS BILLING STOP ($0.00/HR): Deleting "${fnName}" ensures zero warm-instance or invocation charges.`,
         impactWarning: `This will permanently delete Cloud Function "${fnName}" in ${region} and disconnect its HTTP trigger or Eventarc event subscription.`,
       };
     }
@@ -492,24 +595,37 @@ function classifyDestructiveAxiosConfig(config) {
           .replace(/-\d+$/, '');
         return {
           title: `Permanently Delete Medallion Lakehouse Pipeline "${cleanPrefix}"`,
+          headerBadge: '3-Tier BigQuery Medallion Lakehouse Teardown Gatekeeper',
+          targetLabel: 'Target Bronze / Silver / Gold Medallion Pipeline',
           resourceKind: '3-Tier BigQuery Medallion Pipeline (Bronze / Silver / Gold)',
           targetName: cleanPrefix,
           location: region,
           projectId,
-          method: 'DELETE',
+          method: 'DELETE MEDALLION PIPELINE',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Medallion Pipeline "${cleanPrefix}"`,
+          cancelToast: `Deletion of Medallion pipeline "${cleanPrefix}" cancelled.`,
+          laymanSummary: `In Plain English: Permanently deletes the 3-tier Medallion Lakehouse pipeline "${cleanPrefix}" and drops its 3 BigQuery datasets (${cleanPrefix}_bronze_raw, ${cleanPrefix}_silver_cleaned, and ${cleanPrefix}_gold_marts) in ${region}.`,
           whatHappensNext: `1. Calls DELETE https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/{datasetId}?deleteContents=true across ${cleanPrefix}_bronze_raw, ${cleanPrefix}_silver_cleaned, and ${cleanPrefix}_gold_marts.\n2. Removes the Medallion ELT pipeline registration from the Data Engineering Studio.`,
+          costWarning: `STORAGE BILLING STOP ($0.00/MO AFTER DELETION): Dropping the Bronze, Silver, and Gold datasets stops any BigQuery table storage charges beyond the 10 GiB Always-Free tier.`,
           impactWarning: `This permanently deletes Medallion pipeline "${cleanPrefix}" (${region}) and drops its 3 BigQuery datasets (${cleanPrefix}_bronze_raw, ${cleanPrefix}_silver_cleaned, ${cleanPrefix}_gold_marts) in project "${projectId}".`,
         };
       }
       return {
-        title: `Permanently Delete ${kind}`,
+        title: `Permanently Delete ${kind} "${target}"?`,
+        headerBadge: 'Data Engineering Studio Resource Teardown Gatekeeper',
+        targetLabel: `Target ${kind}`,
         resourceKind: kind,
         targetName: target,
         location: region,
         projectId,
-        method: 'DELETE',
+        method: 'DELETE DATA RESOURCE',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete "${target}"`,
+        cancelToast: `Deletion of "${target}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes the ${kind} "${target}" (${region}) from your Data Engineering Studio in project "${projectId}".`,
+        whatHappensNext: `1. Issues an authenticated DELETE call against the Google Cloud Data Engineering control plane for "${target}" (${region}).\n2. Removes "${target}" and refreshes the Data Engineering Studio inventory.`,
+        costWarning: `BILLING STOP ($0.00/HR AFTER DELETION): Deleting "${target}" stops any associated pipeline or storage charges.`,
         impactWarning: `This will permanently delete the ${kind} "${target}" (${region}) from project "${projectId}".`,
       };
     }
@@ -520,6 +636,8 @@ function classifyDestructiveAxiosConfig(config) {
       const reg = body.region || params.region || 'us-central1';
       return {
         title: `Delete Cloud Deploy Pipeline "${pipeId}" & Delivery Targets in ${reg}?`,
+        headerBadge: 'Google Cloud Deploy Delivery Pipeline Teardown Gatekeeper',
+        targetLabel: 'Target Cloud Deploy Pipeline & Dev/Staging/Prod Targets',
         laymanSummary: `In Plain English: Removes the Cloud Deploy release pipeline "${pipeId}" and its associated Dev/Staging/Prod delivery targets in ${reg}. Deleting unused pipelines ensures you stay within Google Cloud Deploy's 1-free-pipeline allowance ($18/mo for extra pipelines).`,
         resourceKind: 'Cloud Deploy Delivery Pipeline + Targets (clouddeploy.googleapis.com/v1)',
         targetName: `${pipeId} (${reg})`,
@@ -529,28 +647,9 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Confirm & Delete Pipeline "${pipeId}"`,
         cancelToast: `Deletion of Cloud Deploy pipeline "${pipeId}" cancelled.`,
+        whatHappensNext: `1. Calls DELETE https://clouddeploy.googleapis.com/v1/projects/${projectId}/locations/${reg}/deliveryPipelines/${pipeId}?force=true.\n2. Deletes associated "-dev", "-staging", and "-prod" delivery target definitions in ${reg}.\n3. Keeps your deployed Cloud Run services running untouched.`,
         costWarning: `FINOPS SAVINGS: Deleting additional Cloud Deploy delivery pipelines avoids the $18.00/month per-pipeline management fee (your first pipeline is $0.00/mo).`,
         impactWarning: `Permanently deletes Cloud Deploy pipeline "${pipeId}" and its "-dev", "-staging", and "-prod" target definitions in ${reg}. Existing Cloud Run services are NOT deleted.`,
-      };
-    }
-
-    // Wave 11 Firestore Document Deletion (/wave11/firestore/documents)
-    if (rawUrl.includes('/wave11/firestore/documents')) {
-      const dbId = body.databaseId || params.databaseId || '(default)';
-      const colId = body.collectionId || params.collectionId || 'cloudpulse_ops';
-      const docId = body.documentId || params.documentId || 'doc';
-      return {
-        title: `Permanently Delete Firestore Document "${colId}/${docId}"?`,
-        laymanSummary: `In Plain English: Deletes the single NoSQL JSON document "${docId}" inside collection "${colId}" of your "${dbId}" Firestore database. Other documents in the collection are untouched.`,
-        resourceKind: 'Cloud Firestore Native Document (firestore.googleapis.com/v1)',
-        targetName: `${dbId} / ${colId} / ${docId}`,
-        location: dbId,
-        projectId,
-        method: 'DELETE DOCUMENT',
-        endpoint: rawUrl,
-        confirmLabel: `Confirm & Delete Document "${docId}"`,
-        cancelToast: `Deletion of Firestore document "${colId}/${docId}" cancelled.`,
-        impactWarning: `This permanently deletes document "${docId}" from collection "${colId}" in Firestore database "${dbId}" on project "${projectId}".`,
       };
     }
 
@@ -561,6 +660,8 @@ function classifyDestructiveAxiosConfig(config) {
       const snapName = decodeURIComponent(vmSnapDeleteMatch[2]);
       return {
         title: `Permanently Delete Compute Engine Snapshot "${snapName}"?`,
+        headerBadge: 'Compute Engine Persistent Disk Snapshot Teardown Gatekeeper',
+        targetLabel: 'Target Persistent Disk Snapshot',
         resourceKind: 'Compute Engine Persistent Disk Snapshot (compute.googleapis.com/v1)',
         targetName: snapName,
         location: `Global Snapshot (Source VM: ${vmName})`,
@@ -569,19 +670,55 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Confirm & Delete Snapshot "${snapName}"`,
         cancelToast: `Deletion of snapshot "${snapName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes backup disk snapshot "${snapName}" (taken from VM "${vmName}") so you stop paying monthly $0.05/GB snapshot storage charges. Your live VM "${vmName}" and its attached boot disk are 100% untouched.`,
+        whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/global/snapshots/${snapName}.\n2. Releases incremental snapshot storage blocks and stops monthly snapshot billing.\n3. Refreshes the VM Snapshot ledger.`,
+        costWarning: `FINOPS SAVINGS ($0.05/GB-MO SAVED): Deleting unused disk snapshots stops monthly incremental snapshot storage charges while keeping your live VM disk intact.`,
         impactWarning: `This permanently deletes disk snapshot "${snapName}" from project "${projectId}". Your running VM "${vmName}" and its boot disk are NOT affected.`,
+      };
+    }
+
+    // Reset local console credit sync cache (non-destructive local cache clear -> no modal needed)
+    if (rawUrl.includes('/billing-guardian/sync-console-credits')) {
+      return null;
+    }
+
+    // Clear in-RAM AI Studio Key Vault (/api/ai-vault/clear)
+    if (rawUrl.includes('/api/ai-vault/clear')) {
+      return {
+        title: 'Zero-Fill & Wipe Sealed AI Studio Key from RAM Vault?',
+        headerBadge: 'AES-256-GCM In-RAM Key Vault Zero-Fill Gatekeeper',
+        targetLabel: 'Target Ephemeral AES-256-GCM API Key Enclave',
+        resourceKind: 'In-RAM AES-256-GCM + Browser WebCrypto Key Vault',
+        targetName: 'Sealed Google AI Studio API Key (AIzaSy•••)',
+        location: 'Local Browser WebCrypto + Node.js RAM Enclave',
+        projectId,
+        method: 'ZERO-FILL & WIPE VAULT',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Wipe Sealed Key from RAM',
+        cancelToast: 'Vault wipe cancelled — your sealed API key remains active in RAM.',
+        laymanSummary: `In Plain English: Cryptographically overwrites (zero-fills) and wipes your sealed Google AI Studio API key from both Browser WebCrypto memory and the Node.js server's AES-256-GCM RAM enclave. Your Google Cloud project and Keyless Vertex AI OAuth2 remain untouched.`,
+        whatHappensNext: `1. Overwrites the in-memory AES-256-GCM key buffer with zeros and clears the Browser WebCrypto CryptoKey handle.\n2. Switches the Gemini Co-Architect back to Keyless Vertex AI OAuth2 mode.\n3. You can re-seal an AI Studio key anytime.`,
+        costWarning: `ZERO COST IMPACT ($0.00): Wiping the local RAM key enclave is instantaneous and free.`,
+        impactWarning: `Removes the sealed Google AI Studio API key from memory; subsequent Gemini queries will use Keyless Vertex AI OAuth2 unless a key is sealed again.`,
       };
     }
 
     // Fallback for any other HTTP DELETE endpoint
     return {
       title: 'Confirm Permanent Resource Deletion',
+      headerBadge: 'CloudPulse 2026 Resource Deletion Gatekeeper',
+      targetLabel: 'Target Google Cloud Resource',
       resourceKind: body.resourceType || body.type || 'Cloud Resource',
       targetName: body.name || body.id || rawUrl.split('/').pop() || rawUrl,
       location: body.region || body.zone || body.location || 'GCP',
       projectId,
       method: 'DELETE',
       endpoint: rawUrl,
+      confirmLabel: 'Confirm & Permanently Delete',
+      cancelToast: 'Resource deletion cancelled.',
+      laymanSummary: `In Plain English: Permanently deletes "${body.name || body.id || rawUrl.split('/').pop() || rawUrl}" from Google Cloud project "${projectId}" and stops any ongoing billing for it.`,
+      whatHappensNext: `1. Sends an authenticated HTTP DELETE request to Google Cloud for "${body.name || body.id || rawUrl.split('/').pop() || rawUrl}".\n2. Verifies resource deletion and logs the receipt in the Flight Recorder.`,
+      costWarning: `BILLING STOP ($0.00/HR AFTER DELETION): Deleting this resource halts any active hourly runtime or monthly storage charges.`,
       impactWarning: `You are about to execute a permanent HTTP DELETE operation on Google Cloud project "${projectId}". Please confirm you want to proceed.`,
     };
   }
@@ -593,13 +730,20 @@ function classifyDestructiveAxiosConfig(config) {
     if (emptyBucketMatch) {
       const bucket = decodeURIComponent(emptyBucketMatch[1]);
       return {
-        title: 'Force Empty & Permanently Delete Cloud Storage Bucket',
-        resourceKind: 'Cloud Storage Bucket (Recursive Purge)',
+        title: `Force Empty & Permanently Delete Bucket "gs://${bucket}"?`,
+        headerBadge: 'Cloud Storage Recursive Purge & Bucket Destruction Gatekeeper',
+        targetLabel: 'Target Cloud Storage Bucket & All Contained Objects',
+        resourceKind: 'Cloud Storage Bucket (Recursive Purge · storage.googleapis.com/v1)',
         targetName: `gs://${bucket}`,
         location: 'Global / Multi-Region',
         projectId,
-        method: 'POST',
+        method: 'EMPTY & DELETE BUCKET',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Destroy Bucket "gs://${bucket}"`,
+        cancelToast: `Destruction of bucket "gs://${bucket}" cancelled.`,
+        laymanSummary: `In Plain English: This is a complete teardown of bucket "gs://${bucket}". First, it permanently deletes every file and version inside "gs://${bucket}", and then it deletes the bucket itself. If you only want to empty the files while keeping the bucket and its settings intact, click Cancel and use "Sweep Bucket" instead.`,
+        whatHappensNext: `1. Lists all live and noncurrent object generations inside "gs://${bucket}" via storage.objects.list(versions=true).\n2. Permanently deletes every object generation inside "gs://${bucket}".\n3. Calls DELETE https://storage.googleapis.com/storage/v1/b/${bucket} to destroy the bucket itself.`,
+        costWarning: `STORAGE BILLING STOP ($0.00/MO AFTER DELETION): Permanently stops all $/GB-month object storage charges for "gs://${bucket}".`,
         impactWarning: `DANGER: This operation will first permanently delete EVERY object and file stored inside "gs://${bucket}" and then permanently destroy the bucket itself. This action is irreversible.`,
       };
     }
@@ -611,16 +755,31 @@ function classifyDestructiveAxiosConfig(config) {
       const prefix = String(body.prefix || '').trim();
       return {
         title: prefix
-          ? `Sweep & Delete Folder "gs://${bucket}/${prefix}"`
-          : `Sweep & Empty Bucket "gs://${bucket}" (Keep Bucket Intact)`,
+          ? `Sweep & Delete Folder "gs://${bucket}/${prefix}"?`
+          : `Sweep & Empty Bucket "gs://${bucket}" (Keep Bucket Intact)?`,
+        headerBadge: 'Cloud Storage Non-Destructive Bucket Sweep Gatekeeper',
+        targetLabel: prefix
+          ? 'Target Cloud Storage Folder Prefix to Purge'
+          : 'Target Cloud Storage Bucket to Sweep (Bucket Preserved)',
         resourceKind: prefix
           ? 'Cloud Storage Virtual Folder (Recursive Object Purge)'
           : 'Cloud Storage Bucket Sweep (Objects Only — Bucket Preserved)',
         targetName: prefix ? `gs://${bucket}/${prefix}` : `gs://${bucket}/*`,
         location: 'Global / Multi-Region',
         projectId,
-        method: 'POST (SWEEP OBJECTS)',
+        method: 'SWEEP OBJECTS (KEEP BUCKET)',
         endpoint: rawUrl,
+        confirmLabel: prefix
+          ? `Confirm & Sweep Folder "${prefix}"`
+          : `Confirm & Sweep All Objects in "gs://${bucket}"`,
+        cancelToast: `Sweep on "gs://${bucket}" cancelled — all objects kept intact.`,
+        laymanSummary: prefix
+          ? `In Plain English: Deletes all files inside folder "gs://${bucket}/${prefix}" while keeping bucket "gs://${bucket}" and every file outside "${prefix}" completely untouched.`
+          : `In Plain English: Empties all files and historical object versions inside "gs://${bucket}" so the bucket drops to 0 Bytes ($0.00/mo storage cost), while keeping the bucket "gs://${bucket}" itself alive — preserving its IAM permissions, CORS rules, Lifecycle policies, and any Cloud Run Gen2 FUSE volume mounts.`,
+        whatHappensNext: prefix
+          ? `1. Lists all objects matching prefix "${prefix}" in "gs://${bucket}".\n2. Deletes every matching object generation via storage.objects.delete.\n3. Keeps bucket "gs://${bucket}" and all other folders untouched.`
+          : `1. Lists all live and noncurrent object generations in "gs://${bucket}".\n2. Purges all objects so stored volume drops to 0 B.\n3. Preserves bucket "gs://${bucket}" metadata, IAM bindings, CORS, Lifecycle rules, and Cloud Run FUSE mounts.`,
+        costWarning: `FINOPS STORAGE RESET ($0.00/MO): Sweeping "gs://${bucket}" resets stored object bytes to 0 B ($0.00/mo) without breaking downstream Cloud Run or IAM integrations.`,
         impactWarning: prefix
           ? `This will permanently delete all objects inside folder prefix "gs://${bucket}/${prefix}". Bucket "gs://${bucket}" and objects outside "${prefix}" remain untouched.`
           : `This will permanently delete ALL objects and historical versions inside "gs://${bucket}" so the bucket becomes completely empty (0 B), while keeping the bucket "gs://${bucket}" itself intact (preserving its IAM, CORS, Lifecycle, and FUSE mount configuration).`,
@@ -643,15 +802,24 @@ function classifyDestructiveAxiosConfig(config) {
         .slice(0, 4)
         .join(', ');
       return {
-        title: `Delete ${totalSelected} Selected Item(s) from gs://${bucket}`,
-        resourceKind: 'Cloud Storage Selective Batch Object Deletion',
+        title: `Delete ${totalSelected} Selected Item(s) from gs://${bucket}?`,
+        headerBadge: 'Cloud Storage Selective Batch Object Deletion Gatekeeper',
+        targetLabel: 'Target Selected Objects & Virtual Folders',
+        resourceKind: 'Cloud Storage Selective Batch Object Deletion (storage.googleapis.com/v1)',
         targetName: `gs://${bucket} (${totalSelected} selected: ${previewNames}${
           totalSelected > 4 ? '...' : ''
         })`,
         location: 'Global / Multi-Region',
         projectId,
-        method: 'POST (BATCH DELETE OBJECTS)',
+        method: 'BATCH DELETE OBJECTS',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete ${totalSelected} Selected Item(s)`,
+        cancelToast: `Batch deletion in "gs://${bucket}" cancelled.`,
+        laymanSummary: `In Plain English: Deletes only the ${objList.length} file(s)${
+          pfxList.length > 0 ? ` and ${pfxList.length} folder(s)` : ''
+        } you checked in "gs://${bucket}". All unchecked files and the bucket itself remain completely untouched.`,
+        whatHappensNext: `1. Expands any selected folder prefixes (${pfxList.length}) into their child object paths.\n2. Executes parallel authenticated DELETE calls on storage.googleapis.com/storage/v1/b/${bucket}/o for the ${totalSelected} selected item(s).\n3. Refreshes the Object Workbench table.`,
+        costWarning: `STORAGE BILLING REDUCTION: Deleting the ${totalSelected} selected item(s) immediately stops $/GB-month storage charges for those files.`,
         impactWarning: `You are about to permanently delete ${objList.length} selected object(s)${
           pfxList.length > 0 ? ` and ${pfxList.length} folder prefix(es)` : ''
         } from bucket "gs://${bucket}". Unselected objects and the bucket itself remain intact.`,
@@ -665,16 +833,33 @@ function classifyDestructiveAxiosConfig(config) {
       const isDeleteBuckets = mode === 'EMPTY_AND_DELETE_BUCKETS';
       return {
         title: isDeleteBuckets
-          ? `Empty & Permanently Delete ${bList.length} Selected Bucket(s)`
-          : `Sweep & Empty ${bList.length} Selected Bucket(s) (Keep Buckets Intact)`,
+          ? `Empty & Permanently Delete ${bList.length} Selected Bucket(s)?`
+          : `Sweep & Empty ${bList.length} Selected Bucket(s) (Keep Buckets Intact)?`,
+        headerBadge: isDeleteBuckets
+          ? 'Multi-Bucket Fleet Purge & Destruction Gatekeeper'
+          : 'Multi-Bucket Fleet Object Sweep (Keep Buckets) Gatekeeper',
+        targetLabel: isDeleteBuckets
+          ? 'Target Cloud Storage Buckets to Empty & Destroy'
+          : 'Target Cloud Storage Buckets to Sweep (Buckets Preserved)',
         resourceKind: isDeleteBuckets
           ? 'Cloud Storage Multi-Bucket Recursive Purge & Destruction'
           : 'Cloud Storage Multi-Bucket Object Sweep (Buckets Preserved)',
         targetName: bList.map((b) => `gs://${b}`).join(', '),
         location: 'Global / Multi-Region',
         projectId,
-        method: `POST (${mode})`,
+        method: mode,
         endpoint: rawUrl,
+        confirmLabel: isDeleteBuckets
+          ? `Confirm & Destroy ${bList.length} Bucket(s)`
+          : `Confirm & Sweep ${bList.length} Bucket(s) (Keep Buckets)`,
+        cancelToast: `Multi-bucket batch action (${mode}) cancelled.`,
+        laymanSummary: isDeleteBuckets
+          ? `In Plain English: Permanently empties AND deletes all ${bList.length} selected bucket(s) (${bList.map((b) => `gs://${b}`).join(', ')}). Every file inside them and the bucket names themselves will be removed.`
+          : `In Plain English: Empties all files inside the ${bList.length} selected bucket(s) (${bList.map((b) => `gs://${b}`).join(', ')}) so storage cost drops to $0.00/mo, while keeping every bucket and its IAM/CORS/Lifecycle/FUSE settings intact.`,
+        whatHappensNext: isDeleteBuckets
+          ? `1. Iterates through ${bList.map((b) => `gs://${b}`).join(', ')} and purges all live and noncurrent object generations.\n2. Calls DELETE https://storage.googleapis.com/storage/v1/b/{bucket} on each selected bucket.\n3. Refreshes the Cloud Storage Fleet inventory.`
+          : `1. Iterates through ${bList.map((b) => `gs://${b}`).join(', ')} and deletes all live and noncurrent object generations.\n2. Preserves every bucket container, IAM policy, and lifecycle rule.\n3. Refreshes the Cloud Storage Fleet inventory.`,
+        costWarning: `FINOPS STORAGE RESET ($0.00/MO): ${isDeleteBuckets ? 'Destroying' : 'Sweeping'} the ${bList.length} selected bucket(s) immediately reduces their stored object billing to $0.00/mo.`,
         impactWarning: isDeleteBuckets
           ? `DANGER: This will permanently empty AND destroy ${bList.length} selected bucket(s): ${bList
               .map((b) => `gs://${b}`)
@@ -700,14 +885,29 @@ function classifyDestructiveAxiosConfig(config) {
         title: isMaskOnly
           ? `Mask Secrets In-Place Without Vaulting to Secret Manager?`
           : `Purge Noncurrent Unredacted Generation while Redacting?`,
+        headerBadge: isMaskOnly
+          ? 'DLP Mask-Only Overwrite (No Secret Manager Vault) Gatekeeper'
+          : 'DLP Redaction + Noncurrent Generation Purge Gatekeeper',
+        targetLabel: 'Target Cloud Storage Object Containing Secrets / PII',
         resourceKind: isMaskOnly
           ? 'Destructive Plaintext Secret Mask-Only Overwrite (No Secret Manager Backup)'
           : 'Cloud Storage DLP Redaction + Noncurrent Generation Purge',
         targetName: `gs://${bucket}/${objName}`,
-        location: 'Global / Multi-Region',
+        location: bucket,
         projectId,
-        method: isMaskOnly ? 'POST (MASK_ONLY)' : 'POST (PURGE_PREV_GEN)',
+        method: isMaskOnly ? 'MASK_ONLY (NO VAULT)' : 'REDACT + PURGE OLD GEN',
         endpoint: rawUrl,
+        confirmLabel: isMaskOnly
+          ? `Confirm Mask-Only Overwrite on "${objName}"`
+          : `Confirm Redact & Purge Old Generation`,
+        cancelToast: `DLP redaction on "gs://${bucket}/${objName}" cancelled.`,
+        laymanSummary: isMaskOnly
+          ? `In Plain English: Overwrites the plaintext credentials/PII inside "gs://${bucket}/${objName}" with "[REDACTED_<TYPE>_BY_CLOUDPULSE_DLP]" WITHOUT saving the original secret into Google Cloud Secret Manager first. If you want to keep a recoverable encrypted copy in Secret Manager (sm://), click Cancel and use "Vault to Secret Manager (sm://) + Mask PII" instead.`
+          : `In Plain English: Sanitizes "gs://${bucket}/${objName}" by writing a clean new object generation AND permanently deletes the previous unredacted object generation so nobody can download the leaked secret via ?generation=#oldGen.`,
+        whatHappensNext: isMaskOnly
+          ? `1. Streams "gs://${bucket}/${objName}" into Node.js RAM and replaces matched secrets/PII with "[REDACTED_<TYPE>_BY_CLOUDPULSE_DLP]".\n2. Uploads the sanitized UTF-8 payload as a new object generation on storage.googleapis.com.\n3. Skips Secret Manager vaulting per your MASK_ONLY selection.`
+          : `1. Vaults or masks matched secrets/PII in "gs://${bucket}/${objName}" and commits a sanitized new object generation.\n2. Calls DELETE https://storage.googleapis.com/storage/v1/b/${bucket}/o/${encodeURIComponent(objName)}?generation={previousGen} to erase the unredacted historical version.\n3. Returns the cryptographic redaction receipt.`,
+        costWarning: `ZERO API SURCHARGE ($0.00): Local RAM regex + Luhn + Shannon entropy sanitization and GCS generation cleanup incur $0.00 in DLP API fees.`,
         impactWarning: isMaskOnly
           ? `WARNING: You selected MASK_ONLY mode. Plaintext credentials inside "gs://${bucket}/${objName}" will be overwritten with "[REDACTED_<TYPE>_BY_CLOUDPULSE_DLP]" WITHOUT vaulting them into Google Cloud Secret Manager (sm://). If these are live credentials and you do not have another copy, cancel and click "Vault Credentials to Secret Manager (sm://) + Mask PII" instead.`
           : `This will permanently delete the previous unredacted object generation from "gs://${bucket}/${objName}" after writing the sanitized version.`,
@@ -720,13 +920,20 @@ function classifyDestructiveAxiosConfig(config) {
       const vmName = decodeURIComponent(vmPowerMatch[1]);
       const zone = body.zone || 'gcp-zone';
       return {
-        title: 'Permanently Delete Compute Engine VM Instance',
-        resourceKind: 'Compute Engine VM',
+        title: `Permanently Delete Compute Engine VM "${vmName}" (${zone})?`,
+        headerBadge: 'Compute Engine VM & Boot Disk Teardown Gatekeeper',
+        targetLabel: 'Target Compute Engine Virtual Machine',
+        resourceKind: 'Compute Engine VM (compute.googleapis.com/v1)',
         targetName: vmName,
         location: zone,
         projectId,
-        method: 'POST (DELETE VM)',
+        method: 'DELETE VM',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete VM "${vmName}"`,
+        cancelToast: `Deletion of VM "${vmName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently shuts down and deletes virtual machine "${vmName}" in zone "${zone}" along with its auto-delete boot disk. Hourly vCPU/RAM and disk charges stop immediately.`,
+        whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}.\n2. Terminates the VM instance and deletes its attached auto-delete boot persistent disk.\n3. Refreshes the Compute Engine VM Fleet inventory.`,
+        costWarning: `FINOPS SAVINGS ($0.00/HR AFTER DELETION): Terminating "${vmName}" immediately stops hourly VM compute, public IPv4 ($3.65/mo), and boot disk charges.`,
         impactWarning: `This will permanently terminate and delete Compute Engine VM "${vmName}" in zone "${zone}", including its auto-delete boot persistent disk.`,
       };
     }
@@ -789,13 +996,20 @@ function classifyDestructiveAxiosConfig(config) {
       const zType = body.type || 'Orphaned Cloud Resource';
       const zZone = body.zone || 'global';
       return {
-        title: `Exterminate & Delete ${zType}`,
-        resourceKind: zType,
+        title: `Exterminate & Delete ${zType} "${zName}"?`,
+        headerBadge: 'FinOps Zombie Resource Exterminator Gatekeeper',
+        targetLabel: `Target Orphaned ${zType}`,
+        resourceKind: `${zType} (Zombie Reaper)`,
         targetName: zName,
         location: zZone,
         projectId,
-        method: 'POST (EXTERMINATE)',
+        method: 'EXTERMINATE ZOMBIE',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Exterminate "${zName}"`,
+        cancelToast: `Extermination of "${zName}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes the unattached/orphaned ${zType} "${zName}" in "${zZone}" so it stops draining wasted money on your monthly Google Cloud bill.`,
+        whatHappensNext: `1. Verifies that "${zName}" (${zType}) is unattached to any running VM or active workload in "${zZone}".\n2. Calls DELETE on Google Cloud's control plane for "${zName}".\n3. Reclaims the monthly FinOps waste and updates your Zombie Reaper savings ledger.`,
+        costWarning: `FINOPS SAVINGS ($0.00/MO AFTER EXTERMINATION): Deleting orphaned persistent disks ($0.04–$0.17/GB-mo) and unattached static external IPv4 addresses ($0.01/hr = $7.30/mo) immediately stops idle billing.`,
         impactWarning: `This will permanently delete the unattached/orphaned ${zType} "${zName}" (${zZone}) from project "${projectId}" to reclaim wasted FinOps spend.`,
       };
     }
@@ -804,13 +1018,20 @@ function classifyDestructiveAxiosConfig(config) {
     if (rawUrl.includes('/wave9/supply-chain/delete-image')) {
       const img = body.uri || body.name || body.image || 'container-image';
       return {
-        title: 'Permanently Delete Artifact Registry Container Image',
-        resourceKind: 'Artifact Registry Image',
+        title: `Permanently Delete Container Image "${img}"?`,
+        headerBadge: 'Artifact Registry Container Image Deletion Gatekeeper',
+        targetLabel: 'Target Container Image URI / Digest',
+        resourceKind: 'Artifact Registry Container Image (artifactregistry.googleapis.com/v1)',
         targetName: img,
         location: 'Artifact Registry',
         projectId,
-        method: 'POST (DELETE IMAGE)',
+        method: 'DELETE CONTAINER IMAGE',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Image`,
+        cancelToast: `Deletion of container image "${img}" cancelled.`,
+        laymanSummary: `In Plain English: Permanently deletes Docker/OCI container image "${img}" and its associated tags from Google Cloud Artifact Registry to free up container storage space.`,
+        whatHappensNext: `1. Calls DELETE on artifactregistry.googleapis.com/v1 for "${img}".\n2. Removes the manifest digest and any attached tags.\n3. Refreshes the Supply-Chain image inventory.`,
+        costWarning: `STORAGE SAVINGS: Deleting unused container images reduces $0.10/GB-month Artifact Registry storage charges beyond the 500 MB free tier.`,
         impactWarning: `This will permanently delete container image "${img}" (and its digest/tags) from Google Cloud Artifact Registry.`,
       };
     }
@@ -822,13 +1043,20 @@ function classifyDestructiveAxiosConfig(config) {
         ? body.images.length
         : 'all untagged';
       return {
-        title: 'Sweep & Delete Dead / Orphaned Container Images',
-        resourceKind: 'Artifact Registry Dead Container Sweep',
+        title: `Sweep & Delete ${count} Dead / Orphaned Container Image(s)?`,
+        headerBadge: 'Artifact Registry Orphaned Image Sweep Gatekeeper',
+        targetLabel: 'Target Untagged / Unused Container Image Digests',
+        resourceKind: 'Artifact Registry Dead Container Sweep (artifactregistry.googleapis.com/v1)',
         targetName: `${count} Dead / Unused Container Images`,
         location: 'Artifact Registry',
         projectId,
-        method: 'POST (SWEEP ORPHANS)',
+        method: 'SWEEP ORPHAN IMAGES',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Sweep ${count} Orphan Image(s)`,
+        cancelToast: `Orphan container image sweep cancelled.`,
+        laymanSummary: `In Plain English: Purges ${count} old, untagged, or unused container image digests from Artifact Registry while automatically protecting every image currently running on Cloud Run or GKE.`,
+        whatHappensNext: `1. Cross-checks all Artifact Registry digests against live Cloud Run and GKE active revisions.\n2. Deletes ${count} unreferenced image digest(s) via artifactregistry.googleapis.com/v1.\n3. Reclaims container registry storage capacity.`,
+        costWarning: `FINOPS STORAGE SAVINGS: Purging stale container build layers eliminates $0.10/GB-month Artifact Registry bloat.`,
         impactWarning: `This will permanently purge ${count} dead/unused container image digests from Artifact Registry. Active container images currently running on Cloud Run are protected and untouched.`,
       };
     }
@@ -836,13 +1064,20 @@ function classifyDestructiveAxiosConfig(config) {
     if (rawUrl.includes('/cloudrun/dead-artifacts-purge-gcs')) {
       const count = Array.isArray(body.objects) ? body.objects.length : 'selected';
       return {
-        title: 'Purge Leftover Cloud Storage Build & Staging Artifacts?',
-        resourceKind: 'Cloud Storage Build / Staging Artifacts',
+        title: `Purge ${count} Leftover Cloud Build & Staging Artifact(s)?`,
+        headerBadge: 'Cloud Build & Source Staging GCS Cleanup Gatekeeper',
+        targetLabel: 'Target Leftover Build Tarballs & Staging Objects',
+        resourceKind: 'Cloud Storage Build / Staging Artifacts (storage.googleapis.com/v1)',
         targetName: `${count} Cloud Storage Artifact Object(s)`,
         location: 'Cloud Storage (storage.googleapis.com)',
         projectId,
-        method: 'POST (PURGE GCS ARTIFACTS)',
+        method: 'PURGE BUILD ARTIFACTS',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Purge ${count} Build Artifact(s)`,
+        cancelToast: `Build artifact cleanup cancelled.`,
+        laymanSummary: `In Plain English: Deletes ${count} leftover source tarballs and temporary Cloud Build staging files from your Cloud Storage staging buckets. Your live running Cloud Run services are NOT affected.`,
+        whatHappensNext: `1. Deletes ${count} temporary build archive object(s) from your Cloud Build / Cloud Run staging bucket(s).\n2. Preserves all running Cloud Run revisions and active container images.\n3. Reclaims Cloud Storage Free-Tier quota.`,
+        costWarning: `FINOPS STORAGE SAVINGS: Cleaning up leftover Cloud Build source tarballs keeps your project inside the 5 GB-month US Standard Always-Free tier.`,
         impactWarning: `This will permanently delete ${count} leftover Cloud Storage build/staging artifact object(s) from project "${projectId}".`,
       };
     }
@@ -852,13 +1087,22 @@ function classifyDestructiveAxiosConfig(config) {
       const catalogName = body.catalogName || 'federated_catalog';
       const gcpRegion = body.gcpRegion || 'us-east4';
       return {
-        title: `Provision Cross-Cloud BigLake Federated Catalog (${provider})?`,
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Provision Cross-Cloud BigLake Federated Catalog "${catalogName}" (${provider})?`,
+        headerBadge: 'BigLake Cross-Cloud Iceberg Federated Catalog Gatekeeper',
+        targetLabel: 'Target BigLake Federated Catalog & Regional Secret',
         resourceKind: `BigLake Iceberg Federated Catalog (${provider})`,
-        targetName: catalogName,
+        targetName: `${catalogName} (${gcpRegion})`,
         location: `${gcpRegion} (biglake.googleapis.com + secretmanager.${gcpRegion}.rep.googleapis.com)`,
         projectId,
-        method: 'POST (CREATE FEDERATED CATALOG)',
+        method: 'CREATE FEDERATED CATALOG',
         endpoint: rawUrl,
+        confirmLabel: `Confirm & Create Catalog "${catalogName}"`,
+        cancelToast: `Creation of federated catalog "${catalogName}" cancelled.`,
+        laymanSummary: `In Plain English: Connects Google Cloud BigLake in "${gcpRegion}" to your remote ${provider} so BigQuery and Managed Spark can query remote Apache Iceberg tables directly without copying files first.`,
+        whatHappensNext: `1. Stores your catalog credential inside a regional Secret Manager secret (secretmanager.${gcpRegion}.rep.googleapis.com).\n2. Calls POST https://biglake.googleapis.com/v1/projects/${projectId}/locations/${gcpRegion}/catalogs?catalogId=${catalogName}.\n3. Binds the BigLake service agent and refreshes your Federated Catalog inventory.`,
+        costWarning: `METADATA CATALOG PRICING (~$0.00/MO): BigLake catalog creation is free; regional Secret Manager versions cost $0.06/mo (first 6 versions per project are Always-Free).`,
         impactWarning: `This will provision a regional Secret Manager secret (if Databricks Unity) and create a BigLake Iceberg Federated Catalog "${catalogName}" in region "${gcpRegion}" for project "${projectId}".`,
       };
     }
@@ -873,13 +1117,20 @@ function classifyDestructiveAxiosConfig(config) {
         const target =
           body.keyName || body.keyId || body.serviceAccountEmail || 'IAM SA Key';
         return {
-          title: 'Permanently Revoke & Delete Service Account JSON Key?',
-          resourceKind: 'IAM Service Account Key (iam.googleapis.com)',
+          title: `Permanently Revoke & Delete Service Account JSON Key "${target}"?`,
+          headerBadge: 'IAM Service Account Key Cryptographic Revocation Gatekeeper',
+          targetLabel: 'Target IAM Service Account Private Key',
+          resourceKind: 'IAM Service Account Key (iam.googleapis.com/v1)',
           targetName: target,
           location: 'Global IAM',
           projectId,
           method: 'DELETE SA KEY',
           endpoint: rawUrl,
+          confirmLabel: `Confirm & Revoke SA Key`,
+          cancelToast: `Revocation of Service Account key "${target}" cancelled.`,
+          laymanSummary: `In Plain English: Immediately and permanently revokes the long-lived exported JSON private key "${target}". Any external script or leaked credential trying to use that .json file will be blocked within seconds.`,
+          whatHappensNext: `1. Calls DELETE https://iam.googleapis.com/v1/${String(target).startsWith('projects/') ? target : `projects/${projectId}/serviceAccounts/.../keys/${target}`}.\n2. Permanently invalidates the public/private keypair across Google Cloud IAM.\n3. Logs the key revocation in Cloud Audit Logs.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting Service Account keys and hardening IAM credentials is 100% free.`,
           impactWarning: `This will immediately and permanently delete Service Account key "${target}" in Google Cloud IAM. Any workload or CI/CD pipeline authenticating with this .json key file will lose access immediately and the private key cannot be recovered.`,
         };
       }
@@ -887,8 +1138,10 @@ function classifyDestructiveAxiosConfig(config) {
         const target =
           body.tokenId || body.serviceAccountEmail || 'OAuth2 Access Token';
         return {
-          title: 'Immediately Revoke Active OAuth2 Access Token?',
-          resourceKind: 'Short-Lived OAuth2 Bearer Token',
+          title: `Immediately Revoke Active OAuth2 Access Token "${target}"?`,
+          headerBadge: 'OAuth2 Bearer Token Revocation Gatekeeper',
+          targetLabel: 'Target Short-Lived OAuth2 Bearer Token',
+          resourceKind: 'Short-Lived OAuth2 Bearer Token (oauth2.googleapis.com/revoke)',
           targetName: target,
           location: 'Global IAM',
           projectId,
@@ -896,6 +1149,9 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Confirm & Revoke OAuth2 Token',
           cancelToast: 'Action cancelled — OAuth2 token kept active.',
+          laymanSummary: `In Plain English: Immediately invalidates the active OAuth2 access token for "${target}" so any session currently holding that bearer token is forced to re-authenticate.`,
+          whatHappensNext: `1. Calls POST https://oauth2.googleapis.com/revoke for the target token.\n2. Purges the active session from the credential ledger.\n3. Records the revocation event in the Flight Recorder.`,
+          costWarning: `ZERO COST ($0.00/MO): OAuth2 token revocation is 100% free.`,
           impactWarning: `This will immediately revoke token "${target}" so it can no longer authenticate against Google Cloud APIs.`,
         };
       }
@@ -903,14 +1159,19 @@ function classifyDestructiveAxiosConfig(config) {
         const target = body.serviceAccountEmail || 'Service Account';
         return {
           title: `Freeze & Disable Service Account "${target}"?`,
-          resourceKind: 'IAM Service Account (Emergency Kill-Switch)',
+          headerBadge: 'IAM Service Account Emergency Freeze Gatekeeper',
+          targetLabel: 'Target IAM Service Account Identity',
+          resourceKind: 'IAM Service Account (iam.googleapis.com/v1 · Emergency Kill-Switch)',
           targetName: target,
           location: 'Global IAM',
           projectId,
-          method: 'DISABLE SA',
+          method: 'DISABLE SERVICE ACCOUNT',
           endpoint: rawUrl,
           confirmLabel: 'Confirm & Freeze Service Account',
           cancelToast: `Action cancelled — "${target}" remains enabled.`,
+          laymanSummary: `In Plain English: Freezes Service Account "${target}" in place without deleting its IAM roles. Every JSON key, OAuth token, and workload running as "${target}" is blocked immediately until you click Re-Enable.`,
+          whatHappensNext: `1. Calls POST https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${target}:disable.\n2. Immediately halts token minting and key authentication for "${target}".\n3. You can unfreeze the account anytime with 1 click (:enable).`,
+          costWarning: `ZERO COST ($0.00/MO): Disabling or re-enabling an IAM Service Account is 100% free.`,
           impactWarning: `EMERGENCY KILL-SWITCH WARNING: Disabling Service Account "${target}" immediately blocks ALL JSON keys, OAuth tokens, and workloads running as this identity until you re-enable it.`,
         };
       }
@@ -927,6 +1188,12 @@ function classifyDestructiveAxiosConfig(config) {
           title: cascade
             ? `Teardown Resource Group "${slug}" + Delete ${count} GCP Resource(s)?`
             : `Remove Logical Resource Group "${slug}"?`,
+          headerBadge: cascade
+            ? 'Azure-Style Resource Group Cascade Teardown Gatekeeper'
+            : 'Logical Resource Group Container Removal Gatekeeper',
+          targetLabel: cascade
+            ? 'Target Resource Group & Underlying GCP Resources'
+            : 'Target Logical Resource Group Container',
           resourceKind: cascade
             ? 'Azure-Style Resource Group + Underlying GCP Resources'
             : 'Azure-Style Logical Resource Group Container',
@@ -939,6 +1206,15 @@ function classifyDestructiveAxiosConfig(config) {
             ? `Confirm & Delete Group + ${count} Resource(s)`
             : 'Confirm & Remove Group Container',
           cancelToast: `Deletion of Resource Group "${slug}" cancelled.`,
+          laymanSummary: cascade
+            ? `In Plain English: Deletes the Resource Group "${slug}" AND permanently destroys all ${count} underlying Google Cloud resource(s) inside it (VMs, Cloud Run services, buckets, datasets, secrets).`
+            : `In Plain English: Removes the logical folder/group tag "${slug}" from your dashboard while leaving all ${count} underlying Google Cloud resources running untouched.`,
+          whatHappensNext: cascade
+            ? `1. Iterates through all ${count} member resource(s) in group "${slug}" and executes live Google Cloud DELETE calls.\n2. Removes the Resource Group definition "${slug}".\n3. Refreshes project resource inventory.`
+            : `1. Removes the logical Resource Group container "${slug}" from metadata storage.\n2. Leaves all underlying VMs, Cloud Run services, and buckets untouched.`,
+          costWarning: cascade
+            ? `FINOPS BILLING STOP ($0.00/HR AFTER CASCADE): Deleting all ${count} member resources halts their ongoing compute and storage billing.`
+            : `ZERO COST IMPACT ($0.00): Removing a logical group container does not change your cloud bill.`,
           impactWarning: cascade
             ? `CRITICAL CASCADE TEARDOWN: This will permanently delete Resource Group "${slug}" AND issue live GCP DELETE calls across all ${count} member resource(s) (Cloud Run, VMs, GCS Buckets, BigQuery Datasets, Secrets).`
             : `This removes the logical Resource Group folder "${slug}" while leaving all underlying GCP resources running untouched.`,
@@ -947,7 +1223,11 @@ function classifyDestructiveAxiosConfig(config) {
       if (act === 'HIBERNATE_RESOURCE_GROUP') {
         const slug = body.slug || 'Resource Group';
         return {
-          title: `Hibernate Resource Group "${slug}"?`,
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Hibernate Resource Group "${slug}" ($0/hr Compute Park)?`,
+          headerBadge: 'Resource Group Compute Park & Hibernation Gatekeeper',
+          targetLabel: 'Target Resource Group to Hibernate',
           resourceKind: 'Azure-Style Resource Group Compute Park',
           targetName: slug,
           location: 'Multi-Region Group',
@@ -956,6 +1236,9 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Confirm & Hibernate Group',
           cancelToast: `Hibernation of "${slug}" cancelled.`,
+          laymanSummary: `In Plain English: Parks all running Compute Engine VMs (instances.stop) and scales warm Cloud Run services to minInstances=0 inside group "${slug}" so active hourly compute burn drops to $0.00/hr without deleting your data.`,
+          whatHappensNext: `1. Stops all RUNNING Compute Engine VMs belonging to Resource Group "${slug}".\n2. Updates warm Cloud Run services in "${slug}" to minInstanceCount=0 (scale-to-zero).\n3. Preserves all persistent disks, buckets, and databases for 1-click wake-up.`,
+          costWarning: `FINOPS SAVINGS ($0.00/HR IDLE COMPUTE): Stopping VMs and scaling Cloud Run to minInstances=0 eliminates hourly vCPU/RAM charges while keeping disks intact.`,
           impactWarning: `This will stop all RUNNING Compute Engine VMs and scale warm Cloud Run services (minInstances -> 0) inside Resource Group "${slug}".`,
         };
       }
@@ -964,8 +1247,12 @@ function classifyDestructiveAxiosConfig(config) {
         (body.fuseLevel === 'SOFT_BRAKE' || body.fuseLevel === 'COMPUTE_PARK')
       ) {
         return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
           title: `Execute Hard-Spend Fuse (${body.fuseLevel}) on "${projectId}"?`,
-          resourceKind: 'Automated Stop-Loss Budget Fuse',
+          headerBadge: 'Automated Stop-Loss Budget Fuse Gatekeeper',
+          targetLabel: 'Target Project Fleet for Stop-Loss Clamping',
+          resourceKind: 'Automated Stop-Loss Budget Fuse (Compute + Cloud Run)',
           targetName: `${projectId} (${body.fuseLevel})`,
           location: 'Global Project Fleet',
           projectId,
@@ -973,6 +1260,15 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Confirm & Execute ${body.fuseLevel}`,
           cancelToast: `Spend Fuse action ${body.fuseLevel} cancelled.`,
+          laymanSummary:
+            body.fuseLevel === 'COMPUTE_PARK'
+              ? `In Plain English: Immediately stops all running Compute Engine VMs across all zones and sets Cloud Run minInstances=0 so hourly compute burn drops to $0.00/hr while keeping all disks and buckets safe.`
+              : `In Plain English: Applies a non-disruptive Soft Brake by setting Cloud Run minInstances=0 and capping maxInstances=3 across project "${projectId}" to prevent runaway autoscaling bills.`,
+          whatHappensNext:
+            body.fuseLevel === 'COMPUTE_PARK'
+              ? `1. Calls instances.stop across all RUNNING Compute Engine VMs in "${projectId}".\n2. Patches warm Cloud Run services to minInstanceCount=0.\n3. Logs the Compute Park receipt in the Flight Recorder.`
+              : `1. Patches Cloud Run services in "${projectId}" to minInstanceCount=0 and maxInstanceCount=3.\n2. Preserves active HTTPS request serving with scale-to-zero economics.`,
+          costWarning: `FINOPS STOP-LOSS SAVINGS: Clamps runaway hourly vCPU/RAM spend immediately without unlinking Cloud Billing or deleting data.`,
           impactWarning:
             body.fuseLevel === 'COMPUTE_PARK'
               ? `This will immediately stop all RUNNING Compute Engine VMs across all zones and scale warm Cloud Run services to minInstances=0.`
@@ -983,6 +1279,8 @@ function classifyDestructiveAxiosConfig(config) {
         const modId = body.moduleId || 'Multi-Cloud Parity Module';
         return {
           title: `Disable & Teardown Feature "${modId}" ($0.00/hr)?`,
+          headerBadge: 'Multi-Cloud Parity Feature Teardown Gatekeeper',
+          targetLabel: 'Target Multi-Cloud Parity Feature Module',
           resourceKind: 'Multi-Cloud Parity Bridge Resources',
           targetName: `${modId} (${body.alsoDisableGcpApis ? 'Feature Resources + Underlying GCP APIs' : 'Feature Resources Only · Keep GCP APIs Enabled'})`,
           location: 'Global Project Bridge',
@@ -991,6 +1289,9 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Confirm Disable & Teardown ($0.00/hr)',
           cancelToast: `Teardown of "${modId}" cancelled.`,
+          laymanSummary: `In Plain English: Tears down all active bridge profiles and resources configured inside module "${modId}" so its hourly cost drops to $0.00/hr.`,
+          whatHappensNext: `1. Removes all configured bridge items under module "${modId}" on project "${projectId}".\n2. ${body.alsoDisableGcpApis ? 'Disables the module-specific Google Cloud APIs.' : 'Keeps shared project Google Cloud APIs enabled so other studios are unaffected.'}\n3. Verifies $0.00/hr module burn.`,
+          costWarning: `ZERO HOURLY BURN ($0.00/HR): Disabling "${modId}" ensures zero ongoing resource or bridge charges.`,
           impactWarning: `This will tear down all active resources configured under "${modId}" on project "${projectId}" so hourly cost drops to $0.00/hr.`,
         };
       }
@@ -1005,6 +1306,8 @@ function classifyDestructiveAxiosConfig(config) {
         const modId = body.moduleId || act;
         return {
           title: `Disable & Remove Resource "${itemTarget}"?`,
+          headerBadge: 'Multi-Cloud Parity Resource Removal Gatekeeper',
+          targetLabel: `Target Parity Resource (${modId})`,
           resourceKind: `Multi-Cloud Parity Resource (${modId})`,
           targetName: itemTarget,
           location: projectId,
@@ -1013,18 +1316,19 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Confirm Delete "${itemTarget}" ($0.00/hr)`,
           cancelToast: `Deletion of "${itemTarget}" cancelled.`,
+          laymanSummary: `In Plain English: Removes "${itemTarget}" from module "${modId}" in project "${projectId}" so it incurs $0.00/hr while leaving shared project APIs intact.`,
+          whatHappensNext: `1. Removes resource/profile "${itemTarget}" from "${modId}".\n2. Revokes any associated conditional IAM or event pipe bindings.\n3. Refreshes the AWS & Azure Parity Studio state.`,
+          costWarning: `ZERO HOURLY BURN ($0.00/HR): Removing "${itemTarget}" stops any associated resource charges immediately.`,
           impactWarning: `This will immediately remove "${itemTarget}" from "${modId}" on project "${projectId}" ($0.00/hr) while keeping shared project GCP APIs enabled.`,
         };
       }
     }
 
-    // Emergency Billing Kill-Switch (Unlink Cloud Billing Account or Soft-Freeze $0 Idle Hibernation)
-    if (
-      rawUrl.includes('/billing/kill-switch') &&
-      (String(body.action || '').toUpperCase() === 'DISABLE' ||
-        String(body.action || '').toUpperCase() === 'SOFT_FREEZE')
-    ) {
-      const isSoftFreeze = String(body.action || '').toUpperCase() === 'SOFT_FREEZE';
+    // Emergency Billing Kill-Switch (Unlink Cloud Billing Account, Soft-Freeze $0 Idle Hibernation, or Re-Link / Wake)
+    if (rawUrl.includes('/billing/kill-switch')) {
+      const ksAct = String(body.action || 'SOFT_FREEZE').toUpperCase();
+      const isSoftFreeze = ksAct === 'SOFT_FREEZE';
+      const isDisable = ksAct === 'DISABLE';
       const extraFlags = [
         body.stopAllVms ? 'Stop Running VMs' : null,
         body.scaleDownCloudRun ? 'Scale Cloud Run to minInstances=0' : null,
@@ -1033,6 +1337,8 @@ function classifyDestructiveAxiosConfig(config) {
 
       if (isSoftFreeze) {
         return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
           title: `Execute $0 Idle Soft-Freeze Hibernation on "${projectId}"?`,
           headerBadge: 'CloudPulse 2026 Soft-Freeze ($0 Idle Hibernation) Gatekeeper',
           targetLabel: 'Target GCP Project & Active Compute Resources',
@@ -1044,25 +1350,53 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Confirm & Execute Soft-Freeze Hibernation',
           cancelToast: 'Soft-Freeze cancelled — active resources remain unchanged.',
+          laymanSummary: `In Plain English: Safely parks all hourly compute burn in "${projectId}" (${extraFlags.join(', ') || 'stops running VMs, sets Cloud Run minInstances=0, and pauses Cloud SQL'}) while keeping your Cloud Billing Account linked so your buckets, domains, and scale-to-zero web apps stay online.`,
+          whatHappensNext: `1. Stops all RUNNING Compute Engine VMs across all zones (instances.stop).\n2. Scales warm Cloud Run services down to minInstanceCount=0.\n3. Sets Cloud SQL instances to activationPolicy=NEVER while keeping your Cloud Billing Account attached.`,
+          costWarning: `FINOPS HIBERNATION ($0.00/HR COMPUTE BURN): Halts active hourly vCPU/RAM compute charges across VMs, Cloud Run, and Cloud SQL without risking account suspension.`,
           impactWarning: `NON-NUCLEAR HIBERNATION: Keeps your Cloud Billing Account linked (preserving GCS buckets, DNS, and scale-to-zero Cloud Run traffic) while halting active hourly burn via: ${
             extraFlags.join(', ') || 'Compute/Serverless/SQL idle freeze'
           }.`,
         };
       }
 
+      if (isDisable) {
+        return {
+          title: `Unlink Cloud Billing Account from "${projectId}"?`,
+          headerBadge: 'CloudPulse 2026 Emergency Billing Kill-Switch Gatekeeper',
+          targetLabel: 'Target GCP Project to Detach from Billing',
+          resourceKind: 'Cloud Billing Account Link (cloudbilling.googleapis.com)',
+          targetName: `${projectId}${extraFlags.length > 0 ? ` (+ ${extraFlags.join(', ')})` : ''}`,
+          location: 'Global Billing',
+          projectId,
+          method: 'UNLINK BILLING',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Unlink Cloud Billing',
+          cancelToast: 'Action cancelled — Cloud Billing remains linked.',
+          laymanSummary: `In Plain English: Nuclear emergency stop-loss! Detaches the Cloud Billing Account from project "${projectId}" via cloudbilling.googleapis.com. Google Cloud will immediately shut down all billable services and paid APIs in "${projectId}" until you re-link a billing account.`,
+          whatHappensNext: `1. Optionally stops VMs and scales down Cloud Run (${extraFlags.join(', ') || 'pre-unlink park'}).\n2. Calls PUT https://cloudbilling.googleapis.com/v1/projects/${projectId}/billingInfo with { billingAccountName: "" }.\n3. Immediately halts all billable spend across "${projectId}".`,
+          costWarning: `ABSOLUTE $0.00 BILLING STOP: Unlinking Cloud Billing guarantees zero new charges can accrue on "${projectId}", but will take billable production workloads offline.`,
+          impactWarning: `EXTREME IMPACT WARNING: Unlinking the Cloud Billing Account from "${projectId}" will immediately stop all billable Google Cloud resources and disable paid API usage across the project until billing is re-linked.`,
+        };
+      }
+
       return {
-        title: `Unlink Cloud Billing Account from "${projectId}"?`,
-        headerBadge: 'CloudPulse 2026 Emergency Billing Kill-Switch Gatekeeper',
-        targetLabel: 'Target GCP Project to Detach from Billing',
-        resourceKind: 'Cloud Billing Account Link (cloudbilling.googleapis.com)',
-        targetName: `${projectId}${extraFlags.length > 0 ? ` (+ ${extraFlags.join(', ')})` : ''}`,
-        location: 'Global Billing',
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Re-Link / Wake Cloud Billing & Compute Fleet on "${projectId}"?`,
+        headerBadge: 'Cloud Billing Re-Link & Fleet Wake-Up Gatekeeper',
+        targetLabel: 'Target GCP Project to Restore / Wake',
+        resourceKind: 'Cloud Billing Account Link & Compute Fleet (cloudbilling.googleapis.com/v1)',
+        targetName: `${projectId} (${ksAct})`,
+        location: 'Global Billing & Compute Fleet',
         projectId,
-        method: 'UNLINK BILLING',
+        method: ksAct,
         endpoint: rawUrl,
-        confirmLabel: 'Confirm & Unlink Cloud Billing',
-        cancelToast: 'Action cancelled — Cloud Billing remains linked.',
-        impactWarning: `EXTREME IMPACT WARNING: Unlinking the Cloud Billing Account from "${projectId}" will immediately stop all billable Google Cloud resources and disable paid API usage across the project until billing is re-linked.`,
+        confirmLabel: `Confirm & ${ksAct} on "${projectId}"`,
+        cancelToast: `Billing ${ksAct} cancelled.`,
+        laymanSummary: `In Plain English: Re-attaches your Cloud Billing Account or wakes up hibernated resources on project "${projectId}" so billable Google Cloud services resume normal operation.`,
+        whatHappensNext: `1. Calls cloudbilling.googleapis.com/v1/projects/${projectId}/billingInfo (or wakes parked VMs/SQL).\n2. Restores active project billing state and refreshes FinOps telemetry.`,
+        costWarning: `BILLING RESUMPTION NOTICE: Re-linking billing or waking parked VMs/SQL resumes standard hourly Google Cloud resource pricing.`,
+        impactWarning: `Restores "${ksAct}" state on project "${projectId}".`,
       };
     }
 
@@ -1072,6 +1406,8 @@ function classifyDestructiveAxiosConfig(config) {
       const isSpendCap = Boolean(body.enableSpendCap);
       const svcRef = body.serviceResourceName || 'All Project Services';
       return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
         title: isSpendCap
           ? `Arm Native Spend Cap ($${capUsd}/mo) on ${svcRef}?`
           : `Arm Auto-Circuit-Breaker & Cloud Billing Budget ($${capUsd}/mo)?`,
@@ -1092,6 +1428,11 @@ function classifyDestructiveAxiosConfig(config) {
           : `Confirm & Arm $${capUsd}/mo Circuit-Breaker`,
         cancelToast:
           'Action cancelled — Circuit-Breaker / Spend Cap was not enabled.',
+        laymanSummary: isSpendCap
+          ? `In Plain English: Creates a official Google Cloud Billing Budget at $${capUsd}/mo with Native Spend Cap enforcement (spendCap.inputState="CONFIGURED") so Google automatically pauses "${svcRef}" for the rest of the month if gross usage hits $${capUsd}.`
+          : `In Plain English: Creates a live $${capUsd}/mo Cloud Billing Budget with 50%, 80%, and 100% alert thresholds and arms the Automated Spend Cap Circuit-Breaker on "${projectId}".`,
+        whatHappensNext: `1. Resolves the active Cloud Billing Account ID linked to "${projectId}".\n2. Calls POST https://billingbudgets.googleapis.com/v1/billingAccounts/{billingAccountId}/budgets with a $${capUsd}/mo cap and 50%/80%/100% threshold rules.\n3. Syncs the newly created budget into the Billing Credit & Spend Cap Guardian.`,
+        costWarning: `ZERO COST ($0.00/MO): Creating and enforcing Cloud Billing Budgets via billingbudgets.googleapis.com/v1 is 100% free.`,
         impactWarning: isSpendCap
           ? `HARD SPEND CAP WARNING: Setting spendCap.inputState = "CONFIGURED" ($${capUsd}/mo · EXCLUDE_ALL_CREDITS) instructs Google Cloud Billing to automatically pause usage of "${svcRef}" in "${projectId}" for the rest of the calendar month once gross estimated usage reaches 100% of $${capUsd} USD. (Note: Because EXCLUDE_ALL_CREDITS is required by Google, gross usage is measured before promotional credits settle.)`
           : `CIRCUIT-BREAKER & BILLING BUDGET WARNING: Confirming this action provisions a live $${capUsd}/mo Cloud Billing Budget on billingbudgets.googleapis.com/v1 (50%, 80%, 100% thresholds) and arms the Automated Spend Cap Circuit-Breaker so compute spend is clamped if your project crosses $${capUsd}/mo.`,
@@ -1104,6 +1445,8 @@ function classifyDestructiveAxiosConfig(config) {
       const bName = body.budgetName || 'billingAccounts/.../budgets/...';
       const shortId = String(bName).split('/').pop() || bName;
       return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
         title:
           act === 'LIFT_CAP'
             ? `Lift Spend Cap (${shortId}) -> AWAITING_NEXT_PERIOD?`
@@ -1111,6 +1454,7 @@ function classifyDestructiveAxiosConfig(config) {
             ? `Update Budget Cap ($${body.newAmountUsd || 25}/mo) on ${shortId}?`
             : `Re-Arm Native Spend Cap (${shortId}) -> CONFIGURED?`,
         headerBadge: 'Cloud Billing Spend Cap State Machine Gatekeeper',
+        targetLabel: 'Target Cloud Billing Budget & Spend Cap State',
         resourceKind: 'Cloud Billing Budget (billingbudgets.googleapis.com/v1)',
         targetName: bName,
         location: 'Global Billing Account',
@@ -1124,6 +1468,14 @@ function classifyDestructiveAxiosConfig(config) {
             ? `Confirm & Set Cap to $${body.newAmountUsd || 25}/mo`
             : 'Confirm & Re-Arm Spend Cap',
         cancelToast: 'Action cancelled — Spend Cap state was not changed.',
+        laymanSummary:
+          act === 'LIFT_CAP'
+            ? `In Plain English: Temporarily unpauses your capped service for the rest of this calendar month (setting spendCap.inputState="AWAITING_NEXT_PERIOD"). It will automatically re-arm on the 1st of next month.`
+            : act === 'RAISE_AMOUNT_AND_UNPAUSE'
+            ? `In Plain English: Updates your monthly Cloud Billing Budget limit on "${shortId}" to $${body.newAmountUsd || 25}/mo and unpauses any throttled service.`
+            : `In Plain English: Re-arms the hard Spend Cap on "${shortId}" (spendCap.inputState="CONFIGURED") so Google pauses the target service if monthly usage reaches 100% of the budget.`,
+        whatHappensNext: `1. Calls PATCH https://billingbudgets.googleapis.com/v1/${bName} with the requested spendCap / amount updateMask.\n2. Verifies the updated Spend Cap state machine transition.\n3. Refreshes the Billing Guardian ledger.`,
+        costWarning: `ZERO API COST ($0.00/MO): Updating Cloud Billing Budgets is free; lifting or raising a cap allows capped services to accrue usage up to the new threshold.`,
         impactWarning:
           act === 'LIFT_CAP'
             ? `Lifting this Spend Cap sets spendCap.inputState = "AWAITING_NEXT_PERIOD". Any paused service will resume immediately and can incur billable charges for the remainder of the current calendar month (it automatically re-arms to CONFIGURED on the 1st of next month).`
@@ -1138,6 +1490,8 @@ function classifyDestructiveAxiosConfig(config) {
       const bName = body.budgetName || 'billingAccounts/.../budgets/...';
       return {
         title: `Delete Cloud Billing Budget "${String(bName).split('/').pop()}"?`,
+        headerBadge: 'Cloud Billing Budget Deletion Gatekeeper',
+        targetLabel: 'Target Cloud Billing Budget Resource',
         resourceKind: 'Cloud Billing Budget (billingbudgets.googleapis.com/v1)',
         targetName: bName,
         location: 'Global Billing Account',
@@ -1146,6 +1500,9 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: 'Confirm & Delete Budget',
         cancelToast: 'Action cancelled — Cloud Billing Budget kept intact.',
+        laymanSummary: `In Plain English: Permanently deletes Cloud Billing Budget "${String(bName).split('/').pop()}" along with its 50%/80%/100% email/PubSub alerts and any attached Spend Cap.`,
+        whatHappensNext: `1. Calls DELETE https://billingbudgets.googleapis.com/v1/${bName}.\n2. Removes the budget threshold rules from your Cloud Billing Account.\n3. Refreshes the Billing Credit & Spend Cap Guardian list.`,
+        costWarning: `BUDGET GUARDRAIL REMOVAL NOTICE: Deleting a budget removes its automated spend alerts and cap enforcement ($0.00 API fee).`,
         impactWarning: `Deleting "${bName}" permanently removes its 50%/80%/100% threshold alerts and any attached Native Spend Cap enforcement.`,
       };
     }
@@ -1161,9 +1518,12 @@ function classifyDestructiveAxiosConfig(config) {
       const actMode =
         body.payload?.autoAction || body.autoAction || 'PARK_NIGHT_MODE';
       return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
         title: `Arm Autonomous FinOps Circuit-Breaker ($${capUsd}/mo)?`,
         headerBadge: '2026 Quantum Nexus Circuit-Breaker Gatekeeper',
-        resourceKind: 'Cloud Billing Budget + Autonomous Tripwire',
+        targetLabel: 'Target Project FinOps Tripwire & Billing Budget',
+        resourceKind: 'Cloud Billing Budget + Autonomous Tripwire (billingbudgets.googleapis.com/v1)',
         targetName: `${projectId} ($${capUsd}/mo · Action: ${actMode})`,
         location: 'Global Project & Billing',
         projectId,
@@ -1171,6 +1531,9 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Confirm & Arm $${capUsd}/mo Circuit-Breaker`,
         cancelToast: 'Action cancelled — Circuit-Breaker was not armed.',
+        laymanSummary: `In Plain English: Sets an automatic monthly spend guardrail of $${capUsd}/mo on "${projectId}" (tripwire mode: ${actMode}) and syncs a live Cloud Billing Budget on billingbudgets.googleapis.com/v1.`,
+        whatHappensNext: `1. Updates the Quantum Nexus FinOps tripwire policy to $${capUsd}/mo (${actMode}).\n2. Provisions or updates the corresponding Cloud Billing Budget via billingbudgets.googleapis.com/v1.\n3. Returns the active circuit-breaker receipt.`,
+        costWarning: `ZERO COST ($0.00/MO): Arming the FinOps Circuit-Breaker and Cloud Billing Budget is 100% free.`,
         impactWarning: `Confirming this action arms the Autonomous FinOps Circuit-Breaker at $${capUsd}/mo (tripwire action: ${actMode}) and provisions a corresponding Cloud Billing Budget via billingbudgets.googleapis.com/v1.`,
       };
     }
@@ -1183,7 +1546,9 @@ function classifyDestructiveAxiosConfig(config) {
       const svc = body.serviceName || 'googleapis.com';
       return {
         title: `Disable Google Cloud API "${svc}"?`,
-        resourceKind: 'Service Usage API (serviceusage.googleapis.com)',
+        headerBadge: 'Service Usage API Disablement Gatekeeper',
+        targetLabel: 'Target Google Cloud Service API',
+        resourceKind: 'Service Usage API (serviceusage.googleapis.com/v1)',
         targetName: svc,
         location: 'Global Project API',
         projectId,
@@ -1191,6 +1556,9 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Confirm & Disable ${svc}`,
         cancelToast: `Action cancelled — "${svc}" remains enabled.`,
+        laymanSummary: `In Plain English: Turns off the Google Cloud API "${svc}" across project "${projectId}". Any workloads or studios that call "${svc}" will stop working until you re-enable the API.`,
+        whatHappensNext: `1. Calls POST https://serviceusage.googleapis.com/v1/projects/${projectId}/services/${svc}:disable with disableDependentServices=true.\n2. Disables API endpoints for "${svc}" on project "${projectId}".\n3. You can re-enable "${svc}" anytime in 1 click.`,
+        costWarning: `API BILLING STOP ($0.00/MO): Disabling an API prevents any new billable API requests against "${svc}".`,
         impactWarning: `Disabling "${svc}" (with disableDependentServices=true) on project "${projectId}" will immediately stop any workloads or SDK calls that depend on this service API.`,
       };
     }
@@ -1201,14 +1569,21 @@ function classifyDestructiveAxiosConfig(config) {
       if (act === 'DELETE_SECRET') {
         const sid = body.secretId || 'Secret';
         return {
-          title: `Delete Secret Manager Secret "${sid}" & All Versions?`,
-          resourceKind: 'Secret Manager Secret (secretmanager.googleapis.com)',
-          targetName: sid,
-          location: 'Secret Manager',
+          title: `Permanently Delete Secret Manager Key "${sid}" & All Versions?`,
+          headerBadge: 'Secret Manager Cryptographic Vault Destruction Gatekeeper',
+          targetLabel: 'Target Secret Manager Key & All Encrypted Versions',
+          resourceKind: 'Secret Manager Secret (secretmanager.googleapis.com/v1)',
+          targetName: `projects/${projectId}/secrets/${sid}`,
+          location: 'Global / Regional Secret Manager Vault',
           projectId,
           method: 'DELETE SECRET',
           endpoint: rawUrl,
-          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Deleting "${sid}" permanently erases the secret and all of its versions. It does NOT revert Cloud Run environment variables back into plaintext! Because the Leak Surgeon removed the plaintext value from Cloud Run and replaced it with a secretKeyRef pointer, any Cloud Run service still referencing "${sid}" will fail to start new instances until that reference is updated or removed.`,
+          confirmLabel: `Permanently Shred Secret "${sid}"`,
+          cancelToast: `Deletion cancelled — Secret "${sid}" remains intact in Secret Manager.`,
+          laymanSummary: `In Plain English: Permanently deletes encrypted secret "${sid}" and every version inside it from Google Cloud Secret Manager. If this secret was vaulted from a Cloud Storage file (DLP Vault & Mask), use "Rehydrate File" first if you want the original value restored before shredding this key.`,
+          whatHappensNext: `1. Calls DELETE https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}.\n2. Permanently shreds the secret container and all historical encrypted version payloads (v1..vN).\n3. Purges "${sid}" from the live Secret Manager inventory table and updates Cloud Run secretKeyRef audit status.`,
+          costWarning: `SECRET MANAGER BILLING STOP ($0.00/MO AFTER DELETION): Deleting "${sid}" immediately stops all $0.06/version-month Secret Manager storage charges (first 6 active versions per project are Always-Free). Zero persistent disks or static IPs are involved.`,
+          impactWarning: `NO PLAINTEXT FALLBACK — IRREVERSIBLE CRYPTOGRAPHIC SHRED: Deleting "${sid}" permanently erases the secret and all of its versions. Any Cloud Run service or workload still referencing secretKeyRef "${sid}" will fail to start new instances until that reference is updated or unbound.`,
         };
       }
       if (
@@ -1219,13 +1594,20 @@ function classifyDestructiveAxiosConfig(config) {
         const ver = body.version || '1';
         return {
           title: `Permanently Destroy Secret Version "${sid} @ v${ver}"?`,
-          resourceKind: 'Secret Manager Version Payload',
-          targetName: `${sid} (Version ${ver})`,
-          location: 'Secret Manager',
+          headerBadge: 'Secret Manager Version Cryptographic Shred Gatekeeper',
+          targetLabel: 'Target Secret Version Payload to Permanently Destroy',
+          resourceKind: 'Secret Manager Version Payload (secretmanager.googleapis.com/v1)',
+          targetName: `projects/${projectId}/secrets/${sid}/versions/${ver}`,
+          location: 'Secret Manager Vault',
           projectId,
           method: 'DESTROY VERSION',
           endpoint: rawUrl,
-          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
+          confirmLabel: `Permanently Destroy "${sid}" v${ver}`,
+          cancelToast: `Version destruction cancelled — "${sid}" v${ver} remains intact.`,
+          laymanSummary: `In Plain English: Permanently shreds version v${ver} of secret "${sid}" so its ciphertext bytes can never be decrypted again. Other versions of "${sid}" remain untouched. Tip: If you only want $0.00/mo billing and might need to roll back later, click Cancel and use "Disable ($0/mo)" instead.`,
+          whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}/versions/${ver}:destroy.\n2. Irreversibly erases the AES-256 cryptographic key material for version v${ver}.\n3. Marks version v${ver} as DESTROYED ($0.00/mo) in the Secret Manager version ledger.`,
+          costWarning: `VERSION BILLING STOP ($0.00/MO): Destroyed secret versions incur $0.00/mo in Google Cloud Secret Manager. Note that Disabled versions also cost $0.00/mo while remaining reversible.`,
+          impactWarning: `IRREVERSIBLE VERSION DESTRUCTION: Destroying version v${ver} of "${sid}" cannot be undone. Any workload pinned specifically to version "${ver}" (instead of "latest") will fail until pointed to an active version.`,
         };
       }
       if (
@@ -1237,6 +1619,8 @@ function classifyDestructiveAxiosConfig(config) {
         const reg = body.region || 'gcp-region';
         return {
           title: `Unbind Broken Secret "${sid}" from Cloud Run "${svc}"?`,
+          headerBadge: 'Cloud Run Broken secretKeyRef Auto-Surgeon Gatekeeper',
+          targetLabel: 'Target Cloud Run Service & Broken Secret Env Binding',
           resourceKind: 'Cloud Run Secret Reference (run.googleapis.com/v2)',
           targetName: `${svc} → ${body.envKey || sid}`,
           location: reg,
@@ -1245,7 +1629,10 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Confirm & Unbind Dead Secret Ref',
           cancelToast: `Action cancelled — "${svc}" was not modified.`,
-          impactWarning: `This will remove the broken secretKeyRef binding ("${sid}") from Cloud Run service "${svc}" (${reg}) and roll a new revision so the service can boot cleanly without crashing on startup.`,
+          laymanSummary: `In Plain English: Cloud Run service "${svc}" is currently trying to mount a deleted or destroyed secret ("${sid}"), which prevents new container instances from starting. Confirming removes that broken reference and rolls a clean revision so "${svc}" boots normally again.`,
+          whatHappensNext: `1. Fetches the live Cloud Run v2 service spec for "${svc}" in "${reg}".\n2. Removes the dead secretKeyRef ("${sid}") from container environment bindings.\n3. Rolls a new healthy Cloud Run revision and verifies startup readiness.`,
+          costWarning: `ZERO EXTRA COST ($0.00 CONTROL-PLANE): Updating Cloud Run environment bindings and rolling a revision costs $0.00 in control-plane fees and preserves scale-to-zero billing.`,
+          impactWarning: `This removes the broken secretKeyRef binding ("${sid}") from Cloud Run service "${svc}" (${reg}) and rolls a new revision so the service can boot cleanly without crashing on startup.`,
         };
       }
     }
@@ -1259,15 +1646,23 @@ function classifyDestructiveAxiosConfig(config) {
         body.serviceName ||
         body.payload?.envId ||
         (body.prNumber ? `PR #${body.prNumber} Shadow Env` : 'Ephemeral PR Env');
+      const reg = body.region || 'us-central1';
       return {
-        title: 'Tear Down & Delete Ephemeral PR Shadow Environment',
-        resourceKind: 'Cloud Run Ephemeral PR Environment',
+        title: `Tear Down & Delete Ephemeral PR Shadow Environment "${target}"?`,
+        headerBadge: 'Quantum Nexus Ephemeral PR Shadow Environment Gatekeeper',
+        targetLabel: 'Target Ephemeral Cloud Run PR Preview Service',
+        resourceKind: 'Cloud Run Ephemeral PR Environment (run.googleapis.com/v2)',
         targetName: target,
-        location: body.region || 'us-central1',
+        location: reg,
         projectId,
-        method: 'POST (DELETE PR ENV)',
+        method: 'DELETE PR ENV',
         endpoint: rawUrl,
-        impactWarning: `This will permanently delete the ephemeral Cloud Run preview service "${target}" and release its preview URL.`,
+        confirmLabel: `Delete Ephemeral PR Env "${target}"`,
+        cancelToast: `Teardown cancelled — "${target}" remains active.`,
+        laymanSummary: `In Plain English: Deletes the temporary pull-request preview service "${target}" in "${reg}" and releases its preview HTTPS URL so no leftover test containers remain deployed.`,
+        whatHappensNext: `1. Calls DELETE on Cloud Run v2 service "${target}" in "${reg}".\n2. Tears down all ephemeral PR container revisions and traffic tags.\n3. Releases the preview .run.app HTTPS endpoint.`,
+        costWarning: `ZERO IDLE / TEARDOWN COST ($0.00/HR AFTER DELETION): Deleting ephemeral PR preview service "${target}" ensures $0.00 in ongoing compute or warm-instance charges.`,
+        impactWarning: `This permanently deletes the ephemeral Cloud Run preview service "${target}" and releases its preview URL.`,
       };
     }
 
@@ -1292,6 +1687,9 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: 'Yes, Expose Service to Public (allUsers)',
           cancelToast: `Access change cancelled — "${serviceName}" remains Private (IAM Authenticated).`,
+          laymanSummary: `In Plain English: Opens Cloud Run service "${serviceName}" (${region}) to the public internet so any browser or webhook can reach its .run.app HTTPS URL without needing a Google IAM token.`,
+          whatHappensNext: `1. Fetches the current IAM policy on https://run.googleapis.com/v2/projects/${projectId}/locations/${region}/services/${serviceName}:getIamPolicy.\n2. Binds member "allUsers" to role "roles/run.invoker" via :setIamPolicy.\n3. Updates the service access badge to PUBLIC (allUsers).`,
+          costWarning: `ZERO IAM COST ($0.00): IAM policy bindings are free; standard Cloud Run request/compute billing applies if public traffic invokes the service.`,
           impactWarning: `PUBLIC EXPOSURE WARNING: This grants "roles/run.invoker" to "allUsers" on Cloud Run service "${serviceName}" (${region}). Anyone on the public internet will be able to invoke its HTTPS URL without Google Cloud IAM authentication.`,
         };
       }
@@ -1307,6 +1705,9 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: 'Yes, Switch to Private (IAM Auth Required)',
         cancelToast: `Access change cancelled — "${serviceName}" remains Public (allUsers).`,
+        laymanSummary: `In Plain English: Locks down Cloud Run service "${serviceName}" (${region}) so anonymous internet traffic is blocked with HTTP 403 Forbidden. Only requests carrying a valid Google Cloud IAM token will be allowed in.`,
+        whatHappensNext: `1. Fetches the IAM policy on "${serviceName}" (${region}).\n2. Removes "allUsers" from role "roles/run.invoker" via :setIamPolicy.\n3. Updates the service access badge to PRIVATE (IAM Auth Required).`,
+        costWarning: `FINOPS & SECURITY PROTECTION ($0.00): Blocking unauthenticated bot traffic prevents unwanted Cloud Run request and CPU charges.`,
         impactWarning: `AUTHENTICATION LOCKDOWN WARNING: This removes "allUsers" (roles/run.invoker) from Cloud Run service "${serviceName}" (${region}). Unauthenticated browsers, webhooks, or external clients calling this URL without a valid Google IAM Bearer token will immediately receive HTTP 403 Forbidden.`,
       };
     }
@@ -1338,6 +1739,7 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Enable 1-Click Cloud IAP on "${serviceName}" ($0.00/mo)`,
           cancelToast: `Cloud IAP activation on "${serviceName}" cancelled.`,
+          laymanSummary: `In Plain English: Places Google's Identity-Aware Proxy (Google Sign-In login gate) directly in front of "${serviceName}" (${region}) at $0.00/mo without needing an $18/mo Load Balancer. Only authorized Google accounts (${accessorsList || 'your active account'}) can open the app.`,
           whatHappensNext: `1. Enables iap.googleapis.com and provisions the project IAP Service Agent (service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com).\n2. Patches Cloud Run service "${serviceName}" with iapEnabled=true, run.googleapis.com/iap-enabled="true", and invokerIamDisabled=false.\n3. Removes allUsers bypass and grants roles/run.invoker to the IAP Service Agent.\n4. Grants roles/iap.httpsResourceAccessor on iap_web/cloud_run-${region}/services/${serviceName} to ${
             accessorsList || 'your active Google account'
           }.`,
@@ -1359,6 +1761,7 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Disable Direct Cloud IAP on "${serviceName}"`,
         cancelToast: `Cloud IAP remains enabled on "${serviceName}".`,
+        laymanSummary: `In Plain English: Turns off Direct Cloud IAP Google Sign-In protection on "${serviceName}" (${region}) and keeps the service locked to standard Private IAM authentication.`,
         whatHappensNext: `1. Patches "${serviceName}" with iapEnabled=false and removes annotation run.googleapis.com/iap-enabled.\n2. Removes the IAP Service Agent from roles/run.invoker on "${serviceName}".`,
         costWarning: `ZERO COST IMPACT ($0.00/MO): Disabling Direct Cloud Run IAP incurs $0.00 in charges.`,
         impactWarning: `Removes Google Sign-In IAP enforcement from "${serviceName}" (${region}). The service will remain Private IAM Authenticated unless you explicitly grant allUsers.`,
@@ -1377,6 +1780,8 @@ function classifyDestructiveAxiosConfig(config) {
       if (mode === 'INSTANT_TRAFFIC_PIN' || mode === 'CLONE_REVISION_SPEC') {
         const isClone = mode === 'CLONE_REVISION_SPEC';
         return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
           title: isClone
             ? `Clone & Redeploy Spec from "${targetRev}" to "${serviceName}"?`
             : `Roll Back 100% Production Traffic to "${targetRev}"?`,
@@ -1392,6 +1797,13 @@ function classifyDestructiveAxiosConfig(config) {
             ? `Confirm & Redeploy Spec from ${targetRev}`
             : `Confirm & Shift 100% Traffic to ${targetRev}`,
           cancelToast: `Action cancelled — "${serviceName}" traffic and revision state unchanged.`,
+          laymanSummary: isClone
+            ? `In Plain English: Copies the exact Docker image, CPU/RAM limits, and environment variables from historical revision "${targetRev}" and rolls out a fresh revision on "${serviceName}" (${region}).`
+            : `In Plain English: Instantly shifts 100% of live HTTPS traffic on "${serviceName}" (${region}) back to healthy historical revision "${targetRev}" in seconds without rebuilding your container.`,
+          whatHappensNext: isClone
+            ? `1. Reads the immutable revision spec of "${targetRev}" on run.googleapis.com/v2.\n2. Patches service "${serviceName}" (${region}) with "${targetRev}"'s container image, resources, and env vars.\n3. Rolls out the new revision and verifies health.`
+            : `1. Calls PATCH https://run.googleapis.com/v2/projects/${projectId}/locations/${region}/services/${serviceName}?updateMask=traffic.\n2. Pins 100% of live traffic to revision "${targetRev}".\n3. Verifies traffic routing convergence.`,
+          costWarning: `ZERO ROLLBACK FEE ($0.00): Shifting Cloud Run revision traffic or cloning a spec incurs $0.00 in control-plane charges and preserves scale-to-zero billing.`,
           impactWarning: isClone
             ? `This will clone the container image, vCPU/Memory limits, and environment spec from historical revision "${targetRev}" and roll a brand-new revision on Cloud Run service "${serviceName}" (${region}).`
             : `INSTANT TRAFFIC ROLLBACK: This immediately pins 100% of live HTTPS traffic on Cloud Run service "${serviceName}" (${region}) to revision "${targetRev}", bypassing the latest revision without rebuilding the container image.`,
@@ -1423,6 +1835,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/wave8/war-room/synthetic-probe') ||
       rawUrl.includes('/wave8/war-room/ai-sre-commander') ||
       rawUrl.includes('/dlp-scan') ||
+      rawUrl.includes('/ransomware-deep-audit') ||
       rawUrl.includes('/functions/test-event') ||
       rawUrl.includes('/ai-copilot') ||
       rawUrl.includes('/ai-vault/ask') ||
@@ -1551,6 +1964,18 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/enterprise-personas/practitioner-devkit') ||
       rawUrl.includes('/enterprise-personas/devsecops-entropy-gitops') ||
       rawUrl.includes('/global-map/') ||
+      rawUrl.includes('/chrono-logs/vm-live-journal') ||
+      rawUrl.includes('/chrono-logs/export-to-gcs/preflight') ||
+      rawUrl.includes('/wave13/blackbox-tamper-verify') ||
+      rawUrl.includes('/storage/s3-compatible/list') ||
+      (rawUrl.includes('/sovereign/secrets-kms/action') &&
+        ['PEEK_SECRET_VERSION', 'ENCRYPT_DECRYPT_DEMO'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
+      (rawUrl.includes('/wave16/action') &&
+        ['DRY_RUN_SQL_SURGEON', 'SYNTHESIZE_IAM_CUSTOM_ROLE'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
       (rawUrl.includes('/enterprise-personas/action') &&
         !['EXECUTE_TRIBUNAL_LIVE_REMEDIATION', 'ROLLBACK_TRIBUNAL_REMEDIATION'].includes(
           String(body.action || '').toUpperCase()
@@ -1948,6 +2373,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'ALPHA',
         title: `Confirm Live Iceberg Estate Probe (Read-Only · $0.00)?`,
+        laymanSummary: `In Plain English: Runs a 100% read-only inspection across 5 Lakehouse services (BigQuery Datasets, Cloud Storage Buckets, BigLake Iceberg REST Catalogs, Managed Kafka, and Dataplex Lakes) in "${reg}" on project "${projectId}" at $0.00 cost.`,
         headerBadge: `[GA + ALPHA] 5-Service Lakehouse Estate Discovery Gatekeeper`,
         targetLabel: 'Target GCP Project & Lakehouse Services to Inspect',
         resourceKind:
@@ -1977,6 +2403,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: track,
         title: `Confirm 1-Tap Iceberg Lakehouse Bootstrap: "${pbTitle}"?`,
+        laymanSummary: `In Plain English: Bootstraps Apache Iceberg V2 Lakehouse playbook "${pbTitle}" in region "${reg}" by provisioning or verifying BigQuery dataset "${projectId}.${ds}" and binding Iceberg metadata pointers to Cloud Storage bucket "gs://${bkt}".`,
         headerBadge: `[${track}] Apache Iceberg Lakehouse & Cost Gatekeeper`,
         targetLabel: 'Target Lakehouse Dataset & Open Iceberg Catalog',
         resourceKind: `BigQuery Dataset + Apache Iceberg V2 (${body.catalogId || 'cp_iceberg_rest_catalog'})`,
@@ -2003,6 +2430,9 @@ function classifyDestructiveAxiosConfig(config) {
         title: isWake
           ? `Confirm 1-Tap Wake: Restore Parked VMs & Warm Cloud Run Fleet?`
           : `Confirm 1-Tap Night-Mode Sleep: Park All Running Compute?`,
+        laymanSummary: isWake
+          ? `In Plain English: Wakes up all Compute Engine VMs and warm Cloud Run services that were previously parked by Night-Mode Sleep in project "${projectId}", restoring them to their pre-sleep running state.`
+          : `In Plain English: Takes a snapshot of your currently running VMs and warm Cloud Run services in project "${projectId}", then gracefully stops the VMs and scales Cloud Run minInstanceCount down to 0 so overnight compute billing drops to $0.00/hr.`,
         headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
         targetLabel: 'Target Project Fleet Operation',
         resourceKind: 'Compute Engine VMs + Cloud Run Fleet',
@@ -2035,6 +2465,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Confirm 1-Tap 3-Tier Stack Synthesis ("${prefix}")?`,
+        laymanSummary: `In Plain English: Provisions a complete 3-tier serverless cloud stack ("${prefix}") in region "${reg}" — creating a Cloud Storage bucket, a BigQuery dataset, and a scale-to-zero Cloud Run Gen2 service pre-wired with environment variables pointing to both.`,
         headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
         targetLabel: '3-Tier Architecture Stack to Provision',
         resourceKind: 'GCS Bucket + BigQuery Dataset + Cloud Run Service',
@@ -2066,6 +2497,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Teleport Cloud Run Service "${src}" (${srcReg}) → ${targetReg}?`,
+        laymanSummary: `In Plain English: Clones your live Cloud Run service "${src}" from "${srcReg}" into failover region "${targetReg}" as "${dstName}" — copying its container image, CPU/memory limits, environment variables, Secret Manager bindings, and IAM invoker policy without interrupting "${src}".`,
         headerBadge: 'Multi-Region Failover & Cloud Run Teleporter Gatekeeper',
         targetLabel: 'Source → Failover Destination Cloud Run Service',
         resourceKind: 'Cloud Run Gen2 Service Clone (run.googleapis.com/v2)',
@@ -2119,6 +2551,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: track,
         title: `Confirm [${track}] Pre-GA Cloud Command (${act})?`,
+        laymanSummary: `In Plain English: Executes Google Cloud SDK [${track}] operation "${act}" on "${target}" (${body.region || 'global'}) in project "${projectId}".`,
         headerBadge: `[${track}] Pre-GA Google Cloud Command & Cost Gatekeeper`,
         targetLabel: `Target [${track}] Resource / Operation`,
         resourceKind: isBeta
@@ -2185,6 +2618,14 @@ function classifyDestructiveAxiosConfig(config) {
             : act === 'MIGRATE_TO_CLOUD_RUN'
             ? `Migrate App Engine Service "${svcId}" to Scale-to-Zero Cloud Run?`
             : `Confirm App Engine Action (${act}) on "${svcId}"?`,
+        laymanSummary:
+          act === 'DELETE_SERVICE'
+            ? `In Plain English: Permanently deletes non-default App Engine service "${svcId}" and all of its versions in project "${projectId}" via appengine.googleapis.com/v1 so all instance billing stops immediately.`
+            : act === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO'
+            ? `In Plain English: Because Google Cloud forbids deleting the "default" App Engine service, this purges all non-serving versions and disables active serving so your App Engine bill drops to $0.00/mo.`
+            : act === 'MIGRATE_TO_CLOUD_RUN'
+            ? `In Plain English: Migrates App Engine service "${svcId}" to a modern scale-to-zero Cloud Run Gen2 service ("ae-${svcId}") that costs $0.00/hr when idle.`
+            : `In Plain English: Executes App Engine control-plane action "${act}" on "${svcId}"${verId ? `/${verId}` : ''} in project "${projectId}".`,
         headerBadge: 'App Engine Service Exterminator & $0/mo Neutralizer Gatekeeper',
         targetLabel: 'Target App Engine Resource',
         resourceKind: 'Google App Engine Admin REST API (appengine.googleapis.com/v1)',
@@ -2223,7 +2664,7 @@ function classifyDestructiveAxiosConfig(config) {
     }
 
     // 3E. 1-Tap Resource Control Center Actions (/api/project/:id/action)
-    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/managed-spark/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/appengine/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
+    if (/\/api\/project\/[^/]+\/action(?:\?|$)/.test(rawUrl)) {
       const act = String(body.actionType || body.action || '').toUpperCase();
       const resId = body.resourceId || body.resourceName || 'target-resource';
       return {
@@ -2233,6 +2674,10 @@ function classifyDestructiveAxiosConfig(config) {
           act === 'ROLLBACK_CANARY'
             ? `Confirm 1-Tap Canary Rollback on "${resId}"?`
             : `Confirm 1-Tap Live FinOps Optimization on "${resId}"?`,
+        laymanSummary:
+          act === 'ROLLBACK_CANARY'
+            ? `In Plain English: Instantly shifts 100% of live HTTPS traffic on Cloud Run service "${resId}" back to its previous stable revision with zero container rebuild.`
+            : `In Plain English: Applies FinOps optimization "${act}" onto live resource "${resId}" in project "${projectId}" (such as enabling Scale-to-Zero on Cloud Run, Autoclass on Cloud Storage, or Physical compressed storage billing on BigQuery).`,
         headerBadge: 'CloudPulse 2026 1-Tap SRE & FinOps Gatekeeper',
         targetLabel: 'Target Live Resource to Mutate',
         resourceKind: body.resourceType || 'Google Cloud Resource',
@@ -2262,6 +2707,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Confirm 1-Tap Multi-Step Runbook Execution ("${rbId}")?`,
+        laymanSummary: `In Plain English: Executes multi-service remediation runbook "${rbId}" across project "${projectId}" — applying coordinated VPC firewall, Cloud Run scaling, Cloud Storage governance, and BigQuery optimization steps with a SHA-256 before/after state receipt.`,
         headerBadge: 'CloudPulse 2026 Transactional Runbook Gatekeeper',
         targetLabel: 'Multi-API Remediation Runbook',
         resourceKind: 'Cross-Service Control-Plane Runbook',
@@ -2291,6 +2737,11 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Confirm 1-Tap VM Action: ${act} on "${vmName}"?`,
+        laymanSummary: isStart
+          ? `In Plain English: Powers on or restarts Compute Engine virtual machine "${vmName}" in zone "${zone}" (${projectId}), resuming hourly vCPU and memory billing.`
+          : act === 'STOP' || act === 'SUSPEND'
+          ? `In Plain English: Gracefully shuts down Compute Engine virtual machine "${vmName}" in zone "${zone}" so hourly vCPU and RAM charges drop to $0.00/hr while preserving your boot disk files.`
+          : `In Plain English: Applies Compute Engine configuration change "${act}" on virtual machine "${vmName}" in zone "${zone}" (${projectId}).`,
         headerBadge: 'CloudPulse 2026 Compute Engine & Cost Gatekeeper',
         targetLabel: 'Target Compute Engine VM Instance',
         resourceKind: 'Compute Engine VM (compute.googleapis.com/v1)',
@@ -2472,7 +2923,6 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/soc/purple-team-drill') ||
       rawUrl.includes('/soc/ai-red-team-audit') ||
       (rawUrl.includes('/soc/ips-dpi-simulate') && !body.emitCloudLogAlert) ||
-      rawUrl.includes('/wave16/action') ||
       rawUrl.includes('/startup-10x/remediate') ||
       rawUrl.includes('/startup-10x/gemini-mentor') ||
       rawUrl.includes('/billing/gemini-advisor') ||
@@ -2554,9 +3004,11 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3G-5. Wave 16 Autonomous Cloud SOC SOAR & Canary Actions (/soc/action)
     if (rawUrl.includes('/soc/action')) {
-      const socAct = String(body.action || 'SOC_SOAR_ACTION').toUpperCase();
+      const socAct = String(body.action || body.actionType || 'SOC_SOAR_ACTION').toUpperCase();
       const socTarget =
         body.targetIpCidr ||
+        body.sourceIp ||
+        body.attackerIp ||
         body.serviceName ||
         body.firewallRuleName ||
         body.serviceAccountEmail ||
@@ -3045,7 +3497,16 @@ function classifyDestructiveAxiosConfig(config) {
         },
       };
 
-      const matchedSoc = socSpecs[socAct];
+      const matchedSoc = socSpecs[socAct] || {
+        title: `Execute Cloud SOC SOAR Remediation "${socAct.replace(/_/g, ' ')}" on "${socTarget}"?`,
+        laymanSummary: `In Plain English: Executes autonomous Cloud SOC security containment or hardening action "${socAct.replace(/_/g, ' ')}" targeting "${socTarget}" in project "${projectId}" and records an Ed25519 forensic receipt.`,
+        resourceKind: `Cloud SOC SOAR Action (${socAct})`,
+        targetName: String(socTarget),
+        confirmLabel: `Confirm & Execute "${socAct.replace(/_/g, ' ')}"`,
+        whatHappensNext: `1. Authenticates against Google Cloud security & network control-plane APIs in project "${projectId}".\n2. Applies SOAR containment action "${socAct}" on "${socTarget}".\n3. Signs an Ed25519 forensic receipt in the SOC Ledger.`,
+        costWarning: `ZERO CONTROL-PLANE COST ($0.00/MO): VPC firewall rules, IAM lock-downs, and SOAR containment policies incur $0.00/mo.`,
+        impactWarning: `Applies live SOC containment "${socAct}" to "${socTarget}" in project "${projectId}".`,
+      };
       if (matchedSoc) {
         return {
           gateType: matchedSoc.gateType || 'ONE_TAP_CLOUD_ACTION',
@@ -3222,6 +3683,9 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: matchedSre.gateType || 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: matchedSre.title,
+          laymanSummary:
+            matchedSre.laymanSummary ||
+            `In Plain English: ${matchedSre.impactWarning || matchedSre.title} (${String(matchedSre.whatHappensNext || '').split('\n')[0]?.replace(/^1\.\s*/, '') || ''})`,
           headerBadge: 'Wave 8 Principal SRE War-Room & Observability Gatekeeper',
           targetLabel: 'Target SRE Observability / Reliability Resource',
           resourceKind: matchedSre.resourceKind,
@@ -3249,6 +3713,9 @@ function classifyDestructiveAxiosConfig(config) {
         title: isResolve
           ? `Emit Live All-Clear Incident Resolution Marker to Cloud Logging ("${projectId}")?`
           : `Execute Live SRE Chaos Game-Day Telemetry Drill (${scenario})?`,
+        laymanSummary: isResolve
+          ? `In Plain English: Writes a structured severity="NOTICE" INCIDENT_RESOLVED event to Cloud Logging ("projects/${projectId}/logs/cloudpulse-sre-war-room") to close out your active SRE Game-Day drill at $0.00 cost.`
+          : `In Plain English: Safely tests your Cloud Logging SLI metrics and Cloud Monitoring alert policies by writing 1 structured severity="ERROR" Game-Day log event (${scenario}) into Cloud Logging without taking down any production servers.`,
         headerBadge: 'Wave 8 SRE Chaos Game-Day & Incident Telemetry Gatekeeper',
         targetLabel: 'Target Cloud Logging Stream & SLI Pipeline',
         resourceKind: 'Cloud Logging Structured Event (logging.googleapis.com/v2/entries:write)',
@@ -3279,6 +3746,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Enable Private Google Access (PGA) on VPC Subnet "${subName}" (${reg})?`,
+        laymanSummary: `In Plain English: Enables Private Google Access on VPC subnet "${subName}" in "${reg}" so internal VMs and GKE nodes without public IPv4 addresses can reach Cloud Storage, BigQuery, and Artifact Registry over Google's private Andromeda fiber at $0.00/mo.`,
         headerBadge: 'Wave 8 Zero-Trust VPC Perimeter Gatekeeper',
         targetLabel: 'Target Regional VPC Subnetwork',
         resourceKind: 'VPC Subnetwork Private Google Access (compute.googleapis.com/v1)',
@@ -3303,6 +3771,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Provision Pub/Sub Topic "${baseTopic}" + Auto-Wired Dead-Letter Queue (DLQ)?`,
+        laymanSummary: `In Plain English: Creates primary Pub/Sub topic "${baseTopic}", a companion Dead-Letter Queue topic "${baseTopic}-dlq", and subscription "${baseTopic}-sub" configured to route poison messages to the DLQ after ${maxAtt} failed delivery attempts.`,
         headerBadge: 'Wave 8 Pub/Sub Dead-Letter Queue Architect Gatekeeper',
         targetLabel: '3-Resource Pub/Sub Resilient Messaging Topology',
         resourceKind: 'Primary Topic + DLQ Topic + Subscription with deadLetterPolicy (pubsub.googleapis.com/v1)',
@@ -3530,6 +3999,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: spec.title,
+        laymanSummary: `In Plain English: ${spec.impact} (${String(spec.what || '').split('\n')[0]?.replace(/^1\.\s*/, '') || ''})`,
         headerBadge:
           spec.badge || 'CloudPulse 2026 Live Resource Provisioning Gatekeeper',
         targetLabel:
@@ -3566,6 +4036,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Submit Official Cloud Quotas Request for ${qMetric} (${curLim} ➔ ${tgtLim}) in ${qReg}?`,
+        laymanSummary: `In Plain English: Submits an official Google Cloud Quotas v1 QuotaPreference request (${qId}: ${curLim} ➔ ${tgtLim}) in "${qReg}" on project "${projectId}" at $0.00 cost.`,
         headerBadge: 'Cloud Quotas v1 Official QuotaPreference Gatekeeper',
         targetLabel: 'Target Quota Metric, Region & Requested Ceiling',
         resourceKind: `Cloud Quotas v1 QuotaPreference (${qId})`,
@@ -3591,6 +4062,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Seal Plaintext Env Vars into Secret Manager on Cloud Run "${svc}"?`,
+          laymanSummary: `In Plain English: Moves plaintext environment variables on Cloud Run service "${svc}" (${reg}) into hardware-encrypted Google Cloud Secret Manager secrets and updates "${svc}" to mount them via secretKeyRef.`,
           headerBadge: 'Cloud Run Plaintext-to-Secret Manager Surgeon Gatekeeper',
           targetLabel: 'Target Cloud Run Service & Secret Manager Vault',
           resourceKind: 'Cloud Run v2 Revision + Secret Manager (run.googleapis.com/v2 + secretmanager.googleapis.com/v1)',
@@ -3614,6 +4086,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Update Live HTTPS Revision Traffic Split on Cloud Run "${svc}"?`,
+          laymanSummary: `In Plain English: Re-balances live HTTPS traffic percentages across deployed revisions of Cloud Run service "${svc}" (${reg}) in real time without rebuilding any container image ($0.00 cost).`,
           headerBadge: 'Cloud Run Zero-Rebuild Traffic Router Gatekeeper',
           targetLabel: 'Target Cloud Run Service & Traffic Allocation',
           resourceKind: 'Cloud Run v2 Traffic Split (run.googleapis.com/v2)',
@@ -3634,6 +4107,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Deploy Multi-Container Docker Compose Stack to Cloud Run (${body.region || 'us-central1'})?`,
+          laymanSummary: `In Plain English: Translates your Docker Compose YAML specification into scale-to-zero Cloud Run v2 services in "${body.region || 'us-central1'}" and auto-wires upstream .run.app service URLs across containers.`,
           headerBadge: 'Cloud Run Docker Compose Synthesizer Gatekeeper',
           targetLabel: 'Docker Compose Services to Materialize on Cloud Run',
           resourceKind: 'Multi-Service Cloud Run v2 Deployment (run.googleapis.com/v2)',
@@ -3657,6 +4131,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Update Live Configuration & Roll Revision on Cloud Run "${svc}" (${reg})?`,
+          laymanSummary: `In Plain English: Updates the container configuration (CPU/Memory limits, min/max scaling instances, Startup CPU Boost, or environment variables) on Cloud Run service "${svc}" in "${reg}" and rolls out a new revision.`,
           headerBadge: 'Cloud Run v2 Revision & Scaling Gatekeeper',
           targetLabel: 'Target Cloud Run Service',
           resourceKind: 'Cloud Run v2 Service Template Patch (run.googleapis.com/v2)',
@@ -3677,35 +4152,145 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
-    // 3G-12. Cloud Storage Bucket Governance Patch, Object Upload, Rewrite, Teleport & DLP Redact
+    // 3G-12. Cloud Storage Bucket Governance Patch, Object Upload, Rewrite, Teleport, Ransomware Drill & DLP Redact
     if (rawUrl.includes('/storage/buckets/')) {
       const bktMatch = rawUrl.match(/\/storage\/buckets\/([^/?]+)/);
       const bktName = bktMatch ? decodeURIComponent(bktMatch[1]) : 'gcs-bucket';
-      if (rawUrl.includes('/dlp-redact')) {
+      if (
+        rawUrl.includes('/ransomware-deep-audit') ||
+        rawUrl.includes('/dlp-scan') ||
+        rawUrl.includes('/gcsfuse-architect')
+      ) {
+        return null;
+      }
+      if (rawUrl.includes('/ransomware-drill')) {
+        const drillAct = String(
+          body.action || 'RUN_CANARY_OVERWRITE_AND_ROLLBACK_DRILL'
+        ).toUpperCase();
+        if (drillAct === 'ROLLBACK_SINGLE_GENERATION') {
+          const objName = body.objectName || 'object';
+          const srcGen = body.sourceGeneration || 'previous';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Roll Back Object "${objName}" to Historical Generation #${srcGen} in "gs://${bktName}"?`,
+            laymanSummary: `In Plain English: Uses Google Cloud Storage's zero-egress server-side rewrite API (rewriteTo?sourceGeneration=${srcGen}) to promote clean historical version #${srcGen} of "${objName}" back to the live object in "gs://${bktName}", undoing any accidental overwrite or ransomware corruption without downloading a single byte.`,
+            headerBadge: 'Ransomware Clean-Room Point-in-Time Generation Rollback Gatekeeper',
+            targetLabel: 'Target Cloud Storage Object & Historical Generation',
+            resourceKind: 'Cloud Storage Generation Rollback (rewriteTo?sourceGeneration)',
+            targetName: `gs://${bktName}/${objName} ← Gen #${srcGen}`,
+            location: 'Cloud Storage Server-Side Backbone',
+            projectId,
+            method: `ROLLBACK TO GEN #${srcGen}`,
+            endpoint: rawUrl,
+            confirmLabel: `Roll Back "${objName}" to Gen #${srcGen}`,
+            cancelToast: `Generation rollback for "${objName}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://storage.googleapis.com/storage/v1/b/${bktName}/o/${encodeURIComponent(objName)}/rewriteTo/b/${bktName}/o/${encodeURIComponent(objName)}?sourceGeneration=${encodeURIComponent(srcGen)}.\n2. Promotes noncurrent generation #${srcGen} to become the new live generation while preserving all historical versions.\n3. Verifies CRC32C and MD5 cryptographic checksums.`,
+            costWarning: `ZERO EGRESS ($0.00): Server-side in-bucket rewrite incurs $0.00 in network egress and counts as 1 Class A operation (first 5,000/mo free).`,
+            impactWarning: `Restores "gs://${bktName}/${objName}" to historical generation #${srcGen} in project "${projectId}".`,
+          };
+        }
+        if (drillAct === 'RESTORE_SOFT_DELETED_OBJECT') {
+          const objName = body.objectName || 'object';
+          const gen = body.generation || 'latest';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Rescue Soft-Deleted Object "${objName}" (Gen #${gen}) From Trash Vault in "gs://${bktName}"?`,
+            laymanSummary: `In Plain English: Pulls deleted file "${objName}" (generation #${gen}) out of Google Cloud Storage's Soft-Delete Trash Vault and restores it as a live, readable object inside "gs://${bktName}".`,
+            headerBadge: 'Cloud Storage Soft-Delete Trash Vault Recovery Gatekeeper',
+            targetLabel: 'Soft-Deleted Object & Generation to Rescue',
+            resourceKind: 'Cloud Storage Object Restore (storage.googleapis.com/storage/v1/b/.../o/.../restore)',
+            targetName: `gs://${bktName}/${objName} (Gen #${gen})`,
+            location: 'Cloud Storage Soft-Delete Vault',
+            projectId,
+            method: 'RESTORE FROM TRASH VAULT',
+            endpoint: rawUrl,
+            confirmLabel: `Restore "${objName}" (Gen #${gen}) From Trash`,
+            cancelToast: `Soft-delete object restore for "${objName}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://storage.googleapis.com/storage/v1/b/${bktName}/o/${encodeURIComponent(objName)}/restore?generation=${encodeURIComponent(gen)}.\n2. Rescues the soft-deleted object generation back into active live state in "gs://${bktName}".`,
+            costWarning: `ZERO RECOVERY FEE ($0.00): Restoring a soft-deleted object is a free Class A operation within the Always-Free Tier.`,
+            impactWarning: `Restores soft-deleted object "gs://${bktName}/${objName}" (generation #${gen}) into active storage on project "${projectId}".`,
+          };
+        }
+        const cleanupAfter = body.cleanupCanaryAfterDrill !== false;
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
-          title: `Redact Sensitive PII/Secrets In-Place in Object "${body.objectName || 'object'}" (gs://${bktName})?`,
-          headerBadge: 'Cloud Storage In-RAM DLP Redaction Gatekeeper',
+          title: `Run 3-Step Clean-Room Ransomware Overwrite & Rollback Drill on "gs://${bktName}"?`,
+          laymanSummary: `In Plain English: Safely tests and proves that your bucket "gs://${bktName}" can survive a ransomware encryption attack! It writes a tiny harmless test file (v1), simulates a ransomware overwrite on that test file (v2), and immediately rolls the file back to the clean v1 generation (v3) while verifying that the SHA-256 and CRC32C checksums match 100%. Your real files are never touched.${cleanupAfter ? ' The temporary canary file is automatically cleaned up after the proof completes.' : ''}`,
+          headerBadge: 'Ransomware Clean-Room Point-in-Time Rollback Drill Gatekeeper',
+          targetLabel: 'Target Bucket & Harmless Canary Object',
+          resourceKind: '3-Step Live GCS Versioning & Rollback Proof (v1 → v2 → v3)',
+          targetName: `gs://${bktName}/.cloudpulse-ransomware-canary/drill-probe.json`,
+          location: 'Cloud Storage Clean-Room Drill',
+          projectId,
+          method: 'RUN v1 → v2 → v3 DRILL',
+          endpoint: rawUrl,
+          confirmLabel: `Run Clean-Room Rollback Drill on gs://${bktName}`,
+          cancelToast: `Ransomware rollback drill on gs://${bktName} cancelled.`,
+          whatHappensNext: `1. Ensures Object Versioning is enabled on "gs://${bktName}" and uploads clean baseline canary object v1 (recording SHA-256 & CRC32C).\n2. Overwrites the canary path with simulated ciphertext v2 so v1 becomes a noncurrent archival generation.\n3. Calls POST .../rewriteTo/...?sourceGeneration=<v1> to roll back to v3, verifies byte-for-byte SHA-256 + CRC32C equality with v1, and measures exact Recovery Time Objective (RTO in ms).${cleanupAfter ? '\n4. Cleans up the temporary canary object so the bucket stays tidy.' : ''}`,
+          costWarning: `ZERO COST ($0.00): Uses 3 Class A operations on a <1 KB test canary object (first 5,000 Class A ops/month are 100% free in Google Cloud Storage).`,
+          impactWarning: `Executes a non-disruptive v1 → v2 → v3 versioning rollback proof on a dedicated canary path inside "gs://${bktName}".`,
+        };
+      }
+      if (rawUrl.includes('/dlp-redact')) {
+        const isVaultMode = body.redactionMode !== 'MASK_ONLY';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: isVaultMode
+            ? `Vault Credentials to Secret Manager & Replace with sm:// Pointers in "${body.objectName || 'object'}" (gs://${bktName})?`
+            : `Redact Sensitive PII/Secrets In-Place in Object "${body.objectName || 'object'}" (gs://${bktName})?`,
+          laymanSummary: isVaultMode
+            ? `In Plain English: Extracts any exposed API keys, passwords, or secrets found inside "gs://${bktName}/${body.objectName || ''}", seals each credential inside Google Cloud Secret Manager, and replaces the raw secret in your file with a safe "sm://projects/${projectId}/secrets/..." reference pointer (recoverable anytime in 1 click).`
+            : `In Plain English: Sanitizes sensitive PII and credentials inside "gs://${bktName}/${body.objectName || ''}" in memory by replacing raw values with "[REDACTED_BY_CLOUDPULSE_DLP]" and writing the cleaned file back to Cloud Storage.`,
+          headerBadge: 'Cloud Storage In-RAM DLP Sanitization & Secret Vault Gatekeeper',
           targetLabel: 'Target Cloud Storage Object to Sanitize',
           resourceKind: 'Cloud Storage Object Overwrite (storage.googleapis.com/upload/storage/v1)',
           targetName: `gs://${bktName}/${body.objectName || ''}`,
           location: 'Cloud Storage',
           projectId,
-          method: 'DLP REDACT OBJECT',
+          method: isVaultMode ? 'VAULT TO SECRET MANAGER' : 'DLP REDACT OBJECT',
           endpoint: rawUrl,
-          confirmLabel: `Overwrite Object with Redacted Payload`,
+          confirmLabel: isVaultMode
+            ? `Vault Secrets to Secret Manager & Mask Object`
+            : `Overwrite Object with Redacted Payload`,
           cancelToast: `DLP redaction on gs://${bktName}/${body.objectName || ''} cancelled.`,
-          whatHappensNext: `1. Masks detected PII, API keys, and credential patterns in memory with "[REDACTED_BY_CLOUDPULSE_DLP]".\n2. Uploads the sanitized byte stream to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(body.objectName || '')}.`,
-          costWarning: `MINIMAL COST ($0.00): 1 Class A object write operation ($0.005 per 1,000 operations; first 5,000 Class A ops/mo are Always Free).`,
-          impactWarning: `Replaces live object "gs://${bktName}/${body.objectName || ''}" with the redacted content (previous generation is retained if Object Versioning is enabled).`,
+          whatHappensNext: `1. Masks detected PII, API keys, and credential patterns in memory${isVaultMode ? ' after vaulting each credential into Secret Manager (secretmanager.googleapis.com/v1)' : ' with "[REDACTED_BY_CLOUDPULSE_DLP]"'}.\n2. Uploads the sanitized byte stream to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(body.objectName || '')}.`,
+          costWarning: `MINIMAL COST ($0.00): 1 Class A object write operation ($0.005 per 1,000 operations; first 5,000 Class A ops/mo and 6 Secret Manager versions/mo are Always Free).`,
+          impactWarning: `Replaces live object "gs://${bktName}/${body.objectName || ''}" with the sanitized content (previous generation is retained if Object Versioning is enabled).`,
         };
       }
       if (rawUrl.includes('/objects/rewrite')) {
+        if (body.sourceGeneration) {
+          const objName = body.objectName || 'object';
+          const srcGen = String(body.sourceGeneration);
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Restore Noncurrent Generation #${srcGen} of "${objName}" to Live Head in "gs://${bktName}"?`,
+            laymanSummary: `In Plain English: Promotes historical object version #${srcGen} of "${objName}" back to become the active live file in "gs://${bktName}" using Google Cloud Storage's zero-egress server-side rewriteTo API — recovering the clean prior version in milliseconds without downloading or re-uploading data.`,
+            headerBadge: 'Point-in-Time Noncurrent Generation Rollback Gatekeeper',
+            targetLabel: 'Target Cloud Storage Object & Historical Generation',
+            resourceKind: `Cloud Storage Server-Side Generation Rollback (rewriteTo?sourceGeneration=${srcGen})`,
+            targetName: `gs://${bktName}/${objName} (Gen #${srcGen} → Live)`,
+            location: 'Cloud Storage Server-Side Backbone',
+            projectId,
+            method: `RESTORE GEN #${srcGen}`,
+            endpoint: rawUrl,
+            confirmLabel: `Restore Gen #${srcGen} as Live Object ($0.00 Egress)`,
+            cancelToast: `Generation restore for "${objName}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://storage.googleapis.com/storage/v1/b/${bktName}/o/${encodeURIComponent(objName)}/rewriteTo/b/${bktName}/o/${encodeURIComponent(objName)}?sourceGeneration=${encodeURIComponent(srcGen)}.\n2. Creates a new live head generation from historical version #${srcGen} while keeping the full version history intact.\n3. Verifies CRC32C and MD5 cryptographic hashes.`,
+            costWarning: `ZERO NETWORK EGRESS ($0.00): Server-side in-bucket rewrite incurs $0.00 in egress bandwidth and counts as 1 Class A operation (first 5,000 Class A ops/mo are Always Free).`,
+            impactWarning: `Promotes generation #${srcGen} to become the active live version of "gs://${bktName}/${objName}".`,
+          };
+        }
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Server-Side Rewrite Object "${body.objectName}" to Storage Class "${body.storageClass || 'NEARLINE'}"?`,
+          laymanSummary: `In Plain English: Changes the storage tier of file "gs://${bktName}/${body.objectName}" to "${body.storageClass || 'NEARLINE'}" directly inside Google's data centers (with zero download/upload bandwidth) to reduce monthly per-GB storage costs.`,
           headerBadge: 'Cloud Storage Zero-Egress Storage Class Rewrite Gatekeeper',
           targetLabel: 'Target Cloud Storage Object',
           resourceKind: `Cloud Storage Rewrite (storage.googleapis.com/storage/v1 · -> ${body.storageClass || 'NEARLINE'})`,
@@ -3726,6 +4311,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Teleport Bucket "gs://${bktName}" to Target Region "${body.targetLocation || 'US'}"?`,
+          laymanSummary: `In Plain English: Creates a new Cloud Storage bucket in region "${body.targetLocation || 'US'}" and copies your objects from "gs://${bktName}" directly across Google's private fiber backbone so your data is co-located in "${body.targetLocation || 'US'}".`,
           headerBadge: 'Cloud Storage Cross-Region Bucket Teleporter Gatekeeper',
           targetLabel: 'Source Bucket -> Destination Regional Bucket',
           resourceKind: 'Cloud Storage Server-Side Object Rewrite (storage.googleapis.com/storage/v1)',
@@ -3742,54 +4328,178 @@ function classifyDestructiveAxiosConfig(config) {
         };
       }
       if (rawUrl.endsWith('/objects') && method === 'post') {
+        const uploadedObjName = body.objectName || body.name || 'new-object';
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
-          title: `Upload Object "${body.objectName || body.name || 'new-object'}" to Bucket "gs://${bktName}"?`,
+          title: `Upload Object "${uploadedObjName}" to Bucket "gs://${bktName}"?`,
+          laymanSummary: `In Plain English: Uploads "${uploadedObjName}" into Cloud Storage bucket "gs://${bktName}" in project "${projectId}" and verifies its CRC32C/MD5 integrity checksum.`,
           headerBadge: 'Cloud Storage Live Object Upload Gatekeeper',
           targetLabel: 'Target Cloud Storage Bucket & Object Key',
           resourceKind: 'Cloud Storage Object Upload (storage.googleapis.com/upload/storage/v1)',
-          targetName: `gs://${bktName}/${body.objectName || body.name || 'object'}`,
+          targetName: `gs://${bktName}/${uploadedObjName}`,
           location: 'Cloud Storage',
           projectId,
           method: 'UPLOAD GCS OBJECT',
           endpoint: rawUrl,
-          confirmLabel: `Upload Object to gs://${bktName}`,
+          confirmLabel: `Upload "${uploadedObjName}" to gs://${bktName}`,
           cancelToast: `Object upload to gs://${bktName} cancelled.`,
-          whatHappensNext: `1. Streams payload to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(body.objectName || body.name || 'object')}.\n2. Verifies CRC32C/MD5 object checksum in bucket "gs://${bktName}".`,
+          whatHappensNext: `1. Streams payload to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(uploadedObjName)}.\n2. Verifies CRC32C/MD5 object checksum in bucket "gs://${bktName}".`,
           costWarning: `STORAGE & CLASS A OPS NOTICE: Counts as 1 Class A write operation (first 5,000 Class A ops/mo and 5 GB Standard storage in US regions are Always Free).`,
-          impactWarning: `Writes live object "${body.objectName || body.name || 'object'}" into bucket "gs://${bktName}" on project "${projectId}".`,
+          impactWarning: `Writes live object "${uploadedObjName}" into bucket "gs://${bktName}" on project "${projectId}".`,
         };
       }
       if (method === 'patch') {
+        const effSoftDeleteDays = Number(
+          body.softDeleteRetentionDays ?? body.softDeleteDays ?? 0
+        );
+        const effVersioning =
+          body.versioning === true || body.versioningEnabled === true;
+        const isRansomwareAirGap =
+          body.retentionPeriodDays !== undefined ||
+          body.lockRetentionPolicy === true ||
+          (effVersioning && effSoftDeleteDays >= 30);
+        if (isRansomwareAirGap) {
+          const wormDays = Number(body.retentionPeriodDays || 0);
+          const isLock = Boolean(body.lockRetentionPolicy);
+          const sdDays = effSoftDeleteDays || 30;
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: isLock
+              ? `Permanently Lock WORM Retention Policy on Bucket "gs://${bktName}"?`
+              : wormDays > 0
+              ? `Enforce ${wormDays}-Day SEC 17a-4 WORM Retention Policy on "gs://${bktName}"?`
+              : `Harden Bucket "gs://${bktName}" With Ransomware Air-Gap (Versioning + ${sdDays}d Soft-Delete + PAP)?`,
+            laymanSummary: isLock
+              ? `In Plain English: IRREVERSIBLE WORM LOCK — Locking the retention policy on "gs://${bktName}" permanently prevents anyone (even a Project Owner) from shortening the retention window or deleting the bucket while objects are inside their retention period.`
+              : wormDays > 0
+              ? `In Plain English: Sets a ${wormDays}-day Write-Once-Read-Many (WORM) retention period on "gs://${bktName}" (plus Object Versioning and ${sdDays}-day Soft-Delete) so no object can be permanently overwritten or deleted before it reaches ${wormDays} days of age.`
+              : `In Plain English: Activates full Ransomware Air-Gap protection on "gs://${bktName}": turns on Object Versioning (so every overwrite keeps a clean prior version), sets a ${sdDays}-day Soft-Delete Trash Vault window, and enforces Public Access Prevention + Uniform IAM — 100% reversible anytime.`,
+            headerBadge: 'Ransomware Resilience & WORM Immutability Gatekeeper',
+            targetLabel: 'Target Cloud Storage Bucket to Harden',
+            resourceKind: 'Cloud Storage Ransomware Air-Gap & WORM Policy (storage.googleapis.com/storage/v1)',
+            targetName: `gs://${bktName}`,
+            location: 'Cloud Storage Control Plane',
+            projectId,
+            method: isLock
+              ? 'LOCK WORM POLICY'
+              : wormDays > 0
+              ? `SET ${wormDays}D WORM RETENTION`
+              : `ENFORCE ${sdDays}D RANSOMWARE AIR-GAP`,
+            endpoint: rawUrl,
+            confirmLabel: isLock
+              ? `Permanently Lock WORM Policy on gs://${bktName}`
+              : wormDays > 0
+              ? `Apply ${wormDays}-Day WORM Policy on gs://${bktName}`
+              : `Harden gs://${bktName} (${sdDays}d Air-Gap · $0.00 API)`,
+            cancelToast: `Ransomware hardening on gs://${bktName} cancelled.`,
+            whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${bktName}.\n2. ${
+              wormDays > 0
+                ? `Configures retentionPolicy.retentionPeriod=${wormDays * 86400}s (${wormDays} days)${isLock ? ' and locks the policy against future reduction' : ''}, versioning.enabled=true, and softDeletePolicy.retentionDurationSeconds=${sdDays * 86400} (${sdDays} days).`
+                : `Enables versioning.enabled=true, softDeletePolicy.retentionDurationSeconds=${sdDays * 86400} (${sdDays} days), publicAccessPrevention="enforced", and uniformBucketLevelAccess.enabled=true.`
+            }\n3. Re-runs the 4-Pillar Ransomware & Entropy Deep Audit on "gs://${bktName}".`,
+            costWarning: `ZERO API COST ($0.00): Updating bucket immutability and air-gap policies is free ($0.00). Retained historical versions and soft-deleted objects bill at standard per-GB storage rates during their retention window.`,
+            impactWarning: isLock
+              ? `IRREVERSIBLE ACTION: Once a bucket retention policy is locked in Google Cloud Storage, it can never be unlocked or shortened.`
+              : `Hardens live ransomware resilience controls on "gs://${bktName}" in project "${projectId}".`,
+          };
+        }
+        const changedFields = [];
+        if (body.versioning !== undefined || body.versioningEnabled !== undefined) {
+          changedFields.push(
+            `Object Versioning=${Boolean(body.versioning ?? body.versioningEnabled) ? 'ON' : 'OFF'}`
+          );
+        }
+        if (body.softDeleteRetentionDays !== undefined || body.softDeleteDays !== undefined) {
+          changedFields.push(
+            `Soft-Delete Retention=${body.softDeleteRetentionDays ?? body.softDeleteDays}d`
+          );
+        }
+        if (body.publicAccessPrevention !== undefined) {
+          changedFields.push(`Public Access Prevention=${body.publicAccessPrevention}`);
+        }
+        if (body.uniformBucketLevelAccess !== undefined) {
+          changedFields.push(
+            `Uniform Bucket-Level Access=${Boolean(body.uniformBucketLevelAccess) ? 'ON' : 'OFF'}`
+          );
+        }
+        if (body.autoclass !== undefined || body.autoclassEnabled !== undefined) {
+          changedFields.push(
+            `Autoclass Tiering=${Boolean(body.autoclass ?? body.autoclassEnabled) ? 'ON' : 'OFF'}`
+          );
+        }
+        if (body.defaultStorageClass || body.storageClass) {
+          changedFields.push(
+            `Default Storage Class=${body.defaultStorageClass || body.storageClass}`
+          );
+        }
+        if (body.lifecycleRules || body.lifecycle) {
+          changedFields.push('Lifecycle Rules');
+        }
+        if (body.cors !== undefined) {
+          changedFields.push('CORS Origins Policy');
+        }
+        const changeSummary =
+          changedFields.length > 0
+            ? changedFields.join(', ')
+            : 'Bucket Governance & Lifecycle Metadata';
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
-          title: `Update Governance & Lifecycle Policy on Bucket "gs://${bktName}"?`,
+          title: `Update ${changeSummary} on Bucket "gs://${bktName}"?`,
+          laymanSummary: `In Plain English: Updates live Cloud Storage governance settings (${changeSummary}) on bucket "gs://${bktName}" in project "${projectId}" via PATCH storage.googleapis.com/storage/v1/b/${bktName} without modifying or deleting any existing objects ($0.00 API call).`,
           headerBadge: 'Cloud Storage Bucket Policy & FinOps Gatekeeper',
-          targetLabel: 'Target Cloud Storage Bucket',
-          resourceKind: 'Cloud Storage Bucket Metadata Patch (storage.googleapis.com/storage/v1)',
-          targetName: `gs://${bktName}`,
+          targetLabel: 'Target Cloud Storage Bucket & Policy Fields',
+          resourceKind: `Cloud Storage Bucket Metadata Patch (${changeSummary})`,
+          targetName: `gs://${bktName} (${changeSummary})`,
           location: 'Cloud Storage',
           projectId,
           method: 'PATCH GCS BUCKET',
           endpoint: rawUrl,
-          confirmLabel: `Apply Policy Update to gs://${bktName} ($0.00)`,
+          confirmLabel: `Apply ${changedFields[0] || 'Policy'} to gs://${bktName} ($0.00)`,
           cancelToast: `Bucket policy update on gs://${bktName} cancelled.`,
-          whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${bktName}.\n2. Updates the requested bucket properties (Uniform Bucket-Level Access, Public Access Prevention, Autoclass, Object Versioning, Soft-Delete retention window, or Lifecycle rules).`,
+          whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${bktName}.\n2. Applies your requested bucket metadata update (${changeSummary}) while keeping all existing objects untouched.`,
           costWarning: `ZERO API COST ($0.00): Updating bucket governance metadata is free ($0.00). Enabling Object Versioning retains historical object generations which bill at standard per-GB storage rates until pruned by a lifecycle rule.`,
-          impactWarning: `Modifies live bucket configuration on "gs://${bktName}" in project "${projectId}".`,
+          impactWarning: `Applies "${changeSummary}" onto live bucket "gs://${bktName}" in project "${projectId}".`,
         };
       }
     }
 
-    // 3G-13. BigQuery Dataset Billing Model Patch, Table Creation & Live SQL Execution
+    // 3G-13. BigQuery Dataset Billing Model Patch, Table Creation, Row Seeding & Live SQL Execution
     if (rawUrl.includes('/bigquery/')) {
+      const bqSeedMatch = rawUrl.match(
+        /\/bigquery\/datasets\/([^/]+)\/tables\/([^/]+)\/seed-rows/
+      );
+      if (bqSeedMatch) {
+        const dsId = decodeURIComponent(bqSeedMatch[1]);
+        const tblId = decodeURIComponent(bqSeedMatch[2]);
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Stream Live Seed Rows into BigQuery Table "${dsId}.${tblId}"?`,
+          laymanSummary: `In Plain English: Streams live sample rows into your BigQuery table "${dsId}.${tblId}" via tabledata.insertAll so you can immediately run SQL queries, Time-Travel diffs, and anomaly detection against real data.`,
+          headerBadge: 'BigQuery Streaming Row Seeder Gatekeeper',
+          targetLabel: 'Target BigQuery Dataset & Table',
+          resourceKind: 'BigQuery Streaming Insert (bigquery.googleapis.com/bigquery/v2/tabledata:insertAll)',
+          targetName: `${projectId}:${dsId}.${tblId}`,
+          location: body.location || 'US',
+          projectId,
+          method: 'SEED BIGQUERY ROWS',
+          endpoint: rawUrl,
+          confirmLabel: `Stream Rows into "${dsId}.${tblId}"`,
+          cancelToast: `Row seeding for "${dsId}.${tblId}" cancelled.`,
+          whatHappensNext: `1. Inspects the live column schema of "${projectId}:${dsId}.${tblId}".\n2. Streams schema-matched rows via POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables/${tblId}/insertAll.`,
+          costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
+          impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
+        };
+      }
       if (rawUrl.includes('/bigquery/query')) {
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Execute Live Standard SQL Query Job on BigQuery ("${projectId}")?`,
+          laymanSummary: `In Plain English: Submits your Standard SQL query to BigQuery's Dremel execution engine in project "${projectId}" (${body.location || 'US'}) — note that Google Cloud includes 1 TiB of free SQL querying every month.`,
           headerBadge: 'BigQuery On-Demand SQL Execution & Cost Gatekeeper',
           targetLabel: 'Target BigQuery SQL Execution Engine',
           resourceKind: 'BigQuery Query Job (bigquery.googleapis.com/bigquery/v2/projects/jobs)',
@@ -3813,6 +4523,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Create BigQuery Table "${dsId}.${tblId}" in Project "${projectId}"?`,
+          laymanSummary: `In Plain English: Creates a new BigQuery table "${dsId}.${tblId}" in project "${projectId}" with your specified typed column schema${body.timePartitioning ? ' and time partitioning' : ''} ($0.00/mo while empty; 10 GiB/mo Always Free).`,
           headerBadge: 'BigQuery Schema & Partitioning Gatekeeper',
           targetLabel: 'Target BigQuery Dataset & Table',
           resourceKind: 'BigQuery Table (bigquery.googleapis.com/bigquery/v2)',
@@ -3835,6 +4546,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Update Dataset Configuration / Storage Billing Model on "${dsId}"?`,
+          laymanSummary: `In Plain English: Updates the storage billing model (${body.storageBillingModel || 'PHYSICAL compressed'}) or expiration settings on BigQuery dataset "${projectId}:${dsId}".`,
           headerBadge: 'BigQuery Dataset & Physical Billing Gatekeeper',
           targetLabel: 'Target BigQuery Dataset',
           resourceKind: 'BigQuery Dataset Patch (bigquery.googleapis.com/bigquery/v2)',
@@ -3882,6 +4594,9 @@ function classifyDestructiveAxiosConfig(config) {
           title: turningOn
             ? `Enable VPC Firewall Rules Logging (Logs: ON) on "${fwName}"?`
             : `Disable VPC Firewall Rules Logging (Logs: OFF) on "${fwName}"?`,
+          laymanSummary: turningOn
+            ? `In Plain English: Turns on VPC Firewall Rules Logging (logConfig.enable=true) for "${fwName}" so every matched connection is recorded in your Cloud Logging "_Default" bucket.`
+            : `In Plain English: Turns off VPC Firewall Rules Logging (logConfig.enable=false) for "${fwName}" so connection log entries stop consuming Cloud Logging storage while keeping packet filtering active.`,
           headerBadge: 'VPC Firewall Audit Logging & Cloud Logging Storage Gatekeeper',
           targetLabel: 'Target VPC Firewall Rule Logging Configuration',
           resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1 · logConfig)',
@@ -3914,6 +4629,9 @@ function classifyDestructiveAxiosConfig(config) {
           title: pausing
             ? `Pause (Disable Enforcement) Firewall Rule "${fwName}"?`
             : `Re-Enable Firewall Rule "${fwName}" on "${projectId}"?`,
+          laymanSummary: pausing
+            ? `In Plain English: Temporarily pauses enforcement of VPC firewall rule "${fwName}" (disabled=true) without deleting the rule, so you can re-enable it anytime in 1 click ($0.00/mo).`
+            : `In Plain English: Re-activates VPC firewall rule "${fwName}" (disabled=false) so Google Cloud Andromeda immediately resumes enforcing it across your VPC ($0.00/mo).`,
           headerBadge: 'VPC Firewall Enforcement State Gatekeeper',
           targetLabel: 'Target VPC Firewall Rule',
           resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
@@ -3944,6 +4662,11 @@ function classifyDestructiveAxiosConfig(config) {
           : isPublicRestore
           ? `Restore Public Internet (0.0.0.0/0) on Firewall Rule "${fwName}"?`
           : `Update Live VPC Firewall Rule "${fwName}" on "${projectId}"?`,
+        laymanSummary: isIapLock
+          ? `In Plain English: Locks down VPC firewall rule "${fwName}" by replacing open public internet access (0.0.0.0/0) with Google Cloud Identity-Aware Proxy's IP range (35.235.240.0/20) — blocking internet SSH/RDP brute-force bots while keeping your authenticated Browser/CLI SSH working ($0.00/mo).`
+          : isPublicRestore
+          ? `In Plain English: Re-opens VPC firewall rule "${fwName}" to all public IPv4 addresses (0.0.0.0/0) in project "${projectId}".`
+          : `In Plain English: Updates the source CIDR ranges (${nextRanges || 'configured CIDRs'}), priority, or logging configuration on VPC firewall rule "${fwName}" in project "${projectId}" ($0.00/mo).`,
         headerBadge: 'VPC Firewall X-Ray & Zero-Trust IAP Gatekeeper',
         targetLabel: 'Target VPC Firewall Rule to Update',
         resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
@@ -4032,7 +4755,12 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/data-engineer/action') ||
       rawUrl.includes('/managed-spark/action') ||
       rawUrl.includes('/aws-azure-parity/action') ||
-      rawUrl.includes('/zombies/exterminate')
+      rawUrl.includes('/zombies/exterminate') ||
+      rawUrl.includes('/dlp-rehydrate-from-secret-manager') ||
+      rawUrl.includes('/wave8/war-room/sre-action') ||
+      rawUrl.includes('/install-agent') ||
+      rawUrl.includes('/gcloud-591/execute') ||
+      rawUrl.includes('/wave16/action')
     ) {
       const act = String(body.action || body.actionType || body.restoreStrategy || '').toUpperCase();
 
@@ -4312,6 +5040,203 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `Creates live secret "${sid}" in Secret Manager on project "${projectId}".`,
         };
       }
+      if (rawUrl.includes('/sovereign/secrets-kms/action')) {
+        const sid = body.secretId || 'secret-key';
+        if (act === 'CREATE_SECRET') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Mint New Encrypted Secret "${sid}" in Google Cloud Secret Manager?`,
+            laymanSummary: `In Plain English: Locks "${sid}" inside Google Cloud Secret Manager's hardware-encrypted AES-256 vault (v1) so your Cloud Run apps and workflows can reference it via sm://projects/${projectId}/secrets/${sid}/versions/latest instead of storing plaintext credentials.`,
+            headerBadge: 'Secret Manager Hardware-Encrypted Vault Gatekeeper',
+            targetLabel: 'New Secret Manager Key & Initial Version (v1)',
+            resourceKind: 'Secret Manager Secret + Version (secretmanager.googleapis.com/v1)',
+            targetName: `projects/${projectId}/secrets/${sid}`,
+            location: body.replication || 'Automatic Global Replication',
+            projectId,
+            method: 'CREATE SECRET + v1',
+            endpoint: rawUrl,
+            confirmLabel: `Mint Encrypted Secret "${sid}"`,
+            cancelToast: `Secret creation for "${sid}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets?secretId=${sid} with automatic global replication.\n2. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}:addVersion to store the AES-256 encrypted v1 payload.\n3. Returns the canonical sm://projects/${projectId}/secrets/${sid}/versions/latest pointer URI.`,
+            costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 WITHIN FREE TIER): Google Cloud Secret Manager includes 6 active secret versions and 10,000 access operations per month for $0.00/mo ($0.06/version-mo beyond Free Tier).`,
+            impactWarning: `Creates live secret "${sid}" (v1) in Secret Manager on project "${projectId}".`,
+          };
+        }
+        if (act === 'ROTATE_SECRET') {
+          const disablePrior = body.disableOldVersions !== false;
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Rotate Secret "${sid}" & Mint New Encrypted Version${disablePrior ? ' ($0.00/mo Old-Version Auto-Disable)' : ''}?`,
+            laymanSummary: `In Plain English: Uploads a brand-new encrypted version of "${sid}" and automatically promotes the "latest" alias to point to it.${disablePrior ? ' It also disables older versions so Google Cloud stops billing $0.06/month for stale historical versions.' : ''}`,
+            headerBadge: 'Secret Manager Zero-Downtime Key Rotation Gatekeeper',
+            targetLabel: 'Target Secret Manager Key to Rotate',
+            resourceKind: 'Secret Manager Version Rotation (secretmanager.googleapis.com/v1)',
+            targetName: `projects/${projectId}/secrets/${sid}/versions/latest`,
+            location: 'Secret Manager Vault',
+            projectId,
+            method: 'ROTATE & MINT VERSION',
+            endpoint: rawUrl,
+            confirmLabel: `Rotate "${sid}" & Mint New Version`,
+            cancelToast: `Rotation for "${sid}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}:addVersion with your new encrypted payload.\n2. Repoints versions/latest to the newly minted version ID.\n3. ${disablePrior ? 'Calls :disable on prior enabled versions so only 1 active version is billed ($0.00/mo within 6-version Free Tier).' : 'Leaves prior versions enabled for dual-key transition.'}`,
+            costWarning: `FINOPS VERSION HYGIENE ($0.00/MO DISABLED VERSIONS): Disabling superseded versions during rotation keeps your active version count inside the 6-version Always-Free Tier ($0.06/version-month otherwise).`,
+            impactWarning: `Mints a new active version for secret "${sid}" in project "${projectId}".`,
+          };
+        }
+        if (act === 'TOGGLE_VERSION_STATE') {
+          const ver = body.version || '1';
+          const nextState = String(body.targetState || 'DISABLE').toUpperCase();
+          const isDisable = nextState === 'DISABLE';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: isDisable
+              ? `Disable Secret Version "${sid} @ v${ver}" ($0.00/mo Billing Pause)?`
+              : `Re-Enable Secret Version "${sid} @ v${ver}" for Live Decryption?`,
+            laymanSummary: isDisable
+              ? `In Plain English: Pauses version v${ver} of "${sid}" so it costs $0.00/month and cannot be read until re-enabled. Unlike Destroy, disabling is 100% reversible in 1 click if you ever need to roll back!`
+              : `In Plain English: Unpauses version v${ver} of "${sid}" so applications and Cloud Run services can read and decrypt this version again immediately.`,
+            headerBadge: 'Secret Manager Version Lifecycle & FinOps Gatekeeper',
+            targetLabel: 'Target Secret Version',
+            resourceKind: 'Secret Manager Version State (secretmanager.googleapis.com/v1)',
+            targetName: `projects/${projectId}/secrets/${sid}/versions/${ver}`,
+            location: 'Secret Manager Vault',
+            projectId,
+            method: isDisable ? 'DISABLE VERSION ($0/MO)' : 'ENABLE VERSION',
+            endpoint: rawUrl,
+            confirmLabel: isDisable
+              ? `Disable "${sid}" v${ver} ($0.00/mo)`
+              : `Re-Enable "${sid}" v${ver}`,
+            cancelToast: `Version state change for "${sid}" v${ver} cancelled.`,
+            whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}/versions/${ver}:${isDisable ? 'disable' : 'enable'}.\n2. Transitions version v${ver} to ${isDisable ? 'DISABLED ($0.00/mo storage charge)' : 'ENABLED (live decryptable)'}.\n3. Refreshes the live version ledger for "${sid}".`,
+            costWarning: isDisable
+              ? `FINOPS SAVINGS ($0.00/MO): Disabled Secret Manager versions are completely free ($0.00/mo) and do not count against your 6 free active versions.`
+              : `BILLING NOTICE: Enabled versions count toward the 6 free active versions per project ($0.06/version-month beyond 6).`,
+            impactWarning: `${isDisable ? 'Disables' : 'Re-enables'} version v${ver} of secret "${sid}" in project "${projectId}".`,
+          };
+        }
+        if (act === 'GRANT_SECRET_ACCESSOR') {
+          const member = body.member || 'serviceAccount';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Grant Secret Accessor Role on "${sid}" Only to "${member}"?`,
+            laymanSummary: `In Plain English: Gives "${member}" permission to read ONLY this single secret ("${sid}") instead of every secret in your project — enforcing strict least-privilege security at $0.00 cost.`,
+            headerBadge: 'Secret Manager Per-Secret IAM Least-Privilege Gatekeeper',
+            targetLabel: 'Target Secret & Authorized Principal',
+            resourceKind: 'Secret-Level IAM Policy (roles/secretmanager.secretAccessor)',
+            targetName: `${sid} ← ${member}`,
+            location: 'Secret Manager IAM Control Plane',
+            projectId,
+            method: 'GRANT SECRET ACCESSOR',
+            endpoint: rawUrl,
+            confirmLabel: `Grant secretAccessor on "${sid}" ($0.00)`,
+            cancelToast: `Per-secret IAM grant on "${sid}" cancelled.`,
+            whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}:getIamPolicy.\n2. Binds "${member}" to role "roles/secretmanager.secretAccessor" scoped strictly to secret "${sid}".\n3. Commits the updated policy via :setIamPolicy.`,
+            costWarning: `ZERO COST ($0.00/MO): Per-secret IAM policy bindings are 100% free in Google Cloud.`,
+            impactWarning: `Grants roles/secretmanager.secretAccessor on secret "${sid}" to "${member}".`,
+          };
+        }
+        if (act === 'CONFIGURE_AUTO_ROTATION_SCHEDULE') {
+          const days = body.rotationPeriodDays || 30;
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Enable ${days}-Day Automatic Rotation Policy on Secret "${sid}" ($0.00/mo)?`,
+            laymanSummary: `In Plain English: Stamps a ${days}-day rotation schedule and nextRotationTime reminder directly onto secret "${sid}" in Google Cloud Secret Manager so compliance audits and rotation workflows track key freshness automatically at $0.00/mo.`,
+            headerBadge: 'Secret Manager Automated Rotation Schedule Gatekeeper',
+            targetLabel: 'Target Secret Manager Rotation Policy',
+            resourceKind: 'Secret Manager Rotation Policy + Labels (secretmanager.googleapis.com/v1)',
+            targetName: `projects/${projectId}/secrets/${sid} (every ${days}d)`,
+            location: 'Secret Manager Vault',
+            projectId,
+            method: `SET ${days}D AUTO-ROTATION`,
+            endpoint: rawUrl,
+            confirmLabel: `Enable ${days}-Day Rotation on "${sid}" ($0.00)`,
+            cancelToast: `Rotation schedule update for "${sid}" cancelled.`,
+            whatHappensNext: `1. Fetches current metadata and etag for secret "${sid}".\n2. Updates rotationPeriod (${days * 86400}s), nextRotationTime, and compliance labels via PATCH https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}.\n3. Refreshes the live Secret Manager compliance badge.`,
+            costWarning: `ZERO COST ($0.00/MO): Secret Manager rotation metadata and compliance labels are 100% free.`,
+            impactWarning: `Configures a ${days}-day rotation schedule on secret "${sid}" in project "${projectId}".`,
+          };
+        }
+        if (act === 'RELOAD_MOUNTED_WORKLOADS') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Hot-Reload Cloud Run Services Mounting Secret "${sid}"?`,
+            laymanSummary: `In Plain English: Finds every Cloud Run service in "${projectId}" that mounts secret "${sid}" and rolls a fresh revision with a rotation timestamp annotation so running containers immediately pick up the newest secret version without downtime.`,
+            headerBadge: 'Secret Manager → Cloud Run Zero-Downtime Hot-Reload Gatekeeper',
+            targetLabel: 'Cloud Run Services Mounting Secret',
+            resourceKind: 'Cloud Run v2 Revision Hot-Reload (run.googleapis.com/v2)',
+            targetName: `Workloads mounting ${sid}`,
+            location: 'All Project Regions',
+            projectId,
+            method: 'HOT-RELOAD WORKLOADS',
+            endpoint: rawUrl,
+            confirmLabel: `Hot-Reload Cloud Run Services Mounting "${sid}"`,
+            cancelToast: `Workload hot-reload for "${sid}" cancelled.`,
+            whatHappensNext: `1. Scans Cloud Run v2 services in project "${projectId}" for secretKeyRef bindings referencing "${sid}".\n2. Patches matching services with annotation cloudpulse.dev/secret-reloaded-at to trigger a zero-downtime rolling revision.\n3. Verifies that new container instances mount the latest enabled version of "${sid}".`,
+            costWarning: `ZERO CONTROL-PLANE FEE ($0.00): Rolling a Cloud Run revision is free and preserves scale-to-zero billing.`,
+            impactWarning: `Triggers a zero-downtime revision rollout on Cloud Run services mounting "${sid}".`,
+          };
+        }
+        if (act === 'HEAL_CLOUDRUN_SECRET_REF') {
+          const svc = body.serviceName || 'Cloud Run Service';
+          const reg = body.region || 'us-central1';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Heal Cloud Run "${svc}" Secret Reference ("${sid}" → latest)?`,
+            laymanSummary: `In Plain English: Repoints Cloud Run service "${svc}" (${reg}) to the latest active version of secret "${sid}" and rolls a healthy revision so the service starts cleanly without broken version errors.`,
+            headerBadge: 'Cloud Run secretKeyRef Auto-Surgeon Gatekeeper',
+            targetLabel: 'Target Cloud Run Service & Secret Reference',
+            resourceKind: 'Cloud Run Secret Reference (run.googleapis.com/v2)',
+            targetName: `${svc} → ${sid}@latest`,
+            location: reg,
+            projectId,
+            method: 'HEAL SECRET REF → LATEST',
+            endpoint: rawUrl,
+            confirmLabel: `Heal "${svc}" Secret Ref to Latest`,
+            cancelToast: `Secret reference heal on "${svc}" cancelled.`,
+            whatHappensNext: `1. Fetches the live Cloud Run v2 service spec for "${svc}" in "${reg}".\n2. Updates the secretKeyRef version for "${sid}" to "latest".\n3. Rolls a new revision on "${svc}" and verifies startup health.`,
+            costWarning: `ZERO EXTRA COST ($0.00): Updating Cloud Run secret version bindings costs $0.00 in control-plane fees.`,
+            impactWarning: `Updates "${svc}" (${reg}) to reference the latest enabled version of secret "${sid}".`,
+          };
+        }
+        if (act === 'CREATE_KMS_KEY' || act === 'ROTATE_KMS_KEY') {
+          const kr = body.keyRingId || 'cloudpulse-sovereign-ring';
+          const kid = body.keyId || 'sovereign-cmek-key';
+          const loc = body.location || 'global';
+          const isRotate = act === 'ROTATE_KMS_KEY';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: isRotate
+              ? `Rotate Cloud KMS CryptoKey "${kr}/${kid}" & Mint New Primary Version?`
+              : `Create Cloud KMS KeyRing "${kr}" & CryptoKey "${kid}" in "${loc}"?`,
+            laymanSummary: isRotate
+              ? `In Plain English: Generates a new primary cryptographic key version inside Cloud KMS key "${kr}/${kid}" so all new data is encrypted with fresh key material while existing ciphertext remains decryptable.`
+              : `In Plain English: Provisions a Customer-Managed Encryption Key ("${kid}") inside KeyRing "${kr}" (${loc}) with automatic 90-day rotation so you control the master encryption keys for your cloud storage and databases.`,
+            headerBadge: 'Cloud KMS Customer-Managed Encryption Key (CMEK) Gatekeeper',
+            targetLabel: 'Target Cloud KMS KeyRing & CryptoKey',
+            resourceKind: 'Cloud KMS CryptoKey (cloudkms.googleapis.com/v1)',
+            targetName: `projects/${projectId}/locations/${loc}/keyRings/${kr}/cryptoKeys/${kid}`,
+            location: loc,
+            projectId,
+            method: isRotate ? 'ROTATE KMS KEY' : 'CREATE KMS KEY',
+            endpoint: rawUrl,
+            confirmLabel: isRotate ? `Rotate KMS Key "${kid}"` : `Create KMS Key "${kid}" ($0.06/mo)`,
+            cancelToast: `Cloud KMS operation on "${kid}" cancelled.`,
+            whatHappensNext: isRotate
+              ? `1. Calls POST https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/${loc}/keyRings/${kr}/cryptoKeys/${kid}/cryptoKeyVersions.\n2. Promotes the newly generated key version to primary via :updatePrimaryVersion.`
+              : `1. Ensures KeyRing "${kr}" exists in location "${loc}".\n2. Calls POST https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/${loc}/keyRings/${kr}/cryptoKeys?cryptoKeyId=${kid} with ENCRYPT_DECRYPT purpose and 90-day rotationPeriod.`,
+            costWarning: `CLOUD KMS PRICING ($0.06/VERSION-MO): Active software Cloud KMS key versions cost $0.06/month plus $0.03 per 10,000 cryptographic operations.`,
+            impactWarning: `${isRotate ? 'Rotates primary version of' : 'Creates'} Cloud KMS CryptoKey "${kr}/${kid}" in "${loc}".`,
+          };
+        }
+      }
       if (rawUrl.includes('/sovereign/')) {
         const target = body.secretId || body.member || body.keyRingId || body.keyId || projectId;
         const isDelete = act.includes('DELETE') || act.includes('DESTROY') || act.includes('REVOKE');
@@ -4322,12 +5247,12 @@ function classifyDestructiveAxiosConfig(config) {
             ? `Tighten IAM Permission on "${body.member || 'Principal'}" (${act || 'Least-Privilege Remediation'})?`
             : rawUrl.includes('/time-machine/snapshot')
             ? `Restore Drifted Cloud Configuration Back to Snapshot Baseline?`
-            : `Execute Sovereign Security Action "${act || 'UPDATE'}" on "${target}"?`,
+            : `Apply Sovereign Security Remediation (${act || 'UPDATE'}) on "${target}"?`,
           laymanSummary: rawUrl.includes('/iam-surgeon/remediate')
             ? `In Plain English: Removes overly broad "admin-style" permissions from "${body.member || 'this identity'}" and replaces them with only the exact permissions it actually needs (Least-Privilege Security), shrinking your blast radius at $0.00 cost.`
             : rawUrl.includes('/time-machine/snapshot')
             ? `In Plain English: Someone or something changed your cloud settings away from your approved snapshot baseline. Clicking confirm automatically reverts those drifted settings back to your safe snapshot state.`
-            : `In Plain English: Updates your Secret Manager or Cloud KMS encryption security settings on "${target}" in project "${projectId}" (rotating versions, updating KMS keys, or cleaning up old secret versions).`,
+            : `In Plain English: Applies your selected IAM, Secret Manager, or Cloud KMS security remediation ("${act || 'UPDATE'}") on "${target}" in project "${projectId}".`,
           headerBadge: 'Sovereign IAM, Secret Manager & KMS Security Gatekeeper',
           targetLabel: 'Target Security Identity / Secret / KMS Key',
           resourceKind: `Sovereign Security Control-Plane (${act || 'SECURITY_UPDATE'})`,
@@ -4336,14 +5261,132 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: act || 'SECURITY REMEDIATION',
           endpoint: rawUrl,
-          confirmLabel: `Confirm & Apply Security Change`,
+          confirmLabel: rawUrl.includes('/iam-surgeon/remediate')
+            ? `Enforce Least-Privilege IAM ($0.00)`
+            : rawUrl.includes('/time-machine/snapshot')
+            ? `Restore Baseline Snapshot State`
+            : `Confirm & Apply "${act || 'Security Update'}"`,
           cancelToast: `Sovereign security action cancelled.`,
-          whatHappensNext: `1. Authenticates against Google Cloud IAM / Secret Manager / KMS APIs in "${projectId}".\n2. Applies "${act || 'remediation'}" on "${target}" and logs the cryptographic audit trail.`,
+          whatHappensNext: `1. Authenticates against Google Cloud IAM / Secret Manager / KMS APIs in "${projectId}".\n2. Applies "${act || 'remediation'}" on "${target}".\n3. Verifies policy convergence and logs the cryptographic audit trail.`,
           costWarning: `ZERO / PENNY COST ($0.00 IAM · $0.06/MO KMS/SECRET): IAM and Time-Machine policy fixes are $0.00; Secret Manager and KMS keys are covered by Free Tier or $0.06/mo per active version.`,
           impactWarning: `Applies live security change "${act || 'REMEDIATE'}" on "${target}" in "${projectId}".`,
         };
       }
+      if (rawUrl.includes('/dlp-rehydrate-from-secret-manager')) {
+        const bktMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/dlp-rehydrate-from-secret-manager/);
+        const bktName = bktMatch ? decodeURIComponent(bktMatch[1]) : body.bucketName || 'gcs-bucket';
+        const objName = body.objectName || 'config-file';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Rehydrate "gs://${bktName}/${objName}" from Secret Manager Vault Pointers?`,
+          laymanSummary: `In Plain English: Scans "gs://${bktName}/${objName}" for sm://projects/${projectId}/secrets/... pointers, fetches the live decrypted values from Google Cloud Secret Manager, and restores the original values back into the Cloud Storage file.`,
+          headerBadge: 'DLP-to-Secret-Manager Lossless File Rehydration Gatekeeper',
+          targetLabel: 'Target Cloud Storage Object to Rehydrate',
+          resourceKind: 'Cloud Storage Object + Secret Manager Access (storage.googleapis.com + secretmanager.googleapis.com)',
+          targetName: `gs://${bktName}/${objName}`,
+          location: 'Cloud Storage + Secret Manager Vault',
+          projectId,
+          method: 'REHYDRATE FROM SM://',
+          endpoint: rawUrl,
+          confirmLabel: `Rehydrate "gs://${bktName}/${objName}"`,
+          cancelToast: `Rehydration of "${objName}" cancelled.`,
+          whatHappensNext: `1. Downloads "gs://${bktName}/${objName}" into Node.js RAM and locates all sm://projects/${projectId}/secrets/<id>/versions/<ver> pointers.\n2. Calls secretmanager.googleapis.com/v1/...:access to retrieve each live secret payload.\n3. Rewrites "gs://${bktName}/${objName}" with the restored values and returns the new GCS generation receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Secret Manager includes 10,000 free access operations/month and Cloud Storage includes 5,000 free Class A writes/month.`,
+          impactWarning: `Restores plaintext values from Secret Manager into "gs://${bktName}/${objName}" — re-run Vault & Mask before sharing this bucket externally.`,
+        };
+      }
       if (rawUrl.includes('/chrono-logs/')) {
+        if (rawUrl.includes('/export-to-gcs')) {
+          const bkt = body.bucketName || `${projectId}-logs-archive`;
+          const prefix = body.objectPrefix || 'logs-archive';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Archive Filtered Cloud Logs to "gs://${bkt}/${prefix}/...jsonl" ($0.00/GB Same-Region)?`,
+            laymanSummary: `In Plain English: Streams the log entries matching your current query into a compressed JSONL archive inside Cloud Storage bucket "gs://${bkt}" in the same region ($0.00/GB transfer fee) for long-term compliance and BigQuery analysis.`,
+            headerBadge: 'Chrono-Log Same-Region ($0.00/GB) GCS JSONL Archiver',
+            targetLabel: 'Target Cloud Storage Log Archive Bucket',
+            resourceKind: 'Cloud Logging → Cloud Storage JSONL Export (storage.googleapis.com/upload/storage/v1)',
+            targetName: `gs://${bkt}/${prefix}/`,
+            location: body.region || 'Same-Region ($0.00/GB Egress)',
+            projectId,
+            method: 'ARCHIVE LOGS TO GCS',
+            endpoint: rawUrl,
+            confirmLabel: `Archive Logs to "gs://${bkt}"`,
+            cancelToast: `Log archive export to "gs://${bkt}" cancelled.`,
+            whatHappensNext: `1. Queries matching log entries from logging.googleapis.com/v2/entries:list in project "${projectId}".\n2. Formats entries as newline-delimited JSON (.jsonl) with SHA-256 integrity metadata.\n3. Uploads the JSONL archive to "gs://${bkt}/${prefix}/" and provides a 1-click "Browse in GCS Workbench" link.`,
+            costWarning: `ZERO EGRESS FEE ($0.00/GB INTRA-REGION): Streaming logs to a same-region Cloud Storage bucket incurs $0.00/GB network egress and fits within the 5 GB-month GCS Always-Free tier.`,
+            impactWarning: `Writes a new .jsonl log archive object into "gs://${bkt}/${prefix}/" in project "${projectId}".`,
+          };
+        }
+        if (rawUrl.includes('/sinks-buckets/action')) {
+          const sAct = String(body.action || 'UPDATE_BUCKET_RETENTION').toUpperCase();
+          const targetSinkOrBucket = body.bucketId || body.sinkName || '_Default';
+          const retDays = body.retentionDays || 30;
+          return {
+            gateType: sAct.includes('DELETE') ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title:
+              sAct === 'UPDATE_BUCKET_RETENTION'
+                ? `Update Cloud Logging Bucket "${targetSinkOrBucket}" Retention to ${retDays} Days?`
+                : sAct === 'CREATE_GCS_SINK'
+                ? `Create Cloud Logging Export Sink "${body.sinkName || 'cloudpulse-gcs-sink'}" → "gs://${body.destinationBucket || 'bucket'}"?`
+                : `Apply Cloud Logging Sink/Bucket Action (${sAct}) on "${targetSinkOrBucket}"?`,
+            laymanSummary:
+              sAct === 'UPDATE_BUCKET_RETENTION'
+                ? `In Plain English: Changes how many days Google Cloud Logging keeps logs inside bucket "${targetSinkOrBucket}" (${retDays} days). Retention up to 30 days on _Default is 100% free.`
+                : `In Plain English: Configures a live Cloud Logging router sink ("${targetSinkOrBucket}") that automatically forwards matching logs to your destination bucket at $0.00 routing fee.`,
+            headerBadge: 'Cloud Logging Router Sink & Bucket Retention Gatekeeper',
+            targetLabel: 'Target Cloud Logging Bucket / Router Sink',
+            resourceKind: 'Cloud Logging Config API (logging.googleapis.com/v2)',
+            targetName: String(targetSinkOrBucket),
+            location: body.location || 'global',
+            projectId,
+            method: sAct,
+            endpoint: rawUrl,
+            confirmLabel:
+              sAct === 'UPDATE_BUCKET_RETENTION'
+                ? `Set "${targetSinkOrBucket}" Retention to ${retDays}d`
+                : `Apply Logging Sink Change (${sAct})`,
+            cancelToast: `Cloud Logging sink/bucket update cancelled.`,
+            whatHappensNext: `1. Connects to logging.googleapis.com/v2/projects/${projectId}.\n2. Executes ${sAct} on "${targetSinkOrBucket}".\n3. Grants the Cloud Logging writerIdentity service account storage.objectCreator on the destination bucket if creating a GCS sink.`,
+            costWarning: `LOGGING RETENTION & ROUTING PRICING: Log routing sinks cost $0.00/mo, and _Default bucket retention up to 30 days is free ($0.01/GiB-month for extended retention beyond 30 days).`,
+            impactWarning: `Updates live Cloud Logging sink/bucket "${targetSinkOrBucket}" in project "${projectId}".`,
+          };
+        }
+        if (rawUrl.includes('/alert-policies/action')) {
+          const aAct = String(body.action || 'CREATE_LOG_ALERT_POLICY').toUpperCase();
+          const mName = body.metricName || body.policyName || 'cloudpulse-error-rate';
+          return {
+            gateType: aAct.includes('DELETE') ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title:
+              aAct === 'DELETE_ALERT_POLICY'
+                ? `Delete Cloud Monitoring Alert Policy "${body.policyName || mName}"?`
+                : `Synthesize Log-Based Metric & Cloud Monitoring Alert Policy "${mName}"?`,
+            laymanSummary:
+              aAct === 'DELETE_ALERT_POLICY'
+                ? `In Plain English: Removes alert policy "${body.policyName || mName}" from Cloud Monitoring so it no longer triggers incident notifications.`
+                : `In Plain English: Registers a live log-based counter metric ("${mName}") for your LQL filter and wires a Cloud Monitoring Alert Policy that triggers whenever matching error logs exceed your threshold.`,
+            headerBadge: 'Cloud Logging → Cloud Monitoring Alert Synthesizer Gatekeeper',
+            targetLabel: 'Target Log Metric & Alert Policy',
+            resourceKind: 'Cloud Logging Metric + Monitoring AlertPolicy (monitoring.googleapis.com/v3)',
+            targetName: String(mName),
+            location: 'Global Monitoring Control Plane',
+            projectId,
+            method: aAct,
+            endpoint: rawUrl,
+            confirmLabel:
+              aAct === 'DELETE_ALERT_POLICY'
+                ? `Delete Alert Policy "${mName}"`
+                : `Create Log Metric & Alert Policy "${mName}"`,
+            cancelToast: `Alert policy operation on "${mName}" cancelled.`,
+            whatHappensNext: `1. Registers or updates log-based counter metric "${mName}" via logging.googleapis.com/v2/projects/${projectId}/metrics.\n2. Provisions or updates the Cloud Monitoring AlertPolicy via monitoring.googleapis.com/v3/projects/${projectId}/alertPolicies.\n3. Refreshes active alert policies in the Chrono-Log SRE Triage Hub.`,
+            costWarning: `ZERO COST ($0.00/MO): User-defined log-based counter metrics and Cloud Monitoring alert policies are free within Google Cloud's observability allotment.`,
+            impactWarning: `Updates live Cloud Monitoring alert policy "${mName}" in project "${projectId}".`,
+          };
+        }
         const name = body.metricName || body.exclusionName || body.sinkName || 'log-rule';
         const isExclusion = rawUrl.includes('exclusion');
         return {
@@ -4366,8 +5409,8 @@ function classifyDestructiveAxiosConfig(config) {
           confirmLabel: isExclusion ? `Apply Log Noise Filter ($0.00)` : `Create Log Counter Metric ($0.00)`,
           cancelToast: `Cloud Logging rule update cancelled.`,
           whatHappensNext: isExclusion
-            ? `1. Calls Cloud Logging Config API (_Default sink exclusions) in project "${projectId}".\n2. Configures exclusion filter "${name}" (${body.filter || 'noise filter'}) to drop matching noisy log ingestion before storage billing.`
-            : `1. Calls POST https://logging.googleapis.com/v2/projects/${projectId}/metrics.\n2. Registers log-based counter metric "${name}" matching filter "${body.filter || 'severity>=ERROR'}".`,
+            ? `1. Calls Cloud Logging Config API (_Default sink exclusions) in project "${projectId}".\n2. Configures exclusion filter "${name}" (${body.filter || 'noise filter'}) to drop matching noisy log ingestion before storage billing.\n3. Verifies updated _Default sink exclusion state.`
+            : `1. Calls POST https://logging.googleapis.com/v2/projects/${projectId}/metrics.\n2. Registers log-based counter metric "${name}" matching filter "${body.filter || 'severity>=ERROR'}".\n3. Streams live metric counter status back to the studio.`,
           costWarning: `ZERO COST ($0.00/MO): Log-based counter metrics and sink exclusion filters are 100% free — and exclusion filters actively reduce your monthly log storage bill.`,
           impactWarning: `Updates live Cloud Logging configuration "${name}" in project "${projectId}".`,
         };
@@ -4396,8 +5439,8 @@ function classifyDestructiveAxiosConfig(config) {
           confirmLabel: isIamDoctor ? `Fix Function IAM Permissions ($0.00)` : `Deploy Function "${fnName}"`,
           cancelToast: `Cloud Function operation for "${fnName}" cancelled.`,
           whatHappensNext: isIamDoctor
-            ? `1. Inspects project "${projectId}" IAM bindings for Cloud Build, Eventarc, and Compute/Function service accounts.\n2. Grants missing invoker/builder roles via cloudresourcemanager.googleapis.com.`
-            : `1. Packages source code and calls cloudfunctions.googleapis.com/v2 in "${region}" to build and deploy "${fnName}".\n2. Configures runtime "${body.runtime || 'nodejs20'}" and entry point "${body.entryPoint || 'handler'}".`,
+            ? `1. Inspects project "${projectId}" IAM bindings for Cloud Build, Eventarc, and Compute/Function service accounts.\n2. Grants missing invoker/builder roles via cloudresourcemanager.googleapis.com.\n3. Verifies readiness for Gen2 function deployment.`
+            : `1. Packages source code and calls cloudfunctions.googleapis.com/v2 in "${region}" to build and deploy "${fnName}".\n2. Configures runtime "${body.runtime || 'nodejs20'}" and entry point "${body.entryPoint || 'handler'}".\n3. Verifies active HTTPS/Eventarc trigger readiness.`,
           costWarning: isIamDoctor
             ? `ZERO COST ($0.00/MO): IAM permission fixes are 100% free.`
             : `ALWAYS-FREE TIER ELIGIBLE ($0.00 IDLE): Cloud Functions Gen2 includes 2 million free invocations/month and scales to $0.00/hr when idle.`,
@@ -4428,8 +5471,8 @@ function classifyDestructiveAxiosConfig(config) {
           confirmLabel: rawUrl.includes('/create-repo') ? `Create Artifact Repository` : `Start Cloud Build Now`,
           cancelToast: `Supply chain operation cancelled.`,
           whatHappensNext: rawUrl.includes('/create-repo')
-            ? `1. Calls POST https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${body.location || 'us-central1'}/repositories?repositoryId=${body.repositoryId || 'cloudpulse-containers'}.\n2. Provisions a private DOCKER repository ready for container pushes.`
-            : `1. Submits a serverless build job to Cloud Build (cloudbuild.googleapis.com/v1/projects/${projectId}/builds).\n2. Clones "${repoOrImage}", builds the container image, and streams build logs live.`,
+            ? `1. Calls POST https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${body.location || 'us-central1'}/repositories?repositoryId=${body.repositoryId || 'cloudpulse-containers'}.\n2. Provisions a private DOCKER repository ready for container pushes.\n3. Verifies vulnerability scanning and IAM repository readiness.`
+            : `1. Submits a serverless build job to Cloud Build (cloudbuild.googleapis.com/v1/projects/${projectId}/builds).\n2. Clones "${repoOrImage}", builds the container image, and streams build logs live.\n3. Pushes the verified image digest to Artifact Registry.`,
           costWarning: `FREE TIER ELIGIBLE: Artifact Registry includes 0.5 GB of free storage/month ($0.00 when empty), and Cloud Build includes 2,500 free build-minutes per month ($0.003/min after).`,
           impactWarning: `Executes live supply-chain operation on "${repoOrImage}" in project "${projectId}".`,
         };
@@ -4451,7 +5494,7 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Create BigLake Catalog "${catId}" ($0.00)`,
           cancelToast: `BigLake catalog creation cancelled.`,
-          whatHappensNext: `1. Calls POST https://biglake.googleapis.com/v1/projects/${projectId}/locations/${body.location || 'us-central1'}/catalogs?catalog_id=${catId}.\n2. Registers open Apache Iceberg metadata catalog "${catId}".`,
+          whatHappensNext: `1. Calls POST https://biglake.googleapis.com/v1/projects/${projectId}/locations/${body.location || 'us-central1'}/catalogs?catalog_id=${catId}.\n2. Registers open Apache Iceberg metadata catalog "${catId}".\n3. Refreshes live BigLake Iceberg catalog inventory.`,
           costWarning: `ZERO COST ($0.00/MO): BigLake metastore catalog metadata entries are free; you only pay for underlying Cloud Storage or BigQuery queries.`,
           impactWarning: `Creates BigLake catalog "${catId}" in "${body.location || 'us-central1'}".`,
         };
@@ -4472,7 +5515,7 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Clamp Warm Instances to 0 ($0.00/hr Idle)`,
           cancelToast: `Always-Free Enforcer cancelled.`,
-          whatHappensNext: `1. Scans all Cloud Run v2 services in project "${projectId}" for warm instances (minInstanceCount > 0) or always-allocated CPU.\n2. Patches warm services via run.googleapis.com/v2 to enforce minInstanceCount=0 and cpuIdle=true so idle compute drops to $0.00/hr.`,
+          whatHappensNext: `1. Scans all Cloud Run v2 services in project "${projectId}" for warm instances (minInstanceCount > 0) or always-allocated CPU.\n2. Patches warm services via run.googleapis.com/v2 to enforce minInstanceCount=0 and cpuIdle=true.\n3. Verifies that idle compute burn drops to $0.00/hr across all regions.`,
           costWarning: `FINOPS COST REDUCTION ($0.00/HR IDLE): Eliminates 24/7 idle container charges across your Cloud Run fleet.`,
           impactWarning: `Reconfigures warm Cloud Run services in "${projectId}" to scale down to 0 instances when idle.`,
         };
@@ -4493,9 +5536,106 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Confirm & Delete Zombie Resource(s)`,
           cancelToast: `Zombie extermination cancelled.`,
-          whatHappensNext: `1. Calls DELETE on the selected unattached Static External IP address(es) (compute.googleapis.com/v1/.../addresses) or orphaned Persistent Disks (compute.googleapis.com/v1/.../disks).\n2. Immediately stops ongoing hourly/monthly idle waste charges.`,
+          whatHappensNext: `1. Calls DELETE on the selected unattached Static External IP address(es) (compute.googleapis.com/v1/.../addresses) or orphaned Persistent Disks (compute.googleapis.com/v1/.../disks).\n2. Immediately stops ongoing hourly/monthly idle waste charges.\n3. Updates the live FinOps Zombie Radar inventory.`,
           costWarning: `FINOPS SAVINGS: Releasing an unattached Static IPv4 address saves $7.30/mo ($0.01/hr), and deleting an unattached Persistent Disk saves $0.04–$0.17/GB-mo.`,
           impactWarning: `Permanently deletes the selected unattached zombie resource(s) from project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/wave8/war-room/sre-action')) {
+        const sreAct = String(body.actionType || body.action || 'SRE_REMEDIATION').toUpperCase();
+        const targetSvc = body.serviceName || body.targetName || 'Cloud Run / Compute Workload';
+        const reg = body.region || 'us-central1';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Live War-Room SRE Action "${sreAct}" on "${targetSvc}" (${reg})?`,
+          laymanSummary: `In Plain English: Runs emergency SRE remediation "${sreAct}" on "${targetSvc}" in "${reg}" (such as clamping minimum instances to 0, shifting canary traffic back to stable, or restarting a degraded instance) to restore service health and stop runaway spend.`,
+          headerBadge: 'Wave 8 SRE Incident War-Room Gatekeeper',
+          targetLabel: 'Target Service / Workload for SRE Remediation',
+          resourceKind: `SRE War-Room Remediation (${sreAct})`,
+          targetName: `${targetSvc} (${reg})`,
+          location: reg,
+          projectId,
+          method: sreAct,
+          endpoint: rawUrl,
+          confirmLabel: `Execute SRE Action "${sreAct}"`,
+          cancelToast: `SRE War-Room action "${sreAct}" cancelled.`,
+          whatHappensNext: `1. Connects to the live Google Cloud control plane for "${targetSvc}" in "${reg}".\n2. Applies SRE remediation "${sreAct}" and verifies revision/instance readiness.\n3. Logs the incident remediation receipt in the War-Room timeline.`,
+          costWarning: `SRE & FINOPS PROTECTION: War-Room traffic rollbacks and scale-to-zero clamps incur $0.00 control-plane fees and immediately halt runaway compute burn.`,
+          impactWarning: `Applies live SRE remediation "${sreAct}" to "${targetSvc}" in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/install-agent')) {
+        const isFleet = rawUrl.includes('/install-agent-fleet');
+        const vmTarget = isFleet
+          ? `All Running GCE VMs in ${projectId}`
+          : decodeURIComponent((rawUrl.match(/\/vms\/([^/]+)\/install-agent/) || [])[1] || body.vmName || 'vm-instance');
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: isFleet
+            ? `Install Google Cloud Ops Agent Across All Running VMs in "${projectId}"?`
+            : `Install & Start Google Cloud Ops Agent on VM "${vmTarget}" via SSH?`,
+          laymanSummary: `In Plain English: Connects over SSH to ${isFleet ? 'your running virtual machines' : `VM "${vmTarget}"`} and installs the official Google Cloud Ops Agent (google-cloud-ops-agent) so real-time RAM, disk I/O, GPU, and system log telemetry streams into Cloud Monitoring.`,
+          headerBadge: 'Compute Engine Ops Agent SSH Installer Gatekeeper',
+          targetLabel: 'Target Compute Engine VM(s)',
+          resourceKind: 'Google Cloud Ops Agent (google-cloud-ops-agent via SSH)',
+          targetName: vmTarget,
+          location: body.zone || 'Project Compute Zones',
+          projectId,
+          method: isFleet ? 'FLEET OPS AGENT INSTALL' : 'INSTALL OPS AGENT',
+          endpoint: rawUrl,
+          confirmLabel: isFleet ? `Install Ops Agent on Running Fleet` : `Install Ops Agent on "${vmTarget}"`,
+          cancelToast: `Ops Agent installation cancelled.`,
+          whatHappensNext: `1. Establishes an authenticated SSH session to ${vmTarget}.\n2. Downloads and runs Google's official add-google-cloud-ops-agent-repo.sh installer with --also-install.\n3. Verifies systemctl status google-cloud-ops-agent* and begins streaming RAM/Disk metrics.`,
+          costWarning: `ZERO LICENSE COST ($0.00): The Google Cloud Ops Agent binary is 100% free; standard Cloud Logging/Monitoring free-tier ingestion allowances (50 GiB/mo) apply.`,
+          impactWarning: `Installs and starts the systemd service google-cloud-ops-agent on ${vmTarget}.`,
+        };
+      }
+      if (rawUrl.includes('/gcloud-591/execute')) {
+        const gAct = String(body.action || 'EXECUTE_GCLOUD_591_ACTION').toUpperCase();
+        const targetRes = body.instanceName || body.clusterName || body.bucketName || body.serviceName || projectId;
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Google Cloud SDK 591/592 Action "${gAct}" on "${targetRes}"?`,
+          laymanSummary: `In Plain English: Runs the selected Google Cloud SDK 591/592 capability ("${gAct}") against "${targetRes}" in project "${projectId}" using authenticated REST/CLI control-plane calls.`,
+          headerBadge: 'Google Cloud SDK 591/592 Frontier Lab Gatekeeper',
+          targetLabel: 'Target SDK 591/592 Resource',
+          resourceKind: `Google Cloud SDK 591/592 · ${gAct}`,
+          targetName: String(targetRes),
+          location: body.region || body.location || 'us-central1',
+          projectId,
+          method: gAct,
+          endpoint: rawUrl,
+          confirmLabel: `Execute "${gAct}" on "${targetRes}"`,
+          cancelToast: `SDK 591/592 action "${gAct}" cancelled.`,
+          whatHappensNext: `1. Validates parameters for "${gAct}" targeting "${targetRes}".\n2. Executes the live Google Cloud REST API / SDK operation in project "${projectId}".\n3. Streams the live JSON verification receipt back to the Frontier Lab.`,
+          costWarning: `CONTROL-PLANE / RESOURCE NOTICE: Policy, DNS reconciliation, and metadata updates cost $0.00; compute/cluster scaling follows standard GCP pricing.`,
+          impactWarning: `Executes "${gAct}" on "${targetRes}" in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/wave16/action')) {
+        const w16Act = String(body.action || 'APPLY_CUSTOM_IAM_ROLE').toUpperCase();
+        const roleId = body.customRoleId || 'cloudpulseLeastPrivRole';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Mint Custom Least-Privilege IAM Role "${roleId}" in Project "${projectId}" ($0.00/mo)?`,
+          laymanSummary: `In Plain English: Creates a custom, tightly-scoped IAM Role ("${roleId}") in project "${projectId}" containing only the exact permissions your workload actually uses — eliminating overly broad Editor/Owner permissions at $0.00/mo.`,
+          headerBadge: 'Custom Least-Privilege IAM Role Synthesizer Gatekeeper',
+          targetLabel: 'Target Custom IAM Role ID',
+          resourceKind: 'Google Cloud Custom IAM Role (iam.googleapis.com/v1)',
+          targetName: `projects/${projectId}/roles/${roleId}`,
+          location: 'Global IAM Control Plane',
+          projectId,
+          method: w16Act,
+          endpoint: rawUrl,
+          confirmLabel: `Create Custom IAM Role "${roleId}" ($0.00)`,
+          cancelToast: `Custom IAM role creation cancelled.`,
+          whatHappensNext: `1. Calls POST https://iam.googleapis.com/v1/projects/${projectId}/roles with roleId="${roleId}".\n2. Binds the synthesized least-privilege permission list.\n3. Returns the live Custom Role resource URI ready for principal binding.`,
+          costWarning: `ZERO COST ($0.00/MO): Custom IAM roles and permission bindings are 100% free in Google Cloud.`,
+          impactWarning: `Creates or updates custom IAM role "projects/${projectId}/roles/${roleId}".`,
         };
       }
       if (rawUrl.includes('/managed-spark/action')) {
@@ -4546,58 +5686,285 @@ function classifyDestructiveAxiosConfig(config) {
             impactWarning: `Creates dataset "${ds}" and seeds 3 tables in project "${projectId}".`,
           };
         }
+        if (act === 'SUBMIT_SERVERLESS_BATCH') {
+          const bId = body.batchId || 'spark-serverless-batch';
+          const prof = body.hardwareProfile || 'MICRO_ETL';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Submit Serverless Spark 3.5 Batch "${bId}" in "${reg}" (${prof})?`,
+            laymanSummary: `In Plain English: Stages your PySpark 3.5 script to Cloud Storage and submits a Dataproc Serverless Spark 3.5 (Runtime 2.2) batch job "${bId}" in "${reg}" with Adaptive Query Execution enabled. It scales automatically and drops back to $0.00/hr the second the batch finishes.`,
+            headerBadge: 'Dataproc Serverless Spark 3.5 Batch Submission Gatekeeper',
+            targetLabel: 'Target Serverless Spark 3.5 Batch Job',
+            resourceKind: 'Dataproc Serverless Spark 3.5 Batch (dataproc.googleapis.com/v1)',
+            targetName: `projects/${projectId}/locations/${reg}/batches/${bId}`,
+            location: reg,
+            projectId,
+            method: `SUBMIT SPARK BATCH (${prof})`,
+            endpoint: rawUrl,
+            confirmLabel: `Submit Serverless Spark Batch "${bId}"`,
+            cancelToast: `Spark batch submission "${bId}" cancelled.`,
+            whatHappensNext: `1. Uploads "${bId}.py" to your regional Cloud Storage staging bucket.\n2. Calls POST https://dataproc.googleapis.com/v1/projects/${projectId}/locations/${reg}/batches?batchId=${bId} with Runtime 2.2 (Spark 3.5) and profile "${prof}".\n3. Streams live batch state and driver output logs into Managed Spark Studio.`,
+            costWarning: `PER-SECOND SERVERLESS BILLING ($0.00/HR IDLE): Dataproc Serverless charges only for active DCU-seconds and shuffle storage while the batch runs, and drops to $0.00/hr immediately upon completion.`,
+            impactWarning: `Submits live Dataproc Serverless batch "${bId}" in region "${reg}".`,
+          };
+        }
+        if (act === 'DELETE_BATCH' || act === 'DELETE_SESSION' || act === 'DELETE_DATAPROC_CLUSTER') {
+          const targetId = body.batchId || body.sessionId || body.clusterName || 'spark-resource';
+          const isCluster = act === 'DELETE_DATAPROC_CLUSTER';
+          return {
+            gateType: 'DELETE',
+            releaseTrack: 'GA',
+            title: isCluster
+              ? `Tear Down 24/7 GCE Dataproc Cluster "${targetId}" in "${reg}" to Stop Hourly Burn?`
+              : `Delete Dataproc Serverless ${act === 'DELETE_BATCH' ? 'Batch' : 'Interactive Session'} "${targetId}"?`,
+            laymanSummary: isCluster
+              ? `In Plain English: Permanently deletes GCE-backed Dataproc cluster "${targetId}" in "${reg}" so you stop paying 24/7 master and worker VM charges while keeping your data safe in Cloud Storage and BigQuery.`
+              : `In Plain English: Terminates and deletes ${act === 'DELETE_BATCH' ? 'Spark batch record' : 'interactive Spark Connect session'} "${targetId}" in "${reg}".`,
+            headerBadge: 'Managed Spark & Dataproc Teardown Gatekeeper',
+            targetLabel: isCluster ? 'Target 24/7 GCE Dataproc Cluster' : 'Target Serverless Spark Batch / Session',
+            resourceKind: `Dataproc ${isCluster ? 'GCE Cluster' : 'Serverless Workload'} (dataproc.googleapis.com/v1)`,
+            targetName: `${targetId} (${reg})`,
+            location: reg,
+            projectId,
+            method: act,
+            endpoint: rawUrl,
+            confirmLabel: `Confirm & Delete "${targetId}"`,
+            cancelToast: `Deletion of "${targetId}" cancelled.`,
+            whatHappensNext: `1. Calls DELETE on dataproc.googleapis.com/v1 in region "${reg}" for "${targetId}".\n2. Terminates any active executors or GCE worker nodes.\n3. Refreshes the Managed Spark fleet inventory.`,
+            costWarning: isCluster
+              ? `FINOPS SAVINGS ($0.00/HR AFTER TEARDOWN): Deleting an idle 24/7 GCE Dataproc cluster immediately stops ongoing Compute Engine VM and persistent disk charges.`
+              : `BILLING STOP ($0.00/HR): Terminating an active session or batch stops any active DCU billing immediately.`,
+            impactWarning: `Permanently deletes "${targetId}" in region "${reg}" on project "${projectId}".`,
+          };
+        }
       }
-      if (
-        rawUrl.includes('/wave10/action') ||
-        rawUrl.includes('/quantum-nexus/action') ||
-        rawUrl.includes('/data-engineer/action') ||
-        rawUrl.includes('/managed-spark/action') ||
-        rawUrl.includes('/aws-azure-parity/action')
-      ) {
-        const studioLabel = rawUrl.includes('/wave10/')
-          ? 'Spanner Graph & Frontier Database Studio'
-          : rawUrl.includes('/quantum-nexus/')
-          ? 'Quantum-Resilient & Sovereign KMS Studio'
-          : rawUrl.includes('/managed-spark/')
-          ? 'Managed Service for Apache Spark & Serverless Studio'
-          : rawUrl.includes('/data-engineer/')
-          ? 'Data Engineering & Medallion Lakehouse Studio'
-          : 'AWS & Azure Enterprise Parity Studio';
-        const friendlyAct = act.replace(/_/g, ' ');
+      if (rawUrl.includes('/sftp/backup-to-gcs') || rawUrl.includes('/scp/backup-to-gcs')) {
+        const vmTarget = decodeURIComponent(
+          (rawUrl.match(/\/vms\/([^/]+)\/(?:sftp|scp)\/backup-to-gcs/) || [])[1] ||
+            body.vmName ||
+            'vm-instance'
+        );
+        const srcPath = body.remotePath || body.sourcePath || '/home';
+        const dstBucket = String(body.bucketName || body.targetBucket || `${projectId}-vm-backups`).replace(/^gs:\/\//, '');
+        const dstObject = body.objectPrefix || body.objectName || 'vm-backup.tar.gz';
+        const reg = body.region || body.zone || 'Same-Region ($0.00/GB Egress)';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Stream Same-Region SFTP/SSH Backup from VM "${vmTarget}" to "gs://${dstBucket}/${dstObject}"?`,
+          laymanSummary: `In Plain English: Streams "${srcPath}" from running Compute Engine VM "${vmTarget}" over SSH/SFTP and uploads it directly into Cloud Storage bucket "gs://${dstBucket}" (${reg}) at $0.00/GB intra-region transfer cost.`,
+          headerBadge: 'Same-Region ($0.00/GB Egress) SFTP-to-GCS Backup Gatekeeper',
+          targetLabel: 'Target Cloud Storage Backup URI & Source VM Path',
+          resourceKind: 'SFTP-to-GCS Same-Region Stream (ssh2 + storage.googleapis.com/upload/storage/v1)',
+          targetName: `${vmTarget}:${srcPath} → gs://${dstBucket}/${dstObject}`,
+          location: reg,
+          projectId,
+          method: 'STREAM SFTP BACKUP TO GCS',
+          endpoint: rawUrl,
+          confirmLabel: `Start Same-Region Backup to gs://${dstBucket}`,
+          cancelToast: `SFTP-to-GCS backup from "${vmTarget}" cancelled.`,
+          whatHappensNext: `1. Connects to VM "${vmTarget}" over SSH/SFTP and packages "${srcPath}".\n2. Streams the payload into "gs://${dstBucket}/${dstObject}" via storage.googleapis.com/upload/storage/v1.\n3. Verifies the CRC32C / SHA-256 digest and unlocks a 1-click "Browse in GCS" link.`,
+          costWarning: `ZERO EGRESS FEE ($0.00/GB INTRA-REGION): Streaming data between a Compute Engine VM and a Cloud Storage bucket in the same Google Cloud region incurs $0.00/GB network transfer fees (5 GB-month US Standard storage is Always-Free).`,
+          impactWarning: `Uploads backup object "gs://${dstBucket}/${dstObject}" from VM "${vmTarget}" (${srcPath}).`,
+        };
+      }
+      if (rawUrl.includes('/cloudrun-bridge/action')) {
+        const vmTarget = decodeURIComponent(
+          (rawUrl.match(/\/vms\/([^/]+)\/cloudrun-bridge\/action/) || [])[1] ||
+            body.vmName ||
+            'vm-instance'
+        );
+        const brAct = String(body.action || 'CONFIGURE_VM_CLOUDRUN_BRIDGE').toUpperCase();
+        const svcName = body.serviceName || 'cloudrun-service';
+        const reg = body.region || body.zone || 'us-central1';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute VM ↔ Cloud Run Bridge Action "${brAct}" (${vmTarget} ↔ ${svcName})?`,
+          laymanSummary: `In Plain English: Configures private VPC / IAM invoker connectivity ("${brAct}") between Compute Engine VM "${vmTarget}" and Cloud Run service "${svcName}" in "${reg}" so they can communicate securely over Google's internal Andromeda network.`,
+          headerBadge: 'Compute Engine VM ↔ Cloud Run v2 Private Bridge Gatekeeper',
+          targetLabel: 'Target VM & Cloud Run Bridge Endpoint',
+          resourceKind: `VM ↔ Cloud Run Bridge (${brAct})`,
+          targetName: `${vmTarget} ↔ ${svcName} (${reg})`,
+          location: reg,
+          projectId,
+          method: brAct,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Execute "${brAct}"`,
+          cancelToast: `VM ↔ Cloud Run bridge action "${brAct}" cancelled.`,
+          whatHappensNext: `1. Authenticates against Compute Engine and Cloud Run v2 APIs in "${reg}".\n2. Applies "${brAct}" between VM "${vmTarget}" and Cloud Run service "${svcName}".\n3. Verifies end-to-end reachability and logs the receipt.`,
+          costWarning: `ZERO IAM / DIRECT VPC EGRESS SURCHARGE ($0.00): Direct VPC egress and IAM invoker bindings incur $0.00/mo in management fees.`,
+          impactWarning: `Applies "${brAct}" between VM "${vmTarget}" and Cloud Run service "${svcName}" in "${reg}".`,
+        };
+      }
+      if (rawUrl.includes('/wave10/action')) {
+        const w10Act = String(body.action || 'EXECUTE_FRONTIER_DB_ACTION').toUpperCase();
+        const friendlyAct = w10Act.replace(/_/g, ' ');
+        const reg = body.region || body.location || 'us-central1';
+        const targetObj =
+          body.instanceId ||
+          body.databaseId ||
+          body.graphName ||
+          body.datasetId ||
+          body.tableId ||
+          body.collectionId ||
+          body.name ||
+          projectId;
+        const isDelete = w10Act.includes('DELETE') || w10Act.includes('DROP') || w10Act.includes('DESTROY');
+        return {
+          gateType: isDelete ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `${ isDelete ? 'Delete' : 'Execute' } Spanner Graph / Frontier DB Action "${friendlyAct}" on "${targetObj}"?`,
+          laymanSummary: isDelete
+            ? `In Plain English: Permanently deletes database/graph resource "${targetObj}" (${reg}) in the Spanner Graph & Frontier Database Studio so any hourly instance or storage billing stops immediately.`
+            : `In Plain English: Runs "${friendlyAct}" on "${targetObj}" in "${reg}" using Google Cloud Spanner Graph (ISO GQL), BigQuery Vector/Graph, or Firestore REST APIs in project "${projectId}".`,
+          headerBadge: 'Cloud Spanner Graph & Frontier Database Studio Gatekeeper',
+          targetLabel: 'Target Spanner Graph / Frontier DB Resource',
+          resourceKind: `Spanner Graph & Frontier DB (spanner.googleapis.com / bigquery.googleapis.com · ${w10Act})`,
+          targetName: `${targetObj} (${reg})`,
+          location: reg,
+          projectId,
+          method: w10Act,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Execute "${friendlyAct}"`,
+          cancelToast: `Frontier Database action "${friendlyAct}" cancelled.`,
+          whatHappensNext: `1. Connects to spanner.googleapis.com/v1 or bigquery.googleapis.com/bigquery/v2 in project "${projectId}".\n2. Executes "${friendlyAct}" targeting "${targetObj}" in "${reg}".\n3. Verifies schema/instance convergence and returns the live query or DDL receipt.`,
+          costWarning: `FRONTIER DB BILLING NOTICE: BigQuery Graph/SQL and Firestore include generous Always-Free tiers ($0.00); Cloud Spanner instances bill per 100 Processing Units (~$0.09/hr after the 90-day free trial).`,
+          impactWarning: `Executes "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/quantum-nexus/action')) {
+        const qAct = String(body.action || 'EXECUTE_QUANTUM_KMS_ACTION').toUpperCase();
+        const friendlyAct = qAct.replace(/_/g, ' ');
+        const reg = body.region || body.location || 'global';
+        const targetObj =
+          body.keyName ||
+          body.keyRing ||
+          body.serviceName ||
+          body.policyName ||
+          body.name ||
+          projectId;
+        const isDelete = qAct.includes('DELETE') || qAct.includes('DESTROY') || qAct.includes('REVOKE');
+        return {
+          gateType: isDelete ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Post-Quantum KMS & Sovereign Security Action "${friendlyAct}" on "${targetObj}"?`,
+          laymanSummary: `In Plain English: Runs "${friendlyAct}" on "${targetObj}" (${reg}) in the Quantum-Resilient & Sovereign KMS Studio (such as provisioning NIST FIPS 203/204 ML-KEM / ML-DSA Cloud KMS keys, rotating cryptographic versions, or enforcing sovereign perimeter policies).`,
+          headerBadge: 'Quantum-Resilient & Sovereign Cloud KMS Gatekeeper',
+          targetLabel: 'Target Cloud KMS KeyRing / Sovereign Resource',
+          resourceKind: `Cloud KMS Post-Quantum & Sovereign Studio (cloudkms.googleapis.com/v1 · ${qAct})`,
+          targetName: `${targetObj} (${reg})`,
+          location: reg,
+          projectId,
+          method: qAct,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Run "${friendlyAct}"`,
+          cancelToast: `Quantum KMS action "${friendlyAct}" cancelled.`,
+          whatHappensNext: `1. Authenticates against cloudkms.googleapis.com/v1 /iam.googleapis.com/v1 in project "${projectId}".\n2. Applies "${friendlyAct}" on "${targetObj}" in "${reg}".\n3. Verifies cryptographic key state and logs the audit receipt.`,
+          costWarning: `CLOUD KMS PRICING NOTICE: Cloud KMS software key versions cost $0.06/version-month (PQC/HSM keys follow standard Cloud KMS pricing; key rings and IAM policies are $0.00/mo).`,
+          impactWarning: `Executes "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/data-engineer/action')) {
+        const deAct = String(body.action || 'EXECUTE_DATA_PIPELINE_ACTION').toUpperCase();
+        const friendlyAct = deAct.replace(/_/g, ' ');
+        const reg = body.region || body.location || 'us-central1';
+        const targetObj =
+          body.pipelinePrefix ||
+          body.datasetId ||
+          body.tableId ||
+          body.bucketName ||
+          body.catalogId ||
+          body.jobName ||
+          body.name ||
+          projectId;
+        const isDelete = deAct.includes('DELETE') || deAct.includes('DROP') || deAct.includes('PURGE');
+        return {
+          gateType: isDelete ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Medallion Lakehouse & Data Engineering Action "${friendlyAct}" on "${targetObj}"?`,
+          laymanSummary: isDelete
+            ? `In Plain English: Permanently deletes data pipeline / lakehouse asset "${targetObj}" in "${reg}" so any associated BigQuery or Cloud Storage billing stops.`
+            : `In Plain English: Runs data engineering pipeline operation "${friendlyAct}" on "${targetObj}" in "${reg}" (such as provisioning Bronze/Silver/Gold Medallion BigQuery datasets, running SQL ELT transforms, or registering Apache Iceberg tables).`,
+          headerBadge: 'Data Engineering & Medallion Lakehouse Studio Gatekeeper',
+          targetLabel: 'Target Medallion Pipeline / Lakehouse Asset',
+          resourceKind: `Data Engineering & Medallion ELT (bigquery.googleapis.com · biglake.v1 · ${deAct})`,
+          targetName: `${targetObj} (${reg})`,
+          location: reg,
+          projectId,
+          method: deAct,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Run "${friendlyAct}"`,
+          cancelToast: `Data Engineering action "${friendlyAct}" cancelled.`,
+          whatHappensNext: `1. Connects to BigQuery / BigLake / Cloud Storage REST APIs in "${reg}" for project "${projectId}".\n2. Executes "${friendlyAct}" on "${targetObj}".\n3. Verifies table/dataset convergence and updates the Data Engineering Studio lineage view.`,
+          costWarning: `BIGQUERY & LAKEHOUSE FREE TIER: BigQuery includes 10 GiB/mo free storage and 1 TiB/mo free SQL querying; Cloud Storage includes 5 GB/mo US Standard free storage.`,
+          impactWarning: `Executes "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/managed-spark/action')) {
+        const spAct = String(body.action || 'EXECUTE_MANAGED_SPARK_ACTION').toUpperCase();
+        const friendlyAct = spAct.replace(/_/g, ' ');
+        const reg = body.region || body.location || 'us-central1';
         const targetObj =
           body.batchId ||
           body.sessionId ||
           body.templateId ||
           body.clusterName ||
-          body.instanceId ||
-          body.databaseId ||
-          body.datasetId ||
-          body.tableId ||
-          body.bucketName ||
           body.stagingBucket ||
-          body.keyName ||
+          body.datasetId ||
+          projectId;
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Managed Spark 3.5 Action "${friendlyAct}" on "${targetObj}" (${reg})?`,
+          laymanSummary: `In Plain English: Runs "${friendlyAct}" on "${targetObj}" in region "${reg}" via Google Cloud Dataproc Serverless / Managed Spark (dataproc.googleapis.com/v1).`,
+          headerBadge: 'Managed Service for Apache Spark & Serverless Studio Gatekeeper',
+          targetLabel: 'Target Serverless Spark Workload / Template / IAM Binding',
+          resourceKind: `Managed Spark 3.5 (dataproc.googleapis.com/v1 · ${spAct})`,
+          targetName: `${targetObj} (${reg})`,
+          location: reg,
+          projectId,
+          method: spAct,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Execute "${friendlyAct}"`,
+          cancelToast: `Managed Spark action "${friendlyAct}" cancelled.`,
+          whatHappensNext: `1. Authenticates against dataproc.googleapis.com/v1 in region "${reg}" for project "${projectId}".\n2. Executes "${friendlyAct}" on "${targetObj}".\n3. Updates the Managed Spark Studio inventory.`,
+          costWarning: `SPARK BILLING NOTICE: Session Templates, IAM bindings, and GCS script staging cost $0.00/mo; Serverless Spark batches/sessions bill per-second only while active ($0.00/hr idle).`,
+          impactWarning: `Executes "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/aws-azure-parity/action')) {
+        const pAct = String(body.action || 'EXECUTE_PARITY_BRIDGE_ACTION').toUpperCase();
+        const friendlyAct = pAct.replace(/_/g, ' ');
+        const reg = body.region || body.location || 'us-central1';
+        const targetObj =
+          body.slug ||
           body.groupName ||
+          body.moduleId ||
+          body.pipeId ||
+          body.shareId ||
+          body.brandId ||
           body.name ||
           projectId;
-        const isDelete = act.includes('DELETE') || act.includes('DROP') || act.includes('DESTROY');
         return {
-          gateType: isDelete ? 'DELETE' : 'ONE_TAP_CLOUD_ACTION',
+          gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
-          title: `${friendlyAct}: Apply on "${targetObj}" (${studioLabel})?`,
-          laymanSummary: `In Plain English: You clicked "${friendlyAct}" inside the ${studioLabel}. Clicking confirm runs this action directly on "${targetObj}" in your Google Cloud project "${projectId}" and updates the live dashboard state immediately.`,
-          headerBadge: `${studioLabel} Gatekeeper`,
-          targetLabel: `Target Resource (${studioLabel})`,
-          resourceKind: `${studioLabel} · ${act || 'ACTION'}`,
-          targetName: String(targetObj),
-          location: body.region || body.location || 'US / Global',
+          title: `Execute AWS & Azure Enterprise Parity Action "${friendlyAct}" on "${targetObj}"?`,
+          laymanSummary: `In Plain English: Configures multi-cloud parity capability "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}" — mapping familiar AWS/Azure workflows (such as Resource Groups, EventBridge Pipes, RAM Resource Shares, or Bedrock/Foundry AI Guardrails) onto native Google Cloud APIs.`,
+          headerBadge: 'AWS & Azure Enterprise Parity Studio Gatekeeper',
+          targetLabel: 'Target Multi-Cloud Parity Resource / Group',
+          resourceKind: `AWS & Azure Enterprise Parity Bridge (${pAct})`,
+          targetName: `${targetObj} (${reg})`,
+          location: reg,
           projectId,
-          method: act || 'EXECUTE STUDIO ACTION',
+          method: pAct,
           endpoint: rawUrl,
-          confirmLabel: `Confirm & Run "${friendlyAct}"`,
-          cancelToast: `Action "${friendlyAct}" cancelled.`,
-          whatHappensNext: `1. Connects to Google Cloud APIs for project "${projectId}" (${studioLabel}).\n2. Executes "${friendlyAct}" targeting "${targetObj}" and records the result in the Flight Recorder.`,
-          costWarning: `BILLING & COST NOTICE: Dataproc Serverless batches incur $0.00/hr idle cost and bill only per-second for active DCU-hours and shuffle storage during execution; IAM & Session Template configurations cost $0.00/mo.`,
-          impactWarning: `Runs "${friendlyAct}" on "${targetObj}" in project "${projectId}".`,
+          confirmLabel: `Confirm & Execute "${friendlyAct}"`,
+          cancelToast: `AWS/Azure Parity action "${friendlyAct}" cancelled.`,
+          whatHappensNext: `1. Authenticates against Google Cloud control-plane APIs for "${projectId}".\n2. Applies multi-cloud parity configuration "${friendlyAct}" on "${targetObj}" (${reg}).\n3. Updates the AWS & Azure Parity Studio inventory and Flight Recorder.`,
+          costWarning: `ZERO BRIDGE OVERHEAD ($0.00/MO): Logical Resource Groups, IAM conditional shares, and parity routing rules incur $0.00/mo in management fees.`,
+          impactWarning: `Applies "${friendlyAct}" on "${targetObj}" in project "${projectId}".`,
         };
       }
     }
@@ -4704,6 +6071,7 @@ function CloudPulseCockpit() {
   const [errorBanner, setRawErrorBanner] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [pendingDeleteQueue, setPendingDeleteQueue] = useState([]);
+  const [pendingCrossTabNav, setPendingCrossTabNav] = useState(null);
   const toastTimerRef = useRef(null);
   const errorTimerRef = useRef(null);
 
@@ -4799,6 +6167,77 @@ function CloudPulseCockpit() {
     CLOUD_SOC: 'Autonomous Cloud SOC & SOAR War-Room',
     DOCS_GUIDE: 'Interactive Architecture & API Guide',
   };
+
+  const SUBTAB_DISPLAY_LABELS = {
+    BUCKETS: 'Bucket Governance (M01)',
+    OBJECTS: 'Object Workbench (M02)',
+    S3_COMPATIBLE_IMPORT: 'S3 / MinIO / Ceph Importer (M03)',
+    FINOPS_LIFECYCLE: '4-Tier Lifecycle FinOps (M04)',
+    WORM_LOCK: 'SEC 17a-4 WORM Lock (M05)',
+    DLP_XRAY: 'RAM DLP Secret & PII X-Ray (M06)',
+    TABLES_SQL: 'SQL Query Workbench & Optimizer',
+    TIME_TRAVEL: '7-Day Time-Travel & Snapshot Restore',
+    LINEAGE_FINOPS: 'Slot FinOps & Column Lineage',
+    METASTORE_CATALOGS: 'BigLake Metastore & Iceberg Catalogs',
+    ICEBERG_50_MATRIX: '50-Feature Lakehouse Matrix',
+    MEDALLION_ELT: 'Bronze-Silver-Gold Medallion ELT',
+    SERVERLESS_SPARK: 'Serverless Spark Pipeline Builder',
+    SERVERLESS_BATCHES: 'Serverless Spark 3.5 Batches',
+    SPARK_CONNECT_NOTEBOOKS: 'Spark Connect & PySpark IDE',
+    DIAGNOSTICS_RCA: 'SparkApplications 3-Pillar RCA & Logs',
+    KNOWLEDGE_LINEAGE_BIGFRAMES: 'Lightning Engine, BigFrames v2 & Lineage',
+    IAM_SURGEON: 'Autonomous IAM Least-Privilege Surgeon',
+    TIME_MACHINE: 'IAM Policy Time-Machine & Drift Rollback',
+    SECRETS_KMS_WAF: 'Secret Manager Lifecycle & KMS Vault',
+    SLO_BURN_AND_RCA: '14.4x SLO Burn Gate & Change Correlator',
+    TOXIC_GRAPH: 'Toxic Combination Attack Graph & SOAR',
+    FLEET_DEPLOY: 'GKE Autopilot & Spot GPU Fleet',
+    TRIGGER_WIZARD: 'Eventarc 130+ Service Trigger Wizard',
+    CLOUD_BUILD_GITHUB: 'GitHub OIDC & SLSA-3 Cloud Build',
+    TOPOLOGY: 'App Hub & 4-Layer Cloud Topology Studio',
+    TERRAFORM: 'Reverse-Terraform .tf Exporter',
+  };
+
+  const activeSubTabsRef = useRef({});
+  useEffect(() => {
+    activeSubTabsRef.current = {
+      CLOUD_STORAGE: storageSubTab,
+      BIGQUERY_STUDIO: bigQuerySubTab,
+      BIGLAKE_STUDIO: bigLakeSubTab,
+      DATA_ENGINEER_STUDIO: dataEngineerSubTab,
+      MANAGED_SPARK_STUDIO: managedSparkSubTab,
+      SOVEREIGN_STUDIO: sovereignSubTab,
+      INNOVATION_LAB: innovationSubTab,
+      SRE_WAR_ROOM: sreSubTab,
+      GKE_STUDIO: gkeSubTab,
+      FUNCTIONS_STUDIO: functionsSubTab,
+      WAVE9_STUDIO: wave9SubTab,
+      AWS_AZURE_PARITY: awsAzureSubTab,
+      ALIBABA_HUAWEI_PARITY: alibabaHuaweiSubTab,
+      RECYCLE_BIN: recycleBinCategory,
+    };
+  }, [
+    storageSubTab,
+    bigQuerySubTab,
+    bigLakeSubTab,
+    dataEngineerSubTab,
+    managedSparkSubTab,
+    sovereignSubTab,
+    innovationSubTab,
+    sreSubTab,
+    gkeSubTab,
+    functionsSubTab,
+    wave9SubTab,
+    awsAzureSubTab,
+    alibabaHuaweiSubTab,
+    recycleBinCategory,
+  ]);
+
+  const resolveActiveSubTabLabel = useCallback((tabId) => {
+    const subId = activeSubTabsRef.current?.[tabId];
+    if (!subId) return null;
+    return SUBTAB_DISPLAY_LABELS[subId] || subId;
+  }, []);
 
   const pulseSpotlightTargetDom = useCallback((spec = {}) => {
     const clearExistingHighlight = () => {
@@ -5084,7 +6523,7 @@ function CloudPulseCockpit() {
     [pulseSpotlightTargetDom]
   );
 
-  const handleOpenBigQuerySql = useCallback(
+  const executeOpenBigQuerySql = useCallback(
     (sqlText, contextLabel = 'SQL Query Workbench & Optimizer') => {
       const prevTab = activeTabRef.current;
       if (sqlText) {
@@ -5106,7 +6545,34 @@ function CloudPulseCockpit() {
     [triggerCrossUiSpotlight]
   );
 
-  const handleScrollToApisWithSpotlight = useCallback(() => {
+  const handleOpenBigQuerySql = useCallback(
+    (sqlText, contextLabel = 'SQL Query Workbench & Optimizer', options = {}) => {
+      const prevTab = activeTabRef.current;
+      const prevSubLabel = resolveActiveSubTabLabel(prevTab);
+      if (
+        options?.skipConfirm ||
+        (prevTab === 'BIGQUERY_STUDIO' &&
+          activeSubTabsRef.current?.BIGQUERY_STUDIO === 'TABLES_SQL')
+      ) {
+        executeOpenBigQuerySql(sqlText, contextLabel);
+        return;
+      }
+      setPendingCrossTabNav({
+        fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+        fromSubTabTitle: prevSubLabel,
+        toStudioTitle: STUDIO_DISPLAY_NAMES.BIGQUERY_STUDIO,
+        toSubTabTitle: contextLabel || 'SQL Query Workbench & Optimizer',
+        actionLabel: 'Open Target in BigQuery SQL Studio',
+        targetResourceLabel: 'Pre-Seeded BigQuery SQL Query',
+        payloadPreview: sqlText ? String(sqlText).trim().slice(0, 260) : null,
+        hasUnsavedWarning: Boolean(options?.hasUnsavedWarning),
+        onConfirm: () => executeOpenBigQuerySql(sqlText, contextLabel),
+      });
+    },
+    [executeOpenBigQuerySql, resolveActiveSubTabLabel]
+  );
+
+  const executeScrollToApisWithSpotlight = useCallback(() => {
     const prevTab = activeTabRef.current;
     if (prevTab !== 'OVERVIEW') {
       setActiveTab('OVERVIEW');
@@ -5120,66 +6586,59 @@ function CloudPulseCockpit() {
     });
   }, [triggerCrossUiSpotlight]);
 
-  const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
-    if (!tabId) return;
-    const prevTab = activeTabRef.current;
-    setStudioSubTabNonce((n) => n + 1);
-    if (tabId === 'TIME_MACHINE') {
-      setSovereignSubTab('TIME_MACHINE');
-      setActiveTab('SOVEREIGN_STUDIO');
-      triggerCrossUiSpotlight({
-        fromTab: prevTab,
-        targetTab: 'SOVEREIGN_STUDIO',
-        targetSubTab: 'TIME_MACHINE',
-        targetLabel: 'IAM & Sovereign Studio → IAM Policy Time-Machine',
-        badgeText: 'IAM Policy Time-Machine',
+  const handleScrollToApisWithSpotlight = useCallback(
+    (options = {}) => {
+      const prevTab = activeTabRef.current;
+      if (options?.skipConfirm || prevTab === 'OVERVIEW') {
+        executeScrollToApisWithSpotlight();
+        return;
+      }
+      setPendingCrossTabNav({
+        fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+        fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+        toStudioTitle: STUDIO_DISPLAY_NAMES.OVERVIEW,
+        toSubTabTitle: 'Emergency Paid API Kill-Switch',
+        actionLabel: 'Open Emergency Paid API Kill-Switch',
+        targetResourceLabel: 'Project Paid API Governance',
+        payloadPreview: null,
+        onConfirm: () => executeScrollToApisWithSpotlight(),
       });
-      return;
+    },
+    [executeScrollToApisWithSpotlight, resolveActiveSubTabLabel]
+  );
+
+  const resolveNavigationTargetMeta = useCallback((tabId, subTab, extraTarget = null) => {
+    if (tabId === 'TIME_MACHINE') {
+      return {
+        normalizedTab: 'SOVEREIGN_STUDIO',
+        resolvedSubTab: 'TIME_MACHINE',
+        toStudioTitle: STUDIO_DISPLAY_NAMES.SOVEREIGN_STUDIO,
+        toSubTabTitle: SUBTAB_DISPLAY_LABELS.TIME_MACHINE,
+      };
     }
     if (tabId === 'ZOMBIE_HUNTER') {
-      setActiveTab('FINOPS');
-      setTimeout(() => {
-        document
-          .getElementById('finops-zombie-reaper-section')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.dispatchEvent(
-          new CustomEvent('cloudpulse:scan-zombies', {
-            detail: { projectId: selectedProjectId },
-          })
-        );
-      }, 150);
-      triggerCrossUiSpotlight({
-        fromTab: prevTab,
-        targetTab: 'FINOPS',
-        targetElementId: 'finops-zombie-reaper-section',
-        targetLabel: 'FinOps Studio → Idle VM & Zombie Resource Reaper',
-        badgeText: 'Zombie Resource Reaper',
-      });
-      return;
+      return {
+        normalizedTab: 'FINOPS',
+        resolvedSubTab: 'ZOMBIE_HUNTER',
+        toStudioTitle: STUDIO_DISPLAY_NAMES.FINOPS,
+        toSubTabTitle: 'Idle VM & Zombie Resource Reaper',
+      };
     }
     if (tabId === 'SECRETS_KMS') {
-      setSovereignSubTab('SECRETS_KMS_WAF');
-      setActiveTab('SOVEREIGN_STUDIO');
-      triggerCrossUiSpotlight({
-        fromTab: prevTab,
-        targetTab: 'SOVEREIGN_STUDIO',
-        targetSubTab: 'SECRETS_KMS_WAF',
-        targetLabel: 'IAM & Sovereign Studio → Secret Manager & KMS Vault',
-        badgeText: 'Secret Manager & KMS Vault',
-      });
-      return;
+      return {
+        normalizedTab: 'SOVEREIGN_STUDIO',
+        resolvedSubTab: 'SECRETS_KMS_WAF',
+        toStudioTitle: STUDIO_DISPLAY_NAMES.SOVEREIGN_STUDIO,
+        toSubTabTitle: SUBTAB_DISPLAY_LABELS.SECRETS_KMS_WAF,
+      };
     }
     if (tabId === 'IAM_SURGEON') {
-      setSovereignSubTab('IAM_SURGEON');
-      setActiveTab('SOVEREIGN_STUDIO');
-      triggerCrossUiSpotlight({
-        fromTab: prevTab,
-        targetTab: 'SOVEREIGN_STUDIO',
-        targetSubTab: 'IAM_SURGEON',
-        targetLabel: 'IAM & Sovereign Studio → Autonomous IAM Surgeon',
-        badgeText: 'Autonomous IAM Surgeon',
-      });
-      return;
+      return {
+        normalizedTab: 'SOVEREIGN_STUDIO',
+        resolvedSubTab: 'IAM_SURGEON',
+        toStudioTitle: STUDIO_DISPLAY_NAMES.SOVEREIGN_STUDIO,
+        toSubTabTitle: SUBTAB_DISPLAY_LABELS.IAM_SURGEON,
+      };
     }
     const innovationSubTabAliases = {
       APPHUB_GDC: 'TOPOLOGY',
@@ -5208,17 +6667,21 @@ function CloudPulseCockpit() {
       Boolean(innovationSubTabAliases[tabId]) || isDirectPersonaSubTab;
     const resolvedSubTab = isDirectInnovationSubTab
       ? subTab || innovationSubTabAliases[tabId] || tabId
+      : tabId === 'BIGLAKE_ICEBERG'
+      ? subTab || 'METASTORE_CATALOGS'
+      : tabId === 'DATA_PIPELINES'
+      ? subTab || 'MEDALLION_ELT'
       : subTab;
 
     const rawNormalizedTab = isDirectInnovationSubTab
       ? 'INNOVATION_LAB'
-      : tabId === 'DATA_ENGINEER'
+      : tabId === 'DATA_ENGINEER' || tabId === 'DATA_PIPELINES'
       ? 'DATA_ENGINEER_STUDIO'
       : tabId === 'MANAGED_SPARK' || tabId === 'SPARK' || tabId === 'DATAPROC_SPARK'
       ? 'MANAGED_SPARK_STUDIO'
       : tabId === 'BIGQUERY' || tabId === 'BIGQUERY_LAKEHOUSE'
       ? 'BIGQUERY_STUDIO'
-      : tabId === 'BIGLAKE'
+      : tabId === 'BIGLAKE' || tabId === 'BIGLAKE_ICEBERG'
       ? 'BIGLAKE_STUDIO'
       : tabId === 'CLOUD_SQL'
       ? 'CLOUD_SQL_STUDIO'
@@ -5281,6 +6744,84 @@ function CloudPulseCockpit() {
     const normalizedTab = VALID_TOP_LEVEL_TABS.has(rawNormalizedTab)
       ? rawNormalizedTab
       : 'INNOVATION_LAB';
+    const toStudioTitle = STUDIO_DISPLAY_NAMES[normalizedTab] || normalizedTab;
+    const toSubTabTitle = resolvedSubTab
+      ? SUBTAB_DISPLAY_LABELS[resolvedSubTab] || resolvedSubTab
+      : extraTarget?.targetLabel || null;
+    return {
+      normalizedTab,
+      resolvedSubTab,
+      toStudioTitle,
+      toSubTabTitle,
+    };
+  }, []);
+
+  const executeNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
+    if (!tabId) return;
+    const prevTab = activeTabRef.current;
+    setStudioSubTabNonce((n) => n + 1);
+    if (tabId === 'TIME_MACHINE') {
+      setSovereignSubTab('TIME_MACHINE');
+      setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'TIME_MACHINE',
+        targetLabel: 'IAM & Sovereign Studio → IAM Policy Time-Machine',
+        badgeText: 'IAM Policy Time-Machine',
+      });
+      return;
+    }
+    if (tabId === 'ZOMBIE_HUNTER') {
+      setActiveTab('FINOPS');
+      setTimeout(() => {
+        document
+          .getElementById('finops-zombie-reaper-section')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:scan-zombies', {
+            detail: { projectId: selectedProjectId },
+          })
+        );
+      }, 150);
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'FINOPS',
+        targetElementId: 'finops-zombie-reaper-section',
+        targetLabel: 'FinOps Studio → Idle VM & Zombie Resource Reaper',
+        badgeText: 'Zombie Resource Reaper',
+      });
+      return;
+    }
+    if (tabId === 'SECRETS_KMS') {
+      setSovereignSubTab('SECRETS_KMS_WAF');
+      setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'SECRETS_KMS_WAF',
+        targetLabel: 'IAM & Sovereign Studio → Secret Manager & KMS Vault',
+        badgeText: 'Secret Manager & KMS Vault',
+      });
+      return;
+    }
+    if (tabId === 'IAM_SURGEON') {
+      setSovereignSubTab('IAM_SURGEON');
+      setActiveTab('SOVEREIGN_STUDIO');
+      triggerCrossUiSpotlight({
+        fromTab: prevTab,
+        targetTab: 'SOVEREIGN_STUDIO',
+        targetSubTab: 'IAM_SURGEON',
+        targetLabel: 'IAM & Sovereign Studio → Autonomous IAM Surgeon',
+        badgeText: 'Autonomous IAM Surgeon',
+      });
+      return;
+    }
+    const { normalizedTab, resolvedSubTab } = resolveNavigationTargetMeta(
+      tabId,
+      subTab,
+      extraTarget
+    );
 
     if (resolvedSubTab && normalizedTab === 'SOVEREIGN_STUDIO') {
       setSovereignSubTab(resolvedSubTab);
@@ -5378,7 +6919,7 @@ function CloudPulseCockpit() {
     const displaySubTab =
       tabId === 'APPHUB_GDC' || resolvedSubTab === 'TOPOLOGY'
         ? 'App Hub & 4-Layer Cloud Topology Studio'
-        : resolvedSubTab;
+        : SUBTAB_DISPLAY_LABELS[resolvedSubTab] || resolvedSubTab;
     triggerCrossUiSpotlight({
       fromTab: prevTab,
       targetTab: normalizedTab,
@@ -5401,7 +6942,50 @@ function CloudPulseCockpit() {
         extraTarget?.ruleName ||
         studioTitle,
     });
-  }, [selectedProjectId, triggerCrossUiSpotlight]);
+  }, [selectedProjectId, triggerCrossUiSpotlight, resolveNavigationTargetMeta]);
+
+  const handleNavigateStudioTab = useCallback(
+    (tabId, subTab, extraTarget = null, options = {}) => {
+      if (!tabId) return;
+      const prevTab = activeTabRef.current;
+      const { normalizedTab, resolvedSubTab, toStudioTitle, toSubTabTitle } =
+        resolveNavigationTargetMeta(tabId, subTab, extraTarget);
+      const currentSubId = activeSubTabsRef.current?.[prevTab] || null;
+      const isSameDestination =
+        normalizedTab === prevTab &&
+        (!resolvedSubTab || resolvedSubTab === currentSubId);
+
+      if (options?.skipConfirm || isSameDestination) {
+        executeNavigateStudioTab(tabId, subTab, extraTarget);
+        return;
+      }
+
+      const targetUriOrContext = extraTarget?.bucketName
+        ? `gs://${extraTarget.bucketName}${
+            extraTarget.objectName ? `/${extraTarget.objectName}` : ''
+          }`
+        : extraTarget?.ruleName
+        ? `Firewall Rule: ${extraTarget.ruleName}`
+        : extraTarget?.targetLabel || null;
+
+      setPendingCrossTabNav({
+        fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+        fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+        toStudioTitle,
+        toSubTabTitle,
+        actionLabel: `Switch to ${toStudioTitle}`,
+        targetResourceLabel: targetUriOrContext,
+        payloadPreview: null,
+        hasUnsavedWarning: Boolean(extraTarget?.hasUnsavedWarning || options?.hasUnsavedWarning),
+        onConfirm: () => executeNavigateStudioTab(tabId, subTab, extraTarget),
+      });
+    },
+    [
+      executeNavigateStudioTab,
+      resolveNavigationTargetMeta,
+      resolveActiveSubTabLabel,
+    ]
+  );
 
   // Listen for custom focus events across Pipeline Bars & Studios so intra-studio deep-links also spotlight their target
   useEffect(() => {
@@ -5444,6 +7028,26 @@ function CloudPulseCockpit() {
         handleNavigateStudioTab(studioId, subTab, extraTarget);
       }
     };
+    const handleRequestCrossTabNavModal = (evt) => {
+      const detail = evt?.detail;
+      if (detail && typeof detail.onConfirm === 'function') {
+        const prevTab = activeTabRef.current;
+        setPendingCrossTabNav({
+          fromStudioTitle:
+            detail.fromStudioTitle || STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+          fromSubTabTitle:
+            detail.fromSubTabTitle || resolveActiveSubTabLabel(prevTab),
+          toStudioTitle:
+            detail.toStudioTitle || STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+          toSubTabTitle: detail.toSubTabTitle || null,
+          actionLabel: detail.actionLabel || 'Switch Workspace View',
+          targetResourceLabel: detail.targetResourceLabel || null,
+          payloadPreview: detail.payloadPreview || null,
+          hasUnsavedWarning: Boolean(detail.hasUnsavedWarning),
+          onConfirm: detail.onConfirm,
+        });
+      }
+    };
 
     // In-studio sub-tab clicks swap panels in-place without triggering cross-UI scroll jumps or banners
     const handleWorkspaceSubTabClick = () => {};
@@ -5452,15 +7056,23 @@ function CloudPulseCockpit() {
     window.addEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
     window.addEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
     window.addEventListener('cloudpulse:cross-ui-navigate', handleCrossUiNavigate);
+    window.addEventListener(
+      'cloudpulse:request-cross-tab-nav',
+      handleRequestCrossTabNavModal
+    );
     document.addEventListener('click', handleWorkspaceSubTabClick);
     return () => {
       window.removeEventListener('cloudpulse:startup-10x-focus', handleStartupFocus);
       window.removeEventListener('cloudpulse:wave9-subtab', handleWave9Focus);
       window.removeEventListener('cloudpulse:functions-focus', handleFunctionsFocus);
       window.removeEventListener('cloudpulse:cross-ui-navigate', handleCrossUiNavigate);
+      window.removeEventListener(
+        'cloudpulse:request-cross-tab-nav',
+        handleRequestCrossTabNavModal
+      );
       document.removeEventListener('click', handleWorkspaceSubTabClick);
     };
-  }, [triggerCrossUiSpotlight, handleNavigateStudioTab]);
+  }, [triggerCrossUiSpotlight, handleNavigateStudioTab, resolveActiveSubTabLabel]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
@@ -6115,7 +7727,7 @@ function CloudPulseCockpit() {
     return preferred || String(rawCmd || '').trim();
   };
 
-  const handleRunInShell = (cmd) => {
+  const executeRunInShell = (cmd) => {
     const prevTab = activeTabRef.current;
     const cleanCmd = sanitizeExecutableCliForShell(cmd);
     setShellSeedCommand(cleanCmd);
@@ -6132,7 +7744,26 @@ function CloudPulseCockpit() {
     });
   };
 
-  const handleOpenInLogsExplorer = (spec) => {
+  const handleRunInShell = (cmd, options = {}) => {
+    const prevTab = activeTabRef.current;
+    const cleanCmd = sanitizeExecutableCliForShell(cmd);
+    if (options?.skipConfirm || prevTab === 'LOGS_SHELL') {
+      executeRunInShell(cmd);
+      return;
+    }
+    setPendingCrossTabNav({
+      fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+      fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+      toStudioTitle: STUDIO_DISPLAY_NAMES.LOGS_SHELL,
+      toSubTabTitle: 'Interactive Cloud Shell Terminal',
+      actionLabel: 'Open & Execute in Cloud Shell Studio',
+      targetResourceLabel: 'gcloud / bq / gsutil CLI Command',
+      payloadPreview: cleanCmd ? `$ ${cleanCmd.slice(0, 220)}` : null,
+      onConfirm: () => executeRunInShell(cmd),
+    });
+  };
+
+  const executeOpenInLogsExplorer = (spec) => {
     const prevTab = activeTabRef.current;
     setLogExplorerSeedSpec({ ...spec, triggeredAt: Date.now() });
     if (spec?.gcloudCommand) {
@@ -6153,7 +7784,26 @@ function CloudPulseCockpit() {
     });
   };
 
-  const handleTestRuleOnGlobalMap = (seed) => {
+  const handleOpenInLogsExplorer = (spec, options = {}) => {
+    const prevTab = activeTabRef.current;
+    if (options?.skipConfirm || prevTab === 'LOGS_SHELL') {
+      executeOpenInLogsExplorer(spec);
+      return;
+    }
+    setPendingCrossTabNav({
+      fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+      fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+      toStudioTitle: STUDIO_DISPLAY_NAMES.LOGS_SHELL,
+      toSubTabTitle: 'Chrono-Logs Time-Machine & SRE Triage',
+      actionLabel: 'Open in Neural Chrono-Logs Explorer',
+      targetResourceLabel:
+        spec?.summary || spec?.regionId || spec?.category || 'Cloud Logging Forensic Query',
+      payloadPreview: spec?.filter || spec?.gcloudCommand || null,
+      onConfirm: () => executeOpenInLogsExplorer(spec),
+    });
+  };
+
+  const executeTestRuleOnGlobalMap = (seed) => {
     const prevTab = activeTabRef.current;
     setGlobalMapXRaySeed({ ...seed, nonce: Date.now() });
     setActiveTab('GLOBAL_MAP');
@@ -6175,7 +7825,28 @@ function CloudPulseCockpit() {
     });
   };
 
-  const handleOpenInVpcFirewallStudio = (seed) => {
+  const handleTestRuleOnGlobalMap = (seed, options = {}) => {
+    const prevTab = activeTabRef.current;
+    if (options?.skipConfirm || prevTab === 'GLOBAL_MAP') {
+      executeTestRuleOnGlobalMap(seed);
+      return;
+    }
+    const ruleTag = `${seed?.ruleName || 'Packet'} (${String(
+      seed?.protocol || 'tcp'
+    ).toUpperCase()}:${seed?.port || 22})`;
+    setPendingCrossTabNav({
+      fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+      fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+      toStudioTitle: STUDIO_DISPLAY_NAMES.GLOBAL_MAP,
+      toSubTabTitle: 'Live Firewall X-Ray Packet Debugger',
+      actionLabel: 'Trace Rule on 40-Region Global Map',
+      targetResourceLabel: ruleTag,
+      payloadPreview: null,
+      onConfirm: () => executeTestRuleOnGlobalMap(seed),
+    });
+  };
+
+  const executeOpenInVpcFirewallStudio = (seed) => {
     const prevTab = activeTabRef.current;
     setVpcStudioRuleSeed({ ...seed, nonce: Date.now() });
     setActiveTab('VPC_NETWORKS');
@@ -6196,7 +7867,27 @@ function CloudPulseCockpit() {
     });
   };
 
-  const handleOpenInCloudSoc = (seed) => {
+  const handleOpenInVpcFirewallStudio = (seed, options = {}) => {
+    const prevTab = activeTabRef.current;
+    if (options?.skipConfirm || prevTab === 'VPC_NETWORKS') {
+      executeOpenInVpcFirewallStudio(seed);
+      return;
+    }
+    setPendingCrossTabNav({
+      fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+      fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+      toStudioTitle: STUDIO_DISPLAY_NAMES.VPC_NETWORKS,
+      toSubTabTitle: seed?.ruleName
+        ? `Firewall Rule "${seed.ruleName}"`
+        : 'VPC Subnets & Firewall Rules',
+      actionLabel: 'Open in VPC & Firewall Rules Studio',
+      targetResourceLabel: seed?.ruleName || seed?.vpcName || 'VPC Firewall Policy',
+      payloadPreview: null,
+      onConfirm: () => executeOpenInVpcFirewallStudio(seed),
+    });
+  };
+
+  const executeOpenInCloudSoc = (seed) => {
     const prevTab = activeTabRef.current;
     setCloudSocSeed({ ...seed, nonce: Date.now() });
     setActiveTab('CLOUD_SOC');
@@ -6217,6 +7908,27 @@ function CloudPulseCockpit() {
     });
   };
 
+  const handleOpenInCloudSoc = (seed, options = {}) => {
+    const prevTab = activeTabRef.current;
+    if (options?.skipConfirm || prevTab === 'CLOUD_SOC') {
+      executeOpenInCloudSoc(seed);
+      return;
+    }
+    setPendingCrossTabNav({
+      fromStudioTitle: STUDIO_DISPLAY_NAMES[prevTab] || prevTab,
+      fromSubTabTitle: resolveActiveSubTabLabel(prevTab),
+      toStudioTitle: STUDIO_DISPLAY_NAMES.CLOUD_SOC,
+      toSubTabTitle:
+        SUBTAB_DISPLAY_LABELS[seed?.targetPillar || 'TOXIC_GRAPH'] ||
+        seed?.targetPillar ||
+        'Toxic Combination Attack Graph & SOAR',
+      actionLabel: 'Open in Cloud SOC & SOAR War-Room',
+      targetResourceLabel: seed?.ruleName || seed?.vpcName || 'VPC Security Perimeter',
+      payloadPreview: null,
+      onConfirm: () => executeOpenInCloudSoc(seed),
+    });
+  };
+
   const handleOpenProvision = (serviceType = 'COMPUTE_VM', locationSpec = null) => {
     setProvisionInitialService(serviceType);
     setProvisionInitialLocation(locationSpec);
@@ -6228,19 +7940,19 @@ function CloudPulseCockpit() {
     await fetchProjectOverview(selectedProjectId);
     setVmRefreshTrigger((c) => c + 1);
     if (serviceType === 'CLOUD_RUN') {
-      handleNavigateStudioTab('CLOUD_RUN');
+      handleNavigateStudioTab('CLOUD_RUN', null, null, { skipConfirm: true });
     } else if (serviceType === 'GKE_CLUSTER') {
-      handleNavigateStudioTab('GKE_STUDIO');
+      handleNavigateStudioTab('GKE_STUDIO', null, null, { skipConfirm: true });
     } else if (serviceType === 'CLOUD_SQL') {
-      handleNavigateStudioTab('CLOUD_SQL_STUDIO');
+      handleNavigateStudioTab('CLOUD_SQL_STUDIO', null, null, { skipConfirm: true });
     } else if (serviceType === 'GCS_BUCKET') {
-      handleNavigateStudioTab('CLOUD_STORAGE');
+      handleNavigateStudioTab('CLOUD_STORAGE', null, null, { skipConfirm: true });
     } else if (serviceType === 'BIGQUERY_DATASET') {
-      handleNavigateStudioTab('BIGQUERY_STUDIO');
+      handleNavigateStudioTab('BIGQUERY_STUDIO', null, null, { skipConfirm: true });
     } else if (serviceType === 'COMPUTE_VM') {
-      handleNavigateStudioTab('VM_SSH');
+      handleNavigateStudioTab('VM_SSH', null, null, { skipConfirm: true });
     } else if (serviceType === 'VPC_NETWORK' || serviceType === 'VPC_FIREWALL') {
-      handleNavigateStudioTab('VPC_NETWORKS');
+      handleNavigateStudioTab('VPC_NETWORKS', null, null, { skipConfirm: true });
     }
   };
 
@@ -7249,7 +8961,7 @@ function CloudPulseCockpit() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setActiveTab('DOCS_GUIDE')}
+                      onClick={() => handleNavigateStudioTab('DOCS_GUIDE')}
                       title="Open Interactive Architecture & API Reference"
                       className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-[#151a25] border border-zinc-200 dark:border-[#262e42] hover:border-blue-500/40 cursor-pointer shrink-0"
                     >
@@ -7836,6 +9548,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     initialSubTab={storageSubTab}
                     subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setStorageSubTab}
                     initialBucketName={storageTargetBucket}
                     initialObjectName={storageTargetObject}
                     onOpenProvision={handleOpenProvision}
@@ -8969,7 +10682,11 @@ function CloudPulseCockpit() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => handleNavigateStudioTab(tab.id)}
+                onClick={() =>
+                  handleNavigateStudioTab(tab.id, null, null, {
+                    skipConfirm: true,
+                  })
+                }
                 title={tab.tip}
                 className={`flex flex-col items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
                   isActive
@@ -8997,7 +10714,7 @@ function CloudPulseCockpit() {
           (r) => r.type === 'Compute Engine VM'
         )}
         onSelectTab={(tabId, subTab) => {
-          handleNavigateStudioTab(tabId, subTab);
+          handleNavigateStudioTab(tabId, subTab, null, { skipConfirm: true });
         }}
         onOpenCreateModal={(type) => {
           if (type === 'VM' || type === 'COMPUTE_VM')
@@ -9097,7 +10814,227 @@ function CloudPulseCockpit() {
         }}
       />
 
+      <CrossTabNavigationGuardModal
+        activeNav={pendingCrossTabNav}
+        onConfirm={() => {
+          const nav = pendingCrossTabNav;
+          setPendingCrossTabNav(null);
+          if (nav?.onConfirm) nav.onConfirm();
+        }}
+        onCancel={() => {
+          const nav = pendingCrossTabNav;
+          setPendingCrossTabNav(null);
+          if (nav?.onCancel) nav.onCancel();
+        }}
+      />
+
       <GlobalInnovationHoverExplainer />
+    </div>
+  );
+}
+
+/**
+ * CrossTabNavigationGuardModal:
+ * Intercepts cross-tab / cross-studio action buttons (such as "Open Target In: BigQuery SQL /
+ * BigLake Iceberg / Managed Spark 3.5 / Medallion ELT / RAM DLP X-Ray / S3 Import", "Browse in GCS →",
+ * "Run in Cloud Shell", etc.) to warn the user that clicking the button will switch them away
+ * from their current page into a different Studio or Sub-Tab. If they refuse ("Stay on This Page"),
+ * nothing changes and they remain on their current workspace.
+ */
+function CrossTabNavigationGuardModal({ activeNav, onConfirm, onCancel }) {
+  useEffect(() => {
+    if (!activeNav) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (onCancel) onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeNav, onCancel]);
+
+  if (!activeNav) return null;
+
+  const {
+    fromStudioTitle = 'Current Workspace',
+    fromSubTabTitle = null,
+    toStudioTitle = 'Destination Workspace',
+    toSubTabTitle = null,
+    actionLabel = 'Switch Workspace View',
+    targetResourceLabel = null,
+    payloadPreview = null,
+    hasUnsavedWarning = false,
+  } = activeNav;
+
+  const fromDisplayName = fromSubTabTitle
+    ? `${fromStudioTitle} · ${fromSubTabTitle}`
+    : fromStudioTitle;
+  const toDisplayName = toSubTabTitle
+    ? `${toStudioTitle} · ${toSubTabTitle}`
+    : toStudioTitle;
+  const toShortButtonLabel = toSubTabTitle || toStudioTitle;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cross-tab-nav-guard-title"
+      onClick={onCancel}
+      className="fixed inset-0 z-[195] bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl rounded-2xl border-2 border-amber-500/80 bg-white dark:bg-[#1a1c20] text-zinc-900 dark:text-zinc-100 shadow-2xl overflow-hidden font-sans animate-in fade-in zoom-in-95 duration-150"
+      >
+        {/* Top Warning Header */}
+        <div className="px-5 py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 text-white flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-black/25 border border-white/25 flex items-center justify-center shrink-0 mt-0.5">
+              <Layers className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-black/30 text-white border border-white/25">
+                  WORKSPACE SWITCH GUARD · LEAVING CURRENT PAGE
+                </span>
+              </div>
+              <h3
+                id="cross-tab-nav-guard-title"
+                className="text-sm sm:text-base font-extrabold mt-1 leading-snug"
+              >
+                Leave this page and switch to {toShortButtonLabel}?
+              </h3>
+              <p className="text-[11px] text-white/90 mt-0.5">
+                {actionLabel} will navigate away from your current workspace into a different UI view.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Body Content */}
+        <div className="p-5 space-y-4 text-xs">
+          {/* Unsaved File Edits Alert (if editing a file in Object Workbench) */}
+          {hasUnsavedWarning && (
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/40 text-red-900 dark:text-red-200 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="font-extrabold uppercase tracking-wider text-[10px] font-mono text-red-600 dark:text-red-400">
+                  Unsaved File Edits Detected in Code Editor
+                </div>
+                <p className="text-xs leading-relaxed">
+                  You have unsaved text modifications in the current editor. If you leave this page now without saving, your unsaved edits may be lost.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Visual From -> To Workspace Transition Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
+            {/* Current Workspace Card */}
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                  Current Page
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  STAY HERE IF REFUSED
+                </span>
+              </div>
+              <div>
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {fromStudioTitle}
+                </div>
+                {fromSubTabTitle && (
+                  <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    {fromSubTabTitle}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Arrow Connector */}
+            <div className="flex items-center justify-center py-1 sm:py-0">
+              <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Destination Workspace Card */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/45 flex flex-col justify-between gap-2">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Destination UI
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                  NEW TAB VIEW
+                </span>
+              </div>
+              <div>
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {toStudioTitle}
+                </div>
+                {toSubTabTitle && (
+                  <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 mt-0.5">
+                    {toSubTabTitle}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Target Context / Payload Preview */}
+          {(targetResourceLabel || payloadPreview) && (
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                <span className="font-bold uppercase tracking-wider text-zinc-500">
+                  Context Carried to New Workspace
+                </span>
+                {targetResourceLabel && (
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold truncate max-w-[280px]">
+                    {targetResourceLabel}
+                  </span>
+                )}
+              </div>
+              {payloadPreview && (
+                <pre className="p-2 rounded-lg bg-zinc-900 text-emerald-300 text-[10.5px] font-mono overflow-x-auto whitespace-pre-wrap max-h-24">
+                  {payloadPreview}
+                </pre>
+              )}
+            </div>
+          )}
+
+          {/* Plain-English Explanation */}
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+            Clicking <strong className="text-zinc-900 dark:text-white">Stay on This Page</strong> will cancel the tab switch and keep you on{' '}
+            <strong className="text-zinc-900 dark:text-white">{fromDisplayName}</strong>. Clicking{' '}
+            <strong className="text-blue-600 dark:text-blue-400">Switch to {toShortButtonLabel}</strong> will open{' '}
+            <strong className="text-zinc-900 dark:text-white">{toDisplayName}</strong> with a 1-click{' '}
+            <code className="font-mono text-[10.5px] px-1 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800">
+              &larr; Back
+            </code>{' '}
+            button at the top so you can return anytime.
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+            >
+              Stay on This Page (Cancel) [Esc]
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Switch to {toShortButtonLabel} &rarr;</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -9195,48 +11132,24 @@ function buildPlainEnglishModalSummary(descriptor = {}) {
     };
   }
 
+  const firstStep = String(whatHappensNext || '')
+    .split('\n')[0]
+    ?.replace(/^[0-9]+\.\s*/, '')
+    .trim();
+  const cleanImpact = String(impactWarning || '').trim();
+  const cleanTitle = String(title || '').replace(/\?$/, '').trim();
+
   let paragraph = '';
-  if (isDelete) {
-    if (combinedText.includes('firewall')) {
-      paragraph = `Think of a VPC Firewall Rule as a security guard rule at your network door. Deleting "${targetName}" removes that rule immediately — if it was opening a port, that port closes; if it was blocking an attacker IP, that block is lifted.`;
-    } else if (combinedText.includes('cloud run')) {
-      paragraph = `Deletes the serverless web app "${targetName}" in ${location}. Its public HTTPS link will immediately stop working (404 Not Found), and all future compute charges stop.`;
-    } else if (combinedText.includes('bucket') || combinedText.includes('storage')) {
-      paragraph = `Removes "${targetName}" from Google Cloud Storage in project "${projectId}". Unless Soft-Delete retention is active on the bucket, deleted files cannot be recovered once removed.`;
-    } else if (combinedText.includes('compute') || combinedText.includes('vm')) {
-      paragraph = `Permanently turns off and deletes virtual machine "${targetName}" (${location}) along with its attached boot drive so you stop paying hourly server charges.`;
-    } else if (combinedText.includes('secret')) {
-      paragraph = `Permanently shreds encrypted password/secret "${targetName}" from Google Cloud Secret Manager. Any app still trying to read this secret on startup will fail until updated.`;
-    } else if (combinedText.includes('dataset') || combinedText.includes('bigquery')) {
-      paragraph = `Deletes "${targetName}" from BigQuery in project "${projectId}". Any SQL dashboards or reports reading from it will stop working unless you restore it within BigQuery's 7-day Time-Travel window.`;
-    } else {
-      paragraph = `You are about to permanently remove "${targetName}" (${resourceKind}) from your Google Cloud project "${projectId}". Active billing for this resource stops immediately once deleted.`;
-    }
-  } else if (combinedText.includes('firewall') || combinedText.includes('quarantine')) {
-    paragraph = `Updates your Google Cloud network security wall for "${targetName}" in project "${projectId}". This takes effect across your VPC network in seconds at $0.00/mo and can be undone anytime from the VPC Firewall studio.`;
-  } else if (combinedText.includes('cloud armor') || combinedText.includes('waf')) {
-    paragraph = `Updates your Google Cloud Armor Web Application Firewall shield ("${targetName}") so malicious web requests (like SQL injection or bot floods) are blocked at Google's edge before reaching your servers.`;
-  } else if (combinedText.includes('cloud run') || combinedText.includes('/cloudrun/')) {
-    paragraph = `Updates or deploys your serverless Cloud Run application "${targetName}" in ${location}. Google Cloud seamlessly rolls out the change over HTTPS while keeping scale-to-zero ($0.00 when idle) active.`;
-  } else if (combinedText.includes('/vms/') || combinedText.includes('compute engine')) {
-    paragraph = `Sends a live power or configuration command (${method}) to virtual machine "${targetName}" in ${location} on project "${projectId}".`;
-  } else if (combinedText.includes('bigquery')) {
-    paragraph = `Runs this data warehouse action (${method}) on "${targetName}" in BigQuery for project "${projectId}". Note that Google Cloud gives every project 1 TB of free SQL querying and 10 GB of free storage every month.`;
-  } else if (combinedText.includes('storage') || combinedText.includes('bucket')) {
-    paragraph = `Updates your Cloud Storage bucket or file "${targetName}" in ${location} (${projectId}). Your existing files remain safe while the new storage setting or upload is applied.`;
-  } else if (combinedText.includes('iam') || combinedText.includes('service-account') || combinedText.includes('role')) {
-    paragraph = `Changes who has permission to access or deploy resources ("${targetName}") in project "${projectId}". IAM permission updates take effect globally within seconds and cost $0.00.`;
-  } else if (combinedText.includes('sql') || combinedText.includes('alloydb') || combinedText.includes('spanner')) {
-    paragraph = `Applies database operation "${method}" on "${targetName}" in ${location} (${projectId}). Review the cost box below before provisioning dedicated database instances.`;
-  } else if (combinedText.includes('gke') || combinedText.includes('kubernetes')) {
-    paragraph = `Runs Kubernetes operation "${method}" on "${targetName}" in ${location} (${projectId}).`;
+  if (cleanImpact && firstStep && !firstStep.includes(cleanImpact.slice(0, 28))) {
+    paragraph = `${cleanImpact} Specifically, ${firstStep.charAt(0).toLowerCase()}${firstStep.slice(1)}`;
+  } else if (cleanImpact) {
+    paragraph = cleanImpact;
+  } else if (firstStep) {
+    paragraph = `${cleanTitle ? `${cleanTitle}: ` : ''}${firstStep}`;
+  } else if (isDelete) {
+    paragraph = `Permanently deletes "${targetName}" (${resourceKind || 'Cloud Resource'}) in ${location} on project "${projectId}" and stops any associated runtime or storage billing.`;
   } else {
-    const cleanImpact = String(impactWarning || '').replace(/^Executes\s+/i, '');
-    paragraph = `You clicked "${method}" for "${targetName}" (${location}) in project "${projectId}". ${
-      cleanImpact
-        ? cleanImpact
-        : `Clicking confirm applies this change live in your Google Cloud account and logs a receipt in the Flight Recorder.`
-    }`;
+    paragraph = `Executes ${method || 'live configuration update'} on "${targetName}" (${resourceKind || location}) in project "${projectId}".`;
   }
 
   return {
@@ -9307,19 +11220,29 @@ function MandatoryDeleteConfirmationModal({
     .trim();
 
   if (String(resourceKind || '').includes('Secret Manager')) {
-    blastRadiusItems.push(
-      `Secret payload "${cleanTarget}" will NEVER revert to plaintext — encrypted bytes are permanently erased.`
-    );
+    if (!isOneTapAction) {
+      blastRadiusItems.push(
+        `Secret payload "${cleanTarget}" will NEVER revert to plaintext — encrypted bytes are permanently erased.`
+      );
+    } else {
+      blastRadiusItems.push(
+        `Hardware-encrypted AES-256 operation on "${cleanTarget}" via secretmanager.googleapis.com/v1.`
+      );
+    }
     const matchingRun = runServices.filter((svc) =>
       JSON.stringify(svc || {}).includes(cleanTarget)
     );
     if (matchingRun.length > 0) {
       blastRadiusItems.push(
-        `${matchingRun.length} Cloud Run service(s) (${matchingRun
-          .map((s) => s.name)
-          .join(', ')}) reference "${cleanTarget}" and will fail to start until healed!`
+        isOneTapAction
+          ? `${matchingRun.length} Cloud Run service(s) (${matchingRun
+              .map((s) => s.name)
+              .join(', ')}) mount secretKeyRef "${cleanTarget}".`
+          : `${matchingRun.length} Cloud Run service(s) (${matchingRun
+              .map((s) => s.name)
+              .join(', ')}) reference "${cleanTarget}" and will fail to start until healed!`
       );
-    } else if (runServices.length > 0) {
+    } else if (runServices.length > 0 && !isOneTapAction) {
       blastRadiusItems.push(
         `Scanned ${runServices.length} live Cloud Run service(s) in project "${projectId}" — verify no container mounts secretKeyRef "${cleanTarget}".`
       );
@@ -9361,10 +11284,15 @@ function MandatoryDeleteConfirmationModal({
     }
   }
 
+  const rkLower = `${resourceKind || ''} ${endpoint || ''} ${method || ''}`.toLowerCase();
+
   const effectiveWhatHappens =
     whatHappensNext ||
-    impactWarning ||
-    `This operation executes a live Google Cloud API call (${method}) against "${targetName}" in project "${projectId}".`;
+    `1. Authenticates against the Google Cloud REST control plane for "${resourceKind || 'Target Resource'}" in project "${projectId}" (${location || 'Global'}).\n2. Executes ${method || 'DELETE'} on "${targetName}".\n3. ${
+      impactWarning
+        ? String(impactWarning).replace(/^\d+\.\s*/, '')
+        : `Verifies resource state convergence and records the audit entry in the Flight Recorder.`
+    }`;
 
   const parsedExecutionSteps = String(effectiveWhatHappens || '')
     .split(/\n+|(?=\b[1-9]\.\s)/)
@@ -9376,11 +11304,41 @@ function MandatoryDeleteConfirmationModal({
     Boolean(whatHappensNext) &&
     String(impactWarning).trim() !== String(whatHappensNext).trim();
 
-  const effectiveCostWarning =
-    costWarning ||
-    (isOneTapAction
-      ? `BILLING & COST NOTICE: Modifying or provisioning live Google Cloud resources can trigger hourly compute/network billing ($/hr), persistent storage/snapshot fees ($/GB-mo), or Cloud Build / API invocation charges on project "${projectId}".`
-      : `BILLING & TEARDOWN NOTICE: Deleting "${targetName}" terminates its active hourly runtime billing, but verify whether detached persistent disks, static external IPv4 addresses ($0.01/hr when unattached), or Cloud Storage snapshots remain billed in project "${projectId}".`);
+  const synthesizedDomainCostWarning = (() => {
+    if (rkLower.includes('secret')) {
+      return isOneTapAction
+        ? `SECRET MANAGER PRICING ($0.00 FREE TIER): Google Cloud Secret Manager includes 6 active versions and 10,000 access operations/month for $0.00/mo ($0.06/version-month beyond 6; disabled versions cost $0.00/mo).`
+        : `SECRET MANAGER BILLING STOP ($0.00/MO AFTER DELETION): Deleting "${targetName}" immediately stops all $0.06/version-month Secret Manager storage charges.`;
+    }
+    if (rkLower.includes('storage') || rkLower.includes('bucket') || rkLower.includes('object')) {
+      return isOneTapAction
+        ? `CLOUD STORAGE PRICING ($0.00 SAME-REGION EGRESS): Standard storage includes 5 GB-month Always-Free in US regions ($0.020/GB-mo beyond Free Tier) with $0.00/GB intra-region transfer.`
+        : `CLOUD STORAGE BILLING STOP ($0.00/GB-MO AFTER DELETION): Deleting "${targetName}" stops ongoing $/GB-month object storage charges (unless Soft-Delete retention keeps a temporary trash copy).`;
+    }
+    if (rkLower.includes('bigquery') || rkLower.includes('dataset')) {
+      return isOneTapAction
+        ? `BIGQUERY ALWAYS-FREE TIER: Includes 10 GiB of free active storage and 1 TiB of free SQL querying every month.`
+        : `BIGQUERY STORAGE BILLING STOP ($0.00/MO AFTER DELETION): Deleting "${targetName}" stops active ($0.02/GiB-mo) and long-term ($0.01/GiB-mo) BigQuery table storage billing.`;
+    }
+    if (rkLower.includes('cloud run') || rkLower.includes('/cloudrun/')) {
+      return isOneTapAction
+        ? `SERVERLESS SCALE-TO-ZERO ($0.00/HR IDLE): Cloud Run v2 includes 2 million free requests/month and bills $0.00/hr when minInstanceCount=0.`
+        : `SERVERLESS TEARDOWN ($0.00/HR AFTER DELETION): Deleting "${targetName}" stops any warm min-instance compute billing immediately.`;
+    }
+    if (rkLower.includes('firewall') || rkLower.includes('iam') || rkLower.includes('serviceaccount') || rkLower.includes('role') || rkLower.includes('vpc')) {
+      return `ZERO CONTROL-PLANE COST ($0.00/MO): VPC firewall rules, routes, and IAM policy/service-account bindings are 100% free in Google Cloud.`;
+    }
+    if (rkLower.includes('sql') || rkLower.includes('alloydb') || rkLower.includes('spanner') || rkLower.includes('gke') || rkLower.includes('dataproc')) {
+      return isOneTapAction
+        ? `DEDICATED INFRASTRUCTURE BILLING NOTICE: Managed database and cluster instances accrue hourly vCPU/RAM and storage charges in project "${projectId}" while running.`
+        : `HOURLY CLUSTER/DB BILLING STOP ($0.00/HR AFTER TEARDOWN): Deleting "${targetName}" terminates its hourly compute and storage billing immediately.`;
+    }
+    return isOneTapAction
+      ? `CLOUD BILLING & COST NOTICE: Control-plane policy updates cost $0.00/mo; compute or storage changes follow standard Google Cloud pricing and Always-Free Tier allowances on "${projectId}".`
+      : `COMPUTE & RESOURCE TEARDOWN NOTICE: Deleting "${targetName}" terminates its active hourly runtime billing; verify no unattached static external IPv4 addresses ($0.01/hr) or orphaned disks remain in "${projectId}".`;
+  })();
+
+  const effectiveCostWarning = costWarning || synthesizedDomainCostWarning;
 
   return (
     <div

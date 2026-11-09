@@ -45,6 +45,24 @@ function formatBytes(bytes = 0) {
   return `${(b / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+function resolveBucketRegionId(rawLocation = '') {
+  const loc = String(rawLocation || 'us-central1').trim().toLowerCase();
+  if (GCP_GLOBAL_REGIONS.some((r) => r.id === loc)) {
+    return loc;
+  }
+  if (loc === 'us' || loc === 'nam4') return 'us-central1';
+  if (loc === 'eu' || loc === 'eur4') return 'europe-west1';
+  if (loc === 'asia' || loc === 'asia1') return 'asia-northeast1';
+  if (loc.startsWith('us-')) return 'us-central1';
+  if (loc.startsWith('europe-') || loc.startsWith('eu-')) return 'europe-west1';
+  if (loc.startsWith('asia-')) return 'asia-east1';
+  if (loc.startsWith('southamerica-')) return 'southamerica-east1';
+  if (loc.startsWith('australia-')) return 'australia-southeast1';
+  if (loc.startsWith('me-')) return 'me-central1';
+  if (loc.startsWith('africa-')) return 'africa-south1';
+  return 'us-central1';
+}
+
 const STORAGE_CLASS_RATES_PER_GB = {
   STANDARD: {
     rate: 0.02,
@@ -76,6 +94,7 @@ export default function CloudStorageStudio({
   projectId,
   initialSubTab = 'BUCKETS',
   subTabNonce = 0,
+  onSubTabChange,
   initialBucketName = '',
   initialObjectName = '',
   onOpenProvision,
@@ -89,6 +108,21 @@ export default function CloudStorageStudio({
   const { version: pricingVersion, unitPricing } = useLivePricingCatalog();
 
   const [activeSubTab, setActiveSubTab] = useState(initialSubTab || 'BUCKETS');
+
+  useEffect(() => {
+    if (typeof onSubTabChange === 'function') {
+      onSubTabChange(activeSubTab);
+    }
+  }, [activeSubTab, onSubTabChange]);
+
+  const STORAGE_SUBTAB_TITLES = {
+    BUCKETS: 'Bucket Governance (M01)',
+    OBJECTS: 'Object Workbench (M02)',
+    S3_COMPATIBLE_IMPORT: 'S3 / MinIO / Ceph Importer (M03)',
+    FINOPS_LIFECYCLE: '4-Tier Lifecycle FinOps (M04)',
+    WORM_LOCK: 'SEC 17a-4 WORM Lock (M05)',
+    DLP_XRAY: 'RAM DLP Secret & PII X-Ray (M06)',
+  };
   const [buckets, setBuckets] = useState([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
   const [selectedBucketName, setSelectedBucketName] = useState(initialBucketName || '');
@@ -206,17 +240,18 @@ export default function CloudStorageStudio({
         );
         const list = res.data?.buckets || [];
         setBuckets(list);
-        if (
-          initialBucketName &&
-          list.some((b) => b.name === initialBucketName)
-        ) {
-          setSelectedBucketName(initialBucketName);
-        } else if (
-          list.length > 0 &&
-          !list.some((b) => b.name === selectedBucketName)
-        ) {
-          setSelectedBucketName(list[0].name);
-        }
+        setSelectedBucketName((prev) => {
+          if (prev && list.some((b) => b.name === prev)) {
+            return prev;
+          }
+          if (
+            initialBucketName &&
+            list.some((b) => b.name === initialBucketName)
+          ) {
+            return initialBucketName;
+          }
+          return list[0]?.name || '';
+        });
       } catch (err) {
         if (onShowError) {
           onShowError(
@@ -227,7 +262,7 @@ export default function CloudStorageStudio({
         if (!silent) setLoadingBuckets(false);
       }
     },
-    [projectId, selectedBucketName, onShowError]
+    [projectId, initialBucketName, onShowError]
   );
 
   useEffect(() => {
@@ -237,6 +272,95 @@ export default function CloudStorageStudio({
   const selectedBucket = useMemo(
     () => buckets.find((b) => b.name === selectedBucketName) || buckets[0] || null,
     [buckets, selectedBucketName]
+  );
+
+  const handleSelectActiveBucket = useCallback(
+    (nextBucketName) => {
+      if (!nextBucketName) return;
+      setSelectedBucketName((prev) => {
+        if (prev !== nextBucketName) {
+          setObjects([]);
+          setInspectedObject(null);
+          setEditedTextContent('');
+          setObjectPrefixFilter('');
+          setS3ImportedResults([]);
+          setS3TransferSpec(null);
+          setTeleportNewBucketName('');
+        }
+        return nextBucketName;
+      });
+      if (gcsfuseArchitectResult) {
+        handleInspectGcsfuseArchitect(nextBucketName, gcsfuseProfile);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gcsfuseArchitectResult, gcsfuseProfile, projectId]
+  );
+
+  const requestGuardedStorageSubTabSwitch = useCallback(
+    (nextSubTabId, options = {}) => {
+      if (!nextSubTabId || nextSubTabId === activeSubTab) {
+        if (options.bucketName) {
+          handleSelectActiveBucket(options.bucketName);
+        }
+        if (typeof options.onConfirmed === 'function') {
+          options.onConfirmed();
+        }
+        return;
+      }
+      const hasUnsavedInEditor =
+        activeSubTab === 'OBJECTS' &&
+        Boolean(
+          inspectedObject?.isText &&
+            editedTextContent !== (inspectedObject?.textContent ?? '')
+        );
+      const targetBucketName =
+        options.bucketName || selectedBucket?.name || selectedBucketName || '';
+      const targetObjectName =
+        options.objectName || inspectedObject?.name || '';
+      const targetResourceLabel = targetBucketName
+        ? `gs://${targetBucketName}${
+            targetObjectName ? `/${targetObjectName}` : ''
+          }`
+        : null;
+
+      window.dispatchEvent(
+        new CustomEvent('cloudpulse:request-cross-tab-nav', {
+          detail: {
+            fromStudioTitle: 'Cloud Storage & WORM Studio',
+            fromSubTabTitle:
+              STORAGE_SUBTAB_TITLES[activeSubTab] || activeSubTab,
+            toStudioTitle: 'Cloud Storage & WORM Studio',
+            toSubTabTitle:
+              STORAGE_SUBTAB_TITLES[nextSubTabId] || nextSubTabId,
+            actionLabel:
+              options.actionLabel ||
+              `Switch to ${STORAGE_SUBTAB_TITLES[nextSubTabId] || nextSubTabId}`,
+            targetResourceLabel,
+            hasUnsavedWarning: Boolean(
+              options.hasUnsavedWarning || hasUnsavedInEditor
+            ),
+            onConfirm: () => {
+              if (options.bucketName) {
+                handleSelectActiveBucket(options.bucketName);
+              }
+              setActiveSubTab(nextSubTabId);
+              if (typeof options.onConfirmed === 'function') {
+                options.onConfirmed();
+              }
+            },
+          },
+        })
+      );
+    },
+    [
+      activeSubTab,
+      inspectedObject,
+      editedTextContent,
+      selectedBucket,
+      selectedBucketName,
+      handleSelectActiveBucket,
+    ]
   );
 
   const fetchObjects = useCallback(
@@ -291,9 +415,9 @@ export default function CloudStorageStudio({
 
   useEffect(() => {
     if (initialBucketName) {
-      setSelectedBucketName(initialBucketName);
+      handleSelectActiveBucket(initialBucketName);
     }
-  }, [initialBucketName, subTabNonce]);
+  }, [initialBucketName, subTabNonce, handleSelectActiveBucket]);
 
   useEffect(() => {
     if (initialObjectName && (initialBucketName || selectedBucket?.name)) {
@@ -309,13 +433,14 @@ export default function CloudStorageStudio({
   useEffect(() => {
     if (
       activeSubTab === 'OBJECTS' &&
+      !loadingObjects &&
       objects.length > 0 &&
       !inspectedObject &&
       !loadingInspect
     ) {
       handleInspectObject(objects[0]);
     }
-  }, [activeSubTab, objects, inspectedObject, loadingInspect]);
+  }, [activeSubTab, loadingObjects, objects, inspectedObject, loadingInspect]);
 
   // Fleet KPI Totals
   const fleetStats = useMemo(() => {
@@ -862,12 +987,8 @@ export default function CloudStorageStudio({
       0,
       100 - simHotPercent - simWarmPercent - simColdPercent
     );
-    const regionLoc = selectedBucket?.location || 'us-central1';
-    const regionProf = getRegionProfile(
-      GCP_GLOBAL_REGIONS.some((r) => r.id === regionLoc)
-        ? regionLoc
-        : 'us-central1'
-    );
+    const resolvedRegId = resolveBucketRegionId(selectedBucket?.location);
+    const regionProf = getRegionProfile(resolvedRegId);
     const mult = regionProf.priceMultiplier || 1.0;
     const cudScale = Math.max(
       0.45,
@@ -927,14 +1048,7 @@ export default function CloudStorageStudio({
 
   // Cross-Region Bucket Teleporter Feasibility
   const bucketTeleportAnalysis = useMemo(() => {
-    const rawLoc = (selectedBucket?.location || 'us-east1').toLowerCase();
-    const srcRegionId = GCP_GLOBAL_REGIONS.some((r) => r.id === rawLoc)
-      ? rawLoc
-      : rawLoc.startsWith('eu')
-      ? 'europe-west1'
-      : rawLoc.startsWith('asia')
-      ? 'asia-east1'
-      : 'us-east1';
+    const srcRegionId = resolveBucketRegionId(selectedBucket?.location || 'us-east1');
 
     const stateSizeGb = Math.max(
       10,
@@ -1206,30 +1320,37 @@ export default function CloudStorageStudio({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 sm:w-[430px]">
+          <div
+            data-action-toolbar="true"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 w-full xl:w-auto xl:min-w-[468px] font-sans"
+          >
             <button
               type="button"
               data-feature-id="GCS_CREATE_BUCKET_BTN"
               onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
-              className="w-full h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
+              className="w-full h-9 px-3.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>+ Create Bucket</span>
+              <span className="truncate">Create Bucket</span>
             </button>
 
             <button
               type="button"
               data-feature-id="GCS_IMPORT_S3_BTN"
               onClick={() => {
-                setActiveSubTab('S3_COMPATIBLE_IMPORT');
-                if (s3RemoteObjects.length === 0) {
-                  handleListS3Compatible(true, s3ProviderType);
-                }
+                requestGuardedStorageSubTabSwitch('S3_COMPATIBLE_IMPORT', {
+                  actionLabel: 'Open S3 / MinIO / Ceph Importer',
+                  onConfirmed: () => {
+                    if (s3RemoteObjects.length === 0) {
+                      handleListS3Compatible(true, s3ProviderType);
+                    }
+                  },
+                });
               }}
-              className="w-full h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+              className="w-full h-9 px-3.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
-              <span>Import S3 / MinIO</span>
+              <span className="truncate">Import S3 / MinIO</span>
             </button>
 
             <button
@@ -1237,87 +1358,21 @@ export default function CloudStorageStudio({
               data-feature-id="GCS_REFRESH_FLEET_BTN"
               onClick={() => fetchBuckets()}
               disabled={loadingBuckets}
-              className="w-full h-9 px-3 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+              className="w-full h-9 px-3.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 shrink-0 ${loadingBuckets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
               />
-              <span>Refresh Fleet</span>
+              <span className="truncate">Refresh Fleet</span>
             </button>
           </div>
         </div>
 
-        {/* Fleet KPI Strip (5 Equal Columns) */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 font-mono">
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] uppercase text-zinc-400">Live Buckets</div>
-            <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              {fleetStats.totalBuckets}
-            </div>
-            <div className="text-[10px] text-zinc-500">storage.googleapis.com</div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] uppercase text-zinc-400">
-              Objects Sampled
-            </div>
-            <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
-              {fleetStats.totalSampleObjects}
-            </div>
-            <div className="text-[10px] text-zinc-500">
-              {formatBytes(fleetStats.totalSampleBytes)} indexed
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] uppercase text-zinc-400">
-              Zero-Trust Score
-            </div>
-            <div
-              className={`text-base font-extrabold mt-0.5 ${
-                fleetStats.avgPosture >= 85
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-amber-500'
-              }`}
-            >
-              {fleetStats.avgPosture}/100
-            </div>
-            <div className="text-[10px] text-zinc-500">
-              {fleetStats.unhardenedCount} bucket(s) need PAP/UBLA
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] uppercase text-zinc-400">
-              Lifecycle Coverage
-            </div>
-            <div className="text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
-              {fleetStats.totalBuckets - fleetStats.noLifecycleCount} /{' '}
-              {fleetStats.totalBuckets}
-            </div>
-            <div className="text-[10px] text-zinc-500">
-              Auto-tiering to Cold/Archive
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] uppercase text-zinc-400">
-              Standard Rate
-            </div>
-            <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-              ${unitPricing.storageStandardGbPerMonthUsd}/GB
-            </div>
-            <div className="text-[10px] text-zinc-500">
-              Live Billing Catalog synced
-            </div>
-          </div>
-        </div>
-
-        {/* Studio Sub-Tabs + Active Bucket Selector */}
-        <div className="space-y-2.5 pt-1">
+        {/* Studio Sub-Tabs + Active Bucket Selector (Primary Navigation First) */}
+        <div className="space-y-2 pt-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
-              Cloud Storage Workspace Modules:
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Cloud Storage Workspace Modules
             </span>
             {buckets.length > 0 && (
               <div className="flex items-center gap-2 font-mono text-xs">
@@ -1326,10 +1381,9 @@ export default function CloudStorageStudio({
                   data-feature-id="GCS_ACTIVE_BUCKET_SELECT"
                   value={selectedBucket?.name || ''}
                   onChange={(e) => {
-                    setSelectedBucketName(e.target.value);
-                    setInspectedObject(null);
+                    handleSelectActiveBucket(e.target.value);
                   }}
-                  className="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 font-bold cursor-pointer"
+                  className="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-amber-500/60 dark:border-amber-500/60 rounded-lg px-2.5 py-1.5 font-bold cursor-pointer"
                 >
                   {buckets.map((b) => (
                     <option key={b.name} value={b.name}>
@@ -1344,43 +1398,50 @@ export default function CloudStorageStudio({
           <div
             role="tablist"
             aria-label="Cloud Storage Workspace Modules"
-            className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-1 p-1 rounded-[10px] font-mono text-xs"
+            className="cp-segmented-menu grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-1.5 p-1 rounded-[10px] font-sans text-xs"
           >
             {[
               {
                 id: 'BUCKETS',
                 icon: HardDrive,
-                label: `Bucket Governance (${buckets.length})`,
+                label: `Buckets (${buckets.length})`,
+                fullTitle: `Bucket Governance (${buckets.length})`,
               },
               {
                 id: 'OBJECTS',
                 icon: FolderOpen,
                 label: `Object Workbench (${objects.length})`,
+                fullTitle: `Object Workbench (${objects.length})`,
               },
               {
                 id: 'S3_COMPATIBLE_IMPORT',
                 icon: Globe,
-                label: 'S3 / MinIO / Ceph',
+                label: 'S3 / MinIO Import',
+                fullTitle: 'S3 / MinIO / Ceph Importer',
               },
               {
                 id: 'FINOPS_LIFECYCLE',
                 icon: DollarSign,
                 label: 'Lifecycle FinOps',
+                fullTitle: 'Storage Class & 4-Tier Lifecycle FinOps',
               },
               {
                 id: 'TELEPORT',
                 icon: Sparkles,
-                label: 'Region Teleporter (40)',
+                label: 'Region Teleporter',
+                fullTitle: 'Cross-Region Bucket Teleporter (40 Regions)',
               },
               {
                 id: 'DLP_XRAY',
                 icon: ShieldAlert,
-                label: 'DLP Secret & PII X-Ray',
+                label: 'DLP Secret X-Ray',
+                fullTitle: 'DLP Secret & PII X-Ray Scanner',
               },
               {
                 id: 'RANSOMWARE_AIRGAP',
                 icon: Lock,
-                label: 'Ransomware Auditor',
+                label: 'Ransomware Audit',
+                fullTitle: 'Ransomware Air-Gap & Retention Auditor',
               },
             ].map((t) => {
               const Icon = t.icon || HardDrive;
@@ -1401,37 +1462,125 @@ export default function CloudStorageStudio({
                       handleListS3Compatible(true, s3ProviderType);
                     }
                   }}
-                  title={t.label}
-                  className={`w-full h-9 px-2.5 rounded-[7px] font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                  title={t.fullTitle || t.label}
+                  className={`w-full h-9 px-2.5 rounded-[7px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     active
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Icon
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        active ? 'text-white' : 'text-blue-500 dark:text-blue-400'
-                      }`}
-                    />
-                    <span className="truncate">{t.label}</span>
-                  </div>
+                  <Icon
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      active ? 'text-white' : 'text-blue-500 dark:text-blue-400'
+                    }`}
+                  />
+                  <span className="truncate">{t.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* Active Bucket & Fleet Telemetry Strip (Dynamically updates whenever Active Bucket changes) */}
+        {activeSubTab !== 'OBJECTS' && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 font-mono pt-1">
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-amber-500 font-bold">
+                Active Bucket ({fleetStats.totalBuckets} in Fleet)
+              </div>
+              <div
+                className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate"
+                title={selectedBucket ? `gs://${selectedBucket.name}` : 'None'}
+              >
+                {selectedBucket ? `gs://${selectedBucket.name}` : 'None'}
+              </div>
+              <div className="text-[10px] text-zinc-500 truncate">
+                {selectedBucket
+                  ? `${selectedBucket.location?.toUpperCase()} (${selectedBucket.locationType || 'Region'}) · ${selectedBucket.storageClass}`
+                  : 'storage.googleapis.com'}
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400">
+                Active Bucket Objects
+              </div>
+              <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                {loadingObjects
+                  ? '...'
+                  : objects.length || selectedBucket?.objectCountSample || 0}{' '}
+                <span className="text-[10px] font-normal text-zinc-500">
+                  ({formatBytes(selectedBucket?.totalBytesSample || 0)})
+                </span>
+              </div>
+              <div className="text-[10px] text-zinc-500">
+                Fleet total: {fleetStats.totalSampleObjects} ({formatBytes(fleetStats.totalSampleBytes)})
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400">
+                Bucket Zero-Trust Score
+              </div>
+              <div
+                className={`text-sm font-extrabold mt-0.5 ${
+                  (selectedBucket?.postureScore ?? fleetStats.avgPosture) >= 85
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-amber-500'
+                }`}
+              >
+                {selectedBucket?.postureScore ?? fleetStats.avgPosture}/100
+              </div>
+              <div className="text-[10px] text-zinc-500 truncate">
+                {selectedBucket
+                  ? `PAP ${selectedBucket.publicAccessPrevention === 'enforced' ? 'Enforced' : 'Inherited'} · ${selectedBucket.uniformBucketLevelAccess ? 'Uniform IAM' : 'Legacy ACL'}`
+                  : `${fleetStats.unhardenedCount} bucket(s) need PAP/UBLA`}
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400">
+                Immutability &amp; Lifecycle
+              </div>
+              <div className="text-xs font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 truncate">
+                {selectedBucket?.retentionPeriodDays > 0
+                  ? `WORM ${selectedBucket.retentionPeriodDays}d`
+                  : selectedBucket?.versioningEnabled
+                  ? 'Versioning ON'
+                  : 'Versioning OFF'}{' '}
+                · {selectedBucket?.softDeleteDays ?? 7}d Soft-Del
+              </div>
+              <div className="text-[10px] text-zinc-500 truncate">
+                {selectedBucket?.autoclassEnabled
+                  ? 'Autoclass ON'
+                  : `${selectedBucket?.lifecycleRules?.length || 0} Lifecycle Rule(s)`}{' '}
+                (Fleet: {fleetStats.totalBuckets - fleetStats.noLifecycleCount}/{fleetStats.totalBuckets})
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400">
+                Active Region Rate ({lifecycleSimulation.regionProf.id})
+              </div>
+              <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                ${lifecycleSimulation.baseStandardRate}/GB
+              </div>
+              <div className="text-[10px] text-zinc-500 truncate">
+                {lifecycleSimulation.regionProf.priceMultiplier.toFixed(2)}x ·{' '}
+                {lifecycleSimulation.regionProf.cfePercent}% CFE
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Live GCP Billing Catalog & Variable Rate Bar */}
-      <LivePricingCatalogControlBar
-        projectId={projectId}
-        selectedRegionId={
-          GCP_GLOBAL_REGIONS.some((r) => r.id === selectedBucket?.location)
-            ? selectedBucket.location
-            : 'us-central1'
-        }
-      />
+      {/* Live GCP Billing Catalog & Variable Rate Bar (Hidden on Object Workbench to maximize IDE viewport) */}
+      {activeSubTab !== 'OBJECTS' && (
+        <LivePricingCatalogControlBar
+          projectId={projectId}
+          selectedRegionId={resolveBucketRegionId(selectedBucket?.location)}
+        />
+      )}
 
       {/* ==================================================================== */}
       {/* SUB-TAB 1: LIVE BUCKET FLEET & ZERO-TRUST GOVERNANCE                 */}
@@ -1460,7 +1609,10 @@ export default function CloudStorageStudio({
           ) : (
             <>
               {/* Multi-Bucket Fleet Selection & Sweep / Delete Bar */}
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+              <div
+                data-action-toolbar="true"
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-sans text-xs"
+              >
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <button
                     type="button"
@@ -1471,17 +1623,19 @@ export default function CloudStorageStudio({
                         setSelectedBucketNames(buckets.map((b) => b.name));
                       }
                     }}
-                    className={`h-8 px-3 rounded-md border font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`h-8 px-3 rounded-md border font-bold cursor-pointer inline-flex items-center gap-1.5 ${
                       selectedBucketNames.length > 0 &&
                       selectedBucketNames.length === buckets.length
                         ? 'bg-blue-600 text-white border-blue-500'
                         : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
                     }`}
                   >
-                    <Check className="w-3.5 h-3.5" />
-                    {selectedBucketNames.length === buckets.length
-                      ? `Unselect All (${buckets.length})`
-                      : `Select All Buckets (${buckets.length})`}
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {selectedBucketNames.length === buckets.length
+                        ? `Unselect All (${buckets.length})`
+                        : `Select All Buckets (${buckets.length})`}
+                    </span>
                   </button>
 
                   {selectedBucketNames.length > 0 && (
@@ -1508,20 +1662,22 @@ export default function CloudStorageStudio({
                     }
                     onClick={() => handleBatchBucketsAction('SWEEP_KEEP_BUCKETS')}
                     title="Deletes all objects inside the selected buckets while keeping the buckets and their IAM/Lifecycle settings intact"
-                    className={`h-8 px-3 rounded-md font-extrabold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
+                    className={`h-8 px-3 rounded-md font-bold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
                       selectedBucketNames.length > 0
                         ? 'bg-amber-500/15 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border-amber-500/40'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
                     }`}
                   >
                     <RefreshCw
-                      className={`w-3.5 h-3.5 ${
+                      className={`w-3.5 h-3.5 shrink-0 ${
                         busyKey === 'batch-SWEEP_KEEP_BUCKETS' ? 'animate-spin' : ''
                       }`}
                     />
-                    {busyKey === 'batch-SWEEP_KEEP_BUCKETS'
-                      ? 'Sweeping Selected...'
-                      : `Sweep Selected Buckets (Keep Buckets) (${selectedBucketNames.length})`}
+                    <span className="truncate">
+                      {busyKey === 'batch-SWEEP_KEEP_BUCKETS'
+                        ? 'Sweeping Selected...'
+                        : `Sweep Selected (Keep Buckets) (${selectedBucketNames.length})`}
+                    </span>
                   </button>
 
                   <button
@@ -1534,22 +1690,32 @@ export default function CloudStorageStudio({
                       handleBatchBucketsAction('EMPTY_AND_DELETE_BUCKETS')
                     }
                     title="Empties and permanently deletes all selected buckets"
-                    className={`h-8 px-3 rounded-md font-extrabold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
+                    className={`h-8 px-3 rounded-md font-bold border inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 ${
                       selectedBucketNames.length > 0
                         ? 'bg-red-500/15 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border-red-500/40'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-800'
                     }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {busyKey === 'batch-EMPTY_AND_DELETE_BUCKETS'
-                      ? 'Deleting Selected...'
-                      : `Empty & Delete Selected (${selectedBucketNames.length})`}
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {busyKey === 'batch-EMPTY_AND_DELETE_BUCKETS'
+                        ? 'Deleting Selected...'
+                        : `Empty & Delete Selected (${selectedBucketNames.length})`}
+                    </span>
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {buckets.map((b) => {
+                {[...buckets]
+                  .sort((a, b) =>
+                    a.name === selectedBucket?.name
+                      ? -1
+                      : b.name === selectedBucket?.name
+                      ? 1
+                      : 0
+                  )
+                  .map((b) => {
                   const isSelected = selectedBucket?.name === b.name;
                   const isCheckedForBatch = selectedBucketNames.includes(b.name);
                   const isHardened =
@@ -1559,10 +1725,10 @@ export default function CloudStorageStudio({
                   return (
                     <div
                       key={b.name}
-                      onClick={() => setSelectedBucketName(b.name)}
+                      onClick={() => handleSelectActiveBucket(b.name)}
                       className={`p-4 rounded-2xl border transition-all space-y-3 font-mono cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-500/[0.05] border-blue-500 shadow-md'
+                          ? 'bg-amber-500/[0.06] border-amber-500 ring-1 ring-amber-500/40 shadow-md'
                           : isCheckedForBatch
                           ? 'bg-blue-500/[0.03] border-blue-500/60'
                           : 'bg-white dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
@@ -1582,6 +1748,11 @@ export default function CloudStorageStudio({
                             <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                               gs://{b.name}
                             </span>
+                            {isSelected && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40 font-extrabold uppercase">
+                                ACTIVE BUCKET
+                              </span>
+                            )}
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold uppercase">
                             {b.location} ({b.locationType})
                           </span>
@@ -1687,12 +1858,12 @@ export default function CloudStorageStudio({
                       </span>
                     </div>
 
-                    {/* Storage Class Quick Switcher (Equal-Width Grid) */}
+                    {/* Storage Class Quick Switcher & Primary Object Workbench CTA */}
                     <div
-                      className="grid grid-cols-1 sm:grid-cols-12 items-center gap-2 pt-1.5 border-t border-zinc-200/70 dark:border-zinc-800/80 text-[10px]"
+                      className="space-y-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800/80 font-sans"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="sm:col-span-8 grid grid-cols-4 gap-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {['STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'].map(
                           (sc) => (
                             <button
@@ -1702,13 +1873,13 @@ export default function CloudStorageStudio({
                               onClick={() =>
                                 handleChangeBucketStorageClass(b, sc)
                               }
-                              className={`w-full h-7 px-2 rounded-md border font-bold cursor-pointer inline-flex items-center justify-center truncate ${
+                              className={`w-full h-7 px-2 rounded-md border text-[11px] font-bold cursor-pointer inline-flex items-center justify-center ${
                                 b.storageClass === sc
                                   ? 'bg-blue-600 text-white border-blue-500'
                                   : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-blue-500/40'
                               }`}
                             >
-                              {sc}
+                              <span className="truncate">{sc}</span>
                             </button>
                           )
                         )}
@@ -1717,32 +1888,38 @@ export default function CloudStorageStudio({
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedBucketName(b.name);
-                          setActiveSubTab('OBJECTS');
+                          requestGuardedStorageSubTabSwitch('OBJECTS', {
+                            bucketName: b.name,
+                            actionLabel: `Open gs://${b.name} in Object Workbench`,
+                          });
                         }}
-                        className="sm:col-span-4 w-full h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer inline-flex items-center justify-center truncate"
+                        className="w-full h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                       >
-                        Browse & Upload Objects →
+                        <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">
+                          Browse &amp; Upload Objects in Workbench →
+                        </span>
                       </button>
                     </div>
 
                     {/* 1-Tap Equal-Width Action Bar */}
                     <div
-                      className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1.5"
+                      data-action-toolbar="true"
+                      className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pt-1 font-sans"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         type="button"
                         disabled={isHardened || busyKey === `harden-${b.name}`}
                         onClick={() => handleHardenBucket(b)}
-                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50"
                       >
                         <Lock className="w-3 h-3 shrink-0" />
                         <span className="truncate">
                           {busyKey === `harden-${b.name}`
                             ? 'Hardening...'
                             : isHardened
-                            ? 'PAP + UBLA Active'
+                            ? 'Hardened'
                             : '1-Tap Harden'}
                         </span>
                       </button>
@@ -1751,7 +1928,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `lifecycle-${b.name}`}
                         onClick={() => handleApplySmartLifecycle(b)}
-                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50"
                       >
                         <Leaf className="w-3 h-3 shrink-0" />
                         <span className="truncate">
@@ -1765,17 +1942,17 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `cors-${b.name}`}
                         onClick={() => handleEnableCors(b)}
-                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50"
                       >
                         <Globe className="w-3 h-3 shrink-0" />
-                        <span className="truncate">Enable Web CORS</span>
+                        <span className="truncate">Enable CORS</span>
                       </button>
 
                       <button
                         type="button"
                         disabled={busyKey === `sweep-${b.name}`}
                         onClick={() => handleSweepBucketKeepIntact(b)}
-                        className="w-full h-8 px-2 rounded-md bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-600 dark:text-amber-300 border border-amber-500/35 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                         title="Sweeps and deletes all objects inside gs://bucket while keeping the bucket itself intact"
                       >
                         <RefreshCw
@@ -1794,7 +1971,7 @@ export default function CloudStorageStudio({
                         type="button"
                         disabled={busyKey === `delete-${b.name}`}
                         onClick={() => handleEmptyAndDeleteBucket(b)}
-                        className="w-full h-8 px-2 rounded-md bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
+                        className="w-full h-8 px-2 rounded-md bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                         title="Empties all object versions and deletes bucket without 409 BucketNotEmpty error"
                       >
                         <Trash2 className="w-3 h-3 shrink-0" />
@@ -1962,7 +2139,7 @@ export default function CloudStorageStudio({
           projectId={projectId}
           buckets={buckets}
           selectedBucket={selectedBucket}
-          onSelectBucket={(bName) => setSelectedBucketName(bName)}
+          onSelectBucket={(bName) => handleSelectActiveBucket(bName)}
           objects={objects}
           loadingObjects={loadingObjects}
           objectPrefixFilter={objectPrefixFilter}
@@ -1985,13 +2162,19 @@ export default function CloudStorageStudio({
           onOpenBigQuerySql={onOpenBigQuerySql}
           onNavigateStudio={onSelectTab}
           onSwitchStorageSubTab={(modId) => {
-            setActiveSubTab(modId);
-            if (
-              modId === 'S3_COMPATIBLE_IMPORT' &&
-              s3RemoteObjects.length === 0
-            ) {
-              handleListS3Compatible(true, s3ProviderType);
-            }
+            requestGuardedStorageSubTabSwitch(modId, {
+              actionLabel: `Open Target in ${
+                STORAGE_SUBTAB_TITLES[modId] || modId
+              }`,
+              onConfirmed: () => {
+                if (
+                  modId === 'S3_COMPATIBLE_IMPORT' &&
+                  s3RemoteObjects.length === 0
+                ) {
+                  handleListS3Compatible(true, s3ProviderType);
+                }
+              },
+            });
           }}
           onShowToast={onShowToast}
           onShowError={onShowError}
@@ -2230,7 +2413,10 @@ export default function CloudStorageStudio({
             </div>
 
             {/* 3 Equal-Width Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div
+              data-action-toolbar="true"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 font-sans text-xs"
+            >
               <button
                 type="button"
                 disabled={s3LoadingList}
@@ -2412,12 +2598,20 @@ export default function CloudStorageStudio({
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         const first = s3ImportedResults[0];
-                        if (first?.gcsObjectName) {
-                          await handleInspectObject({ name: first.gcsObjectName });
-                        }
-                        setActiveSubTab('OBJECTS');
+                        requestGuardedStorageSubTabSwitch('OBJECTS', {
+                          objectName: first?.gcsObjectName || '',
+                          actionLabel:
+                            'Open Imported Files in Object Workbench (M02)',
+                          onConfirmed: async () => {
+                            if (first?.gcsObjectName) {
+                              await handleInspectObject({
+                                name: first.gcsObjectName,
+                              });
+                            }
+                          },
+                        });
                       }}
                       className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
@@ -2426,7 +2620,12 @@ export default function CloudStorageStudio({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setActiveSubTab('DLP_XRAY')}
+                      onClick={() =>
+                        requestGuardedStorageSubTabSwitch('DLP_XRAY', {
+                          actionLabel:
+                            'Scan Imported Files with RAM DLP X-Ray (M06)',
+                        })
+                      }
                       className="h-8 px-3 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <ShieldAlert className="w-3.5 h-3.5" />
@@ -2461,9 +2660,16 @@ export default function CloudStorageStudio({
                     <button
                       key={it.gcsObjectName}
                       type="button"
-                      onClick={async () => {
-                        await handleInspectObject({ name: it.gcsObjectName });
-                        setActiveSubTab('OBJECTS');
+                      onClick={() => {
+                        requestGuardedStorageSubTabSwitch('OBJECTS', {
+                          objectName: it.gcsObjectName,
+                          actionLabel: `Inspect gs://${selectedBucket?.name}/${it.gcsObjectName} in Object Workbench`,
+                          onConfirmed: async () => {
+                            await handleInspectObject({
+                              name: it.gcsObjectName,
+                            });
+                          },
+                        });
                       }}
                       className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-950 border border-emerald-500/40 text-[10px] font-bold text-zinc-800 dark:text-zinc-200 hover:border-blue-500 cursor-pointer"
                     >
@@ -2874,15 +3080,23 @@ export default function CloudStorageStudio({
           projectId={projectId}
           overview={{ buckets }}
           initialBucketName={selectedBucket?.name}
+          onSelectBucket={(bName) => handleSelectActiveBucket(bName)}
           onOpenObjectInWorkbench={(bucketName, objName) => {
-            if (bucketName) setSelectedBucketName(bucketName);
-            setActiveSubTab('OBJECTS');
-            if (objName) {
-              handleInspectObject(
-                { name: objName },
-                { bucketNameOverride: bucketName || selectedBucket?.name }
-              );
-            }
+            requestGuardedStorageSubTabSwitch('OBJECTS', {
+              bucketName: bucketName || selectedBucket?.name,
+              objectName: objName || '',
+              actionLabel: objName
+                ? `Inspect gs://${bucketName || selectedBucket?.name}/${objName} in Object Workbench`
+                : `Open gs://${bucketName || selectedBucket?.name} in Object Workbench`,
+              onConfirmed: async () => {
+                if (objName) {
+                  await handleInspectObject(
+                    { name: objName },
+                    { bucketNameOverride: bucketName || selectedBucket?.name }
+                  );
+                }
+              },
+            });
           }}
           onRefreshGlobal={() => {
             fetchBuckets();
@@ -2899,15 +3113,23 @@ export default function CloudStorageStudio({
           projectId={projectId}
           overview={{ buckets }}
           initialBucketName={selectedBucket?.name}
+          onSelectBucket={(bName) => handleSelectActiveBucket(bName)}
           onOpenObjectInWorkbench={(bucketName, objName) => {
-            if (bucketName) setSelectedBucketName(bucketName);
-            setActiveSubTab('OBJECTS');
-            if (objName) {
-              handleInspectObject(
-                { name: objName },
-                { bucketNameOverride: bucketName || selectedBucket?.name }
-              );
-            }
+            requestGuardedStorageSubTabSwitch('OBJECTS', {
+              bucketName: bucketName || selectedBucket?.name,
+              objectName: objName || '',
+              actionLabel: objName
+                ? `Inspect gs://${bucketName || selectedBucket?.name}/${objName} in Object Workbench`
+                : `Open gs://${bucketName || selectedBucket?.name} Version Time-Machine in Object Workbench`,
+              onConfirmed: async () => {
+                if (objName) {
+                  await handleInspectObject(
+                    { name: objName },
+                    { bucketNameOverride: bucketName || selectedBucket?.name }
+                  );
+                }
+              },
+            });
           }}
           onRefreshGlobal={() => {
             fetchBuckets();

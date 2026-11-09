@@ -155,6 +155,7 @@ export default function EngineerMoonshotsWave3({
   projectId,
   overview,
   initialBucketName = '',
+  onSelectBucket,
   onOpenObjectInWorkbench,
   onRefreshGlobal,
   onRunInShell,
@@ -203,12 +204,17 @@ export default function EngineerMoonshotsWave3({
   const [scanningDlp, setScanningDlp] = useState(false);
 
   useEffect(() => {
-    if (initialBucketName) {
+    if (initialBucketName && initialBucketName !== selectedDlpBucket) {
       setSelectedDlpBucket(initialBucketName);
+      setDlpScanResult(null);
+      setCanaryInjectReceipt(null);
+      setDlpRedactionReceipt(null);
+      setDlpInlineError(null);
     } else if (!selectedDlpBucket && overview?.buckets?.length > 0) {
       setSelectedDlpBucket(overview.buckets[0].name);
     }
-  }, [initialBucketName, overview?.buckets, selectedDlpBucket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBucketName, overview?.buckets]);
 
   const fetchBucketsForMoonshots = useCallback(async () => {
     if (!projectId) return;
@@ -265,6 +271,13 @@ export default function EngineerMoonshotsWave3({
       setScanningDlp(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === 'X1' && projectId && selectedDlpBucket) {
+      handleRunDlpScan(selectedDlpBucket, dlpScanEngine);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, projectId, selectedDlpBucket]);
 
   const handleInjectCanaryLeakObject = async () => {
     if (!projectId) return;
@@ -680,6 +693,14 @@ US_TAXPAYER_SSN=123-45-6789
   // ==========================================================================
   // X4 STATE: Cryptographic Ransomware Air-Gap & Clean-Room Recovery Auditor
   // ==========================================================================
+  const [selectedRansomwareBucket, setSelectedRansomwareBucket] = useState(
+    initialBucketName || ''
+  );
+  const [deepRansomwareAudit, setDeepRansomwareAudit] = useState(null);
+  const [loadingDeepRansomware, setLoadingDeepRansomware] = useState(false);
+  const [ransomwareDrillReceipt, setRansomwareDrillReceipt] = useState(null);
+  const [runningRansomwareDrill, setRunningRansomwareDrill] = useState(false);
+
   const ransomwareAudit = useMemo(() => {
     const list = buckets.length > 0 ? buckets : overview?.buckets || [];
     const auditedBuckets = list.map((b) => {
@@ -688,15 +709,24 @@ US_TAXPAYER_SSN=123-45-6789
       const softDelDays = Number(b.softDeleteDays ?? 7);
       const versioning = Boolean(b.versioningEnabled);
       const wormDays = Number(b.retentionPeriodDays || 0);
+      const wormLocked = Boolean(b.retentionIsLocked);
+      const defaultEventHold = Boolean(b.defaultEventBasedHold);
       const cmek = Boolean(b.kmsKeyName);
+      const kmsKeyShort = b.kmsKeyName
+        ? String(b.kmsKeyName).split('/').pop()
+        : null;
+      const privilegedPrincipalsCount = Number(
+        b.privilegedIamPrincipalsCount || 0
+      );
 
       let score = 0;
       if (pap) score += 20;
       if (ubla) score += 20;
-      if (softDelDays >= 14) score += 20;
+      if (softDelDays >= 30) score += 25;
+      else if (softDelDays >= 14) score += 18;
       else if (softDelDays >= 7) score += 10;
-      if (versioning || wormDays > 0) score += 20;
-      if (wormDays >= 30) score += 15;
+      if (versioning || wormDays > 0) score += 25;
+      if (wormDays >= 7 || defaultEventHold) score += 5;
       if (cmek) score += 5;
 
       return {
@@ -708,7 +738,11 @@ US_TAXPAYER_SSN=123-45-6789
         softDelDays,
         versioning,
         wormDays,
+        wormLocked,
+        defaultEventHold,
         cmek,
+        kmsKeyShort,
+        privilegedPrincipalsCount,
         survivalScore: Math.min(100, score),
       };
     });
@@ -724,39 +758,174 @@ US_TAXPAYER_SSN=123-45-6789
     return {
       auditedBuckets,
       overallScore,
-      rtoMinutes: overallScore >= 85 ? 4 : overallScore >= 65 ? 18 : 95,
+      rtoMinutes: overallScore >= 85 ? 1 : overallScore >= 65 ? 15 : 95,
       rpoMinutes: overallScore >= 85 ? 0 : 15,
     };
   }, [buckets, overview]);
 
-  const handleAirGapLockBucket = async (bucketName) => {
+  useEffect(() => {
+    if (initialBucketName && initialBucketName !== selectedRansomwareBucket) {
+      setSelectedRansomwareBucket(initialBucketName);
+      setRansomwareDrillReceipt(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBucketName]);
+
+  useEffect(() => {
+    const list = ransomwareAudit.auditedBuckets;
+    if (
+      list.length > 0 &&
+      (!selectedRansomwareBucket ||
+        !list.some((b) => b.name === selectedRansomwareBucket))
+    ) {
+      setSelectedRansomwareBucket(initialBucketName || list[0].name);
+    }
+  }, [ransomwareAudit.auditedBuckets, selectedRansomwareBucket, initialBucketName]);
+
+  const handleRunDeepRansomwareAudit = async (bucketNameOverride = null) => {
+    const targetBkt =
+      bucketNameOverride ||
+      selectedRansomwareBucket ||
+      ransomwareAudit.auditedBuckets[0]?.name;
+    if (!projectId || !targetBkt) return;
+    setLoadingDeepRansomware(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          targetBkt
+        )}/ransomware-deep-audit`
+      );
+      setDeepRansomwareAudit(res.data);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to run deep ransomware audit on gs://${targetBkt}`
+        );
+      }
+    } finally {
+      setLoadingDeepRansomware(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'X4' && projectId && selectedRansomwareBucket) {
+      handleRunDeepRansomwareAudit(selectedRansomwareBucket);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, projectId, selectedRansomwareBucket]);
+
+  const handleAirGapLockBucket = async (bucketName, patchOverride = null) => {
     if (!projectId || !bucketName) return;
     setBusyKey(`airgap-${bucketName}`);
     try {
+      const payload = patchOverride || {
+        publicAccessPrevention: 'enforced',
+        uniformBucketLevelAccess: true,
+        versioningEnabled: true,
+        softDeleteDays: 30,
+      };
       const res = await axios.patch(
         `/api/project/${encodeURIComponent(
           projectId
         )}/storage/buckets/${encodeURIComponent(bucketName)}`,
-        {
-          publicAccessPrevention: 'enforced',
-          uniformBucketLevelAccess: true,
-          versioningEnabled: true,
-          softDeleteDays: 30,
-        }
+        payload
       );
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            `Air-Gap Hardened gs://${bucketName} (PAP Enforced + Uniform IAM + Versioning + 30d Soft-Delete Recovery)!`
+            `Updated Ransomware Air-Gap policy on gs://${bucketName}!`
         );
       }
       await fetchBucketsForMoonshots();
+      if (bucketName === selectedRansomwareBucket) {
+        await handleRunDeepRansomwareAudit(bucketName);
+      }
       if (onRefreshGlobal) onRefreshGlobal();
     } catch (err) {
       if (onShowError) {
         onShowError(
           err.response?.data?.error ||
-            `Failed to apply Air-Gap Vault Lock on gs://${bucketName}`
+            `Failed to apply Air-Gap Vault policy on gs://${bucketName}`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const handleRunRansomwareDrill = async (bucketNameOverride = null) => {
+    const targetBkt =
+      bucketNameOverride ||
+      selectedRansomwareBucket ||
+      ransomwareAudit.auditedBuckets[0]?.name;
+    if (!projectId || !targetBkt) return;
+    setRunningRansomwareDrill(true);
+    setBusyKey(`drill-${targetBkt}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(targetBkt)}/ransomware-drill`,
+        {}
+      );
+      setRansomwareDrillReceipt(res.data);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Completed Clean-Room Ransomware Rollback Drill on gs://${targetBkt}!`
+        );
+      }
+      await fetchBucketsForMoonshots();
+      await handleRunDeepRansomwareAudit(targetBkt);
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to run Clean-Room Ransomware Drill on gs://${targetBkt}`
+        );
+      }
+    } finally {
+      setRunningRansomwareDrill(false);
+      setBusyKey(null);
+    }
+  };
+
+  const handleRollbackNoncurrentGeneration = async (
+    bucketName,
+    objectName,
+    sourceGeneration
+  ) => {
+    if (!projectId || !bucketName || !objectName || !sourceGeneration) return;
+    setBusyKey(`rollback-${objectName}-${sourceGeneration}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(bucketName)}/objects/rewrite`,
+        {
+          objectName,
+          sourceGeneration: String(sourceGeneration),
+          destinationBucket: bucketName,
+          destinationObjectName: objectName,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Restored generation #${sourceGeneration} as the live version of gs://${bucketName}/${objectName}!`
+        );
+      }
+      await handleRunDeepRansomwareAudit(bucketName);
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to restore generation #${sourceGeneration} for ${objectName}`
         );
       }
     } finally {
@@ -1398,7 +1567,13 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
             <div className="w-full pt-2 border-t border-red-500/20 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 items-center">
               <select
                 value={selectedDlpBucket}
-                onChange={(e) => setSelectedDlpBucket(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedDlpBucket(val);
+                  if (typeof onSelectBucket === 'function') {
+                    onSelectBucket(val);
+                  }
+                }}
                 title="Select a live Cloud Storage bucket in your project to stream objects into the ephemeral DLP X-Ray scanner"
                 className="w-full h-9 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
@@ -2301,6 +2476,7 @@ CMD ["server/index.js"]`;
 
               <button
                 type="button"
+                data-feature-id="MOONSHOT_X2_PATCH_COLDSTART_BOOST_BTN"
                 disabled={busyKey === `coldstart-${activeRunObj.name}`}
                 onClick={handleApplyColdStartSurgery}
                 title={`Patch Cloud Run service "${activeRunObj.name}" via GCP Cloud Run v2 API to enable startupCpuBoost=true and EXECUTION_ENVIRONMENT_GEN2`}
@@ -2375,6 +2551,7 @@ CMD ["server/index.js"]`;
                 {onRunInShell && activeService && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X2_RUN_CPU_BOOST_SHELL_BTN"
                     onClick={() =>
                       onRunInShell(
                         `gcloud run services update ${activeService.name} --region=${activeService.region || 'us-central1'} --cpu-boost --execution-environment=gen2 --project=${projectId}`
@@ -2388,6 +2565,7 @@ CMD ["server/index.js"]`;
                 )}
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X2_DOWNLOAD_DOCKERFILE_BTN"
                   onClick={() =>
                     handleDownloadFile(
                       `Dockerfile.${activeService?.name || 'cloudrun'}.distroless`,
@@ -2402,6 +2580,7 @@ CMD ["server/index.js"]`;
                 {onSelectStudioTab && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X2_OPEN_CLOUDRUN_STUDIO_BTN"
                     onClick={() => onSelectStudioTab('CLOUD_RUN')}
                     className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
                   >
@@ -2410,6 +2589,7 @@ CMD ["server/index.js"]`;
                 )}
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X2_COPY_DOCKERFILE_BTN"
                   onClick={() => handleCopy(dockerfilePatch, 'dockerfile')}
                   title="Copy this multi-stage Google Distroless Dockerfile to shrink container image size from ~980 MB to 48 MB (-78% cold-start pull time)"
                   className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 cursor-pointer"
@@ -2563,6 +2743,7 @@ LIMIT 50;`;
                 {onRunInShell && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X3_ENABLE_PGA_SHELL_BTN"
                     onClick={() =>
                       onRunInShell(
                         `gcloud compute networks subnets update default --region=${targetColocateRegion} --enable-private-ip-google-access --project=${projectId}`
@@ -2576,6 +2757,7 @@ LIMIT 50;`;
                 )}
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X3_DOWNLOAD_COLOCATE_SH_BTN"
                   onClick={() =>
                     handleDownloadFile(
                       `zero-egress-colocate-${projectId}.sh`,
@@ -2591,6 +2773,7 @@ LIMIT 50;`;
                 {onOpenBigQuerySql && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X3_QUERY_EGRESS_BQ_BTN"
                     onClick={() => onOpenBigQuerySql(egressAuditBigQuerySql)}
                     className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
                   >
@@ -2600,6 +2783,7 @@ LIMIT 50;`;
                 {onSelectStudioTab && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X3_OPEN_VPC_STUDIO_BTN"
                     onClick={() => onSelectStudioTab('VPC_FIREWALL')}
                     className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                   >
@@ -2654,6 +2838,7 @@ LIMIT 50;`;
                       <>
                         <button
                           type="button"
+                          data-feature-id="MOONSHOT_X3_OPEN_COMPUTE_NODE_BTN"
                           onClick={() => onSelectStudioTab(targetComputeStudio)}
                           className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                         >
@@ -2661,6 +2846,7 @@ LIMIT 50;`;
                         </button>
                         <button
                           type="button"
+                          data-feature-id="MOONSHOT_X3_OPEN_DATA_NODE_BTN"
                           onClick={() => onSelectStudioTab(targetDataStudio)}
                           className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                         >
@@ -2682,126 +2868,557 @@ LIMIT 50;`;
   // RENDER X4: CRYPTOGRAPHIC RANSOMWARE AIR-GAP & CLEAN-ROOM AUDITOR
   // ==========================================================================
   if (activeTab === 'X4') {
+    const activeAuditBkt =
+      ransomwareAudit.auditedBuckets.find(
+        (b) => b.name === selectedRansomwareBucket
+      ) || ransomwareAudit.auditedBuckets[0];
+
     return (
       <div className="space-y-4">
         <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-emerald-500/20 pb-3.5">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
-                MOONSHOT X4 · RANSOMWARE SURVIVAL &amp; AIR-GAP AUDITOR
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+                  MOONSHOT X4 · 4-PILLAR RANSOMWARE SURVIVAL &amp; CLEAN-ROOM AUDITOR
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-900 text-emerald-400 border border-emerald-500/30">
+                  NIST SP 800-209 · SEC Rule 17a-4 (WORM) · GCS Generation Time-Machine
+                </span>
+              </div>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <Lock className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                <Lock className="w-5 h-5 text-emerald-500" />
                 <span>
-                  Cryptographic Ransomware Air-Gap Resilience &amp; Clean-Room
-                  RTO/RPO Auditor
+                  Cryptographic Ransomware Air-Gap Resilience, 6-Gate X-Ray &amp;
+                  Live Clean-Room Rollback Studio
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Audits every live Cloud Storage bucket against NIST &amp; SEC
-                17a-4 ransomware survival criteria (PAP, Uniform IAM, 30d
-                Soft-Delete, Versioning, WORM Lock, CMEK) and hardens vulnerable
-                buckets in 1 click.
+                Inspects live bucket immutability gates (`PAP`, `Uniform IAM`, `Soft-Delete 7d–90d`, `Object Versioning` vs `SEC 17a-4 WORM Retention`, `CMEK`, and `Destructive IAM Principals`), runs a live 3-step ransomware overwrite &amp; rollback drill (`v1 -&gt; v2 -&gt; v3`), and restores noncurrent generations in 1 click.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 font-mono">
+            <div className="flex items-center gap-2.5 font-mono flex-wrap">
               <div className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-500/40 text-right">
                 <div className="text-[10px] uppercase text-zinc-400">
-                  Ransomware Survival Score
+                  Fleet Survival Score
                 </div>
                 <div className="text-base font-extrabold text-emerald-500">
                   {ransomwareAudit.overallScore}/100 · RTO{' '}
-                  {ransomwareAudit.rtoMinutes}m
+                  {deepRansomwareAudit?.estimatedRtoSeconds
+                    ? `${deepRansomwareAudit.estimatedRtoSeconds}s`
+                    : `${ransomwareAudit.rtoMinutes}m`}
                 </div>
               </div>
             </div>
           </div>
 
+          {/* PILLAR 1: BUCKET FLEET & 1-TAP IMMUTABILITY / WORM / SOFT-DELETE CONTROLS */}
           <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                1. Select Bucket to Inspect &amp; Harden ({ransomwareAudit.auditedBuckets.length} Buckets)
+              </span>
+              {activeAuditBkt && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    data-feature-id="RANSOMWARE_X4_DEEP_AUDIT_BTN"
+                    disabled={loadingDeepRansomware}
+                    onClick={() =>
+                      handleRunDeepRansomwareAudit(activeAuditBkt.name)
+                    }
+                    className="h-8 px-3 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-sans font-bold cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        loadingDeepRansomware ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>
+                      {loadingDeepRansomware
+                        ? 'Scanning 6 Gates & Generations...'
+                        : `Deep-Audit gs://${activeAuditBkt.name}`}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-feature-id="RANSOMWARE_X4_RUN_CLEANROOM_DRILL_BTN"
+                    disabled={runningRansomwareDrill}
+                    onClick={() => handleRunRansomwareDrill(activeAuditBkt.name)}
+                    title="Writes a clean JSON ledger (v1), simulates a ransomware overwrite (v2), and executes a live GCS rewriteTo rollback from noncurrent generation v1 -> v3 while verifying CRC32C & SHA-256"
+                    className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-sans font-bold cursor-pointer inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>
+                      {runningRansomwareDrill
+                        ? 'Running v1 -> v2 Attack -> v3 Rollback Drill...'
+                        : 'Run Live Clean-Room Rollback Drill (v1 -> v2 -> v3)'}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {ransomwareAudit.auditedBuckets.length === 0 ? (
               <div className="p-4 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
                 No Cloud Storage buckets found yet — provision a compliant bucket
                 to audit its live ransomware survival score.
               </div>
             ) : (
-              ransomwareAudit.auditedBuckets.map((b) => (
-                <div
-                  key={b.name}
-                  className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
-                >
-                  <div>
-                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                      gs://{b.name} ({b.location} · {b.storageClass})
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${
-                          b.pap
-                            ? 'bg-emerald-500/15 text-emerald-500'
-                            : 'bg-red-500/15 text-red-500'
-                        }`}
-                      >
-                        PAP: {b.pap ? 'Enforced' : 'Inherited'}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${
-                          b.ubla
-                            ? 'bg-emerald-500/15 text-emerald-500'
-                            : 'bg-amber-500/15 text-amber-500'
-                        }`}
-                      >
-                        IAM: {b.ubla ? 'Uniform' : 'Fine-Grained ACL'}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-500">
-                        Soft-Delete: {b.softDelDays}d
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${
-                          b.versioning || b.wormDays > 0
-                            ? 'bg-emerald-500/15 text-emerald-500'
-                            : 'bg-amber-500/15 text-amber-500'
-                        }`}
-                      >
-                        {b.wormDays > 0
-                          ? `WORM Lock: ${b.wormDays}d`
-                          : b.versioning
-                          ? 'Versioning: ON'
-                          : 'Versioning: OFF'}
-                      </span>
-                    </div>
-                  </div>
+              [...ransomwareAudit.auditedBuckets]
+                .sort((a, b) =>
+                  a.name === activeAuditBkt?.name
+                    ? -1
+                    : b.name === activeAuditBkt?.name
+                    ? 1
+                    : 0
+                )
+                .map((b) => {
+                const isSelected = activeAuditBkt?.name === b.name;
+                return (
+                  <div
+                    key={b.name}
+                    onClick={() => {
+                      setSelectedRansomwareBucket(b.name);
+                      if (typeof onSelectBucket === 'function') {
+                        onSelectBucket(b.name);
+                      }
+                    }}
+                    className={`p-3.5 rounded-xl border transition-all flex flex-col gap-2.5 text-xs font-mono cursor-pointer ${
+                      isSelected
+                        ? 'bg-white dark:bg-zinc-900 border-amber-500 ring-1 ring-amber-500/40 shadow-sm'
+                        : 'bg-white/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                            gs://{b.name}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                            {b.location.toUpperCase()} · {b.storageClass}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40 font-bold">
+                              ACTIVE X-RAY TARGET
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px]">
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold ${
+                              b.pap
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-red-500/15 text-red-500'
+                            }`}
+                          >
+                            PAP: {b.pap ? 'Enforced' : 'Inherited'}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold ${
+                              b.ubla
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}
+                          >
+                            IAM: {b.ubla ? 'Uniform' : 'Legacy ACL'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                            Soft-Delete: {b.softDelDays}d
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold ${
+                              b.versioning || b.wormDays > 0
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}
+                          >
+                            {b.wormDays > 0
+                              ? `WORM Retention: ${b.wormDays}d (${
+                                  b.wormLocked ? 'LOCKED' : 'Unlocked'
+                                })`
+                              : b.versioning
+                              ? 'Versioning: ON'
+                              : 'Versioning: OFF'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold">
+                            {b.cmek
+                              ? `CMEK: ${b.kmsKeyShort}`
+                              : 'Google AES-256'}
+                          </span>
+                          {b.privilegedPrincipalsCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
+                              {b.privilegedPrincipalsCount} Admin Principal(s)
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-extrabold text-emerald-500">
-                      {b.survivalScore}%
-                    </span>
-                    {onOpenObjectInWorkbench && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenObjectInWorkbench(b.name, '')}
-                        title={`Open gs://${b.name} in the Object Workbench (M02) to inspect noncurrent object versions, restore soft-deleted generations, or toggle temporaryHold / eventBasedHold`}
-                        className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                      <div
+                        className="flex flex-wrap items-center gap-2 font-sans"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        Version Time-Machine &amp; Holds (M02) →
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      disabled={busyKey === `airgap-${b.name}`}
-                      onClick={() => handleAirGapLockBucket(b.name)}
-                      title={`Harden gs://${b.name} in 1 click via Google Cloud Storage API: enforces publicAccessPrevention='enforced', uniformBucketLevelAccess=true, versioningEnabled=true, and a 30-day Soft-Delete recovery window`}
-                      className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
-                    >
-                      {busyKey === `airgap-${b.name}`
-                        ? 'Hardening...'
-                        : '1-Tap Air-Gap Shield (30d Soft-Delete)'}
-                    </button>
+                        <span className="text-sm font-mono font-extrabold text-emerald-500 mr-1">
+                          {b.survivalScore}%
+                        </span>
+                        {onOpenObjectInWorkbench && (
+                          <button
+                            type="button"
+                            data-feature-id="RANSOMWARE_X4_OPEN_WORKBENCH_BTN"
+                            onClick={() => onOpenObjectInWorkbench(b.name, '')}
+                            title={`Open gs://${b.name} in the Object Workbench (M02) to inspect noncurrent object versions, restore soft-deleted generations, or toggle temporaryHold / eventBasedHold`}
+                            className="h-8 px-3 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
+                          >
+                            Version Time-Machine (M02) →
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          data-feature-id="RANSOMWARE_X4_AIRGAP_30D_SHIELD_BTN"
+                          disabled={busyKey === `airgap-${b.name}`}
+                          onClick={() => handleAirGapLockBucket(b.name)}
+                          title={`Harden gs://${b.name} in 1 click via Google Cloud Storage API: enforces publicAccessPrevention='enforced', uniformBucketLevelAccess=true, versioningEnabled=true, and a 30-day Soft-Delete recovery window`}
+                          className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          {busyKey === `airgap-${b.name}`
+                            ? 'Hardening...'
+                            : '1-Tap Air-Gap Shield (30d Soft-Delete)'}
+                        </button>
+                        <button
+                          type="button"
+                          data-feature-id="RANSOMWARE_X4_MAX_90D_SOFT_DELETE_BTN"
+                          disabled={busyKey === `airgap-${b.name}`}
+                          onClick={() =>
+                            handleAirGapLockBucket(b.name, {
+                              publicAccessPrevention: 'enforced',
+                              uniformBucketLevelAccess: true,
+                              versioningEnabled: true,
+                              softDeleteDays: 90,
+                            })
+                          }
+                          title={`Configure maximum 90-day Google Cloud Storage Soft-Delete retention window + Object Versioning on gs://${b.name}`}
+                          className="h-8 px-2.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          Max 90d Soft-Delete
+                        </button>
+                        <button
+                          type="button"
+                          data-feature-id="RANSOMWARE_X4_WORM_LOCK_30D_BTN"
+                          disabled={busyKey === `airgap-${b.name}` || b.wormLocked}
+                          onClick={() =>
+                            handleAirGapLockBucket(
+                              b.name,
+                              b.wormDays > 0
+                                ? {
+                                    retentionPeriodDays: 0,
+                                    versioningEnabled: true,
+                                  }
+                                : {
+                                    retentionPeriodDays: 30,
+                                    defaultEventBasedHold: true,
+                                  }
+                            )
+                          }
+                          title={
+                            b.wormDays > 0
+                              ? `Switch gs://${b.name} from Unlocked WORM Retention back to Object Versioning mode`
+                              : `Enable 30-Day SEC 17a-4 Unlocked WORM Retention Policy + Default Event-Based Hold on gs://${b.name} (automatically disables Object Versioning per GCS API spec)`
+                          }
+                          className="h-8 px-2.5 rounded-md bg-amber-500/15 hover:bg-amber-600 hover:text-white text-amber-700 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          {b.wormDays > 0
+                            ? 'Switch WORM -> Versioning'
+                            : '30d WORM Lock (SEC 17a-4)'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
+          {/* PILLAR 2: LIVE 3-STEP RANSOMWARE OVERWRITE & CLEAN-ROOM ROLLBACK DRILL RECEIPT */}
+          {ransomwareDrillReceipt && (
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-blue-500/40 space-y-3 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">
+                    LIVE CLEAN-ROOM ROLLBACK DRILL VERIFIED
+                  </span>
+                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    gs://{ransomwareDrillReceipt.bucketName}/
+                    {ransomwareDrillReceipt.objectName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                    Measured RTO: {ransomwareDrillReceipt.rollbackRtoMs} ms
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    RPO: 0 Bytes Lost (CRC32C Verified)
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                {(ransomwareDrillReceipt.timeline || []).map((step) => (
+                  <div
+                    key={step.step}
+                    className={`p-3 rounded-xl border space-y-1 ${
+                      step.step === 2
+                        ? 'bg-red-500/5 border-red-500/30'
+                        : 'bg-emerald-500/5 border-emerald-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-extrabold uppercase text-zinc-900 dark:text-zinc-100">
+                        Step {step.step}: {step.phase}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 font-bold">
+                        Gen #{String(step.generation).slice(-6)}
+                      </span>
+                    </div>
+                    <div className="text-[10.5px] text-zinc-600 dark:text-zinc-300">
+                      {step.summary}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 pt-1">
+                      CRC32C: <code>{step.crc32c}</code> · SHA256:{' '}
+                      <code>{String(step.sha256 || '').slice(0, 12)}…</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PILLAR 3: 6-GATE CRYPTOGRAPHIC SURVIVAL MATRIX FOR ACTIVE BUCKET */}
+          {deepRansomwareAudit && (
+            <div className="space-y-3 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  2. 6-Gate Cryptographic Survival Matrix — gs://
+                  {deepRansomwareAudit.bucketName} ({deepRansomwareAudit.survivalScore}
+                  /100)
+                </span>
+                <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+                  <span>
+                    Live Objects:{' '}
+                    <strong className="text-zinc-900 dark:text-zinc-100">
+                      {deepRansomwareAudit.telemetry?.liveObjectsCount || 0}
+                    </strong>
+                  </span>
+                  <span>·</span>
+                  <span>
+                    Noncurrent Gens:{' '}
+                    <strong className="text-emerald-600 dark:text-emerald-400">
+                      {deepRansomwareAudit.telemetry?.noncurrentGenerationsCount || 0}
+                    </strong>
+                  </span>
+                  <span>·</span>
+                  <span>
+                    Soft-Deleted in Trash:{' '}
+                    <strong className="text-blue-600 dark:text-blue-400">
+                      {deepRansomwareAudit.telemetry?.softDeletedObjectsCount || 0}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 font-mono">
+                {(deepRansomwareAudit.gates || []).map((gate) => (
+                  <div
+                    key={gate.id}
+                    className={`p-3 rounded-xl border space-y-1 ${
+                      gate.passed
+                        ? 'bg-white dark:bg-zinc-900 border-emerald-500/35'
+                        : 'bg-white dark:bg-zinc-900 border-amber-500/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {gate.title}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
+                          gate.passed
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {gate.pointsEarned}/{gate.maxPoints} pts
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                      {gate.statusLabel}
+                    </div>
+                    <p className="text-[10.5px] text-zinc-500 leading-relaxed">
+                      {gate.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* PILLAR 4: NONCURRENT GENERATION TIME-MACHINE & IAM BLAST-RADIUS LEDGER */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 font-mono text-xs">
+                {/* Left: Noncurrent Object Generations Ready for 1-Tap Rollback */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      3. Noncurrent Generation Rollback Ledger (
+                      {(deepRansomwareAudit.versionedObjectChains || []).length})
+                    </span>
+                    <span className="text-[10px] text-zinc-500">
+                      1-Click Point-in-Time Restore
+                    </span>
+                  </div>
+
+                  {(deepRansomwareAudit.versionedObjectChains || []).length ===
+                  0 ? (
+                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500">
+                      No overwritten/noncurrent object generations found in{' '}
+                      <code>gs://{deepRansomwareAudit.bucketName}</code> yet.
+                      Click{' '}
+                      <strong>
+                        Run Live Clean-Room Rollback Drill (v1 -&gt; v2 -&gt; v3)
+                      </strong>{' '}
+                      above to test real GCS generation preservation &amp;
+                      point-in-time recovery!
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {deepRansomwareAudit.versionedObjectChains.map((chain) => {
+                        const prevGen = chain.noncurrentGenerations?.[0];
+                        return (
+                          <div
+                            key={chain.objectName}
+                            className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                {chain.objectName}
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                {chain.totalGenerations} total gen(s) · Live
+                                Gen #{String(chain.liveGeneration?.generation || '').slice(-6)}{' '}
+                                {prevGen
+                                  ? `· Previous Gen #${String(prevGen.generation).slice(-6)} (${prevGen.size} B, CRC32C ${prevGen.crc32c})`
+                                  : ''}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 font-sans">
+                              {prevGen && (
+                                <button
+                                  type="button"
+                                  data-feature-id="RANSOMWARE_X4_RESTORE_GEN_BTN"
+                                  disabled={
+                                    busyKey ===
+                                    `rollback-${chain.objectName}-${prevGen.generation}`
+                                  }
+                                  onClick={() =>
+                                    handleRollbackNoncurrentGeneration(
+                                      deepRansomwareAudit.bucketName,
+                                      chain.objectName,
+                                      prevGen.generation
+                                    )
+                                  }
+                                  className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                >
+                                  {busyKey ===
+                                  `rollback-${chain.objectName}-${prevGen.generation}`
+                                    ? 'Restoring...'
+                                    : `Restore Gen #${String(
+                                        prevGen.generation
+                                      ).slice(-6)}`}
+                                </button>
+                              )}
+                              {onOpenObjectInWorkbench && (
+                                <button
+                                  type="button"
+                                  data-feature-id="RANSOMWARE_X4_INSPECT_CHAIN_BTN"
+                                  onClick={() =>
+                                    onOpenObjectInWorkbench(
+                                      deepRansomwareAudit.bucketName,
+                                      chain.objectName
+                                    )
+                                  }
+                                  className="h-7 px-2 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                                >
+                                  Inspect →
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Destructive IAM Principal Blast-Radius Audit */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      4. IAM Delete / Overwrite Blast-Radius Principals (
+                      {(deepRansomwareAudit.destructivePrincipals || []).length})
+                    </span>
+                    <span className="text-[10px] text-zinc-500">
+                      storage.admin / objectAdmin
+                    </span>
+                  </div>
+
+                  {(deepRansomwareAudit.destructivePrincipals || []).length ===
+                  0 ? (
+                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500">
+                      Zero direct bucket-level destructive IAM principals found.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                      {deepRansomwareAudit.destructivePrincipals.map(
+                        (p, idx) => (
+                          <div
+                            key={`${p.role}-${p.member}-${idx}`}
+                            className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[11px]"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                {p.member}
+                              </div>
+                              <div className="text-[10px] text-zinc-500 truncate">
+                                {p.role}
+                              </div>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
+                                p.riskVector === 'CRITICAL_PUBLIC_WRITE_DELETE'
+                                  ? 'bg-red-500/20 text-red-500'
+                                  : p.riskVector ===
+                                    'SERVICE_ACCOUNT_KEY_COMPROMISE_VECTOR'
+                                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              }`}
+                            >
+                              {p.riskVector ===
+                              'SERVICE_ACCOUNT_KEY_COMPROMISE_VECTOR'
+                                ? 'SA Key Vector'
+                                : p.riskVector ===
+                                  'CRITICAL_PUBLIC_WRITE_DELETE'
+                                ? 'PUBLIC WRITE!'
+                                : 'Admin Identity'}
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2860,6 +3477,7 @@ LIMIT 50;`;
 
               <button
                 type="button"
+                data-feature-id="MOONSHOT_X5_TOGGLE_ANYCAST_CDN_BTN"
                 onClick={() => setEnableGlobalAnycastCdn((v) => !v)}
                 title="Simulate terminating client TLS 1.3 handshakes at Google's nearest Global Anycast Edge PoP (Cloud Load Balancing + Cloud CDN) instead of traversing transoceanic fiber to the origin"
                 className={`px-3.5 py-2 rounded-md text-xs font-mono font-extrabold border cursor-pointer transition-all ${
@@ -2876,6 +3494,7 @@ LIMIT 50;`;
               {onRunInShell && (
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X5_INSPECT_ANYCAST_SHELL_BTN"
                   onClick={() =>
                     onRunInShell(
                       `gcloud compute backend-services list --global --project=${projectId}`
@@ -2890,6 +3509,7 @@ LIMIT 50;`;
 
               <button
                 type="button"
+                data-feature-id="MOONSHOT_X5_DOWNLOAD_ANYCAST_SH_BTN"
                 onClick={() =>
                   handleDownloadFile(
                     `anycast-cdn-${selectedOriginRegion}-${projectId}.sh`,
@@ -2906,6 +3526,7 @@ LIMIT 50;`;
               {onSelectStudioTab && (
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X5_OPEN_GLOBAL_MAP_BTN"
                   onClick={() => onSelectStudioTab('GLOBAL_MAP')}
                   className="px-3 py-2 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold cursor-pointer"
                 >
@@ -3019,6 +3640,7 @@ LIMIT 50;`;
             </select>
             <button
               type="button"
+              data-feature-id="MOONSHOT_X6_SYNC_AI_MODELS_BTN"
               onClick={handleDiscoverLiveModels}
               disabled={discoveringModels}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
@@ -3041,7 +3663,8 @@ LIMIT 50;`;
           <div className="p-3.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
             <div className="space-y-1">
               <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-                <span>🟢 Path A Active · Keyless Google Cloud Vertex AI OAuth2 (No API Key Needed)</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>Path A Active · Keyless Google Cloud Vertex AI OAuth2 (No API Key Needed)</span>
               </div>
               <div className="text-zinc-600 dark:text-zinc-300 text-[11px]">
                 Authenticates directly with your active Google Cloud login token against{' '}
@@ -3050,6 +3673,7 @@ LIMIT 50;`;
             </div>
             <button
               type="button"
+              data-feature-id="MOONSHOT_X6_SWITCH_PATH_B_BTN"
               onClick={() => setAiPreferredProvider('AI_STUDIO_KEY')}
               className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold cursor-pointer"
             >
@@ -3154,6 +3778,7 @@ LIMIT 50;`;
               </div>
               <button
                 type="button"
+                data-feature-id="MOONSHOT_X6_FOCUS_VAULT_BOX_BTN"
                 onClick={focusAndHighlightKeyInput}
                 title="Click to jump directly to the encrypted API key input box below"
                 className="p-2 rounded-md bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 hover:border-amber-500 flex items-start gap-2 text-left cursor-pointer"
@@ -3248,6 +3873,7 @@ LIMIT 50;`;
               <div className="sm:col-span-3 flex items-center gap-2">
                 <button
                   type="submit"
+                  data-feature-id="MOONSHOT_X6_SEAL_KEY_BTN"
                   disabled={busyKey === 'seal-key'}
                   title={
                     transportMode === 'BROWSER_DIRECT_TLS13'
@@ -3267,6 +3893,7 @@ LIMIT 50;`;
                 {vaultStatus.configured && (
                   <button
                     type="button"
+                    data-feature-id="MOONSHOT_X6_CLEAR_VAULT_BTN"
                     onClick={handleClearVault}
                     className="px-2.5 py-2 rounded-md bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
                     title="Zero-fill and wipe the encrypted API key from Browser WebCrypto memory and Server RAM Vault"
@@ -3299,6 +3926,7 @@ LIMIT 50;`;
                 <button
                   key={preset.id}
                   type="button"
+                  data-feature-id="MOONSHOT_X6_MODEL_PRESET_BTN"
                   onClick={() => setSelectedGeminiModel(preset.id)}
                   title={preset.tip}
                   className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer ${
@@ -3336,6 +3964,7 @@ LIMIT 50;`;
               <button
                 key={q}
                 type="button"
+                data-feature-id="MOONSHOT_X6_PROMPT_PRESET_BTN"
                 onClick={() => {
                   setAiPrompt(q);
                   handleAskGeminiArchitect(q);
@@ -3358,6 +3987,7 @@ LIMIT 50;`;
             />
             <button
               type="button"
+              data-feature-id="MOONSHOT_X6_ASK_ARCHITECT_BTN"
               disabled={askingAi}
               onClick={() => handleAskGeminiArchitect(aiPrompt)}
               title={`Send your prompt + live ${projectId} resource telemetry to ${
@@ -3419,6 +4049,7 @@ LIMIT 50;`;
                 </div>
                 <button
                   type="button"
+                  data-feature-id="MOONSHOT_X6_COPY_RESPONSE_BTN"
                   onClick={() => handleCopy(aiResponse.answer, 'ai-ans')}
                   title="Copy the entire Markdown SRE architecture response to your clipboard"
                   className="px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer font-bold"
@@ -3454,6 +4085,7 @@ LIMIT 50;`;
                             </span>
                             <button
                               type="button"
+                              data-feature-id="MOONSHOT_X6_COPY_SNIPPET_BTN"
                               onClick={() => handleCopy(codeBody, blockKey)}
                               title={`Copy this ${lang} command/code snippet to your clipboard`}
                               className="text-emerald-400 hover:underline cursor-pointer font-bold"

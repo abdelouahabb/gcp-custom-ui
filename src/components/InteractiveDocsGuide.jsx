@@ -907,12 +907,13 @@ const DOC_SECTIONS = [
       'X1 — Cloud Storage Live DLP, Secret Leak & PII X-Ray Scanner + 1-Tap In-Place Redactor: Streams object bytes in server memory to detect leaked GCP Service Account keys, AWS keys, GitHub PATs, Stripe keys, JWTs, Credit Cards, IBANs, and SSNs—with a 1-Tap Canary Injector and 1-Tap In-Place Cryptographic Redactor.',
       'X2 — Serverless Cold-Start Profiler & Container Diet Surgeon: Breaks down Cloud Run startup into 5 phases (Image Pull, Sandbox Init, Runtime Boot, Weight Tax, Warm P50), patches Startup CPU Boost + Gen2 Execution Environment in 1 tap, and synthesizes a multi-stage Distroless Dockerfile.',
       'X3 — Cross-Service Egress & Hidden Data-Gravity Tollbooth: Cross-references every Compute VM and Cloud Run service region against your Cloud Storage bucket locations using the Live Pricing Catalog to flag cross-region ($0.02/GB) and inter-continental ($0.08–$0.12/GB) bandwidth taxes.',
-      'X4 — Cryptographic Ransomware Air-Gap & Clean-Room Recovery Auditor: Scores every bucket on a 0–100 Ransomware Survival scale, computes exact RTO/RPO, and applies a 1-Tap 30-Day Soft-Delete + Object Versioning Air-Gap Shield.',
+      'X4 — 4-Pillar Cryptographic Ransomware Air-Gap, 6-Gate Live X-Ray & Clean-Room Recovery Drill Studio: Evaluates a 6-Gate Zero-Trust & Immutability Matrix (PAP, Uniform IAM, Soft-Delete 7d–90d, Object Versioning vs SEC 17a-4 WORM Retention, CMEK, and Over-Privileged IAM Principals), inventories live noncurrent & soft-deleted object generations for 1-click point-in-time restoration, and executes a non-destructive 3-step Clean-Room Ransomware Attack & Rollback Proof verifying SHA-256 and CRC32C bit-for-bit integrity.',
       'X5 — 12-Metropolis Speed-of-Light User-Experience & Anycast Edge Latency Matrix: Calculates great-circle fiber distance and TLS RTT from 12 global population hubs to your active GCP regions vs Google Cloud CDN Anycast Edge.',
       'X6 — Option 3 AES-256-GCM Encrypted Google AI Studio BYOK RAM Vault (Gemini 3.8 Flash & 3.1 Pro): Seals your AIzaSy... key in volatile Node.js RAM using crypto.createCipheriv("aes-256-gcm") with an 8,192-token output budget, live /v1beta/models auto-discovery, and 3-step onboarding when empty.',
     ],
     apisUsed: [
-      'POST /api/project/:id/storage/buckets/:bucket/dlp-scan & /dlp-redact',
+      'POST /api/project/:id/storage/buckets/:bucket/dlp-scan, /dlp-redact & /dlp-rehydrate-from-secret-manager',
+      'POST /api/project/:id/storage/buckets/:bucket/ransomware-deep-audit & /ransomware-drill',
       'GET /api/ai-vault/status, GET /api/ai-vault/models, POST /api/ai-vault/configure & POST /api/project/:id/ai-vault/ask',
       'POST /api/project/:id/storage/buckets/:bucket/security-patch & PATCH /api/project/:id/cloudrun/:region/:name',
     ],
@@ -1991,6 +1992,33 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       '100% client-side zero-cost UX enhancement ($0.00/mo, zero network overhead).',
+  },
+  {
+    id: 'ransomware-clean-room-studio-3zone-object-ide-and-navigation-guard',
+    wave: 'WAVE 22 CLOUD STORAGE SECURITY & UX · 4-PILLAR RANSOMWARE CLEAN-ROOM STUDIO, 3-ZONE OBJECT WORKBENCH IDE & CROSS-STUDIO NAVIGATION GUARD',
+    title:
+      '50. 4-Pillar Cryptographic Ransomware Air-Gap & Clean-Room Rollback Studio (`X4`), Redesigned 3-Zone Object Workbench IDE, Cross-Studio Navigation Guard & 100% Plain-English Action Gatekeeper',
+    badge: 'Cloud Storage Studio + Object Workbench IDE + Global Guard Modals',
+    badgeColor:
+      'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30',
+    icon: ShieldCheck,
+    targetTab: 'CLOUD_STORAGE',
+    problemSolved:
+      'Traditional storage consoles only toggle Versioning or Soft-Delete checkboxes without proving recovery speed, leave operators overwhelmed by cluttered object action buttons, unexpectedly switch studios without asking when clicking cross-tab deep-links, and show generic confirmation prompts that fail to explain exact API mutations or billing impact.',
+    howItWorks: [
+      'Pillar 1 — 6-Gate Live Bucket Metadata & IAM Blast-Radius X-Ray (POST /ransomware-deep-audit): Queries live bucket metadata (projection=full), IAM policy bindings, and object generations (?versions=true & ?softDeleted=true) to score Public Access Prevention (15 pts), Uniform IAM (15 pts), Soft-Delete Window (25 pts), Object Versioning (25 pts), SEC 17a-4 WORM Retention Lock (10 pts), and CMEK / Least-Privilege IAM (10 pts).',
+      'Pillar 2 — Live Noncurrent & Soft-Deleted Generation Time-Machine: Lists every historical generation (#generation) and soft-deleted tombstone inside the selected bucket with 1-click Point-in-Time Generation Rollback (rewriteTo?sourceGeneration) and Soft-Delete Restoration (/restore?generation).',
+      'Pillar 3 — Live 3-Step Non-Destructive Ransomware Attack & Clean-Room Rollback Proof (POST /ransomware-drill): Writes an isolated canary v1 object (.cloudpulse-ransomware-drill/canary-proof.json), overwrites it with a simulated v2 ransomware payload while Soft-Delete/Versioning preserves #genV1, restores #genV1 to v3 via rewriteTo, and verifies SHA-256 + CRC32C bit-for-bit equality while measuring exact RTO in milliseconds.',
+      'Pillar 4 — Bi-Directional Active Bucket Synchronization & 3-Zone Object Workbench IDE: Selecting any bucket in Active Bucket immediately updates regional CFE/pricing telemetry, sorts the active bucket to #1 in the fleet grid, syncs across Object Workbench, DLP X-Ray, and Ransomware Auditor, and renders a streamlined 3-Zone Object IDE with consolidated overflow menus (Access & Hold, Actions & Export, Jump to Studio...) and a Cross-Studio Navigation Confirmation Guard Modal.',
+      '100% Plain-English Action Gatekeeper (classifyDestructiveAxiosConfig in src/App.jsx): Every mutating API route across all 22 Studios now provides a dedicated plain-English laymanSummary, headerBadge, targetLabel, whatHappensNext, costWarning, impactWarning, and confirmLabel with zero generic fallback templates.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/storage/buckets/:bucketName/ransomware-deep-audit & /ransomware-drill',
+      'POST /api/project/:id/storage/buckets/:bucketName/security-patch (versioningEnabled, softDeleteDays, publicAccessPrevention, uniformBucketLevelAccess)',
+      'storage.googleapis.com/storage/v1/b/:bucket?projection=full, /b/:bucket/iam, /o?versions=true & /o?softDeleted=true',
+    ],
+    billingImpact:
+      '100% $0.00/mo for 6-Gate Ransomware Deep Audits, IAM Blast-Radius checks, and Clean-Room Canary Drills (auto-cleaned). Historical noncurrent versions incur standard storage rates ($0.020/GB-mo) only when objects are overwritten.',
   },
 ];
 

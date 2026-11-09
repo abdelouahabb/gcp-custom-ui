@@ -5531,6 +5531,354 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'POST https://secretmanager.googleapis.com/v1/projects/{id}/secrets/{s}/versions/{v}:destroy',
     safetyMode: 'LIVE_MUTATION',
   },
+  // ===========================================================================
+  // MOONSHOT X2: SERVERLESS COLD-START PROFILER & CONTAINER DIET SURGEON
+  // ===========================================================================
+  MOONSHOT_X2_PATCH_COLDSTART_BOOST_BTN: {
+    badge: 'CLOUD RUN GEN2 + STARTUP CPU BOOST PATCH',
+    title: 'Patch Startup CPU Boost + Gen2 VM Runtime (`PATCH run.googleapis.com/v2/.../services`)',
+    whatItDoes:
+      'Patches your selected Cloud Run service revision template with `run.googleapis.com/startup-cpu-boost: true` and `EXECUTION_ENVIRONMENT_GEN2` so cold-starting containers receive extra CPU cycles during initialization.',
+    enterpriseValue:
+      'Cuts JVM, Python ML, and Node.js container cold-start p99 latency by up to 50% with zero permanent idle instance cost.',
+    gcpApis: 'PATCH https://run.googleapis.com/v2/projects/{id}/locations/{region}/services/{svc}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MOONSHOT_X2_RUN_CPU_BOOST_SHELL_BTN: {
+    badge: 'GCLOUD RUN SERVICES UPDATE TERMINAL',
+    title: 'Run `--cpu-boost --execution-environment=gen2` in Cloud Shell',
+    whatItDoes:
+      'Pre-populates and executes `gcloud run services update <service> --region=<region> --cpu-boost --execution-environment=gen2` inside the integrated Cloud Shell terminal.',
+    enterpriseValue:
+      'Provides transparent CLI verification and revision rollout output directly in your terminal.',
+    gcpApis: 'gcloud run services update --cpu-boost --execution-environment=gen2',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MOONSHOT_X2_DOWNLOAD_DOCKERFILE_BTN: {
+    badge: 'DISTROLESS MULTI-STAGE DOCKERFILE EXPORT',
+    title: 'Download Multi-Stage Distroless `Dockerfile.distroless`',
+    whatItDoes:
+      'Downloads a production-hardened multi-stage `Dockerfile` using `gcr.io/distroless/base-debian12:nonroot` (`48 MB` image footprint, zero shell/package manager attack surface).',
+    enterpriseValue:
+      'Shrinks container pull & decompression latency during Cloud Run scale-out bursts while eliminating OS-level CVEs.',
+    gcpApis: 'Browser Blob Download (Dockerfile.distroless)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X2_OPEN_CLOUDRUN_STUDIO_BTN: {
+    badge: 'CROSS-STUDIO NAVIGATION',
+    title: 'Open Cloud Run & Cloud Functions Studio',
+    whatItDoes:
+      'Switches to the Cloud Run & Functions Studio (with a workspace switch confirmation guard) to inspect revisions, traffic splits, and container logs.',
+    enterpriseValue:
+      'Connects cold-start profiling directly to live revision management and traffic canary controls.',
+    gcpApis: 'UI Studio Navigation -> CLOUD_RUN',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X2_COPY_DOCKERFILE_BTN: {
+    badge: 'CLIPBOARD COPY',
+    title: 'Copy Distroless Multi-Stage `Dockerfile` to Clipboard',
+    whatItDoes:
+      'Copies the synthesized multi-stage `gcr.io/distroless` `Dockerfile` to your clipboard for immediate pasting into your repository.',
+    enterpriseValue:
+      'Accelerates container image diet refactoring in CI/CD pipelines.',
+    gcpApis: 'navigator.clipboard.writeText',
+    safetyMode: 'READ_ONLY',
+  },
+  // ===========================================================================
+  // MOONSHOT X3: DATA-GRAVITY & INTER-REGION EGRESS TOLLBOOTH
+  // ===========================================================================
+  MOONSHOT_X3_ENABLE_PGA_SHELL_BTN: {
+    badge: 'VPC PRIVATE GOOGLE ACCESS ($0.00/GB)',
+    title: 'Enable Private Google Access (`--enable-private-ip-google-access`) in Cloud Shell',
+    whatItDoes:
+      'Runs `gcloud compute networks subnets update default --region=<region> --enable-private-ip-google-access` in Cloud Shell so VMs and GKE nodes reach Cloud Storage and BigQuery over Google internal fiber instead of external NAT.',
+    enterpriseValue:
+      'Eliminates Cloud NAT data-processing surcharges (`$0.045/GB`) for Google API traffic.',
+    gcpApis: 'PATCH https://compute.googleapis.com/compute/v1/projects/{id}/regions/{region}/subnetworks/default',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MOONSHOT_X3_DOWNLOAD_COLOCATE_SH_BTN: {
+    badge: 'SAME-REGION CO-LOCATION SCRIPT',
+    title: 'Download Same-Region Data-Gravity Co-Location Script (`co-locate.sh`)',
+    whatItDoes:
+      'Downloads an executable `gcloud` shell script that enables Private Google Access and provisions a same-region (`$0.00/GB` intra-region transfer) Cloud Storage bucket.',
+    enterpriseValue:
+      'Replaces `$0.02–$0.12/GB` cross-region network egress fees with `$0.00/GB` same-region co-location.',
+    gcpApis: 'Browser Blob Download (colocate-data-gravity.sh)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X3_QUERY_EGRESS_BQ_BTN: {
+    badge: 'BIGQUERY NETWORK EGRESS FINOPS SQL',
+    title: 'Query Network Egress SKUs in BigQuery Studio',
+    whatItDoes:
+      'Opens BigQuery Studio pre-loaded with a FinOps SQL query grouping inter-region and internet egress spend by SKU and destination region.',
+    enterpriseValue:
+      'Pinpoints exact billing line-items responsible for cross-region data-gravity charges.',
+    gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{id}/jobs',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X3_OPEN_VPC_STUDIO_BTN: {
+    badge: 'CROSS-STUDIO NAVIGATION',
+    title: 'Open VPC & Perimeter Firewall Studio',
+    whatItDoes:
+      'Navigates to the VPC & Firewall Studio to inspect subnets, Private Google Access flags, and egress firewall rules.',
+    enterpriseValue:
+      'Provides end-to-end visibility over network topology and egress paths.',
+    gcpApis: 'UI Studio Navigation -> VPC_FIREWALL',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X3_OPEN_COMPUTE_NODE_BTN: {
+    badge: 'COMPUTE SOURCE INSPECTOR',
+    title: 'Inspect Compute Source Node in VM / Cloud Run Studio',
+    whatItDoes:
+      'Jumps directly to the Compute VM Fleet or Cloud Run Studio for the source workload in this egress pair.',
+    enterpriseValue:
+      'Lets engineers verify workload region placement and network interface settings in 1 click.',
+    gcpApis: 'UI Studio Navigation -> VM_SSH / CLOUD_RUN',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X3_OPEN_DATA_NODE_BTN: {
+    badge: 'DATA STORAGE TARGET INSPECTOR',
+    title: 'Inspect Target Bucket / Database in Storage or SQL Studio',
+    whatItDoes:
+      'Opens the target Cloud Storage bucket in the Object Workbench or the target database in Cloud SQL & AlloyDB Studio.',
+    enterpriseValue:
+      'Speeds up data-gravity remediation by linking compute sources directly to their storage targets.',
+    gcpApis: 'UI Studio Navigation -> CLOUD_STORAGE / CLOUD_SQL',
+    safetyMode: 'READ_ONLY',
+  },
+  // ===========================================================================
+  // MOONSHOT X4: 4-PILLAR RANSOMWARE RESILIENCE & CLEAN-ROOM RECOVERY STUDIO
+  // ===========================================================================
+  RANSOMWARE_X4_DEEP_AUDIT_BTN: {
+    badge: '4-PILLAR RANSOMWARE & SHANNON ENTROPY X-RAY',
+    title: 'Run Live 4-Pillar Ransomware & Entropy Audit (`POST .../ransomware-deep-audit`)',
+    whatItDoes:
+      'Executes a 100% read-only forensic inspection of your bucket: (1) samples the first 4 KB of objects via `Range: bytes=0-4095` to compute Shannon byte entropy (`H(X)`, 0–8 bits/byte) and detect `.locked`/`.ryuk`/`.akira` ransomware extensions, (2) audits IAM bindings for `roles/storage.admin` blast-radius and cross-project Principals, (3) evaluates 5-Vector Defense Posture (`0–100`), and (4) builds the Multi-Generation Time-Machine Catalog (`?versions=true`).',
+    enterpriseValue:
+      'Detects encrypted or mass-deleted objects and IAM privilege escalation before a ransomware incident becomes unrecoverable — at `$0.00` mutation risk.',
+    gcpApis:
+      'GET storage/v1/b/{bucket}?projection=full · GET storage/v1/b/{bucket}/iam · GET storage/v1/b/{bucket}/o?versions=true',
+    safetyMode: 'READ_ONLY',
+  },
+  RANSOMWARE_X4_RUN_CLEANROOM_DRILL_BTN: {
+    badge: 'NON-DESTRUCTIVE LIVE RECOVERY DRILL',
+    title: 'Execute Live Non-Destructive Clean-Room Recovery Drill (`POST .../ransomware-recovery-drill`)',
+    whatItDoes:
+      'Selects a real historical/noncurrent object generation (`#generation`) in your bucket and executes a server-side Cloud Storage `rewriteTo` into `gs://<bucket>/cleanroom-recovery-drill/<timestamp>_recovered_<file>`, verifying `CRC32C` + `MD5` cryptographic integrity and measuring exact recovery throughput (`ms`) without modifying your live production objects.',
+    enterpriseValue:
+      'Produces an auditable SOC2 / ISO-27001 / SEC 17a-4 Disaster Recovery proof receipt with real Recovery Time Objective (`RTO`) telemetry.',
+    gcpApis:
+      'POST https://storage.googleapis.com/storage/v1/b/{bucket}/o/{src}/rewriteTo/b/{bucket}/o/{cleanroomDest}?sourceGeneration={gen}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  RANSOMWARE_X4_OPEN_WORKBENCH_BTN: {
+    badge: 'OBJECT WORKBENCH DEEP-LINK',
+    title: 'Inspect Bucket in Cloud Storage Object Workbench',
+    whatItDoes:
+      'Opens the selected bucket in the Cloud Storage Object Workbench so you can browse folders, inspect object metadata, or download recovered clean-room files.',
+    enterpriseValue:
+      'Bridges ransomware forensics directly with interactive object-level operations.',
+    gcpApis: 'UI Studio Navigation -> CLOUD_STORAGE (Object Workbench)',
+    safetyMode: 'READ_ONLY',
+  },
+  RANSOMWARE_X4_AIRGAP_30D_SHIELD_BTN: {
+    badge: 'REVERSIBLE 30-DAY AIR-GAP SHIELD',
+    title: 'Apply 30-Day Air-Gap Shield: Versioning + 30d Soft-Delete + UBLA (`PATCH /storage/v1/b/{bucket}`)',
+    whatItDoes:
+      'Patches your Cloud Storage bucket metadata in a single atomic REST call to enable Object Versioning (`versioning.enabled=true`), set a 30-day Soft-Delete retention window (`softDeletePolicy.retentionDurationSeconds=2592000`), and enforce Uniform Bucket-Level Access (`iamConfiguration.uniformBucketLevelAccess.enabled=true`).',
+    enterpriseValue:
+      'Protects every object against malicious `DELETE` or ransomware overwrite while remaining 100% reversible (unlike permanent WORM lock).',
+    gcpApis: 'PATCH https://storage.googleapis.com/storage/v1/b/{bucket}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  RANSOMWARE_X4_MAX_90D_SOFT_DELETE_BTN: {
+    badge: 'MAXIMUM 90-DAY SOFT-DELETE WINDOW',
+    title: 'Enforce Maximum 90-Day Soft-Delete Retention (`7,776,000s`) + Versioning',
+    whatItDoes:
+      'Configures the maximum Google Cloud Storage Soft-Delete retention window (`90 days` / `7,776,000 seconds`) alongside Object Versioning and Uniform Bucket-Level Access.',
+    enterpriseValue:
+      'Guarantees a full 90-day forensic recovery window for deleted or overwritten objects even if an attacker compromises a service account key.',
+    gcpApis: 'PATCH https://storage.googleapis.com/storage/v1/b/{bucket}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  RANSOMWARE_X4_WORM_LOCK_30D_BTN: {
+    badge: 'SEC 17a-4 / FINRA WORM RETENTION POLICY',
+    title: 'Enforce 30-Day WORM Retention Policy (`retentionPolicy.retentionPeriod=2592000`)',
+    whatItDoes:
+      'Applies a 30-day Write-Once-Read-Many (WORM) Bucket Retention Policy (`2,592,000 seconds`) alongside Versioning and 30-day Soft-Delete so no object can be deleted or overwritten before it reaches 30 days of age.',
+    enterpriseValue:
+      'Satisfies strict financial and healthcare regulatory immutability mandates (SEC Rule 17a-4, FINRA, HIPAA).',
+    gcpApis: 'PATCH https://storage.googleapis.com/storage/v1/b/{bucket}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  RANSOMWARE_X4_RESTORE_GEN_BTN: {
+    badge: 'POINT-IN-TIME GENERATION ROLLBACK',
+    title: 'Restore Historical Clean Generation to Live Head (`POST .../copyTo?sourceGeneration={gen}`)',
+    whatItDoes:
+      'Copies a clean historical noncurrent object generation (`?sourceGeneration=<gen>`) back over the live object path (`gs://<bucket>/<object>`), creating a new clean live head generation while preserving the full version chain.',
+    enterpriseValue:
+      'Recovers ransomware-corrupted or accidentally overwritten files in sub-second time without downloading or re-uploading data.',
+    gcpApis:
+      'POST https://storage.googleapis.com/storage/v1/b/{bucket}/o/{obj}/copyTo/b/{bucket}/o/{obj}?sourceGeneration={gen}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  RANSOMWARE_X4_INSPECT_CHAIN_BTN: {
+    badge: 'OBJECT VERSION CHAIN INSPECTOR',
+    title: 'Inspect Object Version Chain in Cloud Storage Workbench',
+    whatItDoes:
+      'Opens this specific object inside the Cloud Storage Object Workbench Version History drawer so you can compare timestamps, sizes, and `CRC32C` hashes across all generations.',
+    enterpriseValue:
+      'Gives forensic responders granular visibility into every mutation event on an object.',
+    gcpApis: 'GET https://storage.googleapis.com/storage/v1/b/{bucket}/o?prefix={obj}&versions=true',
+    safetyMode: 'READ_ONLY',
+  },
+  // ===========================================================================
+  // MOONSHOT X5: GLOBAL ANYCAST EDGE CDN & SPEED-OF-LIGHT LATENCY SIMULATOR
+  // ===========================================================================
+  MOONSHOT_X5_TOGGLE_ANYCAST_CDN_BTN: {
+    badge: 'GLOBAL ANYCAST EDGE TLS 1.3 TERMINATION',
+    title: 'Toggle Global Anycast Edge CDN (`Cloud Load Balancing + Cloud CDN`)',
+    whatItDoes:
+      'Toggles between Direct Origin Fiber RTT and Google Global Anycast Edge PoP termination across 12 global population hubs (`NYC`, `SFO`, `São Paulo`, `London`, `Frankfurt`, `Paris`, `Dubai`, `Johannesburg`, `Mumbai`, `Singapore`, `Tokyo`, `Sydney`).',
+    enterpriseValue:
+      'Demonstrates how terminating TCP + TLS 1.3 handshakes at Google’s nearest Edge PoP cuts global user latency by 65–85%.',
+    gcpApis: 'Haversine Subsea Fiber RTT + Google Edge PoP Latency Matrix',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X5_INSPECT_ANYCAST_SHELL_BTN: {
+    badge: 'CLOUD LOAD BALANCING BACKEND INSPECTOR',
+    title: 'Inspect Global Backend Services in Cloud Shell (`gcloud compute backend-services list`)',
+    whatItDoes:
+      'Runs `gcloud compute backend-services list --global --project=<id>` in the integrated Cloud Shell to audit live Global External Application Load Balancers and Cloud CDN status.',
+    enterpriseValue:
+      'Verifies which backend services currently have Cloud CDN and Global Anycast routing enabled.',
+    gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{id}/global/backendServices',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X5_DOWNLOAD_ANYCAST_SH_BTN: {
+    badge: 'ANYCAST CDN PROVISIONING SCRIPT',
+    title: 'Download Global Anycast Cloud CDN Provisioning Script (`anycast-cdn.sh`)',
+    whatItDoes:
+      'Downloads a complete `gcloud` script that creates a Serverless NEG, enables `--enable-cdn --cache-mode=CACHE_ALL_STATIC`, and binds a Global Anycast IPv4/IPv6 HTTPS forwarding rule.',
+    enterpriseValue:
+      'Automates multi-step Global Load Balancer + Cloud CDN setup into a reproducible script.',
+    gcpApis: 'Browser Blob Download (anycast-cdn.sh)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X5_OPEN_GLOBAL_MAP_BTN: {
+    badge: 'CROSS-STUDIO NAVIGATION',
+    title: 'Open 40-Region Global Network World Map',
+    whatItDoes:
+      'Switches to the interactive 40-Region Global Network World Map to visualize subsea fiber cables, carbon-free energy (`CFE %`), and live SSH/HTTPS telemetry.',
+    enterpriseValue:
+      'Connects latency simulation with live multi-region network topology.',
+    gcpApis: 'UI Studio Navigation -> GLOBAL_MAP',
+    safetyMode: 'READ_ONLY',
+  },
+  // ===========================================================================
+  // MOONSHOT X6: ZERO-SNIFFING WEBCRYPTO ENCLAVE & GEMINI 3.8 / 3.1 ARCHITECT
+  // ===========================================================================
+  MOONSHOT_X6_SYNC_AI_MODELS_BTN: {
+    badge: 'LIVE GEMINI MODEL CATALOG DISCOVERY',
+    title: 'Sync Live Google AI Studio Models (`GET /v1beta/models`)',
+    whatItDoes:
+      'Queries `https://generativelanguage.googleapis.com/v1beta/models` over HTTPS TLS 1.3 (or via the Server RAM Vault) to auto-discover all newly released Gemini 3.x / 2.5 models.',
+    enterpriseValue:
+      'Ensures your SRE Co-Architect immediately supports newly released Gemini models without code updates.',
+    gcpApis: 'GET https://generativelanguage.googleapis.com/v1beta/models',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_SWITCH_PATH_B_BTN: {
+    badge: 'AI ENGINE SWITCHER',
+    title: 'Switch to Path B (`AIzaSy...` Google AI Studio Key Enclave)',
+    whatItDoes:
+      'Switches the active inference provider from Keyless Vertex AI OAuth2 (Path A) to the encrypted Google AI Studio API Key Enclave (Path B).',
+    enterpriseValue:
+      'Allows using personal or team Google AI Studio API keys with zero-sniffing WebCrypto protection.',
+    gcpApis: 'POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_FOCUS_VAULT_BOX_BTN: {
+    badge: 'QUICK ONBOARDING STEP 2',
+    title: 'Focus Encrypted API Key Input Box',
+    whatItDoes:
+      'Scrolls to and focuses the password-masked API key input field so you can paste your `AIzaSy...` key and seal it in WebCrypto RAM.',
+    enterpriseValue:
+      'Streamlines 3-step onboarding for the Zero-Sniffing WebCrypto Enclave.',
+    gcpApis: 'Browser WebCrypto API (SubtleCrypto AES-256-GCM)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_SEAL_KEY_BTN: {
+    badge: 'AES-256-GCM / RSA-OAEP-256 KEY SEAL',
+    title: 'Seal API Key in Browser WebCrypto Enclave or Server RSA-OAEP-256 RAM Vault',
+    whatItDoes:
+      'In Mode 1, seals your `AIzaSy...` key inside a non-extractable Browser `CryptoKey` (`AES-256-GCM`) with 0 local HTTP packets. In Mode 2, encrypts the key with the server’s 2048-bit `RSA-OAEP-SHA256` public key before sealing it in Node.js RAM.',
+    enterpriseValue:
+      'Prevents `Wireshark`/`tcpdump` packet sniffers, `localStorage` XSS scripts, and git commits from ever capturing your plaintext API key.',
+    gcpApis: 'WebCrypto SubtleCrypto.encrypt (AES-256-GCM / RSA-OAEP-256)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MOONSHOT_X6_CLEAR_VAULT_BTN: {
+    badge: 'CRYPTOGRAPHIC RAM ZERO-FILL',
+    title: 'Wipe Sealed API Key from Browser WebCrypto & Server RAM (`DELETE /api/ai-vault/clear`)',
+    whatItDoes:
+      'Overwrites the in-memory `AES-256-GCM` key buffer with `0x00` bytes and drops the non-extractable Browser WebCrypto handle.',
+    enterpriseValue:
+      'Provides immediate cryptographic key revocation at the end of an incident response or screen-share session.',
+    gcpApis: 'DELETE /api/ai-vault/clear + WebCrypto Enclave Purge',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MOONSHOT_X6_MODEL_PRESET_BTN: {
+    badge: '1-TAP GEMINI MODEL SWITCH',
+    title: 'Switch Active Gemini Model (`gemini-3.8-flash` / `gemini-3.1-pro`)',
+    whatItDoes:
+      'Switches the active LLM reasoning engine between `gemini-3.8-flash` (ultra-fast SRE & `gcloud` CLI synthesis) and `gemini-3.1-pro` (deep cloud architecture & compliance analysis).',
+    enterpriseValue:
+      'Lets engineers match model latency and reasoning depth to the complexity of the SRE task.',
+    gcpApis: 'Vertex AI / Google AI Studio Model Selector',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_PROMPT_PRESET_BTN: {
+    badge: 'LIVE TELEMETRY SRE PROMPT PRESET',
+    title: 'Run Live Project Architecture, FinOps, or Compliance Audit Prompt',
+    whatItDoes:
+      'Injects your live project telemetry (Cloud Run services, Compute VMs, Cloud Storage buckets, VPC firewalls) into the selected SRE prompt and executes live Gemini inference.',
+    enterpriseValue:
+      'Generates project-specific `gcloud` remediation commands grounded in your actual live GCP inventory.',
+    gcpApis: 'POST aiplatform.googleapis.com / generativelanguage.googleapis.com (:generateContent)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_ASK_ARCHITECT_BTN: {
+    badge: 'LIVE GEMINI SRE CO-ARCHITECT INFERENCE',
+    title: 'Ask Live Gemini Co-Architect (Grounded with Live Project Telemetry)',
+    whatItDoes:
+      'Sends your prompt + live project resource context to Gemini (`8,192` output token budget) via Keyless Vertex AI OAuth2 or your sealed AI Studio WebCrypto key.',
+    enterpriseValue:
+      'Delivers copy-pasteable `gcloud` commands, Terraform snippets, and FinOps optimizations tailored to your live GCP resources.',
+    gcpApis: 'POST aiplatform.googleapis.com / generativelanguage.googleapis.com (:generateContent)',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_COPY_RESPONSE_BTN: {
+    badge: 'CLIPBOARD EXPORT',
+    title: 'Copy Full Markdown SRE Response to Clipboard',
+    whatItDoes:
+      'Copies the complete Gemini SRE architecture analysis and all embedded `gcloud` / SQL code blocks to your clipboard.',
+    enterpriseValue:
+      'Makes it effortless to paste architecture runbooks into incident tickets or PR descriptions.',
+    gcpApis: 'navigator.clipboard.writeText',
+    safetyMode: 'READ_ONLY',
+  },
+  MOONSHOT_X6_COPY_SNIPPET_BTN: {
+    badge: 'CODE BLOCK CLIPBOARD COPY',
+    title: 'Copy Individual Command / Code Snippet to Clipboard',
+    whatItDoes:
+      'Copies this specific `bash` / `gcloud` / `sql` code block from the Gemini response directly to your clipboard.',
+    enterpriseValue:
+      'Eliminates manual text selection errors when copying multi-line CLI commands.',
+    gcpApis: 'navigator.clipboard.writeText',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**
@@ -6323,34 +6671,214 @@ function matchSpecificButtonInLaymanTerms(
   // D. SECRET MANAGER, CLOUD RUN, FINOPS & SECURITY SPECIFIC CONTROLS
   // ============================================================================
   if (
-    (labelLower === 'disable' || labelLower.includes('disable version')) &&
-    (headingText.toLowerCase().includes('secret') || titleLower.includes('secret'))
+    labelLower === 'reveal' ||
+    labelLower === 'hide value' ||
+    labelLower === 'peek value' ||
+    labelLower === 'hide' ||
+    labelLower === 'unmask' ||
+    labelLower === 'mask' ||
+    labelLower.startsWith('peek v') ||
+    titleLower.includes('decrypt and inspect') ||
+    titleLower.includes('reveal')
   ) {
     return {
-      badge: 'REVERSIBLE $0.00 SECRET PAUSE',
-      title: 'Disable Secret Version (Pause $0.06/mo Charge Safely)',
+      badge: 'EPHEMERAL IN-MEMORY SECRET PEEK',
+      title: `${cleanLabel}${wherePhrase}`,
       whatItDoes:
-        'Temporarily turns off this secret version so apps cannot fetch it and Google stops billing the $0.06/month active version fee—without erasing it.',
+        meaningfulTitle ||
+        'Fetches and decrypts the secret payload on demand (`versions/latest:access`) into browser memory for temporary inspection, or masks it back to `••••••••` immediately.',
+      enterpriseValue:
+        'Never caches plaintext secrets in localStorage or disk—gives engineers safe, audited verification of live Secret Manager payloads (10,000 free access ops/month).',
+      gcpApis: 'GET https://secretmanager.googleapis.com/v1/projects/{project}/secrets/{secret}/versions/{v}:access',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower === 'sm://' ||
+    labelLower.includes('sm:// uri') ||
+    titleLower.includes('sm://')
+  ) {
+    return {
+      badge: 'COPY CANONICAL SM:// POINTER URI',
+      title: `Copy Canonical Secret Manager Pointer (${cleanLabel})`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Copies the `sm://projects/<project>/secrets/<id>/versions/latest` pointer URI to your clipboard for use in Cloud Run `--set-secrets`, DLP vaulting, or config files.',
+      enterpriseValue:
+        'Replaces hardcoded `.env` credentials with zero-trust Secret Manager references that resolve dynamically at runtime.',
+      gcpApis: 'sm://projects/{project}/secrets/{secret}/versions/latest',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.includes('rotate / versions') ||
+    labelLower.includes('close drawer') ||
+    labelLower === '+ rotate' ||
+    labelLower.includes('rotate & mint new version')
+  ) {
+    const isExecuteRotate = labelLower.includes('rotate & mint');
+    return {
+      badge: isExecuteRotate ? 'ZERO-DOWNTIME KEY ROTATION' : 'SECRET VERSION & ROTATION DRAWER',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        (isExecuteRotate
+          ? 'Uploads a new AES-256 encrypted version payload to Secret Manager (`:addVersion`), promotes `versions/latest`, and optionally disables older versions (`$0.00/mo`).'
+          : 'Opens or closes the per-secret Version History & Zero-Downtime Rotation drawer to mint new versions, inspect v1..vN states, or disable/destroy old versions.'),
+      enterpriseValue:
+        'Lets you rotate compromised or expiring API keys in seconds while keeping active version counts inside Google Cloud’s 6-version Always-Free Tier.',
+      gcpApis: 'POST https://secretmanager.googleapis.com/v1/projects/{project}/secrets/{secret}:addVersion',
+      safetyMode: isExecuteRotate ? 'LIVE_MUTATION' : 'READ_ONLY',
+    };
+  }
+
+  if (labelLower.includes('generate 256-bit') || labelLower.includes('crypto key')) {
+    return {
+      badge: 'CSPRNG 256-BIT KEY SYNTHESIZER',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Generates a high-entropy 256-bit cryptographically secure random key (`crypto.getRandomValues`) directly in browser RAM ready to mint or rotate into Secret Manager.',
+      enterpriseValue:
+        'Eliminates weak human-typed passwords and achieves >4.5 bits/char Shannon entropy for JWT signing keys, webhook secrets, and database passwords.',
+      gcpApis: 'Web Crypto API CSPRNG (crypto.getRandomValues) → Secret Manager :addVersion',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.includes('disable ($0/mo)') ||
+    ((labelLower === 'disable' || labelLower === 'enable' || labelLower.includes('disable version')) &&
+      (headingText.toLowerCase().includes('secret') || titleLower.includes('secret') || titleLower.includes('version')))
+  ) {
+    const isEnable = labelLower === 'enable';
+    return {
+      badge: isEnable ? 'RE-ENABLE SECRET VERSION' : 'REVERSIBLE $0.00 SECRET PAUSE',
+      title: isEnable
+        ? 'Re-Enable Secret Version for Live Decryption'
+        : 'Disable Secret Version (Pause $0.06/mo Charge Safely)',
+      whatItDoes: isEnable
+        ? 'Unpauses this disabled secret version in Google Cloud Secret Manager so applications and Cloud Run services can read and decrypt it again immediately.'
+        : 'Temporarily turns off this secret version so apps cannot fetch it and Google stops billing the $0.06/month active version fee—without erasing it.',
       enterpriseValue:
         'Unlike "Destroy" (which erases the secret forever), "Disable" is 100% reversible: if you discover an older app still needed this key, you can re-enable it in 1 click!',
-      gcpApis: 'POST secretmanager.googleapis.com/v1/.../versions/{v}:disable',
+      gcpApis: `POST secretmanager.googleapis.com/v1/.../versions/{v}:${isEnable ? 'enable' : 'disable'}`,
       safetyMode: 'LIVE_MUTATION',
     };
   }
 
   if (
-    (labelLower === 'destroy' || labelLower.includes('destroy version')) &&
-    (headingText.toLowerCase().includes('secret') || titleLower.includes('secret'))
+    labelLower.startsWith('destroy v') ||
+    ((labelLower === 'destroy' || labelLower.includes('destroy version')) &&
+      (headingText.toLowerCase().includes('secret') || titleLower.includes('secret') || titleLower.includes('version')))
   ) {
     return {
       badge: 'PERMANENT CRYPTOGRAPHIC ERASE',
-      title: 'Permanently Destroy Secret Version (Cannot Be Undone)',
+      title: `Permanently Destroy Secret Version (${cleanLabel})`,
       whatItDoes:
-        'Irreversibly erases the encrypted password or API key inside this secret version from Google’s servers forever.',
+        meaningfulTitle ||
+        'Irreversibly erases the encrypted password or API key inside this specific secret version from Google’s servers forever.',
       enterpriseValue:
-        'Use this when a credential has been leaked or compromised and you want a cryptographic guarantee that nobody can ever read it again.',
+        'Use this when a credential has been leaked or compromised and you want a cryptographic guarantee that nobody can ever read that version again ($0.00/mo after destruction).',
       gcpApis: 'POST secretmanager.googleapis.com/v1/.../versions/{v}:destroy',
       safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (
+    labelLower.includes('grant secretaccessor') ||
+    labelLower.includes('secretaccessor') ||
+    titleLower.includes('secretaccessor')
+  ) {
+    return {
+      badge: 'PER-SECRET LEAST-PRIVILEGE IAM ($0.00)',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Binds `roles/secretmanager.secretAccessor` on this single secret only (rather than project-wide) so the target Service Account can decrypt only this key.',
+      enterpriseValue:
+        'Prevents lateral movement: if one microservice is compromised, it cannot read database or Stripe keys belonging to other services ($0.00 IAM cost).',
+      gcpApis: 'POST https://secretmanager.googleapis.com/v1/projects/{project}/secrets/{secret}:setIamPolicy',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('auto-rotation') || labelLower.includes('30-day auto-rotation')) {
+    return {
+      badge: 'AUTOMATED 30-DAY ROTATION POLICY ($0.00)',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Configures a 30-day `rotationPeriod` and `nextRotationTime` schedule plus compliance tracking labels on this secret in Google Cloud Secret Manager.',
+      enterpriseValue:
+        'Automates SOC2 / ISO27001 credential rotation tracking at $0.00/mo without requiring paid external secret rotation appliances.',
+      gcpApis: 'PATCH https://secretmanager.googleapis.com/v1/projects/{project}/secrets/{secret}',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('hot-reload') && (labelLower.includes('cloud run') || labelLower.includes('mounted'))) {
+    return {
+      badge: 'ZERO-DOWNTIME CLOUD RUN SECRET RELOAD',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Finds every Cloud Run v2 service mounting this secret and rolls a fresh revision annotation so running containers immediately pick up the newly rotated version.',
+      enterpriseValue:
+        'Eliminates stale cached environment variables after a secret rotation with zero downtime and $0.00 control-plane cost.',
+      gcpApis: 'PATCH https://run.googleapis.com/v2/projects/{project}/locations/{region}/services/{service}',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('heal: point to latest') || labelLower.includes('unbind dead secretkeyref')) {
+    const isUnbind = labelLower.includes('unbind');
+    return {
+      badge: 'CLOUD RUN BROKEN SECRET-REF SURGEON',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        (isUnbind
+          ? 'Removes a broken `secretKeyRef` pointing to a deleted secret from the Cloud Run service spec and rolls a clean revision so the service can boot.'
+          : 'Repoints a Cloud Run service pinned to a destroyed/disabled secret version back to `versions/latest` and rolls a healthy revision.'),
+      enterpriseValue:
+        'Fixes startup crash loops caused by deleted or destroyed Secret Manager versions in 1 click.',
+      gcpApis: 'PATCH https://run.googleapis.com/v2/projects/{project}/locations/{region}/services/{service}',
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  if (labelLower.includes('safety guide') || labelLower.includes('hide guide')) {
+    return {
+      badge: 'SECRET LIFECYCLE SAFETY ARCHITECTURE',
+      title: `${cleanLabel}${wherePhrase}`,
+      whatItDoes:
+        meaningfulTitle ||
+        'Toggles the interactive comparison guide explaining Disable ($0.00/mo, 1-click reversible) vs Destroy Version ($0.00/mo, irreversible) vs Delete Entire Secret.',
+      enterpriseValue:
+        'Helps engineers choose the safest, lowest-cost lifecycle state before executing permanent cryptographic destruction.',
+      gcpApis: 'Secret Manager Lifecycle & FinOps Architecture Reference',
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  if (
+    labelLower.startsWith('all secrets (') ||
+    labelLower.startsWith('dlp-vaulted keys (') ||
+    labelLower.startsWith('app & cloud run (')
+  ) {
+    return {
+      badge: 'SECRET VAULT INVENTORY FILTER',
+      title: `${cleanLabel} — Secret Manager Filter`,
+      whatItDoes:
+        meaningfulTitle ||
+        `Filters the live Secret Manager table to show "${cleanLabel}"—separating DLP-vaulted Cloud Storage credentials (\`cloudpulse-dlp-*\`) from application and Cloud Run secrets.`,
+      enterpriseValue:
+        'Lets you audit DLP-rehydrated storage keys alongside production microservice secrets in one unified table.',
+      gcpApis: 'GET https://secretmanager.googleapis.com/v1/projects/{project}/secrets',
+      safetyMode: 'READ_ONLY',
     };
   }
 
@@ -6517,21 +7045,38 @@ function matchSpecificButtonInLaymanTerms(
   }
 
   if (
+    labelLower === 'delete' ||
+    labelLower === 'destroy' ||
+    labelLower === 'remove' ||
+    labelLower === 'shred' ||
     labelLower.startsWith('delete ') ||
     labelLower.startsWith('destroy ') ||
     labelLower.startsWith('remove ') ||
     labelLower.startsWith('decommission') ||
     labelLower.startsWith('prune ')
   ) {
+    const isSecretCtx =
+      headingText.toLowerCase().includes('secret') ||
+      titleLower.includes('secret') ||
+      codeSnippet.toLowerCase().includes('secret');
     return {
-      badge: 'REMOVE RESOURCE & STOP BILLING',
+      badge: isSecretCtx
+        ? 'SHRED SECRET & STOP VERSION BILLING'
+        : 'REMOVE RESOURCE & STOP BILLING',
       title: `${cleanLabel}${wherePhrase}`,
       whatItDoes:
         meaningfulTitle ||
-        `Removes "${cleanLabel.replace(/^(delete|destroy|remove|prune)\s*/i, '') || cleanLabel}"${wherePhrase} from your Google Cloud project so you stop paying for it.`,
-      enterpriseValue:
-        'Cleans up unused or orphaned cloud resources that would otherwise silently add to your monthly bill.',
-      gcpApis: codeSnippet || `Google Cloud Resource Cleanup${wherePhrase}`,
+        (isSecretCtx
+          ? `Permanently deletes this secret and all of its encrypted versions from Google Cloud Secret Manager after passing the Destructive Action Gatekeeper, showing live DELETING → SHREDDED row status.`
+          : `Removes "${cleanLabel.replace(/^(delete|destroy|remove|prune)\s*/i, '') || headingText || cleanLabel}"${wherePhrase} from your Google Cloud project after confirmation so you stop paying for it.`),
+      enterpriseValue: isSecretCtx
+        ? 'Cryptographically shreds unused or compromised credentials and immediately stops $0.06/version-month Secret Manager storage charges.'
+        : 'Cleans up unused or orphaned cloud resources that would otherwise silently add to your monthly bill, gated by a mandatory confirmation modal.',
+      gcpApis:
+        codeSnippet ||
+        (isSecretCtx
+          ? 'DELETE https://secretmanager.googleapis.com/v1/projects/{project}/secrets/{secret}'
+          : `Google Cloud Resource Teardown${wherePhrase}`),
       safetyMode: 'LIVE_MUTATION',
     };
   }
@@ -7031,23 +7576,104 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
     inferredApi = codeSnippet || 'billingbudgets.googleapis.com/v1 · cloudbilling.googleapis.com/v1';
   }
 
-  // 4. Compose a Button-Specific `whatItDoes` and `enterpriseValue` Using the Button's Own Content & Action Intent
+  // 4. Compose a Domain- & Action-Specific `whatItDoes` and `enterpriseValue` Using the Button's Own Content & Domain
+  let domainWhatItDoes = '';
+  let domainEnterpriseValue = '';
+  const targetPhrase = rowSubject ? ` for "${rowSubject.slice(0, 48)}"` : '';
+  const studioPhrase = headingText ? ` in ${headingText}` : '';
+
+  if (fullContext.includes('dataproc') || fullContext.includes('spark') || fullContext.includes('bigframes') || fullContext.includes('iceberg') || fullContext.includes('biglake')) {
+    domainWhatItDoes = isMutating
+      ? `Configures or submits Serverless Spark 3.5 / BigLake Iceberg operation "${displayLabel}"${targetPhrase} via Dataproc Serverless Runtime 2.2 with Adaptive Query Execution.`
+      : `Switches or inspects "${displayLabel}"${targetPhrase} inside the Managed Spark 3.5 & BigLake Lakehouse workbench.`;
+    domainEnterpriseValue =
+      'Eliminates 24/7 idle Hadoop/Spark cluster burn ($0.00/hr when idle) and keeps Parquet/Iceberg scans in the same region ($0.00/GB transfer).';
+  } else if (fullContext.includes('bigquery') || fullContext.includes('dataset') || fullContext.includes('slot') || fullContext.includes('partition')) {
+    domainWhatItDoes = isMutating
+      ? `Applies BigQuery warehouse operation "${displayLabel}"${targetPhrase}${studioPhrase} via bigquery.googleapis.com/bigquery/v2.`
+      : `Focuses the BigQuery SQL & Storage inspector on "${displayLabel}"${targetPhrase} to analyze slot utilization, partition pruning, or table schemas.`;
+    domainEnterpriseValue =
+      'Protects your 1 TiB/month free query allowance and 10 GiB/month free storage tier while preventing unpartitioned full-table scans.';
+  } else if (fullContext.includes('spanner') || fullContext.includes('truetime') || fullContext.includes('processing unit')) {
+    domainWhatItDoes = isMutating
+      ? `Applies Cloud Spanner configuration or DDL/GQL operation "${displayLabel}"${targetPhrase} across TrueTime-synchronized nodes.`
+      : `Inspects Cloud Spanner instance topology, GQL property graphs, or Processing Unit sizing for "${displayLabel}"${targetPhrase}.`;
+    domainEnterpriseValue =
+      'Delivers 99.999% external-consistency relational + graph semantics with granular 100-PU FinOps right-sizing.';
+  } else if (fullContext.includes('cloud sql') || fullContext.includes('alloydb') || fullContext.includes('pgvector') || fullContext.includes('postgres')) {
+    domainWhatItDoes = isMutating
+      ? `Applies relational database operation "${displayLabel}"${targetPhrase} on Cloud SQL / AlloyDB via sqladmin.googleapis.com.`
+      : `Loads "${displayLabel}"${targetPhrase} in the Cloud SQL & AlloyDB studio to inspect connection pools, pgvector indexes, or HA standby health.`;
+    domainEnterpriseValue =
+      'Prevents connection exhaustion, optimizes pgvector HNSW recall, and guards against unutilized 24/7 database instance spend.';
+  } else if (fullContext.includes('gke') || fullContext.includes('kubernetes') || fullContext.includes('kubectl') || fullContext.includes('autopilot')) {
+    domainWhatItDoes = isMutating
+      ? `Reconciles Kubernetes cluster or workload spec "${displayLabel}"${targetPhrase} via container.googleapis.com/v1.`
+      : `Inspects GKE Autopilot/Standard node pools, ComputeClasses, or pod health for "${displayLabel}"${targetPhrase}.`;
+    domainEnterpriseValue =
+      'Right-sizes Pod CPU/Memory requests and Spot VM fallback classes so you never overpay for unallocated Kubernetes node capacity.';
+  } else if (fullContext.includes('cloud run') || fullContext.includes('revision') || fullContext.includes('worker-pool') || fullContext.includes('mininstances')) {
+    domainWhatItDoes = isMutating
+      ? `Updates serverless Cloud Run v2 service or revision traffic for "${displayLabel}"${targetPhrase} with zero-downtime HTTPS rollout.`
+      : `Focuses the Cloud Run v2 studio on "${displayLabel}"${targetPhrase} to inspect revision traffic splits, cold-start latency, or secret mounts.`;
+    domainEnterpriseValue =
+      'Preserves scale-to-zero (`minInstanceCount=0`, `$0.00/hr` idle) and 2M free monthly invocations while keeping rollbacks 1 click away.';
+  } else if (fullContext.includes('bucket') || fullContext.includes('cloud storage') || fullContext.includes('gs://') || fullContext.includes('object')) {
+    domainWhatItDoes = isMutating
+      ? `Applies Cloud Storage bucket or object operation "${displayLabel}"${targetPhrase} via storage.googleapis.com/storage/v1.`
+      : `Opens or filters Cloud Storage bucket/object telemetry for "${displayLabel}"${targetPhrase} (storage class, Public Access Prevention, or object prefix).`;
+    domainEnterpriseValue =
+      'Keeps transfers inside the same region ($0.00/GB egress) and enforces Uniform Bucket-Level Access and Autoclass lifecycle savings.';
+  } else if (fullContext.includes('vpc') || fullContext.includes('subnet') || fullContext.includes('firewall') || fullContext.includes('load balanc')) {
+    domainWhatItDoes = isMutating
+      ? `Updates global VPC network routing, firewall rules, or Cloud Armor perimeter policy for "${displayLabel}"${targetPhrase}.`
+      : `Switches the VPC Network & Firewall topology view to "${displayLabel}"${targetPhrase} to audit ingress ports, IAP tunnels, or packet paths.`;
+    domainEnterpriseValue =
+      'Leverages Google Cloud’s single global VPC ($0.00 cross-region VPC peering) while locking down open 0.0.0.0/0 ports.';
+  } else if (fullContext.includes('vm ') || fullContext.includes('compute engine') || fullContext.includes('ssh') || fullContext.includes('sftp')) {
+    domainWhatItDoes = isMutating
+      ? `Runs Compute Engine VM lifecycle or SSH/SFTP operation "${displayLabel}"${targetPhrase} via compute.googleapis.com/v1.`
+      : `Selects or inspects VM fleet, Web-SSH terminal, or SFTP file browser view for "${displayLabel}"${targetPhrase}.`;
+    domainEnterpriseValue =
+      'Provides direct browser-to-VM SSH/SFTP and real-time CPU/RAM/disk diagnostics while protecting `e2-micro` Always-Free eligibility.';
+  } else if (fullContext.includes('iam') || fullContext.includes('service account') || fullContext.includes('secret') || fullContext.includes('kms') || fullContext.includes('pam')) {
+    domainWhatItDoes = isMutating
+      ? `Applies zero-trust IAM, Secret Manager, or Cloud KMS security control "${displayLabel}"${targetPhrase} in your active project.`
+      : `Focuses the Sovereign IAM, Secret Manager & KMS workbench on "${displayLabel}"${targetPhrase} to audit principals, key versions, or blast radius.`;
+    domainEnterpriseValue =
+      'Enforces least-privilege access ($0.00 IAM policy bindings) and hardware-encrypted AES-256 secret hygiene (6 free versions/month).';
+  } else if (fullContext.includes('log') || fullContext.includes('lql') || fullContext.includes('trace') || fullContext.includes('journalctl')) {
+    domainWhatItDoes = isMutating
+      ? `Applies Cloud Logging sink, retention, or log-based alert rule "${displayLabel}"${targetPhrase} via logging.googleapis.com/v2.`
+      : `Loads Cloud Logging LQL filter or SRE triage view "${displayLabel}"${targetPhrase} to pinpoint errors, latency spikes, or noisy log streams.`;
+    domainEnterpriseValue =
+      'Accelerates incident root-cause triage while keeping log ingestion inside the 50 GiB/month Always-Free Cloud Logging tier.';
+  } else if (fullContext.includes('budget') || fullContext.includes('finops') || fullContext.includes('billing') || fullContext.includes('cud') || fullContext.includes('spend')) {
+    domainWhatItDoes = isMutating
+      ? `Applies FinOps cost guardrail or waste-reduction action "${displayLabel}"${targetPhrase} across your project.`
+      : `Switches the FinOps & Billing telemetry view to "${displayLabel}"${targetPhrase} to inspect hourly burn, promotional credits, or idle resources.`;
+    domainEnterpriseValue =
+      'Prevents surprise billing spikes by surfacing unattached static IPs ($7.30/mo), warm idle containers, and Always-Free tier limits.';
+  } else {
+    domainWhatItDoes = isMutating
+      ? `Runs live Google Cloud control-plane action "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''} gated by pre-execution safety validation.`
+      : `Switches the active workspace view or parameter preset to "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''}.`;
+    domainEnterpriseValue = isMutating
+      ? `Executes directly against Google Cloud REST APIs with full Flight Recorder audit logging and mandatory confirmation before any state change.`
+      : `Updates the live telemetry lens or interactive studio workflow immediately in your browser with $0.00 cloud cost and zero mutation risk.`;
+  }
+
   const primaryExplanation =
     meaningfulTitle ||
     buttonInnerDescription ||
-    (isMutating
-      ? `Executes "${displayLabel}"${rowSubject ? ` on "${rowSubject.slice(0, 48)}"` : ''}${headingText ? ` in ${headingText}` : ''}${codeSnippet ? ` via \`${codeSnippet.slice(0, 72)}\`` : ''} against your live Google Cloud project.`
-      : `Selects or activates "${displayLabel}"${rowSubject ? ` for "${rowSubject.slice(0, 48)}"` : ''}${headingText ? ` inside ${headingText}` : ''}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''}.`);
+    domainWhatItDoes;
 
   const secondaryValue =
     (buttonInnerDescription && meaningfulTitle && buttonInnerDescription !== meaningfulTitle
       ? buttonInnerDescription
       : cardDescription && cardDescription !== primaryExplanation
       ? cardDescription
-      : null) ||
-    (isMutating
-      ? `Applies "${displayLabel}"${rowSubject ? ` to ${rowSubject.slice(0, 40)}` : ''} using your authenticated Google Cloud session, with pre-execution safety validation and live status feedback.`
-      : `Focused read-only control for "${displayLabel}"${headingText ? ` in ${headingText}` : ''}—updates your live view or stages parameters immediately with zero risk of unintended cloud mutations.`);
+      : null) || domainEnterpriseValue;
 
   return {
     badge: domainBadge,
