@@ -1252,7 +1252,7 @@ export default function Revolutionary2026Suite({
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
               <option value="ALL">All Domains (16 Specialized Studios)</option>
-              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 591.0.0 (8)</option>
+              <option value="ALPHA_BETA">Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 592.0.0 (8)</option>
               <option value="QUANTUM">2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews (1)</option>
               <option value="FINOPS">FinOps Sleep &amp; Zombie Hunter, Cross-Region Teleporter &amp; Egress Tollbooth (3)</option>
               <option value="PERF_TOPOLOGY">4-Layer Topology &amp; Latency/Cold-Start/12-City RTT Suite (2)</option>
@@ -1342,10 +1342,10 @@ export default function Revolutionary2026Suite({
             {
               id: 'GCLOUD_ALPHA_BETA',
               category: 'ALPHA_BETA',
-              badge: 'SDK 591.0.0',
+              badge: 'SDK 592.0.0',
               label:
-                '[SDK 591.0.0] Google Cloud CLI Lab (Worker Pools, Cluster Director, Model Armor, Quotas)',
-              tip: 'Google Cloud SDK 591.0.0 (2026.10.26) [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Vertex AI Model Armor [GA], Cluster Director & Lustre [GA], Cloud Observability [GA], Orchestration Pipelines [BETA], Compliance Manager [GA] & Audit Manager [GA]',
+                '[SDK 592.0.0] Google Cloud CLI Lab (AlloyDB Autoscaler, GKE Ambient Mesh, Backup-DR, Worker Pools)',
+              tip: 'Google Cloud SDK 592.0.0 (2026-11-03 · 2026.10.30) [GA], [BETA], and [ALPHA] capabilities: AlloyDB Autoscaler & Cron Schedules [GA 592], Cloud SQL reconcile-networking [GA 592], GKE Ambient Mesh & Dataplane V2 [GA 592], Backup-DR Auto-Protection [GA 592], Dataproc DWS Spark [GA 592], Cloud Run Worker Pools & --public [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Vertex AI Model Armor [GA], Cluster Director & Lustre [GA], Cloud Observability [GA] & Compliance Manager [GA]',
               icon: Rocket,
             },
             {
@@ -1449,7 +1449,7 @@ export default function Revolutionary2026Suite({
                   <div className="flex items-center gap-2 min-w-0">
                     <Icon className="w-4 h-4 shrink-0" />
                     <span className="text-xs font-bold leading-snug truncate">
-                      {t.label}
+                      {String(t.label).split(' — ')[0]}
                     </span>
                   </div>
                   <span
@@ -1614,7 +1614,7 @@ export default function Revolutionary2026Suite({
         />
       )}
 
-      {/* FLAGSHIP WAVE 1–3: [GA / BETA / ALPHA] GCLOUD 591.0.0 FRONTIER STUDIO */}
+      {/* FLAGSHIP WAVE 1–5: [GA / BETA / ALPHA] GCLOUD 592.0.0 FRONTIER STUDIO */}
       {subTab === 'GCLOUD_ALPHA_BETA' && (
         <GcloudAlphaBetaStudio
           projectId={projectId}
@@ -1668,7 +1668,7 @@ export default function Revolutionary2026Suite({
                   }}
                   className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
                 >
-                  ← Grounded Dev Knowledge &amp; Design Center [GA 591.0.0]
+                  ← Grounded Dev Knowledge &amp; Design Center [GA 592.0.0]
                 </button>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />

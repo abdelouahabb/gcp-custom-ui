@@ -55,7 +55,7 @@ export default function StudioGcpAdvantageBar({
 }) {
   const [auditData, setAuditData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
   // Domain-specific interactive states
@@ -122,7 +122,7 @@ export default function StudioGcpAdvantageBar({
   const [liveGcloudProbeLabel, setLiveGcloudProbeLabel] = useState('');
   const [liveGcloudProbeResult, setLiveGcloudProbeResult] = useState(null);
 
-  const handleRunLiveGcloudProbe = async (command, label = 'SDK 591.0.0 Live Probe') => {
+  const handleRunLiveGcloudProbe = async (command, label = 'SDK 592.0.0 Live Probe') => {
     if (!projectId || !command) return;
     setLiveGcloudProbeLoading(true);
     setLiveGcloudProbeLabel(label);
@@ -131,6 +131,7 @@ export default function StudioGcpAdvantageBar({
         `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
         {
           action: 'EXECUTE_READONLY_GCLOUD_PROBE',
+          commandText: command,
           command,
         }
       );
@@ -502,7 +503,7 @@ export default function StudioGcpAdvantageBar({
                 {meta.badge}
               </span>
               <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                ⚡ Direct REST API + 🔧 gcloud 591.0.0 Live Probe (Online Token Bridged)
+                Direct REST API + gcloud 592.0.0 Live Probe (Online Token Bridged)
               </span>
               <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                 {meta.title}
@@ -804,7 +805,7 @@ export default function StudioGcpAdvantageBar({
                         GA 591.0.0
                       </span>
                       <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                        🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+                        Requires gcloud CLI 592.0.0 · Online Token Bridged
                       </span>
                       <span className="font-bold text-zinc-900 dark:text-zinc-100">
                         Compute Backend Service Circuit Breakers &amp; WildFire Inline ML TLS Policies
@@ -955,7 +956,7 @@ export default function StudioGcpAdvantageBar({
                     ($0.00 Idle)
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                    🔧 Requires gcloud CLI 591.0.0 for GPU Flag Verification
+                    Requires gcloud CLI 592.0.0 for GPU Flag Verification
                   </span>
                 </div>
                 <div className="text-[11px] text-zinc-500">
@@ -1516,7 +1517,7 @@ export default function StudioGcpAdvantageBar({
                       BETA 591.0.0
                     </span>
                     <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-1.5">
-                      🔧 Requires gcloud CLI 591.0.0
+                      Requires gcloud CLI 592.0.0
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
                       Google Workspace Client-Side Encryption Key Access (`gcloud beta workspace-key-access`):
@@ -1602,7 +1603,7 @@ export default function StudioGcpAdvantageBar({
                     GA 591.0.0
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold shrink-0">
-                    🔧 Requires gcloud CLI 591.0.0
+                    Requires gcloud CLI 592.0.0
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
                     Creation-Time FinOps Labels (`--labels`):
@@ -1703,18 +1704,18 @@ export default function StudioGcpAdvantageBar({
                 </div>
               </div>
 
-              {/* SDK 591.0.0 GA: Zero-Drain In-Place Node Config Updates */}
+              {/* SDK 591.0.0 + 592.0.0 GA: Zero-Drain Live Node Updates, Ambient Service Mesh & Dataplane V2 */}
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
-                      GA 591.0.0
+                      GA 592.0.0
                     </span>
                     <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+                      Requires gcloud CLI 592.0.0 · Online Token Bridged
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      GKE Zero-Drain In-Place Node Pool Live Update (`--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN`)
+                      GKE Ambient Mesh (`--enable-ambient-networking`), Dataplane V2 (`--enable-dataplane-v2`) &amp; Zero-Drain Live Node Update (`LIVE_UPDATE_WITHOUT_DRAIN`)
                     </span>
                   </div>
                 </div>
@@ -1759,8 +1760,8 @@ export default function StudioGcpAdvantageBar({
                     disabled={liveGcloudProbeLoading}
                     onClick={() =>
                       handleRunLiveGcloudProbe(
-                        `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`,
-                        'GKE LIVE_UPDATE_WITHOUT_DRAIN Probe (gcloud 591.0.0)'
+                        `gcloud container clusters update "${gkeClusterTarget}" --location="${gkeUpdateLocation}" --enable-ambient-networking --enable-dataplane-v2 --project="${projectId}"`,
+                        'GKE Ambient Mesh & Dataplane V2 Probe (gcloud 592.0.0)'
                       )
                     }
                     className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
@@ -1770,37 +1771,55 @@ export default function StudioGcpAdvantageBar({
                         liveGcloudProbeLoading ? 'animate-spin' : ''
                       }`}
                     />
-                    <span>Run Live Probe (LIVE_UPDATE_WITHOUT_DRAIN)</span>
+                    <span>Run Probe ([GA 592.0.0] --enable-ambient-networking &amp; --enable-dataplane-v2)</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={liveGcloudProbeLoading}
+                    onClick={() =>
+                      handleRunLiveGcloudProbe(
+                        `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`,
+                        'GKE LIVE_UPDATE_WITHOUT_DRAIN Probe (gcloud 592.0.0)'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        liveGcloudProbeLoading ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Run Probe (LIVE_UPDATE_WITHOUT_DRAIN)</span>
                   </button>
                   {onRunInShell && (
                     <button
                       type="button"
                       onClick={() =>
                         onRunInShell(
-                          `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`
+                          `gcloud container clusters update "${gkeClusterTarget}" --location="${gkeUpdateLocation}" --enable-ambient-networking --enable-dataplane-v2 --project="${projectId}"`
                         )
                       }
                       className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <Terminal className="w-3.5 h-3.5" />
-                      <span>Run Zero-Drain Live Update in Cloud Shell</span>
+                      <span>Run Ambient Mesh + Dataplane V2 in Cloud Shell</span>
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() =>
                       handleCopy(
-                        `gcloud container node-pools update "${gkeNodePoolTarget}" --cluster="${gkeClusterTarget}" --location="${gkeUpdateLocation}" --node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN --project="${projectId}"`,
-                        'gke-live-591'
+                        `gcloud container clusters update "${gkeClusterTarget}" --location="${gkeUpdateLocation}" --enable-ambient-networking --enable-dataplane-v2 --project="${projectId}"`,
+                        'gke-ambient-592'
                       )
                     }
                     className="px-2.5 py-1.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
                   >
                     <Copy className="w-3 h-3" />
                     <span>
-                      {copiedKey === 'gke-live-591'
-                        ? 'Copied LIVE_UPDATE_WITHOUT_DRAIN CLI!'
-                        : 'Copy [GA 591.0.0] LIVE_UPDATE_WITHOUT_DRAIN CLI'}
+                      {copiedKey === 'gke-ambient-592'
+                        ? 'Copied Ambient Mesh + Dataplane V2 CLI!'
+                        : 'Copy [GA 592.0.0] Ambient Mesh CLI'}
                     </span>
                   </button>
                 </div>
@@ -1814,7 +1833,7 @@ export default function StudioGcpAdvantageBar({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-extrabold">
-                    🔧 GCLOUD CLI 591.0.0 LIVE PROBE RECEIPT
+                    GCLOUD CLI 592.0.0 LIVE PROBE RECEIPT
                   </span>
                   {liveGcloudProbeResult?.probeMode && (
                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
@@ -1824,8 +1843,8 @@ export default function StudioGcpAdvantageBar({
                   {liveGcloudProbeResult?.authBridgeMode && (
                     <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
                       {liveGcloudProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER'
-                        ? '🔑 Online Session OAuth Bridge'
-                        : '💻 Local ADC / gcloud Auth'}
+                        ? 'Online Session OAuth Bridge'
+                        : 'Local ADC / gcloud Auth'}
                     </span>
                   )}
                   {typeof liveGcloudProbeResult?.durationMs === 'number' && (

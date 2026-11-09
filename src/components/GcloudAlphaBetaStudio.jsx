@@ -28,11 +28,11 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   if (normalized === 'GA') {
     return (
       <span
-        title="Google Cloud GA Track (Promoted in SDK 591.0.0 · 2026.10.26): Production General Availability command group."
+        title="Google Cloud GA Track (Promoted in SDK 592.0.0 · 2026.10.30): Production General Availability command group."
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        <span>[GA · PROMOTED 591.0.0]</span>
+        <span>[GA · PROMOTED 592.0.0]</span>
       </span>
     );
   }
@@ -50,7 +50,7 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   if (normalized === 'ALPHA_AND_BETA') {
     return (
       <span
-        title="Combined Google Cloud GA + BETA + ALPHA Track (SDK 591.0.0)"
+        title="Combined Google Cloud GA + BETA + ALPHA Track (SDK 592.0.0)"
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 shrink-0"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -491,7 +491,7 @@ const STUDIO_TABS = [
     wave: 'WAVE_1',
     track: 'BETA',
     shortLabel: '[BETA/GA] Cloud Run 4-Primitive Lab',
-    subtitle: 'worker-pools · multi-region-services · compose [GA] · instances',
+    subtitle: 'worker-pools · multi-region-services · --public [NEW 592] · compose [GA] · instances',
     icon: Server,
     ownerStudioTab: 'CLOUD_RUN',
     ownerStudioLabel: 'Open Cloud Run Fleet & Compose Studio',
@@ -500,8 +500,8 @@ const STUDIO_TABS = [
     id: 'ALPHA_AGENT_MCP',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: '[GA 591.0.0] Agent Registry, Skills & Identity Control Plane',
-    subtitle: 'gcloud agent-registry mcp-servers · agents · skills [GA 591] · publishers [GA 591] · findings [GA 591]',
+    shortLabel: '[GA 592.0.0] Agent Registry, Skills & Identity Control Plane',
+    subtitle: 'gcloud agent-registry mcp-servers · agents · skills --scanning-policy [GA 592] · publishers · findings',
     icon: Cpu,
     ownerStudioTab: 'MCP_HUB',
     ownerStudioLabel: 'Open Dedicated MCP Servers Studio (48 Servers)',
@@ -510,7 +510,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_PAM_TROUBLESHOOT',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: '[GA 591.0.0] PAM JIT IAM & 403 Troubleshooter',
+    shortLabel: '[GA 592.0.0] PAM JIT IAM & 403 Troubleshooter',
     subtitle: 'gcloud pam entitlements/grants [GA] · gcloud policy-troubleshoot iam [GA]',
     icon: KeyRound,
     ownerStudioTab: 'SOVEREIGN_STUDIO',
@@ -541,7 +541,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_MODEL_ARMOR',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '[GA 591.0.0] Model Armor LLM Firewall & Safety Floor',
+    shortLabel: '[GA 592.0.0] Model Armor LLM Firewall & Safety Floor',
     subtitle: 'gcloud model-armor templates · floorsettings · sanitize-user-prompt [GA]',
     icon: ShieldAlert,
     ownerStudioTab: 'CLOUD_SOC',
@@ -551,8 +551,8 @@ const STUDIO_TABS = [
     id: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '[GA 591.0.0] Grounded Dev Knowledge & App Topology',
-    subtitle: 'gcloud developer-knowledge answer-query · app-topology · design-center [GA]',
+    shortLabel: '[GA 592.0.0] Grounded Dev Knowledge & App Topology',
+    subtitle: 'gcloud developer-knowledge answer-query · apphub MULTI_REGIONAL [592] · design-center [GA]',
     icon: Globe,
     ownerStudioTab: 'SRE_WAR_ROOM',
     ownerStudioLabel: 'Open SRE War-Room Topology',
@@ -581,7 +581,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_AI_HYPERCOMPUTER_HPC',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: '[GA 591.0.0] AI Hypercomputer Cluster Director & Lustre',
+    shortLabel: '[GA 592.0.0] AI Hypercomputer Cluster Director & Lustre',
     subtitle: 'gcloud cluster-director clusters [GA] · gcloud lustre [GA] · mldiagnostics',
     icon: Sparkles,
     ownerStudioTab: 'WAVE9_STUDIO',
@@ -592,22 +592,33 @@ const STUDIO_TABS = [
     id: 'WAVE3_GCLOUD_590_SUITE',
     wave: 'WAVE_3',
     track: 'ALPHA_AND_BETA',
-    shortLabel: '[SDK 590→591] 8-Pillar Observability, Orchestration & AI',
+    shortLabel: '[SDK 590→592] 8-Pillar Observability, Orchestration & AI',
     subtitle: 'observability · orchestration-pipelines · compliance-manager · gemini · vector-search · IPAM',
     icon: Terminal,
     ownerStudioTab: 'DATA_ENGINEER_STUDIO',
     ownerStudioLabel: 'Open Data Engineering & Orchestration Studio',
   },
-  // NEW WAVE 4: GOOGLE CLOUD SDK 591.0.0 (2026-10-27) 8 NEW GA/BETA UPGRADES
+  // WAVE 4: GOOGLE CLOUD SDK 591.0.0 (2026-10-27) 8 GA/BETA UPGRADES
   {
     id: 'WAVE4_GCLOUD_591_UPGRADES',
     wave: 'WAVE_4',
     track: 'GA',
-    shortLabel: '[NEW SDK 591.0.0] 8 GA Upgrades (Skills, VM Agent-ID, GKE Live)',
+    shortLabel: '[SDK 591.0.0] 8 GA Upgrades (Skills, VM Agent-ID, GKE Live)',
     subtitle: 'agent-registry skills/publishers/findings [GA] · VM --identity-type [GA] · GKE LIVE_UPDATE · LB Circuit Breakers · WIF Actor',
     icon: FileCode2,
     ownerStudioTab: 'VM_SSH',
     ownerStudioLabel: 'Open Compute Engine VM & Agent Identity Studio',
+  },
+  // NEW WAVE 5: GOOGLE CLOUD SDK 592.0.0 (2026-11-03) 8 NEW GA/BETA UPGRADES
+  {
+    id: 'WAVE5_GCLOUD_592_UPGRADES',
+    wave: 'WAVE_5',
+    track: 'GA',
+    shortLabel: '[NEW SDK 592.0.0] 8 GA Upgrades (AlloyDB Autoscaler, GKE Ambient Mesh, Backup-DR, DWS Spark)',
+    subtitle: 'alloydb --enable-autoscaler [GA] · sql reconcile-networking · GKE --enable-ambient-networking [GA] · backup-dr auto-protection [GA] · dataproc DWS',
+    icon: Sparkles,
+    ownerStudioTab: 'GKE_FINOPS',
+    ownerStudioLabel: 'Open GKE & Database Fleet Studios',
   },
 ];
 
@@ -911,7 +922,7 @@ export default function GcloudAlphaBetaStudio({
 
   return (
     <div className="space-y-5">
-      {/* Top Pre-GA Release Channel Disclosure & SDK 591.0.0 Version Banner */}
+      {/* Top Pre-GA Release Channel Disclosure & SDK 592.0.0 Version Banner */}
       <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-red-500/10 to-blue-500/10 p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
@@ -919,43 +930,43 @@ export default function GcloudAlphaBetaStudio({
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
-                  GCLOUD {overview?.sdk?.coreVersion || '591.0.0'} CLI LAB
-                  (12 COMMAND SUITES)
+                  GCLOUD {overview?.sdk?.coreVersion || '592.0.0'} CLI LAB
+                  (13 COMMAND SUITES)
                 </span>
               </span>
               <ReleaseTrackBadge track="GA" />
               <ReleaseTrackBadge track="BETA" />
               <ReleaseTrackBadge track="ALPHA" />
               <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                core={overview?.sdk?.alphaVersion || '2026.10.26'} · alpha=
-                {overview?.sdk?.alphaVersion || '2026.10.26'} · beta=
-                {overview?.sdk?.betaVersion || '2026.10.26'}
+                core={overview?.sdk?.alphaVersion || '2026.10.30'} · alpha=
+                {overview?.sdk?.alphaVersion || '2026.10.30'} · beta=
+                {overview?.sdk?.betaVersion || '2026.10.30'}
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
               Google Cloud [GA Promoted], [BETA] &amp; [ALPHA] Frontier
-              Capabilities — SDK {overview?.sdk?.coreVersion || '591.0.0'} (2026.10.26) Suite
+              Capabilities — SDK {overview?.sdk?.coreVersion || '592.0.0'} (2026.10.30) Suite
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
               Synchronized with{' '}
               <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                Google Cloud SDK {overview?.sdk?.coreVersion || '591.0.0'} (2026.10.26 · Python 3.14.9)
+                Google Cloud SDK {overview?.sdk?.coreVersion || '592.0.0'} (2026-11-03 · core 2026.10.30 · Python 3.14.9)
               </strong>
-              : Wave 1–4 command groups (<code className="font-mono">agent-registry skills/publishers/findings [NEW GA]</code>,{' '}
-              <code className="font-mono">compute --identity-type=AGENT_IDENTITY [NEW GA]</code>,{' '}
-              <code className="font-mono">container LIVE_UPDATE_WITHOUT_DRAIN [NEW GA]</code>,{' '}
-              <code className="font-mono">compute --circuit-breakers-* [NEW GA]</code>,{' '}
-              <code className="font-mono">iam --actor-providers [NEW GA]</code>,{' '}
-              <code className="font-mono">network-security wildfire-analysis [NEW GA]</code>,{' '}
-              <code className="font-mono">beta workspace-key-access [NEW BETA]</code>,{' '}
+              : Wave 1–5 command groups (<code className="font-mono">alloydb --enable-autoscaler &amp; --autoscaler-target-connections-count [NEW GA 592]</code>,{' '}
+              <code className="font-mono">sql instances reconcile-networking [NEW GA 592]</code>,{' '}
+              <code className="font-mono">container --enable-ambient-networking &amp; --enable-dataplane-v2 [NEW GA 592]</code>,{' '}
+              <code className="font-mono">backup-dr auto-protection-policies [NEW GA 592]</code>,{' '}
+              <code className="font-mono">dataproc --scheduling-timeout &amp; --requested-run-duration [NEW GA 592]</code>,{' '}
+              <code className="font-mono">beta run --public [NEW BETA 592]</code>,{' '}
+              <code className="font-mono">agent-registry skills --scanning-policy [GA 592]</code>,{' '}
+              <code className="font-mono">kms kem-ecdh-p256/p384 [NEW GA 592]</code>,{' '}
               <code className="font-mono">pam</code>,{' '}
               <code className="font-mono">model-armor</code>,{' '}
               <code className="font-mono">cluster-director</code>,{' '}
-              <code className="font-mono">observability</code>,{' '}
-              <code className="font-mono">compliance-manager</code>) are wired
+              <code className="font-mono">observability</code>) are wired
               directly to their{' '}
               <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                [GA · 591.0.0]
+                [GA · 592.0.0]
               </strong>{' '}
               tracks alongside{' '}
               <strong className="text-amber-600 dark:text-amber-400 font-mono">
@@ -974,7 +985,7 @@ export default function GcloudAlphaBetaStudio({
               value={region}
               onChange={(e) => setRegion(e.target.value)}
               className="rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200"
-              title="Select target GCP Region for gcloud 591.0.0 operations"
+              title="Select target GCP Region for gcloud 592.0.0 operations"
             >
               <option value="us-central1">us-central1 (Iowa)</option>
               <option value="us-east1">us-east1 (S. Carolina)</option>
@@ -994,21 +1005,21 @@ export default function GcloudAlphaBetaStudio({
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
               />
-              <span>Refresh SDK {overview?.sdk?.coreVersion || '591.0.0'} Telemetry</span>
+              <span>Refresh SDK {overview?.sdk?.coreVersion || '592.0.0'} Telemetry</span>
             </button>
 
             <button
               type="button"
               disabled={actionRunning === 'RUN_12_SUITE_SDK_AUDIT'}
               onClick={() => executeAlphaBetaAction('RUN_12_SUITE_SDK_AUDIT')}
-              title="Audit all 12 SDK 591.0.0 CLI Suites and verify live GCP API enablement across your project"
+              title="Audit all 13 SDK 592.0.0 CLI Suites and verify live GCP API enablement across your project"
               className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>
                 {actionRunning === 'RUN_12_SUITE_SDK_AUDIT'
-                  ? 'Auditing 12 Suites...'
-                  : '12-Suite API & CLI Audit'}
+                  ? 'Auditing 13 Suites...'
+                  : '13-Suite API & CLI Audit'}
               </span>
             </button>
 
@@ -1017,7 +1028,7 @@ export default function GcloudAlphaBetaStudio({
               onClick={() => {
                 const scriptLines = [
                   '#!/usr/bin/env bash',
-                  `# CloudPulse 2026 — Google Cloud SDK ${overview?.sdk?.coreVersion || '591.0.0'} 12-Suite Frontier Runbook`,
+                  `# CloudPulse 2026 — Google Cloud SDK ${overview?.sdk?.coreVersion || '592.0.0'} 13-Suite Frontier Runbook`,
                   `# Project: ${projectId} | Region: ${region}`,
                   'set -euo pipefail',
                   '',
@@ -1025,6 +1036,7 @@ export default function GcloudAlphaBetaStudio({
                   `gcloud version`,
                   `gcloud agent-registry mcp-servers list --project=${projectId} --location=global --format=json`,
                   `gcloud agent-registry skills list --project=${projectId} --location=global --format=json`,
+                  `gcloud backup-dr auto-protection-policies list --project=${projectId} --location=${region} --format=json`,
                   `gcloud pam check-onboarding-status --project=${projectId} --location=global --format=json`,
                   `gcloud service-health events list --project=${projectId} --location=global --format=json`,
                   `gcloud cloudlocationfinder cloud-locations list --project=${projectId} --location=global --page-size=10 --format=json`,
@@ -1039,12 +1051,12 @@ export default function GcloudAlphaBetaStudio({
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${projectId}-gcloud-591-12-suite-runbook.sh`;
+                a.download = `${projectId}-gcloud-592-13-suite-runbook.sh`;
                 a.click();
                 URL.revokeObjectURL(url);
-                notify(`Exported ${projectId}-gcloud-591-12-suite-runbook.sh!`);
+                notify(`Exported ${projectId}-gcloud-592-13-suite-runbook.sh!`);
               }}
-              title="Download an executable 12-Suite gcloud 591.0.0 verification shell runbook (.sh)"
+              title="Download an executable 13-Suite gcloud 592.0.0 verification shell runbook (.sh)"
               className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
             >
               <FileCode2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1053,7 +1065,7 @@ export default function GcloudAlphaBetaStudio({
           </div>
         </div>
 
-        {/* Interactive gcloud 591.0.0 Command Builder, Syntax Validator & Live Read-Only Probe Workbench */}
+        {/* Interactive gcloud 592.0.0 Command Builder, Syntax Validator & Live Read-Only Probe Workbench */}
         <div
           ref={workbenchSectionRef}
           className={`mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 space-y-2 rounded-xl transition-all duration-300 ${
@@ -1065,21 +1077,33 @@ export default function GcloudAlphaBetaStudio({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                Interactive SDK {overview?.sdk?.coreVersion || '591.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
+                Interactive SDK {overview?.sdk?.coreVersion || '592.0.0'} Command Validator &amp; Live Read-Only Probe Workbench:
               </span>
               <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-extrabold">
-                🔧 Requires gcloud CLI ≥ 591.0.0 · Online Session Token Bridged
+                Requires gcloud CLI ≥ 592.0.0 · Online Session Token Bridged
               </span>
               {workbenchHighlightLabel && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
-                  🎯 LOADED &amp; PROBING: {workbenchHighlightLabel}
+                  LOADED &amp; PROBING: {workbenchHighlightLabel}
                 </span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-1">
               {[
                 {
-                  label: 'Agent Skills [GA]',
+                  label: 'Backup-DR Auto-Policies [GA 592]',
+                  cmd: `gcloud backup-dr auto-protection-policies list --location=${region}`,
+                },
+                {
+                  label: 'AlloyDB Instances [GA 592]',
+                  cmd: `gcloud alloydb instances list --region=${region}`,
+                },
+                {
+                  label: 'GKE Clusters [GA 592]',
+                  cmd: 'gcloud container clusters list',
+                },
+                {
+                  label: 'Agent Skills [GA 592]',
                   cmd: 'gcloud agent-registry skills list --location=global',
                 },
                 {
@@ -1097,14 +1121,6 @@ export default function GcloudAlphaBetaStudio({
                 {
                   label: 'Observability Scope [GA]',
                   cmd: 'gcloud observability scopes describe _Default --location=global',
-                },
-                {
-                  label: 'Orchestration Types [BETA]',
-                  cmd: 'gcloud beta orchestration-pipelines resource-types list',
-                },
-                {
-                  label: 'Server TLS Policies [GA]',
-                  cmd: 'gcloud network-security server-tls-policies list --location=global',
                 },
               ].map((preset) => (
                 <button
@@ -1785,7 +1801,7 @@ export default function GcloudAlphaBetaStudio({
           )}
         </div>
 
-        {/* Live Installed SDK 591.0.0 Component Matrix Strip */}
+        {/* Live Installed SDK 592.0.0 Component Matrix Strip */}
         <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mr-1">
             Installed SDK Components:
@@ -1793,11 +1809,11 @@ export default function GcloudAlphaBetaStudio({
           {[
             {
               k: 'gcloud',
-              v: overview?.sdk?.coreVersion || '591.0.0',
+              v: overview?.sdk?.coreVersion || '592.0.0',
             },
             {
               k: 'alpha/beta/core',
-              v: overview?.sdk?.alphaVersion || '2026.10.26',
+              v: overview?.sdk?.alphaVersion || '2026.10.30',
             },
             {
               k: 'bq',
@@ -1806,6 +1822,10 @@ export default function GcloudAlphaBetaStudio({
             {
               k: 'python',
               v: overview?.sdk?.pythonVersion || '3.14.9',
+            },
+            {
+              k: 'datastore-emulator',
+              v: overview?.sdk?.datastoreEmulatorVersion || '2.3.1',
             },
             {
               k: 'kubectl',
@@ -1849,11 +1869,12 @@ export default function GcloudAlphaBetaStudio({
               onChange={(e) => setWaveFilter(e.target.value)}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">Domain: All CLI Suites (12)</option>
+              <option value="ALL">Domain: All CLI Suites (13)</option>
               <option value="WAVE_1">Runtime, Agent Identity &amp; PAM (5)</option>
               <option value="WAVE_2">Model Armor, Quotas &amp; AI HPC (5)</option>
               <option value="WAVE_3">Observability &amp; Orchestration (1)</option>
-              <option value="WAVE_4">NEW SDK 591.0.0 GA/Beta Upgrades (1)</option>
+              <option value="WAVE_4">SDK 591.0.0 GA/Beta Upgrades (1)</option>
+              <option value="WAVE_5">NEW SDK 592.0.0 GA/Beta Upgrades (1)</option>
             </select>
 
             <select
@@ -1863,7 +1884,7 @@ export default function GcloudAlphaBetaStudio({
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
               <option value="ALL">Track: All Tracks</option>
-              <option value="GA">Track: [GA 591.0.0]</option>
+              <option value="GA">Track: [GA 592.0.0]</option>
               <option value="BETA">Track: [BETA] Only</option>
               <option value="ALPHA">Track: [ALPHA] Only</option>
             </select>
@@ -1917,14 +1938,20 @@ export default function GcloudAlphaBetaStudio({
                   <Icon className="w-4 h-4 shrink-0 opacity-80" />
                   <span
                     className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-full ${
-                      tab.wave === 'WAVE_3'
+                      tab.wave === 'WAVE_5'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : tab.wave === 'WAVE_3'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                         : tab.wave === 'WAVE_2'
                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
                         : 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30'
                     }`}
                   >
-                    {tab.wave === 'WAVE_3'
+                    {tab.wave === 'WAVE_5'
+                      ? 'NEW 592.0.0'
+                      : tab.wave === 'WAVE_4'
+                      ? 'SDK 591.0.0'
+                      : tab.wave === 'WAVE_3'
                       ? 'MCP & OBS'
                       : tab.wave === 'WAVE_2'
                       ? 'AI & QUOTAS'
@@ -6182,6 +6209,252 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
                   • <code className="font-mono">gcloud beta app migrate-to-run</code> now masks sensitive env vars in printed terminal output while preserving them in <code className="font-mono">service.yaml</code>.<br />
                   • <code className="font-mono">gcloud database-migration conversion-workspaces</code> adds <code className="font-mono">--ai-processing-location</code> for Gemini data residency.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* WAVE 5: GOOGLE CLOUD SDK 592.0.0 (2026-11-03) 8 NEW GA/BETA UPGRADES */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'WAVE5_GCLOUD_592_UPGRADES' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left 7 Cols: 8-Pillar Live SDK 592.0.0 Upgrade Probe */}
+          <div className="lg:col-span-7 rounded-2xl border border-emerald-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ReleaseTrackBadge track="GA" />
+                <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  Google Cloud SDK 592.0.0 (2026-11-03) — 8-Pillar New Upgrades Probe
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={actionRunning === 'SCAN_WAVE5_GCLOUD_592_UPGRADES'}
+                onClick={() =>
+                  executeAlphaBetaAction('SCAN_WAVE5_GCLOUD_592_UPGRADES')
+                }
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>
+                  {actionRunning === 'SCAN_WAVE5_GCLOUD_592_UPGRADES'
+                    ? 'Probing SDK 592.0.0 (8 Upgrades)...'
+                    : 'Run 8-Pillar SDK 592.0.0 Live Scan'}
+                </span>
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Executes 8 live CLI probes and command synthesizers for the newly
+              promoted capabilities in{' '}
+              <code className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                Google Cloud SDK 592.0.0 (core 2026.10.30 · Python 3.14.9 · cloud-datastore-emulator 2.3.1)
+              </code>
+              :
+            </p>
+
+            <div className="space-y-2.5">
+              {[
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '1. AlloyDB Autoscaler, Cron Schedules & Target Connections Count (--enable-autoscaler)',
+                  cmd: `gcloud alloydb instances update cp-alloydb-primary --cluster=cp-alloydb-cluster --project=${projectId} --region=${region} --enable-autoscaler --autoscaler-max-node-count=8 --autoscaler-target-cpu-usage=0.70 --autoscaler-target-connections-count=1000 --autoscaler-set-schedule=peak-hours --autoscaler-schedule-cron-exp="0 8 * * 1-5" --autoscaler-schedule-duration-seconds=36000 --autoscaler-schedule-min-node-count=4`,
+                  desc: 'Promoted to GA in 592.0.0 on alloydb instances create/update: --enable-autoscaler, cron schedules, --autoscaler-target-connections-count, plus Auth Proxy v1.17.2 & beta --connection-pooling-authproxy-pooler-scaling-type.',
+                  ownerTab: 'CLOUD_SQL_ALLOYDB',
+                  ownerLabel: 'Cloud SQL & AlloyDB Studio',
+                },
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '2. Cloud SQL Private Service Connect DNS Reconciliation (reconcile-networking)',
+                  cmd: `gcloud sql instances reconcile-networking cp-pg16-primary --project=${projectId}`,
+                  desc: 'New GA command in 592.0.0: reconciles Private Service Connect (PSC) DNS networking configuration for a Cloud SQL instance without instance recreation.',
+                  ownerTab: 'CLOUD_SQL_ALLOYDB',
+                  ownerLabel: 'Cloud SQL & AlloyDB Studio',
+                },
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '3. GKE Zero-Sidecar Ambient Mesh (--enable-ambient-networking) & Dataplane V2 Migration',
+                  cmd: `gcloud container clusters update cp-autopilot --project=${projectId} --region=${region} --enable-ambient-networking --enable-dataplane-v2`,
+                  desc: 'Promoted --enable-ambient-networking to GA on clusters create, create-auto, and update, and added --enable-dataplane-v2 to initiate live GKE Dataplane V2 migration.',
+                  ownerTab: 'GKE_FINOPS',
+                  ownerLabel: 'GKE Studio',
+                },
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '4. Backup & DR Auto-Protection Policies, Bindings & Resource Matcher GA',
+                  cmd: `gcloud backup-dr auto-protection-policies list --project=${projectId} --location=${region} --format=json`,
+                  desc: 'Promoted auto-protection-policies, auto-protection-bindings, applied-auto-protection-policies (--location now required), and binding-matching-resources to GA.',
+                  ownerTab: 'SRE_WAR_ROOM',
+                  ownerLabel: 'SRE Resilience Studio',
+                },
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '5. Dataproc Dynamic Workload Scheduler (DWS) (--scheduling-timeout & --requested-run-duration)',
+                  cmd: `gcloud dataproc clusters create cp-dws-spark-cluster --project=${projectId} --region=${region} --scheduling-timeout=3600s --requested-run-duration=14400s`,
+                  desc: 'Added --scheduling-timeout and --requested-run-duration flags to gcloud dataproc clusters create for DWS GPU/CPU scheduled Spark clusters.',
+                  ownerTab: 'MANAGED_SPARK_STUDIO',
+                  ownerLabel: 'Managed Spark Studio',
+                },
+                {
+                  badge: '[NEW BETA/GA · 592.0.0]',
+                  title: '6. Cloud Run --public Invoker Bypass & App Engine migrate-to-run --from-image + VPC Egress',
+                  cmd: `gcloud beta run services update cp-edge-api --project=${projectId} --region=${region} --public`,
+                  desc: 'Added --public to gcloud beta run deploy/services update/multi-region-services update (disabling invoker IAM & IAP), plus App Engine --from-image and app.yaml vpc_access.',
+                  ownerTab: 'CLOUD_RUN',
+                  ownerLabel: 'Cloud Run Studio',
+                },
+                {
+                  badge: '[NEW GA/BETA · 592.0.0]',
+                  title: '7. Dataplex Data Documentation (--custom-instructions) & BigLake CMEK / Workday Federation',
+                  cmd: `gcloud dataplex datascans create data-documentation cp-lakehouse-docs --project=${projectId} --location=${region} --data-source-entity=projects/${projectId}/locations/${region}/lakes/cp-lake/zones/curated/entities/orders --custom-instructions="Generate executive SLA & lineage notes" --sql-dialect=GOOGLE_SQL`,
+                  desc: 'Added --custom-instructions & --sql-dialect to Dataplex data-documentation datascans (GA), --kms-key to BigLake Hive catalogs, and --workday-api-client-client-id to BigLake Iceberg.',
+                  ownerTab: 'DATA_ENGINEER_STUDIO',
+                  ownerLabel: 'Data Engineering Studio',
+                },
+                {
+                  badge: '[NEW GA · 592.0.0]',
+                  title: '8. Cloud KMS ECDH KEM (kem-ecdh-p256/p384), Agent Skills --scanning-policy & Compute Subblocks',
+                  cmd: `gcloud agent-registry skills list --project=${projectId} --location=global --format=json`,
+                  desc: 'Added Cloud KMS ECDH KEM (kem-ecdh-p256 & kem-ecdh-p384), replaced Agent Registry --scanning-state with --scanning-policy, added App Hub MULTI_REGIONAL, and promoted Compute --reservation-subblock.',
+                  ownerTab: 'SOVEREIGN_STUDIO',
+                  ownerLabel: 'Sovereign KMS & IAM Studio',
+                },
+              ].map((item, idx) => {
+                const liveProbe =
+                  lastReceipt?.wave === 'WAVE_5' &&
+                  Array.isArray(lastReceipt.probes)
+                    ? lastReceipt.probes[idx]
+                    : null;
+                return (
+                  <div
+                    key={item.title}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-1.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                          {item.badge}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                          {item.title}
+                        </span>
+                        {liveProbe && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">
+                            {liveProbe.ok !== false ? 'VERIFIED' : 'PROBED'} ·{' '}
+                            {liveProbe.durationMs || 0}ms
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleLoadInWorkbench(item.cmd, item.title)
+                          }
+                          className="px-2 py-0.5 rounded bg-blue-600/15 hover:bg-blue-600/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          Load in Workbench ↑
+                        </button>
+                        {item.ownerTab && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleNavigateOwnerStudio(
+                                item.ownerTab,
+                                item.ownerLabel
+                              )
+                            }
+                            className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            Open {item.ownerLabel} →
+                          </button>
+                        )}
+                        {typeof onOpenShellWithCommand === 'function' && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenShellWithCommand(item.cmd)}
+                            className="text-[11px] font-mono text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                          >
+                            $ Shell
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => copyText(item.cmd, item.title)}
+                          className="text-[11px] font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        >
+                          Copy CLI
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                      {item.desc}
+                    </p>
+                    <div className="p-2 rounded-lg bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
+                      $ {item.cmd}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right 5 Cols: SDK 592.0.0 Release Notes, Promotions & Breaking Changes Summary */}
+          <div className="lg:col-span-5 rounded-2xl border border-blue-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-3.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                SDK 592.0.0 (2026-11-03) Release Notes &amp; Breaking Changes Ledger
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Verified directly from <code className="font-mono">/home/abdelouahab/google-cloud-sdk/RELEASE_NOTES</code>:
+            </p>
+            <div className="space-y-2.5 text-xs font-mono">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                  1. AlloyDB Autoscaler GA &amp; Cloud SQL PSC Reconcile
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  • Promoted <code className="font-mono">--enable-autoscaler</code>, <code className="font-mono">--autoscaler-max-node-count</code>, <code className="font-mono">--autoscaler-target-cpu-usage</code>, and cron schedule flags to GA on <code className="font-mono">gcloud alloydb instances create/update</code> + added <code className="font-mono">--autoscaler-target-connections-count</code>.<br />
+                  • Added <code className="font-mono">gcloud sql instances reconcile-networking</code> (GA) to repair PSC DNS bindings in-place.
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1">
+                <div className="font-bold text-blue-700 dark:text-blue-300">
+                  2. GKE Ambient Service Mesh GA, Dataplane V2 &amp; Backup-DR GA
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  • Promoted <code className="font-mono">--enable-ambient-networking</code> to GA on <code className="font-mono">gcloud container clusters create / create-auto / update</code>.<br />
+                  • Added <code className="font-mono">--enable-dataplane-v2</code> to <code className="font-mono">clusters update</code> &amp; <code className="font-mono">--datapath-provider</code> to <code className="font-mono">node-pools update</code>.<br />
+                  • Promoted <code className="font-mono">gcloud backup-dr auto-protection-policies</code> &amp; <code className="font-mono">auto-protection-bindings</code> to GA (<code className="font-mono">--location</code> now mandatory).
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
+                <div className="font-bold text-indigo-700 dark:text-indigo-300">
+                  3. Dataproc DWS Spark, Dataplex Docs, BigLake CMEK &amp; KMS KEM
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  • Dataproc DWS: <code className="font-mono">--scheduling-timeout</code> &amp; <code className="font-mono">--requested-run-duration</code> on <code className="font-mono">clusters create</code>.<br />
+                  • Dataplex: <code className="font-mono">--custom-instructions</code> &amp; <code className="font-mono">--sql-dialect</code> on <code className="font-mono">data-documentation</code>.<br />
+                  • Cloud KMS: ECDH KEM algorithms <code className="font-mono">kem-ecdh-p256</code> and <code className="font-mono">kem-ecdh-p384</code>.<br />
+                  • Cloud Bigtable: <code className="font-mono">--automated-backup-keep-hot-duration</code> &amp; <code className="font-mono">--avro-schema-path</code>.
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                <div className="font-bold text-amber-700 dark:text-amber-300">
+                  4. Breaking Changes &amp; Deprecations in SDK 592.0.0
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  • <strong>Agent Registry</strong>: Removed <code className="font-mono">--scanning-state</code> from <code className="font-mono">gcloud agent-registry skills create/update</code>; use <code className="font-mono">--scanning-policy</code>.<br />
+                  • <strong>Java 25+ Emulators</strong>: <code className="font-mono">cloud-datastore-emulator 2.3.1</code> &amp; Firestore Emulator <code className="font-mono">v1.23.0</code> (adds <code className="font-mono">add_window_fields</code>) now require Java 25+.<br />
+                  • <strong>Firebase Test Lab</strong>: <code className="font-mono">gcloud firebase test</code> deprecated (shutting down Sept 30, 2027 in favor of Developer Device Platform).
                 </div>
               </div>
             </div>

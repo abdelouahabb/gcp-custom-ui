@@ -23,7 +23,80 @@ import {
   Fingerprint,
   Layers,
   Zap,
+  Eye,
+  EyeOff,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+
+// Helper: Decompose long Secret Manager IDs (e.g., cloudpulse-dlp-leaked-staging-secrets-env-aws_backup_access_key)
+// into a clean, scannable Primary Title + Origin Badge + Canonical Secret ID so buttons are never pushed down.
+function parseSecretDisplayMeta(secretObj) {
+  const rawId = String(secretObj?.secretId || '').trim();
+  const labels = secretObj?.labels || {};
+  const isDlpVaulted =
+    rawId.startsWith('cloudpulse-dlp-') ||
+    labels['managed-by'] === 'cloudpulse-dlp-vault';
+
+  if (isDlpVaulted) {
+    const stripped = rawId.replace(/^cloudpulse-dlp-/, '');
+    // Common pattern: <file-slug>-<env_key_with_underscores>
+    const envMatch = stripped.match(/^(.*?-env|.*?-json|.*?-yaml|.*?-yml|.*?-cfg|.*?-conf|.*?-ini)-([a-z0-9_]+)$/i);
+    let fileHint = '';
+    let keyName = stripped;
+    if (envMatch) {
+      fileHint = envMatch[1].replace(/-([a-z0-9]+)$/i, '.$1');
+      keyName = envMatch[2].toUpperCase();
+    } else if (stripped.includes('_')) {
+      const parts = stripped.split('-');
+      const idxWithUnderscore = parts.findIndex((p) => p.includes('_'));
+      if (idxWithUnderscore > 0) {
+        fileHint = parts.slice(0, idxWithUnderscore).join('-');
+        keyName = parts.slice(idxWithUnderscore).join('_').toUpperCase();
+      } else {
+        keyName = stripped.toUpperCase();
+      }
+    }
+    return {
+      primaryTitle: keyName,
+      hasDistinctSubtitle: keyName.toLowerCase() !== rawId.toLowerCase(),
+      originBadge: fileHint ? `DLP Vault · ${fileHint}` : 'DLP X-Ray Vault',
+      detectorBadge: labels['detector-id']
+        ? String(labels['detector-id']).toUpperCase()
+        : '',
+      sourceBucket: labels['source-bucket'] || '',
+      isDlpVaulted: true,
+    };
+  }
+
+  if (labels['cloudrun-service']) {
+    const svc = labels['cloudrun-service'];
+    const suffix = rawId.startsWith(`${svc}-`)
+      ? rawId.slice(svc.length + 1).toUpperCase()
+      : rawId;
+    return {
+      primaryTitle: suffix,
+      hasDistinctSubtitle: suffix.toLowerCase() !== rawId.toLowerCase(),
+      originBadge: `Cloud Run · ${svc}`,
+      detectorBadge: '',
+      sourceBucket: '',
+      isDlpVaulted: false,
+    };
+  }
+
+  return {
+    primaryTitle: rawId,
+    hasDistinctSubtitle: false,
+    originBadge:
+      labels['managed-by'] === 'cloudpulse-autonomous-soc'
+        ? 'Autonomous SOC Canary'
+        : 'Sovereign Secret',
+    detectorBadge: '',
+    sourceBucket: '',
+    isDlpVaulted: false,
+  };
+}
 
 export default function SovereignTimeMachineIamStudio({
   projectId,
@@ -97,6 +170,11 @@ export default function SovereignTimeMachineIamStudio({
   const [rotateDisableOld, setRotateDisableOld] = useState(true);
   const [grantSaBySecret, setGrantSaBySecret] = useState({});
   const [secretActionBusy, setSecretActionBusy] = useState(null);
+  const [secretCategoryFilter, setSecretCategoryFilter] = useState('ALL'); // 'ALL' | 'DLP' | 'APP'
+  const [secretSearchQuery, setSecretSearchQuery] = useState('');
+  const [peekedSecrets, setPeekedSecrets] = useState({}); // { [secretId]: { value, version, masked, crc32c, showRaw } }
+  const [showSecretPricingInfo, setShowSecretPricingInfo] = useState(false);
+  const [showSecretSafetyGuide, setShowSecretSafetyGuide] = useState(false);
   const [githubRepoSlug, setGithubRepoSlug] = useState('');
   const [wifBusy, setWifBusy] = useState(false);
   const [wifResult, setWifResult] = useState(null);
@@ -494,6 +572,75 @@ export default function SovereignTimeMachineIamStudio({
     }
   };
 
+  const activeSmProject = vaultData?.activeSecretProject || projectId;
+
+  const handleGenerateRandomSecretValue = (targetSecretId) => {
+    const arr = new Uint8Array(24);
+    window.crypto.getRandomValues(arr);
+    const hex = Array.from(arr)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    setRotateValues((prev) => ({
+      ...prev,
+      [targetSecretId]: `cp_live_${hex}`,
+    }));
+  };
+
+  const handlePeekSecretVersion = async (
+    targetSecretId,
+    versionId = 'latest'
+  ) => {
+    if (peekedSecrets[targetSecretId] && versionId === 'latest') {
+      setPeekedSecrets((prev) => {
+        const next = { ...prev };
+        delete next[targetSecretId];
+        return next;
+      });
+      return;
+    }
+    setSecretActionBusy(`PEEK:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'PEEK_SECRET_VERSION',
+          secretId: targetSecretId,
+          versionId,
+          targetSecretProject: activeSmProject,
+        }
+      );
+      if (res.data?.ok) {
+        setPeekedSecrets((prev) => ({
+          ...prev,
+          [targetSecretId]: {
+            value: res.data.secretValue,
+            masked: res.data.maskedPreview,
+            version: res.data.version,
+            crc32c: res.data.dataCrc32c,
+            showRaw: true,
+          },
+        }));
+        if (onTriggerToast) {
+          onTriggerToast(
+            res.data.message ||
+              `Decrypted ${targetSecretId}@v${res.data.version}`
+          );
+        }
+      }
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            `Failed to access secret payload for ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
   const handleCreateSecret = async (e) => {
     e.preventDefault();
     if (!secretId.trim()) return;
@@ -510,6 +657,7 @@ export default function SovereignTimeMachineIamStudio({
           region: secretRegion,
           rotationDays: secretRotationDays,
           serviceAccountEmail: secretBindSaEmail,
+          targetSecretProject: activeSmProject,
         }
       );
       if (onTriggerToast) {
@@ -555,9 +703,15 @@ export default function SovereignTimeMachineIamStudio({
           secretId: targetSecretId,
           newSecretValue: newVal,
           disablePreviousVersions: rotateDisableOld,
+          targetSecretProject: activeSmProject,
         }
       );
       setRotateValues((prev) => ({ ...prev, [targetSecretId]: '' }));
+      setPeekedSecrets((prev) => {
+        const next = { ...prev };
+        delete next[targetSecretId];
+        return next;
+      });
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Rotated ${targetSecretId}`);
       }
@@ -589,6 +743,7 @@ export default function SovereignTimeMachineIamStudio({
           secretId: targetSecretId,
           version,
           targetState,
+          targetSecretProject: activeSmProject,
         }
       );
       if (onTriggerToast) {
@@ -628,6 +783,7 @@ export default function SovereignTimeMachineIamStudio({
           action: 'GRANT_SECRET_ACCESSOR',
           secretId: targetSecretId,
           serviceAccountEmail: saEmail,
+          targetSecretProject: activeSmProject,
         }
       );
       if (onTriggerToast) {
@@ -658,12 +814,18 @@ export default function SovereignTimeMachineIamStudio({
         {
           action: 'DELETE_SECRET',
           secretId: targetSecretId,
+          targetSecretProject: activeSmProject,
         }
       );
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Deleted secret ${targetSecretId}`);
       }
       if (expandedSecretId === targetSecretId) setExpandedSecretId(null);
+      setPeekedSecrets((prev) => {
+        const next = { ...prev };
+        delete next[targetSecretId];
+        return next;
+      });
       await fetchVaultStudio();
     } catch (err) {
       if (onTriggerToast) {
@@ -887,17 +1049,21 @@ export default function SovereignTimeMachineIamStudio({
           </div>
         </div>
 
-        {/* In-Studio Sovereign IAM & Time-Machine Modules */}
+        {/* In-Studio Sovereign IAM & Time-Machine Segmented Navigation Bar */}
         <div className="pt-3 mt-4 border-t border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Sovereign IAM, Time-Machine &amp; Zero-Trust Vault Modules (01–04)
+              Studio Workspace Module Switcher
             </span>
             <span className="text-[10px] font-mono text-zinc-500">
-              Zero-Trust IAM, Drift &amp; Encryption Modules
+              Select a module below to switch views
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div
+            role="tablist"
+            aria-label="Sovereign Studio Modules"
+            className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1 p-1 rounded-[10px]"
+          >
             {[
               {
                 id: 'IAM_SURGEON',
@@ -952,6 +1118,8 @@ export default function SovereignTimeMachineIamStudio({
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   data-feature-id={`SOVEREIGN_TAB_${tab.id}`}
                   title={tab.tip}
                   onClick={() => {
@@ -963,29 +1131,25 @@ export default function SovereignTimeMachineIamStudio({
                       if (tab.section) setIamSectionView(tab.section);
                     }
                   }}
-                  className={`w-full h-11 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  className={`w-full h-9 px-2.5 rounded-[7px] text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     active
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`p-1 rounded-md shrink-0 ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    <Icon
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        active ? 'text-white' : 'text-blue-500 dark:text-blue-400'
                       }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </span>
+                    />
                     <span className="truncate">{tab.label}</span>
                   </div>
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-mono shrink-0 ${
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono shrink-0 ${
                       active
                         ? 'bg-black/25 text-blue-100'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                        : 'bg-zinc-200/70 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400'
                     }`}
                   >
                     {tab.badge}
@@ -1002,14 +1166,26 @@ export default function SovereignTimeMachineIamStudio({
          ===================================================================== */}
       {activeSubTab === 'IAM_SURGEON' && (
         <div className="space-y-4">
-          {/* KPI Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
-              <div className="text-[11px] font-mono text-zinc-500">
-                IAM Least-Privilege Score
+          {/* Subordinate Clickable Quick-Filter Telemetry Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1.5 rounded-lg bg-zinc-50/90 dark:bg-[#0b0f17] border border-zinc-200/80 dark:border-slate-800/80 font-mono">
+            <div
+              onClick={() => {
+                setIamSectionView('SPLIT');
+                setIamFilter('ALL');
+              }}
+              title="Click to reset filter and show all IAM bindings & SA keys"
+              className="px-2.5 py-1.5 rounded-md border border-zinc-200/70 dark:border-slate-800 bg-white/80 dark:bg-[#111622] cursor-pointer hover:border-blue-500/50 transition-colors flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                  Least-Privilege Score
+                </div>
+                <div className="text-[9.5px] text-zinc-400 truncate">
+                  ETag: {iamData?.etag ? iamData.etag.slice(0, 8) : 'v3'} · Reset →
+                </div>
               </div>
               <div
-                className={`text-2xl font-black mt-1 ${
+                className={`text-sm font-black shrink-0 ${
                   (iamData?.iamScore ?? 100) >= 80
                     ? 'text-emerald-500'
                     : (iamData?.iamScore ?? 100) >= 50
@@ -1019,9 +1195,6 @@ export default function SovereignTimeMachineIamStudio({
               >
                 {iamData ? `${iamData.iamScore}/100` : '...'}
               </div>
-              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                Policy ETag: {iamData?.etag ? iamData.etag.slice(0, 10) : 'v3'}
-              </div>
             </div>
 
             <div
@@ -1029,17 +1202,19 @@ export default function SovereignTimeMachineIamStudio({
                 setIamSectionView('ROLES');
                 setIamFilter('CRITICAL');
               }}
-              title="Click to inspect Critical God-Role bindings"
-              className="p-3.5 rounded-[10px] border border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
+              title="Click to filter Critical God-Role bindings"
+              className="px-2.5 py-1.5 rounded-md border border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors flex items-center justify-between gap-2"
             >
-              <div className="text-[11px] font-mono text-red-500">
-                Critical God-Role Bindings
+              <div className="min-w-0">
+                <div className="text-[10px] text-red-500 font-bold truncate">
+                  Critical God-Roles
+                </div>
+                <div className="text-[9.5px] text-zinc-400 truncate">
+                  owner / editor · Filter →
+                </div>
               </div>
-              <div className="text-2xl font-black text-red-500 mt-1">
+              <div className="text-sm font-black text-red-500 shrink-0">
                 {iamData?.summary?.criticalCount ?? 0}
-              </div>
-              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                roles/owner, roles/editor, allUsers
               </div>
             </div>
 
@@ -1048,18 +1223,20 @@ export default function SovereignTimeMachineIamStudio({
                 setIamSectionView('ROLES');
                 setIamFilter('HIGH');
               }}
-              title="Click to inspect Escalation & Wildcard Roles"
-              className="p-3.5 rounded-[10px] border border-amber-500/30 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors"
+              title="Click to filter Escalation & Wildcard Roles"
+              className="px-2.5 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2"
             >
-              <div className="text-[11px] font-mono text-amber-500">
-                Escalation & Wildcard Roles
+              <div className="min-w-0">
+                <div className="text-[10px] text-amber-500 font-bold truncate">
+                  Escalation Roles
+                </div>
+                <div className="text-[9.5px] text-zinc-400 truncate">
+                  Token/KeyAdmin · Filter →
+                </div>
               </div>
-              <div className="text-2xl font-black text-amber-500 mt-1">
+              <div className="text-sm font-black text-amber-500 shrink-0">
                 {(iamData?.summary?.highCount ?? 0) +
                   (iamData?.summary?.mediumCount ?? 0)}
-              </div>
-              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                TokenCreator / KeyAdmin / *Admin
               </div>
             </div>
 
@@ -1068,49 +1245,47 @@ export default function SovereignTimeMachineIamStudio({
                 setIamSectionView('ROLES');
                 setIamFilter('JIT_ONLY');
               }}
-              title="Click to inspect 24h JIT Condition Protected bindings"
-              className="p-3.5 rounded-[10px] border border-blue-500/30 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors"
+              title="Click to filter 24h JIT Condition Protected bindings"
+              className="px-2.5 py-1.5 rounded-md border border-blue-500/30 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors flex items-center justify-between gap-2"
             >
-              <div className="text-[11px] font-mono text-blue-400">
-                24h JIT Condition Protected
+              <div className="min-w-0">
+                <div className="text-[10px] text-blue-400 font-bold truncate">
+                  24h JIT Protected
+                </div>
+                <div className="text-[9.5px] text-zinc-400 truncate">
+                  CEL time-bounded · Filter →
+                </div>
               </div>
-              <div className="text-2xl font-black text-blue-400 mt-1">
+              <div className="text-sm font-black text-blue-400 shrink-0">
                 {iamData?.summary?.jitProtectedCount ?? 0}
-              </div>
-              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                Time-bounded CEL expressions
               </div>
             </div>
 
             <div
               onClick={() => setIamSectionView('SA_VAULT')}
               title="Click to open the Service Account .json Key, OAuth2 Token & Kill-Switch Vault"
-              className={`p-3.5 rounded-[10px] border cursor-pointer transition-all ${
+              className={`px-2.5 py-1.5 rounded-md border cursor-pointer transition-all flex items-center justify-between gap-2 ${
                 iamSectionView === 'SA_VAULT'
-                  ? 'border-amber-400 bg-amber-500/15 ring-1 ring-amber-400/50'
+                  ? 'border-amber-400 bg-amber-500/15'
                   : 'border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10'
               }`}
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[11px] font-mono text-amber-400 font-bold">
-                  SA Keys & Tokens Vault
-                </span>
-                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                  Open →
-                </span>
+              <div className="min-w-0">
+                <div className="text-[10px] text-amber-400 font-bold truncate">
+                  SA Keys &amp; Tokens
+                </div>
+                <div className="text-[9.5px] text-zinc-400 truncate">
+                  {iamData?.summary?.serviceAccountsCount ?? 0} SAs · Open →
+                </div>
               </div>
               <div
-                className={`text-2xl font-black mt-1 ${
+                className={`text-sm font-black shrink-0 ${
                   (iamData?.summary?.userManagedKeysCount ?? 0) > 0
                     ? 'text-red-500'
                     : 'text-emerald-500'
                 }`}
               >
                 {iamData?.summary?.userManagedKeysCount ?? 0} Keys
-              </div>
-              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                {iamData?.summary?.serviceAccountsCount ?? 0} SAs ·{' '}
-                {iamData?.mintedTokens?.length ?? 0} Tokens
               </div>
             </div>
           </div>
@@ -2603,119 +2778,120 @@ export default function SovereignTimeMachineIamStudio({
 
             return (
               <div
-                className={`p-4 rounded-[10px] border space-y-3 ${
+                className={`p-3 rounded-[10px] border space-y-2 ${
                   fin.withinFreeTier
-                    ? 'bg-emerald-500/[0.06] border-emerald-500/35'
-                    : 'bg-amber-500/[0.08] border-amber-500/40'
+                    ? 'bg-emerald-500/[0.05] border-emerald-500/30'
+                    : 'bg-amber-500/[0.06] border-amber-500/35'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <KeyRound
-                      className={`w-4 h-4 ${
+                      className={`w-4 h-4 shrink-0 ${
                         fin.withinFreeTier
                           ? 'text-emerald-500'
                           : 'text-amber-500'
                       }`}
                     />
-                    <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                      Secret Manager FinOps Free-Tier Meter & Lifecycle Surgeon (
-                      `secretmanager.googleapis.com/v1`)
+                    <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Secret Manager Quota Meter (`secretmanager.googleapis.com/v1`)
                     </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-extrabold border ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
                         fin.withinFreeTier
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
                           : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
                       }`}
                     >
                       {fin.withinFreeTier
-                        ? `100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
-                        : `PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
+                        ? `FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active · $0.00/mo)`
+                        : `${fin.totalEnabledVersions} Active (${fin.freeTierActiveVersionsLimit} Free + ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
                             fin.estimatedMonthlyUsd || 0
                           ).toFixed(2)}/mo)`}
                     </span>
                   </div>
-                </div>
 
-                {/* Quota Progress Bar */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10.5px] font-mono text-zinc-600 dark:text-zinc-300">
-                    <span>
-                      Active (`ENABLED`) Secret Versions:{' '}
-                      <strong>{fin.totalEnabledVersions}</strong> of{' '}
-                      <strong>{fin.freeTierActiveVersionsLimit} FREE/mo</strong>{' '}
-                      ({fin.freeVersionsRemaining} free slot(s) remaining)
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
+                      Disabled/Destroyed: <strong className="text-emerald-600 dark:text-emerald-400">{fin.totalDisabledOrDestroyedVersions} ($0/mo)</strong>
                     </span>
-                    <span>
-                      Disabled / Destroyed Versions:{' '}
-                      <strong className="text-emerald-600 dark:text-emerald-400">
-                        {fin.totalDisabledOrDestroyedVersions} ($0.00/mo)
-                      </strong>
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-                    <div
-                      style={{ width: `${pctUsed}%` }}
-                      className={`h-full transition-all duration-300 ${
-                        fin.withinFreeTier ? 'bg-emerald-500' : 'bg-amber-500'
-                      }`}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretPricingInfo((v) => !v)}
+                      className="px-2 py-1 rounded-[6px] text-[10px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <span>{showSecretPricingInfo ? 'Hide Pricing Rules' : 'Pricing Rules (6 Free/Mo)'}</span>
+                      {showSecretPricingInfo ? (
+                        <ChevronUp className="w-3 h-3" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* 4-Pillar FinOps Pricing Breakdown */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-[10.5px] font-mono">
-                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
-                    <div className="text-[9.5px] uppercase text-emerald-600 dark:text-emerald-400 font-bold">
-                      1. Monthly Free Tier (Always $0)
-                    </div>
-                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                      6 Active Versions FREE / mo
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
-                      + 10,000 Access Ops FREE + 3 Rotations FREE per billing account.
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
-                    <div className="text-[9.5px] uppercase text-amber-600 dark:text-amber-400 font-bold">
-                      2. Paid Rate Beyond 6 Free
-                    </div>
-                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                      $0.06 / Active Version / Mo
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
-                      +$0.03 per 10,000 access ops & $0.05 per rotation notification.
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
-                    <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
-                      3. Disabled & Destroyed = $0.00
-                    </div>
-                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                      $0.00 / mo When Disabled
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
-                      When rotating (v1 → v2), auto-disable v1 so it costs $0.00 and frees your quota!
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
-                    <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
-                      4. Replication Cost Multiplier
-                    </div>
-                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                      Pin Single Region = 1× Cost
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
-                      Multi-region replicas bill per replica location; single-region `userManaged` bills 1×.
-                    </div>
-                  </div>
+                {/* Compact Quota Bar */}
+                <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                  <div
+                    style={{ width: `${pctUsed}%` }}
+                    className={`h-full transition-all duration-300 ${
+                      fin.withinFreeTier ? 'bg-emerald-500' : 'bg-amber-500'
+                    }`}
+                  />
                 </div>
+
+                {/* Collapsible 4-Pillar FinOps Pricing Breakdown */}
+                {showSecretPricingInfo && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 text-[10.5px] font-mono">
+                    <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                      <div className="text-[9.5px] uppercase text-emerald-600 dark:text-emerald-400 font-bold">
+                        1. Monthly Free Tier (Always $0)
+                      </div>
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        6 Active Versions FREE / mo
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        + 10,000 Access Ops FREE + 3 Rotations FREE per billing account.
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                      <div className="text-[9.5px] uppercase text-amber-600 dark:text-amber-400 font-bold">
+                        2. Paid Rate Beyond 6 Free
+                      </div>
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        $0.06 / Active Version / Mo
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        +$0.03 per 10,000 access ops & $0.05 per rotation notification.
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                      <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
+                        3. Disabled & Destroyed = $0.00
+                      </div>
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        $0.00 / mo When Disabled
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        When rotating (v1 → v2), auto-disable v1 so it costs $0.00 and frees your quota!
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                      <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
+                        4. Replication Cost Multiplier
+                      </div>
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        Pin Single Region = 1× Cost
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        Multi-region replicas bill per replica location; single-region `userManaged` bills 1×.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -2738,50 +2914,67 @@ export default function SovereignTimeMachineIamStudio({
                 </span>
               </div>
 
-              {/* Regulatory Blueprint Selector */}
+              {/* Regulatory Blueprint Segmented Selector */}
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-mono text-zinc-500">
-                  1. Choose Secret Regulatory & Residency Blueprint
+                  1. Secret Regulatory &amp; Residency Preset
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                  role="tablist"
+                  aria-label="Secret Regulatory Blueprint"
+                  className="cp-segmented-menu grid grid-cols-2 gap-1 p-1 rounded-[9px]"
+                >
                   {[
                     {
                       id: 'gdpr-sovereign',
-                      label: 'GDPR EU Sovereign Lock',
+                      label: 'GDPR EU Lock',
                       desc: 'Locks userManaged EU replication (1× version cost) + ≤30d rotation',
                     },
                     {
                       id: 'sec-finra-us',
-                      label: 'SEC / FINRA US Vault',
+                      label: 'SEC / FINRA US',
                       desc: 'Locks US regional residency (1× version cost) + 30d rotation',
                     },
                     {
                       id: 'hipaa-vault',
-                      label: 'HIPAA Clinical Secret',
+                      label: 'HIPAA Clinical',
                       desc: 'Locks US BAA regional residency + ≤60d rotation',
                     },
                     {
                       id: 'custom',
-                      label: 'Custom GCP Standard',
+                      label: 'Custom GCP',
                       desc: 'Unlocks global automatic or custom region replication',
                     },
-                  ].map((bp) => (
-                    <button
-                      key={bp.id}
-                      type="button"
-                      onClick={() => applySecretBlueprint(bp.id)}
-                      className={`p-2.5 rounded-[8px] border text-left cursor-pointer transition-all ${
-                        secretBlueprint === bp.id
-                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
-                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                      }`}
-                    >
-                      <div className="text-xs font-bold">{bp.label}</div>
-                      <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                        {bp.desc}
-                      </div>
-                    </button>
-                  ))}
+                  ].map((bp) => {
+                    const active = secretBlueprint === bp.id;
+                    return (
+                      <button
+                        key={bp.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        title={bp.desc}
+                        onClick={() => applySecretBlueprint(bp.id)}
+                        className={`px-2.5 py-1.5 rounded-[6px] text-center cursor-pointer transition-all text-[11px] font-mono font-bold ${
+                          active
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                        }`}
+                      >
+                        {bp.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 px-1">
+                  {secretBlueprint === 'gdpr-sovereign' &&
+                    'GDPR EU Sovereign Lock: Pins userManaged EU replication (1× cost) + ≤30d rotation.'}
+                  {secretBlueprint === 'sec-finra-us' &&
+                    'SEC / FINRA US Vault: Pins US regional residency (1× cost) + 30d rotation.'}
+                  {secretBlueprint === 'hipaa-vault' &&
+                    'HIPAA Clinical Secret: Pins US BAA regional residency + ≤60d rotation.'}
+                  {secretBlueprint === 'custom' &&
+                    'Custom GCP Standard: Unlocks global automatic or custom region replication.'}
                 </div>
               </div>
 
@@ -2923,60 +3116,88 @@ export default function SovereignTimeMachineIamStudio({
               <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-emerald-500" />
+                    <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 flex-wrap">
+                      <Lock className="w-4 h-4 text-emerald-500 shrink-0" />
                       <span>
-                        Dedicated Secret Manager Lifecycle & Rotation Studio (
+                        Dedicated Secret Manager Lifecycle &amp; Rotation Studio (
                         {vaultData?.secrets?.length || 0} Secrets)
                       </span>
+                      {vaultData?.activeSecretProject && (
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
+                          Project: {vaultData.activeSecretProject}
+                        </span>
+                      )}
                     </div>
                     <p className="text-[10.5px] text-zinc-500 mt-0.5">
-                      Click any secret below to rotate payload versions (`:addVersion`), disable or destroy old versions so they cost **$0.00/mo**, or bind `roles/secretmanager.secretAccessor` to a Cloud Run / VM Service Account.
+                      Reveal decrypted payloads (`:access`), rotate versions (`:addVersion`), disable or destroy old versions (`$0.00/mo`), or bind `roles/secretmanager.secretAccessor`.
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono text-zinc-500">
-                    KMS KeyRings: {vaultData?.keyRings?.length || 0}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretSafetyGuide((v) => !v)}
+                      title="Compare Disable ($0/mo reversible) vs Destroy (permanent) vs Delete Secret"
+                      className="px-2 py-1 rounded-[7px] text-[10px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-amber-500" />
+                      <span>{showSecretSafetyGuide ? 'Hide Safety Guide' : 'Safety Guide'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fetchVaultStudio()}
+                      disabled={loadingVault}
+                      className="px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${
+                          loadingVault ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Critical Clarification: Does Delete / Destroy Revert to Plaintext or Disappear Forever? */}
-                <div className="p-3 rounded-[9px] bg-red-500/[0.06] border border-red-500/35 space-y-1.5 text-[11px] leading-relaxed">
-                  <div className="font-mono font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span>
-                      CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
-                    </span>
+                {/* Collapsible Safety Guide: Disable ($0) vs Destroy vs Delete */}
+                {showSecretSafetyGuide && (
+                  <div className="p-3 rounded-[9px] bg-red-500/[0.06] border border-red-500/35 space-y-1.5 text-[11px] leading-relaxed">
+                    <div className="font-mono font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — Unless You Use Rehydrate First!
+                      </span>
+                    </div>
+                    <p className="text-zinc-700 dark:text-zinc-300 text-[10.5px]">
+                      When Cloud Run&apos;s Leak Surgeon or DLP X-Ray seals a credential into Secret Manager, the plaintext value is replaced with a pointer (<code className="font-mono font-bold">secretKeyRef</code> or <code className="font-mono font-bold">sm://</code>):
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
+                      <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-amber-500/35">
+                        <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                          1. DISABLE Version ($0/mo · Reversible)
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                          Encrypted bytes stay safely stored at <strong>$0.00/mo</strong>, and you can re-enable anytime.
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/35">
+                        <div className="font-extrabold text-red-600 dark:text-red-400">
+                          2. DESTROY Version ($0/mo · Permanent)
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                          Cryptographically shreds that version&apos;s payload <strong>forever</strong>.
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/45">
+                        <div className="font-extrabold text-red-600 dark:text-red-400">
+                          3. DELETE Secret (Permanent)
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                          Erases the entire secret &amp; all versions forever. Use <strong>Rehydrate GCS File</strong> first if you need to restore a GCS object.
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-zinc-700 dark:text-zinc-300 text-[10.5px]">
-                    When Cloud Run&apos;s Leak Surgeon seals an environment variable into Secret Manager, the **plaintext value is completely removed** from Cloud Run and replaced with a pointer (<code className="font-mono font-bold">valueSource.secretKeyRef</code>). Secret Manager does **not** keep a backup in Cloud Run:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
-                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-amber-500/35">
-                      <div className="font-extrabold text-amber-600 dark:text-amber-400">
-                        1. DISABLE Version ($0/mo · Reversible)
-                      </div>
-                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        Encrypted bytes stay safely stored at <strong>$0.00/mo</strong>, but workloads cannot read it until you click <strong>▶ Enable</strong>. <em>Never reverts to plaintext.</em>
-                      </div>
-                    </div>
-                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/35">
-                      <div className="font-extrabold text-red-600 dark:text-red-400">
-                        2. DESTROY Version ($0/mo · Permanent)
-                      </div>
-                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        Cryptographically shreds that version&apos;s payload <strong>forever</strong> (cannot be undone). <strong>It will NOT return to plaintext</strong>—the value is gone!
-                      </div>
-                    </div>
-                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/45">
-                      <div className="font-extrabold text-red-600 dark:text-red-400">
-                        3. DELETE Secret (Permanent)
-                      </div>
-                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        Erases the entire secret &amp; all versions forever. Any Cloud Run service still referencing <code className="font-bold">secretKeyRef</code> will <strong>fail to start</strong> until you update or remove that env var!
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Live Broken Cloud Run secretKeyRef Dependency Radar & 1-Click Healer */}
                 {(vaultData?.brokenSecretReferences || []).length > 0 && (
@@ -3036,415 +3257,707 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
                 )}
 
-                {vaultData?.secrets?.length > 0 ? (
-                  <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
-                    {vaultData.secrets.map((s) => {
-                      const isExpanded = expandedSecretId === s.secretId;
-                      const rotateBusy =
-                        secretActionBusy === `ROTATE:${s.secretId}`;
-                      const grantBusy =
-                        secretActionBusy === `GRANT:${s.secretId}`;
-                      const deleteBusy =
-                        secretActionBusy === `DELETE:${s.secretId}`;
-                      const schedBusy =
-                        secretActionBusy === `SCHED:${s.secretId}`;
-                      const reloadBusy =
-                        secretActionBusy === `RELOAD:${s.secretId}`;
-                      const mountedList = s.mountedByWorkloads || [];
-
-                      return (
-                        <div
-                          key={s.name}
-                          className={`rounded-[10px] border transition-all ${
-                            isExpanded
-                              ? 'border-blue-500/60 bg-zinc-50/90 dark:bg-zinc-900/90 shadow-md'
-                              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
+                {/* Category Filter Tabs & Search Input */}
+                {(vaultData?.secrets?.length || 0) > 0 && (() => {
+                  const allSecrets = vaultData?.secrets || [];
+                  const dlpCount = allSecrets.filter((s) =>
+                    parseSecretDisplayMeta(s).isDlpVaulted
+                  ).length;
+                  const appCount = allSecrets.length - dlpCount;
+                  return (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      <div
+                        role="tablist"
+                        aria-label="Secret Category Filter"
+                        className="cp-segmented-menu grid grid-cols-3 gap-1 p-1 rounded-[8px] flex-1 sm:max-w-[520px]"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={secretCategoryFilter === 'ALL'}
+                          onClick={() => setSecretCategoryFilter('ALL')}
+                          className={`px-2.5 py-1 rounded-[6px] text-[10.5px] font-mono font-bold cursor-pointer transition-colors ${
+                            secretCategoryFilter === 'ALL'
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                           }`}
                         >
-                          {/* Secret Summary Row */}
-                          <div className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-extrabold text-zinc-900 dark:text-zinc-100 break-all">
-                                  {s.secretId}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                          All Secrets ({allSecrets.length})
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={secretCategoryFilter === 'DLP'}
+                          onClick={() => setSecretCategoryFilter('DLP')}
+                          className={`px-2.5 py-1 rounded-[6px] text-[10.5px] font-mono font-bold cursor-pointer transition-colors ${
+                            secretCategoryFilter === 'DLP'
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          DLP-Vaulted Keys ({dlpCount})
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={secretCategoryFilter === 'APP'}
+                          onClick={() => setSecretCategoryFilter('APP')}
+                          className={`px-2.5 py-1 rounded-[6px] text-[10.5px] font-mono font-bold cursor-pointer transition-colors ${
+                            secretCategoryFilter === 'APP'
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          App &amp; Cloud Run ({appCount})
+                        </button>
+                      </div>
+                      <div className="relative flex-1 sm:max-w-[260px]">
+                        <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={secretSearchQuery}
+                          onChange={(e) => setSecretSearchQuery(e.target.value)}
+                          placeholder="Filter by key, secret ID, or bucket..."
+                          className="w-full pl-8 pr-2.5 py-1 rounded-[7px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {vaultData?.secrets?.length > 0 ? (
+                  <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+                    {vaultData.secrets
+                      .filter((s) => {
+                        const meta = parseSecretDisplayMeta(s);
+                        if (
+                          secretCategoryFilter === 'DLP' &&
+                          !meta.isDlpVaulted
+                        ) {
+                          return false;
+                        }
+                        if (
+                          secretCategoryFilter === 'APP' &&
+                          meta.isDlpVaulted
+                        ) {
+                          return false;
+                        }
+                        if (secretSearchQuery.trim()) {
+                          const q = secretSearchQuery.trim().toLowerCase();
+                          const matchId = String(s.secretId || '')
+                            .toLowerCase()
+                            .includes(q);
+                          const matchPrimary = String(meta.primaryTitle || '')
+                            .toLowerCase()
+                            .includes(q);
+                          const matchLabels = JSON.stringify(s.labels || {})
+                            .toLowerCase()
+                            .includes(q);
+                          return matchId || matchPrimary || matchLabels;
+                        }
+                        return true;
+                      })
+                      .map((s) => {
+                        const meta = parseSecretDisplayMeta(s);
+                        const isExpanded = expandedSecretId === s.secretId;
+                        const peekInfo = peekedSecrets[s.secretId];
+                        const peekBusy =
+                          secretActionBusy === `PEEK:${s.secretId}`;
+                        const rotateBusy =
+                          secretActionBusy === `ROTATE:${s.secretId}`;
+                        const grantBusy =
+                          secretActionBusy === `GRANT:${s.secretId}`;
+                        const deleteBusy =
+                          secretActionBusy === `DELETE:${s.secretId}`;
+                        const schedBusy =
+                          secretActionBusy === `SCHED:${s.secretId}`;
+                        const reloadBusy =
+                          secretActionBusy === `RELOAD:${s.secretId}`;
+                        const mountedList = s.mountedByWorkloads || [];
+                        const smUri = `sm://projects/${activeSmProject}/secrets/${s.secretId}/versions/${
+                          s.latestEnabledVersion || 'latest'
+                        }`;
+
+                        return (
+                          <div
+                            key={s.name}
+                            className={`rounded-[10px] border transition-all overflow-hidden ${
+                              isExpanded
+                                ? 'border-blue-500/60 bg-zinc-50/90 dark:bg-zinc-900/90 shadow-md'
+                                : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 hover:border-zinc-300 dark:hover:border-zinc-700'
+                            }`}
+                          >
+                            {/* TIER 1: Non-Wrapping Header Row (Identity Left + Pinned Action Toolbar Right) */}
+                            <div className="p-3 flex items-start justify-between gap-3 text-xs font-mono">
+                              <div className="min-w-0 flex-1">
+                                {/* Primary Key Name + Origin & Detector Badges */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span
+                                    title={s.secretId}
+                                    className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] truncate max-w-full"
+                                  >
+                                    {meta.primaryTitle}
+                                  </span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[9.5px] font-bold shrink-0 ${
+                                      meta.isDlpVaulted
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                    }`}
+                                  >
+                                    {meta.originBadge}
+                                  </span>
+                                  {meta.detectorBadge && (
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[9px] font-bold shrink-0">
+                                      {meta.detectorBadge}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Truncated Canonical Secret Manager ID Subtitle */}
+                                <div className="mt-1 flex items-center gap-1.5 min-w-0 text-[10.5px] text-zinc-500">
+                                  <span className="text-[9.5px] uppercase tracking-wider text-zinc-400 shrink-0">
+                                    ID:
+                                  </span>
+                                  <code
+                                    title={s.secretId}
+                                    className="truncate block text-zinc-600 dark:text-zinc-400 bg-zinc-200/60 dark:bg-zinc-950/80 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800"
+                                  >
+                                    {s.secretId}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleCopy(s.secretId, 'Secret ID')
+                                    }
+                                    title={`Copy full Secret ID: ${s.secretId}`}
+                                    className="p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer shrink-0"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Right Pinned Action Toolbar (Equal-aligned button matrix across all rows) */}
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={peekBusy}
+                                  onClick={() =>
+                                    handlePeekSecretVersion(
+                                      s.secretId,
+                                      s.latestEnabledVersion || 'latest'
+                                    )
+                                  }
+                                  title={`Access and decrypt live payload from Secret Manager (GET /v1/projects/${activeSmProject}/secrets/${s.secretId}/versions/latest:access)`}
+                                  className={`w-[96px] h-7 px-2 rounded text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap transition-colors ${
+                                    peekInfo
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  } disabled:opacity-50`}
+                                >
+                                  {peekInfo ? (
+                                    <EyeOff className="w-3 h-3 shrink-0" />
+                                  ) : (
+                                    <Eye className="w-3 h-3 shrink-0" />
+                                  )}
+                                  <span>
+                                    {peekBusy
+                                      ? 'Decrypt...'
+                                      : peekInfo
+                                      ? 'Hide Value'
+                                      : 'Reveal'}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCopy(smUri, `sm:// URI (${s.secretId})`)
+                                  }
+                                  title={`Copy canonical Secret Manager URI: ${smUri}`}
+                                  className="w-[68px] h-7 px-2 rounded bg-white dark:bg-[#1a2130] hover:bg-zinc-100 dark:hover:bg-[#232c40] text-zinc-800 dark:text-zinc-100 border border-zinc-300 dark:border-[#323d56] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap"
+                                >
+                                  <Copy className="w-3 h-3 shrink-0" />
+                                  <span>sm://</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedSecretId(
+                                      isExpanded ? null : s.secretId
+                                    )
+                                  }
+                                  className={`w-[138px] h-7 px-2 rounded text-[10.5px] font-mono font-bold border transition-colors cursor-pointer inline-flex items-center justify-center whitespace-nowrap ${
+                                    isExpanded
+                                      ? 'bg-blue-600 text-white border-blue-500'
+                                      : 'bg-white dark:bg-[#1a2130] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-100 border-zinc-300 dark:border-[#323d56]'
+                                  }`}
+                                >
+                                  {isExpanded
+                                    ? 'Hide Controls ▲'
+                                    : 'Rotate / Versions ▼'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={deleteBusy}
+                                  onClick={() => handleDeleteSecret(s.secretId)}
+                                  title={`Permanently delete secret "${s.secretId}" and all its versions. WARNING: This does NOT revert Cloud Run back to plaintext — the secret value will disappear forever!`}
+                                  className="w-7 h-7 rounded bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 cursor-pointer inline-flex items-center justify-center disabled:opacity-50 shrink-0"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* TIER 2: Structured Metadata & FinOps Status Footer Bar */}
+                            <div className="px-3 py-1.5 border-t border-zinc-200/70 dark:border-zinc-800/80 bg-zinc-100/70 dark:bg-zinc-950/60 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold">
                                   v{s.latestEnabledVersion || '1'} ACTIVE
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px]">
+                                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25">
                                   {s.enabledVersionsCount || 0} Enabled ·{' '}
                                   {(s.disabledVersionsCount || 0) +
                                     (s.destroyedVersionsCount || 0)}{' '}
                                   Disabled/Destroyed ($0)
                                 </span>
-                                {mountedList.length > 0 && (
-                                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold">
-                                    Mounted by {mountedList.length} Cloud Run Ref(s)
-                                  </span>
-                                )}
-                                {s.rotationSchedule?.rotationPeriod && (
-                                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
-                                    Auto-Rotate Active
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap items-center gap-2">
-                                <span>
+                                <span className="text-zinc-500">
                                   {s.replicationMode}{' '}
                                   {s.locations?.length > 0
                                     ? `(${s.locations.join(', ')})`
                                     : '(global)'}
                                 </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2 text-zinc-500">
+                                {meta.sourceBucket && (
+                                  <span className="text-emerald-700 dark:text-emerald-400">
+                                    Bucket: gs://{meta.sourceBucket}
+                                  </span>
+                                )}
                                 {s.accessorMembers?.length > 0 && (
                                   <span className="text-emerald-600 dark:text-emerald-400">
-                                    · IAM Accessors: {s.accessorMembers.length}
+                                    IAM Accessors: {s.accessorMembers.length}
+                                  </span>
+                                )}
+                                {mountedList.length > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
+                                    {mountedList.length} Cloud Run Ref(s)
+                                  </span>
+                                )}
+                                {s.rotationSchedule?.rotationPeriod && (
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
+                                    Auto-Rotate Active
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedSecretId(
-                                    isExpanded ? null : s.secretId
-                                  )
-                                }
-                                className={`px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
-                                  isExpanded
-                                    ? 'bg-blue-600 text-white border-blue-500'
-                                    : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
-                                }`}
-                              >
-                                {isExpanded
-                                  ? 'Hide Lifecycle Controls ▲'
-                                  : 'Rotate / Versions / IAM ▼'}
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={deleteBusy}
-                                onClick={() => handleDeleteSecret(s.secretId)}
-                                title={`Permanently delete secret "${s.secretId}" and all its versions. WARNING: This does NOT revert Cloud Run back to plaintext — the secret value will disappear forever!`}
-                                className="p-1.5 rounded-[7px] bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 cursor-pointer disabled:opacity-50"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Expanded Secret Lifecycle Drawer: Rotate, Version Control & IAM Binding */}
-                          {isExpanded && (
-                            <div className="p-3.5 pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-3.5 text-xs">
-                              {/* 1. Rotate Secret Payload Box */}
-                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <span className="text-[11px] font-mono font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                    <span>
-                                      1. Rotate Secret Payload (Mint New Version)
-                                    </span>
+                            {/* Decrypted Secret Payload Inspector (:access) */}
+                            {peekInfo && (
+                              <div className="px-3 py-2.5 border-t border-emerald-500/30 bg-emerald-950/10 dark:bg-emerald-950/25 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-bold shrink-0">
+                                    DECRYPTED v{peekInfo.version} (:access)
                                   </span>
-                                  <label className="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={rotateDisableOld}
-                                      onChange={(e) =>
-                                        setRotateDisableOld(e.target.checked)
-                                      }
-                                      className="rounded accent-emerald-500"
-                                    />
-                                    <span>
-                                      Auto-disable old versions ($0.00/mo — keeps Free Tier!)
+                                  <code className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold break-all">
+                                    {peekInfo.showRaw
+                                      ? peekInfo.value
+                                      : peekInfo.masked}
+                                  </code>
+                                  {peekInfo.crc32c && (
+                                    <span className="text-[9.5px] text-zinc-500 shrink-0">
+                                      CRC32C: {peekInfo.crc32c}
                                     </span>
-                                  </label>
+                                  )}
                                 </div>
-
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  <input
-                                    type="password"
-                                    value={rotateValues[s.secretId] || ''}
-                                    onChange={(e) =>
-                                      setRotateValues((prev) => ({
-                                        ...prev,
-                                        [s.secretId]: e.target.value,
-                                      }))
-                                    }
-                                    placeholder={`Enter new rotated secret payload for ${s.secretId}...`}
-                                    className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                                  />
+                                <div className="flex items-center gap-1.5 shrink-0">
                                   <button
                                     type="button"
-                                    disabled={
-                                      rotateBusy ||
-                                      !(rotateValues[s.secretId] || '').trim()
-                                    }
                                     onClick={() =>
-                                      handleRotateSecret(s.secretId)
+                                      setPeekedSecrets((prev) => ({
+                                        ...prev,
+                                        [s.secretId]: {
+                                          ...prev[s.secretId],
+                                          showRaw: !prev[s.secretId]?.showRaw,
+                                        },
+                                      }))
                                     }
-                                    className="px-3 py-1.5 rounded-[7px] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
+                                    className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
                                   >
-                                    {rotateBusy
-                                      ? 'Rotating...'
-                                      : 'Rotate & Mint New Version'}
+                                    {peekInfo.showRaw ? 'Mask' : 'Unmask'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleCopy(
+                                        peekInfo.value,
+                                        `Decrypted secret value (${s.secretId})`
+                                      )
+                                    }
+                                    className="px-2 py-0.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Copy className="w-2.5 h-2.5" />
+                                    <span>Copy Value</span>
                                   </button>
                                 </div>
                               </div>
+                            )}
 
-                              {/* 2. Version History & FinOps State Surgeon */}
-                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
-                                  <span>
-                                    2. Secret Versions ({s.versions?.length || 0}) — FinOps State Control
-                                  </span>
-                                  <span className="text-[10px] text-zinc-500">
-                                    ENABLED = counts toward 6 free ($0.06 after) · DISABLED/DESTROYED = $0.00
-                                  </span>
+                            {/* Expanded Secret Lifecycle Drawer: Rotate, Version Control & IAM Binding */}
+                            {isExpanded && (
+                              <div className="p-3.5 pt-2.5 border-t border-zinc-200 dark:border-zinc-800 space-y-3.5 text-xs">
+                                {/* 1. Rotate Secret Payload Box */}
+                                <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className="text-[11px] font-mono font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                      <span>
+                                        1. Rotate Secret Payload (Mint New Version)
+                                      </span>
+                                    </span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleGenerateRandomSecretValue(
+                                            s.secretId
+                                          )
+                                        }
+                                        className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono font-bold cursor-pointer"
+                                      >
+                                        Generate 256-Bit Crypto Key
+                                      </button>
+                                      <label className="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={rotateDisableOld}
+                                          onChange={(e) =>
+                                            setRotateDisableOld(
+                                              e.target.checked
+                                            )
+                                          }
+                                          className="rounded accent-emerald-500"
+                                        />
+                                        <span>
+                                          Auto-disable old versions ($0.00/mo)
+                                        </span>
+                                      </label>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                      type="text"
+                                      value={rotateValues[s.secretId] || ''}
+                                      onChange={(e) =>
+                                        setRotateValues((prev) => ({
+                                          ...prev,
+                                          [s.secretId]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder={`Enter new rotated secret payload for ${meta.primaryTitle}...`}
+                                      className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                    />
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        rotateBusy ||
+                                        !(rotateValues[s.secretId] || '').trim()
+                                      }
+                                      onClick={() =>
+                                        handleRotateSecret(s.secretId)
+                                      }
+                                      className="px-3 py-1.5 rounded-[7px] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
+                                    >
+                                      {rotateBusy
+                                        ? 'Rotating...'
+                                        : 'Rotate & Mint New Version'}
+                                    </button>
+                                  </div>
                                 </div>
 
-                                {s.versions?.length > 0 ? (
-                                  <div className="space-y-1.5">
-                                    {s.versions.map((v) => {
-                                      const isEnabled = v.state === 'ENABLED';
-                                      const isDisabled = v.state === 'DISABLED';
-                                      const isDestroyed =
-                                        v.state === 'DESTROYED';
-                                      return (
-                                        <div
-                                          key={v.name}
-                                          className="p-2 rounded-[7px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                                              Version {v.version}
-                                            </span>
-                                            <span
-                                              className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold border ${
-                                                isEnabled
-                                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                                  : isDisabled
-                                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
-                                                  : 'bg-zinc-500/15 text-zinc-500 border-zinc-500/30 line-through'
-                                              }`}
-                                            >
-                                              {v.state}{' '}
-                                              {isEnabled
-                                                ? '(Active Quota)'
-                                                : isDisabled
-                                                ? '($0.00/mo · Reversible)'
-                                                : '($0.00/mo · Erased Forever)'}
-                                            </span>
-                                            {v.createTime && (
-                                              <span className="text-[10px] text-zinc-500">
-                                                {new Date(
-                                                  v.createTime
-                                                ).toLocaleDateString()}
+                                {/* 2. Version History & FinOps State Surgeon */}
+                                <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                                  <div className="flex items-center justify-between text-[11px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                                    <span>
+                                      2. Secret Versions ({s.versions?.length || 0}) — FinOps State Control
+                                    </span>
+                                    <span className="text-[10px] text-zinc-500">
+                                      ENABLED = counts toward 6 free ($0.06 after) · DISABLED/DESTROYED = $0.00
+                                    </span>
+                                  </div>
+
+                                  {s.versions?.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                      {s.versions.map((v) => {
+                                        const isEnabled = v.state === 'ENABLED';
+                                        const isDisabled =
+                                          v.state === 'DISABLED';
+                                        const isDestroyed =
+                                          v.state === 'DESTROYED';
+                                        return (
+                                          <div
+                                            key={v.name}
+                                            className="p-2 rounded-[7px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                                Version {v.version}
                                               </span>
+                                              <span
+                                                className={`px-1.5 py-0.5 rounded-full text-[9.5px] font-bold border ${
+                                                  isEnabled
+                                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                                    : isDisabled
+                                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                                                    : 'bg-zinc-500/15 text-zinc-500 border-zinc-500/30 line-through'
+                                                }`}
+                                              >
+                                                {v.state}{' '}
+                                                {isEnabled
+                                                  ? '(Active Quota)'
+                                                  : isDisabled
+                                                  ? '($0.00/mo · Reversible)'
+                                                  : '($0.00/mo · Erased Forever)'}
+                                              </span>
+                                              {v.createTime && (
+                                                <span className="text-[10px] text-zinc-500">
+                                                  {new Date(
+                                                    v.createTime
+                                                  ).toLocaleDateString()}
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            {!isDestroyed && (
+                                              <div className="flex items-center gap-1.5">
+                                                {isEnabled && (
+                                                  <button
+                                                    type="button"
+                                                    disabled={Boolean(
+                                                      secretActionBusy
+                                                    )}
+                                                    onClick={() =>
+                                                      handlePeekSecretVersion(
+                                                        s.secretId,
+                                                        v.version
+                                                      )
+                                                    }
+                                                    className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                                                  >
+                                                    Peek v{v.version}
+                                                  </button>
+                                                )}
+                                                {isEnabled ? (
+                                                  <button
+                                                    type="button"
+                                                    disabled={Boolean(
+                                                      secretActionBusy
+                                                    )}
+                                                    onClick={() =>
+                                                      handleToggleSecretVersionState(
+                                                        s.secretId,
+                                                        v.version,
+                                                        'DISABLE'
+                                                      )
+                                                    }
+                                                    title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
+                                                    className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                                                  >
+                                                    Disable ($0/mo)
+                                                  </button>
+                                                ) : (
+                                                  <button
+                                                    type="button"
+                                                    disabled={Boolean(
+                                                      secretActionBusy
+                                                    )}
+                                                    onClick={() =>
+                                                      handleToggleSecretVersionState(
+                                                        s.secretId,
+                                                        v.version,
+                                                        'ENABLE'
+                                                      )
+                                                    }
+                                                    title={`Re-enable version ${v.version} for live workload access`}
+                                                    className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
+                                                  >
+                                                    Enable
+                                                  </button>
+                                                )}
+
+                                                <button
+                                                  type="button"
+                                                  disabled={Boolean(
+                                                    secretActionBusy
+                                                  )}
+                                                  onClick={() =>
+                                                    handleToggleSecretVersionState(
+                                                      s.secretId,
+                                                      v.version,
+                                                      'DESTROY'
+                                                    )
+                                                  }
+                                                  title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
+                                                  className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
+                                                >
+                                                  Destroy v{v.version}
+                                                </button>
+                                              </div>
                                             )}
                                           </div>
-
-                                          {!isDestroyed && (
-                                            <div className="flex items-center gap-1.5">
-                                              {isEnabled ? (
-                                                <button
-                                                  type="button"
-                                                  disabled={Boolean(
-                                                    secretActionBusy
-                                                  )}
-                                                  onClick={() =>
-                                                    handleToggleSecretVersionState(
-                                                      s.secretId,
-                                                      v.version,
-                                                      'DISABLE'
-                                                    )
-                                                  }
-                                                  title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
-                                                  className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
-                                                >
-                                                  Disable ($0/mo)
-                                                </button>
-                                              ) : (
-                                                <button
-                                                  type="button"
-                                                  disabled={Boolean(
-                                                    secretActionBusy
-                                                  )}
-                                                  onClick={() =>
-                                                    handleToggleSecretVersionState(
-                                                      s.secretId,
-                                                      v.version,
-                                                      'ENABLE'
-                                                    )
-                                                  }
-                                                  title={`Re-enable version ${v.version} for live workload access`}
-                                                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
-                                                >
-                                                  ▶ Enable
-                                                </button>
-                                              )}
-
-                                              <button
-                                                type="button"
-                                                disabled={Boolean(
-                                                  secretActionBusy
-                                                )}
-                                                onClick={() =>
-                                                  handleToggleSecretVersionState(
-                                                    s.secretId,
-                                                    v.version,
-                                                    'DESTROY'
-                                                  )
-                                                }
-                                                title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
-                                                className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
-                                              >
-                                                Destroy (Disappears Forever)
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <div className="text-[11px] font-mono text-zinc-500">
-                                    No versions minted yet. Use Rotate above to mint Version 1.
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* 3. Resource-Scoped IAM Secret Accessor Binding */}
-                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-emerald-500/30 space-y-2">
-                                <div className="text-[11px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2">
-                                  <span>
-                                    3. Least-Privilege Secret IAM (`roles/secretmanager.secretAccessor`)
-                                  </span>
-                                  <span className="text-[10px] text-zinc-500">
-                                    Scoped to `{s.secretId}` only
-                                  </span>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="text-[11px] font-mono text-zinc-500">
+                                      No versions minted yet. Use Rotate above to mint Version 1.
+                                    </div>
+                                  )}
                                 </div>
 
-                                {s.accessorMembers?.length > 0 && (
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    {s.accessorMembers.map((mem) => (
-                                      <span
-                                        key={mem}
-                                        className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
-                                      >
-                                        ✓ {mem}
-                                      </span>
-                                    ))}
+                                {/* 3. Resource-Scoped IAM Secret Accessor Binding */}
+                                <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-emerald-500/30 space-y-2">
+                                  <div className="text-[11px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2">
+                                    <span>
+                                      3. Least-Privilege Secret IAM (`roles/secretmanager.secretAccessor`)
+                                    </span>
+                                    <span className="text-[10px] text-zinc-500 truncate max-w-[220px]">
+                                      Scoped to `{meta.primaryTitle}`
+                                    </span>
                                   </div>
-                                )}
 
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  <select
-                                    value={
-                                      grantSaBySecret[s.secretId] ||
-                                      vaultData?.serviceAccounts?.[0]?.email ||
-                                      ''
-                                    }
-                                    onChange={(e) =>
-                                      setGrantSaBySecret((prev) => ({
-                                        ...prev,
-                                        [s.secretId]: e.target.value,
-                                      }))
-                                    }
-                                    className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                                  >
-                                    {(vaultData?.serviceAccounts || []).map(
-                                      (sa) => (
-                                        <option key={sa.email} value={sa.email}>
-                                          {sa.email} ({sa.displayName})
-                                        </option>
-                                      )
-                                    )}
-                                  </select>
-                                  <button
-                                    type="button"
-                                    disabled={grantBusy}
-                                    onClick={() =>
-                                      handleGrantSecretAccessor(s.secretId)
-                                    }
-                                    className="px-3 py-1.5 rounded-[7px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
-                                  >
-                                    {grantBusy
-                                      ? 'Binding IAM...'
-                                      : 'Grant secretAccessor'}
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* 4. Live Cloud Run Mounts Hot-Reload & $0/mo Autonomous Rotation Schedule */}
-                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
-                                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-                                  <span className="font-extrabold text-blue-600 dark:text-blue-300">
-                                    4. Live Cloud Run `secretKeyRef` Mounts ({mountedList.length}) & $0/mo Auto-Rotation
-                                  </span>
-                                  <button
-                                    type="button"
-                                    disabled={schedBusy}
-                                    onClick={() =>
-                                      handleScheduleAutoRotation(s.secretId, 30)
-                                    }
-                                    title="Configure Google Cloud Secret Manager native 30-day rotationSchedule ($0.00/mo inside the 3 Free Rotations/month quota)"
-                                    className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
-                                  >
-                                    {schedBusy
-                                      ? 'Scheduling...'
-                                      : s.rotationSchedule?.rotationPeriod
-                                      ? `Next Auto-Rotation: ${
-                                          s.rotationSchedule.nextRotationTime
-                                            ? new Date(
-                                                s.rotationSchedule
-                                                  .nextRotationTime
-                                              ).toLocaleDateString()
-                                            : 'Active'
-                                        } (Re-Sync 30d)`
-                                      : 'Enable $0/mo 30-Day Auto-Rotation'}
-                                  </button>
-                                </div>
-
-                                {mountedList.length > 0 ? (
-                                  <div className="space-y-1.5">
+                                  {s.accessorMembers?.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                      {mountedList.map((mw, mIdx) => (
+                                      {s.accessorMembers.map((mem) => (
                                         <span
-                                          key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
-                                          className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-200 border border-blue-500/30 text-[10px] font-mono"
+                                          key={mem}
+                                          className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
                                         >
-                                          {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
+                                          ✓ {mem}
                                         </span>
                                       ))}
                                     </div>
+                                  )}
+
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <select
+                                      value={
+                                        grantSaBySecret[s.secretId] ||
+                                        vaultData?.serviceAccounts?.[0]
+                                          ?.email ||
+                                        ''
+                                      }
+                                      onChange={(e) =>
+                                        setGrantSaBySecret((prev) => ({
+                                          ...prev,
+                                          [s.secretId]: e.target.value,
+                                        }))
+                                      }
+                                      className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                    >
+                                      {(vaultData?.serviceAccounts || []).map(
+                                        (sa) => (
+                                          <option
+                                            key={sa.email}
+                                            value={sa.email}
+                                          >
+                                            {sa.email} ({sa.displayName})
+                                          </option>
+                                        )
+                                      )}
+                                    </select>
                                     <button
                                       type="button"
-                                      disabled={reloadBusy}
+                                      disabled={grantBusy}
                                       onClick={() =>
-                                        handleReloadMountedWorkloads(
-                                          s.secretId,
-                                          mountedList
-                                        )
+                                        handleGrantSecretAccessor(s.secretId)
                                       }
-                                      className="w-full py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                                      className="px-3 py-1.5 rounded-[7px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
                                     >
-                                      {reloadBusy
-                                        ? 'Rolling Fresh Cloud Run Revision(s)...'
-                                        : `1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
+                                      {grantBusy
+                                        ? 'Binding IAM...'
+                                        : 'Grant secretAccessor'}
                                     </button>
                                   </div>
-                                ) : (
-                                  <div className="text-[10.5px] font-mono text-zinc-500">
-                                    No Cloud Run services currently mount `{s.secretId}` via `secretKeyRef`. Seal an env var in the Cloud Run Leak Surgeon to link it automatically.
+                                </div>
+
+                                {/* 4. Live Cloud Run Mounts Hot-Reload & $0/mo Autonomous Rotation Schedule */}
+                                <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                                    <span className="font-extrabold text-blue-600 dark:text-blue-300">
+                                      4. Live Cloud Run `secretKeyRef` Mounts ({mountedList.length}) &amp; $0/mo Auto-Rotation
+                                    </span>
+                                    <button
+                                      type="button"
+                                      disabled={schedBusy}
+                                      onClick={() =>
+                                        handleScheduleAutoRotation(
+                                          s.secretId,
+                                          30
+                                        )
+                                      }
+                                      title="Configure Google Cloud Secret Manager native 30-day rotationSchedule ($0.00/mo inside the 3 Free Rotations/month quota)"
+                                      className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                                    >
+                                      {schedBusy
+                                        ? 'Scheduling...'
+                                        : s.rotationSchedule?.rotationPeriod
+                                        ? `Next Auto-Rotation: ${
+                                            s.rotationSchedule.nextRotationTime
+                                              ? new Date(
+                                                  s.rotationSchedule
+                                                    .nextRotationTime
+                                                ).toLocaleDateString()
+                                              : 'Active'
+                                          } (Re-Sync 30d)`
+                                        : 'Enable $0/mo 30-Day Auto-Rotation'}
+                                    </button>
                                   </div>
-                                )}
+
+                                  {mountedList.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        {mountedList.map((mw, mIdx) => (
+                                          <span
+                                            key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
+                                            className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-200 border border-blue-500/30 text-[10px] font-mono"
+                                          >
+                                            {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        disabled={reloadBusy}
+                                        onClick={() =>
+                                          handleReloadMountedWorkloads(
+                                            s.secretId,
+                                            mountedList
+                                          )
+                                        }
+                                        className="w-full py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                                      >
+                                        {reloadBusy
+                                          ? 'Rolling Fresh Cloud Run Revision(s)...'
+                                          : `1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${meta.primaryTitle}@latest"`}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="text-[10.5px] font-mono text-zinc-500">
+                                      No Cloud Run services currently mount `{meta.primaryTitle}` via `secretKeyRef`. Seal an env var in the Cloud Run Leak Surgeon to link it automatically.
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 ) : (
                   <div className="text-xs text-zinc-500 font-mono py-4">

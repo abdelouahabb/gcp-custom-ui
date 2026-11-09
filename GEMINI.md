@@ -56,6 +56,7 @@
      - 2-step collision preflight (`POST /api/project/:id/chrono-logs/export-to-gcs/preflight`) + confirmation modal (`POST /api/project/:id/chrono-logs/export-to-gcs`) to archive filtered log entries into `gs://<bucket>/logs-archive/...jsonl` with a 1-click **`Browse in GCS →`** deep-link (`onOpenStorageBucket`).
      - Live Cloud Logging Sinks (`logging.googleapis.com/v2/projects/:id/sinks`) & Log Buckets (`_Default`, `_Required`) retention editor (`POST /api/project/:id/chrono-logs/sinks-buckets/action`).
   4. **Pillar 4 — 1-Tap Log-to-Metric & Cloud Monitoring Alert Policy Synthesizer**: Creates real Cloud Logging log-based metrics and Cloud Monitoring alert policies (`POST /api/project/:id/chrono-logs/alert-policies/action`) directly from any log query.
+  5. **Pillar 5 — Cloud Logging FinOps & `_Default` Sink Exclusion Filter Studio (`@skill:cloud-logging-finops`)**: Audits Cloud Logging buckets, `_Default` sink exclusions, and stream volume shares (`POST /api/project/:id/chrono-logs/finops-audit`) and applies 1-click `_Default` sink noise-exclusion filters (`POST /api/project/:id/chrono-logs/finops-exclusion`).
 
 ### D. GDE Mode (`Alt+G`) 7-Shield Live Demo & Screen-Share Privacy Engine
 - **Files**:
@@ -84,14 +85,53 @@
 ### F. Managed Service for Apache Spark & Dataproc Serverless Studio (`MANAGED_SPARK_STUDIO`)
 - **Files**:
   - [`src/components/ManagedSparkStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ManagedSparkStudio.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L40145-L41320)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L6258-L6272)
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L40145-L43070)
+  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L7701-L7725)
+  - [`src/components/BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx), [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx), [`src/components/DataEngineeringStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/DataEngineeringStudio.jsx)
 - **Capabilities**:
   - **Live Multi-Region Fleet Discovery (`GET /api/project/:id/managed-spark/overview`)**: Discovers Dataproc Serverless Batches (`locations/:region/batches`), Interactive Spark Connect Sessions (`locations/:region/sessions`), Session Templates (`locations/:region/sessionTemplates`), GCE Clusters (`regions/:region/clusters`), `dataproc.googleapis.com` / `biglake.googleapis.com` API status, and 7-Role Spark IAM readiness.
-  - **1-Click Serverless Spark 3.5 Batch Staging & Submission (`SUBMIT_SERVERLESS_BATCH`)**: Automatically ensures the regional GCS staging bucket exists (with Uniform Bucket-Level Access), uploads the PySpark `.py` script, and submits a Runtime `2.2` (Spark 3.5) batch with Adaptive Query Execution (`spark.sql.adaptive.enabled=true`) and 1-click **`Browse in GCS →`** deep-linking.
-  - **Interactive `ManagedSparkSession` (Spark Connect) `.ipynb` & `.py` Studio**: Generates downloadable Jupyter notebooks (`from google.cloud.managed_spark_connect import ManagedSparkSession`) and Session Templates (`CREATE_SESSION_TEMPLATE`).
-  - **3-Pillar SparkApplications & Driver Log RCA (`INSPECT_BATCH_DIAGNOSTICS`)**: Queries `sparkApplications` (`:search`, `:searchStages`, `:searchExecutorSummary`, `:searchSqlQueries`, `:searchJobs`) and streams a bounded 32 KB `Range` tail of GCS `driveroutput.000000000` + Cloud Logging entries.
-  - **Pre-Submission PySpark Linter & 7-Role IAM Doctor**: Static analyzer catching `.master("local")`, unbounded `.toPandas()`/`.collect()`, missing `F.broadcast()`, raw `print()`, and inline `pip install`, paired with 1-click IAM role binding (`BIND_SPARK_IAM_ROLES`).
+  - **4-Stage Physical Execution Plan DAG & 6-Gate Live Python 3 AST X-Ray (`PREFLIGHT_SPARK_BATCH_XRAY`) + 4-Profile Executor, Heap & C++ Lightning Engine Cockpit (`SPARK_HARDWARE_PROFILES`)**: Runs a real `python3` `ast` + `py_compile` subprocess on the edited PySpark script to synthesize a 4-Stage Physical Execution Plan (`Stage 0 Scan` $\to$ `Stage 1 Broadcast/Shuffle Exchange` $\to$ `Stage 2 WholeStageCodegen / C++ Vectorized` $\to$ `Stage 3 ACID Sink Commit`), audits 6 live GCP infrastructure gates (including Same-Region `$0.00/GB` GCS Data-Gravity alignment and BigQuery target dataset/table readiness), and offers 4 interactive hardware profiles (`MICRO_ETL`, `PROD_LAKEHOUSE`, `HEAVY_SHUFFLE`, and `LIGHTNING_TURBO` `spark.dataproc.engine=lightningEngine`).
+  - **1-Click `$0.00` Compute GCS Dry-Stager (`STAGE_SCRIPT_TO_GCS_ONLY`) + 1-Click BigQuery Dataset & Source Table Seeder (`BOOTSTRAP_SPARK_DEMO_ASSETS`) + Serverless Spark 3.5 Submission (`SUBMIT_SERVERLESS_BATCH`)**: Stages `.py` scripts to `gs://<bucket>/spark-jobs/<batchId>.py` at `$0.00` compute cost with a cryptographic `SHA-256` receipt and 1-click **`Browse Staged .py in GCS Workbench →`**, bootstraps the target BigQuery dataset and seeds 3 live source tables (`telemetry_events`, `dim_regions`, `account_risk_tiers`), submits Runtime `2.2` (Spark 3.5) batches with Adaptive Query Execution (`spark.sql.adaptive.enabled=true`), and calculates 24/7 GCE Dataproc cluster burn vs `$0.00/hr` Serverless idle cost with 1-click idle cluster teardown (`DELETE_DATAPROC_CLUSTER`).
+  - **Live BigQuery Table & GCS Prefix Schema Introspector (`INTROSPECT_SPARK_DATA_ASSETS`) + Real `python3 -m py_compile` Verifier (`VALIDATE_PYSPARK_SYNTAX`)**: Queries live BigQuery `tables.get` column schemas, row counts, and `<= 100 MB` `BroadcastHashJoin` (`F.broadcast()`) eligibility plus GCS object prefix formats, and synthesizes schema-verified PySpark 3.5 scripts.
+  - **3-Pillar SparkApplications RCA (`INSPECT_BATCH_DIAGNOSTICS`), Interactive Property Auto-Tuner & Bounded 128 KB GCS Driver Log Regex Search (`SEARCH_GCS_DRIVER_LOG`)**: Queries `sparkApplications` (`:search`, `:searchStages`, `:searchExecutorSummary`, `:searchSqlQueries`, `:searchJobs`), synthesizes tuned Spark properties (`skewJoin.enabled`, `scaling.version=2`, `8g` heap) with 1-click re-submission, and performs bounded 128 KB `Range` regex searches over `<outputUri>.000000000`.
+  - **Bi-Directional Cross-Studio Wiring**: Deep-linked with **BigQuery Studio** (per-table `PySpark 3.5 →` & `Query in BigQuery →`), **Cloud Storage Object Workbench** (`Managed Spark 3.5 →` & `Browse in GCS →`), **Data Engineering Studio** (`Open Full Managed Spark Studio →`), **BigLake Iceberg Studio**, **Chrono-Log SRE Triage Hub** (`Logs →`), and **`StudioGcpAdvantageBar` (`SPARK` domain)**.
+  - **5th Pillar — Spark Lightning Engine + BigFrames v2.0 + Data Lineage Blast-Radius (`ANALYZE_SPARK_KNOWLEDGE_CATALOG_AND_LINEAGE`)**: Queries `datalineage.googleapis.com/v1` (`:searchLinks` downstream blast radius & upstream provenance) + Dataplex Knowledge Catalog `aspectTypes`, and synthesizes **Managed Spark Lightning Engine (`spark.dataproc.engine=lightningEngine`)** batches and **BigQuery DataFrames (`bigframes.pandas` v2.0 + `bigframes.bigquery.ml`)** pipelines. Also added the **Cloud Storage FUSE (`gcsfuse` v2) & ML Checkpointing Architect** (`POST /api/project/:id/storage/buckets/:bucketName/gcsfuse-architect`) in `CloudStorageStudio.jsx`.
+
+### G. Google Cloud SDK `592.0.0` (`2026-11-03` · `2026.10.30`) Frontier Lab & Wave 5 GA Upgrades
+- **Files**:
+  - [`src/components/GcloudAlphaBetaStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcloudAlphaBetaStudio.jsx)
+  - [`src/components/StudioGcpAdvantageBar.jsx`](file:///home/abdelouahab/gcp-ui/src/components/StudioGcpAdvantageBar.jsx)
+  - [`src/components/CloudSqlAndAlloyDbStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudSqlAndAlloyDbStudio.jsx)
+  - [`src/components/ManagedSparkStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ManagedSparkStudio.jsx)
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L56749-L60480)
+- **Capabilities**:
+  - **Wave 5 `SCAN_WAVE5_GCLOUD_592_UPGRADES` 8-Pillar Live Probe & 13-Suite Audit**: Probes and synthesizes AlloyDB Autoscaler (`--enable-autoscaler`, `--autoscaler-target-connections-count`, cron schedules), Cloud SQL PSC DNS reconciliation (`gcloud sql instances reconcile-networking`), GKE Ambient Service Mesh (`--enable-ambient-networking`) & Dataplane V2 Migration (`--enable-dataplane-v2`), Backup & DR Auto-Protection (`gcloud backup-dr auto-protection-policies`), Dataproc DWS Scheduled Spark Clusters (`--scheduling-timeout`, `--requested-run-duration`), Cloud Run `--public`, Dataplex Data Documentation (`--custom-instructions`, `--sql-dialect`), BigLake CMEK (`--kms-key`), Agent Registry `--scanning-policy` (breaking change replacing `--scanning-state`), and Cloud KMS ECDH KEM (`kem-ecdh-p256`/`p384`).
+
+### H. Dual-Engine Cloud Storage Secret, Credential & Regulated PII X-Ray Scanner (`LOCAL_RAM_REGEX_LUHN` vs `CLOUD_DLP_VISION_OCR`) & 100% `<button>` Hover Explainer Coverage
+- **Files**:
+  - [`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L187-L325) & [`lines 1240–1605`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L1240-L1605)
+  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L29009-L29660)
+- **Capabilities**:
+  - **Engine 1 (`LOCAL_RAM_REGEX_LUHN`, Default · `$0.00` API Cost · Zero OCR Binary Required)**: Streams structured text/code/config objects (`.env`, `.json`, `.yaml`, `.csv`, `.log`, `.pem`, `.sql`, `.tfstate`) up to `128 KB` via `?alt=media` into Node.js RAM and evaluates 11 credential & PII regex signatures + Luhn Mod-10 PAN checksum (`verifyLuhnChecksum`) + Shannon Entropy (`computeShannonEntropy` in `bits/char`), with 1-tap in-place UTF-8 sanitization.
+  - **Engine 2 (`CLOUD_DLP_VISION_OCR`, Optional Choice · `dlp.googleapis.com/v2`)**: Combines Engine 1 with Google Cloud Sensitive Data Protection REST API (`content:inspect`, `content:deidentify`, and `image:redact`) to inspect both text AND binary images (`.png`, `.jpg`, `.webp` up to `512 KB`) using Google’s cloud-hosted Vision OCR (`byteItem`) and burn opaque black pixel bounding boxes over leaked secrets/PII inside images.
+  - **100% `<button>` `GlobalInnovationHoverExplainer` Coverage (`2,700+` buttons across `66` JSX files)**: Eliminated `null` returns on icon-only/1-char buttons via `inferIconOrSingleCharButtonLabel`, decomposed multi-element card buttons via `extractButtonDomContext`, wired all 54 buttons in `ManagedSparkStudio.jsx` and all 7 buttons in the Dual-Engine DLP X-Ray Scanner with handcrafted `INNOVATION_FEATURE_GUIDE` entries (`512` total entries), and replaced all 18 generic studio-wide catch-all blocks.
+
+### I. Secret Manager Lifecycle Studio, DLP-to-Secret-Manager (`sm://`) Vaulting & Unified Warm-Amber Architectural Design System
+- **Files**:
+  - [`src/components/SecretManagerVaultExplorer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SecretManagerVaultExplorer.jsx)
+  - [`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx)
+  - [`src/components/SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx)
+  - [`src/components/Startup10xMentorStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/Startup10xMentorStudio.jsx)
+  - [`src/components/SortableKpiRow.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SortableKpiRow.jsx)
+  - [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css), [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx)
+- **Capabilities**:
+  - **DLP-to-Secret-Manager (`VAULT_AND_MASK`) & Rehydrate (`POST /api/project/:id/storage/buckets/:bucketName/dlp-rehydrate`)**: Instead of destructively erasing plaintext credentials in Cloud Storage, vaults every discovered credential into `secretmanager.googleapis.com/v1` (`projects/<id>/secrets/cloudpulse-dlp-.../versions/latest`), replaces the file value with a `sm://projects/...` pointer, hides the vault button once vaulted, and supports 1-click file rehydration.
+  - **Dedicated Secret Manager Lifecycle & Rotation Studio (`SecretManagerVaultExplorer.jsx`)**: 2-column table-grid Secret row layout (`grid-cols-[minmax(0,1fr)_auto]`) with fixed-width aligned action columns (`Peek Value`, `+ Rotate`, `sm:// URI`, `Delete`), version enable/disable (`$0.00/mo` disabled state), and permanent version destruction gated by `classifyDestructiveAxiosConfig`.
+  - **Google Cloud Console Left Architectural Navigation Rail + Warm-Amber Selection Language (`src/index.css`, `src/App.jsx`)**:
+    - Replaced top multi-row Studio card grids with a collapsible `232px` Left Architectural Navigation Sidebar (`<aside>`) + Workspace Breadcrumb Header.
+    - Adopted the high-contrast **Warm Amber/Orange Selection Language** (`#f59e0b` border + `rgba(245, 158, 11, 0.16)` surface glow + `#fbbf24` icon/badge highlight) across all Studio tab bars, equal-width grid menus, segmented mode switchers, and the left navigation rail, while keeping standalone execution CTAs in solid blue (`bg-blue-600 text-white`).
+    - Flattened passive read-only KPI boxes (`Section 1B` in `src/index.css`) into subordinate recessed telemetry strips and moved interactive menus above telemetry in `Startup10xMentorStudio.jsx`.
 
 ---
 

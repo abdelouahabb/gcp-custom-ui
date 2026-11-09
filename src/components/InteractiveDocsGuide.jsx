@@ -34,50 +34,51 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'managed-service-for-apache-spark-and-dataproc-serverless-studio',
-    wave: '2026 LAKEHOUSE & SPARK · MANAGED SERVICE FOR APACHE SPARK, DATAPROC SERVERLESS BATCHES, SPARK CONNECT NOTEBOOKS & DRIVER LOG RCA',
+    wave: '2026 LAKEHOUSE & SPARK · 5-PILLAR MANAGED SERVICE FOR APACHE SPARK, 6-GATE AST PHYSICAL PLAN X-RAY, 4-PROFILE HARDWARE COCKPIT, LIGHTNING ENGINE C++ & BIGFRAMES v2.0',
     title:
-      'Managed Service for Apache Spark & Dataproc Serverless Studio — Scale-to-Zero Spark 3.5 Batches, Interactive ManagedSparkSession Notebooks, 3-Pillar Driver Log RCA & Pre-Submission PySpark Linter',
-    badge: 'MANAGED SPARK TAB (NEXT TO DATA STUDIO) + LAKEHOUSE PIPELINE BAR',
+      '5-Pillar Managed Service for Apache Spark & Dataproc Serverless Studio — 6-Gate AST & Data-Gravity X-Ray, 4-Profile Hardware Cockpit, $0.00 GCS Dry-Stager, BigFrames v2.0, Data Lineage & 3-Pillar Driver Log RCA',
+    badge: 'MANAGED SPARK TAB + BIGQUERY / GCS / DATA ENGINEER BI-DIRECTIONAL DEEP-LINKS',
     badgeColor:
       'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/40',
     icon: Cpu,
     targetTab: 'MANAGED_SPARK_STUDIO',
     problemSolved:
-      'Running Apache Spark on traditional persistent clusters wastes thousands of dollars on idle master/worker VMs, while submitting Dataproc Serverless batches from the standard console requires manual GCS staging bucket creation, manual PySpark script uploads, hunting through deeply nested gs://.../driveroutput.000000000 blobs when jobs fail with Exit Code 1 or Executor OOM, and debugging cryptic missing IAM roles (roles/dataproc.worker, BigQuery Storage Read/Write APIs, and BigLake Iceberg catalog permissions).',
+      'Running Apache Spark on traditional persistent clusters wastes $350+/mo on idle master/worker VMs, while submitting Dataproc Serverless batches from the standard console is a blind 90-second wait-and-crash loop: operators have zero pre-flight visibility into Python AST syntax errors, missing source BigQuery tables (404), cross-region GCS bucket egress taxes ($0.02/GB), unbroadcasted SortMergeJoins, or missing IAM roles—and hunting through megabyte gs://.../driveroutput.000000000 logs freezes the browser.',
     howItWorks: [
-      'Live Multi-Region Spark Fleet & Lakehouse Discovery (GET /api/project/:id/managed-spark/overview): Queries dataproc.googleapis.com/v1 across Serverless Batches (locations/:region/batches), Interactive Spark Connect Sessions (locations/:region/sessions), Session Templates (locations/:region/sessionTemplates), GCE Clusters (regions/:region/clusters), BigLake Catalogs, GCS staging buckets, BigQuery datasets, API enablement status, and a 7-Role Spark IAM Readiness Matrix.',
-      '1-Click Serverless Spark 3.5 Batch Staging & Submission (SUBMIT_SERVERLESS_BATCH): Choose from 4 production PySpark 3.5 / Runtime 2.2 blueprints (BigQuery Medallion ETL, BigLake Apache Iceberg REST Catalog ACID Upsert, Vertex AI Gemini Batch Enrichment, or Distributed PySpark MLlib) or edit your own script inline. Automatically ensures the regional GCS staging bucket exists with Uniform Bucket-Level Access, uploads the .py script to gs://<bucket>/spark-jobs/, and submits the Serverless Batch with Adaptive Query Execution (spark.sql.adaptive.enabled=true) and a 1-click "Browse in GCS ->" deep-link.',
-      'Interactive ManagedSparkSession (Spark Connect) .ipynb & .py Studio (SPARK_CONNECT_NOTEBOOKS + CREATE_SESSION_TEMPLATE): Generates downloadable Jupyter .ipynb notebooks and .py scripts powered by google.cloud.managed_spark_connect.ManagedSparkSession (Spark Connect sub-5-second interactive kernel startup with $0.00/hr idle cost when closed) and provisions reusable Dataproc Serverless Session Templates.',
-      '3-Pillar SparkApplications & Bounded 32 KB GCS Driver Log RCA (INSPECT_BATCH_DIAGNOSTICS): Combines (1)Batch Control-Plane State & stateMessage, (2) Native Dataproc sparkApplications REST telemetry (:search, :searchStages, :searchExecutorSummary, :searchSqlQueries, :searchJobs for GC pause, shuffle spill, and skew diagnostics), and (3) a bounded 32 KB HTTP Range tail of gs://.../driveroutput.000000000 + Cloud Logging entries so megabyte driver logs never freeze the browser.',
-      'Pre-Submission PySpark Linter & 7-Role Spark IAM Auto-Doctor (OPTIMIZER_AND_IAM + BIND_SPARK_IAM_ROLES): Static analyzer catching .master("local") overrides, unbounded .toPandas()/.collect() driver OOM traps, missing F.broadcast() hints, raw print() buffering, and inline pip install anti-patterns, paired with 1-click IAM role binding for the Dataproc VM Service Account.',
+      'Pillar 1 — 1-Click Serverless Spark 3.5 Batch Launcher, 4-Profile Hardware Cockpit, 6-Gate AST Physical Plan X-Ray & $0.00 GCS Dry-Stager (PREFLIGHT_SPARK_BATCH_XRAY, STAGE_SCRIPT_TO_GCS_ONLY, BOOTSTRAP_SPARK_DEMO_ASSETS & SUBMIT_SERVERLESS_BATCH): Switch across 4 Lakehouse blueprints (BigLake Iceberg Medallion, BigQuery Storage Read Arrow Streams, Cloud Spanner + BigQuery Federated Fraud Scoring, and GCS Parquet to Iceberg 512MB Compaction) and 4 Executor/Memory/Engine hardware profiles (Micro 2–4 Executors, Production AQE 2–16 Executors, Heavy Shuffle & SkewJoin 4–32 Executors, and Native C++ Vectorized Lightning Engine). Run the <800ms 6-Gate Pre-Flight AST & Data-Gravity X-Ray (parsing the live Python 3 AST into a 4-Stage Physical Execution Plan DAG, verifying same-region $0.00/GB bucket gravity with 1-click region alignment, and checking BigQuery source table readiness), stage the .py script to GCS at $0.00 compute cost with a SHA-256 & object generation receipt, bootstrap live BigQuery source tables in 1 click, or tear down idle GCE Dataproc clusters.',
+      'Pillar 2 — Interactive ManagedSparkSession (Spark Connect) .ipynb Studio, Live BigQuery/GCS Schema Introspector & Real python3 -m py_compile Verifier (INTROSPECT_SPARK_DATA_ASSETS & VALIDATE_PYSPARK_SYNTAX): Queries live BigQuery tables.get column schemas, row counts, and <= 100 MB BroadcastHashJoin (F.broadcast()) eligibility plus GCS object prefix formats, synthesizes schema-verified PySpark 3.5 scripts, runs real python3 -m py_compile bytecode verification, and exports ManagedSparkSession (.ipynb) notebooks.',
+      'Pillar 3 — 3-Pillar SparkApplications RCA, Interactive Property Auto-Tuner & Bounded 128 KB GCS Driver Log Regex Search (INSPECT_BATCH_DIAGNOSTICS & SEARCH_GCS_DRIVER_LOG): Queries Dataproc sparkApplications (:search, :searchStages, :searchExecutorSummary, :searchSqlQueries, :searchJobs), synthesizes auto-tuned Spark properties (skewJoin.enabled, scaling.version=2, 8g heap) with 1-click batch re-submission, and performs bounded 128 KB HTTP Range regex searches over gs://.../driveroutput.000000000.',
+      'Pillar 4 — Pre-Submission PySpark Linter & 7-Role Spark IAM Auto-Doctor (OPTIMIZER_AND_IAM & BIND_SPARK_IAM_ROLES): Static analyzer catching .master("local") overrides, unbounded .toPandas()/.collect() driver OOM traps, missing F.broadcast() hints, raw print() buffering, and inline pip install anti-patterns, paired with 1-click IAM role binding for the Dataproc VM Service Account.',
+      'Pillar 5 — Managed Spark Lightning Engine (C++), BigQuery DataFrames (BigFrames v2.0) & Data Lineage Blast-Radius Inspector (ANALYZE_SPARK_KNOWLEDGE_CATALOG_AND_LINEAGE): Queries datalineage.googleapis.com/v1 (:searchLinks downstream blast radius & upstream provenance) and Dataplex Knowledge Catalog aspectTypes, and synthesizes spark.dataproc.engine=lightningEngine batches alongside bigframes.pandas v2.0 + bigframes.bigquery.ml pipelines.',
     ],
     apisUsed: [
       'GET /api/project/:id/managed-spark/overview (dataproc.googleapis.com/v1 batches, sessions, sessionTemplates, clusters + biglake + storage + bigquery + cloudresourcemanager)',
-      'POST /api/project/:id/managed-spark/action (ENABLE_SPARK_APIS | SUBMIT_SERVERLESS_BATCH | CREATE_SESSION_TEMPLATE | CREATE_INTERACTIVE_SESSION | INSPECT_BATCH_DIAGNOSTICS | BIND_SPARK_IAM_ROLES | DELETE_BATCH | DELETE_SESSION | DELETE_SESSION_TEMPLATE)',
-      'dataproc.googleapis.com/v1/projects/:id/locations/:region/batches/:batchId/sparkApplications (:search, :searchStages, :searchExecutorSummary, :searchSqlQueries)',
+      'POST /api/project/:id/managed-spark/action (PREFLIGHT_SPARK_BATCH_XRAY | STAGE_SCRIPT_TO_GCS_ONLY | BOOTSTRAP_SPARK_DEMO_ASSETS | INTROSPECT_SPARK_DATA_ASSETS | VALIDATE_PYSPARK_SYNTAX | SUBMIT_SERVERLESS_BATCH | SEARCH_GCS_DRIVER_LOG | ANALYZE_SPARK_KNOWLEDGE_CATALOG_AND_LINEAGE | DELETE_DATAPROC_CLUSTER)',
+      'dataproc.googleapis.com/v1/projects/:id/locations/:region/batches/:batchId/sparkApplications + datalineage.googleapis.com/v1/:searchLinks + dataplex.googleapis.com/v1/aspectTypes',
     ],
     billingImpact:
-      'Dataproc Serverless for Apache Spark bills strictly per second of active DCU / Shuffle storage during batch execution and drops to $0.00/hr the instant the batch finishes; all mutating actions are protected by the Mandatory Pre-Execution Confirmation Gatekeeper.',
+      'Pre-Flight AST X-Ray, py_compile verification, and GCS .py dry-staging incur $0.00 compute cost; Dataproc Serverless bills strictly per second of active DCU / Shuffle storage during execution and drops to $0.00/hr the instant the batch finishes (~38% lower DCU runtime when C++ Lightning Engine is enabled).',
   },
   {
     id: 'cloud-storage-sweep-keep-bucket-selective-batch-delete-and-sftp-backup',
-    wave: '2026 CLOUD STORAGE & SFTP · SWEEP BUCKET (KEEP BUCKET INTACT), SELECTIVE BATCH DELETION & SFTP-TO-GCS SAME-REGION ($0.00/GB) BACKUP',
+    wave: '2026 CLOUD STORAGE & SFTP · SWEEP BUCKET (KEEP BUCKET INTACT), SELECTIVE BATCH DELETION, GCSFUSE v2 ML CHECKPOINT ARCHITECT & SFTP-TO-GCS ($0.00/GB) BACKUP',
     title:
-      'Cloud Storage Sweep (Keep Bucket Intact), Selective Multi-Object & Multi-Bucket Batch Deletion & SFTP-to-GCS Same-Region ($0.00/GB Egress) Backup Streamer',
+      'Cloud Storage Sweep (Keep Bucket Intact), Selective Multi-Object/Bucket Batch Deletion, Cloud Storage FUSE (gcsfuse v2) ML Checkpointing Architect & SFTP-to-GCS Same-Region ($0.00/GB) Backup Streamer',
     badge: 'CLOUD STORAGE STUDIO (BUCKETS & OBJECT WORKBENCH) + VM SFTP BROWSER',
     badgeColor:
       'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: HardDrive,
     targetTab: 'CLOUD_STORAGE',
     problemSolved:
-      'Deleting and recreating a Cloud Storage bucket just to clear its contents breaks IAM bindings, CORS policies, Lifecycle rules, KMS CMEK keys, and active Cloud Run Gen2 GCS FUSE mounts—and risks global bucket-name squatting. Meanwhile, engineers needed multi-checkbox selective deletion for specific objects, virtual folders, and buckets, plus a 1-click way to stream files/folders from a Compute Engine VM SFTP session into a same-region GCS bucket at $0.00/GB network egress.',
+      'Deleting and recreating a Cloud Storage bucket just to clear its contents breaks IAM bindings, CORS policies, Lifecycle rules, KMS CMEK keys, and active Cloud Run Gen2 GCS FUSE mounts—and risks global bucket-name squatting. Meanwhile, engineers needed multi-checkbox selective deletion for specific objects, virtual folders, and buckets, a live gcsfuse v2 POSIX & PyTorch/JAX checkpointing architect, and a 1-click way to stream files/folders from a Compute Engine VM SFTP session into a same-region GCS bucket at $0.00/GB network egress.',
     howItWorks: [
       'Per-Bucket & Multi-Bucket "Sweep Bucket (Keep Bucket Intact)" vs. "Empty & Delete" (POST /api/project/:id/storage/buckets/:b/sweep & POST /api/project/:id/storage/buckets/batch-action): Purges all live and noncurrent object generations (?versions=true) inside one or more selected buckets while keeping the bucket resource itself 100% intact (preserving IAM, Public Access Prevention, CORS, Lifecycle, KMS, and Cloud Run FUSE mounts).',
       'Selective Multi-Object & Virtual Folder Batch Deletion in Object Workbench (POST /api/project/:id/storage/buckets/:b/objects/batch-delete): Check any combination of individual objects and virtual folder rows (folder/) in GcsObjectWorkbench.jsx and click "Delete Selected (N)" right next to "Bundle .tar (N)", or click "Sweep Bucket (N) / Sweep Folder" to empty only the active prefix.',
+      'Cloud Storage FUSE (gcsfuse v2) & ML Checkpointing Architect (POST /api/project/:id/storage/buckets/:b/gcsfuse-architect): Audits live bucket metadata (Hierarchical Namespace HNS for atomic O(1) directory rename during PyTorch/JAX checkpointing, Uniform Bucket-Level Access, Autoclass, and Soft-Delete) and synthesizes tuned gcsfuse v2 --profile YAML configs and GKE gcsfuse.csi.storage.gke.io StorageClass + Pod manifests.',
       'Selection-Aware VM SFTP-to-GCS Same-Region ($0.00/GB Egress) Backup Streamer (POST /api/project/:id/vms/:name/sftp/backup-to-gcs/preflight & /backup-to-gcs): Selecting files or folders in the VM SFTP browser automatically syncs the source path and preserves the exact file or directory name on the target gs:// URI, defaults to a bucket in the VM’s exact GCP region for $0.00/GB intra-region transfer, runs a 2-step gs:// URI collision preflight check (Keep Both vs. Overwrite), and provides a 1-click "Browse in GCS ->" deep-link directly into the Object Workbench.',
     ],
     apisUsed: [
-      'POST /api/project/:id/storage/buckets/:bucketName/sweep & POST /api/project/:id/storage/buckets/batch-action',
+      'POST /api/project/:id/storage/buckets/:bucketName/sweep, /storage/buckets/batch-action & /storage/buckets/:bucketName/gcsfuse-architect',
       'POST /api/project/:id/storage/buckets/:bucketName/objects/batch-delete (storage.googleapis.com/storage/v1/b/:b/o?versions=true)',
       'POST /api/project/:id/vms/:vmName/sftp/backup-to-gcs/preflight & POST /api/project/:id/vms/:vmName/sftp/backup-to-gcs',
     ],
@@ -86,30 +87,31 @@ const DOC_SECTIONS = [
   },
   {
     id: 'chrono-log-4-pillar-devops-sre-logging-command-hub',
-    wave: '2026 OBSERVABILITY & SRE · 4-PILLAR 100X DEVOPS & SRE LOGGING COMMAND HUB, LIVE VM JOURNALCTL SSH & SAME-REGION LOG-TO-GCS ARCHIVE',
+    wave: '2026 OBSERVABILITY & SRE · 5-PILLAR 100X DEVOPS & SRE LOGGING COMMAND HUB, LIVE VM JOURNALCTL SSH, SAME-REGION LOG-TO-GCS ARCHIVE & CLOUD LOGGING FINOPS',
     title:
-      '4-Pillar 100X DevOps & SRE Logging Command Hub — Multi-Project Error Radar, Live VM OS journalctl/dmesg Inspector, Same-Region Log-to-GCS JSONL Archive & 1-Tap Log-to-Metric Alert Synthesizer',
+      '5-Pillar 100X DevOps & SRE Logging Command Hub — Multi-Project Error Radar, Live VM OS journalctl/dmesg Inspector, Same-Region Log-to-GCS JSONL Archive, 1-Tap Log-to-Metric Alert Synthesizer & Cloud Logging FinOps Exclusion Studio',
     badge: 'LOGS & CLOUD SHELL TAB (CHRONO-LOG TIME-MACHINE)',
     badgeColor:
       'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
     icon: Terminal,
     targetTab: 'LOGS_SHELL',
     problemSolved:
-      'During an incident, SREs and DevOps engineers waste precious minutes switching between projects to find where errors are spiking, SSHing into VMs to inspect inside-OS journalctl/dmesg/container logs that never reach Cloud Logging, manually configuring Cloud Logging Sinks or _Default bucket retention, and clicking through multiple Monitoring screens to turn a log query into a metric and alert policy.',
+      'During an incident, SREs and DevOps engineers waste precious minutes switching between projects to find where errors are spiking, SSHing into VMs to inspect inside-OS journalctl/dmesg/container logs that never reach Cloud Logging, manually configuring Cloud Logging Sinks or _Default bucket retention, clicking through multiple Monitoring screens to turn a log query into a metric and alert policy, and paying $0.50/GiB for noisy DEBUG/health-check logs in _Default.',
     howItWorks: [
       'Pillar 1 — Multi-Project Error Radar & 16-Preset DevOps/SRE Filter Library (POST /api/project/:id/chrono-logs/multi-project-radar): Scans all discovered GCP projects in parallel for live ERROR/CRITICAL counts and provides 16 1-click LQL presets across Cloud Run (5xx crashes, cold starts, OOMs), GCE VMs (Serial Console kernel panics, sshd auth, Guest Agent), Cloud Audit (IAM changes, destructive deletes), VPC Firewall drops, GKE CrashLoopBackOff, and Cloud SQL deadlocks.',
       'Pillar 2 — Live VM OS journalctl / dmesg / Container & Systemd Unit Inspector (POST /api/project/:id/chrono-logs/vm-live-journal): Connects directly to running Compute Engine VMs over SSH to stream real inside-Linux journalctl, dmesg -T, /var/log/syslog, auth.log sshd events, docker/containerd logs, failed systemd units, and top CPU/RAM processes.',
       'Pillar 3 — Same-Region ($0.00/GB) Log-to-GCS JSONL Archive & Log Sink / Bucket Retention Studio (POST /api/project/:id/chrono-logs/export-to-gcs/preflight, /export-to-gcs & /sinks-buckets/action): Archives filtered log streams into compressed or raw JSONL objects in a same-region GCS bucket with 2-step collision preflight and a 1-click "Browse in GCS ->" deep-link, and manages live Cloud Logging Sinks (logging.googleapis.com/v2/projects/:id/sinks) and _Default / _Required log bucket retention days.',
       'Pillar 4 — 1-Tap Log-to-Metric & Cloud Monitoring Alert Policy Synthesizer (POST /api/project/:id/chrono-logs/alert-policies/action): Turns any active LQL filter into a real Cloud Logging log-based counter metric and a live Cloud Monitoring Alert Policy (monitoring.googleapis.com/v3/projects/:id/alertPolicies) in a single click.',
+      'Pillar 5 — Cloud Logging FinOps & _Default Sink Exclusion Filter Studio (POST /api/project/:id/chrono-logs/finops-audit & /finops-exclusion): Audits Cloud Logging buckets, _Default sink exclusions, and stream byte-volume shares ($0.50/GiB beyond 50 GiB/mo free tier) and applies 1-click _Default sink noise-exclusion filters (PATCH logging.googleapis.com/v2/projects/:id/sinks/_Default?updateMask=exclusions).',
     ],
     apisUsed: [
       'POST /api/project/:id/chrono-logs/multi-project-radar & POST /api/project/:id/chrono-logs/vm-live-journal',
       'POST /api/project/:id/chrono-logs/export-to-gcs/preflight & POST /api/project/:id/chrono-logs/export-to-gcs',
       'GET & POST /api/project/:id/chrono-logs/sinks-buckets & /sinks-buckets/action (logging.googleapis.com/v2 sinks & buckets)',
-      'GET & POST /api/project/:id/chrono-logs/alert-policies & /alert-policies/action (logging.googleapis.com/v2/projects/:id/metrics + monitoring.googleapis.com/v3/projects/:id/alertPolicies)',
+      'GET & POST /api/project/:id/chrono-logs/alert-policies & /alert-policies/action + POST /chrono-logs/finops-audit & /finops-exclusion',
     ],
     billingImpact:
-      'Cloud Logging includes 50 GiB/project/month Always Free ingestion and 30-day _Default retention; archiving logs to a same-region Standard/Coldline/Archive GCS bucket incurs $0.00/GB intra-region transfer cost.',
+      'Cloud Logging includes 50 GiB/project/month Always Free ingestion and 30-day _Default retention; archiving logs to a same-region Standard/Coldline/Archive GCS bucket incurs $0.00/GB intra-region transfer cost, and _Default sink exclusion filters stop $0.50/GiB ingestion charges on low-signal DEBUG/health-check noise.',
   },
   {
     id: 'global-map-live-gce-vm-ssh-auth-log-geo-telemetry-and-4-scenarios',

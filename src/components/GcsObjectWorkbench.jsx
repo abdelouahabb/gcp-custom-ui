@@ -46,7 +46,9 @@ import {
   CheckSquare,
   Square,
   Key,
+  Zap,
 } from 'lucide-react';
+import SecretManagerVaultExplorer from './SecretManagerVaultExplorer';
 
 function formatBytes(bytes = 0) {
   const b = Number(bytes || 0);
@@ -301,72 +303,210 @@ ORDER BY estimated_monthly_usd DESC;
   },
 ];
 
-// Client-side Pre-Save & Pre-Public Secret / PII Guardrail Scanner
+// Shannon Byte/Character Entropy H(X) = -sum(p_i * log2(p_i)) in bits/char (0.00 -> 6.00)
+function computeShannonEntropyClient(str = '') {
+  const s = String(str || '').trim();
+  if (!s) return 0;
+  const freq = {};
+  for (let i = 0; i < s.length; i += 1) {
+    const ch = s[i];
+    freq[ch] = (freq[ch] || 0) + 1;
+  }
+  const len = s.length;
+  let entropy = 0;
+  for (const count of Object.values(freq)) {
+    const p = count / len;
+    entropy -= p * Math.log2(p);
+  }
+  return Number(entropy.toFixed(2));
+}
+
+// Luhn Mod-10 Checksum Validator for 13-19 Digit Payment Card PANs
+function verifyLuhnChecksumClient(panStr = '') {
+  const digits = String(panStr || '').replace(/\D/g, '');
+  if (digits.length < 13 || digits.length > 19) return false;
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let d = parseInt(digits.charAt(i), 10);
+    if (shouldDouble) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    shouldDouble = !shouldDouble;
+  }
+  return sum % 10 === 0;
+}
+
+function maskTokenPreviewClient(str = '') {
+  const s = String(str || '').trim();
+  if (s.length <= 10) return `${s.slice(0, 2)}••••••`;
+  return `${s.slice(0, 6)}••••••${s.slice(-4)}`;
+}
+
+// Client-side Pre-Save & Pre-Public Secret / PII Guardrail Scanner (11-Signature + Luhn Mod-10 + Shannon Entropy H(X))
 function scanTextForSecretsAndPii(text = '') {
   const raw = String(text || '');
   if (!raw) return [];
   const rules = [
     {
       id: 'GCP_SA_PRIVATE_KEY',
-      label: 'GCP / RSA Private Key Block',
+      label: 'GCP / RSA Private Key PEM Block',
       severity: 'CRITICAL',
+      category: 'CLOUD_CREDENTIAL',
       regex: /-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----/g,
-      replacement: '-----BEGIN PRIVATE KEY-----[REDACTED_BY_CLOUDPULSE_GUARDRAIL]-----END PRIVATE KEY-----',
+      replacement:
+        '-----BEGIN PRIVATE KEY-----[REDACTED_GCP_SA_PRIVATE_KEY_BY_CLOUDPULSE_DLP]-----END PRIVATE KEY-----',
+      rotationHint:
+        'gcloud iam service-accounts keys delete <KEY_ID> --iam-account=<SA_EMAIL>',
     },
     {
       id: 'GOOGLE_API_KEY',
       label: 'Google Cloud / Maps / Gemini API Key (AIza...)',
       severity: 'HIGH',
+      category: 'CLOUD_CREDENTIAL',
       regex: /AIza[0-9A-Za-z\-_]{35}/g,
-      replacement: 'AIza[REDACTED_GOOGLE_API_KEY]',
+      replacement: '[REDACTED_GOOGLE_API_KEY_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'gcloud services api-keys delete <KEY_UID> # or restrict key in APIs & Services -> Credentials',
     },
     {
       id: 'GCP_OAUTH_TOKEN',
       label: 'Google OAuth2 Access Token (ya29...)',
       severity: 'CRITICAL',
-      regex: /ya29\.[0-9A-Za-z\-_]{25,}/g,
-      replacement: 'ya29.[REDACTED_GCP_OAUTH_TOKEN]',
+      category: 'CLOUD_CREDENTIAL',
+      regex: /ya29\.[0-9A-Za-z\-_]{20,}/g,
+      replacement: '[REDACTED_GCP_OAUTH_TOKEN_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'curl -d "token=<TOKEN>" https://oauth2.googleapis.com/revoke',
     },
     {
-      id: 'AWS_ACCESS_KEY',
-      label: 'AWS IAM Access Key ID (AKIA...)',
-      severity: 'HIGH',
+      id: 'AWS_ACCESS_KEY_ID',
+      label: 'AWS IAM Access Key ID (AKIA/ASIA...)',
+      severity: 'CRITICAL',
+      category: 'CLOUD_CREDENTIAL',
       regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,
-      replacement: 'AKIA[REDACTED_AWS_KEY]',
+      replacement: '[REDACTED_AWS_ACCESS_KEY_ID_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'aws iam update-access-key --access-key-id <AKIA...> --status Inactive',
     },
     {
       id: 'GITHUB_PAT',
       label: 'GitHub Personal Access Token (ghp_/github_pat_)',
-      severity: 'HIGH',
+      severity: 'CRITICAL',
+      category: 'CLOUD_CREDENTIAL',
       regex: /\b(?:ghp_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{40,})\b/g,
-      replacement: 'ghp_[REDACTED_GITHUB_TOKEN]',
+      replacement: '[REDACTED_GITHUB_PAT_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Revoke immediately in GitHub -> Settings -> Developer settings -> Personal access tokens',
     },
     {
-      id: 'GENERIC_SECRET_ASSIGN',
-      label: 'Hardcoded Password / Secret / Private Key Value',
-      severity: 'MEDIUM',
-      regex: /("(?:private_key_id|client_secret|password|api_secret|jwt_secret)"\s*:\s*")([^"\n]{8,})(")/gi,
-      replacement: '$1[REDACTED_SECRET]$3',
+      id: 'OPENAI_ANTHROPIC_KEY',
+      label: 'OpenAI / Anthropic AI Secret Key (sk-...)',
+      severity: 'CRITICAL',
+      category: 'AI_CREDENTIAL',
+      regex: /\bsk-(?:proj-|ant-)?[0-9a-zA-Z\-_]{24,}\b/g,
+      replacement: '[REDACTED_OPENAI_ANTHROPIC_KEY_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Revoke key in OpenAI/Anthropic Console and migrate to Secret Manager / Vertex AI ADC',
+    },
+    {
+      id: 'JWT_BEARER_TOKEN',
+      label: 'Signed JSON Web Token (JWT eyJ...)',
+      severity: 'HIGH',
+      category: 'AUTH_TOKEN',
+      regex: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
+      replacement: '[REDACTED_JWT_BEARER_TOKEN_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Rotate JWT signing key in Secret Manager (`gcloud secrets versions add jwt-signing-key`)',
+    },
+    {
+      id: 'GENERIC_PASSWORD_ASSIGN',
+      label: 'Hardcoded Password / DB Secret (.env or JSON)',
+      severity: 'HIGH',
+      category: 'SECRET_CONFIG',
+      regex: /(?:password|passwd|db_pass|secret_key|api_secret|client_secret|private_key_id)\s*[:=]\s*['"][^'"\s]{6,}['"]/gi,
+      replacement: '[REDACTED_GENERIC_PASSWORD_ASSIGN_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Move secret into Secret Manager (`gcloud secrets create <NAME> --replication-policy=automatic`)',
+    },
+    {
+      id: 'CREDIT_CARD_PAN',
+      label: 'Payment Card PAN (Visa / MasterCard / Amex · Luhn Mod-10)',
+      severity: 'HIGH',
+      category: 'PCI_PII',
+      regex: /\b(?:\d[ -]*?){13,16}\b/g,
+      replacement: '[REDACTED_CREDIT_CARD_PAN_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'PCI-DSS Req 3.4: Never store primary account numbers (PAN) in plaintext GCS objects',
     },
     {
       id: 'US_SSN_PII',
-      label: 'US Social Security Number (PII)',
-      severity: 'MEDIUM',
+      label: 'US Social Security Number (SSN PII)',
+      severity: 'HIGH',
+      category: 'REGULATED_PII',
       regex: /\b\d{3}-\d{2}-\d{4}\b/g,
-      replacement: '[REDACTED-SSN]',
+      replacement: '[REDACTED_US_SSN_PII_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Tokenize regulated taxpayer identifiers via Google Cloud DLP `content:deidentify`',
+    },
+    {
+      id: 'IBAN_BANK_ACCOUNT',
+      label: 'International Bank Account Number (IBAN PII)',
+      severity: 'MEDIUM',
+      category: 'FINANCIAL_PII',
+      regex: /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g,
+      replacement: '[REDACTED_IBAN_BANK_ACCOUNT_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'Mask financial account identifiers before exporting CSV/ENV logs to Cloud Storage',
+    },
+    {
+      id: 'EMAIL_ADDRESS_PII',
+      label: 'Customer / Employee Email Address (GDPR PII)',
+      severity: 'MEDIUM',
+      category: 'CONTACT_PII',
+      regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+      replacement: '[REDACTED_EMAIL_ADDRESS_PII_BY_CLOUDPULSE_DLP]',
+      rotationHint:
+        'GDPR Art. 32: Pseudonymize personal contact emails in shared staging buckets',
     },
   ];
 
   const findings = [];
   for (const r of rules) {
-    const matches = raw.match(r.regex);
-    if (matches && matches.length > 0) {
+    const re = new RegExp(r.regex.source, r.regex.flags);
+    const matchEntries = [...raw.matchAll(re)];
+    if (matchEntries.length > 0) {
+      const lineOccurrences = matchEntries.map((m) => {
+        const matchStr = m[0] || '';
+        const offset = typeof m.index === 'number' ? m.index : 0;
+        const lineNumber = raw.slice(0, offset).split('\n').length || 1;
+        return {
+          lineNumber,
+          maskedBefore: maskTokenPreviewClient(matchStr),
+          replacedWith: r.replacement,
+          shannonEntropyBits: computeShannonEntropyClient(matchStr),
+          luhnVerified:
+            r.id === 'CREDIT_CARD_PAN'
+              ? verifyLuhnChecksumClient(matchStr)
+              : null,
+        };
+      });
+      const firstVal = matchEntries[0][0] || '';
       findings.push({
         id: r.id,
         label: r.label,
         severity: r.severity,
-        count: matches.length,
-        sample: String(matches[0]).slice(0, 36) + (matches[0].length > 36 ? '...' : ''),
+        category: r.category,
+        count: matchEntries.length,
+        sample: maskTokenPreviewClient(firstVal),
+        shannonEntropyBits: computeShannonEntropyClient(firstVal),
+        luhnVerified:
+          r.id === 'CREDIT_CARD_PAN' ? verifyLuhnChecksumClient(firstVal) : null,
+        lineNumbers: [...new Set(lineOccurrences.map((o) => o.lineNumber))],
+        lineOccurrences,
+        rotationHint: r.rotationHint,
         regex: r.regex,
         replacement: r.replacement,
       });
@@ -1139,21 +1279,254 @@ export default function GcsObjectWorkbench({
   };
 
   // Real-time Client-Side Secret & PII Pre-Save Guardrail Findings
+  const [showRedactionArchitecture, setShowRedactionArchitecture] = useState(false);
+  const [lastRedactionAuditReceipt, setLastRedactionAuditReceipt] = useState(null);
+  const [committingRedactionGcs, setCommittingRedactionGcs] = useState(false);
+  const [showSecretManagerExplorer, setShowSecretManagerExplorer] = useState(false);
+
   const secretFindings = useMemo(
     () => scanTextForSecretsAndPii(editedTextContent),
     [editedTextContent]
   );
 
+  // Clear stale redaction receipt if the user switches to a different object
+  useEffect(() => {
+    setLastRedactionAuditReceipt((prev) => {
+      if (!prev) return null;
+      if (prev.objectName !== inspectedObject?.objectName) return null;
+      return prev;
+    });
+  }, [inspectedObject?.objectName]);
+
   const handleAutoRedactSecrets = () => {
-    let sanitized = String(editedTextContent || '');
+    const rawBefore = String(editedTextContent || '');
+    const lineTransformations = [];
+    let sanitized = rawBefore;
+    let totalReplaced = 0;
+
     for (const f of secretFindings) {
-      sanitized = sanitized.replace(f.regex, f.replacement);
+      const re = new RegExp(f.regex.source, f.regex.flags);
+      sanitized = sanitized.replace(re, (matchStr) => {
+        totalReplaced += 1;
+        return f.replacement;
+      });
+      for (const occ of f.lineOccurrences || []) {
+        lineTransformations.push({
+          lineNumber: occ.lineNumber,
+          detectorId: f.id,
+          label: f.label,
+          severity: f.severity,
+          category: f.category,
+          shannonEntropyBits: occ.shannonEntropyBits,
+          luhnVerified: occ.luhnVerified,
+          maskedBefore: occ.maskedBefore,
+          replacedWith: f.replacement,
+          rotationHint: f.rotationHint,
+        });
+      }
     }
+
+    setLastRedactionAuditReceipt({
+      bucketName: selectedBucket?.name || '',
+      objectName: inspectedObject?.objectName || '',
+      previousGeneration: inspectedObject?.generation || 'current',
+      preRedactionBuffer: rawBefore,
+      bytesBefore: new Blob([rawBefore]).size,
+      bytesAfter: new Blob([sanitized]).size,
+      redactedPatternsCount: secretFindings.length,
+      redactedTokensCount: totalReplaced,
+      lineTransformations: lineTransformations.sort(
+        (a, b) => a.lineNumber - b.lineNumber
+      ),
+      redactedAt: new Date().toISOString(),
+      committedToGcs: false,
+      newGeneration: null,
+      previousGenerationPurged: false,
+    });
+
     setEditedTextContent(sanitized);
     if (onShowToast) {
       onShowToast(
-        `Redacted ${secretFindings.length} secret/PII pattern(s) in editor buffer. Click "Save Generation" to persist.`
+        `Stage 1 Complete: Sanitized ${totalReplaced} secret/PII token(s) across ${lineTransformations.length} match(es) in your browser RAM buffer. Review the Glass-Box Redaction Ledger below, then click "Commit Sanitized Generation to GCS" to persist!`
       );
+    }
+  };
+
+  const handleUndoBufferRedaction = () => {
+    if (!lastRedactionAuditReceipt?.preRedactionBuffer) return;
+    setEditedTextContent(lastRedactionAuditReceipt.preRedactionBuffer);
+    setLastRedactionAuditReceipt(null);
+    if (onShowToast) {
+      onShowToast(
+        'Restored original unredacted buffer in browser memory ($0.00 network cost).'
+      );
+    }
+  };
+
+  const handleDownloadUnredactedBak = () => {
+    const rawToSave =
+      lastRedactionAuditReceipt?.preRedactionBuffer ||
+      String(editedTextContent || '');
+    const baseName = String(inspectedObject?.objectName || 'object')
+      .split('/')
+      .pop();
+    const blobUrl = window.URL.createObjectURL(
+      new Blob([rawToSave], { type: 'text/plain;charset=utf-8' })
+    );
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', `${baseName}.unredacted.bak`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(blobUrl);
+    if (onShowToast) {
+      onShowToast(
+        `Downloaded untouched backup copy "${baseName}.unredacted.bak" to your workstation!`
+      );
+    }
+  };
+
+  const handleCommitRedactedToGcs = async (
+    purgePreviousGeneration = false,
+    redactionMode = 'VAULT_TO_SECRET_MANAGER'
+  ) => {
+    if (!projectId || !selectedBucket?.name || !inspectedObject?.objectName) {
+      return;
+    }
+    const rawSnapshotBefore =
+      lastRedactionAuditReceipt?.preRedactionBuffer ||
+      String(editedTextContent || '');
+    setCommittingRedactionGcs(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/dlp-redact`,
+        {
+          objectName: inspectedObject.objectName,
+          scanEngine: 'LOCAL_RAM_REGEX_LUHN',
+          redactionMode,
+          purgePreviousGeneration,
+        }
+      );
+      const auditLinesFromServer = Array.isArray(res.data?.redactionAuditLines)
+        ? res.data.redactionAuditLines.map((row) => ({
+            lineNumber: row.lineNumber,
+            detectorId: row.detectorId,
+            label: row.label,
+            severity: row.severity,
+            category: row.category,
+            actionTaken: row.actionTaken || 'MASKED_IN_PLACE',
+            shannonEntropyBits: row.shannonEntropyBits,
+            luhnVerified: row.luhnVerified,
+            maskedBefore: row.maskedBefore,
+            replacedWith: row.replacedWith,
+            rotationHint:
+              row.actionTaken === 'VAULTED_TO_SECRET_MANAGER'
+                ? `gcloud secrets versions access ${row.versionNumber || 'latest'} --secret="${row.secretId}" --project="${row.secretProjectId}"`
+                : 'Masked in-place per Regulated PII policy',
+          }))
+        : null;
+
+      setLastRedactionAuditReceipt((prev) => ({
+        bucketName: selectedBucket.name,
+        objectName: inspectedObject.objectName,
+        preRedactionBuffer: prev?.preRedactionBuffer || rawSnapshotBefore,
+        bytesBefore: res.data?.bytesBefore ?? prev?.bytesBefore ?? 0,
+        bytesAfter: res.data?.bytesAfter ?? prev?.bytesAfter ?? 0,
+        redactedPatternsCount:
+          auditLinesFromServer?.length ?? prev?.redactedPatternsCount ?? 0,
+        redactedTokensCount:
+          res.data?.redactedCount ?? prev?.redactedTokensCount ?? 0,
+        lineTransformations:
+          auditLinesFromServer || prev?.lineTransformations || [],
+        redactedAt: new Date().toISOString(),
+        committedToGcs: true,
+        redactionMode: res.data?.redactionMode || redactionMode,
+        secretManagerTargetProject:
+          res.data?.secretManagerTargetProject || null,
+        vaultedSecretsCount: res.data?.vaultedSecretsCount || 0,
+        vaultedSecrets: res.data?.vaultedSecrets || [],
+        cloudRunSetSecretsCli: res.data?.cloudRunSetSecretsCli || null,
+        previousGeneration:
+          res.data?.previousGeneration || prev?.previousGeneration || 'current',
+        newGeneration: res.data?.newGeneration || 'latest',
+        newCrc32c: res.data?.newCrc32c || null,
+        newMd5Hash: res.data?.newMd5Hash || null,
+        previousGenerationPurged: Boolean(res.data?.previousGenerationPurged),
+        restApiTrace: res.data?.restApiTrace || [],
+      }));
+
+      if (Number(res.data?.vaultedSecretsCount || 0) > 0) {
+        setShowSecretManagerExplorer(true);
+      }
+
+      // Reload the inspected object so the editor buffer reflects the new `sm://projects/...` URIs!
+      await handleInspectObject(inspectedObject.objectName);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Committed sanitized object gs://${selectedBucket.name}/${inspectedObject.objectName} to Google Cloud Storage!`
+        );
+      }
+      if (fetchObjects) fetchObjects(selectedBucket.name, { silent: true });
+    } catch (err) {
+      if (
+        err?.isDestructiveCancelled ||
+        err?.message === 'DESTRUCTIVE_ACTION_CANCELLED'
+      ) {
+        return;
+      }
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to commit sanitized generation to Google Cloud Storage.'
+        );
+      }
+    } finally {
+      setCommittingRedactionGcs(false);
+    }
+  };
+
+  const handleRehydrateWorkbenchFromSecretManager = async () => {
+    if (!projectId || !selectedBucket?.name || !inspectedObject?.objectName) {
+      return;
+    }
+    setCommittingRedactionGcs(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/dlp-rehydrate-from-secret-manager`,
+        {
+          objectName: inspectedObject.objectName,
+          writeBackToGcs: true,
+        }
+      );
+      if (res.data?.rehydratedText) {
+        setEditedTextContent(res.data.rehydratedText);
+      }
+      await handleInspectObject(inspectedObject.objectName);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Rehydrated credentials from Google Cloud Secret Manager into gs://${selectedBucket.name}/${inspectedObject.objectName}!`
+        );
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to rehydrate sm:// credentials from Secret Manager.'
+        );
+      }
+    } finally {
+      setCommittingRedactionGcs(false);
     }
   };
 
@@ -2363,6 +2736,20 @@ export default function GcsObjectWorkbench({
                   onNavigateStudio && onNavigateStudio('BIGLAKE_ICEBERG'),
               },
               {
+                key: 'MANAGED_SPARK_35',
+                icon: Zap,
+                label: 'Managed Spark 3.5',
+                title:
+                  'Open Managed Service for Apache Spark 3.5 Studio with this bucket/object pre-wired for Serverless PySpark or Spark Connect',
+                onClick: () =>
+                  onNavigateStudio &&
+                  onNavigateStudio('MANAGED_SPARK_STUDIO', 'SPARK_CONNECT_NOTEBOOKS', {
+                    bucketName: selectedBucket?.name || '',
+                    objectName:
+                      inspectedObject?.name || currentFolderPrefix || '',
+                  }),
+              },
+              {
                 key: 'MEDALLION_ELT',
                 icon: FileCode,
                 label: 'Medallion ELT',
@@ -3100,37 +3487,520 @@ export default function GcsObjectWorkbench({
                 </div>
               </div>
 
-              {/* Feature 5: Real-Time Client-Side Secret & PII Pre-Save Guardrail Banner */}
-              {inspectedObject.isTextLike && secretFindings.length > 0 && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-                  <div className="flex items-start gap-2.5 flex-1 min-w-[240px]">
-                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="space-y-0.5">
-                      <div className="font-extrabold text-amber-700 dark:text-amber-300">
-                        Pre-Save &amp; Pre-Public DLP Guardrail: {secretFindings.length} Credential / PII Pattern(s) Detected in Buffer!
-                      </div>
-                      <div className="text-[11px] text-zinc-600 dark:text-zinc-300 flex flex-wrap gap-1.5">
-                        {secretFindings.map((f) => (
-                          <span
-                            key={f.id}
-                            className="px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-zinc-900 border border-amber-500/30 text-[10px] font-mono font-bold"
+              {/* Feature 5: Glass-Box Real-Time Client-Side Secret & PII Pre-Save Guardrail + Secret Manager Vault & Redaction Ledger */}
+              {inspectedObject.isTextLike &&
+                (secretFindings.length > 0 ||
+                  lastRedactionAuditReceipt ||
+                  /sm:\/\/projects\/[^/\s"']+\/secrets\//.test(
+                    String(editedTextContent || '')
+                  )) && (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-3 text-xs font-mono">
+                    {secretFindings.length > 0 && (
+                      <div className="flex flex-wrap items-start justify-between gap-2.5">
+                        <div className="flex items-start gap-2.5 flex-1 min-w-[260px]">
+                          <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <div className="font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
+                              <span>
+                                Pre-Save &amp; Pre-Public DLP Guardrail:{' '}
+                                {secretFindings.length} Credential / PII Signature(s)
+                                Detected in Editor Buffer!
+                              </span>
+                              <button
+                                type="button"
+                                data-feature-id="WORKBENCH_TOGGLE_REDACT_ARCH_BTN"
+                                onClick={() =>
+                                  setShowRedactionArchitecture((v) => !v)
+                                }
+                                className="px-2 py-0.5 rounded bg-zinc-900 text-zinc-100 text-[10px] font-bold cursor-pointer hover:bg-zinc-800"
+                              >
+                                {showRedactionArchitecture
+                                  ? 'Hide Glass-Box Architecture'
+                                  : 'Where Do My Secrets Go? (Glass-Box)'}
+                              </button>
+                            </div>
+                            <div className="text-[11px] text-zinc-600 dark:text-zinc-300 flex flex-wrap gap-1.5">
+                              {secretFindings.map((f) => (
+                                <span
+                                  key={f.id}
+                                  className="px-2 py-0.5 rounded-full bg-white/90 dark:bg-zinc-900 border border-amber-500/30 text-[10px] font-mono font-bold"
+                                >
+                                  [{f.severity}] {f.label} ({f.count}x · Line{' '}
+                                  {(f.lineNumbers || []).join(', ')} · H(X)={f.shannonEntropyBits}b
+                                  {f.luhnVerified !== null
+                                    ? ` · Luhn:${f.luhnVerified ? 'VALID' : 'NO'}`
+                                    : ''}
+                                  )
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {secretFindings.some(
+                            (f) => f.category === 'CLOUD_CREDENTIAL'
+                          ) &&
+                            !lastRedactionAuditReceipt?.committedToGcs && (
+                              <button
+                                type="button"
+                                data-feature-id="WORKBENCH_VAULT_SECRET_MANAGER_BTN"
+                                disabled={committingRedactionGcs}
+                                onClick={() =>
+                                  handleCommitRedactedToGcs(
+                                    false,
+                                    'VAULT_TO_SECRET_MANAGER'
+                                  )
+                                }
+                                title="RECOMMENDED ZERO-LOSS REMEDIATION: Vaults every credential into Google Cloud Secret Manager (secretmanager.googleapis.com/v1), rewrites the file value to sm://projects/<projectId>/secrets/<secretId>/versions/<ver>, and masks regulated PII so zero keys are ever lost!"
+                                className="h-8 px-3.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                              >
+                                <Key className="w-3.5 h-3.5" />
+                                <span>
+                                  {committingRedactionGcs
+                                    ? 'Vaulting to Secret Manager...'
+                                    : '1-Tap Vault Keys to Secret Manager (sm://) + Mask PII'}
+                                </span>
+                              </button>
+                            )}
+
+                          <button
+                            type="button"
+                            data-feature-id="WORKBENCH_DOWNLOAD_UNREDACTED_BAK_BTN"
+                            onClick={handleDownloadUnredactedBak}
+                            title="Download the untouched original buffer as a .unredacted.bak file to your workstation before modifying anything"
+                            className="h-8 px-2.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
                           >
-                            [{f.severity}] {f.label} ({f.count}x)
-                          </span>
-                        ))}
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download .bak Copy</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            data-feature-id="WORKBENCH_AUTO_REDACT_BUFFER_BTN"
+                            onClick={handleAutoRedactSecrets}
+                            title="Stage 1 Preview: Replaces matched tokens with [REDACTED_<TYPE>_BY_CLOUDPULSE_DLP] in browser memory first (with 1-Click Undo)"
+                            className="h-8 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>Preview Mask in Buffer</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Quick Rehydrate & Secret Manager UI Banner when viewing a file that already has `sm://projects/.../secrets/...` URIs */}
+                    {/sm:\/\/projects\/[^/\s"']+\/secrets\//.test(
+                      String(editedTextContent || '')
+                    ) &&
+                      !lastRedactionAuditReceipt && (
+                        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                            This file contains live Google Cloud Secret Manager
+                            (<code>sm://projects/.../secrets/...</code>) URI
+                            references! Your credentials are already vaulted in
+                            Secret Manager.
+                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              data-feature-id="WORKBENCH_OPEN_SM_STUDIO_BTN"
+                              onClick={() =>
+                                setShowSecretManagerExplorer((v) => !v)
+                              }
+                              className={`px-2.5 py-1 rounded text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1 ${
+                                showSecretManagerExplorer
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Key className="w-3 h-3" />
+                              <span>
+                                {showSecretManagerExplorer
+                                  ? 'Hide Secret Manager UI'
+                                  : 'Explore, Rotate & Delete in Secret Manager UI'}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              data-feature-id="WORKBENCH_REHYDRATE_SM_BTN"
+                              disabled={committingRedactionGcs}
+                              onClick={handleRehydrateWorkbenchFromSecretManager}
+                              className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>
+                                {committingRedactionGcs
+                                  ? 'Rehydrating from Secret Manager...'
+                                  : '1-Click Rehydrate Keys from Secret Manager (sm:// → Plaintext)'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Glass-Box Architecture Breakdown for Cloud Architects & DevSecOps */}
+                    {(showRedactionArchitecture || lastRedactionAuditReceipt) && (
+                      <div className="p-3 rounded-xl bg-zinc-950 text-zinc-200 border border-zinc-800 space-y-2.5 text-[11px]">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+                          <span className="font-extrabold text-blue-400">
+                            Glass-Box DevSecOps Architecture: Where Your Secrets Go &amp; How Zero-Loss Migration Works
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            Zero Black-Box · 4-Stage Secret Manager Vault + GCS Pipeline
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-[10.5px] leading-relaxed">
+                          <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <div className="font-bold text-amber-400 mb-1">
+                              Stage 1: 11-Rule AST + Luhn + H(X)
+                            </div>
+                            Scans UTF-8 lines in memory using 11 compiled regex AST signatures (`AIza...`, `AKIA...`, `ghp_...`, `sk-proj-...`, RSA PEM, JWT, `.env`/JSON passwords, SSN, IBAN, Email), verifies 16-digit PANs via Luhn Mod-10 checksum, and computes Shannon Entropy `H(X)` (`bits/char`).
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <div className="font-bold text-emerald-400 mb-1">
+                              Stage 2: Secret Manager Vault (`sm://`)
+                            </div>
+                            <strong>Never Loses a Key:</strong> Application credentials (`CREDENTIAL_LEAK`) are vaulted into `secretmanager.googleapis.com/v1/projects/:id/secrets/:secretId:addVersion` and rewritten in the file as `sm://projects/:id/secrets/:secretId/versions/:ver`. Customer PII is masked in-place.
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <div className="font-bold text-blue-400 mb-1">
+                              Stage 3: Atomic GCS Generation Commit
+                            </div>
+                            Streams the sanitized UTF-8 buffer to `POST https://storage.googleapis.com/upload/storage/v1/b/:b/o?uploadType=media&name=:o`, creating a new immutable GCS Object Generation (`Gen #new`) with a verified CRC32C &amp; MD5 digest.
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <div className="font-bold text-red-400 mb-1">
+                              Stage 4: Cloud Run Mount / 1-Click Rehydrate
+                            </div>
+                            Generates a ready-to-run `gcloud run services update --set-secrets=...` CLI command, allows 1-click rehydration from Secret Manager (`:access`), and optionally purges the old unredacted GCS generation (`?generation=#oldGen`).
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Persistent Glass-Box Redaction Execution Ledger & 3-Stage Commit Console */}
+                    {lastRedactionAuditReceipt && (
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-500/40 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">
+                              {lastRedactionAuditReceipt.committedToGcs
+                                ? lastRedactionAuditReceipt.vaultedSecretsCount >
+                                  0
+                                  ? `VAULTED ${lastRedactionAuditReceipt.vaultedSecretsCount} KEYS TO SECRET MANAGER & COMMITTED (GEN #${String(
+                                      lastRedactionAuditReceipt.newGeneration
+                                    ).slice(-6)})`
+                                  : `COMMITTED TO GCS (GEN #${String(
+                                      lastRedactionAuditReceipt.newGeneration
+                                    ).slice(-6)})`
+                                : 'STAGE 1 BUFFER SANITIZED (READY TO COMMIT TO GCS)'}
+                            </span>
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                              Processed {lastRedactionAuditReceipt.redactedTokensCount}{' '}
+                              Secret/PII Token(s) across{' '}
+                              {lastRedactionAuditReceipt.lineTransformations.length}{' '}
+                              Line Match(es) ({lastRedactionAuditReceipt.bytesBefore} B
+                              → {lastRedactionAuditReceipt.bytesAfter} B)
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* BEFORE COMMIT: Show Stage 1/2 Commit Buttons */}
+                            {!lastRedactionAuditReceipt.committedToGcs ? (
+                              <>
+                                <button
+                                  type="button"
+                                  data-feature-id="WORKBENCH_UNDO_REDACT_BUFFER_BTN"
+                                  onClick={handleUndoBufferRedaction}
+                                  className="px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Undo Buffer Redaction</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  data-feature-id="WORKBENCH_VAULT_SECRET_MANAGER_BTN"
+                                  disabled={committingRedactionGcs}
+                                  onClick={() =>
+                                    handleCommitRedactedToGcs(
+                                      false,
+                                      'VAULT_TO_SECRET_MANAGER'
+                                    )
+                                  }
+                                  className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                  <Key className="w-3.5 h-3.5" />
+                                  <span>
+                                    {committingRedactionGcs
+                                      ? 'Vaulting & Committing...'
+                                      : 'Vault Keys to Secret Manager (sm://) + Commit'}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  data-feature-id="WORKBENCH_COMMIT_REDACTED_GCS_BTN"
+                                  disabled={committingRedactionGcs}
+                                  onClick={() =>
+                                    handleCommitRedactedToGcs(false, 'MASK_ONLY')
+                                  }
+                                  className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                  <Save className="w-3.5 h-3.5" />
+                                  <span>
+                                    {committingRedactionGcs
+                                      ? 'Committing...'
+                                      : 'Commit Mask-Only ([REDACTED])'}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  data-feature-id="WORKBENCH_COMMIT_AND_PURGE_GEN_BTN"
+                                  disabled={committingRedactionGcs}
+                                  onClick={() =>
+                                    handleCommitRedactedToGcs(
+                                      true,
+                                      'VAULT_TO_SECRET_MANAGER'
+                                    )
+                                  }
+                                  className="px-3 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  <span>
+                                    Vault to SM + Purge Old Gen (#
+                                    {String(
+                                      lastRedactionAuditReceipt.previousGeneration
+                                    ).slice(-6)}
+                                    )
+                                  </span>
+                                </button>
+                              </>
+                            ) : (
+                              /* AFTER COMMIT: Vault button is removed! Show Secret Manager UI Explorer & Rehydrate */
+                              <>
+                                <button
+                                  type="button"
+                                  data-feature-id="WORKBENCH_OPEN_SM_STUDIO_BTN"
+                                  onClick={() =>
+                                    setShowSecretManagerExplorer((v) => !v)
+                                  }
+                                  className={`px-3 py-1.5 rounded-md text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                                    showSecretManagerExplorer
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  }`}
+                                >
+                                  <Key className="w-3.5 h-3.5" />
+                                  <span>
+                                    {showSecretManagerExplorer
+                                      ? 'Hide Secret Manager UI'
+                                      : 'Explore, Rotate & Delete in Secret Manager UI'}
+                                  </span>
+                                </button>
+
+                                {lastRedactionAuditReceipt.vaultedSecretsCount >
+                                  0 && (
+                                  <button
+                                    type="button"
+                                    data-feature-id="WORKBENCH_REHYDRATE_SM_BTN"
+                                    disabled={committingRedactionGcs}
+                                    onClick={
+                                      handleRehydrateWorkbenchFromSecretManager
+                                    }
+                                    className="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                    <span>
+                                      Rehydrate Keys from Secret Manager (sm://
+                                      → Plaintext)
+                                    </span>
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Vaulted Secret Manager Inventory inside Object Workbench */}
+                        {Array.isArray(lastRedactionAuditReceipt.vaultedSecrets) &&
+                          lastRedactionAuditReceipt.vaultedSecrets.length > 0 && (
+                            <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/30 space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                                  <Key className="w-3.5 h-3.5" />
+                                  <span>
+                                    Vaulted in Google Cloud Secret Manager (
+                                    <code>
+                                      projects/
+                                      {
+                                        lastRedactionAuditReceipt.secretManagerTargetProject
+                                      }
+                                      /secrets/*
+                                    </code>
+                                    )
+                                  </span>
+                                </span>
+                                {lastRedactionAuditReceipt.cloudRunSetSecretsCli && (
+                                  <button
+                                    type="button"
+                                    data-feature-id="DLP_XRAY_COPY_CLOUDRUN_SECRETS_CLI_BTN"
+                                    onClick={() => {
+                                      navigator.clipboard?.writeText(
+                                        lastRedactionAuditReceipt.cloudRunSetSecretsCli
+                                      );
+                                      if (onShowToast) {
+                                        onShowToast(
+                                          'Copied Cloud Run --set-secrets CLI command!'
+                                        );
+                                      }
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Copy className="w-2.5 h-2.5" />
+                                    <span>Copy Cloud Run --set-secrets CLI</span>
+                                  </button>
+                                )}
+                              </div>
+                              <div className="overflow-x-auto rounded border border-emerald-500/20">
+                                <table className="w-full text-left text-[10px]">
+                                  <thead className="bg-emerald-950/20 text-zinc-500 uppercase">
+                                    <tr>
+                                      <th className="px-2 py-1">Line / Key</th>
+                                      <th className="px-2 py-1">
+                                        Secret Manager URI Written into File
+                                      </th>
+                                      <th className="px-2 py-1">
+                                        Retrieve Plaintext Anytime (CLI)
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-emerald-500/15">
+                                    {lastRedactionAuditReceipt.vaultedSecrets.map(
+                                      (vs, idx) => (
+                                        <tr key={`${vs.secretId}-${idx}`}>
+                                          <td className="px-2 py-1 font-bold text-zinc-900 dark:text-zinc-100">
+                                            L{vs.lineNumber} ·{' '}
+                                            <code>{vs.envKey}</code>
+                                          </td>
+                                          <td className="px-2 py-1 text-emerald-700 dark:text-emerald-400 font-bold">
+                                            <code>{vs.smUri}</code>
+                                          </td>
+                                          <td className="px-2 py-1 text-zinc-500">
+                                            <code>{vs.gcloudAccessCmd}</code>
+                                          </td>
+                                        </tr>
+                                      )
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Line-by-Line Before -> After Transformation Table */}
+                        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+                          <table className="w-full text-left text-[10.5px]">
+                            <thead className="bg-zinc-100 dark:bg-zinc-950 text-zinc-500 uppercase">
+                              <tr>
+                                <th className="px-2.5 py-1.5">Line #</th>
+                                <th className="px-2.5 py-1.5">Detector &amp; Severity</th>
+                                <th className="px-2.5 py-1.5">Entropy / Checksum</th>
+                                <th className="px-2.5 py-1.5">Masked Original → Sanitized Replacement</th>
+                                <th className="px-2.5 py-1.5">DevSecOps Credential Rotation Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                              {lastRedactionAuditReceipt.lineTransformations.map(
+                                (tr, idx) => (
+                                  <tr
+                                    key={`${tr.detectorId}-${tr.lineNumber}-${idx}`}
+                                    className="bg-white dark:bg-zinc-900/60"
+                                  >
+                                    <td className="px-2.5 py-1.5 font-extrabold text-blue-600 dark:text-blue-400">
+                                      L{tr.lineNumber}
+                                    </td>
+                                    <td className="px-2.5 py-1.5">
+                                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                        {tr.detectorId}
+                                      </span>{' '}
+                                      <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-500 font-bold">
+                                        {tr.severity}
+                                      </span>
+                                    </td>
+                                    <td className="px-2.5 py-1.5 text-zinc-600 dark:text-zinc-400">
+                                      H(X)={tr.shannonEntropyBits} bits/char
+                                      {tr.luhnVerified !== null
+                                        ? ` · Luhn:${
+                                            tr.luhnVerified ? 'VALID' : 'FAIL'
+                                          }`
+                                        : ''}
+                                    </td>
+                                    <td className="px-2.5 py-1.5">
+                                      <span className="line-through text-red-500 mr-1.5">
+                                        {tr.maskedBefore}
+                                      </span>
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                        → {tr.replacedWith}
+                                      </span>
+                                    </td>
+                                    <td className="px-2.5 py-1.5 text-zinc-500 dark:text-zinc-400">
+                                      <code>{tr.rotationHint}</code>
+                                    </td>
+                                  </tr>
+                                )
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {Array.isArray(lastRedactionAuditReceipt.restApiTrace) &&
+                          lastRedactionAuditReceipt.restApiTrace.length > 0 && (
+                            <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-400 border border-zinc-800 space-y-1 text-[10px]">
+                              <div className="font-bold text-zinc-300">
+                                Verified Google Cloud Storage REST API Execution Trace:
+                              </div>
+                              {lastRedactionAuditReceipt.restApiTrace.map(
+                                (step, idx) => (
+                                  <div key={idx}>{step}</div>
+                                )
+                              )}
+                            </div>
+                          )}
+                      </div>
+                    )}
+
+                    {/* Interactive Google Cloud Secret Manager Explorer & Lifecycle Studio */}
+                    {showSecretManagerExplorer && (
+                      <SecretManagerVaultExplorer
+                        projectId={projectId}
+                        preferredSecretProject={
+                          lastRedactionAuditReceipt?.secretManagerTargetProject ||
+                          (
+                            String(editedTextContent || '').match(
+                              /sm:\/\/projects\/([^/\s"']+)\/secrets\//
+                            ) || []
+                          )[1] ||
+                          projectId
+                        }
+                        highlightSecretIds={
+                          (lastRedactionAuditReceipt?.vaultedSecrets || []).map(
+                            (vs) => vs.secretId
+                          )
+                        }
+                        defaultFilterMode="DLP_VAULTED"
+                        onShowToast={onShowToast}
+                        onShowError={onShowError}
+                        onRehydrateFileFromSecretManager={
+                          handleRehydrateWorkbenchFromSecretManager
+                        }
+                        rehydratingFile={committingRedactionGcs}
+                        onClose={() => setShowSecretManagerExplorer(false)}
+                      />
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAutoRedactSecrets}
-                    className="h-8 px-3 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>1-Tap Auto-Redact Secrets</span>
-                  </button>
-                </div>
-              )}
+                )}
 
               {/* Feature 3: Upgraded In-Place Rename, Move, Duplicate & Cross-Bucket Server-Side Copy Bar */}
               {showRenameBar && (

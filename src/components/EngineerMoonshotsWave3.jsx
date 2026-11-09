@@ -37,6 +37,7 @@ import {
   useLivePricingCatalog,
   LivePricingCatalogControlBar,
 } from './GlobalNetworkWorldMap';
+import SecretManagerVaultExplorer from './SecretManagerVaultExplorer';
 
 // 12 Global User Population Metropolises for X5 Speed-of-Light Latency Matrix
 const GLOBAL_CLIENT_HUBS = [
@@ -187,16 +188,27 @@ export default function EngineerMoonshotsWave3({
   // ==========================================================================
   // X1 STATE: Cloud Storage DLP, Secret Leak & PII X-Ray Scanner
   // ==========================================================================
-  const [buckets, setBuckets] = useState([]);
-  const [selectedDlpBucket, setSelectedDlpBucket] = useState(initialBucketName || '');
+  const [buckets, setBuckets] = useState(() => overview?.buckets || []);
+  const [selectedDlpBucket, setSelectedDlpBucket] = useState(
+    () => initialBucketName || overview?.buckets?.[0]?.name || ''
+  );
+  const [dlpScanEngine, setDlpScanEngine] = useState('LOCAL_RAM_REGEX_LUHN'); // LOCAL_RAM_REGEX_LUHN | CLOUD_DLP_VISION_OCR
+  const [showDlpArchitectureDocs, setShowDlpArchitectureDocs] = useState(true);
   const [dlpScanResult, setDlpScanResult] = useState(null);
+  const [canaryInjectReceipt, setCanaryInjectReceipt] = useState(null);
+  const [dlpRedactionReceipt, setDlpRedactionReceipt] = useState(null);
+  const [showDlpSecretManagerExplorer, setShowDlpSecretManagerExplorer] =
+    useState(false);
+  const [dlpInlineError, setDlpInlineError] = useState(null);
   const [scanningDlp, setScanningDlp] = useState(false);
 
   useEffect(() => {
     if (initialBucketName) {
       setSelectedDlpBucket(initialBucketName);
+    } else if (!selectedDlpBucket && overview?.buckets?.length > 0) {
+      setSelectedDlpBucket(overview.buckets[0].name);
     }
-  }, [initialBucketName]);
+  }, [initialBucketName, overview?.buckets, selectedDlpBucket]);
 
   const fetchBucketsForMoonshots = useCallback(async () => {
     if (!projectId) return;
@@ -218,26 +230,36 @@ export default function EngineerMoonshotsWave3({
     fetchBucketsForMoonshots();
   }, [fetchBucketsForMoonshots]);
 
-  const handleRunDlpScan = async (bucketToScan = selectedDlpBucket) => {
+  const handleRunDlpScan = async (
+    bucketToScan = selectedDlpBucket,
+    engineOverride = dlpScanEngine
+  ) => {
     if (!projectId || !bucketToScan) return;
     setScanningDlp(true);
+    setDlpInlineError(null);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
-        )}/storage/buckets/${encodeURIComponent(bucketToScan)}/dlp-scan`
+        )}/storage/buckets/${encodeURIComponent(bucketToScan)}/dlp-scan`,
+        { scanEngine: engineOverride }
       );
       setDlpScanResult(res.data);
       if (onShowToast) {
         onShowToast(
-          `DLP X-Ray scanned ${res.data.scannedObjectsCount} object(s) in gs://${bucketToScan}: ${res.data.totalMatches} secret/PII pattern(s) detected.`
+          `DLP X-Ray (${
+            res.data.scanEngine === 'CLOUD_DLP_VISION_OCR'
+              ? 'Cloud DLP v2 + Vision OCR'
+              : '$0.00 In-Memory Regex + Luhn/Entropy'
+          }) scanned ${res.data.scannedObjectsCount} object(s) in gs://${bucketToScan}: ${res.data.totalMatches} secret/PII pattern(s) detected.`
         );
       }
     } catch (err) {
+      const errMsg =
+        err.response?.data?.error || `Failed to run DLP scan on gs://${bucketToScan}`;
+      setDlpInlineError(errMsg);
       if (onShowError) {
-        onShowError(
-          err.response?.data?.error || `Failed to run DLP scan on gs://${bucketToScan}`
-        );
+        onShowError(errMsg);
       }
     } finally {
       setScanningDlp(false);
@@ -245,13 +267,21 @@ export default function EngineerMoonshotsWave3({
   };
 
   const handleInjectCanaryLeakObject = async () => {
-    if (!projectId || !selectedDlpBucket) return;
+    if (!projectId) return;
     setBusyKey('inject-canary');
+    setDlpInlineError(null);
     try {
+      const targetBucket =
+        selectedDlpBucket ||
+        buckets[0]?.name ||
+        overview?.buckets?.[0]?.name ||
+        '_auto_canary_';
+
       const syntheticGcpKey = [
         'AIza',
         'SyD9canaryTestKeyForCloudPulseDlpXray99123',
       ].join('');
+      const syntheticAwsKey = ['AKIA', 'IOSFODNN7EXAMPLE'].join('');
       const syntheticGhPat = [
         'ghp',
         '_1234567890abcdefABCDEF1234567890abcd',
@@ -260,63 +290,158 @@ export default function EngineerMoonshotsWave3({
         'sk-proj-',
         'canaryTestSecretKeyForCloudPulse2026ScannerDemo99',
       ].join('');
+      const syntheticPan = ['4532', '0151', '1283', '0366'].join('-'); // Luhn Mod-10 valid test PAN
       const canaryPayload = `# CANARY DLP TEST ARTIFACT (SAFE SYNTHETIC TOKENS FOR X-RAY VERIFICATION)
 SERVICE_ENVIRONMENT=staging
 GCP_TEST_API_KEY=${syntheticGcpKey}
+AWS_BACKUP_ACCESS_KEY=${syntheticAwsKey}
 GITHUB_AUTOMATION_PAT=${syntheticGhPat}
 OPENAI_INFERENCE_KEY=${syntheticSk}
 DB_PASSWORD="SyntheticCanaryDemoVaultValue_000!"
+TEST_BILLING_CARD_PAN=${syntheticPan}
 CUSTOMER_CONTACT_EMAIL=sre-compliance-audit@enterprise-example.org
 EU_TREASURY_IBAN=DE89370400440532013000
 US_TAXPAYER_SSN=123-45-6789
 `;
-      await axios.post(
+      const uploadRes = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
-        )}/storage/buckets/${encodeURIComponent(selectedDlpBucket)}/objects`,
+        )}/storage/buckets/${encodeURIComponent(targetBucket)}/objects`,
         {
           objectName: 'canary-audit/leaked-staging-secrets.env',
+          content: canaryPayload,
           textContent: canaryPayload,
-          contentType: 'text/plain',
+          contentType: 'text/plain; charset=utf-8',
           storageClass: 'STANDARD',
+          autoFallbackWritableBucket: true,
         }
       );
+
+      const resolvedBucket =
+        uploadRes.data?.bucket ||
+        uploadRes.data?.object?.bucket ||
+        (targetBucket !== '_auto_canary_' ? targetBucket : '');
+
+      if (resolvedBucket) {
+        setBuckets((prev) => {
+          if (prev.some((b) => b.name === resolvedBucket)) return prev;
+          return [
+            {
+              name: resolvedBucket,
+              location: uploadRes.data?.bucketLocation || 'US',
+            },
+            ...prev,
+          ];
+        });
+        setSelectedDlpBucket(resolvedBucket);
+      }
+
+      setCanaryInjectReceipt({
+        bucket: resolvedBucket,
+        owningProjectId: uploadRes.data?.owningProjectId || projectId,
+        autoRoutedFromClosedBilling: Boolean(
+          uploadRes.data?.autoRoutedFromClosedBilling
+        ),
+        autoRoutedReason: uploadRes.data?.autoRoutedReason || null,
+        objectName: 'canary-audit/leaked-staging-secrets.env',
+        sizeBytes: Number(uploadRes.data?.object?.size || canaryPayload.length),
+        generation: uploadRes.data?.object?.generation || 'latest',
+        md5Hash: uploadRes.data?.object?.md5Hash || '',
+        crc32c: uploadRes.data?.object?.crc32c || '',
+        injectedAt: new Date().toISOString(),
+        injectedPatternsCount: 9,
+      });
+
       if (onShowToast) {
         onShowToast(
-          `Uploaded synthetic canary file gs://${selectedDlpBucket}/canary-audit/leaked-staging-secrets.env — running DLP X-Ray now!`
+          `Uploaded synthetic canary file gs://${resolvedBucket}/canary-audit/leaked-staging-secrets.env (${canaryPayload.length} bytes) — running DLP X-Ray now!`
         );
       }
-      await handleRunDlpScan(selectedDlpBucket);
+      if (resolvedBucket) {
+        await handleRunDlpScan(resolvedBucket, dlpScanEngine);
+      }
     } catch (err) {
+      const errMsg =
+        err.response?.data?.error || 'Failed to upload canary test file.';
+      setDlpInlineError(errMsg);
       if (onShowError) {
-        onShowError(
-          err.response?.data?.error || 'Failed to upload canary test file.'
-        );
+        onShowError(errMsg);
       }
     } finally {
       setBusyKey(null);
     }
   };
 
-  const handleRedactObjectInPlace = async (objectName) => {
+  const handleRedactObjectInPlace = async (
+    objectName,
+    purgePreviousGeneration = false,
+    redactionMode = 'VAULT_TO_SECRET_MANAGER'
+  ) => {
     if (!projectId || !selectedDlpBucket || !objectName) return;
     setBusyKey(`redact-${objectName}`);
+    setDlpInlineError(null);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
         )}/storage/buckets/${encodeURIComponent(selectedDlpBucket)}/dlp-redact`,
-        { objectName }
+        {
+          objectName,
+          scanEngine: dlpScanEngine,
+          redactionMode,
+          purgePreviousGeneration,
+        }
       );
+      setDlpRedactionReceipt(res.data);
+      if (Number(res.data?.vaultedSecretsCount || 0) > 0) {
+        setShowDlpSecretManagerExplorer(true);
+      }
       if (onShowToast) {
         onShowToast(res.data?.message || `Sanitized ${objectName} in-place!`);
       }
-      await handleRunDlpScan(selectedDlpBucket);
+      await handleRunDlpScan(selectedDlpBucket, dlpScanEngine);
     } catch (err) {
+      if (err?.isDestructiveCancelled || err?.message === 'DESTRUCTIVE_ACTION_CANCELLED') {
+        return;
+      }
+      const errMsg =
+        err.response?.data?.error || `Failed to redact ${objectName}`;
+      setDlpInlineError(errMsg);
       if (onShowError) {
-        onShowError(
-          err.response?.data?.error || `Failed to redact ${objectName}`
+        onShowError(errMsg);
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const handleRehydrateFromSecretManager = async (bucketName, objectName) => {
+    if (!projectId || !bucketName || !objectName) return;
+    setBusyKey(`rehydrate-${objectName}`);
+    setDlpInlineError(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          bucketName
+        )}/dlp-rehydrate-from-secret-manager`,
+        { objectName, writeBackToGcs: true }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Rehydrated credentials from Secret Manager into gs://${bucketName}/${objectName}!`
         );
+      }
+      await handleRunDlpScan(bucketName, dlpScanEngine);
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        `Failed to rehydrate sm:// secrets for ${objectName}`;
+      setDlpInlineError(errMsg);
+      if (onShowError) {
+        onShowError(errMsg);
       }
     } finally {
       setBusyKey(null);
@@ -1236,32 +1361,46 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
         <div className="p-5 rounded-2xl bg-red-50/50 dark:bg-red-500/[0.06] border border-red-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
-                  MOONSHOT X1 · LIVE IN-MEMORY DLP & SECRET LEAK X-RAY
+                  MOONSHOT X1 · DUAL-ENGINE DLP &amp; SECRET LEAK X-RAY
                 </span>
+                <button
+                  type="button"
+                  data-feature-id="DLP_XRAY_TOGGLE_ARCH_DOCS_BTN"
+                  onClick={() => setShowDlpArchitectureDocs((v) => !v)}
+                  title="Toggle the technical breakdown explaining how Engine 1 scans UTF-8 byte streams without OCR vs. how Engine 2 uses Google Cloud Sensitive Data Protection (dlp.googleapis.com/v2) built-in Vision OCR for images"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>
+                    {showDlpArchitectureDocs
+                      ? 'Hide Architecture: How It Works Without Local OCR'
+                      : 'How Does This Work Without Local OCR?'}
+                  </span>
+                </button>
               </div>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
                 <FileWarning className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  Cloud Storage Secret, Credential & Regulated PII X-Ray Scanner
+                  Cloud Storage Secret, Credential &amp; Regulated PII X-Ray Scanner
                   + 1-Tap In-Place Redactor
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Streams live objects from your Cloud Storage buckets into
-                ephemeral server memory, inspects against 11 credential & GDPR/PCI
-                PII detectors, calculates financial breach exposure, and
-                sanitizes leaked secrets in-place with 1 click.
+                Choose between the $0.00 Zero-Dependency In-Memory UTF-8 + Luhn/Shannon Entropy
+                Engine (for text, code, and configs) or Google Cloud Sensitive Data Protection
+                API (`dlp.googleapis.com/v2`) with server-side Vision OCR &amp; `.png`/`.jpg`
+                pixel bounding-box redaction (`image:redact`).
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-full pt-2 border-t border-red-500/20 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 items-center">
               <select
                 value={selectedDlpBucket}
                 onChange={(e) => setSelectedDlpBucket(e.target.value)}
                 title="Select a live Cloud Storage bucket in your project to stream objects into the ephemeral DLP X-Ray scanner"
-                className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full h-9 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 {buckets.length === 0 && (
                   <option value="">No buckets found in project</option>
@@ -1275,47 +1414,267 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
 
               <button
                 type="button"
+                data-feature-id="DLP_XRAY_RUN_SCAN_BTN"
                 disabled={!selectedDlpBucket || scanningDlp}
-                onClick={() => handleRunDlpScan(selectedDlpBucket)}
-                title="Stream live objects from the selected GCS bucket into server RAM and scan against 11 credential, API key, and GDPR/PCI PII detectors without writing to disk"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                onClick={() => handleRunDlpScan(selectedDlpBucket, dlpScanEngine)}
+                title="Stream live objects from the selected GCS bucket and scan using your selected DLP engine (Engine 1 In-Memory UTF-8 Regex/Luhn/Entropy or Engine 2 Cloud DLP v2 + Vision OCR)"
+                className="w-full h-9 inline-flex items-center justify-center gap-1.5 px-3 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold shadow-sm cursor-pointer disabled:opacity-50 truncate"
               >
                 <RefreshCw
-                  className={`w-3.5 h-3.5 ${scanningDlp ? 'animate-spin' : ''}`}
+                  className={`w-3.5 h-3.5 shrink-0 ${scanningDlp ? 'animate-spin' : ''}`}
                 />
-                <span>{scanningDlp ? 'Scanning Objects...' : 'Run Live DLP X-Ray'}</span>
+                <span className="truncate">
+                  {scanningDlp
+                    ? 'Scanning Objects...'
+                    : dlpScanEngine === 'CLOUD_DLP_VISION_OCR'
+                    ? 'Run Cloud DLP v2 + OCR'
+                    : 'Run $0.00 In-Memory DLP'}
+                </span>
               </button>
 
               <button
                 type="button"
-                disabled={!selectedDlpBucket || busyKey === 'inject-canary'}
+                data-feature-id="DLP_XRAY_INJECT_CANARY_BTN"
+                disabled={busyKey === 'inject-canary' || scanningDlp}
                 onClick={handleInjectCanaryLeakObject}
                 title="Upload a safe, synthetic canary test file (canary-audit/leaked-staging-secrets.env) into your bucket and trigger an immediate DLP X-Ray scan so you can test live detection & 1-Tap Redaction"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="w-full h-9 inline-flex items-center justify-center gap-1.5 px-3 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold cursor-pointer disabled:opacity-50 truncate"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>+ Inject Canary Leak File (Test Live)</span>
+                <Sparkles
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    busyKey === 'inject-canary' ? 'animate-spin' : ''
+                  }`}
+                />
+                <span className="truncate">
+                  {busyKey === 'inject-canary'
+                    ? 'Injecting Canary...'
+                    : '+ Inject Canary Leak File'}
+                </span>
               </button>
 
               {onOpenObjectInWorkbench && selectedDlpBucket && (
                 <button
                   type="button"
+                  data-feature-id="DLP_XRAY_OPEN_WORKBENCH_BTN"
                   onClick={() => onOpenObjectInWorkbench(selectedDlpBucket, '')}
                   title={`Open gs://${selectedDlpBucket} in the Cloud Storage Multi-Format Object Workbench (M02)`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                  className="w-full h-9 inline-flex items-center justify-center gap-1.5 px-3 rounded bg-zinc-100 dark:bg-[#1a2130] text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-[#323d56] text-xs font-mono font-bold cursor-pointer truncate"
                 >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Open Bucket in Object Workbench (M02) →</span>
+                  <Eye className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Object Workbench (M02) →</span>
                 </button>
               )}
+
+              <button
+                type="button"
+                data-feature-id="DLP_XRAY_OPEN_SM_STUDIO_BTN"
+                onClick={() => setShowDlpSecretManagerExplorer((v) => !v)}
+                title="Open the interactive Google Cloud Secret Manager Explorer & Lifecycle Studio to inspect, reveal (:access), rotate (:addVersion), disable, or delete vaulted secrets"
+                className={`w-full h-9 inline-flex items-center justify-center gap-1.5 px-3 rounded text-xs font-mono font-bold cursor-pointer truncate ${
+                  showDlpSecretManagerExplorer
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {showDlpSecretManagerExplorer
+                    ? 'Hide Secret Manager UI'
+                    : 'Secret Manager UI'}
+                </span>
+              </button>
             </div>
           </div>
+
+          {/* 2-Mode Engine Choice Bar */}
+          <div className="p-3 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>Select Inspection &amp; Redaction Engine Mode:</span>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-500">
+                Zero local OCR binaries required on your machine in either mode
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                data-feature-id="DLP_XRAY_ENGINE_LOCAL_BTN"
+                onClick={() => setDlpScanEngine('LOCAL_RAM_REGEX_LUHN')}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  dlpScanEngine === 'LOCAL_RAM_REGEX_LUHN'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/70 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-extrabold">
+                    Engine 1 (Default): $0.00 In-Memory UTF-8 + Luhn &amp; Entropy
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                      dlpScanEngine === 'LOCAL_RAM_REGEX_LUHN'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    $0.00 API COST · ZERO OCR
+                  </span>
+                </div>
+                <p
+                  className={`text-[11px] mt-1 leading-relaxed ${
+                    dlpScanEngine === 'LOCAL_RAM_REGEX_LUHN'
+                      ? 'text-blue-50'
+                      : 'text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  Streams structured text/code objects (`.env`, `.json`, `.yaml`, `.csv`, `.log`,
+                  `.pem`, `.sql`, `.tfstate`) via `?alt=media` into Node.js RAM and runs 11
+                  credential/PII regex detectors + Luhn Mod-10 PAN checksum + Shannon Entropy
+                  (`H(X)`). Overwrites sanitized UTF-8 generations in-place.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                data-feature-id="DLP_XRAY_ENGINE_CLOUD_OCR_BTN"
+                onClick={() => setDlpScanEngine('CLOUD_DLP_VISION_OCR')}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  dlpScanEngine === 'CLOUD_DLP_VISION_OCR'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/70 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-extrabold">
+                    Engine 2 (Optional): Google Cloud DLP v2 + Vision OCR (`image:redact`)
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                      dlpScanEngine === 'CLOUD_DLP_VISION_OCR'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    TEXT + .PNG/.JPG OCR PIXEL REDACTION
+                  </span>
+                </div>
+                <p
+                  className={`text-[11px] mt-1 leading-relaxed ${
+                    dlpScanEngine === 'CLOUD_DLP_VISION_OCR'
+                      ? 'text-blue-50'
+                      : 'text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  Calls Google Cloud Sensitive Data Protection (`dlp.googleapis.com/v2`)
+                  `content:inspect` &amp; `content:deidentify` for text AND scans `.png`/`.jpg`
+                  images using Google’s cloud-hosted Vision OCR—burning opaque black bounding boxes
+                  over leaked keys/PII inside images via `projects.image.redact`.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Architecture Explainer: How It Works Without Local OCR */}
+          {showDlpArchitectureDocs && (
+            <div className="p-3.5 rounded-xl bg-zinc-900 text-zinc-200 border border-zinc-800 space-y-2 text-[11px] font-mono">
+              <div className="flex items-center justify-between gap-2 text-blue-400 font-bold">
+                <span>
+                  Architecture Deep-Dive: How Secret &amp; PII Detection Works Without Installing OCR Tools
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  server/index.js · GcsObjectWorkbench.jsx
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[10.5px] leading-relaxed text-zinc-300">
+                <div className="p-2.5 rounded-lg bg-zinc-950/90 border border-zinc-800">
+                  <div className="font-bold text-emerald-400 mb-1">
+                    1. Ephemeral ?alt=media RAM Stream
+                  </div>
+                  95%+ of cloud credential leaks in GCS live in structured text artifacts (`.env`,
+                  `service-account.json`, `.tfstate`, `.yaml`, `.csv`, `.log`). Engine 1 streams up
+                  to 128 KB per object via `GET /storage/v1/b/:b/o/:o?alt=media` straight into RAM
+                  with zero `/tmp` disk writes.
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-950/90 border border-zinc-800">
+                  <div className="font-bold text-amber-400 mb-1">
+                    2. 11 Signatures + Luhn + Entropy
+                  </div>
+                  Instead of OCR, Engine 1 evaluates 11 compiled regex AST signatures (`AIza...`,
+                  `AKIA...`, `ghp_...`, `sk-proj-...`, RSA PEM blocks, JWTs, SSNs, IBANs), verifies
+                  16-digit PANs with the Luhn Mod-10 checksum, and measures Shannon Entropy
+                  (`H(X)` bits/char).
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-950/90 border border-zinc-800">
+                  <div className="font-bold text-blue-400 mb-1">
+                    3. Optional Cloud Vision OCR (Engine 2)
+                  </div>
+                  When you need to scan screenshots or photos (`.png`/`.jpg`), switching to Engine 2
+                  sends base64 `byteItem` payloads to `dlp.googleapis.com/v2/.../content:inspect`
+                  and `image:redact`—using Google’s server-side OCR to paint black pixel boxes over
+                  secrets!
+                </div>
+              </div>
+            </div>
+          )}
+
+          {dlpInlineError && (
+            <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/40 text-xs font-mono text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{dlpInlineError}</span>
+              </div>
+              <button
+                type="button"
+                data-feature-id="DLP_XRAY_DISMISS_ERROR_BTN"
+                onClick={() => setDlpInlineError(null)}
+                className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-[10px] font-bold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {canaryInjectReceipt && (
+            <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs font-mono text-amber-900 dark:text-amber-200 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-amber-600 text-white text-[10px] font-extrabold">
+                    CANARY ARTIFACT STAGED IN GCS
+                  </span>
+                  <span className="font-bold">
+                    gs://{canaryInjectReceipt.bucket}/{canaryInjectReceipt.objectName}
+                  </span>
+                  <span className="text-[11px] opacity-80">
+                    ({canaryInjectReceipt.sizeBytes} bytes · Gen #{String(canaryInjectReceipt.generation).slice(-6)} · {canaryInjectReceipt.injectedPatternsCount} synthetic secret/PII tokens{canaryInjectReceipt.crc32c ? ` · CRC32C ${canaryInjectReceipt.crc32c}` : ''})
+                  </span>
+                </div>
+                <span className="text-[10.5px] font-bold text-amber-700 dark:text-amber-300">
+                  Ready below: Click &quot;1-Tap Redact &amp; Mask in GCS&quot; to test live in-place sanitization
+                </span>
+              </div>
+              {canaryInjectReceipt.autoRoutedReason && (
+                <div className="text-[11px] text-amber-800 dark:text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                  <strong>Multi-Project Active-Billing Auto-Router:</strong>{' '}
+                  {canaryInjectReceipt.autoRoutedReason}
+                </div>
+              )}
+            </div>
+          )}
+
+          {dlpScanResult?.cloudDlpApiNote && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-700 dark:text-amber-300">
+              {dlpScanResult.cloudDlpApiNote}
+            </div>
+          )}
 
           {dlpScanResult && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
               <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] uppercase text-zinc-400">
-                  Scanned Objects
+                  Scanned Objects ({dlpScanResult.scanEngine === 'CLOUD_DLP_VISION_OCR' ? 'Cloud DLP + OCR' : 'RAM Engine'})
                 </div>
                 <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
                   {dlpScanResult.scannedObjectsCount} /{' '}
@@ -1375,10 +1734,15 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                   className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-red-500/40 space-y-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-500 border border-red-500/30">
                         {obj.highestSeverity} LEAK
                       </span>
+                      {obj.isImageObject && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                          VISION OCR IMAGE
+                        </span>
+                      )}
                       <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
                         gs://{dlpScanResult.bucket}/{obj.objectName}
                       </span>
@@ -1388,6 +1752,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                       {onOpenObjectInWorkbench && (
                         <button
                           type="button"
+                          data-feature-id="DLP_XRAY_OPEN_WORKBENCH_BTN"
                           onClick={() =>
                             onOpenObjectInWorkbench(
                               dlpScanResult.bucket,
@@ -1401,22 +1766,136 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                           <span>Open &amp; Edit in Object Workbench (M02) →</span>
                         </button>
                       )}
-                      <button
-                        type="button"
-                        disabled={busyKey === `redact-${obj.objectName}`}
-                        onClick={() => handleRedactObjectInPlace(obj.objectName)}
-                        title={`Sanitize and overwrite gs://${dlpScanResult.bucket}/${obj.objectName} in-place by replacing all matched credentials & PII tokens with [REDACTED_BY_CLOUDPULSE_DLP]`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>
-                          {busyKey === `redact-${obj.objectName}`
-                            ? 'Redacting in GCS...'
-                            : '1-Tap Redact & Mask in GCS'}
-                        </span>
-                      </button>
+                      {(obj.isImageObject ||
+                        (obj.findings.some((f) => f.category === 'CREDENTIAL_LEAK') &&
+                          !(
+                            dlpRedactionReceipt?.objectName === obj.objectName &&
+                            dlpRedactionReceipt?.vaultedSecretsCount > 0
+                          ))) ? (
+                        <button
+                          type="button"
+                          data-feature-id="DLP_XRAY_VAULT_SECRET_MANAGER_BTN"
+                          disabled={busyKey === `redact-${obj.objectName}`}
+                          onClick={() =>
+                            handleRedactObjectInPlace(
+                              obj.objectName,
+                              false,
+                              'VAULT_TO_SECRET_MANAGER'
+                            )
+                          }
+                          title={
+                            obj.isImageObject
+                              ? `Burn solid black pixel bounding boxes over OCR-detected secrets/PII inside image gs://${dlpScanResult.bucket}/${obj.objectName} via dlp.googleapis.com/v2/projects/${projectId}/image:redact`
+                              : `RECOMMENDED ZERO-LOSS REMEDIATION: Automatically vaults every leaked credential into Google Cloud Secret Manager (secretmanager.googleapis.com/v1), rewrites the file value to sm://projects/<projectId>/secrets/<secretId>/versions/<ver>, and masks regulated PII in-place so zero keys are ever lost!`
+                          }
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>
+                            {busyKey === `redact-${obj.objectName}`
+                              ? 'Vaulting to Secret Manager & Sanitizing...'
+                              : obj.isImageObject
+                              ? '1-Tap Burn Black Pixel Boxes in GCS (image:redact)'
+                              : '1-Tap Vault Keys to Secret Manager (sm://) + Mask PII'}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          data-feature-id="DLP_XRAY_OPEN_SM_STUDIO_BTN"
+                          onClick={() =>
+                            setShowDlpSecretManagerExplorer((prev) => !prev)
+                          }
+                          title="Secrets from this object have already been vaulted into Google Cloud Secret Manager! Open the interactive Secret Manager UI to reveal, rotate, disable, or delete them."
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold cursor-pointer ${
+                            showDlpSecretManagerExplorer
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
+                          }`}
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>
+                            {showDlpSecretManagerExplorer
+                              ? 'Hide Secret Manager Explorer'
+                              : 'Explore, Rotate & Delete in Secret Manager UI'}
+                          </span>
+                        </button>
+                      )}
+                      {!obj.isImageObject && (
+                        <>
+                          <button
+                            type="button"
+                            data-feature-id="DLP_XRAY_REDACT_IN_PLACE_BTN"
+                            disabled={busyKey === `redact-${obj.objectName}`}
+                            onClick={() =>
+                              handleRedactObjectInPlace(
+                                obj.objectName,
+                                false,
+                                'MASK_ONLY'
+                              )
+                            }
+                            title={`DESTRUCTIVE MASK-ONLY MODE: Overwrites all matched credentials & PII with [REDACTED_<TYPE>_BY_CLOUDPULSE_DLP] WITHOUT vaulting credentials into Google Cloud Secret Manager (triggers confirmation warning)`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>Mask Only ([REDACTED])</span>
+                          </button>
+                          {obj.findings.some(
+                            (f) => f.category === 'CREDENTIAL_LEAK'
+                          ) &&
+                            !(
+                              dlpRedactionReceipt?.objectName ===
+                                obj.objectName &&
+                              dlpRedactionReceipt?.vaultedSecretsCount > 0
+                            ) && (
+                              <button
+                                type="button"
+                                data-feature-id="DLP_XRAY_REDACT_AND_PURGE_GEN_BTN"
+                                disabled={busyKey === `redact-${obj.objectName}`}
+                                onClick={() =>
+                                  handleRedactObjectInPlace(
+                                    obj.objectName,
+                                    true,
+                                    'VAULT_TO_SECRET_MANAGER'
+                                  )
+                                }
+                                title={`Vault credentials into Google Cloud Secret Manager (sm://), write the sanitized file into a new GCS generation, AND delete the previous noncurrent generation (?generation=...) so plaintext keys are removed from bucket history while safely preserved in Secret Manager`}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Vault to SM + Purge Old GCS Gen</span>
+                              </button>
+                            )}
+                        </>
+                      )}
                     </div>
                   </div>
+
+                  {/* Credential Preservation Policy Banner */}
+                  {!obj.isImageObject && (
+                    <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/25 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="font-extrabold text-emerald-700 dark:text-emerald-400">
+                          Zero-Loss Secret Manager Migration Policy:
+                        </span>{' '}
+                        Application credentials (<code>AIza...</code>,{' '}
+                        <code>AKIA...</code>, <code>ghp_...</code>,{' '}
+                        <code>sk-proj-...</code>, <code>DB_PASSWORD</code>) are
+                        never blindly destroyed — clicking{' '}
+                        <strong>
+                          1-Tap Vault Keys to Secret Manager (sm://) + Mask PII
+                        </strong>{' '}
+                        migrates each key into{' '}
+                        <code>secretmanager.googleapis.com/v1</code> and replaces
+                        the plaintext value with its live{' '}
+                        <code>
+                          sm://projects/&lt;project&gt;/secrets/&lt;id&gt;/versions/&lt;ver&gt;
+                        </code>{' '}
+                        URI reference, while masking regulated customer PII (PAN,
+                        SSN, IBAN, Email) in-place.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {obj.findings.map((f) => (
@@ -1424,7 +1903,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                         key={f.detectorId}
                         className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="font-bold text-red-600 dark:text-red-400">
                             {f.label}
                           </span>
@@ -1433,8 +1912,16 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                             risk
                           </span>
                         </div>
-                        <div className="text-[10px] text-zinc-500 mt-1">
-                          Masked Sample: <code>{f.maskedSamples.join(', ')}</code>
+                        <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap items-center justify-between gap-1">
+                          <span>
+                            Masked Sample: <code>{f.maskedSamples.join(', ')}</code>
+                          </span>
+                          {typeof f.shannonEntropyBits === 'number' && (
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] font-bold">
+                              H(X)={f.shannonEntropyBits} bits/char
+                              {f.luhnVerified === true ? ' · Luhn OK' : ''}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1456,6 +1943,278 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 </span>
               </div>
             )
+          )}
+
+          {/* Glass-Box DevSecOps Redaction Execution Receipt & Secret Manager Vault Ledger */}
+          {dlpRedactionReceipt && (
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-500/40 space-y-3 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">
+                    {dlpRedactionReceipt.vaultedSecretsCount > 0
+                      ? `SECRET MANAGER VAULT + DLP RECEIPT (${dlpRedactionReceipt.vaultedSecretsCount} VAULTED TO sm://)`
+                      : 'GLASS-BOX REDACTION RECEIPT'}
+                  </span>
+                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    gs://{dlpRedactionReceipt.bucket}/{dlpRedactionReceipt.objectName}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">
+                    ({dlpRedactionReceipt.redactedCount} token(s) processed · Gen #
+                    {String(dlpRedactionReceipt.previousGeneration || 'prev').slice(-6)}{' '}
+                    → Gen #
+                    {String(dlpRedactionReceipt.newGeneration || 'new').slice(-6)} ·
+                    CRC32C {dlpRedactionReceipt.newCrc32c || 'verified'}
+                    {dlpRedactionReceipt.previousGenerationPurged
+                      ? ' · Old Gen Purged'
+                      : ''}
+                    )
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-feature-id="DLP_XRAY_OPEN_SM_STUDIO_BTN"
+                    onClick={() =>
+                      setShowDlpSecretManagerExplorer((prev) => !prev)
+                    }
+                    title="Open the interactive Google Cloud Secret Manager Explorer UI to reveal decrypted secret payloads (:access), rotate keys (:addVersion), disable old versions ($0.00/mo), or delete secrets"
+                    className={`px-2.5 py-1 rounded text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1 ${
+                      showDlpSecretManagerExplorer
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
+                    }`}
+                  >
+                    <Key className="w-3 h-3" />
+                    <span>
+                      {showDlpSecretManagerExplorer
+                        ? 'Hide Secret Manager Explorer'
+                        : 'Explore, Rotate & Delete in Secret Manager UI'}
+                    </span>
+                  </button>
+                  {dlpRedactionReceipt.vaultedSecretsCount > 0 && (
+                    <button
+                      type="button"
+                      data-feature-id="DLP_XRAY_REHYDRATE_SM_BTN"
+                      disabled={
+                        busyKey ===
+                        `rehydrate-${dlpRedactionReceipt.objectName}`
+                      }
+                      onClick={() =>
+                        handleRehydrateFromSecretManager(
+                          dlpRedactionReceipt.bucket,
+                          dlpRedactionReceipt.objectName
+                        )
+                      }
+                      title="Reads each sm://projects/.../secrets/.../versions/... reference from Google Cloud Secret Manager (:access) and restores the original plaintext credentials back into the Cloud Storage file"
+                      className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>
+                        {busyKey ===
+                        `rehydrate-${dlpRedactionReceipt.objectName}`
+                          ? 'Rehydrating from Secret Manager...'
+                          : '1-Click Rehydrate Keys from Secret Manager (sm:// → Plaintext)'}
+                      </span>
+                    </button>
+                  )}
+                  {onOpenObjectInWorkbench && (
+                    <button
+                      type="button"
+                      data-feature-id="DLP_XRAY_OPEN_WORKBENCH_BTN"
+                      onClick={() =>
+                        onOpenObjectInWorkbench(
+                          dlpRedactionReceipt.bucket,
+                          dlpRedactionReceipt.objectName
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>Inspect Sanitized File in Object Workbench (M02) →</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {showDlpSecretManagerExplorer && (
+                <SecretManagerVaultExplorer
+                  projectId={projectId}
+                  targetSecretProject={
+                    dlpRedactionReceipt?.secretManagerTargetProject || ''
+                  }
+                  vaultedSecretsHint={dlpRedactionReceipt?.vaultedSecrets || []}
+                  rehydrateContext={
+                    dlpRedactionReceipt?.bucket &&
+                    dlpRedactionReceipt?.objectName
+                      ? {
+                          bucket: dlpRedactionReceipt.bucket,
+                          objectName: dlpRedactionReceipt.objectName,
+                        }
+                      : null
+                  }
+                  onRehydrated={() => {
+                    fetchDlpScan();
+                  }}
+                  onShowToast={onShowToast}
+                  onClose={() => setShowDlpSecretManagerExplorer(false)}
+                />
+              )}
+
+              {/* Vaulted Secret Manager Inventory Table */}
+              {Array.isArray(dlpRedactionReceipt.vaultedSecrets) &&
+                dlpRedactionReceipt.vaultedSecrets.length > 0 && (
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/30 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5" />
+                        <span>
+                          Where Your Secrets Went — Vaulted in Google Cloud
+                          Secret Manager (
+                          <code>
+                            projects/
+                            {dlpRedactionReceipt.secretManagerTargetProject}
+                            /secrets/*
+                          </code>
+                          )
+                        </span>
+                      </div>
+                      {dlpRedactionReceipt.cloudRunSetSecretsCli && (
+                        <button
+                          type="button"
+                          data-feature-id="DLP_XRAY_COPY_CLOUDRUN_SECRETS_CLI_BTN"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(
+                              dlpRedactionReceipt.cloudRunSetSecretsCli
+                            );
+                            if (onShowToast) {
+                              onShowToast(
+                                'Copied Cloud Run --set-secrets CLI command to clipboard!'
+                              );
+                            }
+                          }}
+                          className="px-2 py-0.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Copy className="w-2.5 h-2.5" />
+                          <span>Copy Cloud Run --set-secrets CLI</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto rounded border border-emerald-500/20">
+                      <table className="w-full text-left text-[10px]">
+                        <thead className="bg-emerald-950/20 text-zinc-500 uppercase">
+                          <tr>
+                            <th className="px-2 py-1">Line / Key</th>
+                            <th className="px-2 py-1">
+                              Secret Manager Reference Rewritten into File
+                            </th>
+                            <th className="px-2 py-1">
+                              Retrieve Plaintext Value Anytime (CLI)
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-emerald-500/15">
+                          {dlpRedactionReceipt.vaultedSecrets.map((vs, idx) => (
+                            <tr key={`${vs.secretId}-${idx}`}>
+                              <td className="px-2 py-1 font-bold text-zinc-900 dark:text-zinc-100">
+                                L{vs.lineNumber} · <code>{vs.envKey}</code>
+                              </td>
+                              <td className="px-2 py-1 text-emerald-700 dark:text-emerald-400 font-bold">
+                                <code>{vs.smUri}</code>
+                              </td>
+                              <td className="px-2 py-1 text-zinc-500">
+                                <code>{vs.gcloudAccessCmd}</code>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+              {Array.isArray(dlpRedactionReceipt.redactionAuditLines) &&
+                dlpRedactionReceipt.redactionAuditLines.length > 0 && (
+                  <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+                    <table className="w-full text-left text-[10.5px]">
+                      <thead className="bg-zinc-100 dark:bg-zinc-950 text-zinc-500 uppercase">
+                        <tr>
+                          <th className="px-2.5 py-1.5">Line #</th>
+                          <th className="px-2.5 py-1.5">Detector &amp; Action</th>
+                          <th className="px-2.5 py-1.5">Entropy H(X) / Checksum</th>
+                          <th className="px-2.5 py-1.5">
+                            Masked Original → Secret Manager URI / Sanitized Token
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        {dlpRedactionReceipt.redactionAuditLines.map((row, idx) => (
+                          <tr
+                            key={`${row.detectorId}-${row.lineNumber}-${idx}`}
+                            className="bg-white dark:bg-zinc-900/60"
+                          >
+                            <td className="px-2.5 py-1.5 font-extrabold text-blue-600 dark:text-blue-400">
+                              L{row.lineNumber}
+                            </td>
+                            <td className="px-2.5 py-1.5 font-bold text-zinc-900 dark:text-zinc-100">
+                              {row.detectorId} ({row.severity}) ·{' '}
+                              <span
+                                className={
+                                  row.actionTaken === 'VAULTED_TO_SECRET_MANAGER'
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-amber-600 dark:text-amber-400'
+                                }
+                              >
+                                {row.actionTaken || 'MASKED_IN_PLACE'}
+                              </span>
+                            </td>
+                            <td className="px-2.5 py-1.5 text-zinc-500">
+                              H(X)={row.shannonEntropyBits} bits/char
+                              {row.luhnVerified !== null
+                                ? ` · Luhn:${row.luhnVerified ? 'VALID' : 'NO'}`
+                                : ''}
+                            </td>
+                            <td className="px-2.5 py-1.5">
+                              <span className="line-through text-red-500 mr-1.5">
+                                {row.maskedBefore}
+                              </span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                → {row.replacedWith}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+              {Array.isArray(dlpRedactionReceipt.restApiTrace) &&
+                dlpRedactionReceipt.restApiTrace.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-400 border border-zinc-800 space-y-1 text-[10px]">
+                    <div className="font-bold text-zinc-300">
+                      Verified Google Cloud Storage &amp; Secret Manager REST API
+                      Execution Trace:
+                    </div>
+                    {dlpRedactionReceipt.restApiTrace.map((step, idx) => (
+                      <div key={idx}>{step}</div>
+                    ))}
+                  </div>
+                )}
+            </div>
+          )}
+
+          {showDlpSecretManagerExplorer && !dlpRedactionReceipt && (
+            <SecretManagerVaultExplorer
+              projectId={projectId}
+              targetSecretProject=""
+              vaultedSecretsHint={[]}
+              rehydrateContext={null}
+              onRehydrated={() => {
+                fetchDlpScan();
+              }}
+              onShowToast={onShowToast}
+              onClose={() => setShowDlpSecretManagerExplorer(false)}
+            />
           )}
         </div>
       </div>

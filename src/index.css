@@ -201,6 +201,519 @@ button.bg-cyan-600.text-white:hover {
   border-radius: 0.375rem !important;
 }
 
+/* ============================================================================
+ * CloudPulse 2026 — Bespoke Enterprise Infrastructure Design Language
+ * Inspired by Google Cloud Pantheon, Cloudflare Zero-Trust & Datadog:
+ *   1. Architectural Left Navigation Rail (<aside>) with 2px left indicator bar
+ *   2. Flush Horizontal Underline Tab Strips (border-b, zero pill-boxes, zero
+ *      card-button grids, 2px bottom indicator bar across all 25 Studios)
+ *   3. Crisp 6px Architectural Panels (#0f131a / #141923) with 1px hairline borders
+ *   4. Compact 5px Tactile Action Buttons (the ONLY boxed clickable controls)
+ *   5. Recessed 5px Form Inputs & Tabular Monospace Telemetry
+ * ============================================================================ */
+
+:root {
+  --cp-bg-canvas: #f4f6f9;
+  --cp-bg-shell: #ffffff;
+  --cp-bg-sunken: #eef2f6;
+  --cp-bg-surface: #ffffff;
+  --cp-bg-subcard: #f8fafc;
+  --cp-bg-control: #ffffff;
+  --cp-bg-control-hover: #f1f5f9;
+  --cp-border-subtle: #e2e8f0;
+  --cp-border-subcard: #cbd5e1;
+  --cp-border-control: #cbd5e1;
+  --cp-border-control-hover: #94a3b8;
+  --cp-accent-blue: #1a73e8;
+  --cp-accent-blue-border: #2563eb;
+  --cp-tab-active-line: #d97706;
+  --cp-tab-active-border: #f59e0b;
+  --cp-tab-active-bg: rgba(245, 158, 11, 0.15);
+  --cp-tab-active-text: #09090b;
+  --cp-tab-inactive-text: #64748b;
+}
+
+.dark {
+  --cp-bg-canvas: #090b10;
+  --cp-bg-shell: #0c0f16;
+  --cp-bg-sunken: #07090d;
+  --cp-bg-surface: #10141d;
+  --cp-bg-subcard: #151a25;
+  --cp-bg-control: #1a2130;
+  --cp-bg-control-hover: #232c40;
+  --cp-border-subtle: #1e2433;
+  --cp-border-subcard: #262e42;
+  --cp-border-control: #323d56;
+  --cp-border-control-hover: #4a5a7d;
+  --cp-accent-blue: #1a73e8;
+  --cp-accent-blue-border: #3b82f6;
+  --cp-tab-active-line: #fbbf24;
+  --cp-tab-active-border: #f59e0b;
+  --cp-tab-active-bg: rgba(245, 158, 11, 0.16);
+  --cp-tab-active-text: #ffffff;
+  --cp-tab-inactive-text: #8b95a5;
+}
+
+body {
+  background-color: var(--cp-bg-canvas);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background-color: var(--cp-bg-canvas);
+}
+
+/* Enforce tabular numbers on all monospace & metric telemetry */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------------------
+ * 1. ARCHITECTURAL PANEL GEOMETRY & SURFACE HIERARCHY (Tier 1 — Static Panels)
+ *    Replaces bubbly vibe-coded rounded-2xl/3xl cards and neon borders with
+ *    crisp 6px (0.375rem) architectural panels and 1px structural hairlines.
+ * ---------------------------------------------------------------------------- */
+div.rounded-xl,
+div.rounded-2xl,
+div.rounded-3xl,
+section.rounded-xl,
+section.rounded-2xl,
+section.rounded-3xl,
+form.rounded-xl,
+form.rounded-2xl {
+  border-radius: 0.375rem !important; /* 6px architectural panel corner */
+}
+
+/* Tighten puffy rounded-full text badges into 4px precision technical tags
+   (leaves tiny w-1.5 / w-2 / w-2.5 status indicator dots circular) */
+span.rounded-full:not(.w-1\.5):not(.w-2):not(.w-2\.5):not(.w-3):not(.h-1\.5):not(.h-2):not(.h-2\.5):not(.h-3) {
+  border-radius: 0.25rem !important; /* 4px technical tag */
+}
+
+.dark div.bg-\[\#131314\],
+.dark div.bg-\[\#121316\],
+.dark div.bg-\[\#14171f\],
+.dark div.bg-\[\#12151c\],
+.dark div.bg-\[\#16171a\],
+.dark div.bg-\[\#18191b\],
+.dark div.bg-\[\#202124\],
+.dark section.bg-\[\#131314\],
+.dark section.bg-\[\#18191b\],
+.dark section.bg-\[\#202124\],
+.dark form.bg-\[\#131314\],
+.dark form.bg-\[\#202124\] {
+  background-color: var(--cp-bg-surface) !important;
+  border-color: var(--cp-border-subtle) !important;
+  box-shadow: none !important;
+}
+
+.dark div.bg-zinc-900,
+.dark div.bg-zinc-900\/40,
+.dark div.bg-zinc-900\/50,
+.dark div.bg-zinc-900\/60,
+.dark div.bg-zinc-900\/70,
+.dark div.bg-zinc-900\/80,
+.dark div.bg-zinc-900\/90,
+.dark div.bg-zinc-950\/60,
+.dark div.bg-zinc-950\/75,
+.dark div.bg-zinc-950\/80,
+.dark div.bg-zinc-950,
+.dark div.bg-slate-900,
+.dark div.bg-slate-900\/80,
+.dark div.bg-slate-950 {
+  background-color: var(--cp-bg-subcard) !important;
+  border-color: var(--cp-border-subcard) !important;
+  box-shadow: none !important;
+}
+
+/* Eliminate decorative purple/fuchsia/violet/indigo neon border clutter */
+.dark div[class*="border-purple-"],
+.dark div[class*="border-fuchsia-"],
+.dark div[class*="border-violet-"],
+.dark div[class*="border-indigo-"] {
+  border-color: var(--cp-border-subcard) !important;
+}
+
+/* ----------------------------------------------------------------------------
+ * 1B. PASSIVE KPI & TELEMETRY RIBBON NORMALIZATION (Zero Fake-Button Cards)
+ *     - Purely informational 4–6 column KPI `<div>` grids (with zero buttons,
+ *       inputs, or forms inside) are collapsed into a single compact recessed
+ *       status ribbon (`36px–42px` tall) with vertical hairline dividers and
+ *       `13px` values — strictly smaller and calmer than Menu Buttons!
+ *     - Clickable KPI filter tiles (`cursor-pointer`) are compacted to `14px`
+ *       values so they never overpower the Studio Navigation Menu or CTAs.
+ * ---------------------------------------------------------------------------- */
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(button)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)):not(:has(> div.cursor-pointer)):not(:has(> div[role="button"])) {
+  background-color: var(--cp-bg-sunken) !important;
+  border: 1px solid var(--cp-border-subtle) !important;
+  border-radius: 0.3125rem !important;
+  padding: 0.35rem 0.65rem !important;
+  gap: 0.5rem !important;
+  align-items: center !important;
+}
+
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(button)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)):not(:has(> div.cursor-pointer)):not(:has(> div[role="button"])) > div {
+  background: transparent !important;
+  border: none !important;
+  border-right: 1px solid var(--cp-border-subtle) !important;
+  border-radius: 0 !important;
+  padding: 0.15rem 0.65rem 0.15rem 0.15rem !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  cursor: default !important;
+}
+
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(button)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)):not(:has(> div.cursor-pointer)):not(:has(> div[role="button"])) > div:last-child {
+  border-right: none !important;
+}
+
+/* Shrink oversized text-2xl / text-xl numbers inside all multi-column KPI strips
+   so passive telemetry NEVER looks bigger than Menu Buttons or Action CTAs */
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)) > div :is(.text-2xl, .text-3xl, .text-xl, .text-lg) {
+  font-size: 0.8125rem !important; /* 13px compact telemetry metric */
+  line-height: 1.25rem !important;
+  font-weight: 700 !important;
+  margin-top: 0.1rem !important;
+}
+
+/* Hide decorative progress bars & 3rd+ line sub-captions inside passive KPI ribbons */
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(button)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)):not(:has(> div.cursor-pointer)):not(:has(> div[role="button"])) > div > div:nth-child(n+3) {
+  display: none !important;
+}
+
+/* Compact clickable KPI filter tiles so they remain subordinate to Menu Tabs */
+div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(table)):not(:has(form)):not(:has(pre)) > div:is(.cursor-pointer, [role="button"]) {
+  padding: 0.45rem 0.65rem !important;
+}
+
+/* ----------------------------------------------------------------------------
+ * 2. UNIFIED WARM-AMBER MENU & TAB SELECTION LANGUAGE (Tier 2 — Equal-Width Tabs)
+ *    - Adopted across every UI from "Step 1 — Pick Your Trigger":
+ *      * Active Menu / Selected Tab = Warm Amber/Orange (`#f59e0b` border +
+ *        `rgba(245, 158, 11, 0.16)` surface tint + `#fbbf24` icon/accent +
+ *        crisp `#ffffff` dark-mode / `#09090b` light-mode text).
+ *      * Action Execution CTAs (`button.bg-blue-600` outside menus) = Solid Blue.
+ *      * Inactive Menu Items = Subtle slate with `hover:border-amber-500/45`.
+ *    - Grid tab bars (`div.grid`, `.cp-segmented-menu.grid`) keep `display: grid`
+ *      so every tab button is 100% EQUAL IN WIDTH across all columns.
+ * ---------------------------------------------------------------------------- */
+.cp-segmented-menu:not(.grid),
+[role="tablist"]:not(.grid),
+div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: stretch !important;
+  gap: 0.375rem !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.cp-segmented-menu.grid,
+[role="tablist"].grid,
+div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])) {
+  display: grid !important;
+  gap: 0.375rem !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  align-items: stretch !important;
+}
+
+/* Equal-width flex items inside horizontal non-grid tab strips */
+:is(
+  .cp-segmented-menu:not(.grid),
+  [role="tablist"]:not(.grid),
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button {
+  flex: 1 1 0% !important;
+  min-width: max-content !important;
+  justify-content: center !important;
+}
+
+/* 100% Equal-width grid items inside multi-column Studio tab grids */
+:is(
+  .cp-segmented-menu.grid,
+  [role="tablist"].grid,
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  justify-content: space-between !important;
+}
+
+/* Base Tab Item Styling (Uniform 38px height, crisp 5px radius, 2px bottom indicator) */
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button {
+  height: 2.375rem !important;
+  min-height: 2.375rem !important;
+  padding: 0 0.75rem !important;
+  border-radius: 0.3125rem !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25rem !important;
+  transition: all 0.12s ease !important;
+}
+
+/* Strip decorative icon-box wrappers & hide multi-line card subtitles inside tabs */
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
+) > button span.p-1 {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
+) > button div.min-w-0 > div:nth-child(n+2),
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
+) > button > p {
+  display: none !important;
+}
+
+/* Inactive Tab Styling (Light & Dark Mode — High Contrast, Never Dark-on-Dark) */
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) {
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) {
+  background-color: #0e131d !important;
+  border: 1px solid #1e2738 !important;
+  border-bottom: 2px solid #1e2738 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) :is(span, div, strong) {
+  color: #cbd5e1 !important;
+}
+
+/* Inactive Tab Hover — Warm Amber/Orange Preview Border (`hover:border-amber-500/45`) */
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]):hover {
+  color: #09090b !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  border-bottom-color: #f59e0b !important;
+  background-color: rgba(245, 158, 11, 0.06) !important;
+}
+
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]):hover {
+  color: #ffffff !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  border-bottom-color: #f59e0b !important;
+  background-color: rgba(245, 158, 11, 0.07) !important;
+}
+
+/* Active Tab / Menu Selection Styling — High-Contrast Warm Amber/Orange ("Step 1 — Pick Your Trigger" Language) */
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  background-image: none !important;
+  border: 1px solid #f59e0b !important;
+  border-bottom: 2px solid #d97706 !important;
+  color: #09090b !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.12) !important;
+}
+
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  background-image: none !important;
+  border: 1px solid #f59e0b !important;
+  border-bottom: 2px solid #fbbf24 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(251, 191, 36, 0.18) !important;
+}
+
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) :is(span, div, strong) {
+  color: inherit !important;
+}
+
+:is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) svg {
+  color: #d97706 !important;
+}
+
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) svg {
+  color: #fbbf24 !important;
+}
+
+/* Inner step/count badges inside active tabs also use warm amber/orange */
+.dark :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.grid:has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) span[class*="bg-"] {
+  background-color: rgba(245, 158, 11, 0.25) !important;
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* ----------------------------------------------------------------------------
+ * 3. TACTILE ACTION BUTTONS (Tier 3 — Standalone Operational Controls)
+ *    Guarantees high-contrast light text (#f1f5f9) on all dark-mode control
+ *    buttons and preserves semantic amber/emerald/red button colors.
+ * ---------------------------------------------------------------------------- */
+button:not([role="tab"]):not(.cp-nav-rail-item) {
+  border-radius: 0.3125rem; /* 5px precision control radius */
+}
+
+/* Light mode secondary action buttons */
+button:not(.bg-blue-600):not([role="tab"]):not(.cp-nav-rail-item):not(.border-b-2):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-amber-"]) {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* Dark mode secondary action buttons — ALWAYS crisp light text (#f1f5f9) on #1a2130 */
+.dark button:not(.bg-blue-600):not([role="tab"]):not(.cp-nav-rail-item):not(.border-b-2):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]):not([class*="bg-green-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"]):not([class*="bg-indigo-600"]):not([class*="bg-purple-600"]) {
+  background-color: var(--cp-bg-control);
+  border-color: var(--cp-border-control);
+  color: #f1f5f9 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Fix buttons that had inverted `dark:bg-zinc-100 dark:text-zinc-900` so they never render dark text on night-blue */
+.dark button:is([class*="dark:text-zinc-900"], [class*="dark:text-zinc-950"], [class*="dark:text-slate-900"], [class*="text-zinc-900"]:not([class*="bg-amber-"]):not([class*="bg-emerald-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"])) {
+  background-color: var(--cp-bg-control) !important;
+  border: 1px solid var(--cp-border-control) !important;
+  color: #f8fafc !important;
+}
+
+.dark button:not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-emerald-400"]):not([class*="bg-cyan-400"]) :is(.text-zinc-900, .text-zinc-800, .text-zinc-700, .dark\:text-zinc-900, .dark\:text-zinc-950) {
+  color: #f1f5f9 !important;
+}
+
+.dark button:not(.bg-blue-600):not([role="tab"]):not(.cp-nav-rail-item):not(.border-b-2):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]):not([class*="bg-green-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"]):hover:not(:disabled) {
+  background-color: var(--cp-bg-control-hover) !important;
+  border-color: var(--cp-border-control-hover) !important;
+  color: #ffffff !important;
+}
+
+/* Primary / Active Action Buttons (Outside of tab bars & nav rail) */
+button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item),
+.dark button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item),
+button.bg-indigo-600:not([role="tab"]):not(.cp-nav-rail-item),
+.dark button.bg-indigo-600:not([role="tab"]):not(.cp-nav-rail-item),
+button.bg-purple-600:not([role="tab"]):not(.cp-nav-rail-item),
+.dark button.bg-purple-600:not([role="tab"]):not(.cp-nav-rail-item) {
+  background-color: var(--cp-accent-blue);
+  background-image: none;
+  border-color: var(--cp-accent-blue-border);
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled),
+.dark button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled) {
+  background-color: #1557b0;
+}
+
+/* ----------------------------------------------------------------------------
+ * 4. RECESSED FORM INPUTS, SELECTS & TEXTAREAS (Tier 4 — Data Entry Wells)
+ * ---------------------------------------------------------------------------- */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark select,
+.dark textarea {
+  background-color: #07090d !important;
+  border-color: #263044 !important;
+  border-radius: 0.3125rem;
+  color: #f1f5f9;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: var(--cp-accent-blue-border) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.25) !important;
+}
+
+
 
 
 

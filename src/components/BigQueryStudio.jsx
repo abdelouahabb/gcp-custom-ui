@@ -869,6 +869,21 @@ LIMIT 25;`;
 
             <button
               type="button"
+              data-feature-id="BQ_OPEN_MANAGED_SPARK_BTN"
+              onClick={() =>
+                onNavigateTab?.('MANAGED_SPARK_STUDIO', 'SPARK_CONNECT_NOTEBOOKS', {
+                  datasetId: selectedDatasetId || '',
+                })
+              }
+              title="Open Managed Service for Apache Spark 3.5 Studio pre-wired to your active BigQuery dataset"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-orange-600 dark:text-orange-400 border border-orange-500/30 rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Managed Spark 3.5 →</span>
+            </button>
+
+            <button
+              type="button"
               data-feature-id="BQ_CREATE_DATASET_BTN"
               onClick={() => onOpenProvision?.('BIGQUERY_DATASET')}
               title="Open the 5-Step BigQuery Enterprise Compliance & Lakehouse Dataset Provisioning Modal"
@@ -1507,6 +1522,23 @@ LIMIT 25;`;
                               {isSeeding
                                 ? 'Streaming 10 Rows...'
                                 : '+ Seed 10 Live Rows'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onNavigateTab?.(
+                                  'MANAGED_SPARK_STUDIO',
+                                  'SPARK_CONNECT_NOTEBOOKS',
+                                  {
+                                    datasetId: selectedDatasetId,
+                                    tableId: t.tableId,
+                                  }
+                                )
+                              }
+                              className="px-2 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-300 border border-orange-500/30 text-[10px] font-bold cursor-pointer"
+                              title={`Introspect ${projectId}.${selectedDatasetId}.${t.tableId} in Managed Spark 3.5 & generate a schema-verified PySpark script`}
+                            >
+                              PySpark 3.5 →
                             </button>
                             <button
                               type="button"

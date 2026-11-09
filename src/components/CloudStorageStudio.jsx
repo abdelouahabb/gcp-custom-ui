@@ -155,6 +155,47 @@ export default function CloudStorageStudio({
   const [s3ImportedResults, setS3ImportedResults] = useState([]);
   const [s3TransferSpec, setS3TransferSpec] = useState(null);
 
+  // Cloud Storage FUSE (gcsfuse) POSIX Mount & ML Checkpointing Architect State
+  const [gcsfuseProfile, setGcsfuseProfile] = useState('aiml-training');
+  const [gcsfuseCacheSizeMb, setGcsfuseCacheSizeMb] = useState(16384);
+  const [gcsfuseLoading, setGcsfuseLoading] = useState(false);
+  const [gcsfuseArchitectResult, setGcsfuseArchitectResult] = useState(null);
+
+  const handleInspectGcsfuseArchitect = async (
+    overrideBucketName,
+    overrideProfile
+  ) => {
+    const bName =
+      overrideBucketName || selectedBucket?.name || buckets[0]?.name;
+    if (!projectId || !bName) return;
+    const prof = overrideProfile || gcsfuseProfile;
+    setGcsfuseLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(bName)}/gcsfuse-architect`,
+        {
+          workloadProfile: prof,
+          mountPoint: `/mnt/${bName}`,
+          fileCacheMaxSizeMb: gcsfuseCacheSizeMb,
+        }
+      );
+      setGcsfuseArchitectResult(res.data);
+      onShowToast?.(
+        `Synthesized tuned gcsfuse (${prof}) & GKE CSI / Cloud Run Gen2 mounts for gs://${bName}`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to inspect gs://${bName} for gcsfuse tuning.`
+      );
+    } finally {
+      setGcsfuseLoading(false);
+    }
+  };
+
   const fetchBuckets = useCallback(
     async ({ silent = false } = {}) => {
       if (!projectId) return;
@@ -1300,7 +1341,11 @@ export default function CloudStorageStudio({
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2 font-mono text-xs">
+          <div
+            role="tablist"
+            aria-label="Cloud Storage Workspace Modules"
+            className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-1 p-1 rounded-[10px] font-mono text-xs"
+          >
             {[
               {
                 id: 'BUCKETS',
@@ -1344,6 +1389,8 @@ export default function CloudStorageStudio({
                 <button
                   key={t.id}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   data-feature-id={`GCS_TAB_${t.id}`}
                   onClick={() => {
                     setActiveSubTab(t.id);
@@ -1355,22 +1402,18 @@ export default function CloudStorageStudio({
                     }
                   }}
                   title={t.label}
-                  className={`w-full h-10 px-2.5 rounded-md font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                  className={`w-full h-9 px-2.5 rounded-[7px] font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                     active
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className={`p-1 rounded-md shrink-0 ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    <Icon
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        active ? 'text-white' : 'text-blue-500 dark:text-blue-400'
                       }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </span>
+                    />
                     <span className="truncate">{t.label}</span>
                   </div>
                 </button>
@@ -1765,6 +1808,146 @@ export default function CloudStorageStudio({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Cloud Storage FUSE (gcsfuse) POSIX Mount & ML Checkpointing Tuner (per @skill:google-cloud-storage-fuse) */}
+            <div className="mt-4 p-4 rounded-2xl bg-white dark:bg-[#202124] border border-blue-500/30 space-y-3 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold">
+                      CLOUD STORAGE FUSE (GCSFUSE v2) &amp; ML CHECKPOINTING ARCHITECT
+                    </span>
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Step-1 Fit Gate · Hierarchical Namespace (HNS) Atomic Rename Check · GKE CSI &amp; Cloud Run Gen2 Mounts
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                    Inspects live bucket metadata (<code className="font-mono">hierarchicalNamespace.enabled</code>) and generates workload-tuned <code className="font-mono">gcsfuse</code> configs (<code className="font-mono">--profile=aiml-training</code> / <code className="font-mono">aiml-checkpointing</code> / <code className="font-mono">aiml-serving</code>).
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={gcsfuseProfile}
+                    onChange={(e) => {
+                      setGcsfuseProfile(e.target.value);
+                      handleInspectGcsfuseArchitect(
+                        selectedBucket?.name,
+                        e.target.value
+                      );
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs"
+                  >
+                    <option value="aiml-training">Profile: aiml-training</option>
+                    <option value="aiml-checkpointing">
+                      Profile: aiml-checkpointing
+                    </option>
+                    <option value="aiml-serving">Profile: aiml-serving</option>
+                    <option value="general-posix">Profile: general-posix</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleInspectGcsfuseArchitect(
+                        selectedBucket?.name,
+                        gcsfuseProfile
+                      )
+                    }
+                    disabled={gcsfuseLoading || !selectedBucket}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer"
+                  >
+                    {gcsfuseLoading
+                      ? 'Inspecting Bucket...'
+                      : `Analyze gs://${selectedBucket?.name || 'bucket'} for gcsfuse`}
+                  </button>
+                </div>
+              </div>
+
+              {gcsfuseArchitectResult && (
+                <div className="space-y-3">
+                  {/* HNS Checkpoint Safety Banner */}
+                  <div
+                    className={`p-3 rounded-xl border ${
+                      gcsfuseArchitectResult.checkpointSafetyAdvisory?.status ===
+                      'ATOMIC_HNS_SAFE'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                    }`}
+                  >
+                    <div className="font-extrabold text-xs">
+                      {gcsfuseArchitectResult.checkpointSafetyAdvisory?.badge}
+                    </div>
+                    <div className="text-[11px] mt-0.5">
+                      {gcsfuseArchitectResult.checkpointSafetyAdvisory?.detail}
+                    </div>
+                  </div>
+
+                  {/* Step 1 Fit Gate Matrix */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    {(gcsfuseArchitectResult.fitGateMatrix || []).map((fg, i) => (
+                      <div
+                        key={i}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                            {fg.workloadType}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-extrabold shrink-0">
+                            {fg.verdict}
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-zinc-500">
+                          {fg.recommendation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Generated Configs Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+                          1. Tuned gcsfuse YAML &amp; Cloud Run Gen2 Volume CLI
+                        </span>
+                        {typeof onRunInShell === 'function' && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRunInShell(
+                                gcsfuseArchitectResult.cloudRunMountCli
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            $ Mount on Cloud Run Gen2
+                          </button>
+                        )}
+                      </div>
+                      <pre className="p-3 rounded-xl bg-[#0d1117] text-emerald-300 text-[11px] border border-zinc-800 overflow-x-auto whitespace-pre-wrap">
+                        {gcsfuseArchitectResult.gcsfuseConfigYaml}
+                        {'\n\n# GCE / VM Mount CLI:\n$ '}
+                        {gcsfuseArchitectResult.gceMountCli}
+                        {'\n\n# Cloud Run Gen2 Volume Mount CLI:\n$ '}
+                        {gcsfuseArchitectResult.cloudRunMountCli}
+                      </pre>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+                          2. GKE gcsfuse.csi.storage.gke.io Pod Manifest
+                        </span>
+                      </div>
+                      <pre className="p-3 rounded-xl bg-[#0d1117] text-blue-300 text-[11px] border border-zinc-800 overflow-x-auto whitespace-pre-wrap">
+                        {gcsfuseArchitectResult.gkeCsiManifestYaml}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             </>
           )}

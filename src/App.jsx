@@ -8,6 +8,9 @@ import {
   Sparkles,
   RefreshCw,
   ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ChevronLeft,
   Check,
   CheckCircle2,
   Terminal,
@@ -103,6 +106,58 @@ import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
+
+/**
+ * Progressive-disclosure wrapper for the 6-Stage Cross-Studio Architecture Pipeline Bars.
+ * Keeps focused Studio tabs clean by default (1-line bar) so the Studio workspace itself
+ * is immediately front-and-center, while allowing 1-click expansion of the 6-stage chain
+ * and Terraform/SOAR/SQL playbook synthesizers.
+ */
+function CollapsibleArchitecturePipelineBar({
+  label = '6-Stage Cross-Studio Architecture Chain',
+  chainSummary = 'Click to expand end-to-end 6-stage pipeline & IaC/SOAR playbook synthesizer',
+  children,
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#12151c] px-3.5 py-2 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Layers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
+            {label}
+          </span>
+          {chainSummary && (
+            <span className="hidden lg:inline text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+              · {chainSummary}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+        >
+          <span>
+            {expanded
+              ? 'Hide 6-Stage Architecture Chain'
+              : '6-Stage Architecture Chain & Playbooks'}
+          </span>
+          {expanded ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+        </button>
+      </div>
+      {expanded && (
+        <div className="pt-3 mt-2.5 border-t border-zinc-200 dark:border-zinc-800">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -630,6 +685,35 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Cloud Storage DLP Mask-Only Overwrite (Without Secret Manager Vaulting) or Noncurrent Generation Purge
+    const dlpRedactMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/dlp-redact/);
+    if (
+      dlpRedactMatch &&
+      (String(body.redactionMode || '').toUpperCase() === 'MASK_ONLY' ||
+        Boolean(body.purgePreviousGeneration))
+    ) {
+      const bucket = decodeURIComponent(dlpRedactMatch[1]);
+      const objName = String(body.objectName || 'object');
+      const isMaskOnly =
+        String(body.redactionMode || '').toUpperCase() === 'MASK_ONLY';
+      return {
+        title: isMaskOnly
+          ? `Mask Secrets In-Place Without Vaulting to Secret Manager?`
+          : `Purge Noncurrent Unredacted Generation while Redacting?`,
+        resourceKind: isMaskOnly
+          ? 'Destructive Plaintext Secret Mask-Only Overwrite (No Secret Manager Backup)'
+          : 'Cloud Storage DLP Redaction + Noncurrent Generation Purge',
+        targetName: `gs://${bucket}/${objName}`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: isMaskOnly ? 'POST (MASK_ONLY)' : 'POST (PURGE_PREV_GEN)',
+        endpoint: rawUrl,
+        impactWarning: isMaskOnly
+          ? `WARNING: You selected MASK_ONLY mode. Plaintext credentials inside "gs://${bucket}/${objName}" will be overwritten with "[REDACTED_<TYPE>_BY_CLOUDPULSE_DLP]" WITHOUT vaulting them into Google Cloud Secret Manager (sm://). If these are live credentials and you do not have another copy, cancel and click "Vault Credentials to Secret Manager (sm://) + Mask PII" instead.`
+          : `This will permanently delete the previous unredacted object generation from "gs://${bucket}/${objName}" after writing the sanitized version.`,
+      };
+    }
+
     // Compute Engine VM Power -> DELETE, DETACH_PUBLIC_IP, ATTACH_PUBLIC_IP
     const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/power/);
     if (vmPowerMatch && String(body.action || '').toUpperCase() === 'DELETE') {
@@ -667,7 +751,7 @@ function classifyDestructiveAxiosConfig(config) {
         confirmLabel: `Detach Public IPv4 from "${vmName}" (-$3.65/mo Saved)`,
         cancelToast: `Public IPv4 detachment on "${vmName}" cancelled.`,
         laymanSummary: `In Plain English: Removes the external public internet IPv4 address from VM "${vmName}" without restarting or recreating the VM. Your VM stays online on its private VPC IP, remains reachable via Browser SSH / Cloud IAP (--tunnel-through-iap), and stops billing the $3.65/month ($0.005/hr) Google Cloud Public IPv4 fee.`,
-        whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/deleteAccessConfig?networkInterface=nic0&accessConfig=External+NAT.\n2. Strips the public NAT IPv4 address in-place while preserving internal VPC connectivity and Cloud IAP SSH.\n3. Updates the VM Fleet card to "🔒 None (--no-address · IAP)".`,
+        whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/deleteAccessConfig?networkInterface=nic0&accessConfig=External+NAT.\n2. Strips the public NAT IPv4 address in-place while preserving internal VPC connectivity and Cloud IAP SSH.\n3. Updates the VM Fleet card to "None (--no-address · IAP)".`,
         costWarning: `FINOPS SAVINGS (-$3.65/MO): Removing an in-use External IPv4 address saves $0.005/hr ($3.65/mo).`,
         impactWarning: `Direct public internet connections to "${vmName}"'s external IPv4 will close; SSH via Cloud IAP (35.235.240.0/20) and internal VPC traffic continue uninterrupted.`,
       };
@@ -1418,6 +1502,17 @@ function classifyDestructiveAxiosConfig(config) {
         ['SEARCH_DATAPLEX_SEMANTIC_CATALOG', 'RUN_SPARK_LOG_RCA_DOCTOR'].includes(
           String(body.action || '').toUpperCase()
         )) ||
+      (rawUrl.includes('/managed-spark/action') &&
+        [
+          'INSPECT_BATCH_DIAGNOSTICS',
+          'INTROSPECT_SPARK_DATA_ASSETS',
+          'VALIDATE_PYSPARK_SYNTAX',
+          'SEARCH_GCS_DRIVER_LOG',
+          'ANALYZE_SPARK_KNOWLEDGE_CATALOG_AND_LINEAGE',
+          'PREFLIGHT_SPARK_BATCH_XRAY',
+        ].includes(String(body.action || '').toUpperCase())) ||
+      rawUrl.includes('/chrono-logs/finops-audit') ||
+      rawUrl.includes('/gcsfuse-architect') ||
       (rawUrl.includes('/wave10/action') &&
         ['SCAN_MODEL_ARMOR', 'EXECUTE_SPANNER_GQL'].includes(
           String(body.action || '').toUpperCase()
@@ -2128,7 +2223,7 @@ function classifyDestructiveAxiosConfig(config) {
     }
 
     // 3E. 1-Tap Resource Control Center Actions (/api/project/:id/action)
-    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/appengine/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
+    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/managed-spark/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/appengine/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
       const act = String(body.actionType || body.action || '').toUpperCase();
       const resId = body.resourceId || body.resourceName || 'target-resource';
       return {
@@ -3935,6 +4030,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/wave10/action') ||
       rawUrl.includes('/quantum-nexus/action') ||
       rawUrl.includes('/data-engineer/action') ||
+      rawUrl.includes('/managed-spark/action') ||
       rawUrl.includes('/aws-azure-parity/action') ||
       rawUrl.includes('/zombies/exterminate')
     ) {
@@ -4248,8 +4344,8 @@ function classifyDestructiveAxiosConfig(config) {
         };
       }
       if (rawUrl.includes('/chrono-logs/')) {
-        const name = body.metricName || body.exclusionName || 'log-rule';
-        const isExclusion = rawUrl.includes('/exclusion');
+        const name = body.metricName || body.exclusionName || body.sinkName || 'log-rule';
+        const isExclusion = rawUrl.includes('exclusion');
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
@@ -4402,6 +4498,55 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `Permanently deletes the selected unattached zombie resource(s) from project "${projectId}".`,
         };
       }
+      if (rawUrl.includes('/managed-spark/action')) {
+        const reg = body.region || 'us-central1';
+        if (act === 'STAGE_SCRIPT_TO_GCS_ONLY') {
+          const bkt = String(body.stagingBucket || `${projectId}-spark-warehouse`).replace(/^gs:\/\//, '');
+          const bId = body.batchId || 'spark-batch';
+          const stagedUri = `gs://${bkt}/spark-jobs/${bId}.py`;
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Stage PySpark 3.5 Script to "${stagedUri}" ($0.00 Compute)?`,
+            laymanSummary: `In Plain English: Uploads your PySpark 3.5 script (${bId}.py) directly into Cloud Storage bucket "gs://${bkt}" (auto-creating the bucket with Uniform Bucket-Level Access if needed) and verifies its SHA-256 digest and object generation without starting a billed Spark batch.`,
+            headerBadge: 'Managed Spark 3.5 Zero-Compute GCS Dry-Stager',
+            targetLabel: 'Target Cloud Storage Staged Script URI',
+            resourceKind: 'Cloud Storage PySpark Script Artifact (storage.googleapis.com/upload/storage/v1)',
+            targetName: stagedUri,
+            location: reg,
+            projectId,
+            method: 'STAGE .PY TO GCS ($0.00 COMPUTE)',
+            endpoint: rawUrl,
+            confirmLabel: `Stage ${bId}.py to GCS ($0.00 Compute)`,
+            cancelToast: `Staging "${bId}.py" to GCS cancelled.`,
+            whatHappensNext: `1. Verifies or creates bucket "gs://${bkt}" in "${reg.toUpperCase()}" with Uniform Bucket-Level Access.\n2. Uploads "${bId}.py" via POST https://storage.googleapis.com/upload/storage/v1/b/${bkt}/o?uploadType=media&name=spark-jobs/${bId}.py.\n3. Computes the SHA-256 checksum and returns the live GCS object generation receipt with a 1-click "Browse in GCS Workbench" link.`,
+            costWarning: `ZERO COMPUTE COST ($0.00): Staging a ~2 KB Python script to Cloud Storage uses zero Dataproc Serverless DCUs and falls well within the 5 GB-month Cloud Storage Always-Free allowance.`,
+            impactWarning: `Uploads spark-jobs/${bId}.py into bucket "gs://${bkt}" in project "${projectId}".`,
+          };
+        }
+        if (act === 'BOOTSTRAP_SPARK_DEMO_ASSETS') {
+          const ds = body.datasetId || 'lakehouse_gold';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Bootstrap BigQuery Dataset "${projectId}.${ds}" & Seed 3 Spark Source Tables?`,
+            laymanSummary: `In Plain English: Creates BigQuery dataset "${ds}" in "${reg}" (if not already present) and provisions + seeds 3 real source tables (telemetry_events, dim_regions, and account_risk_tiers) so your Serverless Spark 3.5 batches have live data ready to process immediately.`,
+            headerBadge: 'Managed Spark 3.5 Live Source Data Bootstrapper',
+            targetLabel: 'Target BigQuery Lakehouse Dataset & Tables',
+            resourceKind: 'BigQuery Dataset + 3 Seeded Source Tables (bigquery.googleapis.com/bigquery/v2)',
+            targetName: `${projectId}.${ds} (telemetry_events, dim_regions, account_risk_tiers)`,
+            location: reg,
+            projectId,
+            method: 'BOOTSTRAP BIGQUERY SPARK TABLES',
+            endpoint: rawUrl,
+            confirmLabel: `Create Dataset "${ds}" & Seed 3 Tables`,
+            cancelToast: `BigQuery Spark dataset bootstrap cancelled.`,
+            whatHappensNext: `1. Ensures dataset "${projectId}.${ds}" exists in region "${reg}".\n2. Creates tables "telemetry_events", "dim_regions", and "account_risk_tiers" via bigquery.tables.insert.\n3. Streams live operational seed rows via tabledata.insertAll and re-runs the 6-Gate Pre-Flight AST X-Ray.`,
+            costWarning: `ALWAYS-FREE TIER ELIGIBLE (~$0.00): Creating a BigQuery dataset is free, and storing ~10 seed rows (<5 KB) falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
+            impactWarning: `Creates dataset "${ds}" and seeds 3 tables in project "${projectId}".`,
+          };
+        }
+      }
       if (
         rawUrl.includes('/wave10/action') ||
         rawUrl.includes('/quantum-nexus/action') ||
@@ -4423,6 +4568,7 @@ function classifyDestructiveAxiosConfig(config) {
           body.batchId ||
           body.sessionId ||
           body.templateId ||
+          body.clusterName ||
           body.instanceId ||
           body.databaseId ||
           body.datasetId ||
@@ -4549,6 +4695,8 @@ function CloudPulseCockpit() {
   });
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [headerToolsExpanded, setHeaderToolsExpanded] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
@@ -4844,7 +4992,7 @@ function CloudPulseCockpit() {
       if (targetEl) {
         targetEl.setAttribute(
           'data-spotlight-badge',
-          `🎯 SPOTLIGHT TARGET — ${String(badgeLabel).slice(0, 52)}`
+          `SPOTLIGHT TARGET — ${String(badgeLabel).slice(0, 52)}`
         );
         targetEl.classList.add('cloudpulse-target-spotlight-active');
         if (shouldScroll) {
@@ -5151,8 +5299,19 @@ function CloudPulseCockpit() {
       setAlibabaHuaweiSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
       setDataEngineerSubTab(resolvedSubTab);
-    } else if (resolvedSubTab && normalizedTab === 'MANAGED_SPARK_STUDIO') {
-      setManagedSparkSubTab(resolvedSubTab);
+    } else if (normalizedTab === 'MANAGED_SPARK_STUDIO') {
+      if (resolvedSubTab) {
+        setManagedSparkSubTab(resolvedSubTab);
+      }
+      if (extraTarget && typeof extraTarget === 'object') {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:open-managed-spark', {
+              detail: { subTab: resolvedSubTab, ...extraTarget },
+            })
+          );
+        }, 45);
+      }
     } else if (resolvedSubTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'BIGQUERY_STUDIO') {
@@ -6377,36 +6536,48 @@ function CloudPulseCockpit() {
           </div>
         )}
 
-        {/* Header Row */}
-        <header className="relative z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-4">
-          {/* Top Row: CloudPulse 2026 Brand (Left) + Live GCP Project Switcher & Provision Resource CTA (Top Right) */}
-          <div className="relative z-50 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm shrink-0">
-                <Cloud className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+        {/* Architectural Top Control Bar */}
+        <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-[#1e2433] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-3 sm:px-5 py-2.5">
+          {/* Top Row: Sidebar Rail Toggle + Brand (Left) + Essential Controls (Right) */}
+          <div className="relative z-50 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((v) => !v)}
+                title={
+                  sidebarCollapsed
+                    ? 'Expand Left Architectural Navigation Rail'
+                    : 'Collapse Left Architectural Navigation Rail to Icon Mode'
+                }
+                className="hidden md:inline-flex items-center justify-center w-8 h-8 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-300 dark:border-[#262e42] text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer shrink-0"
+              >
+                <Layers className="w-4 h-4" />
+              </button>
+              <div className="w-8 h-8 rounded bg-blue-600/10 dark:bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <Cloud className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
-                    CloudPulse <span className="text-zinc-500 dark:text-zinc-400">2026</span>
+                  <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
+                    CloudPulse <span className="font-mono text-xs font-semibold text-zinc-500 dark:text-zinc-400">GCP</span>
                   </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-1.5 py-0.5 rounded">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    REAL PROJECT MODE
+                    LIVE API
                   </span>
                   {gdePrivacyConfig.enabled && (
                     <span
                       title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      GDE TUTORIAL SHIELD ON
+                      GDE SHIELD
                     </span>
                   )}
                 </div>
                 <p
                   data-gde-ignore="true"
-                  className="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none"
+                  className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none"
                 >
                   {gdePrivacyConfig.enabled
                     ? redactTextForGdeMode(
@@ -6423,86 +6594,63 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: [Docs] + [Overview] + [10-Persona Board] + [SDK 591.0.0] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              {/* 1-Click Docs & Architecture Guide Button */}
-              <button
-                type="button"
-                data-feature-id="DOCS_GUIDE"
-                onClick={() => handleNavigateStudioTab('DOCS_GUIDE')}
-                title="Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide"
-                className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
-                  activeTab === 'DOCS_GUIDE'
-                    ? 'bg-blue-600 text-white border-blue-400/40'
-                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
-                }`}
-              >
-                <BookOpen className="w-4 h-4 shrink-0" />
-                <span>Docs</span>
-              </button>
-
-              {/* Big 1-Click Overview & Resource Lineage Button */}
-              <button
-                type="button"
-                data-feature-id="OVERVIEW"
-                onClick={() => handleNavigateStudioTab('OVERVIEW')}
-                title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
-                className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer whitespace-nowrap border ${
-                  activeTab === 'OVERVIEW'
-                    ? 'bg-blue-600 text-white border-blue-400/40'
-                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4 shrink-0" />
-                <span>Overview</span>
-              </button>
-
-              {/* 1-Click 10-Persona Enterprise Architecture Board Launcher */}
+            {/* Top-Right Cluster: Essential Controls + Project Switcher + Provision CTA + Cockpit Tools Toggle */}
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              {/* Live Burn-Rate Radar Ticker Pill */}
               <button
                 type="button"
                 onClick={() =>
-                  handleNavigateStudioTab('INNOVATION_LAB', 'FIVE_PERSONA_COUNCIL', {
-                    targetLabel: '2026 Innovation Lab → 10-Persona Enterprise Architecture Board',
-                    badgeText: '10-Persona Architecture Board',
+                  handleNavigateStudioTab('INNOVATION_LAB', 'FINOPS_SLEEP', {
+                    targetLabel: '2026 Innovation Lab → Night-Mode FinOps Sleep Switch',
+                    badgeText: 'FinOps Night-Mode Sleep Switch',
                   })
                 }
-                title="Open 10-Persona Enterprise Architecture Board & Pre-Flight War-Room: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps, (06) AI/MLOps Engineer, (07) SRE Commander, (08) Database Reliability Engineer (DBRE), (09) FinOps & GreenOps, and (10) K8s & IDP Platform Engineer"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                <span>10-Persona Board</span>
+                <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>${liveBurn.hourly.toFixed(4)}/hr</span>
               </button>
 
-              {/* 1-Click [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab Launcher */}
+              {/* GDE Streamer & Tutorial Privacy Shield */}
+              <GdeStreamerPrivacyShield
+                config={gdePrivacyConfig}
+                onChangeConfig={setGdePrivacyConfig}
+                accountEmail={contextData.account}
+                projects={contextData.projects}
+                selectedProjectId={selectedProjectId}
+              />
+
+              {/* ⌘K Global Command & Voice Action Bar */}
               <button
                 type="button"
-                onClick={() =>
-                  handleNavigateStudioTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA', {
-                    targetLabel: '2026 Innovation Lab → gcloud SDK 591.0.0 Frontier Lab',
-                    badgeText: 'gcloud SDK 591.0.0 Lab',
-                  })
-                }
-                title="Open [GA/BETA/ALPHA] gcloud 591.0.0 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                data-feature-id="CMD_PALETTE"
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                <span>SDK 591.0.0 Lab</span>
+                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>⌘K Ops</span>
               </button>
 
-              {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
+              {/* Progressive Disclosure Toggle for Secondary Cockpit Tools & Telemetry */}
               <button
                 type="button"
-                data-feature-id="RECYCLE_BIN"
-                onClick={() => handleNavigateStudioTab('RECYCLE_BIN')}
-                title="Open 30-Day Cloud Recycle Bin: Find what resources were deleted and which Google Cloud APIs were disabled in the last 30 days, with 1-Click Restore & Re-Enable"
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap border ${
-                  activeTab === 'RECYCLE_BIN'
-                    ? 'bg-blue-600 text-white border-blue-400/40'
+                onClick={() => setHeaderToolsExpanded((v) => !v)}
+                title="Expand or collapse Cockpit Telemetry, Flight Recorder, Auto-Pilot Guard, 10-Persona Board, SDK 592 Lab & Timezone controls"
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                  headerToolsExpanded
+                    ? 'bg-blue-600 text-white border-blue-500'
                     : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                 }`}
               >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Recycle Bin</span>
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span>Cockpit Tools</span>
+                {headerToolsExpanded ? (
+                  <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                )}
               </button>
 
               {/* Live GCP Project Dropdown */}
@@ -6517,16 +6665,16 @@ function CloudPulseCockpit() {
                     }
                   }}
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 h-8 text-xs font-mono font-bold transition-colors cursor-pointer whitespace-nowrap"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="hidden md:inline text-[11px] font-sans font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <span className="hidden md:inline text-[10px] font-sans font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     Project:
                   </span>
-                  <span className="max-w-[160px] sm:max-w-[220px] truncate">
+                  <span className="max-w-[150px] sm:max-w-[200px] truncate">
                     {selectedProjectId}
                   </span>
-                  <ChevronDown className="w-4 h-4 opacity-70 shrink-0" />
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 </button>
 
                 {projectMenuOpen && (
@@ -6543,7 +6691,7 @@ function CloudPulseCockpit() {
                         }}
                         className="px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 font-bold text-[9.5px] cursor-pointer normal-case"
                       >
-                        🔄 Sync Projects
+                        Sync Projects
                       </button>
                     </div>
                     {(contextData.projects || []).map((proj) => (
@@ -6611,34 +6759,137 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('COMPUTE_VM')}
                 title="Provision a live GCP resource (1. Compute Engine VM [Default], 2. VPC Network, 3. Firewall Rule, 4. Cloud Run Service, 5. GKE Cluster, 6. Cloud SQL / AlloyDB, 7. Cloud Storage Bucket, or 8. BigQuery Dataset)"
-                className="inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-6 py-2.5 min-w-[200px] sm:min-w-[235px] text-xs sm:text-sm font-extrabold tracking-tight transition-all shadow-md cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-3.5 h-8 text-xs font-extrabold tracking-tight transition-all shadow-sm cursor-pointer whitespace-nowrap"
               >
-                <PlusCircle className="w-4 h-4 shrink-0" />
-                <span>Provision Resource</span>
+                <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>Provision</span>
+              </button>
+
+              {/* Refresh Button */}
+              <button
+                type="button"
+                disabled={loadingOverview}
+                onClick={() => {
+                  fetchProjectOverview(selectedProjectId);
+                  setVmRefreshTrigger((c) => c + 1);
+                }}
+                title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
+                aria-label="Refresh GCP telemetry"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 ${
+                    loadingOverview ? 'animate-spin' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Dark / Light Mode Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={
+                  isDark
+                    ? 'Switch to Daylight High-Contrast Mode'
+                    : 'Switch to 2026 OLED Dark Cockpit Mode'
+                }
+                aria-label="Toggle Dark or Light Mode"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shrink-0 cursor-pointer"
+              >
+                {isDark ? (
+                  <Sun className="w-3.5 h-3.5 text-zinc-400" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
+                )}
               </button>
             </div>
           </div>
 
-          {/* Secondary Telemetry & Cockpit Controls Bar (Single-Row Compact Layout) */}
-          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
+          {/* Secondary Telemetry & Cockpit Controls Bar (Collapsible via "Cockpit Tools" button; stays mounted in DOM) */}
+          <div
+            className={`relative z-30 items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-2.5 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 ${
+              headerToolsExpanded ? 'flex' : 'hidden'
+            }`}
+          >
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap min-w-0">
-              {/* Live Burn-Rate Radar Ticker Pill */}
+              {/* 1-Click Overview Button */}
+              <button
+                type="button"
+                data-feature-id="OVERVIEW"
+                onClick={() => handleNavigateStudioTab('OVERVIEW')}
+                title="Open Project Overview, Resource Lineage & Stale/Orphaned Resource Detector"
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'OVERVIEW'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+                <span>Overview</span>
+              </button>
+
+              {/* 1-Click 10-Persona Enterprise Architecture Board Launcher */}
               <button
                 type="button"
                 onClick={() =>
-                  handleNavigateStudioTab('INNOVATION_LAB', 'FINOPS_SLEEP', {
-                    targetLabel: '2026 Innovation Lab → Night-Mode FinOps Sleep Switch',
-                    badgeText: 'FinOps Night-Mode Sleep Switch',
+                  handleNavigateStudioTab('INNOVATION_LAB', 'FIVE_PERSONA_COUNCIL', {
+                    targetLabel: '2026 Innovation Lab → 10-Persona Enterprise Architecture Board',
+                    badgeText: '10-Persona Architecture Board',
                   })
                 }
-                title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch (Zeroes active vCPU/GPU compute via REST API or Google Cloud Scheduler; attached Persistent Disks & unused Static External IPs still bill)"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0"
+                title="Open 10-Persona Enterprise Architecture Board & Pre-Flight War-Room"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap"
               >
-                <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span>${liveBurn.hourly.toFixed(4)}/hr</span>
-                <span className="hidden xl:inline text-[10px] opacity-75">
-                  (~${liveBurn.monthly.toFixed(2)}/mo)
-                </span>
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span>10-Persona Board</span>
+              </button>
+
+              {/* 1-Click [GA/BETA/ALPHA] gcloud 592.0.0 Frontier Lab Launcher */}
+              <button
+                type="button"
+                onClick={() =>
+                  handleNavigateStudioTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA', {
+                    targetLabel: '2026 Innovation Lab → gcloud SDK 592.0.0 Frontier Lab',
+                    badgeText: 'gcloud SDK 592.0.0 Lab',
+                  })
+                }
+                title="Open [GA/BETA/ALPHA] gcloud 592.0.0 Frontier Lab"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span>SDK 592.0.0 Lab</span>
+              </button>
+
+              {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
+              <button
+                type="button"
+                data-feature-id="RECYCLE_BIN"
+                onClick={() => handleNavigateStudioTab('RECYCLE_BIN')}
+                title="Open 30-Day Cloud Recycle Bin"
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'RECYCLE_BIN'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Recycle Bin</span>
+              </button>
+
+              {/* 1-Click Docs & Architecture Guide Button */}
+              <button
+                type="button"
+                data-feature-id="DOCS_GUIDE"
+                onClick={() => handleNavigateStudioTab('DOCS_GUIDE')}
+                title="Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide"
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  activeTab === 'DOCS_GUIDE'
+                    ? 'bg-blue-600 text-white border-blue-400/40'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                <span>Docs</span>
               </button>
 
               {/* Cloud Billing Account & Promotional Credits Pill */}
@@ -6685,43 +6936,6 @@ function CloudPulseCockpit() {
                         )}`
                       : 'Bonus: $0.00'}
                 </span>
-                {gdeSummary.hasImportedCredits &&
-                gdeSummary.expiringSoonRemainingUsd > 0 &&
-                gdeSummary.nearestExpiryDays !== null ? (
-                  <span className="hidden xl:inline text-[10px] opacity-90">
-                    {gdePrivacyConfig.enabled &&
-                    gdePrivacyConfig.hideCreditBalances !== false
-                      ? `· $•••.•• (${gdeSummary.nearestExpiryDays}d)`
-                      : `· $${gdeSummary.expiringSoonRemainingUsd.toLocaleString(
-                          'en-US',
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          }
-                        )} (${gdeSummary.nearestExpiryDays}d)`}
-                  </span>
-                ) : null}
-              </button>
-
-              {/* GDE Streamer & Tutorial Privacy Shield */}
-              <GdeStreamerPrivacyShield
-                config={gdePrivacyConfig}
-                onChangeConfig={setGdePrivacyConfig}
-                accountEmail={contextData.account}
-                projects={contextData.projects}
-                selectedProjectId={selectedProjectId}
-              />
-
-              {/* ⌘K Global Command & Voice Action Bar */}
-              <button
-                type="button"
-                data-feature-id="CMD_PALETTE"
-                onClick={() => setCommandPaletteOpen(true)}
-                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span>⌘K Ops</span>
               </button>
 
               {/* Reincarnated Orbital Telemetry & Zero-Mock Control-Plane Triggers */}
@@ -6839,7 +7053,7 @@ function CloudPulseCockpit() {
                   }
                   showToast(
                     nextVal
-                      ? '🎯 Cross-UI Feature Spotlight ENABLED — Jumping between Studios will highlight the destination feature & show a return breadcrumb.'
+                      ? 'Cross-UI Feature Spotlight ENABLED — Jumping between Studios will highlight the destination feature & show a return breadcrumb.'
                       : 'Cross-UI Feature Spotlight disabled.'
                   );
                 }}
@@ -6866,50 +7080,12 @@ function CloudPulseCockpit() {
                 <span>Health &amp; Drift</span>
               </button>
 
-              {/* Refresh Button */}
-              <button
-                type="button"
-                disabled={loadingOverview}
-                onClick={() => {
-                  fetchProjectOverview(selectedProjectId);
-                  setVmRefreshTrigger((c) => c + 1);
-                }}
-                title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
-                aria-label="Refresh GCP telemetry"
-                className="p-1.5 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50 shrink-0"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 ${
-                    loadingOverview ? 'animate-spin' : ''
-                  }`}
-                />
-              </button>
-
-              {/* Dark / Light Mode Toggle */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title={
-                  isDark
-                    ? 'Switch to Daylight High-Contrast Mode'
-                    : 'Switch to 2026 OLED Dark Cockpit Mode'
-                }
-                aria-label="Toggle Dark or Light Mode"
-                className="p-1.5 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm shrink-0"
-              >
-                {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-zinc-400" />
-                ) : (
-                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
-                )}
-              </button>
-
               {/* Disconnect / Switch Account Button */}
               <button
                 type="button"
                 onClick={handleDisconnect}
                 title="Disconnect active session & switch Google Cloud account"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <span className="hidden xl:inline">Disconnect</span>
@@ -6917,46 +7093,173 @@ function CloudPulseCockpit() {
             </div>
           </div>
 
-          {/* Underline Navigation Tabs (Single-Row Compact Horizontal Bar) */}
-          <nav className="flex items-center justify-between gap-2 lg:gap-2.5 mt-3.5 pb-2 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto">
-            {navTabs.map((tab, idx) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              const showGroupDivider =
-                idx > 0 && navTabs[idx - 1].group !== tab.group;
-              return (
-                <React.Fragment key={tab.id}>
-                  {showGroupDivider && (
-                    <span
-                      className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700/80 mb-1.5 shrink-0"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    data-feature-id={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    title={tab.tip}
-                    className={`inline-flex items-center gap-1 text-[11.5px] whitespace-nowrap transition-all cursor-pointer shrink-0 pb-1.5 font-semibold border-b-2 ${
-                      isActive
-                        ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border-transparent hover:border-zinc-400 dark:hover:border-zinc-600'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 text-current opacity-80 shrink-0" />
-                    <span>{tab.label}</span>
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </nav>
         </header>
 
-        {/* Main Content Body */}
-        <main
-          id="cloudpulse-main-workspace"
-          className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1"
-        >
+        {/* Architectural Control Plane Shell: Left Domain Rail + Main Workspace */}
+        <div className="flex items-start min-h-[calc(100vh-3.5rem)]">
+          {/* Left Architectural Navigation Rail (Google Cloud Pantheon / Cloudflare / Datadog Style) */}
+          {!mobilePreview && (
+            <aside
+              aria-label="Google Cloud Architectural Studios Navigation"
+              className={`hidden md:flex flex-col shrink-0 sticky top-[53px] h-[calc(100vh-53px)] overflow-y-auto border-r border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0c0f16] select-none transition-all duration-150 ${
+                sidebarCollapsed ? 'w-14' : 'w-56'
+              }`}
+            >
+              <div className="py-2.5 space-y-3.5 flex-1">
+                {[
+                  { id: 'COMMAND', title: 'Command & Global' },
+                  { id: 'INFRA_COMPUTE', title: 'Compute, VPC & Storage' },
+                  { id: 'DATA_AI', title: 'Data & Lakehouse' },
+                  { id: 'SECURITY_SRE', title: 'Security, IAM & SRE' },
+                  { id: 'OPS_DOCS', title: 'FinOps & Observability' },
+                ].map((section) => {
+                  const groupTabs = navTabs.filter((t) => t.group === section.id);
+                  if (!groupTabs.length) return null;
+                  return (
+                    <div key={section.id} className="space-y-0.5">
+                      {!sidebarCollapsed && (
+                        <div className="px-3 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400 dark:text-[#647087]">
+                          {section.title}
+                        </div>
+                      )}
+                      {groupTabs.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        const countBadge =
+                          tab.id === 'VM_SSH'
+                            ? overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms
+                            : tab.id === 'VPC_NETWORKS'
+                              ? overview?.vpcs?.length
+                              : tab.id === 'CLOUD_RUN'
+                                ? overview?.cloudRunServices?.length
+                                : tab.id === 'CLOUD_STORAGE'
+                                  ? overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets
+                                  : null;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            data-feature-id={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            title={tab.tip}
+                            className={`cp-nav-rail-item w-full flex items-center ${
+                              sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+                            } h-8 text-[12px] border-l-2 transition-colors cursor-pointer ${
+                              isActive
+                                ? 'border-l-amber-500 bg-amber-500/15 text-zinc-950 dark:text-white font-semibold'
+                                : 'border-l-transparent text-zinc-600 dark:text-[#8b95a5] hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-amber-500/[0.06] font-medium'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2.5 min-w-0">
+                              <Icon
+                                className={`w-3.5 h-3.5 shrink-0 ${
+                                  isActive
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-zinc-400 dark:text-[#687387]'
+                                }`}
+                              />
+                              {!sidebarCollapsed && (
+                                <span className="truncate">{tab.label}</span>
+                              )}
+                            </span>
+                            {!sidebarCollapsed &&
+                              countBadge !== null &&
+                              countBadge !== undefined && (
+                                <span
+                                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums ${
+                                    isActive
+                                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold'
+                                      : 'text-zinc-400 dark:text-[#647087]'
+                                  }`}
+                                >
+                                  {countBadge}
+                                </span>
+                              )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Rail Footer: Collapse / Expand Toggle */}
+              <div className="p-2 border-t border-zinc-200 dark:border-[#1e2433]">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed((v) => !v)}
+                  title={
+                    sidebarCollapsed
+                      ? 'Expand Navigation Sidebar'
+                      : 'Collapse Navigation Sidebar'
+                  }
+                  className="cp-nav-rail-item w-full flex items-center justify-center gap-1.5 h-7 rounded text-[11px] font-mono text-zinc-500 dark:text-[#7c879c] hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.04] cursor-pointer"
+                >
+                  <ChevronRight
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      sidebarCollapsed ? '' : 'rotate-180'
+                    }`}
+                  />
+                  {!sidebarCollapsed && <span>Collapse Rail</span>}
+                </button>
+              </div>
+            </aside>
+          )}
+
+          {/* Main Content Body */}
+          <main
+            id="cloudpulse-main-workspace"
+            className="min-w-0 flex-1 px-4 sm:px-6 lg:px-7 py-4 space-y-4"
+          >
+            {/* Architectural Workspace Breadcrumb & Context Header */}
+            {(() => {
+              const currentTabObj =
+                navTabs.find((t) => t.id === activeTab) || navTabs[0];
+              const CurrentIcon = currentTabObj?.icon || Layers;
+              const groupNameMap = {
+                COMMAND: 'Command & Global Edge',
+                INFRA_COMPUTE: 'Compute, VPC & Storage',
+                DATA_AI: 'Data & Lakehouse',
+                SECURITY_SRE: 'Security, IAM & SRE',
+                OPS_DOCS: 'FinOps & Observability',
+              };
+              const domainLabel =
+                groupNameMap[currentTabObj?.group] || 'Google Cloud Control Plane';
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-200 dark:border-[#1e2433]">
+                  <div className="flex items-center gap-2 min-w-0 text-xs">
+                    <span className="font-mono text-[11px] text-zinc-500 dark:text-[#7c879c] truncate max-w-[160px]">
+                      {selectedProjectId || 'gcp-project'}
+                    </span>
+                    <span className="text-zinc-300 dark:text-zinc-700">/</span>
+                    <span className="hidden sm:inline text-zinc-500 dark:text-[#8b95a5] font-medium">
+                      {domainLabel}
+                    </span>
+                    <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">
+                      /
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-950 dark:text-zinc-100">
+                      <CurrentIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span>{currentTabObj?.label || activeTab}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="hidden xl:block text-[11px] text-zinc-500 dark:text-[#7c879c] truncate max-w-xl">
+                      {currentTabObj?.tip}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('DOCS_GUIDE')}
+                      title="Open Interactive Architecture & API Reference"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-[#151a25] border border-zinc-200 dark:border-[#262e42] hover:border-blue-500/40 cursor-pointer shrink-0"
+                    >
+                      <BookOpen className="w-3 h-3 text-blue-500 shrink-0" />
+                      <span>Docs</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           {/* Sticky Cross-UI Feature Spotlight Arrival Beacon & 1-Click Return Breadcrumb */}
           {featureSpotlightEnabled && activeSpotlightBanner && (
             <div
@@ -6965,7 +7268,7 @@ function CloudPulseCockpit() {
             >
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-extrabold uppercase tracking-wider">
-                  🎯 SPOTLIGHT TARGET
+                  SPOTLIGHT TARGET
                 </span>
                 <span className="text-zinc-300">
                   Jumped from{' '}
@@ -6986,7 +7289,7 @@ function CloudPulseCockpit() {
                   onClick={() => pulseSpotlightTargetDom(activeSpotlightBanner)}
                   className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
                 >
-                  📍 Locate &amp; Flash Target Again
+                  Locate &amp; Flash Target Again
                 </button>
 
                 {activeSpotlightBanner.fromTab &&
@@ -7169,14 +7472,19 @@ function CloudPulseCockpit() {
                     onScrollToApis={handleScrollToApisWithSpotlight}
                   />
 
-                  <EnterpriseStackPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Enterprise Cloud Architecture & Stack Pipeline"
+                    chainSummary="IAM & VPC → Compute / GKE / Cloud Run → Storage / Databases / BigQuery → Cloud SOC & SRE"
+                  >
+                    <EnterpriseStackPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      overview={overview}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
 
                   <ResourceControlCenter
                     resources={overview?.resources || []}
@@ -7189,7 +7497,11 @@ function CloudPulseCockpit() {
                     onSelectTab={handleNavigateStudioTab}
                   />
 
-                  {/* 5-Domain Organized Studio Hub */}
+                  {/* 5-Domain Organized Studio Directory (Collapsed by default since Left Rail is always visible) */}
+                  <CollapsibleArchitecturePipelineBar
+                    label="CloudPulse 2026 Architectural Domain Directory (5 Domains · 25 Studios)"
+                    chainSummary="Full directory of all 25 engineering studios & live resource counts"
+                  >
                   <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                       <div>
@@ -7204,7 +7516,7 @@ function CloudPulseCockpit() {
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 20 DEDICATED STUDIOS
+                        5 DOMAINS · 25 DEDICATED STUDIOS
                       </span>
                     </div>
 
@@ -7299,12 +7611,14 @@ function CloudPulseCockpit() {
                       ))}
                     </div>
                   </div>
+                  </CollapsibleArchitecturePipelineBar>
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <PersonaContextualHelper
                       persona="ARCHITECT"
                       projectId={selectedProjectId}
                       studioContextLabel="Overview · SPOF Blast-Radius & FinOps"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -7316,6 +7630,7 @@ function CloudPulseCockpit() {
                       persona="CLOUD_ENG"
                       projectId={selectedProjectId}
                       studioContextLabel="Resource Table · .tf Exporter & 5-Gate Pre-Flight"
+                      defaultExpanded={false}
                       onOpenFullBoard={(p) =>
                         handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                       }
@@ -7342,13 +7657,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GLOBAL_MAP' && (
                 <div className="space-y-4">
-                  <MultiCloudGlobalParityPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Multi-Cloud & Global Subsea Fiber Architecture Chain"
+                    chainSummary="40 GCP Regions · Subsea Fiber · Cross-Cloud Latency & DR"
+                  >
+                    <MultiCloudGlobalParityPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <GlobalNetworkWorldMap
                     projectId={selectedProjectId}
                     overview={overview}
@@ -7381,14 +7701,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'INNOVATION_LAB' && (
                 <div className="space-y-4">
-                  <MultiCloudGlobalParityPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    activeSubTab={innovationSubTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="2026 Beyond-Console Innovation & Multi-Cloud Chain"
+                    chainSummary="Reverse-Terraform · Blast-Radius · DLP X-Ray · Gcloud 592"
+                  >
+                    <MultiCloudGlobalParityPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      activeSubTab={innovationSubTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <Revolutionary2026Suite
                     projectId={selectedProjectId}
                     overview={overview}
@@ -7422,13 +7747,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'STARTUP_10X' && (
                 <div className="space-y-4">
-                  <FinOpsCostKillPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="FinOps, Credit Runway & Cost-Kill Architecture Chain"
+                    chainSummary="Billing Budgets · Credit Guardian · Zombie Reaper · CUDs"
+                  >
+                    <FinOpsCostKillPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <Startup10xMentorStudio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
@@ -7453,15 +7783,20 @@ function CloudPulseCockpit() {
 
               {activeTab === 'MCP_HUB' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Data Lakehouse, Spark & Agentic AI Architecture Chain"
+                    chainSummary="GCS → BigLake → BigQuery → Managed Spark → Vertex AI & MCP"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <GoogleCloudRemoteMcpStudio
                     projectId={selectedProjectId}
                     onShowToast={showToast}
@@ -7483,15 +7818,20 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_STORAGE' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Data Lakehouse, Storage & AI Architecture Chain"
+                    chainSummary="Cloud Storage → BigLake Iceberg → BigQuery → Serverless Spark → Vertex AI"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     initialSubTab={storageSubTab}
@@ -7535,15 +7875,20 @@ function CloudPulseCockpit() {
 
               {activeTab === 'BIGQUERY_STUDIO' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Data Lakehouse, BigQuery & AI Architecture Chain"
+                    chainSummary="GCS → BigLake → BigQuery Capacitor → Serverless Spark → BQML"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <BigQueryStudio
                     projectId={selectedProjectId}
                     initialSql={bigQueryInitialSql}
@@ -7599,15 +7944,20 @@ function CloudPulseCockpit() {
 
               {activeTab === 'BIGLAKE_STUDIO' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Data Lakehouse, BigLake Iceberg & AI Architecture Chain"
+                    chainSummary="Cloud Storage → BigLake Metastore → BigQuery → Serverless Spark → Vertex AI"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <BigLakeIcebergStudio
                     projectId={selectedProjectId}
                     initialSubTab={bigLakeSubTab}
@@ -7644,15 +7994,20 @@ function CloudPulseCockpit() {
 
               {activeTab === 'DATA_ENGINEER_STUDIO' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Data Engineering, Medallion ELT & Spark Architecture Chain"
+                    chainSummary="GCS → BigLake → Dataform / dbt → Serverless Spark → BigQuery"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <DataEngineeringStudio
                     projectId={selectedProjectId}
                     initialSubTab={dataEngineerSubTab}
@@ -7689,22 +8044,37 @@ function CloudPulseCockpit() {
 
               {activeTab === 'MANAGED_SPARK_STUDIO' && (
                 <div className="space-y-4">
-                  <DataLakehouseAiPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Managed Service for Apache Spark & Lakehouse Architecture Chain"
+                    chainSummary="GCS → BigLake → Serverless Spark 3.5 / Lightning Engine → BigQuery"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <ManagedSparkStudio
                     projectId={selectedProjectId}
                     initialSubTab={managedSparkSubTab}
                     subTabNonce={studioSubTabNonce}
                     onNavigateTab={handleNavigateStudioTab}
                     onOpenBigQuerySql={handleOpenBigQuerySql}
+                    onOpenLogsExplorer={handleOpenInLogsExplorer}
                     onRunInShell={handleRunInShell}
+                    onOpenShellWithCommand={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="SPARK"
+                    onRunInShell={handleRunInShell}
+                    onLoadBigQuerySql={handleOpenBigQuerySql}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -7726,14 +8096,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
                 <div className="space-y-4">
-                  <OltpDatabaseContinuityBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenProvision={handleOpenProvision}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="OLTP Database, AlloyDB & Spanner Continuity Chain"
+                    chainSummary="Cloud SQL PG 17 / MySQL 8.4 → AlloyDB Vector → Spanner → PITR"
+                  >
+                    <OltpDatabaseContinuityBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenProvision={handleOpenProvision}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <CloudSqlAndAlloyDbStudio
                     projectId={selectedProjectId}
                     onOpenProvisionCloudSql={() =>
@@ -7780,13 +8155,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE9_STUDIO' && (
                 <div className="space-y-4">
-                  <GitOpsReleaseFactoryPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    activeSubTab={wave9SubTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="GitOps, Cloud Build & SLSA-3 Release Factory Chain"
+                    chainSummary="GitHub OIDC → Cloud Build → Artifact Registry → Cloud Run / GKE"
+                  >
+                    <GitOpsReleaseFactoryPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      activeSubTab={wave9SubTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <Wave9AiGkeSqlSupplyChainStudio
                     projectId={selectedProjectId}
                     initialSubTab={wave9SubTab}
@@ -7829,14 +8209,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'WAVE10_FRONTIER' && (
                 <div className="space-y-4">
-                  <OltpDatabaseContinuityBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenProvision={handleOpenProvision}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Spanner Graph, Vector & OLTP Continuity Chain"
+                    chainSummary="100-PU Sizer · ISO GQL Graph · ScaNN RAG · Zero-Downtime DDL"
+                  >
+                    <OltpDatabaseContinuityBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenProvision={handleOpenProvision}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <Wave10Frontier2026Studio
                     projectId={selectedProjectId}
                     onNavigateTab={handleNavigateStudioTab}
@@ -7863,12 +8248,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'SOVEREIGN_STUDIO' && (
                 <div className="space-y-4">
-                  <SecOpsSreForensicsPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Wave 4 · 6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
+                    chainSummary="IAM & Secret Vault → Perimeter & Toxic Graph → Cloud Audit → SOAR → SRE Burn Gate"
+                  >
+                    <SecOpsSreForensicsPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <SovereignTimeMachineIamStudio
                     projectId={selectedProjectId}
                     initialSubTab={sovereignSubTab}
@@ -7907,12 +8297,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'SRE_WAR_ROOM' && (
                 <div className="space-y-4">
-                  <SecOpsSreForensicsPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
+                    chainSummary="IAM & Secrets → Perimeter → Cloud Audit → SOAR → 14.4x SLO Burn Gate"
+                  >
+                    <SecOpsSreForensicsPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}
                     initialSubTab={sreSubTab}
@@ -7956,12 +8351,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_RUN' && (
                 <div className="space-y-4">
-                  <GitOpsReleaseFactoryPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="GitOps, Cloud Build & Serverless Release Factory Chain"
+                    chainSummary="GitHub OIDC → Cloud Build → Artifact Registry → Cloud Run Revisions"
+                  >
+                    <GitOpsReleaseFactoryPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <CloudRunFleetManager
                     projectId={selectedProjectId}
                     initialServices={overview?.cloudRunServices || []}
@@ -8020,12 +8420,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
                 <div className="space-y-4">
-                  <GitOpsReleaseFactoryPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Eventarc, Pub/Sub & Cloud Functions Release Chain"
+                    chainSummary="GitHub → Cloud Build → Cloud Functions Gen2 → 90+ Eventarc Triggers"
+                  >
+                    <GitOpsReleaseFactoryPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <CloudFunctionsEventarcStudio
                     projectId={selectedProjectId}
                     initialSubTab={functionsSubTab}
@@ -8050,12 +8455,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'GKE_STUDIO' && (
                 <div className="space-y-4">
-                  <GitOpsReleaseFactoryPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Kubernetes (GKE), Artifact Registry & GitOps Chain"
+                    chainSummary="Cloud Build → Artifact Registry → GKE Autopilot / Standard → Mesh"
+                  >
+                    <GitOpsReleaseFactoryPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <GkeFleetStudio
                     projectId={selectedProjectId}
                     initialSubTab={gkeSubTab}
@@ -8108,14 +8518,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'VM_SSH' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Enterprise Compute, VPC, Storage & Recovery Chain"
+                    chainSummary="VPC & Firewalls → Compute Engine VMs → Cloud Storage → 30-Day Recycle Bin"
+                  >
+                    <EnterpriseStackPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      overview={overview}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <VmFleetAndSsh
                     projectId={selectedProjectId}
                     account={contextData.account}
@@ -8188,14 +8603,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'VPC_NETWORKS' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Enterprise VPC, Firewall, Compute & Recovery Chain"
+                    chainSummary="VPC Subnets → Firewall Rules → Compute Fleet → Cloud SOC → Recycle Bin"
+                  >
+                    <EnterpriseStackPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      overview={overview}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <VpcNetworksAndFirewalls
                     projectId={selectedProjectId}
                     vpcs={overview?.vpcs || []}
@@ -8242,13 +8662,18 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
-                  <FinOpsCostKillPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="6-Stage FinOps, Credit Guardian & Zombie Reaper Chain"
+                    chainSummary="Billing Export → Credit Ledger → Zombie Reaper → CUDs → Emergency API Kill-Switch"
+                  >
+                    <FinOpsCostKillPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <div
                     id="finops-billing-guardian-section"
                     className="scroll-mt-24"
@@ -8343,12 +8768,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'LOGS_SHELL' && (
                 <div className="space-y-4">
-                  <SecOpsSreForensicsPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="6-Stage SecOps, Cloud Audit & SRE Forensics Chain"
+                    chainSummary="IAM & Secrets → Perimeter → 400d Cloud Audit Logs → SOAR → SRE Burn Gate"
+                  >
+                    <SecOpsSreForensicsPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <LogStreamerAndShell
                     logs={overview?.logs || []}
                     projectId={selectedProjectId}
@@ -8380,14 +8810,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'RECYCLE_BIN' && (
                 <div className="space-y-4">
-                  <EnterpriseStackPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    overview={overview}
-                    onOpenProvision={handleOpenProvision}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Enterprise Recovery & 30-Day Cloud Recycle Bin Chain"
+                    chainSummary="Compute VMs · Cloud Storage Soft-Delete · BigQuery Time-Travel · Secret Versions"
+                  >
+                    <EnterpriseStackPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      overview={overview}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <CloudRecycleBinStudio
                     projectId={selectedProjectId}
                     initialCategory={recycleBinCategory}
@@ -8404,14 +8839,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'AWS_AZURE_PARITY' && (
                 <div className="space-y-4">
-                  <MultiCloudGlobalParityPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    activeSubTab={awsAzureSubTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Multi-Cloud Parity & Migration Architecture Chain"
+                    chainSummary="AWS / Azure / Alibaba / Huawei → GCP Service Mapping & Terraform Synthesizer"
+                  >
+                    <MultiCloudGlobalParityPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      activeSubTab={awsAzureSubTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <AwsAzureEnvySuiteStudio
                     key="aws-azure-parity"
                     cloudFamily="AWS_AZURE"
@@ -8437,14 +8877,19 @@ function CloudPulseCockpit() {
 
               {activeTab === 'ALIBABA_HUAWEI_PARITY' && (
                 <div className="space-y-4">
-                  <MultiCloudGlobalParityPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    activeSubTab={alibabaHuaweiSubTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="Alibaba Cloud & Huawei Cloud Parity Architecture Chain"
+                    chainSummary="ECS / OSS / MaxCompute / ModelArts → GCE / GCS / BigQuery / Vertex AI"
+                  >
+                    <MultiCloudGlobalParityPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      activeSubTab={alibabaHuaweiSubTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onTestRuleOnGlobalMap={handleTestRuleOnGlobalMap}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <AwsAzureEnvySuiteStudio
                     key="alibaba-huawei-parity"
                     cloudFamily="ALIBABA_HUAWEI"
@@ -8470,12 +8915,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'CLOUD_SOC' && (
                 <div className="space-y-4">
-                  <SecOpsSreForensicsPipelineBar
-                    projectId={selectedProjectId}
-                    activeTab={activeTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
+                  <CollapsibleArchitecturePipelineBar
+                    label="6-Stage Zero-Trust Cloud SOC, IDS/IPS & SOAR Chain"
+                    chainSummary="IAM & Secret Hygiene → Toxic Graph → Cloud Audit → Cloud IDS/WAF → SOAR Quarantine"
+                  >
+                    <SecOpsSreForensicsPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
                   <AutonomousCloudSocStudio
                     projectId={selectedProjectId}
                     initialSocSeed={cloudSocSeed}
@@ -8503,6 +8953,7 @@ function CloudPulseCockpit() {
               )}
           </>
         </main>
+        </div>
 
         <div
           className={`${

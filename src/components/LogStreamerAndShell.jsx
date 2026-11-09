@@ -219,6 +219,61 @@ export default function LogStreamerAndShell({
   const [selectedTraceId, setSelectedTraceId] = useState(null);
   const [expandedChronoEntryId, setExpandedChronoEntryId] = useState(null);
   const [applyingExclusionId, setApplyingExclusionId] = useState(null);
+  const [finopsAuditData, setFinopsAuditData] = useState(null);
+  const [loadingFinopsAudit, setLoadingFinopsAudit] = useState(false);
+  const [applyingFinopsExclusion, setApplyingFinopsExclusion] = useState('');
+
+  const handleRunLoggingFinopsAudit = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingFinopsAudit(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/finops-audit`,
+        {}
+      );
+      setFinopsAuditData(res.data);
+      onShowToast?.(
+        `Completed Cloud Logging FinOps Audit for ${projectId} (${res.data?.sampleEntriesCount || 0} log entries analyzed)`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run Cloud Logging FinOps audit.'
+      );
+    } finally {
+      setLoadingFinopsAudit(false);
+    }
+  }, [projectId, onShowToast, onShowError]);
+
+  const handleApplyFinopsExclusion = async (exc) => {
+    if (!projectId || !exc) return;
+    setApplyingFinopsExclusion(exc.name);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/finops-exclusion`,
+        {
+          exclusionName: exc.name,
+          description: exc.description,
+          filter: exc.filter,
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          `Applied exclusion filter "${exc.name}" to _Default sink!`
+      );
+      await handleRunLoggingFinopsAudit();
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to apply exclusion "${exc.name}".`
+      );
+    } finally {
+      setApplyingFinopsExclusion('');
+    }
+  };
   const [exclusionBanner, setExclusionBanner] = useState(null);
 
   // --- 2026 Open-Source Log Explorer Suite (ClickHouse / HyperDX / VictoriaLogs / SigNoz / lnav / Grafana Loki) ---
@@ -1893,7 +1948,7 @@ export default function LogStreamerAndShell({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-white font-extrabold text-[11px]">
-                🔍 GLOBAL MAP FORENSIC TRACE LOADED
+                GLOBAL MAP FORENSIC TRACE LOADED
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
@@ -1918,7 +1973,7 @@ export default function LogStreamerAndShell({
 
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                🔧 Requires gcloud CLI · Online Token Bridged
+                Requires gcloud CLI · Online Token Bridged
               </span>
               {activeMapForensicSpec.gcloudCommand && (
                 <button
@@ -2079,7 +2134,7 @@ export default function LogStreamerAndShell({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
             {[
               {
                 id: 'VM_JOURNAL',
@@ -2114,6 +2169,12 @@ export default function LogStreamerAndShell({
                 } Active Policies · conditionMatchedLog`,
                 icon: ShieldAlert,
               },
+              {
+                id: 'LOGGING_FINOPS',
+                title: '05 · Cloud Logging FinOps',
+                subtitle: `$0.50/GiB Attribution · _Default Sink Exclusions`,
+                icon: Zap,
+              },
             ].map((p) => {
               const Icon = p.icon;
               const isActive = activeDevopsPillar === p.id;
@@ -2133,6 +2194,9 @@ export default function LogStreamerAndShell({
                           chronoData?.compiledQuery?.effectiveLql ||
                           'severity>=ERROR'
                       );
+                    }
+                    if (next === 'LOGGING_FINOPS' && !finopsAuditData) {
+                      handleRunLoggingFinopsAudit();
                     }
                   }}
                   className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start justify-between gap-2 ${
@@ -3038,6 +3102,176 @@ export default function LogStreamerAndShell({
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {/* PILLAR 5 DRAWER: CLOUD LOGGING FINOPS & _DEFAULT SINK EXCLUSION FILTER STUDIO (per @skill:cloud-logging-finops) */}
+          {activeDevopsPillar === 'LOGGING_FINOPS' && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-emerald-500/40 space-y-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+                    CLOUD LOGGING FINOPS ($0.50/GiB ABOVE 50 GiB/MO FREE TIER)
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Service &amp; Stream Volume Attribution + 1-Click `_Default` Sink Exclusion Filters
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleRunLoggingFinopsAudit}
+                    disabled={loadingFinopsAudit}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    {loadingFinopsAudit ? 'Auditing...' : 'Re-Run FinOps Audit'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDevopsPillar(null)}
+                    className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {finopsAuditData ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold">
+                        Low-Signal Volume Share
+                      </div>
+                      <div className="text-sm font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
+                        {finopsAuditData.lowSignalSharePct}% (DEBUG/INFO/DEFAULT)
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold">
+                        Log Buckets Audited
+                      </div>
+                      <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                        {(finopsAuditData.buckets || []).length} bucket(s)
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold">
+                        Active _Default Exclusions
+                      </div>
+                      <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        {(finopsAuditData.defaultSink?.exclusions || []).length} rule(s)
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold">
+                        List Price &amp; Free Tier
+                      </div>
+                      <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                        $0.50/GiB (First 50 GiB Free)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Contributors by Service & Stream */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                      <div className="text-[10.5px] font-extrabold text-zinc-700 dark:text-zinc-300 uppercase">
+                        Top Volume Contributors by Resource Type
+                      </div>
+                      {(finopsAuditData.serviceBreakdown || []).map((svc) => (
+                        <div
+                          key={svc.resourceType}
+                          className="flex items-center justify-between text-[11px]"
+                        >
+                          <span className="text-zinc-800 dark:text-zinc-200 font-bold">
+                            {svc.resourceType}
+                          </span>
+                          <span className="text-blue-600 dark:text-blue-400 font-bold">
+                            {svc.sharePct}% ({Math.round(svc.sampleBytes / 1024)} KB sampled)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                      <div className="text-[10.5px] font-extrabold text-zinc-700 dark:text-zinc-300 uppercase">
+                        Top Log Streams (logName)
+                      </div>
+                      {(finopsAuditData.streamBreakdown || []).map((st) => (
+                        <div
+                          key={st.logStream}
+                          className="flex items-center justify-between text-[11px]"
+                        >
+                          <span className="text-zinc-800 dark:text-zinc-200 truncate max-w-[220px]">
+                            {st.logStream}
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            {st.sharePct}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 1-Click _Default Sink Exclusion Filter Recommendations */}
+                  <div className="space-y-2">
+                    <div className="text-[10.5px] font-extrabold text-zinc-700 dark:text-zinc-300 uppercase">
+                      1-Click `_Default` Sink Noise-Exclusion Filters (Cut Ingestion Before $0.50/GiB Billing)
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {(finopsAuditData.recommendedExclusions || []).map((exc) => (
+                        <div
+                          key={exc.name}
+                          className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5 flex flex-col justify-between"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-[11px]">
+                                {exc.name}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-bold">
+                                ~{exc.estSavingsPct}% Drop
+                              </span>
+                            </div>
+                            <p className="text-[10.5px] text-zinc-500">
+                              {exc.description}
+                            </p>
+                            <code className="block p-1.5 rounded bg-zinc-900 text-emerald-400 text-[10px] break-all">
+                              {exc.filter}
+                            </code>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={
+                              exc.alreadyActive ||
+                              applyingFinopsExclusion === exc.name
+                            }
+                            onClick={() => handleApplyFinopsExclusion(exc)}
+                            className={`w-full py-1.5 px-2.5 rounded-md text-[10.5px] font-bold cursor-pointer ${
+                              exc.alreadyActive
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                : 'bg-blue-600 hover:bg-blue-500 text-white'
+                            }`}
+                          >
+                            {exc.alreadyActive
+                              ? 'Active on _Default Sink'
+                              : applyingFinopsExclusion === exc.name
+                              ? 'Applying Exclusion...'
+                              : 'Apply Exclusion to _Default Sink'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-zinc-500">
+                  {loadingFinopsAudit
+                    ? 'Auditing Cloud Logging buckets, _Default sink exclusions, and stream volume shares...'
+                    : 'Click "Re-Run FinOps Audit" above to analyze Cloud Logging spend & exclusion filters.'}
+                </div>
+              )}
             </div>
           )}
         </div>

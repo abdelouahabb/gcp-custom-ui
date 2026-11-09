@@ -2533,9 +2533,27 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     Never pay for idle master/worker VMs again. Submit PySpark/Ray directly to Serverless Batches with sub-30s startup.
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                  $0.00/HR IDLE
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onNavigateTab?.(
+                        'MANAGED_SPARK_STUDIO',
+                        'SERVERLESS_BATCHES',
+                        {
+                          region: sparkRegion,
+                          bucketName: sparkBucket,
+                        }
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-300 border border-orange-500/30 cursor-pointer"
+                  >
+                    Open Full Managed Spark Studio →
+                  </button>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                    $0.00/HR IDLE
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

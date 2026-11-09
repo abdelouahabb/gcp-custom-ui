@@ -956,9 +956,13 @@ export default function SreWarRoomPerimeterStudio({
         )}
 
         {/* ==================================================================
-            12-PILLAR (3x4 BENTO GRID) NAVIGATION MATRIX
+            12-PILLAR SEGMENTED NAVIGATION MATRIX
            ================================================================== */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+        <div
+          role="tablist"
+          aria-label="SRE War-Room Pillars"
+          className="cp-segmented-menu grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1 p-1 rounded-[10px] mt-2"
+        >
           {SRE_PILLARS.map((p) => {
             const active = activePillar === p.id;
             const badge = getPillarBadge(p.id);
@@ -970,40 +974,30 @@ export default function SreWarRoomPerimeterStudio({
               <button
                 key={p.id}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 data-subtab-id={p.id}
                 data-feature-id={`SRE_PILLAR_${p.id}`}
+                title={`${p.shortTitle} — ${p.subtitle}`}
                 onClick={() => setActivePillar(p.id)}
-                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                className={`w-full h-9 px-2.5 rounded-[7px] text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                   active
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : isAlert
-                    ? 'bg-red-500/10 border-red-500/40 text-zinc-900 dark:text-white'
-                    : 'bg-zinc-50/90 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-zinc-800 dark:text-zinc-200'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
-                <div className="flex items-center justify-between gap-1.5">
-                  <span
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full truncate ${
-                      active
-                        ? 'bg-white/20 text-white'
-                        : isAlert
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {badge}
-                  </span>
-                </div>
-                <div className="text-xs font-extrabold truncate mt-0.5">
-                  {p.shortTitle}
-                </div>
-                <div
-                  className={`text-[10px] font-mono truncate ${
-                    active ? 'text-red-100' : 'text-zinc-500 dark:text-zinc-400'
+                <span className="truncate">{p.shortTitle}</span>
+                <span
+                  className={`text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                    active
+                      ? 'bg-black/25 text-blue-100'
+                      : isAlert
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-zinc-200/70 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
-                  {p.subtitle}
-                </div>
+                  {badge}
+                </span>
               </button>
             );
           })}

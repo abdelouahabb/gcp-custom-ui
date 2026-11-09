@@ -65,6 +65,12 @@ const SUB_TABS = [
     shortDesc: 'Broadcast join / OOM .toPandas() static analyzer & 1-click Spark IAM role binder',
     icon: ShieldCheck,
   },
+  {
+    id: 'LIGHTNING_BIGFRAMES_LINEAGE',
+    label: 'Lightning Engine, BigFrames & Lineage',
+    shortDesc: 'Spark Lightning Engine (C++), BigFrames v2.0 & Data Lineage Blast-Radius Inspector',
+    icon: Zap,
+  },
 ];
 
 const WORKLOAD_TEMPLATES = [
@@ -72,6 +78,26 @@ const WORKLOAD_TEMPLATES = [
     id: 'BIGLAKE_ICEBERG_MEDALLION',
     title: 'BigLake Managed Iceberg + Broadcast Join ETL',
     badge: 'Apache Iceberg + AQE',
+    batchPrefix: 'spark-iceberg-medallion',
+    defaultNamespace: 'lakehouse_gold',
+    fourthFieldLabel: 'BigLake Metastore Catalog',
+    defaultCatalogOrTarget: 'biglake_iceberg_catalog',
+    sourceFlow: 'BigQuery Storage Read + Regional Dim Lookup',
+    transformFlow: 'F.broadcast() Join + HTTP 5xx Error Flagging',
+    sinkFlow: 'BigLake Iceberg ACID Table (service_telemetry_gold)',
+    engineBadges: [
+      'Runtime 2.2 (Spark 3.5)',
+      'BigLakeMetastoreCatalog',
+      'F.broadcast() <= 100MB',
+      'AQE Coalesce',
+    ],
+    sparkProperties: {
+      'spark.sql.adaptive.enabled': 'true',
+      'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+      'spark.sql.autoBroadcastJoinThreshold': '104857600',
+      'spark.sql.extensions':
+        'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions',
+    },
     description:
       'Reads Bronze events from BigQuery Storage Read API, broadcast-joins lookup dimension table, and writes ACID Iceberg Silver/Gold tables into BigLake Metastore.',
   },
@@ -79,6 +105,25 @@ const WORKLOAD_TEMPLATES = [
     id: 'BQ_STORAGE_READ_ARROW',
     title: 'BigQuery Storage Read API (Parallel Arrow Streams)',
     badge: 'gRPC Arrow Zero-Copy',
+    batchPrefix: 'spark-bq-arrow-stream',
+    defaultNamespace: 'telemetry_slo_analytics',
+    fourthFieldLabel: 'Arrow Read Stream Mode & Window',
+    defaultCatalogOrTarget: 'ARROW_GRPC_7D_WINDOW',
+    sourceFlow: 'BigQuery Capacitor Partitioned Table (telemetry_events)',
+    transformFlow: 'Parallel gRPC Arrow Read + P95 Window Percentile',
+    sinkFlow: 'BigQuery Direct Storage Write API (regional_slo_rollup)',
+    engineBadges: [
+      'Runtime 2.2 (Spark 3.5)',
+      'readDataFormat=ARROW',
+      'writeMethod=direct',
+      'Window P95 Rollup',
+    ],
+    sparkProperties: {
+      'spark.sql.adaptive.enabled': 'true',
+      'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+      'spark.sql.adaptive.skewJoin.enabled': 'true',
+      'spark.sql.autoBroadcastJoinThreshold': '104857600',
+    },
     description:
       'Streams partitioned BigQuery tables directly into Spark executors over parallel gRPC Arrow channels with predicate pushdown and window analytics.',
   },
@@ -86,6 +131,24 @@ const WORKLOAD_TEMPLATES = [
     id: 'SPANNER_GRAPH_FEDERATION',
     title: 'Cloud Spanner + BigQuery Federated Fraud Scoring',
     badge: 'Spanner + BigQuery',
+    batchPrefix: 'spark-spanner-fraud',
+    defaultNamespace: 'fraud_risk_warehouse',
+    fourthFieldLabel: 'Spanner Instance / Graph Database',
+    defaultCatalogOrTarget: 'prod-graph-spanner/payments-ledger',
+    sourceFlow: 'Cloud Spanner (AccountTransfers) + BigQuery (account_risk_tiers)',
+    transformFlow: 'Cross-Engine Broadcast Join + Risk Score >= 0.75 Filter',
+    sinkFlow: 'BigQuery Fraud Alert Table (flagged_graph_accounts)',
+    engineBadges: [
+      'Runtime 2.2 (Spark 3.5)',
+      'spark-spanner-connector',
+      'Cross-Engine Federation',
+      'Direct Write API',
+    ],
+    sparkProperties: {
+      'spark.sql.adaptive.enabled': 'true',
+      'spark.sql.adaptive.skewJoin.enabled': 'true',
+      'spark.dataproc.scaling.version': '2',
+    },
     description:
       'Joins operational Cloud Spanner transaction graph edges with historical BigQuery customer features inside a single Serverless Spark 3.5 batch.',
   },
@@ -93,8 +156,93 @@ const WORKLOAD_TEMPLATES = [
     id: 'PARQUET_SCHEMA_EVOLUTION',
     title: 'GCS Parquet to BigLake Iceberg Compaction',
     badge: 'GCS -> Iceberg',
+    batchPrefix: 'spark-parquet-compact',
+    defaultNamespace: 'iceberg_compacted_silver',
+    fourthFieldLabel: 'BigLake Catalog & 512MB Compaction Target',
+    defaultCatalogOrTarget: 'biglake_iceberg_512mb',
+    sourceFlow: 'Cloud Storage Multi-File Parquet (gs://.../raw-events/)',
+    transformFlow: 'mergeSchema=true + Window Row-Number Deduplication',
+    sinkFlow: '512 MB Compacted BigLake Iceberg Table (compacted_events)',
+    engineBadges: [
+      'Runtime 2.2 (Spark 3.5)',
+      'mergeSchema=true',
+      'target-file-size=512MB',
+      'Window Dedup',
+    ],
+    sparkProperties: {
+      'spark.sql.adaptive.enabled': 'true',
+      'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+      'spark.sql.extensions':
+        'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions',
+      'spark.sql.parquet.mergeSchema': 'true',
+    },
     description:
       'Reads raw multi-file Parquet drops from Cloud Storage, deduplicates records by event timestamp, and compacts them into 512 MB Iceberg data files.',
+  },
+];
+
+const SPARK_HARDWARE_PROFILES = [
+  {
+    id: 'MICRO_ETL',
+    title: 'Micro Serverless (2–4 Executors)',
+    badge: '4g Heap · ~$0.0048/run',
+    estimatedCostUsd: 0.0048,
+    dcuSummary: '110 DCU-s · Fast Dev & Dimension Lookup',
+    properties: {
+      'spark.dynamicAllocation.enabled': 'true',
+      'spark.dynamicAllocation.minExecutors': '2',
+      'spark.dynamicAllocation.maxExecutors': '4',
+      'spark.driver.memory': '4g',
+      'spark.executor.memory': '4g',
+    },
+  },
+  {
+    id: 'PROD_LAKEHOUSE',
+    title: 'Production AQE Lakehouse (2–16 Executors)',
+    badge: '8g Heap · ~$0.0142/run',
+    estimatedCostUsd: 0.0142,
+    dcuSummary: '260 DCU-s · Dynamic Scaling v2 + AQE',
+    properties: {
+      'spark.dataproc.scaling.version': '2',
+      'spark.dynamicAllocation.enabled': 'true',
+      'spark.dynamicAllocation.minExecutors': '2',
+      'spark.dynamicAllocation.maxExecutors': '16',
+      'spark.driver.memory': '8g',
+      'spark.executor.memory': '8g',
+    },
+  },
+  {
+    id: 'HEAVY_SHUFFLE',
+    title: 'Heavy Shuffle & SkewJoin Surgeon (4–32 Executors)',
+    badge: '16g Heap · ~$0.0320/run',
+    estimatedCostUsd: 0.032,
+    dcuSummary: '580 DCU-s · SkewJoin + 64MB Partition Target',
+    properties: {
+      'spark.dataproc.scaling.version': '2',
+      'spark.dynamicAllocation.enabled': 'true',
+      'spark.dynamicAllocation.minExecutors': '4',
+      'spark.dynamicAllocation.maxExecutors': '32',
+      'spark.driver.memory': '16g',
+      'spark.executor.memory': '16g',
+      'spark.sql.adaptive.skewJoin.enabled': 'true',
+      'spark.sql.adaptive.advisoryPartitionSizeInBytes': '67108864',
+    },
+  },
+  {
+    id: 'LIGHTNING_TURBO',
+    title: 'Lightning Engine C++ Vectorized (2–16 Executors)',
+    badge: 'Native SIMD C++ · ~$0.0095/run',
+    estimatedCostUsd: 0.0095,
+    dcuSummary: '175 DCU-s · -38% Compute Time via C++ Vectorization',
+    properties: {
+      'spark.dataproc.engine': 'lightningEngine',
+      'spark.dataproc.scaling.version': '2',
+      'spark.dynamicAllocation.enabled': 'true',
+      'spark.dynamicAllocation.minExecutors': '2',
+      'spark.dynamicAllocation.maxExecutors': '16',
+      'spark.driver.memory': '8g',
+      'spark.executor.memory': '8g',
+    },
   },
 ];
 
@@ -135,7 +283,7 @@ def main():
         .getOrCreate()
     )
 
-    logger.info("Reading BigQuery table via parallel gRPC Arrow Storage Read API...")
+    logger.info("Reading BigQuery table via parallel gRPC Arrow Storage Read API (mode=${cat})...")
     events_df = (
         spark.read.format("bigquery")
         .option("table", "${proj}.${ds}.telemetry_events")
@@ -205,12 +353,12 @@ def main():
         .getOrCreate()
     )
 
-    logger.info("Reading operational transfers from Cloud Spanner via spark-spanner-connector...")
+    logger.info("Reading operational transfers from Cloud Spanner (${cat}) via spark-spanner-connector...")
     spanner_edges_df = (
         spark.read.format("cloud-spanner")
         .option("projectId", "${proj}")
-        .option("instanceId", "prod-graph-spanner")
-        .option("databaseId", "payments-ledger")
+        .option("instanceId", "${cat.split('/')[0] || 'prod-graph-spanner'}")
+        .option("databaseId", "${cat.split('/')[1] || 'payments-ledger'}")
         .option("table", "AccountTransfers")
         .load()
     )
@@ -541,10 +689,13 @@ export default function ManagedSparkStudio({
   subTabNonce = 0,
   onNavigateTab,
   onOpenBigQuerySql,
+  onOpenLogsExplorer,
   onRunInShell,
+  onOpenShellWithCommand,
   onShowToast,
   onShowError,
 }) {
+  const shellRunner = onOpenShellWithCommand || onRunInShell;
   const [activeSubTab, setActiveSubTab] = useState(
     initialSubTab || 'SERVERLESS_BATCHES'
   );
@@ -558,13 +709,240 @@ export default function ManagedSparkStudio({
     'BIGLAKE_ICEBERG_MEDALLION'
   );
   const [batchIdInput, setBatchIdInput] = useState(
-    () => `spark-iceberg-${Date.now().toString().slice(-5)}`
+    () => `spark-iceberg-medallion-${Date.now().toString().slice(-4)}`
   );
   const [stagingBucket, setStagingBucket] = useState('');
   const [targetDataset, setTargetDataset] = useState('lakehouse_gold');
   const [targetCatalog, setTargetCatalog] = useState('biglake_iceberg_catalog');
   const [customPyCode, setCustomPyCode] = useState('');
+  const [customSparkProperties, setCustomSparkProperties] = useState({
+    'spark.sql.adaptive.enabled': 'true',
+    'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+    'spark.sql.autoBroadcastJoinThreshold': '104857600',
+    'spark.sql.extensions':
+      'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions',
+  });
+  const [launcherPreviewTab, setLauncherPreviewTab] = useState('SCRIPT');
+  const [selectedHardwareProfileId, setSelectedHardwareProfileId] =
+    useState('PROD_LAKEHOUSE');
+  const [preflightXrayLoading, setPreflightXrayLoading] = useState(false);
+  const [preflightXrayResult, setPreflightXrayResult] = useState(null);
+  const [stagedScriptReceipt, setStagedScriptReceipt] = useState(null);
+  const [stageScriptBusy, setStageScriptBusy] = useState(false);
+  const [bootstrapBusy, setBootstrapBusy] = useState(false);
   const [copiedId, setCopiedId] = useState('');
+
+  const activeTemplateMeta = useMemo(
+    () =>
+      WORKLOAD_TEMPLATES.find((t) => t.id === selectedTemplateId) ||
+      WORKLOAD_TEMPLATES[0],
+    [selectedTemplateId]
+  );
+
+  const activeHardwareProfile = useMemo(
+    () =>
+      SPARK_HARDWARE_PROFILES.find((p) => p.id === selectedHardwareProfileId) ||
+      SPARK_HARDWARE_PROFILES[1],
+    [selectedHardwareProfileId]
+  );
+
+  const handleSelectHardwareProfile = useCallback(
+    (profile) => {
+      if (!profile) return;
+      setSelectedHardwareProfileId(profile.id);
+      setCustomSparkProperties((prev) => {
+        const cleaned = { ...prev };
+        delete cleaned['spark.dataproc.engine'];
+        delete cleaned['spark.dataproc.scaling.version'];
+        delete cleaned['spark.dynamicAllocation.enabled'];
+        delete cleaned['spark.dynamicAllocation.minExecutors'];
+        delete cleaned['spark.dynamicAllocation.maxExecutors'];
+        delete cleaned['spark.driver.memory'];
+        delete cleaned['spark.executor.memory'];
+        delete cleaned['spark.sql.adaptive.skewJoin.enabled'];
+        delete cleaned['spark.sql.adaptive.advisoryPartitionSizeInBytes'];
+        return {
+          ...(activeTemplateMeta.sparkProperties || {}),
+          ...cleaned,
+          ...(profile.properties || {}),
+        };
+      });
+      onShowToast?.(
+        `Applied "${profile.title}" hardware profile (${profile.dcuSummary})`
+      );
+    },
+    [activeTemplateMeta, onShowToast]
+  );
+
+  const handleRunPreflightXray = useCallback(
+    async (overrideCode, overrideDataset, overrideBucket, overrideBatchId, overrideProps) => {
+      if (!projectId) return;
+      setPreflightXrayLoading(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+          {
+            action: 'PREFLIGHT_SPARK_BATCH_XRAY',
+            region,
+            batchId: overrideBatchId || batchIdInput,
+            stagingBucket: overrideBucket || stagingBucket,
+            datasetId: overrideDataset || targetDataset,
+            pythonScriptContent:
+              overrideCode !== undefined ? overrideCode : customPyCode,
+            properties: overrideProps || customSparkProperties,
+          }
+        );
+        setPreflightXrayResult(res.data);
+      } catch (err) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to run 6-Gate Pre-Flight Spark AST X-Ray.'
+        );
+      } finally {
+        setPreflightXrayLoading(false);
+      }
+    },
+    [
+      projectId,
+      region,
+      batchIdInput,
+      stagingBucket,
+      targetDataset,
+      customPyCode,
+      customSparkProperties,
+      onShowError,
+    ]
+  );
+
+  const handleStageScriptToGcsOnly = async () => {
+    if (!projectId) return;
+    setStageScriptBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+        {
+          action: 'STAGE_SCRIPT_TO_GCS_ONLY',
+          region,
+          batchId: batchIdInput,
+          stagingBucket: stagingBucket || `${projectId}-spark-warehouse`,
+          pythonScriptContent: customPyCode,
+        }
+      );
+      setStagedScriptReceipt(res.data);
+      if (res.data?.bucketName && !stagingBucket) {
+        setStagingBucket(res.data.bucketName);
+      }
+      onShowToast?.(
+        res.data?.message ||
+          `Staged ${batchIdInput}.py to ${res.data?.stagedUri} ($0.00 compute)`
+      );
+      await fetchSparkOverview(region, true);
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to stage PySpark script to GCS.'
+      );
+    } finally {
+      setStageScriptBusy(false);
+    }
+  };
+
+  const handleBootstrapSparkDemoAssets = async () => {
+    if (!projectId) return;
+    setBootstrapBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+        {
+          action: 'BOOTSTRAP_SPARK_DEMO_ASSETS',
+          region,
+          datasetId: targetDataset || 'lakehouse_gold',
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          `Bootstrapped BigQuery dataset "${targetDataset}" and seeded live source tables!`
+      );
+      await fetchSparkOverview(region, true);
+      await handleRunPreflightXray();
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to bootstrap BigQuery Spark source tables.'
+      );
+    } finally {
+      setBootstrapBusy(false);
+    }
+  };
+
+  const handleSelectWorkloadTemplate = useCallback(
+    (tpl) => {
+      if (!tpl) return;
+      const suffix = Date.now().toString().slice(-4);
+      const nextBatchId = `${tpl.batchPrefix || 'spark-batch'}-${suffix}`;
+      const nextDataset = tpl.defaultNamespace || 'lakehouse_gold';
+      const nextCatalog =
+        tpl.defaultCatalogOrTarget || 'biglake_iceberg_catalog';
+      const nextProps = {
+        ...(tpl.sparkProperties || {
+          'spark.sql.adaptive.enabled': 'true',
+          'spark.sql.autoBroadcastJoinThreshold': '104857600',
+        }),
+        ...(activeHardwareProfile?.properties || {}),
+      };
+      const nextCode = buildPySparkBatchCode({
+        templateId: tpl.id,
+        projectId,
+        region,
+        bucketName: stagingBucket,
+        datasetId: nextDataset,
+        catalogId: nextCatalog,
+      });
+
+      setSelectedTemplateId(tpl.id);
+      setBatchIdInput(nextBatchId);
+      setTargetDataset(nextDataset);
+      setTargetCatalog(nextCatalog);
+      setCustomSparkProperties(nextProps);
+      setSyntaxValidation(null);
+      setStagedScriptReceipt(null);
+      setCustomPyCode(nextCode);
+      if (launcherPreviewTab === 'XRAY_DAG') {
+        handleRunPreflightXray(
+          nextCode,
+          nextDataset,
+          stagingBucket,
+          nextBatchId,
+          nextProps
+        );
+      }
+      onShowToast?.(
+        `Loaded "${tpl.title}" blueprint (${nextBatchId}.py -> ${tpl.sinkFlow})`
+      );
+    },
+    [
+      projectId,
+      region,
+      stagingBucket,
+      activeHardwareProfile,
+      launcherPreviewTab,
+      handleRunPreflightXray,
+      onShowToast,
+    ]
+  );
+
+  // Live BigQuery & GCS Schema Introspector + py_compile Validator state
+  const [introspectTableId, setIntrospectTableId] = useState('');
+  const [gcsPrefixInput, setGcsPrefixInput] = useState('');
+  const [introspectLoading, setIntrospectLoading] = useState(false);
+  const [introspectResult, setIntrospectResult] = useState(null);
+  const [syntaxValidation, setSyntaxValidation] = useState(null);
+  const [syntaxValidating, setSyntaxValidating] = useState(false);
 
   // Session / Template creator state
   const [sessionTemplateIdInput, setSessionTemplateIdInput] = useState(
@@ -574,10 +952,60 @@ export default function ManagedSparkStudio({
     () => `spark-connect-${Date.now().toString().slice(-4)}`
   );
 
-  // Diagnostics / RCA inspector state
+  // Diagnostics / RCA inspector & GCS Driver Log Regex Search state
   const [selectedBatchForRca, setSelectedBatchForRca] = useState('');
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
   const [diagnosticsResult, setDiagnosticsResult] = useState(null);
+  const [driverLogSearchPattern, setDriverLogSearchPattern] = useState(
+    'ERROR|Exception|Traceback|OutOfMemoryError|Py4JJavaError|Caused by'
+  );
+  const [driverLogSearching, setDriverLogSearching] = useState(false);
+  const [driverLogSearchResult, setDriverLogSearchResult] = useState(null);
+
+  // Lightning Engine, BigFrames v2.0 & Data Lineage Blast-Radius state
+  const [lineageCatalogLoading, setLineageCatalogLoading] = useState(false);
+  const [lineageCatalogResult, setLineageCatalogResult] = useState(null);
+
+  const handleAnalyzeSparkKnowledgeCatalogAndLineage = useCallback(
+    async (overrideDs, overrideTbl) => {
+      if (!projectId) return;
+      setLineageCatalogLoading(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+          {
+            action: 'ANALYZE_SPARK_KNOWLEDGE_CATALOG_AND_LINEAGE',
+            region,
+            datasetId: overrideDs !== undefined ? overrideDs : targetDataset,
+            tableId:
+              overrideTbl !== undefined ? overrideTbl : introspectTableId,
+            stagingBucket,
+          }
+        );
+        setLineageCatalogResult(res.data);
+        onShowToast?.(
+          `Analyzed Data Lineage Blast Radius (${res.data?.downstreamBlastRadius?.totalAffected || 0} downstream links) & synthesized BigFrames v2.0 + Lightning Engine config`
+        );
+      } catch (err) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to analyze Data Lineage & Knowledge Catalog.'
+        );
+      } finally {
+        setLineageCatalogLoading(false);
+      }
+    },
+    [
+      projectId,
+      region,
+      targetDataset,
+      introspectTableId,
+      stagingBucket,
+      onShowToast,
+      onShowError,
+    ]
+  );
 
   useEffect(() => {
     if (initialSubTab && SUB_TABS.some((t) => t.id === initialSubTab)) {
@@ -735,6 +1163,8 @@ export default function ManagedSparkStudio({
     onShowToast?.('Copied to clipboard');
   };
 
+  const copyToClipboard = (text, label) => handleCopy(text, label);
+
   const handleDownloadFile = (filename, content, mimeType = 'text/plain') => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -748,7 +1178,202 @@ export default function ManagedSparkStudio({
     onShowToast?.(`Downloaded ${filename}`);
   };
 
-  const handleSubmitServerlessBatch = async () => {
+  const handleIntrospectSparkDataAssets = useCallback(
+    async (overrideDataset, overrideTable, overrideGcsUri) => {
+      if (!projectId) return;
+      const ds = overrideDataset !== undefined ? overrideDataset : targetDataset;
+      const tbl = overrideTable !== undefined ? overrideTable : introspectTableId;
+      const gcs =
+        overrideGcsUri !== undefined
+          ? overrideGcsUri
+          : gcsPrefixInput || (stagingBucket ? `gs://${stagingBucket}` : '');
+      setIntrospectLoading(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+          {
+            action: 'INTROSPECT_SPARK_DATA_ASSETS',
+            region,
+            datasetId: ds,
+            tableId: tbl,
+            gcsUri: gcs,
+          }
+        );
+        const data = res.data || {};
+        setIntrospectResult(data);
+        if (data.selectedTable?.tableId && !tbl) {
+          setIntrospectTableId(data.selectedTable.tableId);
+        }
+        onShowToast?.(
+          data.selectedTable?.tableId
+            ? `Introspected live schema for ${projectId}.${ds}.${data.selectedTable.tableId} (${(data.selectedTable.columns || []).length} columns)`
+            : `Discovered ${(data.tables || []).length} BigQuery tables & ${(data.gcsObjects || []).length} GCS objects`
+        );
+      } catch (err) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to introspect BigQuery / GCS assets.'
+        );
+      } finally {
+        setIntrospectLoading(false);
+      }
+    },
+    [projectId, region, targetDataset, introspectTableId, gcsPrefixInput, stagingBucket, onShowToast, onShowError]
+  );
+
+  const handleValidatePySparkSyntax = async () => {
+    if (!projectId) return;
+    setSyntaxValidating(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+        {
+          action: 'VALIDATE_PYSPARK_SYNTAX',
+          pythonScriptContent: customPyCode,
+        }
+      );
+      setSyntaxValidation(res.data);
+      if (res.data?.syntaxValid) {
+        onShowToast?.(
+          res.data.message || 'PySpark 3.5 script passed python3 -m py_compile!'
+        );
+      } else {
+        onShowError?.(
+          res.data?.compilerOutput || 'Python syntax error detected in script.'
+        );
+      }
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to validate PySpark syntax.'
+      );
+    } finally {
+      setSyntaxValidating(false);
+    }
+  };
+
+  const handleSearchGcsDriverLog = async (overrideUri, overridePattern) => {
+    if (!projectId) return;
+    const outputUri =
+      overrideUri ||
+      diagnosticsResult?.batch?.outputUri ||
+      batches.find((b) => b.id === selectedBatchForRca)?.outputUri;
+    if (!outputUri) {
+      onShowError?.(
+        'Select a batch with a GCS driver output URI (or run 3-Pillar RCA first) to search the driver log.'
+      );
+      return;
+    }
+    setDriverLogSearching(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+        {
+          action: 'SEARCH_GCS_DRIVER_LOG',
+          outputUri,
+          pattern: overridePattern || driverLogSearchPattern,
+          contextLines: 3,
+        }
+      );
+      setDriverLogSearchResult(res.data);
+      onShowToast?.(
+        `Scanned bounded 128 KB GCS driver log tail: ${res.data?.matchCount || 0} match(es) found`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to search GCS driver output log.'
+      );
+    } finally {
+      setDriverLogSearching(false);
+    }
+  };
+
+  const handleApplyAutoTunedPropertiesAndResubmit = async (recommendedProps) => {
+    const mergedProps = {
+      ...customSparkProperties,
+      ...(recommendedProps || {}),
+    };
+    setCustomSparkProperties(mergedProps);
+    onShowToast?.(
+      `Applied ${Object.keys(recommendedProps || {}).length} auto-tuned Spark 3.5 properties (AQE + SkewJoin + Dynamic Scaling v2)`
+    );
+    await handleSubmitServerlessBatch(mergedProps);
+  };
+
+  const handleDeleteDataprocCluster = async (clusterName, clusterRegion) => {
+    if (!projectId || !clusterName) return;
+    setActionBusy(`DEL_CLUSTER_${clusterName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
+        {
+          action: 'DELETE_DATAPROC_CLUSTER',
+          region: clusterRegion || region,
+          clusterName,
+        }
+      );
+      onShowToast?.(
+        res.data?.message || `Deleted Dataproc GCE cluster ${clusterName}`
+      );
+      await fetchSparkOverview(region, true);
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to delete cluster ${clusterName}`
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Listen for incoming cross-studio deep-links (from BigQuery Studio, GCS Workbench, Data Engineering Studio)
+  useEffect(() => {
+    const onOpenManagedSpark = (ev) => {
+      const detail = ev?.detail || {};
+      if (detail.subTab && SUB_TABS.some((t) => t.id === detail.subTab)) {
+        setActiveSubTab(detail.subTab);
+      }
+      if (detail.region) setRegion(detail.region);
+      if (detail.bucketName) {
+        setStagingBucket(detail.bucketName);
+        setGcsPrefixInput(
+          detail.objectName
+            ? `gs://${detail.bucketName}/${detail.objectName}`
+            : `gs://${detail.bucketName}`
+        );
+      }
+      if (detail.datasetId) setTargetDataset(detail.datasetId);
+      if (detail.tableId) setIntrospectTableId(detail.tableId);
+      if (detail.batchId) {
+        setSelectedBatchForRca(detail.batchId);
+      }
+      if (detail.datasetId || detail.tableId || detail.bucketName) {
+        handleIntrospectSparkDataAssets(
+          detail.datasetId || targetDataset,
+          detail.tableId || '',
+          detail.bucketName
+            ? detail.objectName
+              ? `gs://${detail.bucketName}/${detail.objectName}`
+              : `gs://${detail.bucketName}`
+            : ''
+        );
+      }
+    };
+    window.addEventListener('cloudpulse:open-managed-spark', onOpenManagedSpark);
+    return () =>
+      window.removeEventListener(
+        'cloudpulse:open-managed-spark',
+        onOpenManagedSpark
+      );
+  }, [handleIntrospectSparkDataAssets, targetDataset]);
+
+  const handleSubmitServerlessBatch = async (overrideProperties) => {
     if (!projectId) return;
     if (!stagingBucket) {
       onShowError?.(
@@ -758,6 +1383,12 @@ export default function ManagedSparkStudio({
     }
     setActionBusy('SUBMIT_BATCH');
     try {
+      const effectiveProps =
+        overrideProperties &&
+        typeof overrideProperties === 'object' &&
+        !overrideProperties.nativeEvent
+          ? overrideProperties
+          : customSparkProperties;
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/managed-spark/action`,
         {
@@ -767,11 +1398,7 @@ export default function ManagedSparkStudio({
           stagingBucket,
           pythonScriptContent: customPyCode,
           runtimeVersion: '2.2',
-          properties: {
-            'spark.sql.adaptive.enabled': 'true',
-            'spark.sql.adaptive.coalescePartitions.enabled': 'true',
-            'spark.sql.autoBroadcastJoinThreshold': '104857600',
-          },
+          properties: effectiveProps,
         }
       );
       onShowToast?.(
@@ -1006,8 +1633,11 @@ export default function ManagedSparkStudio({
 
   const gcloudSubmitCli = useMemo(() => {
     const cleanBkt = stagingBucket || `${projectId}-spark-warehouse`;
-    return `gcloud dataproc batches submit pyspark gs://${cleanBkt}/spark-jobs/${batchIdInput}.py --batch=${batchIdInput} --region=${region} --project=${projectId} --version=2.2 --properties="spark.sql.adaptive.enabled=true,spark.sql.autoBroadcastJoinThreshold=104857600"`;
-  }, [stagingBucket, projectId, batchIdInput, region]);
+    const propsArg = Object.entries(customSparkProperties || {})
+      .map(([k, v]) => `${k}=${v}`)
+      .join(',');
+    return `gcloud dataproc batches submit pyspark gs://${cleanBkt}/spark-jobs/${batchIdInput}.py --batch=${batchIdInput} --region=${region} --project=${projectId} --version=2.2 --properties="${propsArg || 'spark.sql.adaptive.enabled=true'}"`;
+  }, [stagingBucket, projectId, batchIdInput, region, customSparkProperties]);
 
   return (
     <div className="space-y-4">
@@ -1064,6 +1694,7 @@ export default function ManagedSparkStudio({
 
             <button
               type="button"
+              data-feature-id="SPARK_BTN_REFRESH_OVERVIEW"
               onClick={() => fetchSparkOverview(region)}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
@@ -1074,7 +1705,42 @@ export default function ManagedSparkStudio({
 
             <button
               type="button"
-              onClick={() => onNavigateTab?.('DATA_ENGINEER_STUDIO')}
+              data-feature-id="SPARK_BTN_QUERY_BQ_GOLD"
+              onClick={() =>
+                onOpenBigQuerySql?.(
+                  `-- Managed Spark 3.5 / BigLake Iceberg Verification Query\nSELECT *\nFROM \`${projectId}.${targetDataset || 'lakehouse_gold'}.service_telemetry_gold\`\nORDER BY processed_at DESC\nLIMIT 100;`
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
+              title="Open BigQuery Studio with a live verification query for your Spark output dataset"
+            >
+              <Database className="w-3.5 h-3.5 text-blue-500" />
+              Query in BigQuery
+              <ArrowRight className="w-3 h-3" />
+            </button>
+
+            {stagingBucket && (
+              <button
+                type="button"
+                data-feature-id="SPARK_BTN_BROWSE_GCS_JOBS"
+                onClick={() =>
+                  handleBrowseGsUriInWorkbench(`gs://${stagingBucket}/spark-jobs/`)
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
+                title={`Browse gs://${stagingBucket} in Cloud Storage Object Workbench`}
+              >
+                <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
+                Browse GCS Staging
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              data-feature-id="SPARK_BTN_OPEN_DATA_STUDIO"
+              onClick={() =>
+                onNavigateTab?.('DATA_ENGINEER_STUDIO', 'SERVERLESS_SPARK')
+              }
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
             >
               <Layers className="w-3.5 h-3.5 text-indigo-500" />
@@ -1084,6 +1750,7 @@ export default function ManagedSparkStudio({
 
             <button
               type="button"
+              data-feature-id="SPARK_BTN_OPEN_BIGLAKE"
               onClick={() => onNavigateTab?.('BIGLAKE_STUDIO')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
             >
@@ -1091,6 +1758,24 @@ export default function ManagedSparkStudio({
               BigLake Iceberg
               <ArrowRight className="w-3 h-3" />
             </button>
+
+            {typeof onOpenLogsExplorer === 'function' && (
+              <button
+                type="button"
+                data-feature-id="SPARK_BTN_OPEN_CHRONO_LOGS"
+                onClick={() =>
+                  onOpenLogsExplorer(
+                    `resource.type=("cloud_dataproc_batch" OR "cloud_dataproc_session" OR "cloud_dataproc_cluster")`
+                  )
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
+                title="Stream live Dataproc Serverless batch & session logs in Chrono-Log SRE Hub"
+              >
+                <Activity className="w-3.5 h-3.5 text-rose-500" />
+                Chrono-Log SRE Hub
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1205,6 +1890,7 @@ export default function ManagedSparkStudio({
               </div>
               <button
                 type="button"
+                data-feature-id="SPARK_BTN_ENABLE_APIS"
                 onClick={handleEnableSparkApis}
                 disabled={actionBusy === 'ENABLE_APIS'}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
@@ -1217,8 +1903,12 @@ export default function ManagedSparkStudio({
             </div>
           )}
 
-        {/* 4-Pillar Sub-Tab Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
+        {/* 5-Pillar Sub-Tab Bar */}
+        <div
+          role="tablist"
+          aria-label="Managed Spark Workspace Modules"
+          className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1 p-1 rounded-[10px] mt-4"
+        >
           {SUB_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -1226,32 +1916,24 @@ export default function ManagedSparkStudio({
               <button
                 key={tab.id}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
                 data-subtab-id={tab.id}
                 data-feature-id={`SPARK_TAB_${tab.id}`}
+                title={tab.shortDesc || tab.label}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition cursor-pointer ${
+                className={`w-full h-9 px-2.5 rounded-[7px] text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
                   isActive
-                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                    : 'bg-white/90 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
                 <Icon
-                  className={`w-4 h-4 mt-0.5 shrink-0 ${
-                    isActive ? 'text-white' : 'text-orange-500'
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'
                   }`}
                 />
-                <div className="min-w-0">
-                  <div className="text-xs font-bold leading-snug">
-                    {tab.label}
-                  </div>
-                  <div
-                    className={`text-[10.5px] mt-0.5 line-clamp-2 ${
-                      isActive ? 'text-blue-100' : 'text-zinc-500 dark:text-zinc-400'
-                    }`}
-                  >
-                    {tab.shortDesc}
-                  </div>
-                </div>
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -1293,17 +1975,18 @@ export default function ManagedSparkStudio({
                   <button
                     key={tpl.id}
                     type="button"
-                    onClick={() => setSelectedTemplateId(tpl.id)}
+                    data-feature-id={`SPARK_TPL_${tpl.id}`}
+                    onClick={() => handleSelectWorkloadTemplate(tpl)}
                     className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                       active
-                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm ring-2 ring-blue-500/30'
                         : 'bg-zinc-50 dark:bg-zinc-900/70 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold">{tpl.title}</span>
                       <span
-                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
                           active
                             ? 'bg-white/20 text-white'
                             : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
@@ -1322,6 +2005,118 @@ export default function ManagedSparkStudio({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Active Blueprint Dataflow & Engine Telemetry Strip (Updates Immediately on Template Click) */}
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-600 text-white">
+                    ACTIVE BLUEPRINT
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    {activeTemplateMeta.title}
+                  </span>
+                  <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
+                    gs://{stagingBucket || `${projectId}-spark-warehouse`}/spark-jobs/{batchIdInput}.py
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(activeTemplateMeta.engineBadges || []).map((badge) => (
+                    <span
+                      key={badge}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800">
+                  <div className="text-[10px] uppercase font-bold text-zinc-500">
+                    1. Source Connector
+                  </div>
+                  <div className="text-zinc-900 dark:text-zinc-100 font-semibold mt-0.5">
+                    {activeTemplateMeta.sourceFlow}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800">
+                  <div className="text-[10px] uppercase font-bold text-zinc-500">
+                    2. Distributed Spark 3.5 Transform
+                  </div>
+                  <div className="text-zinc-900 dark:text-zinc-100 font-semibold mt-0.5">
+                    {activeTemplateMeta.transformFlow}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800">
+                  <div className="text-[10px] uppercase font-bold text-zinc-500">
+                    3. Target Sink Table
+                  </div>
+                  <div className="text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
+                    {activeTemplateMeta.sinkFlow}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Interactive Executor, Memory & Engine Hardware Cockpit */}
+              <div className="pt-2 border-t border-blue-500/20 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-blue-500" />
+                    <span>
+                      Executor Autoscaling, Heap &amp; Vectorized Engine Profile
+                    </span>
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                    Active Profile: {activeHardwareProfile.title} · Est. Run Cost: $
+                    {activeHardwareProfile.estimatedCostUsd.toFixed(4)} ($0.00/hr idle)
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {SPARK_HARDWARE_PROFILES.map((prof) => {
+                    const isProfActive = selectedHardwareProfileId === prof.id;
+                    return (
+                      <button
+                        key={prof.id}
+                        type="button"
+                        data-feature-id={`SPARK_HW_${prof.id}`}
+                        onClick={() => handleSelectHardwareProfile(prof)}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          isProfActive
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                            : 'bg-white/90 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-[11px] font-bold leading-snug">
+                            {prof.title}
+                          </span>
+                          <span
+                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                              isProfActive
+                                ? 'bg-white/20 text-white'
+                                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            }`}
+                          >
+                            {prof.badge}
+                          </span>
+                        </div>
+                        <div
+                          className={`text-[10.5px] font-mono mt-1 ${
+                            isProfActive
+                              ? 'text-blue-100'
+                              : 'text-zinc-500 dark:text-zinc-400'
+                          }`}
+                        >
+                          {prof.dcuSummary}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Batch Parameters Form */}
@@ -1379,7 +2174,8 @@ export default function ManagedSparkStudio({
 
               <div>
                 <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                  BigLake Metastore Catalog
+                  {activeTemplateMeta.fourthFieldLabel ||
+                    'BigLake Metastore Catalog'}
                 </label>
                 <input
                   type="text"
@@ -1390,11 +2186,418 @@ export default function ManagedSparkStudio({
               </div>
             </div>
 
+            {/* Inline Live Preview & Editor for Staged Script / gcloud CLI / Spark Properties */}
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 p-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_PREVIEW_TAB_SCRIPT"
+                    onClick={() => setLauncherPreviewTab('SCRIPT')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer inline-flex items-center gap-1.5 ${
+                      launcherPreviewTab === 'SCRIPT'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <FileCode2 className="w-3.5 h-3.5" />
+                    <span>
+                      Staged PySpark 3.5 Script ({batchIdInput}.py ·{' '}
+                      {customPyCode.split('\n').length} lines)
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_PREVIEW_TAB_XRAY_DAG"
+                    onClick={() => {
+                      setLauncherPreviewTab('XRAY_DAG');
+                      handleRunPreflightXray();
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer inline-flex items-center gap-1.5 ${
+                      launcherPreviewTab === 'XRAY_DAG'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>
+                      4-Stage Physical DAG &amp; 6-Gate AST X-Ray
+                      {preflightXrayResult
+                        ? ` (${preflightXrayResult.readyScore}/100)`
+                        : ''}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_PREVIEW_TAB_GCLOUD_CLI"
+                    onClick={() => setLauncherPreviewTab('GCLOUD_CLI')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer inline-flex items-center gap-1.5 ${
+                      launcherPreviewTab === 'GCLOUD_CLI'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>gcloud dataproc batches submit CLI</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_PREVIEW_TAB_PROPERTIES"
+                    onClick={() => setLauncherPreviewTab('PROPERTIES')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer inline-flex items-center gap-1.5 ${
+                      launcherPreviewTab === 'PROPERTIES'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <Wrench className="w-3.5 h-3.5" />
+                    <span>
+                      Spark 3.5 Properties (
+                      {Object.keys(customSparkProperties || {}).length})
+                    </span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_TOGGLE_LIGHTNING_ENGINE"
+                    onClick={() => {
+                      const isLightning =
+                        customSparkProperties?.['spark.dataproc.engine'] ===
+                        'lightningEngine';
+                      const next = { ...customSparkProperties };
+                      if (isLightning) {
+                        delete next['spark.dataproc.engine'];
+                        onShowToast?.(
+                          'Switched to Standard Dataproc Serverless Spark 3.5 runtime'
+                        );
+                      } else {
+                        next['spark.dataproc.engine'] = 'lightningEngine';
+                        onShowToast?.(
+                          'Enabled Spark Lightning Engine (spark.dataproc.engine=lightningEngine)!'
+                        );
+                      }
+                      setCustomSparkProperties(next);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition cursor-pointer inline-flex items-center gap-1 ${
+                      customSparkProperties?.['spark.dataproc.engine'] ===
+                      'lightningEngine'
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                    title="Toggle Google Cloud Managed Spark C++ Vectorized Lightning Engine"
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>
+                      {customSparkProperties?.['spark.dataproc.engine'] ===
+                      'lightningEngine'
+                        ? 'Lightning Engine: ON'
+                        : 'Enable Lightning Engine'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_VERIFY_PY_COMPILE"
+                    onClick={handleValidatePySparkSyntax}
+                    disabled={syntaxValidating}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>
+                      {syntaxValidating
+                        ? 'Compiling...'
+                        : 'Verify Syntax (py_compile)'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_COPY_WORKBENCH_CODE"
+                    onClick={() =>
+                      handleCopy(
+                        launcherPreviewTab === 'GCLOUD_CLI'
+                          ? gcloudSubmitCli
+                          : launcherPreviewTab === 'PROPERTIES'
+                          ? JSON.stringify(customSparkProperties, null, 2)
+                          : customPyCode,
+                        `launcher-copy-${launcherPreviewTab}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer inline-flex items-center gap-1"
+                  >
+                    {copiedId === `launcher-copy-${launcherPreviewTab}` ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>
+                      {copiedId === `launcher-copy-${launcherPreviewTab}`
+                        ? 'Copied!'
+                        : 'Copy'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {syntaxValidation && (
+                <div
+                  className={`rounded-lg px-3 py-2 text-xs font-mono flex items-center justify-between gap-2 ${
+                    syntaxValidation.syntaxValid
+                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                      : 'bg-rose-500/15 border border-rose-500/30 text-rose-800 dark:text-rose-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {syntaxValidation.syntaxValid ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                    )}
+                    <span>
+                      {syntaxValidation.message ||
+                        syntaxValidation.compilerOutput}
+                    </span>
+                  </div>
+                  <span className="text-[10.5px] opacity-80">
+                    {syntaxValidation.lineCount ||
+                      customPyCode.split('\n').length}{' '}
+                    lines verified
+                  </span>
+                </div>
+              )}
+
+              {launcherPreviewTab === 'SCRIPT' && (
+                <textarea
+                  rows={10}
+                  value={customPyCode}
+                  onChange={(e) => {
+                    setCustomPyCode(e.target.value);
+                    setSyntaxValidation(null);
+                  }}
+                  className="w-full rounded-xl bg-[#0d1117] text-emerald-300 font-mono text-xs p-3.5 border border-zinc-800 focus:outline-none focus:border-blue-500 leading-relaxed"
+                  spellCheck={false}
+                />
+              )}
+
+              {launcherPreviewTab === 'XRAY_DAG' && (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <span>
+                        Live Python 3 AST Physical Execution Plan &amp; 6-Gate Pre-Flight X-Ray
+                      </span>
+                      {preflightXrayResult && (
+                        <span className="px-2 py-0.5 rounded-full text-[10.5px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          Readiness Score: {preflightXrayResult.readyScore}/100
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      data-feature-id="SPARK_BTN_RERUN_XRAY"
+                      onClick={() => handleRunPreflightXray()}
+                      disabled={preflightXrayLoading}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${
+                          preflightXrayLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>
+                        {preflightXrayLoading
+                          ? 'Running AST & GCP Probe...'
+                          : 'Re-Run 6-Gate AST X-Ray ($0.00)'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {preflightXrayLoading && !preflightXrayResult ? (
+                    <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                      Parsing Python 3 AST, inspecting Spark operators, and probing live GCS Bucket + BigQuery Dataset + IAM bindings...
+                    </div>
+                  ) : preflightXrayResult ? (
+                    <div className="space-y-3">
+                      {/* 4-Stage Physical Execution DAG */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {(preflightXrayResult.physicalDagStages || []).map(
+                          (stg, idx) => (
+                            <div
+                              key={stg.stageId || idx}
+                              className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1 font-mono text-xs"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold">
+                                  {stg.stageId}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                  {stg.shuffleBytes}
+                                </span>
+                              </div>
+                              <div className="font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                                {stg.name}
+                              </div>
+                              <div className="text-[10.5px] text-blue-600 dark:text-blue-400 truncate">
+                                {stg.operator}
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                {stg.parallelism}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {/* 6 Pre-Flight Gates */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {(preflightXrayResult.gates || []).map((g) => {
+                          const isPass =
+                            g.status === 'PASS' || g.status === 'AUTO_CREATE';
+                          return (
+                            <div
+                              key={g.id}
+                              className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2 text-xs font-mono"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                    {g.title}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold ${
+                                      isPass
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                    }`}
+                                  >
+                                    {g.status}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                  {g.summary}
+                                </p>
+                              </div>
+
+                              {g.id === 'GATE_2_GRAVITY' &&
+                                g.sameRegionGravity === false &&
+                                g.bucketLocation &&
+                                SPARK_REGIONS.includes(
+                                  g.bucketLocation.toLowerCase()
+                                ) && (
+                                  <button
+                                    type="button"
+                                    data-feature-id="SPARK_BTN_ALIGN_REGION_TO_BUCKET"
+                                    onClick={() => {
+                                      const aligned =
+                                        g.bucketLocation.toLowerCase();
+                                      setRegion(aligned);
+                                      onShowToast?.(
+                                        `Aligned batch region to ${aligned} for $0.00/GB same-region GCS data gravity!`
+                                      );
+                                    }}
+                                    className="self-start px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                                  >
+                                    Align Region to {g.bucketLocation.toLowerCase()} ($0.00/GB Egress)
+                                  </button>
+                                )}
+
+                              {g.id === 'GATE_3_BIGQUERY' &&
+                                g.status === 'BOOTSTRAP_READY' && (
+                                  <button
+                                    type="button"
+                                    data-feature-id="SPARK_BTN_BOOTSTRAP_BQ_DEMO"
+                                    onClick={handleBootstrapSparkDemoAssets}
+                                    disabled={bootstrapBusy}
+                                    className="self-start px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Database className="w-3 h-3" />
+                                    <span>
+                                      {bootstrapBusy
+                                        ? 'Bootstrapping BigQuery Dataset & Tables...'
+                                        : `Bootstrap Dataset "${targetDataset}" & Seed 3 Source Tables`}
+                                    </span>
+                                  </button>
+                                )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {launcherPreviewTab === 'GCLOUD_CLI' && (
+                <pre className="w-full rounded-xl bg-[#0d1117] text-blue-300 font-mono text-xs p-3.5 border border-zinc-800 overflow-x-auto whitespace-pre-wrap">
+                  {gcloudSubmitCli}
+                </pre>
+              )}
+
+              {launcherPreviewTab === 'PROPERTIES' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
+                  {Object.entries(customSparkProperties || {}).map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                    >
+                      <span className="text-zinc-600 dark:text-zinc-400 truncate">
+                        {k}
+                      </span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                        {String(v)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Live Cryptographic GCS Staged Script Receipt (When Staged to GCS) */}
+            {stagedScriptReceipt && (
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      STAGED TO CLOUD STORAGE ($0.00 COMPUTE):
+                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                      {stagedScriptReceipt.stagedUri}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    Size: {stagedScriptReceipt.sizeBytes} bytes · Location:{' '}
+                    {stagedScriptReceipt.bucketLocation} · Generation:{' '}
+                    {stagedScriptReceipt.generation} · SHA-256:{' '}
+                    {String(stagedScriptReceipt.sha256 || '').slice(0, 20)}...
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_BROWSE_STAGED_PY"
+                    onClick={() =>
+                      handleBrowseGsUriInWorkbench(
+                        stagedScriptReceipt.stagedUri
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                  >
+                    <HardDrive className="w-3.5 h-3.5" />
+                    <span>Browse Staged .py in GCS Workbench →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Action Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_SUBMIT_SERVERLESS_BATCH"
                   onClick={handleSubmitServerlessBatch}
                   disabled={actionBusy === 'SUBMIT_BATCH'}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer transition"
@@ -1407,21 +2610,73 @@ export default function ManagedSparkStudio({
 
                 <button
                   type="button"
-                  onClick={() => onRunInShell?.(gcloudSubmitCli)}
+                  data-feature-id="SPARK_BTN_STAGE_SCRIPT_ONLY"
+                  onClick={handleStageScriptToGcsOnly}
+                  disabled={stageScriptBusy}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition"
+                  title="Upload the PySpark .py script to your GCS staging bucket and verify its SHA-256 & object generation without spending any Dataproc compute DCUs"
+                >
+                  <HardDrive className="w-3.5 h-3.5" />
+                  {stageScriptBusy
+                    ? 'Uploading .py to GCS...'
+                    : 'Stage .py to GCS Only ($0.00 Compute)'}
+                </button>
+
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_RERUN_XRAY"
+                  onClick={() => {
+                    setLauncherPreviewTab('XRAY_DAG');
+                    handleRunPreflightXray();
+                  }}
+                  disabled={preflightXrayLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
+                >
+                  <Activity className="w-3.5 h-3.5 text-blue-500" />
+                  {preflightXrayLoading
+                    ? 'Scanning AST & GCP...'
+                    : '6-Gate AST & Data-Gravity X-Ray ($0.00)'}
+                </button>
+
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_BOOTSTRAP_BQ_DEMO"
+                  onClick={handleBootstrapSparkDemoAssets}
+                  disabled={bootstrapBusy}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
+                  title="Create the target BigQuery dataset and seed real telemetry_events, dim_regions, and account_risk_tiers tables for immediate Spark execution"
+                >
+                  <Database className="w-3.5 h-3.5 text-indigo-500" />
+                  {bootstrapBusy
+                    ? 'Seeding BigQuery...'
+                    : `Bootstrap BQ Dataset (${targetDataset})`}
+                </button>
+
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_RUN_IN_CLOUD_SHELL"
+                  onClick={() => {
+                    if (shellRunner) {
+                      shellRunner(gcloudSubmitCli);
+                    } else {
+                      handleCopy(gcloudSubmitCli, 'cli-fallback');
+                    }
+                  }}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition"
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  Run gcloud dataproc batches submit in Cloud Shell
+                  Run in Cloud Shell
                 </button>
               </div>
 
               <button
                 type="button"
+                data-feature-id="SPARK_BTN_CUSTOMIZE_IN_TAB2"
                 onClick={() => setActiveSubTab('SPARK_CONNECT_NOTEBOOKS')}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
                 <FileCode2 className="w-3.5 h-3.5" />
-                Edit PySpark Script / Export .ipynb Notebook
+                Open Full Notebook (.ipynb) &amp; Schema Introspector
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -1524,6 +2779,7 @@ export default function ManagedSparkStudio({
                               {b.mainUri && b.mainUri.startsWith('gs://') && (
                                 <button
                                   type="button"
+                                  data-feature-id="SPARK_BTN_BROWSE_STAGED_PY"
                                   onClick={() =>
                                     handleBrowseGsUriInWorkbench(b.mainUri)
                                   }
@@ -1536,6 +2792,7 @@ export default function ManagedSparkStudio({
                               )}
                               <button
                                 type="button"
+                                data-feature-id="SPARK_BTN_BATCH_INSPECT_RCA"
                                 onClick={() =>
                                   handleInspectBatchDiagnostics(b.id, b.region)
                                 }
@@ -1544,8 +2801,25 @@ export default function ManagedSparkStudio({
                                 <Eye className="w-3 h-3 text-blue-500" />
                                 Inspect RCA
                               </button>
+                              {typeof onOpenLogsExplorer === 'function' && (
+                                <button
+                                  type="button"
+                                  data-feature-id="SPARK_BTN_BATCH_LOGS"
+                                  onClick={() =>
+                                    onOpenLogsExplorer(
+                                      `resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="${b.id}"`
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                                  title={`Stream batch "${b.id}" logs in Chrono-Log SRE Triage Hub`}
+                                >
+                                  <Terminal className="w-3 h-3" />
+                                  Logs →
+                                </button>
+                              )}
                               <button
                                 type="button"
+                                data-feature-id="SPARK_BTN_BATCH_DELETE"
                                 onClick={() => handleDeleteBatch(b.id, b.region)}
                                 disabled={actionBusy === `DEL_BATCH_${b.id}`}
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
@@ -1577,6 +2851,7 @@ export default function ManagedSparkStudio({
                 </div>
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_CREATE_INTERACTIVE_SESSION"
                   onClick={handleCreateInteractiveSession}
                   disabled={actionBusy === 'CREATE_SESSION'}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
@@ -1613,6 +2888,7 @@ export default function ManagedSparkStudio({
                       </div>
                       <button
                         type="button"
+                        data-feature-id="SPARK_BTN_DELETE_SESSION"
                         onClick={() => handleDeleteSession(s.id, s.region)}
                         className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 cursor-pointer"
                         title="Terminate & Delete Session"
@@ -1644,24 +2920,48 @@ export default function ManagedSparkStudio({
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {clusters.map((c) => (
-                    <div
-                      key={`${c.region}:${c.clusterName}`}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
-                    >
-                      <div>
-                        <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                          {c.clusterName}{' '}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            {c.state}
-                          </span>
+                  {clusters.map((c) => {
+                    const estNodes = 1 + Number(c.workerCount || 2);
+                    const estMonthlyUsd = (estNodes * 116.8).toFixed(2);
+                    return (
+                      <div
+                        key={`${c.region}:${c.clusterName}`}
+                        className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <span>{c.clusterName}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              {c.state}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                              ~${estMonthlyUsd}/mo 24/7 burn vs $0 Serverless idle
+                            </span>
+                          </div>
+                          <div className="text-[10.5px] text-zinc-500 mt-0.5">
+                            {c.region} · 1x {c.masterType} + {c.workerCount}x {c.workerType} ({c.imageVersion})
+                          </div>
                         </div>
-                        <div className="text-[10.5px] text-zinc-500">
-                          {c.region} · 1x {c.masterType} + {c.workerCount}x {c.workerType} ({c.imageVersion})
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            data-feature-id="SPARK_BTN_TEARDOWN_IDLE_GCE_CLUSTER"
+                            onClick={() =>
+                              handleDeleteDataprocCluster(c.clusterName, c.region)
+                            }
+                            disabled={
+                              actionBusy === `DEL_CLUSTER_${c.clusterName}`
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                            title="Delete Persistent GCE Dataproc Cluster & Switch to Serverless ($0.00/hr idle)"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Delete Idle Cluster
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1694,6 +2994,7 @@ export default function ManagedSparkStudio({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_DOWNLOAD_IPYNB"
                   onClick={() =>
                     handleDownloadFile(
                       `managed_spark_${selectedTemplateId.toLowerCase()}.ipynb`,
@@ -1708,6 +3009,7 @@ export default function ManagedSparkStudio({
                 </button>
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_DOWNLOAD_PY"
                   onClick={() =>
                     handleDownloadFile(
                       `${batchIdInput}.py`,
@@ -1743,6 +3045,7 @@ export default function ManagedSparkStudio({
                 />
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_CREATE_SESSION_TEMPLATE"
                   onClick={handleCreateSessionTemplate}
                   disabled={actionBusy === 'CREATE_TEMPLATE'}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
@@ -1755,15 +3058,217 @@ export default function ManagedSparkStudio({
               </div>
             </div>
 
-            {/* Editable PySpark Code Editor */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 font-mono">
-                  PySpark 3.5 Script ({selectedTemplateId}.py)
-                </span>
-                <div className="flex items-center gap-2">
+            {/* Live BigQuery Table & GCS Prefix Schema Introspector (Step 3 Mandatory Pre-Flight) */}
+            <div className="rounded-xl bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-emerald-500/5 border border-blue-500/25 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-blue-500" />
+                    Live BigQuery &amp; GCS Schema Introspector (Zero-Hallucination Column &amp; Broadcast Join Discovery)
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    Queries live BigQuery <code className="font-mono">tables.get</code> metadata and GCS <code className="font-mono">objects.list</code> prefixes to verify exact column names, types, row counts, and <code className="font-mono">&lt;= 100 MB</code> <code className="font-mono">F.broadcast()</code> eligibility before writing PySpark code.
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    data-feature-id="SPARK_BTN_INTROSPECT_DATA_ASSETS"
+                    onClick={() => handleIntrospectSparkDataAssets()}
+                    disabled={introspectLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    {introspectLoading
+                      ? 'Introspecting Live Schema...'
+                      : 'Introspect BigQuery & GCS Schema'}
+                  </button>
+                  {introspectResult?.synthesizedPySparkCode && (
+                    <button
+                      type="button"
+                      data-feature-id="SPARK_BTN_LOAD_SYNTHESIZED_SCRIPT"
+                      onClick={() => {
+                        setCustomPyCode(introspectResult.synthesizedPySparkCode);
+                        onShowToast?.(
+                          `Loaded schema-verified PySpark 3.5 script for ${projectId}.${introspectResult.datasetId}.${introspectResult.selectedTable?.tableId || 'table'}`
+                        );
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Load Schema-Verified PySpark 3.5 Script
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[10.5px] font-semibold text-zinc-500 mb-1">
+                    BigQuery Dataset ({projectId})
+                  </label>
+                  {(overviewData?.datasets || []).length > 0 ? (
+                    <select
+                      value={targetDataset}
+                      onChange={(e) => {
+                        setTargetDataset(e.target.value);
+                        setIntrospectTableId('');
+                        handleIntrospectSparkDataAssets(e.target.value, '', gcsPrefixInput);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                    >
+                      {(overviewData?.datasets || []).map((d) => (
+                        <option key={d.datasetId} value={d.datasetId}>
+                          {d.datasetId} ({d.location})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={targetDataset}
+                      onChange={(e) => setTargetDataset(e.target.value)}
+                      placeholder="dataset_id"
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-semibold text-zinc-500 mb-1">
+                    BigQuery Table (Optional — Auto-Discovers First Table)
+                  </label>
+                  {(introspectResult?.tables || []).length > 0 ? (
+                    <select
+                      value={introspectTableId}
+                      onChange={(e) => {
+                        setIntrospectTableId(e.target.value);
+                        handleIntrospectSparkDataAssets(
+                          targetDataset,
+                          e.target.value,
+                          gcsPrefixInput
+                        );
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                    >
+                      {(introspectResult?.tables || []).map((t) => (
+                        <option key={t.tableId} value={t.tableId}>
+                          {t.tableId} ({t.type})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={introspectTableId}
+                      onChange={(e) => setIntrospectTableId(e.target.value)}
+                      placeholder="Click Introspect to list tables..."
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-semibold text-zinc-500 mb-1">
+                    GCS Input Prefix (gs://bucket/prefix)
+                  </label>
+                  <input
+                    type="text"
+                    value={gcsPrefixInput}
+                    onChange={(e) => setGcsPrefixInput(e.target.value)}
+                    placeholder={stagingBucket ? `gs://${stagingBucket}` : 'gs://my-bucket/data'}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              {introspectResult?.selectedTable && (
+                <div className="rounded-lg bg-white/90 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {projectId}.{introspectResult.datasetId}.{introspectResult.selectedTable.tableId}{' '}
+                      <span className="text-zinc-500 font-normal">
+                        ({introspectResult.selectedTable.numRows.toLocaleString()} rows ·{' '}
+                        {introspectResult.selectedTable.sizeMb} MB)
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                        introspectResult.selectedTable.broadcastJoinCandidate
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                      }`}
+                    >
+                      {introspectResult.selectedTable.broadcastJoinCandidate
+                        ? 'Eligible for F.broadcast() Join (<= 100 MB)'
+                        : 'Large Fact Table (> 100 MB · Use AQE Partition Coalescing)'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(introspectResult.selectedTable.columns || []).map((col) => (
+                      <span
+                        key={col.name}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono"
+                      >
+                        <strong className="text-zinc-900 dark:text-zinc-100">
+                          {col.name}
+                        </strong>
+                        <span className="text-blue-600 dark:text-blue-400">
+                          {col.type}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Editable PySpark Code Editor */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 font-mono">
+                    PySpark 3.5 Script ({selectedTemplateId}.py)
+                  </span>
+                  {syntaxValidation && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono font-bold ${
+                        syntaxValidation.syntaxValid
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {syntaxValidation.syntaxValid ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" />
+                          py_compile PASS ({syntaxValidation.lineCount} lines)
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3 h-3" />
+                          Syntax Error
+                        </>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_VERIFY_PY_COMPILE"
+                    onClick={handleValidatePySparkSyntax}
+                    disabled={syntaxValidating}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                    title="Run real python3 -m py_compile syntax verification before submitting to Dataproc Serverless"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    {syntaxValidating
+                      ? 'Checking py_compile...'
+                      : 'Verify Syntax (py_compile)'}
+                  </button>
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_COPY_WORKBENCH_CODE"
                     onClick={() => handleCopy(customPyCode, 'PY_CODE')}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
                   >
@@ -1776,7 +3281,8 @@ export default function ManagedSparkStudio({
                   </button>
                   <button
                     type="button"
-                    onClick={handleSubmitServerlessBatch}
+                    data-feature-id="SPARK_BTN_SUBMIT_SERVERLESS_BATCH"
+                    onClick={() => handleSubmitServerlessBatch()}
                     disabled={actionBusy === 'SUBMIT_BATCH'}
                     className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                   >
@@ -1785,6 +3291,11 @@ export default function ManagedSparkStudio({
                   </button>
                 </div>
               </div>
+              {syntaxValidation && !syntaxValidation.syntaxValid && (
+                <pre className="p-2.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-200 font-mono text-[11px] whitespace-pre-wrap">
+                  {syntaxValidation.compilerOutput}
+                </pre>
+              )}
               <textarea
                 rows={18}
                 value={customPyCode}
@@ -1831,6 +3342,7 @@ export default function ManagedSparkStudio({
                 </select>
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_RUN_3PILLAR_RCA"
                   onClick={() =>
                     handleInspectBatchDiagnostics(selectedBatchForRca, region)
                   }
@@ -1910,6 +3422,144 @@ export default function ManagedSparkStudio({
                       {(diagnosticsResult.sqlQueries || []).length}
                     </div>
                   </div>
+                </div>
+
+                {/* Automated SparkApplications Property Auto-Tuner & 1-Click Re-Submit */}
+                {diagnosticsResult.autoTuneRecommendation && (
+                  <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-blue-500" />
+                          Interactive Spark 3.5 Property Auto-Tuner (Synthesized from Stages &amp; Driver Logs)
+                        </div>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          {diagnosticsResult.autoTuneRecommendation.summary}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        data-feature-id="SPARK_BTN_APPLY_AUTOTUNE_RESUBMIT"
+                        onClick={() =>
+                          handleApplyAutoTunedPropertiesAndResubmit(
+                            diagnosticsResult.autoTuneRecommendation
+                              .recommendedProperties
+                          )
+                        }
+                        disabled={actionBusy === 'SUBMIT_BATCH'}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        Apply Tuned Properties &amp; Re-Submit Batch
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(
+                        diagnosticsResult.autoTuneRecommendation
+                          .recommendedProperties || {}
+                      ).map(([k, v]) => (
+                        <span
+                          key={k}
+                          className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-zinc-800 dark:text-zinc-200"
+                        >
+                          <span className="text-blue-600 dark:text-blue-400">
+                            {k}
+                          </span>
+                          ={String(v)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bounded 128 KB GCS Driver Log Regex Search */}
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 p-4 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono">
+                      Bounded 128 KB GCS Driver Log Regex Inspector (&lt;outputUri&gt;.000000000)
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        {
+                          label: 'Exceptions & OOM',
+                          pattern:
+                            'ERROR|Exception|Traceback|OutOfMemoryError|Py4JJavaError|Caused by',
+                        },
+                        {
+                          label: 'Shuffle / Stage Failures',
+                          pattern:
+                            'FetchFailedException|Stage.*failed|ExecutorLostFailure|skew',
+                        },
+                        {
+                          label: 'IAM / PermissionDenied',
+                          pattern: 'PermissionDenied|403|AccessDenied|IAM',
+                        },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          data-feature-id="SPARK_BTN_DRIVER_LOG_REGEX_PRESET"
+                          onClick={() => {
+                            setDriverLogSearchPattern(preset.pattern);
+                            handleSearchGcsDriverLog(
+                              diagnosticsResult.batch?.outputUri,
+                              preset.pattern
+                            );
+                          }}
+                          className="px-2 py-0.5 rounded text-[10.5px] font-mono bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={driverLogSearchPattern}
+                      onChange={(e) => setDriverLogSearchPattern(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                      placeholder="Regex pattern (e.g. ERROR|Exception|OutOfMemoryError)"
+                    />
+                    <button
+                      type="button"
+                      data-feature-id="SPARK_BTN_DRIVER_LOG_REGEX_SEARCH"
+                      onClick={() =>
+                        handleSearchGcsDriverLog(
+                          diagnosticsResult.batch?.outputUri,
+                          driverLogSearchPattern
+                        )
+                      }
+                      disabled={driverLogSearching}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      {driverLogSearching ? 'Scanning...' : 'Search Driver Log'}
+                    </button>
+                  </div>
+                  {driverLogSearchResult && (
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-mono text-zinc-500">
+                        Scanned {driverLogSearchResult.totalLinesScanned} lines in{' '}
+                        <code>{driverLogSearchResult.driverUri}</code> —{' '}
+                        <strong className="text-zinc-900 dark:text-zinc-100">
+                          {driverLogSearchResult.matchCount} match(es)
+                        </strong>
+                      </div>
+                      {(driverLogSearchResult.matches || []).length > 0 && (
+                        <div className="max-h-56 overflow-y-auto space-y-1.5">
+                          {driverLogSearchResult.matches.map((m, idx) => (
+                            <pre
+                              key={idx}
+                              className="p-2.5 rounded-lg bg-[#0d1117] border border-zinc-800 text-[11px] font-mono text-amber-200 whitespace-pre-wrap"
+                            >
+                              {m.contextBlock}
+                            </pre>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Bounded 32KB GCS driveroutput tail */}
@@ -2050,6 +3700,7 @@ export default function ManagedSparkStudio({
               {missingIamRoles.length > 0 && (
                 <button
                   type="button"
+                  data-feature-id="SPARK_BTN_BIND_MISSING_IAM_ROLES"
                   onClick={() => handleBindMissingSparkIamRoles(missingIamRoles)}
                   disabled={actionBusy === 'BIND_IAM'}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
@@ -2098,6 +3749,315 @@ export default function ManagedSparkStudio({
                 </div>
               ))}
             </div>
+
+            {/* SDK 592.0.0 GA: Dataproc Dynamic Workload Scheduler (DWS) Scheduled Clusters */}
+            <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                    [NEW GA · SDK 592.0.0]
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Dataproc Dynamic Workload Scheduler (DWS) Scheduled Cluster CLI
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {typeof onOpenShellWithCommand === 'function' && (
+                    <button
+                      type="button"
+                      data-feature-id="SPARK_BTN_DWS_SCHEDULED_CLUSTER_SHELL"
+                      onClick={() =>
+                        onOpenShellWithCommand(
+                          `gcloud dataproc clusters create cp-dws-spark-cluster --project=${projectId} --region=${region} --scheduling-timeout=3600s --requested-run-duration=14400s`
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                    >
+                      $ Run in Cloud Shell
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    data-feature-id="SPARK_BTN_DWS_SCHEDULED_CLUSTER_COPY"
+                    onClick={() =>
+                      copyToClipboard(
+                        `gcloud dataproc clusters create cp-dws-spark-cluster --project=${projectId} --region=${region} --scheduling-timeout=3600s --requested-run-duration=14400s`,
+                        'DWS Scheduled Cluster CLI'
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    Copy CLI
+                  </button>
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                Promoted to GA in Google Cloud SDK 592.0.0 (2026-11-03): use{' '}
+                <code className="font-mono">--scheduling-timeout</code> and{' '}
+                <code className="font-mono">--requested-run-duration</code> on{' '}
+                <code className="font-mono">gcloud dataproc clusters create</code> for DWS queued GPU/CPU Spark clusters.
+              </p>
+              <div className="p-2.5 rounded-lg bg-zinc-950 text-emerald-400 font-mono text-[11px] break-all">
+                $ gcloud dataproc clusters create cp-dws-spark-cluster --project={projectId} --region={region} --scheduling-timeout=3600s --requested-run-duration=14400s
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-TAB 5: LIGHTNING_BIGFRAMES_LINEAGE
+          (Spark Lightning Engine + BigFrames v2.0 + Data Lineage Blast Radius)
+      ===================================================================== */}
+      {activeSubTab === 'LIGHTNING_BIGFRAMES_LINEAGE' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 text-[10px] font-mono font-bold">
+                    GOOGLE CLOUD SKILLS PACK
+                  </span>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-orange-500" />
+                    Managed Spark Lightning Engine + BigFrames v2.0 + Data Lineage Blast-Radius Studio
+                  </h3>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Combines{' '}
+                  <strong>Managed Spark Lightning Engine (<code className="font-mono">spark.dataproc.engine=lightningEngine</code>)</strong>,{' '}
+                  <strong>BigQuery DataFrames (<code className="font-mono">bigframes.pandas</code> v2.0 + <code className="font-mono">bigframes.bigquery.ml</code>)</strong>, and{' '}
+                  <strong>Knowledge Catalog Data Lineage (<code className="font-mono">datalineage.googleapis.com/v1</code>)</strong> downstream blast-radius analysis.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_RUN_LINEAGE_CATALOG_SYNTHESIS"
+                  onClick={() => handleAnalyzeSparkKnowledgeCatalogAndLineage()}
+                  disabled={lineageCatalogLoading}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  {lineageCatalogLoading
+                    ? 'Querying Data Lineage & Knowledge Catalog...'
+                    : 'Run Lineage Blast-Radius & Synthesize BigFrames'}
+                </button>
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_SUBMIT_LIGHTNING_ENGINE_BATCH"
+                  onClick={() =>
+                    handleApplyAutoTunedPropertiesAndResubmit({
+                      'spark.dataproc.engine': 'lightningEngine',
+                      'spark.sql.adaptive.enabled': 'true',
+                      'spark.sql.adaptive.skewJoin.enabled': 'true',
+                      'spark.dataproc.scaling.version': '2',
+                    })
+                  }
+                  disabled={actionBusy === 'SUBMIT_BATCH'}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white cursor-pointer"
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  Submit Serverless Batch with Lightning Engine
+                </button>
+              </div>
+            </div>
+
+            {/* Target BigQuery Asset Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div>
+                <label className="block text-[10.5px] font-semibold text-zinc-500 mb-1">
+                  BigQuery Dataset ({projectId})
+                </label>
+                <input
+                  type="text"
+                  value={targetDataset}
+                  onChange={(e) => setTargetDataset(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div>
+                <label className="block text-[10.5px] font-semibold text-zinc-500 mb-1">
+                  Target Table / View ID (FQN: bigquery:{projectId}.{targetDataset}.{introspectTableId || 'service_telemetry_gold'})
+                </label>
+                <input
+                  type="text"
+                  value={introspectTableId}
+                  onChange={(e) => setIntrospectTableId(e.target.value)}
+                  placeholder="service_telemetry_gold (auto-discovers first table if blank)"
+                  className="w-full px-3 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  data-feature-id="SPARK_BTN_RUN_IN_CLOUD_SHELL"
+                  onClick={() =>
+                    shellRunner?.(
+                      lineageCatalogResult?.lightningSubmitCli ||
+                        `gcloud dataproc batches submit pyspark gs://${stagingBucket || `${projectId}-spark-warehouse`}/spark-jobs/${batchIdInput}.py --project=${projectId} --region=${region} --version=2.2 --properties="spark.dataproc.engine=lightningEngine,spark.sql.adaptive.enabled=true,spark.dataproc.scaling.version=2"`
+                    )
+                  }
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-900 hover:bg-zinc-800 text-emerald-400 border border-zinc-700 cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  $ Run Lightning Engine CLI in Cloud Shell
+                </button>
+              </div>
+            </div>
+
+            {lineageCatalogResult ? (
+              <div className="space-y-4">
+                {/* Summary KPIs */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10.5px] text-zinc-500 uppercase font-semibold">
+                      Resolved Asset FQN
+                    </div>
+                    <div className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-1 break-all">
+                      {lineageCatalogResult.fqn}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10.5px] text-zinc-500 uppercase font-semibold">
+                      Downstream Blast Radius
+                    </div>
+                    <div className="text-base font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      {lineageCatalogResult.downstreamBlastRadius?.totalAffected || 0}{' '}
+                      <span className="text-xs font-normal text-zinc-500">
+                        dependent asset(s)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10.5px] text-zinc-500 uppercase font-semibold">
+                      Upstream Provenance
+                    </div>
+                    <div className="text-base font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      {lineageCatalogResult.upstreamProvenance?.totalSources || 0}{' '}
+                      <span className="text-xs font-normal text-zinc-500">
+                        source link(s)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10.5px] text-zinc-500 uppercase font-semibold">
+                      Knowledge Catalog Aspects
+                    </div>
+                    <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      {(lineageCatalogResult.knowledgeCatalogAspects || []).length}{' '}
+                      <span className="text-xs font-normal text-zinc-500">
+                        aspect type(s)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Downstream Blast-Radius Table */}
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      Downstream Data Lineage Blast-Radius Table (datalineage.googleapis.com/v1 · Location: {lineageCatalogResult.lineageLocationSearched})
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-500">
+                      Critical Path Assets: {lineageCatalogResult.downstreamBlastRadius?.criticalCount || 0}
+                    </span>
+                  </div>
+                  {(lineageCatalogResult.downstreamBlastRadius?.links || []).length === 0 ? (
+                    <p className="text-xs text-zinc-500 font-mono">
+                      {lineageCatalogResult.downstreamBlastRadius?.advisory ||
+                        `0 downstream dependencies found for ${lineageCatalogResult.fqn} in location "${lineageCatalogResult.lineageLocationSearched}". Safe to modify or overwrite without breaking downstream views.`}
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs font-mono">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10.5px] uppercase text-zinc-500">
+                            <th className="py-1.5 pr-3">Downstream Asset</th>
+                            <th className="py-1.5 px-3">Lineage Link Name</th>
+                            <th className="py-1.5 px-3">Depth</th>
+                            <th className="py-1.5 pl-3">Impact Type</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/70">
+                          {lineageCatalogResult.downstreamBlastRadius.links.map((lk, i) => (
+                            <tr key={lk.name || i}>
+                              <td className="py-2 pr-3 font-bold text-zinc-900 dark:text-zinc-100">
+                                {lk.targetFqn}
+                              </td>
+                              <td className="py-2 px-3 text-zinc-500 truncate max-w-xs">
+                                {lk.name}
+                              </td>
+                              <td className="py-2 px-3">{lk.depth}</td>
+                              <td className="py-2 pl-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    lk.isCriticalPath
+                                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                  }`}
+                                >
+                                  {lk.impactType}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Synthesized BigQuery DataFrames (BigFrames v2.0) Code Studio */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 font-mono">
+                      Synthesized BigQuery DataFrames (bigframes.pandas v2.0 + bigframes.bigquery.ml) Pipeline
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        data-feature-id="SPARK_BTN_OPEN_BIGFRAMES_IN_EDITOR"
+                        onClick={() => {
+                          setCustomPyCode(lineageCatalogResult.bigFramesCode);
+                          setActiveSubTab('SPARK_CONNECT_NOTEBOOKS');
+                          onShowToast?.(
+                            'Loaded BigFrames v2.0 script into editor!'
+                          );
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                      >
+                        Load into Editor &amp; Verify py_compile →
+                      </button>
+                      <button
+                        type="button"
+                        data-feature-id="SPARK_BTN_DOWNLOAD_BIGFRAMES_PY"
+                        onClick={() =>
+                          handleDownloadFile(
+                            `bigframes_${lineageCatalogResult.tableId}.py`,
+                            lineageCatalogResult.bigFramesCode,
+                            'text/x-python'
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                      >
+                        Download bigframes.py
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="rounded-xl bg-[#0d1117] text-emerald-300 font-mono text-xs p-4 border border-zinc-800 overflow-x-auto whitespace-pre-wrap">
+                    {lineageCatalogResult.bigFramesCode}
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 p-6 text-center space-y-2">
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Click <strong>Run Lineage Blast-Radius &amp; Synthesize BigFrames</strong> above to query <code className="font-mono">datalineage.googleapis.com/v1</code>, inspect Dataplex Knowledge Catalog Aspect Types, and generate a <code className="font-mono">bigframes.pandas</code> v2.0 + Spark Lightning Engine pipeline.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

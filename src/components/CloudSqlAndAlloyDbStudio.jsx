@@ -1633,6 +1633,53 @@ LIMIT 25;`,
                 </p>
               </div>
             )}
+
+            {/* SDK 592.0.0 GA: AlloyDB Autoscaler & Cloud SQL PSC DNS Reconcile Strip */}
+            <div className="p-3.5 rounded-[10px] border border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-950/15 space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold">
+                    [NEW GA · SDK 592.0.0]
+                  </span>
+                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                    AlloyDB Autoscaler + Cron Schedules &amp; Cloud SQL PSC DNS Reconcile
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  {
+                    label: 'AlloyDB Autoscaler + Target Connections Count + Cron Schedule [GA 592.0.0]',
+                    cmd: `gcloud alloydb instances update ${sqlName || 'cloudpulse-alloydb-pg16'} --cluster=${sqlName || 'cloudpulse-alloydb'}-cluster --project=${projectId} --region=${sqlRegion || 'us-central1'} --enable-autoscaler --autoscaler-max-node-count=8 --autoscaler-target-cpu-usage=0.70 --autoscaler-target-connections-count=1000 --autoscaler-set-schedule=peak-hours --autoscaler-schedule-cron-exp="0 8 * * 1-5" --autoscaler-schedule-duration-seconds=36000 --autoscaler-schedule-min-node-count=4`,
+                  },
+                  {
+                    label: 'Cloud SQL Private Service Connect (PSC) DNS Reconcile [NEW GA 592.0.0]',
+                    cmd: `gcloud sql instances reconcile-networking ${sqlName || 'cloudpulse-pg16-vault'} --project=${projectId}`,
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="p-2.5 rounded-lg bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                        {item.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(item.cmd, item.label)}
+                        className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                      >
+                        {copiedLabel === item.label ? 'Copied!' : 'Copy CLI'}
+                      </button>
+                    </div>
+                    <code className="block text-[10px] text-zinc-600 dark:text-zinc-400 break-all">
+                      $ {item.cmd}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

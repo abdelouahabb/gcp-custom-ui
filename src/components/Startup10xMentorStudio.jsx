@@ -485,273 +485,50 @@ export default function Startup10xMentorStudio({
           </div>
         </div>
 
-        {/* 4 High-Contrast Live Startup 10X KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
-          {/* KPI 1: Readiness Score */}
-          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400 font-extrabold">
-                10X Scale Readiness
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  score >= 85
-                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                    : score >= 70
-                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                    : 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                }`}
-              >
-                {score >= 85 ? 'LAUNCH READY' : 'NEEDS TUNING'}
-              </span>
-            </div>
-            <div className="text-2xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              {score}
-              <span className="text-xs text-zinc-400 font-normal">/100</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-              <div
-                className={`h-full transition-all ${
-                  score >= 85
-                    ? 'bg-emerald-500'
-                    : score >= 70
-                    ? 'bg-amber-500'
-                    : 'bg-red-500'
-                }`}
-                style={{ width: `${Math.max(5, Math.min(100, score))}%` }}
-              />
-            </div>
-            <div className="text-[10px] text-zinc-600 dark:text-zinc-400 truncate">
-              {scoreDeductions.length > 0
-                ? scoreDeductions[0]
-                : '✓ 0 critical scaling bottlenecks'}
-            </div>
-          </div>
-
-          {/* KPI 2: Live Monthly Burn & Credit Runway */}
-          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400 font-extrabold">
-                Live Resource Burn
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold">
-                {runway.currentRunwayMonths} Mo Runway
-              </span>
-            </div>
-            <div className="text-2xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              ${runway.liveResourceMonthlyBurnUsd}
-              <span className="text-xs text-zinc-400 font-normal">/mo live</span>
-            </div>
-            <div className="text-[10px] text-zinc-600 dark:text-zinc-400">
-              Recoverable waste:{' '}
-              <strong className="text-emerald-600 dark:text-emerald-400">
-                ${runway.totalMonthlyVampireWasteUsd}/mo
-              </strong>{' '}
-              ({runway.vampireItems?.length || 0} items)
-            </div>
-          </div>
-
-          {/* KPI 3: Live Compute, Serverless & DB Fleet */}
-          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400 font-extrabold">
-                Live Compute &amp; Storage
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-extrabold">
-                {regionGravity.hasRegionMismatch
-                  ? '⚠ Multi-Region Lag'
-                  : '✓ Co-Located'}
-              </span>
-            </div>
-            <div className="text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              {vmFindings.length} VMs · {cloudRunFindings.length} Run · {bucketFindings.length} Buckets
-            </div>
-            <div className="text-[10px] text-zinc-600 dark:text-zinc-400">
-              {sqlFindings.length} Cloud SQL · {datasetFindings.length} BigQuery Datasets
-            </div>
-          </div>
-
-          {/* KPI 4: SOC2 Deal-Blockers & 24h HTTP 429s */}
-          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400 font-extrabold">
-                SOC2 &amp; Quota Health
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  soc2Blockers.openFirewalls.some((fw) => !fw.isWebHttpHttpsOnly) ||
-                  quotaWall.liveTraffic24h?.total429Count24h > 0
-                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                }`}
-              >
-                {quotaWall.liveTraffic24h?.total429Count24h || 0} HTTP 429s (24h)
-              </span>
-            </div>
-            <div className="text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              {soc2Blockers.adminOpenFirewallsCount ??
-                soc2Blockers.openFirewalls.filter((fw) => !fw.isWebHttpHttpsOnly)
-                  .length}{' '}
-              Admin 0.0.0.0/0 · {soc2Blockers.unhardenedBucketsCount} Unshielded
-            </div>
-            <div className="text-[10px] text-zinc-600 dark:text-zinc-400">
-              {(
-                quotaWall.liveTraffic24h?.totalRequests24h || 0
-              ).toLocaleString()}{' '}
-              API Calls (24h) ·{' '}
-              {soc2Blockers.webOpenFirewallsCount ??
-                soc2Blockers.openFirewalls.filter((fw) => fw.isWebHttpHttpsOnly)
-                  .length}{' '}
-              Web (80/443)
-            </div>
-          </div>
-        </div>
-
-        {/* Score Deduction Breakdown Pills (Transparent Audit Trail) */}
-        {scoreDeductions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[10.5px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
-              Live Readiness Deductions:
-            </span>
-            {scoreDeductions.map((ded, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10.5px] font-mono font-bold"
-              >
-                {ded}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Embedded Zero-Sniffing WebCrypto Enclave & Live Gemini Startup 10X CTO Mentor */}
-        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-zinc-200 dark:border-zinc-800 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[10.5px] font-mono font-extrabold">
-                <Sparkles className="w-3 h-3" />
-                <span>LIVE GEMINI STARTUP 10X CTO &amp; YC ARCHITECTURE MENTOR</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              data-feature-id="STARTUP_10X_GEMINI_CTO_MENTOR"
-              disabled={loadingMentor}
-              onClick={handleRunGeminiMentor}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold shadow-xs cursor-pointer disabled:opacity-50"
-            >
-              <Sparkles
-                className={`w-3.5 h-3.5 ${loadingMentor ? 'animate-spin' : ''}`}
-              />
-              <span>
-                {loadingMentor
-                  ? `Reviewing with ${geminiModel}...`
-                  : `Generate Live 10X Architecture Review (${geminiModel})`}
-              </span>
-            </button>
-          </div>
-
-          <ZeroSniffingWebCryptoEnclaveBar
-            projectId={projectId}
-            compact
-            selectedModel={geminiModel}
-            onChangeModel={setGeminiModel}
-            preferredProvider={geminiPreferredProvider}
-            onChangePreferredProvider={setGeminiPreferredProvider}
-            onShowToast={onShowToast}
-          />
-
-          {mentorAdvice?.advice && (
-            <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-500/30 space-y-2.5 text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[10px] font-extrabold">
-                    LIVE GEMINI CTO VERDICT
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                    {mentorAdvice.provider} · {mentorAdvice.modelUsed}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMentorAdvice(null)}
-                  className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100 leading-relaxed">
-                {mentorAdvice.advice.readinessVerdict}
-              </p>
-              {mentorAdvice.advice.runwayStrategy && (
-                <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  {mentorAdvice.advice.runwayStrategy}
-                </p>
-              )}
-              {Array.isArray(mentorAdvice.advice.topBottlenecks) &&
-                mentorAdvice.advice.topBottlenecks.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
-                    {mentorAdvice.advice.topBottlenecks
-                      .slice(0, 4)
-                      .map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-1 font-mono text-[11px]"
-                        >
-                          <div className="font-bold text-indigo-600 dark:text-indigo-400">
-                            [{item.pillar}] {item.title}
-                          </div>
-                          <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">
-                            {item.impact}
-                          </div>
-                          {item.cliCmd && (
-                            <div className="flex items-center justify-between gap-2 pt-1">
-                              <code className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate">
-                                {item.cliCmd}
-                              </code>
-                              {onRunInShell && (
-                                <button
-                                  type="button"
-                                  onClick={() => onRunInShell(item.cliCmd)}
-                                  className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold shrink-0 cursor-pointer"
-                                >
-                                  Run CLI
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                )}
-            </div>
-          )}
-        </div>
-
-        {/* Pillar Filter Bar: View All 5 Pillars OR Focus on 1 Pillar */}
+        {/* ==================================================================== */}
+        {/* 1. PRIMARY CALL-TO-ACTION MENU: 5-PILLAR SCALING NAVIGATION BAR      */}
+        {/* ==================================================================== */}
         <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-mono font-extrabold uppercase text-zinc-500 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
               Select Scaling Pillar ({activeModule === 'ALL' ? 'Showing All 5 Pillars' : activeModule})
             </span>
-            <button
-              type="button"
-              onClick={() =>
-                setActiveModule((prev) =>
-                  prev === 'ALL' ? 'COLD_START_VPC_LAG' : 'ALL'
-                )
-              }
-              className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold border cursor-pointer transition-colors ${
-                activeModule === 'ALL'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
-              }`}
-            >
-              <Layers className="w-3 h-3 inline mr-1" />
-              {activeModule === 'ALL'
-                ? '✓ Showing All 5 Pillars'
-                : 'Show All 5 Pillars Together'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                data-feature-id="STARTUP_10X_GEMINI_CTO_MENTOR"
+                disabled={loadingMentor}
+                onClick={handleRunGeminiMentor}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles
+                  className={`w-3 h-3 ${loadingMentor ? 'animate-spin' : ''}`}
+                />
+                <span>
+                  {loadingMentor
+                    ? `Reviewing (${geminiModel})...`
+                    : `AI CTO Review (${geminiModel})`}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveModule((prev) =>
+                    prev === 'ALL' ? 'COLD_START_VPC_LAG' : 'ALL'
+                  )
+                }
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold border cursor-pointer transition-colors ${
+                  activeModule === 'ALL'
+                    ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-xs'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-amber-500/40'
+                }`}
+              >
+                <Layers className="w-3 h-3 inline mr-1" />
+                {activeModule === 'ALL'
+                  ? '✓ Showing All 5 Pillars'
+                  : 'Show All 5 Pillars Together'}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
@@ -764,18 +541,18 @@ export default function Startup10xMentorStudio({
                   type="button"
                   data-feature-id={m.id}
                   onClick={() => setActiveModule(m.id)}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
+                  className={`p-3 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
                     isSelected
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-zinc-50 dark:bg-[#121316] text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                      ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-xs'
+                      : 'bg-zinc-50 dark:bg-[#121316] text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
                         isSelected
-                          ? 'bg-white/20 text-white'
-                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                          ? 'bg-amber-500 text-zinc-950'
+                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                       }`}
                     >
                       {m.step}
@@ -787,7 +564,7 @@ export default function Startup10xMentorStudio({
                       <div
                         className={`text-[10.5px] font-mono truncate ${
                           isSelected
-                            ? 'text-blue-100'
+                            ? 'text-amber-700 dark:text-amber-300'
                             : 'text-zinc-500 dark:text-zinc-400'
                         }`}
                       >
@@ -795,12 +572,251 @@ export default function Startup10xMentorStudio({
                       </div>
                     </div>
                   </div>
-                  <Icon className="w-4 h-4 shrink-0" />
+                  <Icon
+                    className={`w-4 h-4 shrink-0 ${
+                      isSelected ? 'text-amber-500 dark:text-amber-400' : ''
+                    }`}
+                  />
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* ==================================================================== */}
+        {/* 2. SUBORDINATE CLICKABLE TELEMETRY RIBBON (Smaller than Menu Tabs)   */}
+        {/* ==================================================================== */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 p-1.5 rounded-lg bg-zinc-50/90 dark:bg-[#0b0f17] border border-zinc-200/80 dark:border-slate-800/80 text-[11px] font-mono">
+          {/* Quick-Jump 1: Readiness Score -> Show All Pillars */}
+          <button
+            type="button"
+            onClick={() => setActiveModule('ALL')}
+            title="Click to inspect all 5 scaling readiness pillars"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'ALL'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>10X Scale Readiness</span>
+                <span className="text-[9px] text-amber-500">All Pillars →</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                {score}/100{' '}
+                <span className="text-[10px] font-normal text-zinc-500 dark:text-zinc-400">
+                  ({score >= 85 ? 'Launch Ready' : `${scoreDeductions.length} bottlenecks`})
+                </span>
+              </div>
+            </div>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                score >= 85
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : score >= 70
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'bg-red-500/15 text-red-600 dark:text-red-400'
+              }`}
+            >
+              {score}%
+            </span>
+          </button>
+
+          {/* Quick-Jump 2: Live Resource Burn -> Pillar 02 Credit Vampires */}
+          <button
+            type="button"
+            onClick={() => setActiveModule('CREDIT_VAMPIRES')}
+            title="Click to jump to Pillar 02: Credit Burn & Idle Vampire Killer"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'CREDIT_VAMPIRES'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>Live Resource Burn</span>
+                <span className="text-[9px] text-amber-500">Pillar 02 →</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                ${runway.liveResourceMonthlyBurnUsd}/mo{' '}
+                <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
+                  (-${runway.totalMonthlyVampireWasteUsd} waste)
+                </span>
+              </div>
+            </div>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-extrabold shrink-0">
+              {runway.currentRunwayMonths}m
+            </span>
+          </button>
+
+          {/* Quick-Jump 3: Live Compute & Storage -> Pillar 01 Cold-Start & Region Gravity */}
+          <button
+            type="button"
+            onClick={() => setActiveModule('COLD_START_VPC_LAG')}
+            title="Click to jump to Pillar 01: Cold-Start & Region Gravity"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'COLD_START_VPC_LAG'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>Compute &amp; Storage</span>
+                <span className="text-[9px] text-amber-500">Pillar 01 →</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                {vmFindings.length} VMs · {cloudRunFindings.length} Run · {bucketFindings.length} GCS
+              </div>
+            </div>
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9.5px] font-extrabold shrink-0">
+              {regionGravity.hasRegionMismatch ? 'Multi-Reg' : 'Co-Loc'}
+            </span>
+          </button>
+
+          {/* Quick-Jump 4: SOC2 & Quota Health -> Pillar 05 SOC2 & GenAI Cache */}
+          <button
+            type="button"
+            onClick={() => setActiveModule('SOC2_AND_GENAI_CACHE')}
+            title="Click to jump to Pillar 05: SOC2 Auto-Fixer & Quota Wall"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'SOC2_AND_GENAI_CACHE'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>SOC2 &amp; Quota Health</span>
+                <span className="text-[9px] text-amber-500">Pillar 05 →</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                {soc2Blockers.adminOpenFirewallsCount ??
+                  soc2Blockers.openFirewalls.filter((fw) => !fw.isWebHttpHttpsOnly)
+                    .length}{' '}
+                Admin 0.0.0.0/0 · {soc2Blockers.unhardenedBucketsCount} Unshielded
+              </div>
+            </div>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                quotaWall.liveTraffic24h?.total429Count24h > 0
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              {quotaWall.liveTraffic24h?.total429Count24h || 0} 429s
+            </span>
+          </button>
+        </div>
+
+        {/* Score Deduction Breakdown Pills (Clickable to jump to relevant pillar) */}
+        {scoreDeductions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
+              Live Deductions:
+            </span>
+            {scoreDeductions.map((ded, idx) => (
+              <span
+                key={idx}
+                className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-mono"
+              >
+                {ded}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Compact Collapsible Zero-Sniffing WebCrypto Enclave & Live Gemini CTO Verdict */}
+        <details className="group rounded-lg bg-zinc-50/70 dark:bg-[#0d111a] border border-zinc-200/80 dark:border-slate-800/80 px-3 py-2 text-xs">
+          <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+            <span className="inline-flex items-center gap-1.5 font-bold text-indigo-600 dark:text-indigo-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Configure Gemini CTO Mentor &amp; WebCrypto API Key Enclave</span>
+            </span>
+            <span className="text-[10px] text-zinc-400 group-open:hidden">
+              Click to expand AI enclave settings ▾
+            </span>
+          </summary>
+          <div className="pt-2.5 mt-2 border-t border-zinc-200 dark:border-slate-800">
+            <ZeroSniffingWebCryptoEnclaveBar
+              projectId={projectId}
+              compact
+              selectedModel={geminiModel}
+              onChangeModel={setGeminiModel}
+              preferredProvider={geminiPreferredProvider}
+              onChangePreferredProvider={setGeminiPreferredProvider}
+              onShowToast={onShowToast}
+            />
+          </div>
+        </details>
+
+        {mentorAdvice?.advice && (
+          <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-500/30 space-y-2.5 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[10px] font-extrabold">
+                  LIVE GEMINI CTO VERDICT
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  {mentorAdvice.provider} · {mentorAdvice.modelUsed}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMentorAdvice(null)}
+                className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+            <p className="font-bold text-zinc-900 dark:text-zinc-100 leading-relaxed">
+              {mentorAdvice.advice.readinessVerdict}
+            </p>
+            {mentorAdvice.advice.runwayStrategy && (
+              <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                {mentorAdvice.advice.runwayStrategy}
+              </p>
+            )}
+            {Array.isArray(mentorAdvice.advice.topBottlenecks) &&
+              mentorAdvice.advice.topBottlenecks.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                  {mentorAdvice.advice.topBottlenecks
+                    .slice(0, 4)
+                    .map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-1 font-mono text-[11px]"
+                      >
+                        <div className="font-bold text-indigo-600 dark:text-indigo-400">
+                          [{item.pillar}] {item.title}
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">
+                          {item.impact}
+                        </div>
+                        {item.cliCmd && (
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <code className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate">
+                              {item.cliCmd}
+                            </code>
+                            {onRunInShell && (
+                              <button
+                                type="button"
+                                onClick={() => onRunInShell(item.cliCmd)}
+                                className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold shrink-0 cursor-pointer"
+                              >
+                                Run CLI
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+          </div>
+        )}
       </div>
 
       {/* ==================================================================== */}
@@ -1046,7 +1062,10 @@ export default function Startup10xMentorStudio({
                       </span>
                       {api.enabled ? (
                         <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-extrabold shrink-0">
-                          ✓ ON
+                          {api.cloudBillingEnabled &&
+                          api.directServiceEnabled === false
+                            ? '✓ ON (cloudbilling)'
+                            : '✓ ON'}
                         </span>
                       ) : (
                         <button
@@ -1071,7 +1090,9 @@ export default function Startup10xMentorStudio({
                       )}
                     </div>
                     <div className="text-[10px] text-zinc-500 truncate">
-                      {api.service}
+                      {api.service === 'billingbudgets.googleapis.com'
+                        ? 'cloudbilling + billingbudgets.googleapis.com'
+                        : api.service}
                     </div>
                     <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                       {api.freeTier}

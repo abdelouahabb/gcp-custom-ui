@@ -1642,8 +1642,12 @@ Format your response with clear Markdown headings:${
           </div>
         </div>
 
-        {/* 5-Pillar Navigation Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        {/* 5-Pillar Segmented Navigation Bar */}
+        <div
+          role="tablist"
+          aria-label="Autonomous Cloud SOC Modules"
+          className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1 p-1 rounded-[10px]"
+        >
           {SOC_PILLARS.map((p) => {
             const Icon = p.icon;
             const isActive = activePillar === p.id;
@@ -1651,23 +1655,23 @@ Format your response with clear Markdown headings:${
               <button
                 key={p.id}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
                 data-soc-pillar={p.id}
+                title={p.subtitle || p.title}
                 onClick={() => setActivePillar(p.id)}
-                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                className={`w-full h-9 px-2.5 rounded-[7px] text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
                   isActive
-                    ? 'bg-blue-500/20 border-blue-400 text-white shadow-md'
-                    : 'bg-zinc-900/70 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
-                <div className="min-w-0">
-                  <div className="text-xs font-extrabold truncate flex items-center gap-1.5">
-                    <Icon className="w-3.5 h-3.5 shrink-0 text-blue-400" />
-                    <span className="truncate">{p.title}</span>
-                  </div>
-                  <div className="text-[10px] text-zinc-400 truncate mt-0.5">
-                    {p.subtitle}
-                  </div>
-                </div>
+                <Icon
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'
+                  }`}
+                />
+                <span className="truncate">{p.title}</span>
               </button>
             );
           })}
