@@ -155,19 +155,19 @@ export default function Wave16EnterpriseMoonshotStudio({
 
   const handleJumpToStudio = (tabId, resourceLabel = '') => {
     if (!tabId) return;
+    const extraTarget =
+      tabId === 'CLOUD_STORAGE' && resourceLabel
+        ? { bucketName: resourceLabel }
+        : resourceLabel
+        ? { targetLabel: resourceLabel }
+        : null;
     if (onSelectStudioTab) {
-      onSelectStudioTab(tabId);
-    }
-    window.dispatchEvent(
-      new CustomEvent('cloudpulse:cross-ui-navigate', {
-        detail: { tabId, resourceLabel },
-      })
-    );
-    if (onShowToast) {
-      onShowToast(
-        `Navigated to ${STUDIO_TAB_LABELS[tabId] || tabId}${
-          resourceLabel ? ` (${resourceLabel})` : ''
-        }`
+      onSelectStudioTab(tabId, null, extraTarget);
+    } else {
+      window.dispatchEvent(
+        new CustomEvent('cloudpulse:cross-ui-navigate', {
+          detail: { tabId, extraTarget },
+        })
       );
     }
   };
@@ -738,9 +738,17 @@ export default function Wave16EnterpriseMoonshotStudio({
                               : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                           }`}
                         >
-                          {b.hasLifecyclePolicy
-                            ? `✓ ${b.lifecycleRulesCount} Lifecycle Rule(s): ${b.lifecycleRulesSummary}`
-                            : '⚠ Missing Lifecycle Policy'}
+                          {b.hasLifecyclePolicy ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Check className="w-3 h-3 shrink-0" />
+                              {b.lifecycleRulesCount} Lifecycle Rule(s): {b.lifecycleRulesSummary}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 shrink-0" />
+                              Missing Lifecycle Policy
+                            </span>
+                          )}
                         </span>
                       </div>
                       <div className="text-[11px] text-zinc-500">
@@ -1025,7 +1033,10 @@ export default function Wave16EnterpriseMoonshotStudio({
 
               {inlineError && !onShowError && (
                 <div className="fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl bg-zinc-950/95 border border-red-500/60 text-xs font-mono text-red-200 flex items-center justify-between gap-2 shadow-2xl">
-                  <span>⚠ {inlineError}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <span>{inlineError}</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setRawInlineError('')}

@@ -16,6 +16,7 @@ import {
   Globe,
   Download,
   ExternalLink,
+  Zap,
 } from 'lucide-react';
 import ZeroSniffingWebCryptoEnclaveBar, {
   getSharedActiveModel,
@@ -1944,10 +1945,14 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${runningTls ? 'animate-spin' : ''}`}
                 />
-                <span>
-                  {runningTls
-                    ? 'Executing Live TLS Handshakes...'
-                    : 'Probe Live TLS 1.3 & X.509 Chains (⚡ Socket · No gcloud)'}
+                <span className="inline-flex items-center gap-1">
+                  {runningTls ? (
+                    'Executing Live TLS Handshakes...'
+                  ) : (
+                    <>
+                      Probe Live TLS 1.3 &amp; X.509 Chains (<Zap className="w-3 h-3 shrink-0" /> Socket · No gcloud)
+                    </>
+                  )}
                 </span>
               </button>
             </div>

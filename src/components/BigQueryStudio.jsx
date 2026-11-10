@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Copy,
   Check,
+  X,
   Layers,
   Lock,
   Globe,
@@ -182,8 +183,16 @@ export default function BigQueryStudio({
   onShowToast,
   onShowError,
 }) {
+  const normalizeBigQuerySubTab = (subId) =>
+    subId === 'TIMETRAVEL_LINEAGE' || subId === 'TIME_TRAVEL'
+      ? 'TIME_MACHINE'
+      : subId === 'LINEAGE_FINOPS'
+      ? 'LINEAGE_BLAST_RADIUS'
+      : subId;
+
   const [activeSubTab, setActiveSubTab] = useState(
-    initialSubTab || (initialSql && initialSql.trim() ? 'TABLES_SQL' : 'DATASETS')
+    normalizeBigQuerySubTab(initialSubTab) ||
+      (initialSql && initialSql.trim() ? 'TABLES_SQL' : 'DATASETS')
   );
   const [datasets, setDatasets] = useState([]);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
@@ -259,7 +268,7 @@ export default function BigQueryStudio({
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(normalizeBigQuerySubTab(initialSubTab));
     }
   }, [initialSubTab, subTabNonce]);
 
@@ -980,7 +989,23 @@ LIMIT 25;`;
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Live BigQuery Capacitor Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Harden datasets with Physical Compressed Billing (`$0.04/GB`), run Dry-Run SQL Cost Estimation (`$6.25/TB`), model Enterprise Autoscaling Slots, and rewind tables 168h via `FOR SYSTEM_TIME AS OF`.
+                Live BigQuery Capacitor Control Plane for{' '}
+                <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">
+                  {projectId}
+                </span>{' '}
+                — Harden datasets with Physical Compressed Billing (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  $0.04/GB
+                </code>
+                ), run Dry-Run SQL Cost Estimation (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  $6.25/TB
+                </code>
+                ), model Enterprise Autoscaling Slots, and rewind tables 168h via{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  FOR SYSTEM_TIME AS OF
+                </code>
+                .
               </p>
             </div>
           </div>
@@ -1190,10 +1215,17 @@ LIMIT 25;`;
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-3">
               <Database className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto opacity-80" />
               <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                No BigQuery Datasets Provisioned Yet in `{projectId}`
+                No BigQuery Datasets Provisioned Yet in{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  {projectId}
+                </code>
               </div>
               <p className="text-xs text-zinc-500 max-w-xl mx-auto">
-                Launch a compliant BigQuery Analytical Lakehouse using our 1-Tap **SEC 17a-4 Financial Ledger**, **GDPR EU Sovereign**, **HIPAA/SOC2**, or **AI Vector & BigLake Iceberg** blueprints.
+                Launch a compliant BigQuery Analytical Lakehouse using our 1-Tap{' '}
+                <strong>SEC 17a-4 Financial Ledger</strong>,{' '}
+                <strong>GDPR EU Sovereign</strong>,{' '}
+                <strong>HIPAA/SOC2</strong>, or{' '}
+                <strong>AI Vector &amp; BigLake Iceberg</strong> blueprints.
               </p>
               <button
                 type="button"
@@ -1288,8 +1320,8 @@ LIMIT 25;`;
                             title="Apply Physical Compressed Billing, 90-Day Partition TTL, IEEE 754 Banker Rounding, and FinOps Attribution Labels in 1 click"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors cursor-pointer"
                           >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>⚡ 1-Tap Full Harden (100/100)</span>
+                            <Zap className="w-3.5 h-3.5 shrink-0" />
+                            <span>1-Tap Full Harden (100/100)</span>
                           </button>
                         )}
                         {!isPhysical && (
@@ -1526,9 +1558,9 @@ LIMIT 25;`;
                       onChange={(e) => setNewTablePartitionType(e.target.value)}
                       className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
                     >
-                      <option value="DAY">DAY (`event_timestamp`)</option>
-                      <option value="HOUR">HOUR (`event_timestamp`)</option>
-                      <option value="MONTH">MONTH (`event_timestamp`)</option>
+                      <option value="DAY">DAY (event_timestamp)</option>
+                      <option value="HOUR">HOUR (event_timestamp)</option>
+                      <option value="MONTH">MONTH (event_timestamp)</option>
                       <option value="NONE">Unpartitioned</option>
                     </select>
                   </div>
@@ -1557,7 +1589,10 @@ LIMIT 25;`;
                         }
                       />
                       <span className="text-[11px]">
-                        Enforce `requirePartitionFilter`
+                        Enforce{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          requirePartitionFilter
+                        </code>
                       </span>
                     </label>
                   </div>
@@ -1580,7 +1615,11 @@ LIMIT 25;`;
               {/* Live Tables List */}
               <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="text-[11px] font-mono font-bold text-zinc-500">
-                  Live Tables in `{selectedDatasetId || 'none'}` ({tables.length})
+                  Live Tables in{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    {selectedDatasetId || 'none'}
+                  </code>{' '}
+                  ({tables.length})
                 </div>
                 {loadingTables ? (
                   <div className="text-xs font-mono text-zinc-400 animate-pulse py-3">
@@ -1823,13 +1862,21 @@ LIMIT 25;`;
                     </span>
                   </h3>
                   <p className="text-[11px] text-zinc-500">
-                    Validates scanned bytes via `jobs.query(dryRun=true)` before spending $0.01 and auto-rewrites SQL per Google Cloud BigQuery optimization rules.
+                    Validates scanned bytes via{' '}
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      jobs.query(dryRun=true)
+                    </code>{' '}
+                    before spending $0.01 and auto-rewrites SQL per Google Cloud BigQuery optimization rules.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <label className="text-[10px] font-mono text-zinc-500">
-                    Safety Guard (`maximumBytesBilled`):
+                    Safety Guard (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      maximumBytesBilled
+                    </code>
+                    ):
                   </label>
                   <select
                     value={maxBytesGuardGb}
@@ -1939,9 +1986,10 @@ LIMIT 25;`;
                     <button
                       type="button"
                       onClick={() => setShowQueryHistoryDrawer(false)}
-                      className="text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                      className="inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
                     >
-                      Close ✕
+                      <span>Close</span>
+                      <X className="w-3 h-3 shrink-0" />
                     </button>
                   </div>
                   <div className="space-y-1.5 max-h-44 overflow-y-auto">
@@ -2080,8 +2128,9 @@ LIMIT 25;`;
                           %)
                         </span>
                         {queryResult.optimizationReport?.verifiedByBigQueryDryRun && (
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-[9px] font-extrabold">
-                            ✓ BQ Verified
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-500/20 text-[9px] font-extrabold">
+                            <Check className="w-2.5 h-2.5 shrink-0" />
+                            <span>BQ Verified</span>
                           </span>
                         )}
                       </div>
@@ -2189,11 +2238,32 @@ LIMIT 25;`;
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                            Summary of Optimizations (10-Rule `bigquery-sql` AST + Dual `jobs.query(dryRun=true)` Compiler Pass)
+                            Summary of Optimizations (10-Rule{' '}
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              bigquery-sql
+                            </code>{' '}
+                            AST + Dual{' '}
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              jobs.query(dryRun=true)
+                            </code>{' '}
+                            Compiler Pass)
                           </span>
                           {queryResult.optimizationReport.verifiedByBigQueryDryRun && (
-                            <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                              ✓ Dual-Pass BigQuery API Verified (Pass #1: {formatBytes(queryResult.optimizationReport.dryRun1BaselineBytes ?? queryResult.totalBytesProcessed)} → Pass #2: {formatBytes(queryResult.optimizationReport.dryRun2OptimizedBytes ?? queryResult.optimizedBytesEstimate)})
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>
+                                Dual-Pass BigQuery API Verified (Pass #1:{' '}
+                                {formatBytes(
+                                  queryResult.optimizationReport.dryRun1BaselineBytes ??
+                                    queryResult.totalBytesProcessed
+                                )}{' '}
+                                → Pass #2:{' '}
+                                {formatBytes(
+                                  queryResult.optimizationReport.dryRun2OptimizedBytes ??
+                                    queryResult.optimizedBytesEstimate
+                                )}
+                                )
+                              </span>
                             </span>
                           )}
                         </div>
@@ -2212,9 +2282,10 @@ LIMIT 25;`;
                                   );
                                   handleExecuteQuery(false, nextSql);
                                 }}
-                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                               >
-                                ▶ Apply &amp; Execute Optimized SQL Live
+                                <Play className="w-3 h-3 shrink-0" />
+                                <span>Apply &amp; Execute Optimized SQL Live</span>
                               </button>
                             )}
                           <button
@@ -2447,11 +2518,19 @@ LIMIT 25;`;
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-blue-500" />
                 <span>
-                  Live Google Cloud BigQuery Jobs &amp; Slot Telemetry (`bigquery.jobs.list`)
+                  Live Google Cloud BigQuery Jobs &amp; Slot Telemetry (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    bigquery.jobs.list
+                  </code>
+                  )
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Real-time job execution ledger streamed from `bigquery.googleapis.com/bigquery/v2/projects/{projectId}/jobs` with Slot-ms consumption, Capacitor shuffle stages, and cache hits.
+                Real-time job execution ledger streamed from{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  bigquery.googleapis.com/bigquery/v2/projects/{projectId}/jobs
+                </code>{' '}
+                with Slot-ms consumption, Capacitor shuffle stages, and cache hits.
               </p>
             </div>
             <button
@@ -2469,11 +2548,19 @@ LIMIT 25;`;
 
           {loadingJobs && jobsList.length === 0 ? (
             <div className="py-8 text-center text-xs font-mono text-zinc-400 animate-pulse">
-              Querying live BigQuery jobs API (`bigquery.jobs.list`)...
+              Querying live BigQuery jobs API (
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                bigquery.jobs.list
+              </code>
+              )...
             </div>
           ) : jobsList.length === 0 ? (
             <div className="py-8 text-center text-xs font-mono text-zinc-500">
-              No recent BigQuery jobs found in `{projectId}` — run a query in the SQL Pre-Crime X-Ray tab to generate live job telemetry.
+              No recent BigQuery jobs found in{' '}
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                {projectId}
+              </code>{' '}
+              — run a query in the SQL Pre-Crime X-Ray tab to generate live job telemetry.
             </div>
           ) : (
             <div className="space-y-4">
@@ -2652,7 +2739,19 @@ LIMIT 25;`;
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Simulate exact monthly savings from switching `storageBillingModel` to `PHYSICAL` compressed bytes and tuning `maxTimeTravelHours`.
+                Simulate exact monthly savings from switching{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  storageBillingModel
+                </code>{' '}
+                to{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  PHYSICAL
+                </code>{' '}
+                compressed bytes and tuning{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  maxTimeTravelHours
+                </code>
+                .
               </p>
             </div>
             <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
@@ -2809,11 +2908,27 @@ LIMIT 25;`;
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <History className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  BigQuery 168-Hour `FOR SYSTEM_TIME AS OF` Time-Machine & Zero-Copy Clone Restorer
+                  BigQuery 168-Hour{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    FOR SYSTEM_TIME AS OF
+                  </code>{' '}
+                  Time-Machine &amp; Zero-Copy Clone Restorer
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Rewind any table to the exact millisecond before a bad `DELETE`, `UPDATE`, or `DROP TABLE` without restoring backups or paying extra storage bytes.
+                Rewind any table to the exact millisecond before a bad{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  DELETE
+                </code>
+                ,{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  UPDATE
+                </code>
+                , or{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  DROP TABLE
+                </code>{' '}
+                without restoring backups or paying extra storage bytes.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
@@ -2824,7 +2939,11 @@ LIMIT 25;`;
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Dataset &amp; Source Table (`{selectedDatasetId || 'analytics_lakehouse'}`)
+                Dataset &amp; Source Table (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  {selectedDatasetId || 'analytics_lakehouse'}
+                </code>
+                )
               </label>
               <div className="flex gap-1.5">
                 {tables.length > 0 ? (
@@ -3020,14 +3139,42 @@ LIMIT 25;`;
               <div className="flex items-center gap-2 flex-wrap">
                 <Cpu className="w-4 h-4 text-blue-500" />
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                  BigQuery AI (`ML.GENERATE_TEXT`), Vector Search (`ScaNN`/`IVF`), TimesFM (`AI.FORECAST`) &amp; Continuous SQL
+                  BigQuery AI (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    ML.GENERATE_TEXT
+                  </code>
+                  ), Vector Search (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    ScaNN
+                  </code>
+                  /
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    IVF
+                  </code>
+                  ), TimesFM (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    AI.FORECAST
+                  </code>
+                  ) &amp; Continuous SQL
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   ZERO DATA MOVEMENT · IN-WAREHOUSE GENAI + VECTOR RAG + STREAMING
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Execute Vertex AI Gemini 2.5 reasoning, `TREE_AH` (Google ScaNN) vector similarity search, zero-shot `TimesFM 2.0` time-series forecasting, and real-time Continuous SQL directly over `{projectId}.{selectedDatasetId || 'analytics_lakehouse'}`:
+                Execute Vertex AI Gemini 2.5 reasoning,{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  TREE_AH
+                </code>{' '}
+                (Google ScaNN) vector similarity search, zero-shot{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  TimesFM 2.0
+                </code>{' '}
+                time-series forecasting, and real-time Continuous SQL directly over{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  {projectId}.{selectedDatasetId || 'analytics_lakehouse'}
+                </code>
+                :
               </p>
             </div>
 
@@ -3351,7 +3498,15 @@ LIMIT 25;`,
                 id: 'bq-continuous-sql',
                 badge: `CONTINUOUS QUERY → ${bqContinuousSink}`,
                 title: `4. BigQuery Continuous SQL Streaming → ${bqContinuousSink} Event Bus`,
-                desc: 'Run an always-on BigQuery Continuous Query (`continuous = TRUE`) that streams sub-second anomaly alerts directly to Pub/Sub or Bigtable.',
+                desc: (
+                  <>
+                    Run an always-on BigQuery Continuous Query (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      continuous = TRUE
+                    </code>
+                    ) that streams sub-second anomaly alerts directly to Pub/Sub or Bigtable.
+                  </>
+                ),
                 ddlSql: `-- BigQuery Continuous SQL Query (Enterprise Edition Slot Reservation · continuous = TRUE)
 EXPORT DATA OPTIONS (
   format = 'CLOUD_PUBSUB',
@@ -3517,7 +3672,11 @@ LIMIT 25;`,
                 <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-amber-500" />
                   <span>
-                    BigQuery Data Lineage Blast-Radius &amp; Partition/Cluster Surgeon (`@skill:datalineage-bigquery-asset-impact-analysis`)
+                    BigQuery Data Lineage Blast-Radius &amp; Partition/Cluster Surgeon (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      @skill:datalineage-bigquery-asset-impact-analysis
+                    </code>
+                    )
                   </span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
@@ -3525,7 +3684,20 @@ LIMIT 25;`,
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
-                Resolves `bigquery:{projectId}.{selectedDatasetId || 'analytics_lakehouse'}.{lineageTargetTable || tables[0]?.tableId || 'telemetry_events_2026'}`, traverses `datalineage.googleapis.com/v1` (`:searchLinks`) + live BigQuery View/Job dependencies, and synthesizes 1-click Partition &amp; Clustering hardening.
+                Resolves{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  bigquery:{projectId}.{selectedDatasetId || 'analytics_lakehouse'}.
+                  {lineageTargetTable || tables[0]?.tableId || 'telemetry_events_2026'}
+                </code>
+                , traverses{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  datalineage.googleapis.com/v1
+                </code>{' '}
+                (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  :searchLinks
+                </code>
+                ) + live BigQuery View/Job dependencies, and synthesizes 1-click Partition &amp; Clustering hardening.
               </p>
             </div>
 
@@ -3704,7 +3876,11 @@ LIMIT 25;`,
                 <div className="xl:col-span-7 p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
-                      2. Downstream Blast Radius Table (`Downstream Asset | Transform Process | Depth | Impact Type`)
+                      2. Downstream Blast Radius Table (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        Downstream Asset | Transform Process | Depth | Impact Type
+                      </code>
+                      )
                     </div>
                     <span className="text-[10px] font-mono text-zinc-500">
                       Parent: {lineageData.analysisMetadata?.parentPath}
@@ -3719,7 +3895,11 @@ LIMIT 25;`,
                           'us',
                         ]
                       ).join(', ')}
-                      ] for `{lineageData.fqn}`. You can safely modify,
+                      ] for{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        {lineageData.fqn}
+                      </code>
+                      . You can safely modify,
                       partition, or cluster this table without breaking
                       downstream views or scheduled queries.
                     </div>
@@ -3790,7 +3970,11 @@ LIMIT 25;`,
                   {/* Analysis Metadata Transparency Box */}
                   <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-zinc-500 space-y-1">
                     <div className="font-bold text-zinc-700 dark:text-zinc-300">
-                      Analysis Metadata (`@skill:datalineage-bigquery-asset-impact-analysis`):
+                      Analysis Metadata (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        @skill:datalineage-bigquery-asset-impact-analysis
+                      </code>
+                      ):
                     </div>
                     <div>
                       • Locations Searched:{' '}
@@ -3813,7 +3997,11 @@ LIMIT 25;`,
                 <div className="xl:col-span-5 p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
-                      3. Partition &amp; Cluster FinOps Surgeon (`@skill:bigquery-sql`)
+                      3. Partition &amp; Cluster FinOps Surgeon (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        @skill:bigquery-sql
+                      </code>
+                      )
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
                       -{lineageData.partitionClusterAudit?.estimatedScanReductionPct || 80}% Scan Bytes
@@ -3883,7 +4071,11 @@ LIMIT 25;`,
                       }
                       className="py-2 px-3 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono font-bold cursor-pointer"
                     >
-                      Build `{lineageData.tableId}_partitioned` Copy
+                      Build{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        {lineageData.tableId}_partitioned
+                      </code>{' '}
+                      Copy
                     </button>
                   </div>
                 </div>

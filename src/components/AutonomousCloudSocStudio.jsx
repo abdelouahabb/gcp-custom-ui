@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
+  Shield,
   ShieldAlert,
   ShieldCheck,
   Lock,
@@ -20,6 +21,11 @@ import {
   Activity,
   Server,
   Sparkles,
+  Globe,
+  Target,
+  Database,
+  Microscope,
+  X,
 } from 'lucide-react';
 import { useSharedGeminiModels } from './ZeroSniffingWebCryptoEnclaveBar';
 
@@ -1216,10 +1222,10 @@ Format your response with clear Markdown headings:${
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              Next-Gen Autonomous 20-Pillar Cloud Security Operations Center (`{projectId}`)
+              Next-Gen Autonomous 20-Pillar Cloud Security Operations Center (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>)
             </h2>
             <p className="text-xs text-zinc-400 max-w-4xl">
-              Correlates live <code className="text-blue-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong>, verifies container <code className="text-blue-300">@sha256</code> supply-chain &amp; Binary Authorization integrity, stress-tests <strong>Gemini &amp; Vertex AI Model-Armor</strong>, audits DNSSEC/Egress/KMS &amp; API attack surface, enforces <strong>12 Formal Zero-Trust Invariants</strong>, and seals every SOAR action in an <strong>Ed25519 (RFC 8032)</strong> ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
+              Correlates live <code className="text-blue-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong>, verifies container <code className="text-blue-300">@sha256</code> supply-chain &amp; Binary Authorization integrity, stress-tests <strong>Gemini &amp; Vertex AI Model-Armor</strong>, audits DNSSEC/Egress/KMS &amp; API attack surface, enforces <strong>12 Formal Zero-Trust Invariants</strong>, and seals every SOAR action in an <strong>Ed25519 (RFC 8032)</strong> ledger + live <strong>ClickOps-to-GitOps (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">main.tf</code>)</strong> diff.
             </p>
           </div>
 
@@ -1332,8 +1338,9 @@ Format your response with clear Markdown headings:${
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-500/15 via-indigo-500/15 to-emerald-500/15 border border-blue-400/50 space-y-2.5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase">
-                  🛡️ VPC &harr; Cloud SOC Live Perimeter Handoff
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                  <Shield className="w-3 h-3 shrink-0" />
+                  <span>VPC &harr; Cloud SOC Live Perimeter Handoff</span>
                 </span>
                 {initialSocSeed.ruleName && (
                   <span className="text-xs font-extrabold text-white">
@@ -1400,9 +1407,10 @@ Format your response with clear Markdown headings:${
                           }
                         )
                       }
-                      className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
-                      🔒 Lock {initialSocSeed.ruleName} to IAP (35.235.240.0/20)
+                      <Lock className="w-3 h-3 shrink-0" />
+                      <span>Lock {initialSocSeed.ruleName} to IAP (35.235.240.0/20)</span>
                     </button>
                   )}
                 <button
@@ -1441,9 +1449,10 @@ Format your response with clear Markdown headings:${
                     );
                   }}
                   disabled={aiLoading}
-                  className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                 >
-                  ✨ Gemini SOC Triage
+                  <Sparkles className="w-3 h-3 shrink-0" />
+                  <span>Gemini SOC Triage</span>
                 </button>
                 <button
                   type="button"
@@ -1462,9 +1471,9 @@ Format your response with clear Markdown headings:${
                   <button
                     type="button"
                     onClick={onClearSocSeed}
-                    className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] cursor-pointer"
+                    className="inline-flex items-center justify-center px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] cursor-pointer"
                   >
-                    ✕
+                    <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -1481,7 +1490,7 @@ Format your response with clear Markdown headings:${
                   Health &amp; Drift &harr; Cloud SOC Bidirectional Bridge
                 </span>
                 <span className="text-xs font-bold text-white">
-                  SOAR Containment &rarr; Live Terraform HCL (`git diff main.tf` + `imports.tf`)
+                  SOAR Containment &rarr; Live Terraform HCL (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">git diff main.tf</code> + <code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">imports.tf</code>)
                 </span>
                 <span className="text-[10px] text-zinc-400">
                   {healthAndDriftBridge.flightMutationsCount} Flight Mutation
@@ -1698,9 +1707,10 @@ Format your response with clear Markdown headings:${
           <button
             type="button"
             onClick={() => setStatusBanner(null)}
-            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold cursor-pointer shrink-0"
           >
-            ✕ Dismiss
+            <X className="w-3 h-3 shrink-0" />
+            <span>Dismiss</span>
           </button>
         </div>
       )}
@@ -1767,7 +1777,8 @@ Format your response with clear Markdown headings:${
                   }
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-mono font-extrabold cursor-pointer"
                 >
-                  <span>🌐 Open DENY Rules in VPC Studio &rarr;</span>
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <span>Open DENY Rules in VPC Studio &rarr;</span>
                 </button>
               </div>
             </div>
@@ -1829,7 +1840,7 @@ Format your response with clear Markdown headings:${
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Correlated Actor Behavioral Kill-Chains (`cloudaudit.googleapis.com` · Grouped by Principal &amp; Caller IP)
+                  Correlated Actor Behavioral Kill-Chains (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cloudaudit.googleapis.com</code> · Grouped by Principal &amp; Caller IP)
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Groups raw Cloud Audit API calls by <code className="font-mono">(principalEmail, callerIp)</code> and scores multi-tactic progression across MITRE ATT&amp;CK Cloud matrices.
@@ -2167,8 +2178,9 @@ Format your response with clear Markdown headings:${
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {isSeedFocused && (
-                        <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
-                          🎯 FOCUSED FROM VPC STUDIO
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                          <Target className="w-3 h-3 shrink-0" />
+                          <span>FOCUSED FROM VPC STUDIO</span>
                         </span>
                       )}
                       <span
@@ -2202,7 +2214,8 @@ Format your response with clear Markdown headings:${
                           }
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-xs font-mono font-extrabold cursor-pointer"
                         >
-                          <span>🌐 Edit / X-Ray in VPC Studio &rarr;</span>
+                          <Globe className="w-3.5 h-3.5 shrink-0" />
+                          <span>Edit / X-Ray in VPC Studio &rarr;</span>
                         </button>
                       )}
 
@@ -2291,10 +2304,10 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
               <Key className="w-4 h-4 text-amber-500" />
-              <span>IAM Service Account User-Managed `.json` Key Auditor &amp; 1-Click Disabler (`iam.googleapis.com/v1`)</span>
+              <span>IAM Service Account User-Managed <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">.json</code> Key Auditor &amp; 1-Click Disabler (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">iam.googleapis.com/v1</code>)</span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              User-managed Service Account `.json` keys never expire by default and are the #1 root cause of cloud breaches. Disable leaked or legacy `.json` keys in 1 click.
+              User-managed Service Account <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">.json</code> keys never expire by default and are the #1 root cause of cloud breaches. Disable leaked or legacy <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">.json</code> keys in 1 click.
             </p>
 
             <div className="space-y-2">
@@ -2386,7 +2399,7 @@ Format your response with clear Markdown headings:${
           {/* Container Supply-Chain Table */}
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-              Cloud Run Container Image `@sha256` Digest &amp; `secretKeyRef` Pinning Radar
+              Cloud Run Container Image <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">@sha256</code> Digest &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">secretKeyRef</code> Pinning Radar
             </h3>
             <div className="space-y-2">
               {supplyChainWorkloads.map((w) => (
@@ -2694,17 +2707,26 @@ Format your response with clear Markdown headings:${
                       </span>
                       <span
                         data-feature-id="SOC_AI_PATH_A_VERTEX_CARD"
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                           socData?.aiCommanderStatus?.vertexAiApiEnabled
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                             : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
                         }`}
                       >
-                        {socData?.aiCommanderStatus?.vertexAiApiEnabled
-                          ? aiPreferredProvider === 'VERTEX_AI_OAUTH'
-                            ? '🟢 ACTIVE ENGINE · NO API KEY NEEDED'
-                            : '🟢 VERTEX AI API ENABLED'
-                          : '🟡 VERTEX AI API NOT ENABLED'}
+                        <span
+                          className={`w-2 h-2 rounded-full inline-block shrink-0 ${
+                            socData?.aiCommanderStatus?.vertexAiApiEnabled
+                              ? 'bg-emerald-500'
+                              : 'bg-amber-500'
+                          }`}
+                        />
+                        <span>
+                          {socData?.aiCommanderStatus?.vertexAiApiEnabled
+                            ? aiPreferredProvider === 'VERTEX_AI_OAUTH'
+                              ? 'ACTIVE ENGINE · NO API KEY NEEDED'
+                              : 'VERTEX AI API ENABLED'
+                            : 'VERTEX AI API NOT ENABLED'}
+                        </span>
                       </span>
                     </div>
                     {!socData?.aiCommanderStatus?.vertexAiApiEnabled && (
@@ -2717,11 +2739,16 @@ Format your response with clear Markdown headings:${
                           })
                         }
                         disabled={Boolean(actionBusy)}
-                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
                       >
-                        {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC'
-                          ? 'Enabling Vertex AI...'
-                          : '⚡ 1-Click Enable Vertex AI (No API Key Needed)'}
+                        {actionBusy === 'ENABLE_VERTEX_AI_FOR_SOC' ? (
+                          'Enabling Vertex AI...'
+                        ) : (
+                          <>
+                            <Zap className="w-3 h-3 shrink-0" />
+                            <span>1-Click Enable Vertex AI (No API Key Needed)</span>
+                          </>
+                        )}
                       </button>
                     )}
                   </div>
@@ -2753,7 +2780,7 @@ Format your response with clear Markdown headings:${
                       </span>
                       <span
                         data-feature-id="SOC_AI_PATH_B_ENCLAVE_CARD"
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                           browserSocVaultMeta.configured ||
                           socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
                           aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
@@ -2763,20 +2790,30 @@ Format your response with clear Markdown headings:${
                       >
                         {browserSocVaultMeta.configured ||
                         socData?.aiCommanderStatus?.aiStudioVaultConfigured ||
-                        aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured
-                          ? `🔒 SEALED (${
-                              browserSocVaultMeta.maskedKey ||
-                              aiBriefing?.aiCommanderStatus?.aiStudioMaskedKey ||
-                              socData?.aiCommanderStatus?.aiStudioMaskedKey ||
-                              'AIza••••'
-                            } · ${
-                              browserSocVaultMeta.keyFingerprint ||
-                              socData?.aiCommanderStatus?.aiStudioKeyFingerprint ||
-                              'AES-256-GCM'
-                            })`
-                          : aiPreferredProvider === 'AI_STUDIO_KEY'
-                          ? '⚠️ PASTE & SEAL AIzaSy... KEY BELOW'
-                          : 'OPTIONAL · NOT CONFIGURED'}
+                        aiBriefing?.aiCommanderStatus?.aiStudioVaultConfigured ? (
+                          <>
+                            <Lock className="w-3 h-3 shrink-0" />
+                            <span>
+                              {`SEALED (${
+                                browserSocVaultMeta.maskedKey ||
+                                aiBriefing?.aiCommanderStatus?.aiStudioMaskedKey ||
+                                socData?.aiCommanderStatus?.aiStudioMaskedKey ||
+                                'AIza••••'
+                              } · ${
+                                browserSocVaultMeta.keyFingerprint ||
+                                socData?.aiCommanderStatus?.aiStudioKeyFingerprint ||
+                                'AES-256-GCM'
+                              })`}
+                            </span>
+                          </>
+                        ) : aiPreferredProvider === 'AI_STUDIO_KEY' ? (
+                          <>
+                            <AlertTriangle className="w-3 h-3 shrink-0" />
+                            <span>PASTE &amp; SEAL AIzaSy... KEY BELOW</span>
+                          </>
+                        ) : (
+                          'OPTIONAL · NOT CONFIGURED'
+                        )}
                       </span>
                     </div>
                     {(browserSocVaultMeta.configured ||
@@ -2807,9 +2844,16 @@ Format your response with clear Markdown headings:${
                       data-feature-id="SOC_AI_SEAL_KEY_BTN"
                       onClick={handleSealAiStudioKey}
                       disabled={aiKeySaving || !inlineApiKeyInput.trim()}
-                      className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
                     >
-                      {aiKeySaving ? 'Sealing...' : '🔒 Seal Key'}
+                      {aiKeySaving ? (
+                        'Sealing...'
+                      ) : (
+                        <>
+                          <Lock className="w-3 h-3 shrink-0" />
+                          <span>Seal Key</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -2893,40 +2937,48 @@ Format your response with clear Markdown headings:${
                 </span>
                 {[
                   {
-                    label: '🌐 Audit 0.0.0.0/0 VPC Firewalls & IAP Lock',
+                    icon: Globe,
+                    label: 'Audit 0.0.0.0/0 VPC Firewalls & IAP Lock',
                     focus: 'VPC_PERIMETER_TRIAGE',
                     q: 'Analyze all exposed 0.0.0.0/0 VPC firewall rules in this project and provide exact gcloud + Terraform IAP (35.235.240.0/20) lockdown commands.',
                   },
                   {
-                    label: '🕵️ Explain Top CloudAudit Kill-Chains',
+                    icon: Eye,
+                    label: 'Explain Top CloudAudit Kill-Chains',
                     focus: 'KILL_CHAIN_ATTRIBUTION',
                     q: 'Analyze the top cloudaudit behavioral kill-chains, identify whether the callers are legitimate operators or suspicious actors, and recommend containment.',
                   },
                   {
-                    label: '🔑 Audit SA Keys & IAM Privilege Escalation',
+                    icon: Key,
+                    label: 'Audit SA Keys & IAM Privilege Escalation',
                     focus: 'IAM_SUPPLY_CHAIN_AUDIT',
                     q: 'Inspect service account keys and IAM privilege-escalation paths in this project and provide a zero-downtime key rotation and WIF migration plan.',
                   },
                   {
-                    label: '🪣 Audit GCS Public Access & Secret Hygiene',
+                    icon: Database,
+                    label: 'Audit GCS Public Access & Secret Hygiene',
                     focus: 'DATA_EXFILTRATION_DLP',
                     q: 'Evaluate Cloud Storage publicAccessPrevention, Uniform Bucket-Level Access, and Secret Manager rotation hygiene for this project.',
                   },
-                ].map((preset) => (
-                  <button
-                    key={preset.focus}
-                    type="button"
-                    data-feature-id="SOC_AI_QUICK_PROMPT_CHIP"
-                    onClick={() => {
-                      setAiCustomQuestion(preset.q);
-                      handleRunAiCommander(preset.focus, preset.q);
-                    }}
-                    disabled={aiLoading}
-                    className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-blue-500/10 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                ].map((preset) => {
+                  const PresetIcon = preset.icon;
+                  return (
+                    <button
+                      key={preset.focus}
+                      type="button"
+                      data-feature-id="SOC_AI_QUICK_PROMPT_CHIP"
+                      onClick={() => {
+                        setAiCustomQuestion(preset.q);
+                        handleRunAiCommander(preset.focus, preset.q);
+                      }}
+                      disabled={aiLoading}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-blue-500/10 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      <PresetIcon className="w-3 h-3 shrink-0" />
+                      <span>{preset.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -2936,15 +2988,22 @@ Format your response with clear Markdown headings:${
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       data-feature-id="SOC_AI_PROVENANCE_BADGE"
-                      className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                         aiBriefing.isLiveLlm
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                           : 'bg-red-500/20 text-red-300 border border-red-500/40'
                       }`}
                     >
-                      {aiBriefing.isLiveLlm
-                        ? `🟢 LIVE GEMINI LLM (${aiBriefing.executionMode})`
-                        : '🔴 LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                      <span
+                        className={`w-2 h-2 rounded-full inline-block shrink-0 ${
+                          aiBriefing.isLiveLlm ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}
+                      />
+                      <span>
+                        {aiBriefing.isLiveLlm
+                          ? `LIVE GEMINI LLM (${aiBriefing.executionMode})`
+                          : 'LIVE GEMINI LLM NOT REACHED (ZERO SYNTHETIC OUTPUT)'}
+                      </span>
                     </span>
                     {aiBriefing.engineUsed && (
                       <span className="text-blue-300 font-bold">
@@ -2987,7 +3046,7 @@ Format your response with clear Markdown headings:${
                         </ul>
                       )}
                     <div className="pt-1 text-[10px] text-emerald-300 font-bold">
-                      → Enable Vertex AI API above (Keyless OAuth2) or seal a Google AI Studio key (`AIzaSy...`) to run real Gemini inference.
+                      &rarr; Enable Vertex AI API above (Keyless OAuth2) or seal a Google AI Studio key (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">AIzaSy...</code>) to run real Gemini inference.
                     </div>
                   </div>
                 )}
@@ -3080,7 +3139,7 @@ Format your response with clear Markdown headings:${
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Layers className="w-4 h-4 text-blue-500" />
                   <span>
-                    IAM Policy Time-Machine, Cryptographic `etag` Vault &amp; 1-Click Atomic `setIamPolicy` Rollback
+                    IAM Policy Time-Machine, Cryptographic <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">etag</code> Vault &amp; 1-Click Atomic <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">setIamPolicy</code> Rollback
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -3159,7 +3218,7 @@ Format your response with clear Markdown headings:${
             {/* Checkpoints List & 1-Click Rollback */}
             <div className="space-y-2 pt-2">
               <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-                Cryptographic IAM Policy Checkpoints (`socIamCheckpointsByProject`):
+                Cryptographic IAM Policy Checkpoints (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">socIamCheckpointsByProject</code>):
               </div>
               {iamTimeMachine.checkpoints.map((cp) => (
                 <div
@@ -3208,7 +3267,7 @@ Format your response with clear Markdown headings:${
             {/* Privileged Role Bindings Inspector */}
             <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
               <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-                Live High-Privilege IAM Role Bindings (`roles/owner`, `roles/editor`, `roles/*.admin`):
+                Live High-Privilege IAM Role Bindings (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">roles/owner</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">roles/editor</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">roles/*.admin</code>):
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {iamTimeMachine.privilegedBindings.map((b) => (
@@ -3260,7 +3319,7 @@ Format your response with clear Markdown headings:${
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  GCS Crown-Jewel Exfiltration Firewall (`publicAccessPrevention` &amp; `uniformBucketLevelAccess`)
+                  GCS Crown-Jewel Exfiltration Firewall (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">publicAccessPrevention</code> &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">uniformBucketLevelAccess</code>)
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Inspects every Cloud Storage bucket in <code className="font-mono">{projectId}</code> and enforces <code className="font-mono">publicAccessPrevention: &quot;enforced&quot;</code> + Uniform Bucket-Level Access in 1 click.
@@ -3357,7 +3416,7 @@ Format your response with clear Markdown headings:${
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Cloud Logging Sinks (`logging.googleapis.com/v2/sinks`)
+                Cloud Logging Sinks (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2/sinks</code>)
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Detects unauthorized cross-project log export sinks used for silent telemetry exfiltration.
@@ -3401,7 +3460,7 @@ Format your response with clear Markdown headings:${
 
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Audit Log Suppression / Exclusions (`logging.googleapis.com/v2/exclusions`)
+                Audit Log Suppression / Exclusions (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2/exclusions</code>)
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Attackers create log exclusions to blind SIEMs during privilege escalation. Delete suspicious exclusions in 1 click.
@@ -3458,7 +3517,7 @@ Format your response with clear Markdown headings:${
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-blue-500" />
                   <span>
-                    1-Click Service Account In-Place Freeze / Unfreeze (`serviceAccounts:disable` &amp; `:enable`)
+                    1-Click Service Account In-Place Freeze / Unfreeze (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">serviceAccounts:disable</code> &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">:enable</code>)
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -3546,7 +3605,7 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Workload Identity Federation (WIF) OIDC / AWS / GitHub Pools (`workloadIdentityPools`)
+                Workload Identity Federation (WIF) OIDC / AWS / GitHub Pools (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">workloadIdentityPools</code>)
               </h3>
               {onRunInShell && (
                 <button
@@ -3631,7 +3690,7 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Server className="w-4 h-4 text-blue-500" />
                 <span>
-                  Cross-Project Multi-Estate SOC Federation Matrix (`cloudresourcemanager.googleapis.com/v1/projects`)
+                  Cross-Project Multi-Estate SOC Federation Matrix (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cloudresourcemanager.googleapis.com/v1/projects</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -3790,7 +3849,7 @@ Format your response with clear Markdown headings:${
                 <span>COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
               </div>
               <h3 className="text-lg font-extrabold text-white">
-                1-Click &ldquo;Defcon-1 Atomic Project Lockdown&rdquo; (`{projectId}`)
+                1-Click &ldquo;Defcon-1 Atomic Project Lockdown&rdquo; (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>)
               </h3>
               <p className="text-xs text-zinc-300 leading-relaxed">
                 Executes a coordinated 5-stage zero-trust perimeter seal across Compute Engine VPC, Cloud Storage, App Engine, Secret Manager, and IAM Resource Manager in a single atomic transaction — while preserving your authenticated Owner access and sealing an <strong>Ed25519 (RFC 8032)</strong> forensic receipt.
@@ -3838,7 +3897,7 @@ Format your response with clear Markdown headings:${
             <div className="flex items-center gap-2 font-extrabold text-amber-300">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                Operational Behavior Warning: How VPC IAP Hardening (`35.235.240.0/20`) Affects Direct Bash SSH
+                Operational Behavior Warning: How VPC IAP Hardening (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">35.235.240.0/20</code>) Affects Direct Bash SSH
               </span>
             </div>
             <p className="text-[11px] text-zinc-200 leading-relaxed">
@@ -3959,7 +4018,7 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-red-500" />
                 <span>
-                  Transitive IAM Impersonation &amp; Privilege-Escalation Graph Solver (`actAs` / `TokenCreator` / `setIamPolicy`)
+                  Transitive IAM Impersonation &amp; Privilege-Escalation Graph Solver (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">actAs</code> / <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">TokenCreator</code> / <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">setIamPolicy</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -4083,7 +4142,7 @@ Format your response with clear Markdown headings:${
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-blue-500" />
                   <span>
-                    Compute Engine Project Metadata (`commonInstanceMetadata`), IAM OS Login, Serial-Port Backdoor &amp; SSH-Key Forensics
+                    Compute Engine Project Metadata (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">commonInstanceMetadata</code>), IAM OS Login, Serial-Port Backdoor &amp; SSH-Key Forensics
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -4134,7 +4193,7 @@ Format your response with clear Markdown headings:${
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-400">IAM OS Login (`enable-oslogin`)</div>
+                <div className="text-[10px] text-zinc-400">IAM OS Login (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">enable-oslogin</code>)</div>
                 <div
                   className={`font-bold mt-0.5 ${
                     vmMetadataAndShieldedRadar.projectOsLoginEnabled
@@ -4148,7 +4207,7 @@ Format your response with clear Markdown headings:${
                 </div>
               </div>
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10px] text-zinc-400">Serial Port (`serial-port-enable`)</div>
+                <div className="text-[10px] text-zinc-400">Serial Port (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">serial-port-enable</code>)</div>
                 <div
                   className={`font-bold mt-0.5 ${
                     vmMetadataAndShieldedRadar.projectSerialPortEnabled
@@ -4184,7 +4243,7 @@ Format your response with clear Markdown headings:${
             {vmMetadataAndShieldedRadar.projectWideSshKeys.length > 0 && (
               <div className="space-y-1.5 pt-2">
                 <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-                  Project-Wide `commonInstanceMetadata.items[ssh-keys]` Inventory:
+                  Project-Wide <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">commonInstanceMetadata.items[ssh-keys]</code> Inventory:
                 </div>
                 {vmMetadataAndShieldedRadar.projectWideSshKeys.map((k, idx) => (
                   <div
@@ -4231,10 +4290,11 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex flex-wrap items-center gap-2">
                 <Activity className="w-4 h-4 text-blue-500" />
                 <span>
-                  Live Endpoint TLS 1.3 X.509 Cipher, HTTP Security Headers (`HSTS`/`CSP`/`CORS`) &amp; Unauthenticated Surface Prober
+                  Live Endpoint TLS 1.3 X.509 Cipher, HTTP Security Headers (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">HSTS</code>/<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">CSP</code>/<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">CORS</code>) &amp; Unauthenticated Surface Prober
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                  ⚡ Direct Node.js HTTPS/TLS 1.3 Socket · No gcloud Required
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  <Zap className="w-3 h-3 shrink-0" />
+                  <span>Direct Node.js HTTPS/TLS 1.3 Socket · No gcloud Required</span>
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -4386,7 +4446,7 @@ Format your response with clear Markdown headings:${
           {/* BigQuery Dataset ACL & PII Column Classifier */}
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-              BigQuery Lakehouse Dataset ACLs &amp; Schema PII/Credential Column Classifier (`bigquery.googleapis.com/v2`)
+              BigQuery Lakehouse Dataset ACLs &amp; Schema PII/Credential Column Classifier (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">bigquery.googleapis.com/v2</code>)
             </h3>
             {dataDlpAndSecretHygiene.datasets.length === 0 ? (
               <div className="text-xs font-mono text-zinc-500">
@@ -4478,7 +4538,7 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Secret Manager Active Version Age &amp; 1-Click 256-Bit Cryptographic Rotation (`secretmanager.googleapis.com/v1`)
+                Secret Manager Active Version Age &amp; 1-Click 256-Bit Cryptographic Rotation (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">secretmanager.googleapis.com/v1</code>)
               </h3>
               <button
                 type="button"
@@ -4686,7 +4746,7 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-500" />
                 <span>
-                  Vertex AI &amp; Gemini Model-Armor Red-Team Prompt-Injection, SSRF (`169.254.169.254`) &amp; IAM Tool-Call Hijack Arena
+                  Vertex AI &amp; Gemini Model-Armor Red-Team Prompt-Injection, SSRF (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">169.254.169.254</code>) &amp; IAM Tool-Call Hijack Arena
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -4833,7 +4893,7 @@ Format your response with clear Markdown headings:${
             </div>
           ) : (
             <div className="p-6 text-center text-xs font-mono text-zinc-500">
-              Click &ldquo;Run 5-Vector AI Red-Team &amp; Model-Armor Audit&rdquo; to test prompt-injection, SSRF (`169.254.169.254`), and IAM tool-call hijack defenses.
+              Click &ldquo;Run 5-Vector AI Red-Team &amp; Model-Armor Audit&rdquo; to test prompt-injection, SSRF (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">169.254.169.254</code>), and IAM tool-call hijack defenses.
             </div>
           )}
         </div>
@@ -4858,7 +4918,7 @@ Format your response with clear Markdown headings:${
               </div>
             </div>
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-              <div className="text-[10px] text-zinc-500">VPC Egress Routes (`0.0.0.0/0`)</div>
+              <div className="text-[10px] text-zinc-500">VPC Egress Routes (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">0.0.0.0/0</code>)</div>
               <div
                 className={`text-base font-extrabold mt-0.5 ${
                   dnsEgressAndKmsRadar.customInternetHijackRoutesCount > 0
@@ -4882,7 +4942,7 @@ Format your response with clear Markdown headings:${
               </div>
             </div>
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-              <div className="text-[10px] text-zinc-500">Cloud KMS KeyRings (`cloudkms.googleapis.com`)</div>
+              <div className="text-[10px] text-zinc-500">Cloud KMS KeyRings (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cloudkms.googleapis.com</code>)</div>
               <div className="text-base font-extrabold mt-0.5 text-blue-500">
                 {(dnsEgressAndKmsRadar.kmsKeyRings || []).length} KeyRing(s) Inspected
               </div>
@@ -4893,7 +4953,7 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Cloud DNS Managed Zones &amp; 1-Click DNSSEC Cryptographic Signing Enforcer (`dns.googleapis.com/v1`)
+                Cloud DNS Managed Zones &amp; 1-Click DNSSEC Cryptographic Signing Enforcer (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">dns.googleapis.com/v1</code>)
               </h3>
               <button
                 type="button"
@@ -4986,7 +5046,7 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                VPC Subnetworks &amp; 1-Click Private Google Access (`privateIpGoogleAccess`) Enforcer (`compute.googleapis.com`)
+                VPC Subnetworks &amp; 1-Click Private Google Access (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">privateIpGoogleAccess</code>) Enforcer (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">compute.googleapis.com</code>)
               </h3>
               <div className="flex flex-wrap items-center gap-2">
                 {dnsEgressAndKmsRadar.subnetsWithoutPrivateGoogleAccessCount > 0 ? (
@@ -5023,9 +5083,10 @@ Format your response with clear Markdown headings:${
                         'default',
                     })
                   }
-                  className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-extrabold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[11px] font-mono font-extrabold cursor-pointer"
                 >
-                  🌐 Open VPC &amp; Subnets Studio &rarr;
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <span>Open VPC &amp; Subnets Studio &rarr;</span>
                 </button>
                 {onNavigateTab && (
                   <button
@@ -5099,7 +5160,7 @@ Format your response with clear Markdown headings:${
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                VPC Route Table Egress Forensics (`0.0.0.0/0` Next-Hop Inspector)
+                VPC Route Table Egress Forensics (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">0.0.0.0/0</code> Next-Hop Inspector)
               </h3>
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
                 {(dnsEgressAndKmsRadar.vpcRoutes || []).map((rt) => (
@@ -5165,7 +5226,7 @@ Format your response with clear Markdown headings:${
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Cloud KMS KeyRing Inventory (`cloudkms.googleapis.com/v1`)
+                  Cloud KMS KeyRing Inventory (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cloudkms.googleapis.com/v1</code>)
                 </h3>
                 <button
                   type="button"
@@ -5257,7 +5318,7 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-500" />
                 <span>
-                  Live Enabled GCP API Attack-Surface Minimizer (`serviceusage.googleapis.com/v1`)
+                  Live Enabled GCP API Attack-Surface Minimizer (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">serviceusage.googleapis.com/v1</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -5356,7 +5417,7 @@ Format your response with clear Markdown headings:${
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <FileCode2 className="w-4 h-4 text-blue-500" />
                   <span>
-                    Binary Authorization Cryptographic Admission Policy (`binaryauthorization.googleapis.com/v1`)
+                    Binary Authorization Cryptographic Admission Policy (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">binaryauthorization.googleapis.com/v1</code>)
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -5408,7 +5469,7 @@ Format your response with clear Markdown headings:${
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                Artifact Registry Repositories (`artifactregistry.googleapis.com/v1`)
+                Artifact Registry Repositories (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">artifactregistry.googleapis.com/v1</code>)
               </h3>
               <button
                 type="button"
@@ -5504,7 +5565,7 @@ Format your response with clear Markdown headings:${
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <span>
-                  Autonomous 12-Invariant Zero-Trust Compliance Engine &amp; 1-Click Self-Healing Reconciler (`INV-01` &rarr; `INV-12`)
+                  Autonomous 12-Invariant Zero-Trust Compliance Engine &amp; 1-Click Self-Healing Reconciler (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">INV-01</code> &rarr; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">INV-12</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -5736,9 +5797,10 @@ Format your response with clear Markdown headings:${
                               filterMode: 'EXPOSED',
                             })
                           }
-                          className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
                         >
-                          🌐 VPC Studio (0.0.0.0/0) &rarr;
+                          <Globe className="w-3 h-3 shrink-0" />
+                          <span>VPC Studio (0.0.0.0/0) &rarr;</span>
                         </button>
                       )}
                       <button
@@ -5778,7 +5840,7 @@ Format your response with clear Markdown headings:${
                   </span>
                 </div>
                 <h3 className="text-sm sm:text-base font-extrabold text-white">
-                  Unified L3/L4 VPC Andromeda IPS, L7 Cloud Armor OWASP WAF &amp; Suricata 7.0 Intrusion Detection (`{projectId}`)
+                  Unified L3/L4 VPC Andromeda IPS, L7 Cloud Armor OWASP WAF &amp; Suricata 7.0 Intrusion Detection (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>)
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-4xl">
                   Evaluates live VPC Firewall ingress exposure (<code className="text-rose-300">0.0.0.0/0</code> on SSH <code className="text-rose-300">:22</code>, RDP <code className="text-rose-300">:3389</code>, Admin <code className="text-rose-300">:8888</code>), <code className="text-blue-300">cloudaudit.googleapis.com</code> behavioral kill-chains, Google Cloud IDS (<code className="text-blue-300">ids.googleapis.com</code>), VPC Packet Mirroring, and Cloud Armor L7 WAF policies. Enforce 1-click inline IPS containment or trace any intrusion signature on the 40-Region Global Map X-Ray.
@@ -5886,7 +5948,7 @@ Format your response with clear Markdown headings:${
                 <h4 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Crosshair className="w-4 h-4 text-rose-500" />
                   <span>
-                    Live Suricata 7.0 &amp; Cloud IDS Intrusion Signatures (`{projectId}`)
+                    Live Suricata 7.0 &amp; Cloud IDS Intrusion Signatures (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>)
                   </span>
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -5971,9 +6033,10 @@ Format your response with clear Markdown headings:${
                                       : 'my-live-client',
                                 })
                               }
-                              className="px-2.5 py-1 rounded-md bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-600 dark:text-teal-300 text-[10px] font-extrabold cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-600 dark:text-teal-300 text-[10px] font-extrabold cursor-pointer"
                             >
-                              🔬 Trace in Global Map X-Ray &rarr;
+                              <Microscope className="w-3 h-3 shrink-0" />
+                              <span>Trace in Global Map X-Ray &rarr;</span>
                             </button>
                           )}
 
@@ -5987,16 +6050,17 @@ Format your response with clear Markdown headings:${
                                   if (el) {
                                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                     if (localStorage.getItem('cloudpulse_feature_spotlight_v1') !== 'false') {
-                                      el.setAttribute('data-spotlight-badge', `🎯 JUMPED HERE — Kill-Chain Actor: ${sig.principalEmail || 'Audit Stream'}`);
+                                      el.setAttribute('data-spotlight-badge', `JUMPED HERE — Kill-Chain Actor: ${sig.principalEmail || 'Audit Stream'}`);
                                       el.classList.add('cloudpulse-target-spotlight-active');
                                       setTimeout(() => el.classList.remove('cloudpulse-target-spotlight-active'), 6500);
                                     }
                                   }
                                 }, 80);
                               }}
-                              className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
                             >
-                              🎯 Inspect Actor in Kill-Chain Engine &rarr;
+                              <Target className="w-3 h-3 shrink-0" />
+                              <span>Inspect Actor in Kill-Chain Engine &rarr;</span>
                             </button>
                           ) : (
                             <button
@@ -6010,9 +6074,10 @@ Format your response with clear Markdown headings:${
                                       : 'ALL',
                                 })
                               }
-                              className="px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold cursor-pointer"
                             >
-                              🌐 Inspect Rule in VPC Studio &rarr;
+                              <Globe className="w-3 h-3 shrink-0" />
+                              <span>Inspect Rule in VPC Studio &rarr;</span>
                             </button>
                           )}
 
@@ -6029,9 +6094,10 @@ Format your response with clear Markdown headings:${
                                   }
                                 )
                               }
-                              className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                             >
-                              🔒 {sig.remediationLabel}
+                              <Lock className="w-3 h-3 shrink-0" />
+                              <span>{sig.remediationLabel}</span>
                             </button>
                           )}
 
@@ -6049,9 +6115,10 @@ Format your response with clear Markdown headings:${
                                     }
                                   )
                                 }
-                                className="px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
                               >
-                                🛡️ {sig.remediationLabel}
+                                <Shield className="w-3 h-3 shrink-0" />
+                                <span>{sig.remediationLabel}</span>
                               </button>
                             )}
 
@@ -6145,7 +6212,7 @@ Format your response with clear Markdown headings:${
                   </span>
                 </div>
                 <h4 className="text-sm font-extrabold text-white">
-                  Interactive L3–L7 Packet Byte-Stream &amp; Exploit Payload Surgeon (`{projectId}`)
+                  Interactive L3–L7 Packet Byte-Stream &amp; Exploit Payload Surgeon (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>)
                 </h4>
                 <p className="text-xs text-zinc-400 font-sans max-w-4xl">
                   Select any of the 6 real-world exploit vectors (Log4Shell JNDI, SQLi UNION, GCE Metadata <code className="font-mono text-rose-300">169.254.169.254</code> SSRF, OWASP LLM01 Prompt-Injection, Outbound Stratum Crypto-Miner, or SSH Brute-Force) or craft a custom byte payload. CloudPulse computes true <strong>Shannon Entropy ($H(X)$ bits/byte)</strong>, renders a <strong>16-byte Hex + ASCII Wireframe Dump</strong>, and tests the packet live against your project&apos;s actual VPC Firewalls, Cloud Armor WAF policies, and Suricata 7.0 rules.
@@ -6160,7 +6227,7 @@ Format your response with clear Markdown headings:${
                     onChange={(e) => setDpiEmitCloudLog(e.target.checked)}
                     className="rounded accent-rose-500"
                   />
-                  <span>Write Alert to Cloud Logging (`entries:write`)</span>
+                  <span>Write Alert to Cloud Logging (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">entries:write</code>)</span>
                 </label>
                 <button
                   type="button"
@@ -6453,7 +6520,7 @@ Format your response with clear Markdown headings:${
                   </span>
                 </h4>
                 <p className="text-xs text-zinc-500 font-sans">
-                  Granularly arm or remove individual Google Cloud Armor preconfigured OWASP v3.3 WAF signatures (`sqli`, `xss`, `rce`, `lfi/rfi`, `scannerdetection`, `protocolattack`, `sessionfixation/php`, `cve-canary/nodejs`) or deploy all 8 rules in 1 click.
+                  Granularly arm or remove individual Google Cloud Armor preconfigured OWASP v3.3 WAF signatures (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">sqli</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">xss</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">rce</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">lfi/rfi</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">scannerdetection</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">protocolattack</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">sessionfixation/php</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cve-canary/nodejs</code>) or deploy all 8 rules in 1 click.
                 </p>
               </div>
 
@@ -6578,7 +6645,7 @@ Format your response with clear Markdown headings:${
                     Outbound C2, Stratum Crypto-Miner &amp; JNDI Callback Blocker
                   </h4>
                   <p className="text-xs text-zinc-500 font-sans">
-                    Blocks compromised workloads from phoning home to Log4Shell JNDI LDAP (<code className="font-mono">:1389</code>), XMRig/Monero Stratum pools (<code className="font-mono">:3333, :4444, :14444, :45560</code>), and Metasploit/IRC C2 channels (<code className="font-mono">:5555, :6667</code>) at `$0.00/mo`.
+                    Blocks compromised workloads from phoning home to Log4Shell JNDI LDAP (<code className="font-mono">:1389</code>), XMRig/Monero Stratum pools (<code className="font-mono">:3333, :4444, :14444, :45560</code>), and Metasploit/IRC C2 channels (<code className="font-mono">:5555, :6667</code>) at <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">$0.00/mo</code>.
                   </p>
                 </div>
 
@@ -6614,7 +6681,7 @@ Format your response with clear Markdown headings:${
                   </code>
                 </div>
                 <div>
-                  Hit Logging (`INCLUDE_ALL_METADATA`):{' '}
+                  Hit Logging (<code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">INCLUDE_ALL_METADATA</code>):{' '}
                   <strong className="text-blue-300">
                     {ipsIdsRadar.egressC2KillSwitch?.hitLoggingEnabled
                       ? 'ENABLED'

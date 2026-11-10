@@ -738,7 +738,7 @@ export default function SreWarRoomPerimeterStudio({
               Autonomous SRE Incident Command Center, Live Blackbox Synthetic Prober &amp; Self-Healing Runbook Engine
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              Real-time Google SRE Book Chapter 5 Multi-Window Error-Budget Burn (`14.4x` 1h Page / `6.0x` 6h Ticket), live `logging.googleapis.com/v2` root-cause autopsy, `monitoring.googleapis.com/v3` Global Uptime &amp; Alert Policy provisioner, DNS/TLS 1.3/HTTPS synthetic prober, VPC-SC `199.36.153.4/30` guard, and Exactly-Once Pub/Sub Dead-Letter Queue (`-dlq`) studio.
+              Real-time Google SRE Book Chapter 5 Multi-Window Error-Budget Burn (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">14.4x</code> 1h Page / <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">6.0x</code> 6h Ticket), live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2</code> root-cause autopsy, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">monitoring.googleapis.com/v3</code> Global Uptime &amp; Alert Policy provisioner, DNS/TLS 1.3/HTTPS synthetic prober, VPC-SC <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">199.36.153.4/30</code> guard, and Exactly-Once Pub/Sub Dead-Letter Queue (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">-dlq</code>) studio.
             </p>
           </div>
 
@@ -858,7 +858,7 @@ export default function SreWarRoomPerimeterStudio({
             }`}
           >
             <div className="text-[10px] font-mono text-zinc-500">
-              1h Fast-Burn (`14.4x` Page)
+              1h Fast-Burn (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">14.4x</code> Page)
             </div>
             <div
               className={`text-xl font-black mt-0.5 ${
@@ -933,7 +933,7 @@ export default function SreWarRoomPerimeterStudio({
               <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 <span>
-                  Auto-Synthesized Google SRE Book Blameless Postmortem (`postmortem.md`)
+                  Auto-Synthesized Google SRE Book Blameless Postmortem (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">postmortem.md</code>)
                 </span>
               </span>
               <button
@@ -1016,7 +1016,7 @@ export default function SreWarRoomPerimeterStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-red-500" />
                   <span>
-                    Google SRE Book Multi-Window Multi-Burn-Rate Matrix (`{slo.sloTargetPct}%` Target · `{slo.monthlyBudgetMinutes}m` Monthly Budget)
+                    Google SRE Book Multi-Window Multi-Burn-Rate Matrix (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{slo.sloTargetPct}%</code> Target · <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{slo.monthlyBudgetMinutes}m</code> Monthly Budget)
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 mt-0.5">
@@ -1140,10 +1140,10 @@ export default function SreWarRoomPerimeterStudio({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Correlated Cloud Logging Root-Cause Signatures (`logging.googleapis.com/v2` · {clusters.length} Cluster(s))
+                  Correlated Cloud Logging Root-Cause Signatures (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2</code> · {clusters.length} Cluster(s))
                 </h3>
                 <p className="text-xs text-zinc-500">
-                  Every signature distinguishes true SLO-burning errors from benign idempotent `409 ALREADY_EXISTS` checks and includes a 1-click control-plane remediation button.
+                  Every signature distinguishes true SLO-burning errors from benign idempotent <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">409 ALREADY_EXISTS</code> checks and includes a 1-click control-plane remediation button.
                 </p>
               </div>
               <button
@@ -1289,7 +1289,7 @@ export default function SreWarRoomPerimeterStudio({
                     {isExpanded && (
                       <div className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2 text-xs font-mono">
                         <div className="text-blue-600 dark:text-blue-400 font-bold">
-                          Root-Cause Forensic Autopsy (`{c.clusterKey}`):
+                          Root-Cause Forensic Autopsy (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{c.clusterKey}</code>):
                         </div>
                         <p className="text-zinc-600 dark:text-zinc-300 font-sans text-xs">
                           {c.whyFlagged}
@@ -1344,7 +1344,7 @@ export default function SreWarRoomPerimeterStudio({
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Live inspection across Compute Engine VMs, Cloud Run v2 Services, App Engine, and BigQuery Datasets on `{projectId}` with 1-click lifecycle and shell actions.
+                Live inspection across Compute Engine VMs, Cloud Run v2 Services, App Engine, and BigQuery Datasets on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code> with 1-click lifecycle and shell actions.
               </p>
             </div>
             <button
@@ -1518,7 +1518,7 @@ export default function SreWarRoomPerimeterStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-500" />
                   <span>
-                    Global HTTPS Uptime Checks (`monitoring.googleapis.com/v3` · {uptimeChecks.length})
+                    Global HTTPS Uptime Checks (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">monitoring.googleapis.com/v3</code> · {uptimeChecks.length})
                   </span>
                 </h3>
                 <p className="text-[11px] text-zinc-500">
@@ -1566,7 +1566,7 @@ export default function SreWarRoomPerimeterStudio({
             {uptimeChecks.length === 0 ? (
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <span className="text-zinc-500">
-                  Zero Cloud Monitoring Uptime Checks configured on `{projectId}`.
+                  Zero Cloud Monitoring Uptime Checks configured on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>.
                 </span>
                 <button
                   type="button"
@@ -1639,7 +1639,7 @@ export default function SreWarRoomPerimeterStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-red-500" />
                   <span>
-                    Cloud Monitoring P1 Alert Policies (`alertPolicies` · {alertPolicies.length})
+                    Cloud Monitoring P1 Alert Policies (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">alertPolicies</code> · {alertPolicies.length})
                   </span>
                 </h3>
                 <p className="text-[11px] text-zinc-500">
@@ -1679,7 +1679,7 @@ export default function SreWarRoomPerimeterStudio({
             {alertPolicies.length === 0 ? (
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <span className="text-zinc-500">
-                  Zero Cloud Monitoring Alert Policies found on `{projectId}`.
+                  Zero Cloud Monitoring Alert Policies found on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>.
                 </span>
                 <button
                   type="button"
@@ -1763,8 +1763,9 @@ export default function SreWarRoomPerimeterStudio({
                 <span>
                   Live Multi-Endpoint Blackbox Synthetic Prober (DNS Lookup + TCP + TLS 1.3 + HTTPS TTFB)
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                  ⚡ Direct Node.js DNS/TCP/TLS Socket · No gcloud Required
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  <Zap className="w-3 h-3 shrink-0" />
+                  Direct Node.js DNS/TCP/TLS Socket · No gcloud Required
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
@@ -1919,11 +1920,11 @@ export default function SreWarRoomPerimeterStudio({
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-500" />
                 <span>
-                  Cloud Logging SLI Counter Metrics Architect (`logging.googleapis.com/v2/projects/{projectId}/metrics`)
+                  Cloud Logging SLI Counter Metrics Architect (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2/projects/{projectId}/metrics</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Converts raw Cloud Logging streams into low-overhead numeric time-series SLIs (`5xx_errors`, `oom_exit137`, `iam_403_denied`) for multi-window SLO error-budget calculation.
+                Converts raw Cloud Logging streams into low-overhead numeric time-series SLIs (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">5xx_errors</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">oom_exit137</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">iam_403_denied</code>) for multi-window SLO error-budget calculation.
               </p>
             </div>
             <button
@@ -1982,7 +1983,7 @@ export default function SreWarRoomPerimeterStudio({
           {logBasedMetrics.length === 0 ? (
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <span className="text-zinc-500">
-                No user-defined Cloud Logging SLI metrics configured yet on `{projectId}`.
+                No user-defined Cloud Logging SLI metrics configured yet on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>.
               </span>
               <button
                 type="button"
@@ -2045,11 +2046,11 @@ export default function SreWarRoomPerimeterStudio({
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Flame className="w-4 h-4 text-red-500" />
                 <span>
-                  Live SRE Chaos Game-Day Fault-Injection Lab (`logging.googleapis.com/v2/entries:write`)
+                  Live SRE Chaos Game-Day Fault-Injection Lab (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2/entries:write</code>)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Injects real structured failure telemetry into `projects/{projectId}/logs/cloudpulse-sre-war-room` to verify your LogRCA clustering, 14.4x SLO Burn alerting, and 1-click MTTR recovery without harming production data.
+                Injects real structured failure telemetry into <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">projects/{projectId}/logs/cloudpulse-sre-war-room</code> to verify your LogRCA clustering, 14.4x SLO Burn alerting, and 1-click MTTR recovery without harming production data.
               </p>
             </div>
             {warRoomData?.drillActive ? (
@@ -2288,7 +2289,7 @@ export default function SreWarRoomPerimeterStudio({
           ) : (
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <span className="text-zinc-500">
-                Click any preset above or &ldquo;Synthesize Incident Plan&rdquo; to generate a live Principal SRE briefing with `{aiModel}`.
+                Click any preset above or &ldquo;Synthesize Incident Plan&rdquo; to generate a live Principal SRE briefing with <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{aiModel}</code>.
               </span>
               <button
                 type="button"
@@ -2321,7 +2322,7 @@ export default function SreWarRoomPerimeterStudio({
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Correlates live `cloudaudit.googleapis.com` configuration mutations alongside runtime error logs to isolate change-induced regressions immediately.
+                Correlates live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">cloudaudit.googleapis.com</code> configuration mutations alongside runtime error logs to isolate change-induced regressions immediately.
               </p>
             </div>
 
@@ -2538,7 +2539,7 @@ export default function SreWarRoomPerimeterStudio({
                 onClick={() => handleCopy(vpcScCli, 'VPC-SC Perimeter CLI')}
                 className="flex-1 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
               >
-                Copy VPC-SC Perimeter Spec (`access-context-manager`)
+                Copy VPC-SC Perimeter Spec (<code className="px-1 py-0.5 rounded bg-black/20 font-mono text-[0.92em]">access-context-manager</code>)
               </button>
               {onRunInShell && (
                 <button
@@ -2556,7 +2557,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                  Live Regional Subnets — Private Google Access (`privateIpGoogleAccess`)
+                  Live Regional Subnets — Private Google Access (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">privateIpGoogleAccess</code>)
                 </div>
                 <div className="text-[11px] font-mono text-zinc-500">
                   Coverage: {vpcScData?.pgaCoveragePct ?? 100}% (
@@ -2639,7 +2640,7 @@ export default function SreWarRoomPerimeterStudio({
               <div className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Radio className="w-4 h-4 text-red-500" />
                 <span>
-                  Provision Resilient Pub/Sub Topic + Dead-Letter Queue (`-dlq`)
+                  Provision Resilient Pub/Sub Topic + Dead-Letter Queue (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">-dlq</code>)
                 </span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
@@ -2685,7 +2686,7 @@ export default function SreWarRoomPerimeterStudio({
 
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Primary Topic Name (Auto-creates companion `-dlq` topic &amp; `-sub` subscription)
+                Primary Topic Name (Auto-creates companion <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">-dlq</code> topic &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">-sub</code> subscription)
               </label>
               <input
                 type="text"
@@ -2719,7 +2720,7 @@ export default function SreWarRoomPerimeterStudio({
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Ack Deadline Seconds (`10–600s`)
+                  Ack Deadline Seconds (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">10–600s</code>)
                 </label>
                 <input
                   type="number"
@@ -2821,7 +2822,7 @@ export default function SreWarRoomPerimeterStudio({
             ) : (
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <span className="text-zinc-500">
-                  No Pub/Sub subscriptions found in `{projectId}`.
+                  No Pub/Sub subscriptions found in <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>.
                 </span>
                 <button
                   type="button"
@@ -2829,7 +2830,7 @@ export default function SreWarRoomPerimeterStudio({
                   onClick={() => handleProvisionPubsubPair()}
                   className="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
                 >
-                  1-Click Bootstrap `sre-incident-events` + `-dlq` Triad
+                  1-Click Bootstrap <code className="px-1 py-0.5 rounded bg-black/20 font-mono text-[0.92em]">sre-incident-events</code> + <code className="px-1 py-0.5 rounded bg-black/20 font-mono text-[0.92em]">-dlq</code> Triad
                 </button>
               </div>
             )}
@@ -2851,7 +2852,7 @@ export default function SreWarRoomPerimeterStudio({
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Live state-aware verification across all 6 SRE reliability invariants on `{projectId}`. Compliant invariants link directly to their owning pillar instead of repeating duplicate bootstrap buttons.
+                Live state-aware verification across all 6 SRE reliability invariants on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code>. Compliant invariants link directly to their owning pillar instead of repeating duplicate bootstrap buttons.
               </p>
             </div>
 
@@ -3107,7 +3108,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
-                  Live ClickOps-to-GitOps Terraform Patch (`sre_war_room_session.tf`)
+                  Live ClickOps-to-GitOps Terraform Patch (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">sre_war_room_session.tf</code>)
                 </span>
                 <button
                   type="button"

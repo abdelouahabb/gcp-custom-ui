@@ -1414,9 +1414,9 @@ serialPipeline:
 
       {/* TAB 3: ACTIVE ASSIST FINOPS RECOMMENDER & REGIONAL QUOTA OPTIMIZER */}
       {activeSubTab === 'FINOPS_QUOTAS' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col gap-4 h-full">
+            <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Live Active Assist Recommendations ({recommendations.length})
@@ -1446,7 +1446,7 @@ serialPipeline:
             </div>
 
             {recommendations.length === 0 ? (
-              <div className="p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center space-y-1.5">
+              <div className="flex-1 flex flex-col items-center justify-center p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center space-y-1.5">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                 <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
                   Zero Active Waste or Over-Provisioned Resources Flagged in {region}
@@ -1456,49 +1456,51 @@ serialPipeline:
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[460px] overflow-y-auto">
-                {recommendations.map((rec) => (
-                  <div
-                    key={rec.fullName || rec.id}
-                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                        {rec.category} · {rec.priority}
-                      </span>
-                      <span className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        -${rec.estimatedMonthlySavingsUsd}/mo
-                      </span>
+              <div className="relative flex-1 min-h-[420px]">
+                <div className="space-y-2.5 max-h-[460px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto pr-1">
+                  {recommendations.map((rec) => (
+                    <div
+                      key={rec.fullName || rec.id}
+                      className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          {rec.category} · {rec.priority}
+                        </span>
+                        <span className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                          -${rec.estimatedMonthlySavingsUsd}/mo
+                        </span>
+                      </div>
+                      <div className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                        {rec.description}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={actingRecId === rec.fullName}
+                          onClick={() => handleRecommenderAction(rec, 'MARK_CLAIMED')}
+                          className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                        >
+                          Claim &amp; Track
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actingRecId === rec.fullName}
+                          onClick={() => handleRecommenderAction(rec, 'MARK_DISMISSED')}
+                          className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer disabled:opacity-50"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
-                      {rec.description}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        disabled={actingRecId === rec.fullName}
-                        onClick={() => handleRecommenderAction(rec, 'MARK_CLAIMED')}
-                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
-                      >
-                        Claim &amp; Track
-                      </button>
-                      <button
-                        type="button"
-                        disabled={actingRecId === rec.fullName}
-                        onClick={() => handleRecommenderAction(rec, 'MARK_DISMISSED')}
-                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer disabled:opacity-50"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col gap-4 h-full">
+            <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
                   Live Compute Regional Quota Saturation ({regionalQuotas.length})
@@ -1511,7 +1513,7 @@ serialPipeline:
             </div>
 
             {/* Quota Search & Category Filter Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
               <input
                 type="text"
                 value={quotaSearch}
@@ -1532,7 +1534,8 @@ serialPipeline:
               </select>
             </div>
 
-            <div className="max-h-[420px] overflow-y-auto space-y-2 pr-1">
+            <div className="relative flex-1 min-h-[420px]">
+              <div className="max-h-[420px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto space-y-2 pr-1">
               {regionalQuotas
                 .filter((q) => {
                   const m = String(q.metric || '').toUpperCase();
@@ -1628,6 +1631,7 @@ serialPipeline:
                     </div>
                   );
                 })}
+              </div>
             </div>
           </div>
         </div>
@@ -1791,7 +1795,7 @@ serialPipeline:
                 <span>
                   {runningStressAudit
                     ? 'Probing All 24 Live GCP Studio Endpoints...'
-                    : 'Run Full 24-Studio Live Stress Audit ($0.00 · ⚡ REST)'}
+                    : 'Run Full 24-Studio Live Stress Audit ($0.00 · REST)'}
                 </span>
               </button>
             </div>

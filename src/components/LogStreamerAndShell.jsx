@@ -8,8 +8,10 @@ import {
   AlertCircle,
   AlertTriangle,
   Info,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
+  CheckCircle2,
   Sparkles,
   ShieldAlert,
   History,
@@ -1951,19 +1953,27 @@ export default function LogStreamerAndShell({
                 GLOBAL MAP FORENSIC TRACE LOADED
               </span>
               <span
-                className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
                   activeMapForensicSpec.verdict === 'ALLOW'
                     ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                     : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
                 }`}
               >
-                {activeMapForensicSpec.verdict === 'ALLOW'
-                  ? '● VERDICT: ALLOW'
-                  : '✕ VERDICT: DENY'}
+                {activeMapForensicSpec.verdict === 'ALLOW' ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
+                    <span>VERDICT: ALLOW</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3 h-3 shrink-0" />
+                    <span>VERDICT: DENY</span>
+                  </>
+                )}
               </span>
               <span className="font-bold text-zinc-900 dark:text-zinc-100">
                 [{activeMapForensicSpec.timestamp}]{' '}
-                {activeMapForensicSpec.sourceIp || 'edge'} ➔{' '}
+                {activeMapForensicSpec.sourceIp || 'edge'} &rarr;{' '}
                 {activeMapForensicSpec.regionId} (
                 {activeMapForensicSpec.regionCity || 'GCP'}) ·{' '}
                 {(activeMapForensicSpec.protocol || 'tcp').toUpperCase()}:
@@ -1981,17 +1991,19 @@ export default function LogStreamerAndShell({
                   onClick={() =>
                     executeShellCommand(activeMapForensicSpec.gcloudCommand)
                   }
-                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] cursor-pointer"
                 >
-                  ▶ Run Live gcloud logging read in Cloud Shell
+                  <Play className="w-3 h-3 shrink-0" />
+                  <span>Run Live gcloud logging read in Cloud Shell</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setActiveMapForensicSpec(null)}
-                className="px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] cursor-pointer"
               >
-                ✕ Dismiss
+                <X className="w-3 h-3 shrink-0" />
+                <span>Dismiss</span>
               </button>
             </div>
           </div>
@@ -2068,7 +2080,7 @@ export default function LogStreamerAndShell({
               </span>
             </div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1">
-              Zero-JSON-Digging Log Intelligence, Cross-Service Trace Stitching & `_Default` Sink FinOps
+              Zero-JSON-Digging Log Intelligence, Cross-Service Trace Stitching &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">_Default</code> Sink FinOps
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Type plain English or LQL to query <code className="font-mono">logging.googleapis.com/v2/entries:list</code>, collapse repetitive stack traces into Drain3 signatures, inspect cross-service <code className="font-mono">traceId</code> waterfalls, and cut <code className="font-mono">$0.50/GiB</code> log ingestion noise in 1 click.
@@ -2080,7 +2092,7 @@ export default function LogStreamerAndShell({
             <div className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] font-mono text-zinc-500">Signatures</div>
               <div className="text-sm font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-                {chronoData?.stats?.totalEntries || 0} ➔ {chronoData?.stats?.uniqueSignatures || 0}
+                {chronoData?.stats?.totalEntries || 0} &rarr; {chronoData?.stats?.uniqueSignatures || 0}
               </div>
             </div>
             <div className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
@@ -2237,14 +2249,14 @@ export default function LogStreamerAndShell({
                     ZERO-AGENT INSIDE-LINUX SSH LOG SURGEON
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    Stream `journalctl`, `/var/log/auth.log`, `/var/log/syslog` &amp; `dmesg` Directly Over SSH2 (Even Without Ops Agent)
+                    Stream <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">journalctl</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">/var/log/auth.log</code>, <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">/var/log/syslog</code> &amp; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">dmesg</code> Directly Over SSH2 (Even Without Ops Agent)
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {typeof onSelectTab === 'function' && (
                     <button
                       type="button"
-                      onClick={() => onSelectTab('VM_FLEET_SSH')}
+                      onClick={() => onSelectTab('VM_SSH')}
                       className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10.5px] font-bold cursor-pointer"
                     >
                       Open VM Fleet &amp; SFTP →
@@ -2487,7 +2499,7 @@ export default function LogStreamerAndShell({
                     SAME-REGION ({devopsHubData?.defaultRegion || 'US-CENTRAL1'}) · $0.00/GB EGRESS
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    1-Click Forensic Log Bundle Exporter to Cloud Storage (`gs://` NDJSON / `.jsonl` + SHA-256 Digest)
+                    1-Click Forensic Log Bundle Exporter to Cloud Storage (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">gs://</code> NDJSON / <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">.jsonl</code> + SHA-256 Digest)
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -2680,8 +2692,11 @@ export default function LogStreamerAndShell({
               {gcsExportReceipt && (
                 <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-900 dark:text-emerald-200">
                   <div className="space-y-0.5">
-                    <div className="font-extrabold">
-                      ✓ EXPORTED {gcsExportReceipt.entryCount} LOG ENTRIES TO{' '}
+                    <div className="font-extrabold inline-flex items-center gap-1 flex-wrap">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        EXPORTED {gcsExportReceipt.entryCount} LOG ENTRIES TO{' '}
+                      </span>
                       <button
                         type="button"
                         onClick={() =>
@@ -2727,7 +2742,7 @@ export default function LogStreamerAndShell({
                     CLOUD LOGGING ROUTER, SINKS &amp; LOG BUCKETS ARCHITECT
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    Manage Log Bucket Retention (`30d`–`3,650d`), Enable BigQuery Log Analytics &amp; Route Live Sinks to GCS or BigQuery
+                    Manage Log Bucket Retention (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">30d</code>–<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">3,650d</code>), Enable BigQuery Log Analytics &amp; Route Live Sinks to GCS or BigQuery
                   </span>
                 </div>
                 <button
@@ -2742,7 +2757,7 @@ export default function LogStreamerAndShell({
               {/* Part A: Live Cloud Logging Buckets (Retention & BigQuery Log Analytics) */}
               <div className="space-y-2">
                 <div className="text-[11px] font-extrabold uppercase text-zinc-500">
-                  A. Live Cloud Logging Buckets (`logging.googleapis.com/v2/projects/{projectId}/locations/-/buckets`)
+                  A. Live Cloud Logging Buckets (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">logging.googleapis.com/v2/projects/{projectId}/locations/-/buckets</code>)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   {(devopsHubData?.logBuckets || []).map((b) => (
@@ -2809,7 +2824,7 @@ export default function LogStreamerAndShell({
               {/* Part B: Provision a New Live Cloud Logging Sink -> GCS or BigQuery */}
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                 <div className="text-[11px] font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
-                  B. Provision Live Cloud Logging Sink (`POST /v2/projects/{projectId}/sinks?uniqueWriterIdentity=true`)
+                  B. Provision Live Cloud Logging Sink (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">POST /v2/projects/{projectId}/sinks?uniqueWriterIdentity=true</code>)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                   <input
@@ -2905,7 +2920,7 @@ export default function LogStreamerAndShell({
                               {sk.name}
                             </span>
                             <span className="text-blue-600 dark:text-blue-400 font-bold truncate">
-                              ➔ {sk.destination}
+                              &rarr; {sk.destination}
                             </span>
                             {sk.exclusionsCount > 0 && (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
@@ -2957,7 +2972,7 @@ export default function LogStreamerAndShell({
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                 <div>
                   <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-extrabold mr-2">
-                    LIVE `monitoring.googleapis.com/v3/projects/{projectId}/alertPolicies`
+                    LIVE <code className="px-1 py-0.5 rounded bg-red-500/15 font-mono text-[0.92em]">monitoring.googleapis.com/v3/projects/{projectId}/alertPolicies</code>
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
                     Turn Any LQL Filter or Error Signature into a Real Cloud Monitoring Log-Match Alert Policy
@@ -3114,7 +3129,7 @@ export default function LogStreamerAndShell({
                     CLOUD LOGGING FINOPS ($0.50/GiB ABOVE 50 GiB/MO FREE TIER)
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    Service &amp; Stream Volume Attribution + 1-Click `_Default` Sink Exclusion Filters
+                    Service &amp; Stream Volume Attribution + 1-Click <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">_Default</code> Sink Exclusion Filters
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -3217,7 +3232,7 @@ export default function LogStreamerAndShell({
                   {/* 1-Click _Default Sink Exclusion Filter Recommendations */}
                   <div className="space-y-2">
                     <div className="text-[10.5px] font-extrabold text-zinc-700 dark:text-zinc-300 uppercase">
-                      1-Click `_Default` Sink Noise-Exclusion Filters (Cut Ingestion Before $0.50/GiB Billing)
+                      1-Click <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">_Default</code> Sink Noise-Exclusion Filters (Cut Ingestion Before $0.50/GiB Billing)
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       {(finopsAuditData.recommendedExclusions || []).map((exc) => (
@@ -3286,7 +3301,7 @@ export default function LogStreamerAndShell({
                     PRE-EXPORT CONFIRMATION &amp; GCS URI COLLISION GUARD
                   </span>
                   <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
-                    Confirm Forensic Log Export to Same-Region Cloud Storage (`$0.00/GB` Egress)
+                    Confirm Forensic Log Export to Same-Region Cloud Storage (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">$0.00/GB</code> Egress)
                   </h4>
                 </div>
                 <button
@@ -3325,8 +3340,11 @@ export default function LogStreamerAndShell({
 
               {gcsExportConfirmModal.hasCollision ? (
                 <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 space-y-2.5 text-[11px]">
-                  <div className="font-extrabold text-amber-800 dark:text-amber-200">
-                    ⚠ COLLISION DETECTED: `{gcsExportConfirmModal.gcsUri}` ALREADY EXISTS ({gcsExportConfirmModal.existingGcsSizeBytes || 0} bytes)
+                  <div className="font-extrabold text-amber-800 dark:text-amber-200 inline-flex items-center gap-1.5 flex-wrap">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      COLLISION DETECTED: <code className="px-1 py-0.5 rounded bg-amber-500/20 font-mono text-[0.92em]">{gcsExportConfirmModal.gcsUri}</code> ALREADY EXISTS ({gcsExportConfirmModal.existingGcsSizeBytes || 0} bytes)
+                    </span>
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-start gap-2 p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
@@ -3356,7 +3374,7 @@ export default function LogStreamerAndShell({
                       />
                       <div>
                         <div className="font-bold text-amber-700 dark:text-amber-400">
-                          Overwrite Existing Object at Same `gs://` URI
+                          Overwrite Existing Object at Same <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">gs://</code> URI
                         </div>
                         <div className="text-[10px] text-zinc-500">
                           Replaces <code>{gcsExportConfirmModal.gcsUri}</code> in place
@@ -3366,8 +3384,11 @@ export default function LogStreamerAndShell({
                   </div>
                 </div>
               ) : (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-200 font-bold">
-                  ✓ Pre-Flight Verified: `{gcsExportConfirmModal.gcsUri}` does not exist yet — zero overwrite risk.
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-200 font-bold inline-flex items-center gap-1.5 flex-wrap w-full">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Pre-Flight Verified: <code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[0.92em]">{gcsExportConfirmModal.gcsUri}</code> does not exist yet — zero overwrite risk.
+                  </span>
                 </div>
               )}
 
@@ -3585,7 +3606,7 @@ export default function LogStreamerAndShell({
                     STAGE 1 · LEXER & PORTER STEMMER ($0.00 · 0 TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Strips conversational stop-words (<code className="font-mono">&quot;show me&quot;</code>, <code className="font-mono">&quot;in the&quot;</code>) and applies the <strong>Porter Suffix Stemming Algorithm</strong> locally in Node.js (<code className="font-mono">&quot;timeouts&quot;</code> ➔ <code className="font-mono">&quot;timeout&quot;</code>, <code className="font-mono">&quot;excluding&quot;</code> ➔ <code className="font-mono">&quot;exclud&quot;</code>).
+                    Strips conversational stop-words (<code className="font-mono">&quot;show me&quot;</code>, <code className="font-mono">&quot;in the&quot;</code>) and applies the <strong>Porter Suffix Stemming Algorithm</strong> locally in Node.js (<code className="font-mono">&quot;timeouts&quot;</code> &rarr; <code className="font-mono">&quot;timeout&quot;</code>, <code className="font-mono">&quot;excluding&quot;</code> &rarr; <code className="font-mono">&quot;exclud&quot;</code>).
                   </p>
                 </div>
 
@@ -3594,7 +3615,7 @@ export default function LogStreamerAndShell({
                     STAGE 2 · NAMED ENTITY RECOGNITION ($0.00 · 0 TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Extracts structured telemetry slots locally: <strong>Services</strong> (<code className="font-mono">&quot;cloud run&quot;</code> ➔ <code className="font-mono">cloud_run_revision</code>), <strong>Geo Aliases</strong> (<code className="font-mono">&quot;iowa&quot;</code> ➔ <code className="font-mono">us-central1</code>), <strong>Latency Math</strong> (<code className="font-mono">&quot;slower than 1500ms&quot;</code> ➔ <code className="font-mono">&gt;&quot;1.5s&quot;</code>), <strong>Time Windows</strong>, and <strong>Negations</strong>.
+                    Extracts structured telemetry slots locally: <strong>Services</strong> (<code className="font-mono">&quot;cloud run&quot;</code> &rarr; <code className="font-mono">cloud_run_revision</code>), <strong>Geo Aliases</strong> (<code className="font-mono">&quot;iowa&quot;</code> &rarr; <code className="font-mono">us-central1</code>), <strong>Latency Math</strong> (<code className="font-mono">&quot;slower than 1500ms&quot;</code> &rarr; <code className="font-mono">&gt;&quot;1.5s&quot;</code>), <strong>Time Windows</strong>, and <strong>Negations</strong>.
                   </p>
                 </div>
 
@@ -3675,7 +3696,7 @@ export default function LogStreamerAndShell({
                           {item.concept}
                         </span>
                         <span className="text-[10px] font-mono text-blue-500 font-bold">
-                          Click to Run LQL ➔
+                          Click to Run LQL &rarr;
                         </span>
                       </div>
                       <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
@@ -3873,7 +3894,7 @@ export default function LogStreamerAndShell({
               <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase text-blue-700 dark:text-blue-300 font-bold">
-                    Native Cloud Logging LQL Filter (`entries:list`)
+                    Native Cloud Logging LQL Filter (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">entries:list</code>)
                   </span>
                   <button
                     type="button"
@@ -3936,7 +3957,7 @@ export default function LogStreamerAndShell({
               <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase text-blue-700 dark:text-blue-300 font-bold">
-                    Log Analytics BigQuery SQL (`_Default._AllLogs`)
+                    Log Analytics BigQuery SQL (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">_Default._AllLogs</code>)
                   </span>
                   <button
                     type="button"
@@ -4140,18 +4161,20 @@ export default function LogStreamerAndShell({
                 <button
                   type="button"
                   onClick={() => jumpToAdjacentActiveBucket('PREV')}
-                  className="px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
+                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
                   title="Jump to previous non-empty histogram bar and inspect its logs"
                 >
-                  ◀ Prev Active Bar
+                  <ChevronLeft className="w-3 h-3 shrink-0" />
+                  <span>Prev Active Bar</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => jumpToAdjacentActiveBucket('NEXT')}
-                  className="px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
+                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-white dark:bg-[#202124] hover:border-blue-500/40 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-bold cursor-pointer"
                   title="Jump to next non-empty histogram bar and inspect its logs"
                 >
-                  Next Active Bar ▶
+                  <span>Next Active Bar</span>
+                  <ChevronRight className="w-3 h-3 shrink-0" />
                 </button>
                 <button
                   type="button"
@@ -4177,9 +4200,10 @@ export default function LogStreamerAndShell({
                   <button
                     type="button"
                     onClick={() => handleSelectHistogramBucket(null)}
-                    className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold cursor-pointer"
                   >
-                    ✕ Show All 24 Bars
+                    <X className="w-3 h-3 shrink-0" />
+                    <span>Show All 24 Bars</span>
                   </button>
                 )}
               </div>
@@ -4413,11 +4437,16 @@ export default function LogStreamerAndShell({
                         <button
                           type="button"
                           onClick={() => handleSelectHistogramBucket(activeReadoutBucket)}
-                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
                         >
-                          {selectedHistogramBucket === activeReadoutBucket.bucketIndex
-                            ? '✓ Viewing This Bar Below'
-                            : `Inspect ${activeReadoutBucket.totalCount} Logs ↓`}
+                          {selectedHistogramBucket === activeReadoutBucket.bucketIndex ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Viewing This Bar Below</span>
+                            </>
+                          ) : (
+                            `Inspect ${activeReadoutBucket.totalCount} Logs ↓`
+                          )}
                         </button>
                       </div>
                     </div>
@@ -4634,7 +4663,7 @@ export default function LogStreamerAndShell({
                 )}
                 {activeSelectedBucket.totalCount === 0 && (
                   <span className="text-[11px] text-amber-800 dark:text-amber-200 font-bold">
-                    No log entries occurred in this time slice — click &quot;Next Active Bar ▶&quot; to jump to the nearest active bar!
+                    No log entries occurred in this time slice — click &quot;Next Active Bar&quot; to jump to the nearest active bar!
                   </span>
                 )}
               </div>
@@ -4643,16 +4672,18 @@ export default function LogStreamerAndShell({
                 <button
                   type="button"
                   onClick={() => jumpToAdjacentActiveBucket('PREV')}
-                  className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                  className="inline-flex items-center gap-0.5 px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
                 >
-                  ◀ Prev Active Bar
+                  <ChevronLeft className="w-3 h-3 shrink-0" />
+                  <span>Prev Active Bar</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => jumpToAdjacentActiveBucket('NEXT')}
-                  className="px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                  className="inline-flex items-center gap-0.5 px-2 py-1 rounded bg-white dark:bg-[#202124] hover:border-amber-500 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
                 >
-                  Next Active Bar ▶
+                  <span>Next Active Bar</span>
+                  <ChevronRight className="w-3 h-3 shrink-0" />
                 </button>
                 <button
                   type="button"
@@ -5122,7 +5153,7 @@ export default function LogStreamerAndShell({
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
                     {activeSelectedBucket ? (
                       <>
-                        This specific time slice had quiet traffic (`0` events), while the full query returned{' '}
+                        This specific time slice had quiet traffic (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">0</code> events), while the full query returned{' '}
                         <strong className="text-zinc-900 dark:text-zinc-100">
                           {(chronoData?.entries || []).length} log entries
                         </strong>{' '}
@@ -5143,9 +5174,10 @@ export default function LogStreamerAndShell({
                         <button
                           type="button"
                           onClick={() => jumpToAdjacentActiveBucket('NEXT')}
-                          className="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
                         >
-                          Jump to Nearest Active Bar ▶
+                          <span>Jump to Nearest Active Bar</span>
+                          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                         </button>
                         <button
                           type="button"
@@ -5718,7 +5750,7 @@ export default function LogStreamerAndShell({
                     VECTOR / LOGSTASH / OPENOBSERVE LIVE GROK PARSER
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Named Capture Group (`(?&lt;field&gt;...)`) Virtual Schema-on-Read Extractor
+                    Named Capture Group (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">(?&lt;field&gt;...)</code>) Virtual Schema-on-Read Extractor
                   </span>
                 </div>
               </div>
@@ -6150,7 +6182,9 @@ export default function LogStreamerAndShell({
                 <div>
                   <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     <DollarSign className="w-4 h-4 text-emerald-500" />
-                    <span>Log FinOps Noise-Cutter (`_Default` Sink Exclusions)</span>
+                    <span>
+                      Log FinOps Noise-Cutter (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">_Default</code> Sink Exclusions)
+                    </span>
                   </h4>
                   <p className="text-[11px] text-zinc-500">
                     Cloud Logging bills <strong>$0.50/GiB</strong> after 50 GiB/mo. Drop noisy healthchecks &amp; high-volume 200 OK chatter at the sink before ingestion.
@@ -6269,7 +6303,7 @@ export default function LogStreamerAndShell({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-extrabold mr-2">
-                    LIVE GIT CLI (`git log`, `git show`, `git blame -L`)
+                    LIVE GIT CLI (<code className="px-1 py-0.5 rounded bg-red-500/15 font-mono text-[0.92em]">git log</code>, <code className="px-1 py-0.5 rounded bg-red-500/15 font-mono text-[0.92em]">git show</code>, <code className="px-1 py-0.5 rounded bg-red-500/15 font-mono text-[0.92em]">git blame -L</code>)
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     Real Repository Commits, File:Line Blame Inspector &amp; Unified Diffs
@@ -6319,7 +6353,7 @@ export default function LogStreamerAndShell({
                       <>
                         <div className="space-y-1">
                           <div className="text-[10px] font-bold text-blue-600 dark:text-blue-300 uppercase">
-                            Live `git blame -L` Output ({gitBlameResult.filePath}:{gitBlameResult.lineNumber})
+                            Live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">git blame -L</code> Output ({gitBlameResult.filePath}:{gitBlameResult.lineNumber})
                           </div>
                           <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre max-h-48">
                             {gitBlameResult.blameOutput}
@@ -6327,7 +6361,7 @@ export default function LogStreamerAndShell({
                         </div>
                         <div className="space-y-1">
                           <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-                            Live `git log -n 1 -p -L` Line Evolution Patch
+                            Live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">git log -n 1 -p -L</code> Line Evolution Patch
                           </div>
                           <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-pre max-h-48">
                             {gitBlameResult.patchOutput}
@@ -6396,7 +6430,9 @@ export default function LogStreamerAndShell({
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>Copy `git show / revert` CLI</span>
+                              <span>
+                                Copy <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 font-mono text-[0.92em]">git show / revert</code> CLI
+                              </span>
                             </>
                           )}
                         </button>
@@ -6418,7 +6454,7 @@ export default function LogStreamerAndShell({
                       </div>
                       <div className="space-y-1">
                         <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-                          Live `git show {item.gitCommitSha}` Unified Diff
+                          Live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">git show {item.gitCommitSha}</code> Unified Diff
                         </div>
                         <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-emerald-500/30 text-[10.5px] text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-pre">
                           {item.unifiedDiffPatch}
@@ -6442,7 +6478,7 @@ export default function LogStreamerAndShell({
                     LIVE CLOUD LOGGING &amp; MONITORING SLO ENGINE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Computed from Live Project Log Stream + 1-Click `logging.googleapis.com/v2/projects/{projectId}/metrics` Provisioner
+                    Computed from Live Project Log Stream + 1-Click <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">logging.googleapis.com/v2/projects/{projectId}/metrics</code> Provisioner
                   </span>
                 </div>
               </div>
@@ -6568,7 +6604,7 @@ export default function LogStreamerAndShell({
               {(chronoData?.liveLogMetrics || []).length > 0 && (
                 <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
                   <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                    Live Google Cloud Log-Based Metrics in Project `{projectId}` (`GET /v2/projects/{projectId}/metrics`):
+                    Live Google Cloud Log-Based Metrics in Project <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{projectId}</code> (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">GET /v2/projects/{projectId}/metrics</code>):
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {chronoData.liveLogMetrics.slice(0, 6).map((m) => (
@@ -6598,7 +6634,7 @@ export default function LogStreamerAndShell({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-2">
-                    LIVE LINUX `/proc/net/snmp` + LIVE `tls.connect` PROBE
+                    LIVE LINUX <code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[0.92em]">/proc/net/snmp</code> + LIVE <code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[0.92em]">tls.connect</code> PROBE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     Real Host Kernel TCP Retransmits, Active Sockets, DNS Resolution Latency &amp; TLS 1.3 Handshake Timing
@@ -6666,8 +6702,9 @@ export default function LogStreamerAndShell({
                   <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
                     Run On-Demand Live DNS + TCP 3-Way Handshake + TLS 1.3 Probe Against Any Endpoint:
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
-                    ⚡ Direct Node.js DNS/TCP/TLS Socket · No gcloud Required
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+                    <Zap className="w-3 h-3 shrink-0" />
+                    Direct Node.js DNS/TCP/TLS Socket · No gcloud Required
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -6738,7 +6775,9 @@ export default function LogStreamerAndShell({
                         ) : (
                           <>
                             <Copy className="w-3 h-3" />
-                            <span>Copy `ss -ti` / `/proc/net/snmp` CLI</span>
+                            <span>
+                              Copy <code className="px-1 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-900 font-mono text-[0.92em]">ss -ti</code> / <code className="px-1 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-900 font-mono text-[0.92em]">/proc/net/snmp</code> CLI
+                            </span>
                           </>
                         )}
                       </button>
@@ -6800,10 +6839,10 @@ export default function LogStreamerAndShell({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
-                    LIVE `POST https://logging.googleapis.com/v2/entries:write`
+                    LIVE <code className="px-1 py-0.5 rounded bg-blue-500/15 font-mono text-[0.92em]">POST https://logging.googleapis.com/v2/entries:write</code>
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Writes Real LogEntry Payloads Into `projects/{projectId}/logs/cloudpulse-sre-canary` &amp; Reads Them Back Live
+                    Writes Real LogEntry Payloads Into <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">projects/{projectId}/logs/cloudpulse-sre-canary</code> &amp; Reads Them Back Live
                   </span>
                 </div>
               </div>
@@ -6811,7 +6850,7 @@ export default function LogStreamerAndShell({
               {/* Optional Custom Message Input for Live `entries:write` */}
               <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
                 <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
-                  Optional Custom Log Payload to Write to Google Cloud Logging (`entries:write`):
+                  Optional Custom Log Payload to Write to Google Cloud Logging (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">entries:write</code>):
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <select
@@ -6949,7 +6988,7 @@ export default function LogStreamerAndShell({
               </span>
             </div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1">
-              Project Mutation Forensics, Actor Attribution (`principalEmail`) & 1-Click Change Inspector
+              Project Mutation Forensics, Actor Attribution (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">principalEmail</code>) &amp; 1-Click Change Inspector
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Streams live <code className="font-mono">cloudaudit.googleapis.com/activity</code> events + in-session Flight Recorder mutations for <span className="font-mono font-semibold">{projectId}</span> so you can see who created, updated, or deleted any resource, their caller IP, IAM policy binding deltas, and copy the exact inspection/reverse CLI.
@@ -7226,7 +7265,7 @@ export default function LogStreamerAndShell({
                       {ev.policyDelta?.length > 0 && (
                         <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/30 space-y-1">
                           <div className="text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
-                            IAM Policy Binding Deltas (`serviceData.policyDelta`):
+                            IAM Policy Binding Deltas (<code className="px-1 py-0.5 rounded bg-amber-500/20 font-mono text-[0.92em] normal-case">serviceData.policyDelta</code>):
                           </div>
                           {ev.policyDelta.map((d, idx) => (
                             <div
@@ -7243,7 +7282,7 @@ export default function LogStreamerAndShell({
                                 {d.action}
                               </span>
                               <span className="text-zinc-900 dark:text-white">{d.role}</span>
-                              <span className="text-zinc-400">➔</span>
+                              <span className="text-zinc-400">&rarr;</span>
                               <span className="text-blue-700 dark:text-blue-300">{d.member}</span>
                             </div>
                           ))}

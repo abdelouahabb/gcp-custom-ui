@@ -15,6 +15,7 @@ import {
   Terminal,
   Copy,
   Check,
+  Wrench,
   ArrowRight,
   ChevronDown,
   ChevronUp,
@@ -1145,8 +1146,11 @@ export default function StudioGcpAdvantageBar({
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <div>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                    Zero-Reboot Live Host Migration (`onHostMaintenance:
-                    MIGRATE`):
+                    Zero-Reboot Live Host Migration (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      onHostMaintenance: MIGRATE
+                    </code>
+                    ):
                   </span>{' '}
                   <span className="text-zinc-500">
                     {vmData?.liveMigratableCount || 0} of{' '}
@@ -1180,11 +1184,20 @@ export default function StudioGcpAdvantageBar({
                     <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
                       GA 591.0.0
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      <Wrench className="w-3 h-3 shrink-0" />
+                      <span>Requires gcloud CLI 591.0.0 · Online Token Bridged</span>
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      Compute VM Cryptographic Agent Identity (`--identity-type=AGENT_IDENTITY`) &amp; MIG In-Place Restart (`--allowed-actions=restart-in-place`)
+                      Compute VM Cryptographic Agent Identity (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --identity-type=AGENT_IDENTITY
+                      </code>
+                      ) &amp; MIG In-Place Restart (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --allowed-actions=restart-in-place
+                      </code>
+                      )
                     </span>
                   </div>
                 </div>
@@ -1341,7 +1354,11 @@ export default function StudioGcpAdvantageBar({
                 >
                   <KeyRound className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    [GA 591.0.0] Zero-Key OIDC &amp; Actor Delegation (`--actor-providers`)
+                    [GA 591.0.0] Zero-Key OIDC &amp; Actor Delegation (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      --actor-providers
+                    </code>
+                    )
                   </span>
                 </button>
                 <button
@@ -1355,7 +1372,11 @@ export default function StudioGcpAdvantageBar({
                 >
                   <Lock className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    [BETA 591.0.0] Workspace Client-Side Encryption (`workspace-key-access`)
+                    [BETA 591.0.0] Workspace Client-Side Encryption (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      workspace-key-access
+                    </code>
+                    )
                   </span>
                 </button>
               </div>
@@ -1422,7 +1443,10 @@ export default function StudioGcpAdvantageBar({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
-                        [GA 591.0.0] `--discovery-uri`
+                        [GA 591.0.0]{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                          --discovery-uri
+                        </code>
                       </label>
                       <input
                         type="text"
@@ -1433,7 +1457,11 @@ export default function StudioGcpAdvantageBar({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
-                        [GA 591.0.0] `--actor-providers` (Optional)
+                        [GA 591.0.0]{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                          --actor-providers
+                        </code>{' '}
+                        (Optional)
                       </label>
                       <input
                         type="text"
@@ -1445,8 +1473,9 @@ export default function StudioGcpAdvantageBar({
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                      🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      <Wrench className="w-3 h-3 shrink-0" />
+                      <span>Requires gcloud CLI 591.0.0 · Online Token Bridged</span>
                     </span>
                     <button
                       type="button"
@@ -1520,7 +1549,11 @@ export default function StudioGcpAdvantageBar({
                       Requires gcloud CLI 592.0.0
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      Google Workspace Client-Side Encryption Key Access (`gcloud beta workspace-key-access`):
+                      Google Workspace Client-Side Encryption Key Access (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gcloud beta workspace-key-access
+                      </code>
+                      ):
                     </span>{' '}
                     <span className="text-zinc-500">
                       Manage KACLS key access endpoints &amp; sovereign encryption configurations for Google Workspace.
@@ -1606,7 +1639,11 @@ export default function StudioGcpAdvantageBar({
                     Requires gcloud CLI 592.0.0
                   </span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
-                    Creation-Time FinOps Labels (`--labels`):
+                    Creation-Time FinOps Labels (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      --labels
+                    </code>
+                    ):
                   </span>
                   <input
                     type="text"
@@ -1715,7 +1752,19 @@ export default function StudioGcpAdvantageBar({
                       Requires gcloud CLI 592.0.0 · Online Token Bridged
                     </span>
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      GKE Ambient Mesh (`--enable-ambient-networking`), Dataplane V2 (`--enable-dataplane-v2`) &amp; Zero-Drain Live Node Update (`LIVE_UPDATE_WITHOUT_DRAIN`)
+                      GKE Ambient Mesh (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --enable-ambient-networking
+                      </code>
+                      ), Dataplane V2 (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --enable-dataplane-v2
+                      </code>
+                      ) &amp; Zero-Drain Live Node Update (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        LIVE_UPDATE_WITHOUT_DRAIN
+                      </code>
+                      )
                     </span>
                   </div>
                 </div>
@@ -1913,9 +1962,12 @@ export default function StudioGcpAdvantageBar({
                             </span>
                           </div>
                           {rows.length === 0 ? (
-                            <div className="text-[11px] text-zinc-300 py-1">
-                              ✓ Probe succeeded with 0 matching resources in project{' '}
-                              <span className="text-blue-300 font-bold">{projectId}</span> (clean state verified).
+                            <div className="text-[11px] text-zinc-300 py-1 flex items-center gap-1.5 flex-wrap">
+                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <span>
+                                Probe succeeded with 0 matching resources in project{' '}
+                                <span className="text-blue-300 font-bold">{projectId}</span> (clean state verified).
+                              </span>
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-40 overflow-auto">

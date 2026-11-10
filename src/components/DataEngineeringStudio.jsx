@@ -1324,18 +1324,20 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             </button>
           </div>
 
-          {/* Right 5 Cols: Active Medallion Pipelines */}
-          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+          {/* Right 5 Cols: Active Medallion Pipelines — Full-Height Dynamic Surface */}
+          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 flex flex-col gap-3 h-full shadow-sm">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3 shrink-0">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
                 Active Medallion Lakehouse Pipelines ({data.medallionPipelines?.length || 0})
               </h3>
-              <span className="text-[10px] font-mono text-emerald-500 font-bold">
-                ● LIVE BIGQUERY ELT
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-500 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>LIVE BIGQUERY ELT</span>
               </span>
             </div>
 
-            <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+            <div className="relative flex-1 min-h-[420px]">
+              <div className="space-y-3 max-h-[420px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto pr-1">
               {(data.medallionPipelines || []).map((p) => (
                 <div
                   key={p.id}
@@ -1429,6 +1431,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           </div>
 
@@ -1639,19 +1642,26 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             )}
           </div>
 
-          {/* Right 5 Cols: Native Dataform Repositories (`dataform.googleapis.com/v1beta1`) */}
-          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
-            <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Native Dataform Repositories (`dataform.googleapis.com/v1beta1`)</span>
+          {/* Right 5 Cols: Native Dataform Repositories — Full-Height Dynamic Surface */}
+          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 flex flex-col gap-4 h-full shadow-sm">
+            <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3 shrink-0">
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex flex-wrap items-center gap-2">
+                <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>Native Dataform Repositories</span>
+                <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                  dataform.googleapis.com/v1beta1
+                </code>
               </h3>
-              <p className="text-xs text-zinc-500">
-                Create a managed Dataform Repository + Workspace in 1 click without wrestling with `workflow_settings.yaml`.
+              <p className="text-xs text-zinc-500 mt-1">
+                Create a managed Dataform Repository + Workspace in 1 click without wrestling with{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px]">
+                  workflow_settings.yaml
+                </code>
+                .
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <input
                 type="text"
                 value={repoIdInput}
@@ -1678,38 +1688,44 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-[340px] overflow-y-auto">
-              {(data.dataformRepos || []).length === 0 ? (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500 text-center">
-                  No Dataform repositories yet. Click &ldquo;+ Create Repo&rdquo; above to initialize a live repository &amp; `main-workspace`.
-                </div>
-              ) : (
-                data.dataformRepos.map((r) => (
-                  <div
-                    key={r.id}
-                    className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
-                  >
-                    <div>
-                      <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                        {r.id} ({r.region})
-                      </div>
-                      <div className="text-[10px] font-mono text-zinc-500">
-                        {r.gitRemote} · Branch: {r.defaultBranch}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleDeleteResource('DATAFORM_REPO', r.id, r.region)
-                      }
-                      className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
-                      title={`Delete Dataform Repository ${r.id}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            <div className="relative flex-1 min-h-[300px]">
+              <div className="space-y-2.5 max-h-[340px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto pr-1">
+                {(data.dataformRepos || []).length === 0 ? (
+                  <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500 text-center">
+                    No Dataform repositories yet. Click &ldquo;+ Create Repo&rdquo; above to initialize a live repository &amp;{' '}
+                    <code className="px-1 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800">
+                      main-workspace
+                    </code>
+                    .
                   </div>
-                ))
-              )}
+                ) : (
+                  data.dataformRepos.map((r) => (
+                    <div
+                      key={r.id}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
+                          {r.id} ({r.region})
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-500">
+                          {r.gitRemote} · Branch: {r.defaultBranch}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDeleteResource('DATAFORM_REPO', r.id, r.region)
+                        }
+                        className="p-1.5 rounded-md hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
+                        title={`Delete Dataform Repository ${r.id}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1721,9 +1737,12 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           {/* Left 6 Cols: Dataplex Auto Data Profiling & Quality Scans */}
           <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
-              <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Dataplex Auto Data Profiling &amp; Quality Scans (`gcloud dataplex datascans`)</span>
+              <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex flex-wrap items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>Dataplex Auto Data Profiling &amp; Quality Scans</span>
+                <code className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                  gcloud dataplex datascans
+                </code>
               </h3>
               <p className="text-xs text-zinc-500">
                 Automatically scans null rates, cardinality, distributions, and enforces non-null / uniqueness expectations on BigQuery &amp; BigLake tables.

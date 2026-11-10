@@ -8,6 +8,10 @@ import {
   Cpu,
   Plus,
   X,
+  Zap,
+  RefreshCw,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 
 const CUSTOM_MODELS_STORAGE_KEY = 'cloudpulse_custom_gemini_models_v1';
@@ -556,38 +560,41 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
           <button
             type="button"
             onClick={() => handleSelectProvider('VERTEX_AI_OAUTH')}
-            className={`px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
               activeProvider === 'VERTEX_AI_OAUTH'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
             title="Use Keyless Google Cloud Vertex AI (OAuth2 Bearer Token) only — hides API key vault"
           >
-            ⚡ Path A: Keyless Vertex AI Only (No Key)
+            <Zap className="w-3.5 h-3.5 shrink-0" />
+            <span>Path A: Keyless Vertex AI Only (No Key)</span>
           </button>
           <button
             type="button"
             onClick={() => handleSelectProvider('AI_STUDIO_KEY')}
-            className={`px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
               activeProvider === 'AI_STUDIO_KEY'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
             title="Use Sealed Google AI Studio API Key (AIzaSy...) only — shows WebCrypto Enclave & RSA-OAEP-256 Vault"
           >
-            🔒 Path B: AI Studio Key Enclave Only (AIzaSy...)
+            <Lock className="w-3.5 h-3.5 shrink-0" />
+            <span>Path B: AI Studio Key Enclave Only (AIzaSy...)</span>
           </button>
           <button
             type="button"
             onClick={() => handleSelectProvider('AUTO')}
-            className={`px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-extrabold transition-all cursor-pointer ${
               activeProvider === 'AUTO'
                 ? 'bg-zinc-800 dark:bg-zinc-700 text-white shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
             title="Show both Path A (Keyless Vertex AI) and Path B (AI Studio Key Vault) with automatic failover"
           >
-            🔄 Auto Dual-Engine (Both)
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+            <span>Auto Dual-Engine (Both)</span>
           </button>
         </div>
       </div>
@@ -681,15 +688,18 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                 <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
                   Path A · Keyless Vertex AI (GCP OAuth2 Token)
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
-                  {activeProvider === 'VERTEX_AI_OAUTH'
-                    ? '🟢 ACTIVE ENGINE · NO API KEY NEEDED'
-                    : !isKeySealed
-                    ? '🟢 ACTIVE PRIMARY (AUTO · NO KEY NEEDED)'
-                    : '🟢 STANDBY FAILOVER READY'}
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
+                  <span>
+                    {activeProvider === 'VERTEX_AI_OAUTH'
+                      ? 'ACTIVE ENGINE · NO API KEY NEEDED'
+                      : !isKeySealed
+                      ? 'ACTIVE PRIMARY (AUTO · NO KEY NEEDED)'
+                      : 'STANDBY FAILOVER READY'}
+                  </span>
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold border ${
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold border ${
                     vertexStatus === 'ENABLED'
                       ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
                       : vertexStatus === 'DISABLED'
@@ -697,11 +707,22 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                       : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
                   }`}
                 >
-                  {vertexStatus === 'ENABLED'
-                    ? '✅ aiplatform.googleapis.com: ENABLED'
-                    : vertexStatus === 'DISABLED'
-                    ? '🔴 aiplatform.googleapis.com: DISABLED'
-                    : '⏳ Checking Service Usage API...'}
+                  {vertexStatus === 'ENABLED' ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>aiplatform.googleapis.com: ENABLED</span>
+                    </>
+                  ) : vertexStatus === 'DISABLED' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-red-500 inline-block shrink-0" />
+                      <span>aiplatform.googleapis.com: DISABLED</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3 h-3 shrink-0" />
+                      <span>Checking Service Usage API...</span>
+                    </>
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -719,10 +740,11 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                       type="button"
                       onClick={() => checkVertexAiStatus(true)}
                       disabled={enablingVertex}
-                      className="px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
                       title="Re-check live Service Usage status (read-only)"
                     >
-                      ↻ Refresh Check
+                      <RefreshCw className="w-3 h-3 shrink-0" />
+                      <span>Refresh Check</span>
                     </button>
                   </>
                 ) : (
@@ -731,14 +753,19 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                     data-feature-id="SOC_AI_ENABLE_VERTEX_BTN"
                     onClick={handleEnableVertexAi}
                     disabled={enablingVertex || vertexStatus === 'CHECKING'}
-                    className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
                     title="Enable aiplatform.googleapis.com on this project for keyless OAuth2 Gemini inference"
                   >
-                    {enablingVertex
-                      ? 'Enabling Vertex AI API...'
-                      : vertexStatus === 'CHECKING'
-                      ? 'Checking Vertex AI API...'
-                      : '⚡ Enable Vertex AI API ($0.00)'}
+                    {enablingVertex ? (
+                      'Enabling Vertex AI API...'
+                    ) : vertexStatus === 'CHECKING' ? (
+                      'Checking Vertex AI API...'
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                        <span>Enable Vertex AI API ($0.00)</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -752,12 +779,41 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                   : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
               }`}
             >
-              <span>
-                {vertexStatus === 'ENABLED'
-                  ? `🟢 Live Service Usage Verified: aiplatform.googleapis.com is ENABLED on "${projectId}" — ready for keyless OAuth2 Gemini calls.`
-                  : vertexStatus === 'DISABLED'
-                  ? `🔴 Live Service Usage Check: aiplatform.googleapis.com is currently DISABLED on "${projectId}". Click "⚡ Enable Vertex AI API Now ($0.00)" above to turn it on.`
-                  : `⏳ Querying serviceusage.googleapis.com/v1/projects/${projectId}/services/aiplatform.googleapis.com...`}
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                {vertexStatus === 'ENABLED' ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
+                    <span>
+                      Live Service Usage Verified:{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        aiplatform.googleapis.com
+                      </code>{' '}
+                      is ENABLED on &ldquo;{projectId}&rdquo; — ready for keyless OAuth2 Gemini calls.
+                    </span>
+                  </>
+                ) : vertexStatus === 'DISABLED' ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block shrink-0" />
+                    <span>
+                      Live Service Usage Check:{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        aiplatform.googleapis.com
+                      </code>{' '}
+                      is currently DISABLED on &ldquo;{projectId}&rdquo;. Click &ldquo;Enable Vertex AI API ($0.00)&rdquo; above to turn it on.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Querying{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        serviceusage.googleapis.com/v1/projects/{projectId}/services/aiplatform.googleapis.com
+                      </code>
+                      ...
+                    </span>
+                  </>
+                )}
               </span>
               {vertexCheckedAt && (
                 <span className="text-[10px] opacity-80 shrink-0">
@@ -811,7 +867,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                   <code className="font-mono">AIzaSy...</code>)
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold ${
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold ${
                     isKeySealed
                       ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                       : activeProvider === 'AI_STUDIO_KEY'
@@ -819,11 +875,19 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                       : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                   }`}
                 >
-                  {isKeySealed
-                    ? `🔒 SEALED (${displayMaskedKey} · ${displayFingerprint})`
-                    : activeProvider === 'AI_STUDIO_KEY'
-                    ? '⚠️ PASTE & SEAL AIzaSy... KEY BELOW'
-                    : 'OPTIONAL · NOT CONFIGURED'}
+                  {isKeySealed ? (
+                    <>
+                      <Lock className="w-3 h-3 shrink-0" />
+                      <span>SEALED ({displayMaskedKey} · {displayFingerprint})</span>
+                    </>
+                  ) : activeProvider === 'AI_STUDIO_KEY' ? (
+                    <>
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                      <span>PASTE &amp; SEAL AIzaSy... KEY BELOW</span>
+                    </>
+                  ) : (
+                    'OPTIONAL · NOT CONFIGURED'
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -875,9 +939,16 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
                 data-feature-id="SOC_AI_SEAL_KEY_BTN"
                 onClick={handleSealKey}
                 disabled={savingKey || !apiKeyInput.trim()}
-                className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
               >
-                {savingKey ? 'Sealing...' : '🔒 Seal Key'}
+                {savingKey ? (
+                  'Sealing...'
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>Seal Key</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

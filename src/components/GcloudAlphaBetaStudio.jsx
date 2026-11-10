@@ -20,6 +20,9 @@ import {
   Sparkles,
   Download,
   BookOpen,
+  Wrench,
+  Check,
+  Shield,
 } from 'lucide-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
@@ -1285,19 +1288,25 @@ export default function GcloudAlphaBetaStudio({
                       {overview?.sdk?.coreVersion || '591.0.0'}]
                     </span>
                   )}
-                  <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold">
-                    🔧 {workbenchProbeReceipt.authBridgeMode || 'GCLOUD_CLI_BRIDGED'}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold">
+                    <Wrench className="w-3 h-3 shrink-0" />
+                    <span>{workbenchProbeReceipt.authBridgeMode || 'GCLOUD_CLI_BRIDGED'}</span>
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold border ${
                       workbenchProbeReceipt.syntaxValid !== false
                         ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                         : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                     }`}
                   >
-                    {workbenchProbeReceipt.syntaxValid !== false
-                      ? '✓ SYNTAX VALID'
-                      : 'DIAGNOSTIC'}
+                    {workbenchProbeReceipt.syntaxValid !== false ? (
+                      <>
+                        <Check className="w-3 h-3 shrink-0" />
+                        <span>SYNTAX VALID</span>
+                      </>
+                    ) : (
+                      'DIAGNOSTIC'
+                    )}
                   </span>
                   <span className="text-[10px] text-zinc-400">
                     {workbenchProbeReceipt.durationMs || 0}ms ·{' '}
@@ -1475,9 +1484,10 @@ export default function GcloudAlphaBetaStudio({
                     ).map((flag, idx) => (
                       <span
                         key={`${flag}-${idx}`}
-                        className="px-2 py-0.5 rounded bg-zinc-800 text-emerald-300 border border-emerald-500/30"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 text-emerald-300 border border-emerald-500/30"
                       >
-                        ✓ {flag.length > 48 ? `${flag.slice(0, 48)}...` : flag}
+                        <Check className="w-2.5 h-2.5 shrink-0" />
+                        <span>{flag.length > 48 ? `${flag.slice(0, 48)}...` : flag}</span>
                       </span>
                     ))}
                   </div>
@@ -1504,15 +1514,26 @@ export default function GcloudAlphaBetaStudio({
                       }`}
                     >
                       <div className="space-y-1">
-                        <div className="font-extrabold text-xs flex items-center gap-1.5">
-                          <span>
+                        <div className="font-extrabold text-xs flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5">
                             {workbenchProbeReceipt.diagnostics.status ===
-                            'API_NOT_ENABLED'
-                              ? '⚠️ GCP Service API Enablement Required'
-                              : workbenchProbeReceipt.diagnostics.status ===
-                                  'SAFE_DRY_RUN_VERIFIED'
-                                ? '🛡️ Safe Pre-Flight Dry-Run & Flag Schema Verified'
-                                : '✓ Live GCP Probe Verification'}
+                            'API_NOT_ENABLED' ? (
+                              <>
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                <span>GCP Service API Enablement Required</span>
+                              </>
+                            ) : workbenchProbeReceipt.diagnostics.status ===
+                              'SAFE_DRY_RUN_VERIFIED' ? (
+                              <>
+                                <Shield className="w-3.5 h-3.5 shrink-0" />
+                                <span>Safe Pre-Flight Dry-Run &amp; Flag Schema Verified</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-3.5 h-3.5 shrink-0" />
+                                <span>Live GCP Probe Verification</span>
+                              </>
+                            )}
                           </span>
                           <span>—</span>
                           <span>
@@ -2688,10 +2709,26 @@ spec:
           <div className="p-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                Looking for Interactive JSON-RPC 2.0 `tools/list` &amp; `tools/call` across all 48 `*.googleapis.com/mcp` Servers?
+                Looking for Interactive JSON-RPC 2.0{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  tools/list
+                </code>{' '}
+                &amp;{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  tools/call
+                </code>{' '}
+                across all 48{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  *.googleapis.com/mcp
+                </code>{' '}
+                Servers?
               </div>
               <div className="text-[11px] font-mono text-zinc-500">
-                The full Remote MCP Hub lives in its dedicated top-level menu tab (`MCP Servers`).
+                The full Remote MCP Hub lives in its dedicated top-level menu tab (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  MCP Servers
+                </code>
+                ).
               </div>
             </div>
             <button
@@ -6173,8 +6210,9 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
             </p>
             <div className="space-y-2.5 text-xs font-mono">
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
-                <div className="font-bold text-emerald-700 dark:text-emerald-300">
-                  ✓ Bundled Python 3.14.9 &amp; TLS Root Store Hardening
+                <div className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>Bundled Python 3.14.9 &amp; TLS Root Store Hardening</span>
                 </div>
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
                   Upgraded bundled Python runtime to <code className="font-mono">3.14.9</code>, updated <code className="font-mono">certifi</code> to <code className="font-mono">2026.10.19</code>, rebuilt Bigtable <code className="font-mono">cbt</code> with Go <code className="font-mono">1.26.9</code> (CVE-2026-94439), and updated Cloud Spanner Emulator to <code className="font-mono">v1.5.59</code>.
@@ -6182,8 +6220,9 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
               </div>
 
               <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1">
-                <div className="font-bold text-blue-700 dark:text-blue-300">
-                  ✓ Agent Registry 100% GA Completion
+                <div className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>Agent Registry 100% GA Completion</span>
                 </div>
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
                   All 9 groups in <code className="font-mono">gcloud agent-registry</code> are now GA: <code className="font-mono">agents</code>, <code className="font-mono">bindings</code>, <code className="font-mono">endpoints</code>, <code className="font-mono">findings</code>, <code className="font-mono">mcp-servers</code>, <code className="font-mono">operations</code>, <code className="font-mono">publishers</code>, <code className="font-mono">services</code>, and <code className="font-mono">skills</code> (<code className="font-mono">skills revisions</code>).
@@ -6191,8 +6230,9 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
               </div>
 
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
-                <div className="font-bold text-indigo-700 dark:text-indigo-300">
-                  ✓ Zero-Downtime Infrastructure Flags (GKE, MIGs &amp; LBs)
+                <div className="font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>Zero-Downtime Infrastructure Flags (GKE, MIGs &amp; LBs)</span>
                 </div>
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
                   • GKE: <code className="font-mono">--node-config-update-mode=LIVE_UPDATE_WITHOUT_DRAIN</code><br />
@@ -6203,8 +6243,9 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
               </div>
 
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
-                <div className="font-bold text-amber-700 dark:text-amber-300">
-                  ✓ App Engine &amp; Database Migration AI Enhancements
+                <div className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>App Engine &amp; Database Migration AI Enhancements</span>
                 </div>
                 <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
                   • <code className="font-mono">gcloud beta app migrate-to-run</code> now masks sensitive env vars in printed terminal output while preserving them in <code className="font-mono">service.yaml</code>.<br />

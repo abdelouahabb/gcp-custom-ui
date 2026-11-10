@@ -20,6 +20,7 @@ import {
   Activity,
   Globe,
   Layers,
+  Lightbulb,
 } from 'lucide-react';
 import ZeroSniffingWebCryptoEnclaveBar, {
   useSharedGeminiModels,
@@ -39,6 +40,7 @@ const STARTUP_10X_MODULES = [
   {
     id: 'COLD_START_VPC_LAG',
     step: '01',
+    sectionId: 'startup-10x-compute-section',
     title: 'Compute & Cold-Start Surgeon',
     subtitle: 'VMs, Cloud Run CPU Boost & Direct VPC',
     icon: Zap,
@@ -46,6 +48,7 @@ const STARTUP_10X_MODULES = [
   {
     id: 'QUOTA_WALL_RADAR',
     step: '02',
+    sectionId: 'startup-10x-quota-section',
     title: 'Launch-Day Quota & HTTP 429 Radar',
     subtitle: 'Live 24h 429s, L4 GPUs & Quotas API',
     icon: Gauge,
@@ -53,6 +56,7 @@ const STARTUP_10X_MODULES = [
   {
     id: 'CREDIT_CLIFF_RUNWAY',
     step: '03',
+    sectionId: 'startup-10x-runway-section',
     title: 'Credit Runway & 6-Vector Cost Audit',
     subtitle: 'Live Burn Ledger, Always-Free Check, Disks, IPs & Storage',
     icon: DollarSign,
@@ -60,6 +64,7 @@ const STARTUP_10X_MODULES = [
   {
     id: 'SOC2_DEAL_BLOCKER',
     step: '04',
+    sectionId: 'startup-10x-soc2-section',
     title: 'Enterprise SOC2 Deal-Blocker Shield',
     subtitle: '1-Click IAP Firewall Lock, PAP & IAM',
     icon: ShieldCheck,
@@ -67,6 +72,7 @@ const STARTUP_10X_MODULES = [
   {
     id: 'GEMINI_RAG_LATENCY',
     step: '05',
+    sectionId: 'startup-10x-rag-section',
     title: 'Data-Gravity & -80% Context Cache',
     subtitle: 'Live Region Co-Location & Token Math',
     icon: Sparkles,
@@ -133,16 +139,35 @@ export default function Startup10xMentorStudio({
     fetchStartupAudit();
   }, [fetchStartupAudit]);
 
+  const jumpToPillar = useCallback((modId, explicitScrollId = null) => {
+    const normalizedMod =
+      modId === 'CREDIT_VAMPIRES'
+        ? 'CREDIT_CLIFF_RUNWAY'
+        : modId === 'SOC2_AND_GENAI_CACHE'
+        ? 'SOC2_DEAL_BLOCKER'
+        : modId || 'ALL';
+    setActiveModule(normalizedMod);
+    const matchedMod = STARTUP_10X_MODULES.find((m) => m.id === normalizedMod);
+    const targetDomId =
+      explicitScrollId ||
+      matchedMod?.sectionId ||
+      (normalizedMod === 'ALL' ? 'startup-10x-compute-section' : null);
+    if (targetDomId) {
+      setTimeout(() => {
+        document
+          .getElementById(targetDomId)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 55);
+    }
+  }, []);
+
   useEffect(() => {
     const handleFocusEvent = (e) => {
       const targetMod = e?.detail?.module;
       const scrollId = e?.detail?.scrollToId;
       if (targetMod) {
-        setActiveModule((prev) =>
-          prev === 'ALL' ? 'ALL' : targetMod
-        );
-      }
-      if (scrollId) {
+        jumpToPillar(targetMod, scrollId);
+      } else if (scrollId) {
         setTimeout(() => {
           document
             .getElementById(scrollId)
@@ -156,7 +181,7 @@ export default function Startup10xMentorStudio({
         'cloudpulse:startup-10x-focus',
         handleFocusEvent
       );
-  }, []);
+  }, [jumpToPillar]);
 
   const handleCopy = (text, id) => {
     navigator.clipboard?.writeText(text);
@@ -371,7 +396,7 @@ export default function Startup10xMentorStudio({
       `## 1. Score Deductions & Bottlenecks`,
       ...(scoreDeductions.length > 0
         ? scoreDeductions.map((d) => `- ${d}`)
-        : [`- ✓ Zero scaling or SOC2 bottlenecks detected`]),
+        : [`- [PASS] Zero scaling or SOC2 bottlenecks detected`]),
       ``,
       `## 2. Founder Unit Economics & Gross Margin (${unitEcon1x.mau.toLocaleString()} MAU @ $${simArpuUsd}/mo ARPU)`,
       `- **Monthly Recurring Revenue (MRR)**: $${unitEcon1x.monthlyMrrUsd.toLocaleString()}/mo`,
@@ -517,16 +542,21 @@ export default function Startup10xMentorStudio({
                     prev === 'ALL' ? 'COLD_START_VPC_LAG' : 'ALL'
                   )
                 }
-                className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold border cursor-pointer transition-colors ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-extrabold border cursor-pointer transition-colors ${
                   activeModule === 'ALL'
                     ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-xs'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-amber-500/40'
                 }`}
               >
-                <Layers className="w-3 h-3 inline mr-1" />
-                {activeModule === 'ALL'
-                  ? '✓ Showing All 5 Pillars'
-                  : 'Show All 5 Pillars Together'}
+                <Layers className="w-3 h-3 shrink-0" />
+                {activeModule === 'ALL' ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                    <span>Showing All 5 Pillars</span>
+                  </>
+                ) : (
+                  <span>Show All 5 Pillars Together</span>
+                )}
               </button>
             </div>
           </div>
@@ -540,7 +570,7 @@ export default function Startup10xMentorStudio({
                   key={m.id}
                   type="button"
                   data-feature-id={m.id}
-                  onClick={() => setActiveModule(m.id)}
+                  onClick={() => jumpToPillar(m.id, m.sectionId)}
                   className={`p-3 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
                     isSelected
                       ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-xs'
@@ -586,7 +616,7 @@ export default function Startup10xMentorStudio({
         {/* ==================================================================== */}
         {/* 2. SUBORDINATE CLICKABLE TELEMETRY RIBBON (Smaller than Menu Tabs)   */}
         {/* ==================================================================== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 p-1.5 rounded-lg bg-zinc-50/90 dark:bg-[#0b0f17] border border-zinc-200/80 dark:border-slate-800/80 text-[11px] font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5 p-1.5 rounded-lg bg-zinc-50/90 dark:bg-[#0b0f17] border border-zinc-200/80 dark:border-slate-800/80 text-[11px] font-mono">
           {/* Quick-Jump 1: Readiness Score -> Show All Pillars */}
           <button
             type="button"
@@ -601,7 +631,7 @@ export default function Startup10xMentorStudio({
             <div className="min-w-0">
               <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
                 <span>10X Scale Readiness</span>
-                <span className="text-[9px] text-amber-500">All Pillars →</span>
+                <span className="text-[9px] text-amber-500">All Pillars &rarr;</span>
               </div>
               <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
                 {score}/100{' '}
@@ -623,13 +653,78 @@ export default function Startup10xMentorStudio({
             </span>
           </button>
 
-          {/* Quick-Jump 2: Live Resource Burn -> Pillar 02 Credit Vampires */}
+          {/* Quick-Jump 2: Live Compute & Storage -> Pillar 01 Cold-Start & Region Gravity */}
           <button
             type="button"
-            onClick={() => setActiveModule('CREDIT_VAMPIRES')}
-            title="Click to jump to Pillar 02: Credit Burn & Idle Vampire Killer"
+            data-feature-id="COLD_START_VPC_LAG"
+            onClick={() =>
+              jumpToPillar('COLD_START_VPC_LAG', 'startup-10x-compute-section')
+            }
+            title="Click to jump to Pillar 01: Compute & Cold-Start Surgeon"
             className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
-              activeModule === 'CREDIT_VAMPIRES'
+              activeModule === 'COLD_START_VPC_LAG'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>Compute &amp; Storage</span>
+                <span className="text-[9px] text-amber-500">Pillar 01 &rarr;</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                {vmFindings.length} VMs · {cloudRunFindings.length} Run · {bucketFindings.length} GCS
+              </div>
+            </div>
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9.5px] font-extrabold shrink-0">
+              {regionGravity.hasRegionMismatch ? 'Multi-Reg' : 'Co-Loc'}
+            </span>
+          </button>
+
+          {/* Quick-Jump 3: Quota & 24h 429 Radar -> Pillar 02 Launch-Day Quota Wall */}
+          <button
+            type="button"
+            data-feature-id="QUOTA_WALL_RADAR"
+            onClick={() =>
+              jumpToPillar('QUOTA_WALL_RADAR', 'startup-10x-quota-section')
+            }
+            title="Click to jump to Pillar 02: Launch-Day Quota & HTTP 429 Radar"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'QUOTA_WALL_RADAR'
+                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
+                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                <span>Quota &amp; 24h 429s</span>
+                <span className="text-[9px] text-amber-500">Pillar 02 &rarr;</span>
+              </div>
+              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                {(quotaWall.liveTraffic24h?.totalRequests24h || 0).toLocaleString()} API calls (24h)
+              </div>
+            </div>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                quotaWall.liveTraffic24h?.total429Count24h > 0
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              {quotaWall.liveTraffic24h?.total429Count24h || 0} 429s
+            </span>
+          </button>
+
+          {/* Quick-Jump 4: Live Resource Burn -> Pillar 03 Credit Runway & 6-Vector Cost Audit */}
+          <button
+            type="button"
+            data-feature-id="CREDIT_CLIFF_RUNWAY"
+            onClick={() =>
+              jumpToPillar('CREDIT_CLIFF_RUNWAY', 'startup-10x-runway-section')
+            }
+            title="Click to jump to Pillar 03: Credit Runway & 6-Vector Cost Audit"
+            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
+              activeModule === 'CREDIT_CLIFF_RUNWAY'
                 ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
                 : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
             }`}
@@ -637,7 +732,7 @@ export default function Startup10xMentorStudio({
             <div className="min-w-0">
               <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
                 <span>Live Resource Burn</span>
-                <span className="text-[9px] text-amber-500">Pillar 02 →</span>
+                <span className="text-[9px] text-amber-500">Pillar 03 &rarr;</span>
               </div>
               <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
                 ${runway.liveResourceMonthlyBurnUsd}/mo{' '}
@@ -651,46 +746,24 @@ export default function Startup10xMentorStudio({
             </span>
           </button>
 
-          {/* Quick-Jump 3: Live Compute & Storage -> Pillar 01 Cold-Start & Region Gravity */}
+          {/* Quick-Jump 5: SOC2 Perimeter -> Pillar 04 Enterprise SOC2 Deal-Blocker Shield */}
           <button
             type="button"
-            onClick={() => setActiveModule('COLD_START_VPC_LAG')}
-            title="Click to jump to Pillar 01: Cold-Start & Region Gravity"
+            data-feature-id="SOC2_DEAL_BLOCKER"
+            onClick={() =>
+              jumpToPillar('SOC2_DEAL_BLOCKER', 'startup-10x-soc2-section')
+            }
+            title="Click to jump to Pillar 04: Enterprise SOC2 Deal-Blocker Shield"
             className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
-              activeModule === 'COLD_START_VPC_LAG'
+              activeModule === 'SOC2_DEAL_BLOCKER'
                 ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
                 : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
             }`}
           >
             <div className="min-w-0">
               <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
-                <span>Compute &amp; Storage</span>
-                <span className="text-[9px] text-amber-500">Pillar 01 →</span>
-              </div>
-              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
-                {vmFindings.length} VMs · {cloudRunFindings.length} Run · {bucketFindings.length} GCS
-              </div>
-            </div>
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9.5px] font-extrabold shrink-0">
-              {regionGravity.hasRegionMismatch ? 'Multi-Reg' : 'Co-Loc'}
-            </span>
-          </button>
-
-          {/* Quick-Jump 4: SOC2 & Quota Health -> Pillar 05 SOC2 & GenAI Cache */}
-          <button
-            type="button"
-            onClick={() => setActiveModule('SOC2_AND_GENAI_CACHE')}
-            title="Click to jump to Pillar 05: SOC2 Auto-Fixer & Quota Wall"
-            className={`px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer flex items-center justify-between gap-2 border ${
-              activeModule === 'SOC2_AND_GENAI_CACHE'
-                ? 'bg-amber-500/15 border-amber-500 text-zinc-900 dark:text-zinc-100'
-                : 'bg-transparent border-transparent hover:border-amber-500/40 text-zinc-700 dark:text-zinc-300'
-            }`}
-          >
-            <div className="min-w-0">
-              <div className="text-[9.5px] uppercase text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
-                <span>SOC2 &amp; Quota Health</span>
-                <span className="text-[9px] text-amber-500">Pillar 05 →</span>
+                <span>SOC2 Deal Shield</span>
+                <span className="text-[9px] text-amber-500">Pillar 04 &rarr;</span>
               </div>
               <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
                 {soc2Blockers.adminOpenFirewallsCount ??
@@ -699,14 +772,8 @@ export default function Startup10xMentorStudio({
                 Admin 0.0.0.0/0 · {soc2Blockers.unhardenedBucketsCount} Unshielded
               </div>
             </div>
-            <span
-              className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
-                quotaWall.liveTraffic24h?.total429Count24h > 0
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-              }`}
-            >
-              {quotaWall.liveTraffic24h?.total429Count24h || 0} 429s
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9.5px] font-extrabold shrink-0">
+              SOC2
             </span>
           </button>
         </div>
@@ -717,14 +784,41 @@ export default function Startup10xMentorStudio({
             <span className="text-[10px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
               Live Deductions:
             </span>
-            {scoreDeductions.map((ded, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-mono"
-              >
-                {ded}
-              </span>
-            ))}
+            {scoreDeductions.map((ded, idx) => {
+              const lower = String(ded || '').toLowerCase();
+              const targetPillar =
+                lower.includes('429') || lower.includes('quota')
+                  ? 'QUOTA_WALL_RADAR'
+                  : lower.includes('vampire') ||
+                    lower.includes('burn') ||
+                    lower.includes('idle') ||
+                    lower.includes('disk') ||
+                    lower.includes('static ip')
+                  ? 'CREDIT_CLIFF_RUNWAY'
+                  : lower.includes('0.0.0.0/0') ||
+                    lower.includes('firewall') ||
+                    lower.includes('soc2') ||
+                    lower.includes('bucket') ||
+                    lower.includes('pap') ||
+                    lower.includes('iam')
+                  ? 'SOC2_DEAL_BLOCKER'
+                  : lower.includes('region') ||
+                    lower.includes('gravity') ||
+                    lower.includes('cache')
+                  ? 'GEMINI_RAG_LATENCY'
+                  : 'COLD_START_VPC_LAG';
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => jumpToPillar(targetPillar)}
+                  title={`Click to inspect & remediate: ${ded}`}
+                  className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 hover:border-amber-500/60 text-amber-700 dark:text-amber-300 text-[10px] font-mono transition-colors cursor-pointer"
+                >
+                  {ded} &rarr;
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -883,8 +977,9 @@ export default function Startup10xMentorStudio({
                           {vm.machineType} · {vm.zone}
                         </span>
                         {vm.isAlwaysFreeEligible ? (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                            ✓ $0.00/mo Always-Free Eligible
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                            <Check className="w-3 h-3 shrink-0" />
+                            <span>$0.00/mo Always-Free Eligible</span>
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold">
@@ -931,12 +1026,14 @@ export default function Startup10xMentorStudio({
                         {svc.region}
                       </span>
                       {svc.startupCpuBoost ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-                          ✓ CPU Boost ON (~420ms boot)
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>CPU Boost ON (~420ms boot)</span>
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
-                          ⚠ CPU Boost OFF (~1,850ms cold start)
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          <span>CPU Boost OFF (~1,850ms cold start)</span>
                         </span>
                       )}
                     </div>
@@ -1061,11 +1158,14 @@ export default function Startup10xMentorStudio({
                         {api.label}
                       </span>
                       {api.enabled ? (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-extrabold shrink-0">
-                          {api.cloudBillingEnabled &&
-                          api.directServiceEnabled === false
-                            ? '✓ ON (cloudbilling)'
-                            : '✓ ON'}
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-extrabold shrink-0">
+                          <Check className="w-2.5 h-2.5 shrink-0" />
+                          <span>
+                            {api.cloudBillingEnabled &&
+                            api.directServiceEnabled === false
+                              ? 'ON (cloudbilling)'
+                              : 'ON'}
+                          </span>
                         </span>
                       ) : (
                         <button
@@ -1208,9 +1308,16 @@ export default function Startup10xMentorStudio({
                       <button
                         type="button"
                         onClick={() => handleCopy(q.cliCmd, q.id)}
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
                       >
-                        {copiedId === q.id ? '✓ Copied' : 'Quota CLI'}
+                        {copiedId === q.id ? (
+                          <>
+                            <Check className="w-3 h-3 shrink-0" />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <span>Quota CLI</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1307,10 +1414,15 @@ export default function Startup10xMentorStudio({
               <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {runway.optimizedRunwayMonths} Months
               </div>
-              <div className="text-[10.5px] text-emerald-700/80 dark:text-emerald-300/80">
-                {runway.extraRunwayMonthsGained > 0
-                  ? `+${runway.extraRunwayMonthsGained} extra months gained`
-                  : '✓ Full 24-month credit window preserved'}
+              <div className="text-[10.5px] text-emerald-700/80 dark:text-emerald-300/80 flex items-center gap-1">
+                {runway.extraRunwayMonthsGained > 0 ? (
+                  <span>+{runway.extraRunwayMonthsGained} extra months gained</span>
+                ) : (
+                  <>
+                    <Check className="w-3 h-3 shrink-0" />
+                    <span>Full 24-month credit window preserved</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1587,8 +1699,9 @@ export default function Startup10xMentorStudio({
                       <div className="text-[11px] text-zinc-800 dark:text-zinc-200 font-bold">
                         {chk.summary}
                       </div>
-                      <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        💡 {chk.tip}
+                      <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed flex items-start gap-1.5">
+                        <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <span>{chk.tip}</span>
                       </div>
                     </div>
                   ))}
@@ -1616,8 +1729,11 @@ export default function Startup10xMentorStudio({
               </div>
               {bucketFindings.length === 0 ? (
                 <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs font-mono">
-                  <div className="text-emerald-600 dark:text-emerald-400 font-bold">
-                    ✓ 0 Cloud Storage buckets in <code className="font-bold">{projectId}</code> ($0.00/mo storage burn · 5 GB US Standard free tier ready).
+                  <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 flex-wrap">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      0 Cloud Storage buckets in <code className="font-bold">{projectId}</code> ($0.00/mo storage burn · 5 GB US Standard free tier ready).
+                    </span>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
                     <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
@@ -1659,12 +1775,14 @@ export default function Startup10xMentorStudio({
                       <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
                         {b.location} ·{' '}
                         {b.hasLifecycle ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                            ✓ 30d Nearline Lifecycle Active
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                            <Check className="w-3 h-3 shrink-0" />
+                            <span>30d Nearline Lifecycle Active</span>
                           </span>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400 font-bold">
-                            ⚠ Missing Lifecycle (Est. -$12/mo)
+                          <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                            <AlertTriangle className="w-3 h-3 shrink-0" />
+                            <span>Missing Lifecycle (Est. -$12/mo)</span>
                           </span>
                         )}
                       </div>
@@ -1682,17 +1800,22 @@ export default function Startup10xMentorStudio({
                           b.location
                         )
                       }
-                      className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
                         b.hasLifecycle && b.papEnforced
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                           : 'bg-blue-600 hover:bg-blue-500 text-white'
                       }`}
                     >
-                      {busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}`
-                        ? 'Applying...'
-                        : b.hasLifecycle && b.papEnforced
-                        ? '✓ Shielded & Lifecycled'
-                        : '1-Click Shield & Lifecycle'}
+                      {busyTarget === `PATCH_BUCKET_STARTUP_SHIELD:${b.name}` ? (
+                        'Applying...'
+                      ) : b.hasLifecycle && b.papEnforced ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>Shielded &amp; Lifecycled</span>
+                        </>
+                      ) : (
+                        '1-Click Shield & Lifecycle'
+                      )}
                     </button>
                   </div>
                 ))
@@ -1717,8 +1840,11 @@ export default function Startup10xMentorStudio({
               </div>
               {datasetFindings.length === 0 ? (
                 <div className="p-3.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs font-mono">
-                  <div className="text-emerald-600 dark:text-emerald-400 font-bold">
-                    ✓ 0 BigQuery datasets in <code className="font-bold">{projectId}</code> ($0.00/mo warehouse burn · 10 GB storage + 1 TB queries/mo free tier ready).
+                  <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 flex-wrap">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      0 BigQuery datasets in <code className="font-bold">{projectId}</code> ($0.00/mo warehouse burn · 10 GB storage + 1 TB queries/mo free tier ready).
+                    </span>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
                     <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
@@ -1760,8 +1886,9 @@ export default function Startup10xMentorStudio({
                       <div className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
                         Location: {d.location} ·{' '}
                         {d.isStartupOptimized ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                            ✓ 168h Time-Travel &amp; Labeled
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                            <Check className="w-3 h-3 shrink-0" />
+                            <span>168h Time-Travel &amp; Labeled</span>
                           </span>
                         ) : (
                           <span>168h Time-Travel &amp; Attribution</span>
@@ -1781,17 +1908,22 @@ export default function Startup10xMentorStudio({
                           d.location
                         )
                       }
-                      className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-extrabold shrink-0 cursor-pointer disabled:opacity-50 ${
                         d.isStartupOptimized
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                           : 'bg-blue-600 hover:bg-blue-500 text-white'
                       }`}
                     >
-                      {busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}`
-                        ? 'Patching...'
-                        : d.isStartupOptimized
-                        ? '✓ Optimized'
-                        : '1-Click Optimize Dataset'}
+                      {busyTarget === `PATCH_BQ_STARTUP_OPTIMIZER:${d.datasetId}` ? (
+                        'Patching...'
+                      ) : d.isStartupOptimized ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>Optimized</span>
+                        </>
+                      ) : (
+                        '1-Click Optimize Dataset'
+                      )}
                     </button>
                   </div>
                 ))
@@ -1875,7 +2007,7 @@ export default function Startup10xMentorStudio({
                     </button>
                   )}
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                       soc2Blockers.openFirewalls.filter(
                         (fw) => !fw.isWebHttpHttpsOnly
                       ).length === 0
@@ -1885,15 +2017,21 @@ export default function Startup10xMentorStudio({
                   >
                     {soc2Blockers.openFirewalls.filter(
                       (fw) => !fw.isWebHttpHttpsOnly
-                    ).length === 0
-                      ? '✓ SOC2 PASS'
-                      : 'ACTION RECOMMENDED'}
+                    ).length === 0 ? (
+                      <>
+                        <Check className="w-3 h-3 shrink-0" />
+                        <span>SOC2 PASS</span>
+                      </>
+                    ) : (
+                      'ACTION RECOMMENDED'
+                    )}
                   </span>
                 </div>
               </div>
               {soc2Blockers.openFirewalls.length === 0 ? (
-                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400">
-                  ✓ 0 world-open 0.0.0.0/0 ingress firewall rules detected!
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>0 world-open 0.0.0.0/0 ingress firewall rules detected!</span>
                 </div>
               ) : (
                 soc2Blockers.openFirewalls.map((fw) => (
@@ -1907,15 +2045,20 @@ export default function Startup10xMentorStudio({
                           {fw.name}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
                             fw.isWebHttpHttpsOnly
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                               : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                           }`}
                         >
-                          {fw.isWebHttpHttpsOnly
-                            ? '✓ PUBLIC WEB (80/443)'
-                            : 'ADMIN / INTERNAL PORT'}
+                          {fw.isWebHttpHttpsOnly ? (
+                            <>
+                              <Check className="w-2.5 h-2.5 shrink-0" />
+                              <span>PUBLIC WEB (80/443)</span>
+                            </>
+                          ) : (
+                            'ADMIN / INTERNAL PORT'
+                          )}
                         </span>
                       </div>
                       <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -1925,9 +2068,10 @@ export default function Startup10xMentorStudio({
                     {fw.isWebHttpHttpsOnly ? (
                       <span
                         title="Standard HTTP/HTTPS web ingress rule — preserved by 1-Click Admin IAP Lock"
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold shrink-0"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold shrink-0"
                       >
-                        ✓ Web Port Preserved
+                        <Check className="w-3 h-3 shrink-0" />
+                        <span>Web Port Preserved</span>
                       </span>
                     ) : (
                       <button
@@ -2016,13 +2160,20 @@ export default function Startup10xMentorStudio({
                         </span>
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               ctrl.status === 'PASS'
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                             }`}
                           >
-                            {ctrl.status === 'PASS' ? '✓ PASS' : 'ACTION NEEDED'}
+                            {ctrl.status === 'PASS' ? (
+                              <>
+                                <Check className="w-3 h-3 shrink-0" />
+                                <span>PASS</span>
+                              </>
+                            ) : (
+                              'ACTION NEEDED'
+                            )}
                           </span>
                           <button
                             type="button"
@@ -2092,15 +2243,23 @@ export default function Startup10xMentorStudio({
               </span>
             </div>
             <span
-              className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold ${
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold ${
                 regionGravity.hasRegionMismatch
                   ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                   : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
               }`}
             >
-              {regionGravity.hasRegionMismatch
-                ? `⚠ +${regionGravity.estimatedCrossRegionRttPenaltyMs}ms Cross-Region Penalty`
-                : `✓ Co-Located (~${regionGravity.estimatedCrossRegionRttPenaltyMs}ms Intra-Region RTT)`}
+              {regionGravity.hasRegionMismatch ? (
+                <>
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
+                  <span>+{regionGravity.estimatedCrossRegionRttPenaltyMs}ms Cross-Region Penalty</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-3 h-3 shrink-0" />
+                  <span>Co-Located (~{regionGravity.estimatedCrossRegionRttPenaltyMs}ms Intra-Region RTT)</span>
+                </>
+              )}
             </span>
           </div>
 

@@ -788,8 +788,9 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <span>
                   100% Live 10-Region Google Cloud Control-Plane Socket Matrix &amp; BigQuery Geo-Standby Streamer
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                  ⚡ Direct DNS/TLS 1.3 Socket + HTTPS REST · No gcloud Required
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  <Zap className="w-3 h-3 shrink-0" />
+                  Direct DNS/TLS 1.3 Socket + HTTPS REST · No gcloud Required
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">

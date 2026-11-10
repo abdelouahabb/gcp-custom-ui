@@ -19,6 +19,10 @@ import {
   GitBranch,
   ArrowRight,
   Lock,
+  Zap,
+  Wrench,
+  Key,
+  Monitor,
 } from 'lucide-react';
 
 export function LakehouseTrackBadge({ track = 'GA' }) {
@@ -1284,31 +1288,48 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
         {probeResult?.liveEstate && (
           <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-zinc-500">BQ Datasets (⚡ REST)</div>
+              <div className="text-[10px] text-zinc-500 inline-flex items-center gap-1">
+                <span>BQ Datasets</span>
+                <Zap className="w-2.5 h-2.5 text-amber-500" />
+                <span>REST</span>
+              </div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.bigQueryDatasetsCount} Live
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-zinc-500">GCS Lake Buckets (⚡ REST)</div>
+              <div className="text-[10px] text-zinc-500 inline-flex items-center gap-1">
+                <span>GCS Lake Buckets</span>
+                <Zap className="w-2.5 h-2.5 text-amber-500" />
+                <span>REST</span>
+              </div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.gcsBucketsCount} Live
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Iceberg REST</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                <Wrench className="w-2.5 h-2.5 shrink-0" />
+                <span>[GA 591.0.0 · gcloud] Iceberg REST</span>
+              </div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.icebergRestCatalogs?.length || 0} Discovered
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Managed Kafka</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                <Wrench className="w-2.5 h-2.5 shrink-0" />
+                <span>[GA 591.0.0 · gcloud] Managed Kafka</span>
+              </div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.managedKafkaClusters?.length || 0} Clusters
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 591.0.0 · 🔧 gcloud] Dataplex Lakes</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                <Wrench className="w-2.5 h-2.5 shrink-0" />
+                <span>[GA 591.0.0 · gcloud] Dataplex Lakes</span>
+              </div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.dataplexLakes?.length || 0} Lakes
               </div>
@@ -1729,50 +1750,54 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
       {/* VIEW MODE 1: MAIN SPLIT WORKBENCH (DEFAULT)                         */}
       {/* =================================================================== */}
       {viewMode === 'SPLIT_WORKBENCH' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left 5 Columns: Scrollable List of 50 Playbooks (Uniform Card Structure) */}
-          <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-3 max-h-[820px] overflow-y-auto space-y-2 shadow-sm">
-            <div className="px-2 py-1.5 flex items-center justify-between text-[11px] font-mono text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left 5 Columns: Full-Height Dynamic 50-Playbook Directory */}
+          <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-3 flex flex-col gap-2.5 h-full shadow-sm">
+            <div className="px-2 py-1.5 flex items-center justify-between text-[11px] font-mono text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
               <span>
                 SHOWING {filteredPlaybooks.length} OF {ICEBERG_PLAYBOOKS.length}{' '}
                 LAKEHOUSE PLAYBOOKS
               </span>
-              <span className="text-blue-600 dark:text-blue-400 font-bold">
+              <span className="text-amber-600 dark:text-amber-400 font-bold">
                 SELECT SCENARIO
               </span>
             </div>
 
-            {filteredPlaybooks.map((pb) => {
-              const isSelected = activePlaybook?.id === pb.id;
-              return (
-                <button
-                  key={pb.id}
-                  type="button"
-                  onClick={() => setSelectedPlaybookId(pb.id)}
-                  className={`w-full text-left p-3 rounded-md border transition-all cursor-pointer space-y-1.5 ${
-                    isSelected
-                      ? 'bg-blue-600/10 dark:bg-blue-500/15 border-blue-500 shadow-sm'
-                      : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35">
-                      PLAYBOOK #{String(pb.num).padStart(2, '0')}
-                    </span>
-                    <LakehouseTrackBadge track={pb.track} />
-                  </div>
-                  <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">
-                    {pb.title}
-                  </div>
-                  <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 truncate">
-                    {pb.persona} · {pb.stack}
-                  </div>
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2">
-                    {pb.angle}
-                  </p>
-                </button>
-              );
-            })}
+            <div className="relative flex-1 min-h-[680px]">
+              <div className="max-h-[680px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto space-y-2 pr-1">
+                {filteredPlaybooks.map((pb) => {
+                  const isSelected = activePlaybook?.id === pb.id;
+                  return (
+                    <button
+                      key={pb.id}
+                      type="button"
+                      onClick={() => setSelectedPlaybookId(pb.id)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                        isSelected
+                          ? 'bg-amber-500/12 dark:bg-amber-500/15 border-amber-500 shadow-sm'
+                          : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/45'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35">
+                          PLAYBOOK #{String(pb.num).padStart(2, '0')}
+                        </span>
+                        <LakehouseTrackBadge track={pb.track} />
+                      </div>
+                      <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">
+                        {pb.title}
+                      </div>
+                      <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 truncate">
+                        {pb.persona} · {pb.stack}
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                        {pb.angle}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Right 7 Columns: Selected Playbook Deep-Dive, 4-Stage Pipeline Ribbon, Target Config & Multi-Engine Code */}
@@ -2015,7 +2040,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   <span className="truncate">
                     {playbookCliProbeLoading
                       ? 'Probing gcloud 591...'
-                      : 'Run Live Probe (🔧 gcloud)'}
+                      : 'Run Live Probe (gcloud)'}
                   </span>
                 </button>
 
@@ -2056,8 +2081,9 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2 font-mono text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
-                        🔧 LIVE GCLOUD 591.0.0 LAKEHOUSE PROBE
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
+                        <Wrench className="w-3 h-3 shrink-0" />
+                        <span>LIVE GCLOUD 591.0.0 LAKEHOUSE PROBE</span>
                       </span>
                       {playbookCliProbeResult?.probeMode && (
                         <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
@@ -2065,10 +2091,18 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         </span>
                       )}
                       {playbookCliProbeResult?.authBridgeMode && (
-                        <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
-                          {playbookCliProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER'
-                            ? '🔑 Online Session OAuth Bridge'
-                            : '💻 Local ADC / gcloud Auth'}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                          {playbookCliProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER' ? (
+                            <>
+                              <Key className="w-3 h-3 shrink-0" />
+                              <span>Online Session OAuth Bridge</span>
+                            </>
+                          ) : (
+                            <>
+                              <Monitor className="w-3 h-3 shrink-0" />
+                              <span>Local ADC / gcloud Auth</span>
+                            </>
+                          )}
                         </span>
                       )}
                       {typeof playbookCliProbeResult?.durationMs === 'number' && (

@@ -2074,7 +2074,10 @@ export default function ManagedSparkStudio({
                     {activeHardwareProfile.estimatedCostUsd.toFixed(4)} ($0.00/hr idle)
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div
+                  data-action-toolbar="true"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 items-stretch"
+                >
                   {SPARK_HARDWARE_PROFILES.map((prof) => {
                     const isProfActive = selectedHardwareProfileId === prof.id;
                     return (
@@ -2083,20 +2086,20 @@ export default function ManagedSparkStudio({
                         type="button"
                         data-feature-id={`SPARK_HW_${prof.id}`}
                         onClick={() => handleSelectHardwareProfile(prof)}
-                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        className={`w-full h-full p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1.5 ${
                           isProfActive
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                            : 'bg-white/90 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                            ? 'bg-amber-500/15 dark:bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 border-b-2 border-b-amber-500 shadow-sm'
+                            : 'bg-white/90 dark:bg-[#0e131d] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-[#1e2738] hover:border-amber-500/45'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-[11px] font-bold leading-snug">
+                        <div className="space-y-1 w-full min-w-0">
+                          <div className="text-[11px] font-extrabold leading-snug break-words text-zinc-950 dark:text-zinc-50">
                             {prof.title}
-                          </span>
+                          </div>
                           <span
-                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            className={`inline-block text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded ${
                               isProfActive
-                                ? 'bg-white/20 text-white'
+                                ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/35'
                                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                             }`}
                           >
@@ -2104,9 +2107,9 @@ export default function ManagedSparkStudio({
                           </span>
                         </div>
                         <div
-                          className={`text-[10.5px] font-mono mt-1 ${
+                          className={`text-[10.5px] font-mono leading-snug ${
                             isProfActive
-                              ? 'text-blue-100'
+                              ? 'text-zinc-700 dark:text-zinc-300'
                               : 'text-zinc-500 dark:text-zinc-400'
                           }`}
                         >

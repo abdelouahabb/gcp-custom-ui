@@ -1200,9 +1200,24 @@ export default function FivePersonaCommandCenter({
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
                   UNDER THE HOOD · HOW THE 10-PERSONA ARCHITECTURE COUNCIL WORKS
                 </div>
-                <div>
-                  1. <strong>20 Parallel Live GCP REST API Probes:</strong> Simultaneously queries `run.googleapis.com/v2`, `sqladmin.googleapis.com/v1`, `storage.googleapis.com/storage/v1`, `bigquery.googleapis.com/bigquery/v2`, `compute.googleapis.com/compute/v1` (Networks, Subnets, Firewalls, Disks, Addresses), `iam.googleapis.com/v1`, `container.googleapis.com/v1`, `logging.googleapis.com/v2`, `orgpolicy.googleapis.com/v2`, and `cloudresourcemanager.googleapis.com/v1` (`:testIamPermissions` &amp; `:getIamPolicy`).
-                  {' '}2. <strong>1-Click Live Control-Plane Remediation:</strong> Clicking `Fix Live` dispatches a real `PATCH /compute/v1/projects/:id/global/firewalls/:name` (`sourceRanges: [&quot;35.235.240.0/20&quot;]`) or `PATCH /storage/v1/b/:bucket` (`publicAccessPrevention: &quot;enforced&quot;`).
+                <div className="leading-relaxed">
+                  1. <strong>20 Parallel Live GCP REST API Probes:</strong> Simultaneously queries{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">run.googleapis.com/v2</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">sqladmin.googleapis.com/v1</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">storage.googleapis.com/storage/v1</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">bigquery.googleapis.com/bigquery/v2</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">compute.googleapis.com/compute/v1</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">iam.googleapis.com/v1</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">container.googleapis.com/v1</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">logging.googleapis.com/v2</code>,{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">orgpolicy.googleapis.com/v2</code>, and{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">cloudresourcemanager.googleapis.com/v1</code>.{' '}
+                  2. <strong>1-Click Live Control-Plane Remediation:</strong> Clicking{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">Fix Live</code> dispatches a real{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">PATCH /compute/v1/.../firewalls/:name</code>{' '}
+                  (<code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">35.235.240.0/20</code>) or{' '}
+                  <code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">PATCH /storage/v1/b/:bucket</code>{' '}
+                  (<code className="px-1 py-0.5 rounded bg-white/70 dark:bg-zinc-900 font-mono">publicAccessPrevention: &quot;enforced&quot;</code>).
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">

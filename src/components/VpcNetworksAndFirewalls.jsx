@@ -24,6 +24,11 @@ import {
   Sliders,
   Play,
   X,
+  Check,
+  Zap,
+  Dna,
+  Target,
+  Microscope,
   Plus,
   FileText,
   Terminal,
@@ -1202,7 +1207,7 @@ export default function VpcNetworksAndFirewalls({
     });
   }, [enrichedFirewalls, selectedVpcFilter, filterMode, searchQuery]);
 
-  // Packet Flow & Firewall Match Simulator evaluation (tracks ★ WINNER + SHADOWED rules)
+  // Packet Flow & Firewall Match Simulator evaluation (tracks WINNER + SHADOWED rules)
   const simulationResult = useMemo(() => {
     const candidateRules = enrichedFirewalls.filter(
       (fw) =>
@@ -1262,7 +1267,7 @@ export default function VpcNetworksAndFirewalls({
         priority: winningRule.priority ?? 1000,
         isDefaultImplied: false,
         shadowedRules,
-        reason: `★ WINNER (1st Match): Matched explicit ${winningRule.action} rule "${winningRule.name}" at priority P-${
+        reason: `WINNER (1st Match): Matched explicit ${winningRule.action} rule "${winningRule.name}" at priority P-${
           winningRule.priority ?? 1000
         } on VPC "${simNetwork}".${
           shadowedRules.length > 0
@@ -1377,7 +1382,13 @@ export default function VpcNetworksAndFirewalls({
                   className="inline-flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 rounded-md px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Reverse-Engineer to .tf (`main.tf`)</span>
+                  <span>
+                    Reverse-Engineer to .tf (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      main.tf
+                    </code>
+                    )
+                  </span>
                 </button>
               </>
             )}
@@ -1454,8 +1465,9 @@ export default function VpcNetworksAndFirewalls({
                 : 'border-emerald-500/25'
             }`}
           >
-            <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400">
-              ✓ ALLOW Rules
+            <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <Check className="w-3 h-3 shrink-0" />
+              <span>ALLOW Rules</span>
             </div>
             <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
               {stats.allowCount}
@@ -1474,8 +1486,9 @@ export default function VpcNetworksAndFirewalls({
                 : 'border-red-500/25'
             }`}
           >
-            <div className="text-[10px] font-mono uppercase text-red-600 dark:text-red-400">
-              ✕ DENY Rules
+            <div className="text-[10px] font-mono uppercase text-red-600 dark:text-red-400 flex items-center gap-1">
+              <X className="w-3 h-3 shrink-0" />
+              <span>DENY Rules</span>
             </div>
             <div className="text-lg font-extrabold font-mono text-red-600 dark:text-red-400">
               {stats.denyCount}
@@ -1620,8 +1633,8 @@ export default function VpcNetworksAndFirewalls({
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold transition-colors cursor-pointer"
             >
-              <ShieldAlert className="w-3.5 h-3.5" />
-              <span>🛡️ Audit Toxic Paths in Cloud SOC &rarr;</span>
+              <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+              <span>Audit Toxic Paths in Cloud SOC &rarr;</span>
             </button>
 
             <button
@@ -1643,8 +1656,8 @@ export default function VpcNetworksAndFirewalls({
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/15 hover:bg-red-500/25 border border-red-500/35 text-red-600 dark:text-red-300 text-xs font-mono font-extrabold transition-colors cursor-pointer"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>⚡ SOAR /32 IP Quarantine ({stats.soarQuarantineRules.length})</span>
+              <Zap className="w-3.5 h-3.5 shrink-0" />
+              <span>SOAR /32 IP Quarantine ({stats.soarQuarantineRules.length})</span>
             </button>
 
             <button
@@ -1666,8 +1679,8 @@ export default function VpcNetworksAndFirewalls({
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-extrabold transition-colors cursor-pointer"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>🧬 12-Invariant Self-Healing (INV-01)</span>
+              <Dna className="w-3.5 h-3.5 shrink-0" />
+              <span>12-Invariant Self-Healing (INV-01)</span>
             </button>
           </div>
         </div>
@@ -1726,9 +1739,10 @@ export default function VpcNetworksAndFirewalls({
                     'TOXIC_GRAPH'
                   )
                 }
-                className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-mono font-extrabold text-xs shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-mono font-extrabold text-xs shrink-0 cursor-pointer"
               >
-                🛡️ Triage in Cloud SOC &rarr;
+                <Shield className="w-3.5 h-3.5 shrink-0" />
+                <span>Triage in Cloud SOC &rarr;</span>
               </button>
             </div>
           </div>
@@ -1943,7 +1957,7 @@ export default function VpcNetworksAndFirewalls({
                     }`}
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    <span>✓ ALLOW TRAFFIC</span>
+                    <span>ALLOW TRAFFIC</span>
                   </button>
                   <button
                     type="button"
@@ -1956,7 +1970,7 @@ export default function VpcNetworksAndFirewalls({
                     }`}
                   >
                     <ShieldOff className="w-4 h-4" />
-                    <span>✕ DENY (BLOCK) TRAFFIC</span>
+                    <span>DENY (BLOCK) TRAFFIC</span>
                   </button>
                 </div>
               </div>
@@ -2335,15 +2349,23 @@ export default function VpcNetworksAndFirewalls({
           >
             <div className="flex items-center gap-3">
               <span
-                className={`px-3 py-1 rounded-full text-xs font-mono font-extrabold ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-extrabold ${
                   simulationResult.verdict === 'ALLOW'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-red-600 text-white'
                 }`}
               >
-                {simulationResult.verdict === 'ALLOW'
-                  ? '✓ PACKET ALLOWED'
-                  : '✕ PACKET DENIED'}
+                {simulationResult.verdict === 'ALLOW' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>PACKET ALLOWED</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3.5 h-3.5 shrink-0" />
+                    <span>PACKET DENIED</span>
+                  </>
+                )}
               </span>
               <div className="text-xs font-mono">
                 <div className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -2396,9 +2418,10 @@ export default function VpcNetworksAndFirewalls({
                         : 'my-live-client',
                     })
                   }
-                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
                 >
-                  🌐 Launch &amp; X-Ray on Global Map ↗
+                  <Globe className="w-3 h-3 shrink-0" />
+                  <span>Launch &amp; X-Ray on Global Map ↗</span>
                 </button>
               )}
             </div>
@@ -2490,9 +2513,10 @@ export default function VpcNetworksAndFirewalls({
                               onSelectTab('CLOUD_SOC');
                             }
                           }}
-                          className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                          className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
                         >
-                          🛡️ SOC Egress &amp; PGA Audit &rarr;
+                          <Shield className="w-3 h-3 shrink-0" />
+                          <span>SOC Egress &amp; PGA Audit &rarr;</span>
                         </button>
                       </div>
                     </div>
@@ -2579,10 +2603,18 @@ export default function VpcNetworksAndFirewalls({
           {focusedSeedRuleName && (
             <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full bg-sky-600 text-white text-[10px] font-extrabold">
-                  {focusedSeedSource === 'CLOUD_SOC'
-                    ? '🛡️ FOCUSED FROM CLOUD SOC & SOAR WAR-ROOM'
-                    : '🎯 FOCUSED FROM GLOBAL MAP X-RAY'}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-600 text-white text-[10px] font-extrabold">
+                  {focusedSeedSource === 'CLOUD_SOC' ? (
+                    <>
+                      <Shield className="w-3 h-3 shrink-0" />
+                      <span>FOCUSED FROM CLOUD SOC &amp; SOAR WAR-ROOM</span>
+                    </>
+                  ) : (
+                    <>
+                      <Target className="w-3 h-3 shrink-0" />
+                      <span>FOCUSED FROM GLOBAL MAP X-RAY</span>
+                    </>
+                  )}
                 </span>
                 <span className="text-zinc-800 dark:text-zinc-200">
                   Rule:{' '}
@@ -2623,9 +2655,10 @@ export default function VpcNetworksAndFirewalls({
                     setFocusedSeedRuleName(null);
                     setFocusedSeedSource(null);
                   }}
-                  className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
                 >
-                  ✕ Clear Focus
+                  <X className="w-3 h-3 shrink-0" />
+                  <span>Clear Focus</span>
                 </button>
               </div>
             </div>
@@ -2657,8 +2690,8 @@ export default function VpcNetworksAndFirewalls({
               >
                 {[
                   { id: 'ALL', label: `All Rules (${enrichedFirewalls.length})` },
-                  { id: 'ALLOW', label: `✓ ALLOW (${stats.allowCount})` },
-                  { id: 'DENY', label: `✕ DENY (${stats.denyCount})` },
+                  { id: 'ALLOW', label: `ALLOW (${stats.allowCount})` },
+                  { id: 'DENY', label: `DENY (${stats.denyCount})` },
                   { id: 'INGRESS', label: `↙ INGRESS (${stats.ingressCount})` },
                   { id: 'EGRESS', label: `↗ EGRESS (${stats.egressCount})` },
                   {
@@ -2746,7 +2779,8 @@ export default function VpcNetworksAndFirewalls({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {isFocusedFromMap && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-sky-600 text-white">
-                              🎯 FOCUSED RULE
+                              <Target className="w-3 h-3 shrink-0" />
+                              <span>FOCUSED RULE</span>
                             </span>
                           )}
                           {/* ALLOW vs DENY Badge */}
@@ -2909,8 +2943,8 @@ export default function VpcNetworksAndFirewalls({
                           title="Send this firewall rule to the Autonomous Cloud SOC & SOAR War-Room for 3-vector Toxic Attack-Path triage, /32 IP Quarantine, or Gemini SOC Commander briefing"
                           className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/35 transition-colors cursor-pointer"
                         >
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>🛡️ Cloud SOC ↗</span>
+                          <ShieldCheck className="w-3 h-3 shrink-0" />
+                          <span>Cloud SOC ↗</span>
                         </button>
 
                         <button
@@ -2920,8 +2954,8 @@ export default function VpcNetworksAndFirewalls({
                           title="Launch a live packet for this rule's protocol/port on the Global World Map and inspect its Priority 0 -> 65535 X-Ray evaluation"
                           className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-md bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-300 border border-sky-500/35 transition-colors cursor-pointer"
                         >
-                          <Globe className="w-3 h-3" />
-                          <span>🔬 X-Ray on Map</span>
+                          <Microscope className="w-3 h-3 shrink-0" />
+                          <span>X-Ray on Map</span>
                         </button>
 
                         <button
@@ -3014,15 +3048,20 @@ export default function VpcNetworksAndFirewalls({
                       <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                         <div className="flex items-center justify-between text-[10px] font-mono">
                           <span
-                            className={`font-bold ${
+                            className={`inline-flex items-center gap-1 font-bold ${
                               tracker.status === 'DONE'
                                 ? 'text-emerald-400'
                                 : 'text-blue-400'
                             }`}
                           >
-                            {tracker.status === 'DONE'
-                              ? '✓ GCP GLOBAL FIREWALL OPERATION DONE'
-                              : `GCP GLOBAL OPERATION: ${tracker.status}`}
+                            {tracker.status === 'DONE' ? (
+                              <>
+                                <Check className="w-3 h-3 shrink-0" />
+                                <span>GCP GLOBAL FIREWALL OPERATION DONE</span>
+                              </>
+                            ) : (
+                              `GCP GLOBAL OPERATION: ${tracker.status}`
+                            )}
                           </span>
                           <span className="text-zinc-700 dark:text-zinc-300 font-bold">
                             {tracker.progress}%
@@ -3059,11 +3098,13 @@ export default function VpcNetworksAndFirewalls({
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    ✓ default-allow-egress (EGRESS · 0.0.0.0/0 · all · 65535)
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Check className="w-3 h-3 shrink-0" />
+                    <span>default-allow-egress (EGRESS · 0.0.0.0/0 · all · 65535)</span>
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
-                    ✕ default-deny-ingress (INGRESS · 0.0.0.0/0 · all · 65535)
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+                    <X className="w-3 h-3 shrink-0" />
+                    <span>default-deny-ingress (INGRESS · 0.0.0.0/0 · all · 65535)</span>
                   </span>
                 </div>
               </div>
@@ -3086,7 +3127,11 @@ export default function VpcNetworksAndFirewalls({
                     Zero-Trust IAP Hardening · Important CLI &amp; Network Behavior Warning
                   </div>
                   <h4 className="text-sm font-extrabold text-white">
-                    Lock &ldquo;{pendingIapLockdownFw.name}&rdquo; to Google Cloud IAP (`35.235.240.0/20`)?
+                    Lock &ldquo;{pendingIapLockdownFw.name}&rdquo; to Google Cloud IAP (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] text-amber-300">
+                      35.235.240.0/20
+                    </code>
+                    )?
                   </h4>
                 </div>
               </div>
@@ -3105,7 +3150,13 @@ export default function VpcNetworksAndFirewalls({
               </p>
               <ul className="space-y-2 text-[11px] text-zinc-200 list-disc pl-4">
                 <li>
-                  <strong className="text-white">Direct Bash `gcloud compute ssh` Without Flag Will Time Out:</strong>{' '}
+                  <strong className="text-white">
+                    Direct Bash{' '}
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] text-amber-300">
+                      gcloud compute ssh
+                    </code>{' '}
+                    Without Flag Will Time Out:
+                  </strong>{' '}
                   Replacing <code className="text-red-300">0.0.0.0/0</code> with <code className="text-emerald-300">35.235.240.0/20</code> blocks direct internet packets to your VM&apos;s public IP on port 22. Running plain{' '}
                   <code className="text-amber-300">gcloud compute ssh &lt;vm-name&gt;</code> in your local bash terminal will stall/time out unless you add{' '}
                   <code className="text-emerald-300 font-bold">--tunnel-through-iap</code>:

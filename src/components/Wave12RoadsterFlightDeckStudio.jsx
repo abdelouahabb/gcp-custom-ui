@@ -1550,8 +1550,9 @@ export default function Wave12RoadsterFlightDeckStudio({
                 <span className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                   12 CONCURRENT OFFICIAL *.GOOGLEAPIS.COM/MCP LANES · JSON-RPC 2.0 INSPECTOR
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-                  ⚡ Direct HTTPS JSON-RPC 2.0 · No gcloud Required
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                  <Zap className="w-3 h-3 shrink-0" />
+                  Direct HTTPS JSON-RPC 2.0 · No gcloud Required
                 </span>
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">

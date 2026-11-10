@@ -36785,32 +36785,193 @@ function classifyLogEntryRootCause(entry, projectId) {
   const sev = String(entry.severity || 'INFO').toUpperCase();
   const proto = entry.protoPayload || {};
   const json = entry.jsonPayload || {};
+  const resType = String(entry.resource?.type || '').trim();
+  const resLabels = entry.resource?.labels || {};
+  const entryLabels = entry.labels || {};
+  const httpReq = entry.httpRequest || json.httpRequest || {};
+
+  // Decode clean log stream slug (e.g. "cloudaudit.googleapis.com/activity", "syslog", "run.googleapis.com/requests")
+  const rawLogName = String(entry.logName || '');
+  const logSlug = rawLogName.includes('/logs/')
+    ? decodeURIComponent(rawLogName.split('/logs/')[1] || '')
+    : rawLogName;
+
+  // Dedicated Cloud Monitoring Uptime Check (`uptime_url` / `monitoring.googleapis.com/uptime_checks`) decoder
+  if (
+    resType === 'uptime_url' ||
+    logSlug.includes('monitoring.googleapis.com/uptime_checks')
+  ) {
+    const targetHost =
+      resLabels.host ||
+      json.host ||
+      httpReq.requestUrl ||
+      `${projectId}.appspot.com`;
+    const checkerLoc =
+      entryLabels.checker_location ||
+      json.checkerLocation ||
+      json.location ||
+      resLabels.location ||
+      'global-edge';
+    const checkId =
+      entryLabels.check_id ||
+      json.checkId ||
+      json.configName ||
+      'uptime-probe';
+    const respCode = Number(
+      json.httpResponseCode ||
+        json.responseCode ||
+        json.checkResult?.responseCode ||
+        httpReq.status ||
+        proto.status?.code ||
+        (sev === 'ERROR' || sev === 'CRITICAL' ? 503 : 200)
+    );
+    const latencyVal =
+      json.requestLatency ||
+      json.latency ||
+      json.checkResult?.requestLatency ||
+      httpReq.latency ||
+      '';
+    const passedFlag =
+      json.passed !== false &&
+      json.checkResult?.passed !== false &&
+      respCode < 400 &&
+      sev !== 'ERROR' &&
+      sev !== 'CRITICAL';
+    const errDetail =
+      entry.textPayload ||
+      json.errorMessage ||
+      json.failureReason ||
+      json.status?.message ||
+      json.message ||
+      '';
+
+    if (!passedFlag) {
+      return {
+        clusterKey: 'UPTIME_PROBE_ENDPOINT_FAILURE',
+        clusterTitle: 'Global Uptime Probe Endpoint Failure (Synthetic Check)',
+        severity: 'CRITICAL',
+        isTrueError: true,
+        isWarRoomDrill: false,
+        isWarRoomResolved: false,
+        serviceName: `monitoring.googleapis.com (${targetHost})`,
+        methodName: `UptimeProbe[${checkerLoc}] -> HTTP ${respCode}`,
+        principal: `cloud-monitoring-uptime@${checkerLoc}`,
+        summary: `Global Uptime Probe [${checkerLoc}] FAILED on https://${targetHost} -> HTTP ${respCode}${
+          errDetail ? ` (${errDetail})` : ''
+        }`,
+        whyFlagged:
+          'An external Google Cloud Monitoring synthetic uptime probe failed to receive a healthy 2xx response from the target endpoint, indicating perimeter reachability loss or gateway 5xx degradation.',
+        remediationAction: 'RESOLVE_INCIDENT_OR_SCALE',
+        remediationLabel: '1-Click Inspect & Restore Endpoint',
+        hotfixCli: `gcloud logging read 'resource.type="uptime_url" AND severity>=ERROR' --project=${projectId} --limit=10`,
+      };
+    }
+
+    return {
+      clusterKey: 'GLOBAL_UPTIME_SYNTHETIC_HEARTBEAT',
+      clusterTitle:
+        'Global Synthetic Uptime Probe Heartbeats (Multi-Region 200 OK)',
+      severity: 'INFO',
+      isTrueError: false,
+      isWarRoomDrill: false,
+      isWarRoomResolved: false,
+      serviceName: `monitoring.googleapis.com (${targetHost})`,
+      methodName: `UptimeProbe[${checkerLoc}] -> HTTP ${respCode}`,
+      principal: `cloud-monitoring-uptime@${checkerLoc}`,
+      summary: `Synthetic Uptime Check "${checkId}" from [${checkerLoc}] verified https://${targetHost} -> HTTP ${respCode} OK${
+        latencyVal ? ` (${latencyVal})` : ''
+      }`,
+      whyFlagged:
+        'Healthy multi-region Cloud Monitoring synthetic uptime probe confirming external TLS/HTTP reachability. Deduplicated per probe location so routine 60s heartbeats never mask real control-plane or runtime errors.',
+      remediationAction: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
+      remediationLabel: '1-Click Verify Global Uptime Check',
+      hotfixCli: `gcloud monitoring uptime list-configs --project=${projectId}`,
+    };
+  }
+
+  // Derive specific Google Cloud service/resource identifier (never raw generic fallback)
+  const resourceTargetLabel =
+    resLabels.service_name ||
+    resLabels.configuration_name ||
+    resLabels.job_name ||
+    (resLabels.bucket_name ? `gs://${resLabels.bucket_name}` : '') ||
+    (resLabels.dataset_id ? `bq:${resLabels.dataset_id}` : '') ||
+    (resLabels.cluster_name
+      ? `gke:${resLabels.cluster_name}${
+          resLabels.container_name ? '/' + resLabels.container_name : ''
+        }`
+      : '') ||
+    (resLabels.instance_id ? `gce:${resLabels.instance_id}` : '') ||
+    resLabels.database_id ||
+    '';
+
+  const serviceName =
+    proto.serviceName ||
+    json.serviceName ||
+    (resType && resourceTargetLabel
+      ? `${resType}(${resourceTargetLabel})`
+      : '') ||
+    resourceTargetLabel ||
+    (logSlug ? logSlug.split('/')[0] : '') ||
+    resType ||
+    'gcp-control-plane';
+
+  // Derive specific API method, HTTP route, or syslog unit (never generic "runtime.event")
+  let httpRouteSummary = '';
+  if (httpReq.requestMethod || httpReq.requestUrl) {
+    let shortUrl = String(httpReq.requestUrl || '');
+    try {
+      const parsedU = new URL(shortUrl);
+      shortUrl = `${parsedU.host}${parsedU.pathname}`;
+    } catch {
+      // relative path
+    }
+    httpRouteSummary = `${httpReq.requestMethod || 'HTTP'} ${shortUrl}${
+      httpReq.status ? ` -> ${httpReq.status}` : ''
+    }${httpReq.latency ? ` (${httpReq.latency})` : ''}`.trim();
+  }
+
+  const syslogUnit =
+    json.SYSLOG_IDENTIFIER ||
+    json.syslog_tag ||
+    json._SYSTEMD_UNIT ||
+    entryLabels['compute.googleapis.com/resource_name'] ||
+    '';
+
+  const methodName =
+    proto.methodName ||
+    httpRouteSummary ||
+    json.event_subtype ||
+    json.operation?.producer ||
+    syslogUnit ||
+    (logSlug ? logSlug.replace(/^cloudaudit\.googleapis\.com\//, 'audit:') : '') ||
+    resType ||
+    'control-plane.telemetry';
+
   const text =
     entry.textPayload ||
     proto.status?.message ||
     json.message ||
     json.msg ||
-    proto.methodName ||
+    json.error?.message ||
+    json.log ||
+    (proto.resourceName
+      ? `${methodName} on ${proto.resourceName}`
+      : httpRouteSummary) ||
     '';
-  const serviceName =
-    proto.serviceName ||
-    json.serviceName ||
-    entry.resource?.type ||
-    'cloud-runtime';
-  const methodName =
-    proto.methodName || json.httpRequest?.requestUrl || 'runtime.event';
+
   const principal =
     proto.authenticationInfo?.principalEmail ||
     json.principal ||
-    'system-service-account';
+    json.actor?.email ||
+    (syslogUnit ? `host:${syslogUnit}` : 'gcp-managed-service-agent');
   const statusCode = Number(
-    proto.status?.code || entry.httpRequest?.status || 0
+    proto.status?.code || httpReq.status || json.status?.code || 0
   );
   const isWarRoomDrill =
-    entry.labels?.['cloudpulse-war-room'] === 'live-drill' ||
-    String(entry.logName || '').includes('cloudpulse-sre-war-room');
-  const isWarRoomResolved =
-    entry.labels?.['cloudpulse-war-room'] === 'resolved';
+    entryLabels['cloudpulse-war-room'] === 'live-drill' ||
+    rawLogName.includes('cloudpulse-sre-war-room');
+  const isWarRoomResolved = entryLabels['cloudpulse-war-room'] === 'resolved';
 
   const combined = `${sev} ${serviceName} ${methodName} ${text}`.toLowerCase();
 
@@ -37004,7 +37165,9 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
     const encProj = encodeURIComponent(projectId);
 
     const [
-      logsRes,
+      highSignalLogsRes,
+      serviceLogsRes,
+      uptimeSampleLogsRes,
       logMetricsRes,
       uptimeChecksRes,
       alertPoliciesRes,
@@ -37013,6 +37176,7 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
       appEngineRes,
       bqRes,
     ] = await Promise.allSettled([
+      // 1A. High-Signal Root-Cause Stream: Warnings, Errors, HTTP >=400, Cloud Audit Mutations & War-Room Drills
       gcpFetch(
         'https://logging.googleapis.com/v2/entries:list',
         token,
@@ -37022,10 +37186,46 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
           headers: { 'Content-Type': 'application/json' },
           body: {
             resourceNames: [`projects/${projectId}`],
-            pageSize: 60,
+            filter:
+              'severity>=WARNING OR httpRequest.status>=400 OR logName:"cloudaudit.googleapis.com" OR logName:"cloudpulse-sre-war-room" OR (resource.type="uptime_url" AND severity>=ERROR)',
+            pageSize: 45,
             orderBy: 'timestamp desc',
           },
           timeout: 6500,
+        }
+      ),
+      // 1B. Live Service & Workload Data-Plane Stream (excludes noisy 60s `uptime_url` pings)
+      gcpFetch(
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            resourceNames: [`projects/${projectId}`],
+            filter: 'NOT resource.type="uptime_url"',
+            pageSize: 30,
+            orderBy: 'timestamp desc',
+          },
+          timeout: 6500,
+        }
+      ),
+      // 1C. Bounded Synthetic Uptime Heartbeat Sample (latest 6 global probe pings, deduplicated by probe region)
+      gcpFetch(
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            resourceNames: [`projects/${projectId}`],
+            filter: 'resource.type="uptime_url"',
+            pageSize: 8,
+            orderBy: 'timestamp desc',
+          },
+          timeout: 5500,
         }
       ),
       gcpFetch(
@@ -37072,10 +37272,60 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
       ),
     ]);
 
-    const rawEntries =
-      logsRes.status === 'fulfilled' && Array.isArray(logsRes.value?.entries)
-        ? logsRes.value.entries
+    const highSignalEntries =
+      highSignalLogsRes.status === 'fulfilled' &&
+      Array.isArray(highSignalLogsRes.value?.entries)
+        ? highSignalLogsRes.value.entries
         : [];
+    const serviceEntries =
+      serviceLogsRes.status === 'fulfilled' &&
+      Array.isArray(serviceLogsRes.value?.entries)
+        ? serviceLogsRes.value.entries
+        : [];
+    const uptimeSampleEntries =
+      uptimeSampleLogsRes.status === 'fulfilled' &&
+      Array.isArray(uptimeSampleLogsRes.value?.entries)
+        ? uptimeSampleLogsRes.value.entries
+        : [];
+
+    // Deduplicate entries by insertId and collapse repetitive healthy `uptime_url` pings to 1 per probe location
+    const seenInsertIds = new Set();
+    const seenHealthyUptimeProbeKeys = new Set();
+    const mergedEntries = [];
+    for (const e of [
+      ...highSignalEntries,
+      ...serviceEntries,
+      ...uptimeSampleEntries,
+    ]) {
+      if (!e) continue;
+      const insId =
+        e.insertId ||
+        `${e.timestamp || ''}-${e.logName || ''}-${
+          e.protoPayload?.methodName || ''
+        }`;
+      if (seenInsertIds.has(insId)) continue;
+      seenInsertIds.add(insId);
+
+      const isHealthyUptimePing =
+        e.resource?.type === 'uptime_url' &&
+        String(e.severity || 'INFO').toUpperCase() !== 'ERROR' &&
+        String(e.severity || 'INFO').toUpperCase() !== 'CRITICAL';
+      if (isHealthyUptimePing) {
+        const probeKey = `${e.labels?.check_id || 'check'}:${
+          e.labels?.checker_location || 'global'
+        }`;
+        if (seenHealthyUptimeProbeKeys.has(probeKey)) continue;
+        seenHealthyUptimeProbeKeys.add(probeKey);
+      }
+      mergedEntries.push(e);
+    }
+
+    mergedEntries.sort(
+      (a, b) =>
+        new Date(b.timestamp || 0).getTime() -
+        new Date(a.timestamp || 0).getTime()
+    );
+    const rawEntries = mergedEntries;
 
     // Find the timestamp of the most recent War-Room `resolved` marker so older drill logs don't keep P1 active after mitigation
     let latestResolvedMs = 0;
@@ -37086,17 +37336,22 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
       }
     }
 
+    const nowMs = Date.now();
+    const activeBurnWindowMs = 60 * 60 * 1000; // 1-hour live Google SRE fast-burn window
     const clustersMap = new Map();
-    const parsedTimeline = rawEntries.slice(0, 50).map((e, idx) => {
+    const parsedTimeline = rawEntries.slice(0, 60).map((e, idx) => {
       const classified = classifyLogEntryRootCause(e, projectId);
       const entryMs = new Date(e.timestamp || 0).getTime();
       const isMitigatedDrill =
         classified.isWarRoomDrill &&
         latestResolvedMs > 0 &&
         entryMs <= latestResolvedMs;
+      const isWithinLive1hWindow =
+        entryMs > 0 && nowMs - entryMs <= activeBurnWindowMs;
 
+      // Historical errors (>1h old) still surface in Root-Cause Forensic Clusters without triggering false live 1h P1 burn
       const effectiveIsTrueError =
-        classified.isTrueError && !isMitigatedDrill;
+        classified.isTrueError && !isMitigatedDrill && isWithinLive1hWindow;
 
       const existing = clustersMap.get(classified.clusterKey) || {
         clusterKey: classified.clusterKey,

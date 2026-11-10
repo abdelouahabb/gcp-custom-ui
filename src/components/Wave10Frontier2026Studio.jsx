@@ -20,6 +20,9 @@ import {
   ArrowRight,
   Server,
   Terminal,
+  Zap,
+  Flame,
+  RotateCcw,
 } from 'lucide-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
@@ -890,7 +893,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
               </span>
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              Most engineers still think Cloud Spanner costs $730+/month minimum and only stores relational rows. With Granular Processing Units (`100 PU = 1/10th Node`), you get globally consistent TrueTime relational tables, ISO GQL Property Graphs, and 768-dim ScaNN Vector Search in a single database starting at <strong>$65.70/month</strong>.
+              Most engineers still think Cloud Spanner costs $730+/month minimum and only stores relational rows. With Granular Processing Units (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">100 PU = 1/10th Node</code>), you get globally consistent TrueTime relational tables, ISO GQL Property Graphs, and 768-dim ScaNN Vector Search in a single database starting at <strong>$65.70/month</strong>.
             </p>
           </div>
 
@@ -1281,7 +1284,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-mono font-bold text-blue-400">
-                  Reproducible `gcloud spanner instances create` Command
+                  Reproducible <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">gcloud spanner instances create</code> Command
                 </span>
                 <div className="flex items-center gap-1.5">
                   {onRunInShell && (
@@ -1438,7 +1441,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Physical `INTERLEAVE IN PARENT` Architect
+                    Physical <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">INTERLEAVE IN PARENT</code> Architect
                   </h3>
                   <p className="text-[11px] text-zinc-500">
                     Unlike standard foreign keys, Spanner physically co-locates child rows inside the same storage split as their parent row for 0-network-hop joins.
@@ -1463,7 +1466,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 </div>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    Level 1 Interleaved Child Table (`INTERLEAVE IN PARENT {parentTable}`)
+                    Level 1 Interleaved Child Table (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">INTERLEAVE IN PARENT {parentTable}</code>)
                   </label>
                   <input
                     type="text"
@@ -1474,7 +1477,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 </div>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    Level 2 Grandchild Table (`INTERLEAVE IN PARENT {childTable}`)
+                    Level 2 Grandchild Table (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">INTERLEAVE IN PARENT {childTable}</code>)
                   </label>
                   <input
                     type="text"
@@ -1627,7 +1630,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                       <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-0.5 truncate">
                         {spannerArtifacts.activePreset.results[0]?.service_id ||
                           'wallet-ingress-api'}{' '}
-                        ──(&lt;{gqlMaxLatencyMs}ms)──▶{' '}
+                        ──(&lt;{gqlMaxLatencyMs}ms)──&rarr;{' '}
                         {spannerArtifacts.activePreset.results[0]?.db_id ||
                           `${spannerName} (${gqlHopDepth}-Hop)`}
                       </div>
@@ -1708,7 +1711,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
-                  Unified Interleaved Relational + `CREATE PROPERTY GRAPH` DDL
+                  Unified Interleaved Relational + <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">CREATE PROPERTY GRAPH</code> DDL
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -1747,7 +1750,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                   Interactive Mermaid Data Schema &amp; ISO GQL Topology Visualizer (Full-Width · Zoom &amp; Pan)
                 </div>
                 <p className="text-[11px] text-zinc-500">
-                  Live-compiled from your `{parentTable}` → `{childTable}` → `{grandchildTable}` interleaved hierarchy and `{gqlHopDepth}`-hop `{selectedGqlPreset}` graph query. Use <strong>160% / 240% / Fullscreen</strong> or double-click the canvas to zoom and drag-pan.
+                  Live-compiled from your <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{parentTable}</code> &rarr; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{childTable}</code> &rarr; <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{grandchildTable}</code> interleaved hierarchy and <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{gqlHopDepth}</code>-hop <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">{selectedGqlPreset}</code> graph query. Use <strong>160% / 240% / Fullscreen</strong> or double-click the canvas to zoom and drag-pan.
                 </p>
               </div>
               <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-0.5">
@@ -1807,7 +1810,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                     Spanner ScaNN Vector Index &amp; Vertex AI Model Binding
                   </h3>
                   <p className="text-[11px] text-zinc-500">
-                    Configure Google Research ScaNN (`VECTOR INDEX`) directly on `ARRAY&lt;FLOAT32&gt;` columns with zero external vector database drift.
+                    Configure Google Research ScaNN (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">VECTOR INDEX</code>) directly on <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">ARRAY&lt;FLOAT32&gt;</code> columns with zero external vector database drift.
                   </p>
                 </div>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
@@ -1856,7 +1859,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
 
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    ScaNN Partition Leaves (`num_leaves`)
+                    ScaNN Partition Leaves (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">num_leaves</code>)
                   </label>
                   <input
                     type="number"
@@ -1868,7 +1871,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
 
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    Hybrid GraphRAG Top-K (`LIMIT`)
+                    Hybrid GraphRAG Top-K (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">LIMIT</code>)
                   </label>
                   <input
                     type="number"
@@ -1908,7 +1911,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
-                  1. Vertex AI Remote Embedding Model &amp; ScaNN `VECTOR INDEX` DDL
+                  1. Vertex AI Remote Embedding Model &amp; ScaNN <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">VECTOR INDEX</code> DDL
                 </span>
                 <button
                   type="button"
@@ -1931,7 +1934,7 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
-                  2. Hybrid GraphRAG Query (`GRAPH_TABLE` + `APPROX_{distanceMetric}_DISTANCE`)
+                  2. Hybrid GraphRAG Query (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">GRAPH_TABLE</code> + <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">APPROX_{distanceMetric}_DISTANCE</code>)
                 </span>
                 <button
                   type="button"
@@ -2047,7 +2050,7 @@ LIMIT 25;`,
           },
           BOUNDED_STALENESS: {
             badge: 'SUB-2ms LOCAL REPLICA · ZERO LEADER ROUNDTRIP',
-            title: '2. Bounded Staleness Read (`MAX_STALENESS = 15s` Local Edge Read)',
+            title: '2. Bounded Staleness Read (MAX_STALENESS = 15s Local Edge Read)',
             whenToUse:
               'Use for high-QPS product catalogs, dashboards, and AI feature lookups. Because TrueTime knows the exact clock bound, any local replica serves the read in <2ms without contacting the leader!',
             estReadLatency: '1.4 ms (Even during Quorum loss!)',
@@ -2120,7 +2123,7 @@ LIMIT 25;`,
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
-                      Google TrueTime Atomic Clock (`[earliest, latest]` &lt;7ms) &amp; Interactive 5-Way Paxos Quorum Simulator
+                      Google TrueTime Atomic Clock (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">[earliest, latest]</code> &lt;7ms) &amp; Interactive 5-Way Paxos Quorum Simulator
                     </h3>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
@@ -2135,7 +2138,7 @@ LIMIT 25;`,
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    <strong>Why this matters to you:</strong> Traditional multi-region DBs drift by ±150ms (NTP), forcing you to choose between <strong>stale reads / double-spend bugs</strong> or <strong>slow 120ms cross-ocean locks</strong>. Spanner uses GPS + atomic clocks (`2ε = {commitWaitMs}ms` commit wait) so <strong>any local replica serves consistent lock-free reads in &lt;5ms</strong> and survives a full regional blackout with <strong>0 lost transactions</strong>.
+                    <strong>Why this matters to you:</strong> Traditional multi-region DBs drift by ±150ms (NTP), forcing you to choose between <strong>stale reads / double-spend bugs</strong> or <strong>slow 120ms cross-ocean locks</strong>. Spanner uses GPS + atomic clocks (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">2ε = {commitWaitMs}ms</code> commit wait) so <strong>any local replica serves consistent lock-free reads in &lt;5ms</strong> and survives a full regional blackout with <strong>0 lost transactions</strong>.
                   </p>
                 </div>
 
@@ -2151,9 +2154,12 @@ LIMIT 25;`,
                         );
                       }
                     }}
-                    className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
                   >
-                    ⚡ Simulate Full `us-central1` Blackout (Kill 2 Zones)
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Simulate Full <code className="px-1 py-0.5 rounded bg-amber-500/20 font-mono text-[0.92em]">us-central1</code> Blackout (Kill 2 Zones)
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -2169,9 +2175,10 @@ LIMIT 25;`,
                         );
                       }
                     }}
-                    className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border border-red-500/30 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border border-red-500/30 cursor-pointer"
                   >
-                    🔥 Simulate 3-Zone Outage (Test Split-Brain Guard)
+                    <Flame className="w-3.5 h-3.5 shrink-0" />
+                    <span>Simulate 3-Zone Outage (Test Split-Brain Guard)</span>
                   </button>
                   {offlinePaxosZones.length > 0 && (
                     <button
@@ -2182,9 +2189,10 @@ LIMIT 25;`,
                           onShowToast('Restored all 5 Paxos zones to 100% healthy.');
                         }
                       }}
-                      className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                     >
-                      ↺ Restore All 5 Zones
+                      <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                      <span>Restore All 5 Zones</span>
                     </button>
                   )}
                 </div>
@@ -2194,14 +2202,14 @@ LIMIT 25;`,
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 flex-wrap gap-2">
                   <span>
-                    <strong>Interactive 5-Zone Multi-Region Paxos Topology (`nam6`):</strong> Click any zone card below to toggle outage and see live quorum &amp; failover behavior:
+                    <strong>Interactive 5-Zone Multi-Region Paxos Topology (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">nam6</code>):</strong> Click any zone card below to toggle outage and see live quorum &amp; failover behavior:
                   </span>
                   <span>
-                    TrueTime Uncertainty (`ε`):{' '}
+                    TrueTime Uncertainty (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">ε</code>):{' '}
                     <strong className="text-blue-600 dark:text-blue-400">
                       ±{trueTimeEpsilonMs}ms
                     </strong>{' '}
-                    → Commit Wait (`2ε`):{' '}
+                    &rarr; Commit Wait (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">2ε</code>):{' '}
                     <strong className="text-emerald-600 dark:text-emerald-400">
                       {commitWaitMs}ms
                     </strong>
@@ -2334,7 +2342,9 @@ LIMIT 25;`,
                         </strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Write Commit Wait (`2ε`):</span>
+                        <span className="text-zinc-500">
+                          Write Commit Wait (<code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">2ε</code>):
+                        </span>
                         <strong className="text-blue-600 dark:text-blue-400">
                           {commitWaitMs} ms
                         </strong>
@@ -2359,9 +2369,16 @@ LIMIT 25;`,
                         onClick={() =>
                           copyText(activeReadConfig.sqlSnippet, 'TRUETIME_SQL')
                         }
-                        className="px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
                       >
-                        {copiedKey === 'TRUETIME_SQL' ? '✓ Copied SQL' : 'Copy TrueTime SQL'}
+                        {copiedKey === 'TRUETIME_SQL' ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                            <span>Copied SQL</span>
+                          </>
+                        ) : (
+                          'Copy TrueTime SQL'
+                        )}
                       </button>
                       {onOpenBigQuerySql && (
                         <button
@@ -2373,7 +2390,7 @@ LIMIT 25;`,
                           }
                           className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                         >
-                          Federated Query in BigQuery →
+                          Federated Query in BigQuery &rarr;
                         </button>
                       )}
                       {onRunInShell && (
@@ -2382,7 +2399,7 @@ LIMIT 25;`,
                           onClick={() => onRunInShell(activeReadConfig.cliCmd)}
                           className="px-2.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-[10.5px] font-mono font-bold cursor-pointer"
                         >
-                          Run `gcloud spanner` in Shell →
+                          Run <code className="px-1 py-0.5 rounded bg-zinc-800 font-mono text-[0.92em]">gcloud spanner</code> in Shell &rarr;
                         </button>
                       )}
                     </div>
@@ -2507,7 +2524,7 @@ LIMIT 25;`,
             <div className="lg:col-span-7 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
-                  `CREATE CHANGE STREAM` DDL ({spannerDialect})
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">CREATE CHANGE STREAM</code> DDL ({spannerDialect})
                 </span>
                 <button
                   type="button"

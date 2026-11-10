@@ -107,7 +107,16 @@ export default function CloudStorageStudio({
 }) {
   const { version: pricingVersion, unitPricing } = useLivePricingCatalog();
 
-  const [activeSubTab, setActiveSubTab] = useState(initialSubTab || 'BUCKETS');
+  const normalizeStorageSubTab = (subId) =>
+    subId === 'OBJECT_WORKBENCH'
+      ? 'OBJECTS'
+      : subId === 'RAM_DLP'
+      ? 'DLP_XRAY'
+      : subId;
+
+  const [activeSubTab, setActiveSubTab] = useState(
+    normalizeStorageSubTab(initialSubTab) || 'BUCKETS'
+  );
 
   useEffect(() => {
     if (typeof onSubTabChange === 'function') {
@@ -403,9 +412,10 @@ export default function CloudStorageStudio({
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      const normalized = normalizeStorageSubTab(initialSubTab);
+      setActiveSubTab(normalized);
       if (
-        initialSubTab === 'S3_COMPATIBLE_IMPORT' &&
+        normalized === 'S3_COMPATIBLE_IMPORT' &&
         s3RemoteObjects.length === 0
       ) {
         handleListS3Compatible(true, s3ProviderType);

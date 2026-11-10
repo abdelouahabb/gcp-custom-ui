@@ -20,6 +20,8 @@ import {
   ChevronUp,
   Lock,
   Globe,
+  Pin,
+  RefreshCw,
 } from 'lucide-react';
 import VisualCronScheduleBuilder, {
   describeCronInPlainEnglish,
@@ -2202,7 +2204,7 @@ export default function ResourceProvisionModal({
           badge: 'ALWAYS FREE TIER ($0.00/MO · 1st e2-micro + ≤30GB pd-standard)',
           detail: `$0.00/mo under Google Cloud Always Free Tier (1st non-preemptible e2-micro in ${vmRegion} + ${totalDiskGb}GB pd-standard · ${
             !externalIpEnabled || externalIpMode === 'NONE'
-              ? '🔒 --no-address Private VPC/IAP'
+              ? '--no-address Private VPC/IAP'
               : 'Ephemeral IPv4 included'
           } · $7.33/mo list price waived)`,
         };
@@ -2241,10 +2243,10 @@ export default function ResourceProvisionModal({
           attachDataDisk ? ` + ${dataDiskSizeGb}GB ${dataDiskType}` : ''
         }${localSsdCount > 0 ? ` + ${localSsdCount}x375GB NVMe` : ''} · ${
           !externalIpEnabled || externalIpMode === 'NONE'
-            ? '🔒 Zero Public IP (--no-address · -$3.65/mo saved)'
+            ? 'Zero Public IP (--no-address · -$3.65/mo saved)'
             : externalIpMode === 'STATIC'
-            ? `📌 Static IPv4 (${staticExternalIp || 'reserved'} · +$3.65/mo)`
-            : '🌐 Ephemeral Public IPv4 (+$3.65/mo)'
+            ? `Static IPv4 (${staticExternalIp || 'reserved'} · +$3.65/mo)`
+            : 'Ephemeral Public IPv4 (+$3.65/mo)'
         }`,
       };
     }
@@ -2898,7 +2900,11 @@ export default function ResourceProvisionModal({
               <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 flex-wrap">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>
-                  Google Cloud &ldquo;Always Free&rdquo; Tier Guardrail (`$0.00/mo` Spec)
+                  Google Cloud &ldquo;Always Free&rdquo; Tier Guardrail (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    $0.00/mo
+                  </code>{' '}
+                  Spec)
                 </span>
                 <a
                   href="https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits"
@@ -2968,11 +2974,14 @@ export default function ResourceProvisionModal({
                     setGkeGpuAcceleratorType('NONE');
                   }
                 }}
-                className="shrink-0 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
               >
-                {liveCostEstimate.monthly === 0 && liveCostEstimate.hourly === 0
-                  ? '✓ Always Free Tier Active ($0.00/mo)'
-                  : serviceType === 'COMPUTE_VM'
+                {liveCostEstimate.monthly === 0 && liveCostEstimate.hourly === 0 ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Always Free Tier Active ($0.00/mo)</span>
+                  </>
+                ) : serviceType === 'COMPUTE_VM'
                   ? 'Lock Always Free VM (e2-micro + 30GB pd-standard)'
                   : serviceType === 'CLOUD_RUN'
                   ? 'Lock Always Free Cloud Run ($0 Idle · 2M req/mo)'
@@ -3259,9 +3268,16 @@ export default function ResourceProvisionModal({
                     type="button"
                     onClick={() => fetchServiceAccounts(true)}
                     disabled={loadingSa}
-                    className="text-[11px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] cursor-pointer"
                   >
-                    {loadingSa ? 'Syncing IAM...' : '↻ Refresh SAs'}
+                    {loadingSa ? (
+                      'Syncing IAM...'
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3 h-3 shrink-0" />
+                        <span>Refresh SAs</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -3300,7 +3316,7 @@ export default function ResourceProvisionModal({
                       .filter((sa) => !sa.disabled)
                       .map((sa) => (
                         <option key={sa.email} value={sa.email}>
-                          {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
+                          {sa.isCustom ? '[CUSTOM SA] ' : '[DEFAULT SA] '}
                           {sa.email}
                           {sa.displayName ? ` — ${sa.displayName}` : ''}
                         </option>
@@ -3309,8 +3325,9 @@ export default function ResourceProvisionModal({
                 </div>
                 <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
                   {selectedServiceAccount ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                      ✓ Explicit SA attached (prevents Compute SA 403)
+                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span>Explicit SA attached (prevents Compute SA 403)</span>
                     </span>
                   ) : (
                     <span>Select an existing project Service Account</span>
@@ -3322,7 +3339,15 @@ export default function ResourceProvisionModal({
                 <div className="mt-2 p-2.5 rounded-lg bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] font-mono">
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      Live Pre-Provision Simulation (`projects.testIamPermissions` + `actAs` + Egress)
+                      Live Pre-Provision Simulation (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        projects.testIamPermissions
+                      </code>{' '}
+                      +{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        actAs
+                      </code>{' '}
+                      + Egress)
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -3349,9 +3374,13 @@ export default function ResourceProvisionModal({
                         }`}
                       >
                         <div className="space-y-0.5 min-w-0">
-                          <div className="font-bold truncate">
-                            {chk.passed ? '✓ ' : chk.isAdvisory ? '' : '✗ '}
-                            {chk.label}
+                          <div className="font-bold truncate flex items-center gap-1">
+                            {chk.passed ? (
+                              <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                            ) : chk.isAdvisory ? null : (
+                              <X className="w-3 h-3 text-red-500 shrink-0" />
+                            )}
+                            <span className="truncate">{chk.label}</span>
                           </div>
                           <div className="text-[10px] opacity-85 leading-snug">
                             {chk.detail}
@@ -3515,7 +3544,11 @@ export default function ResourceProvisionModal({
 
                   <div>
                     <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                      Internal ULA IPv6 Addressing (`fd20::/48`)
+                      Internal ULA IPv6 Addressing (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        fd20::/48
+                      </code>
+                      )
                     </label>
                     <button
                       type="button"
@@ -3589,9 +3622,45 @@ export default function ResourceProvisionModal({
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-bold text-emerald-700 dark:text-emerald-300">
-                        Auto-Mode Global Subnet Allocation (`--subnet-mode=auto`):
+                        Auto-Mode Global Subnet Allocation (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --subnet-mode=auto
+                        </code>
+                        ):
                       </span>{' '}
-                      Google Cloud automatically provisions one `/20` subnet (`4,092` usable IPs) in every GCP region out of the `10.128.0.0/9` block (`us-central1` = `10.128.0.0/20`, `europe-west1` = `10.132.0.0/20`, etc.). Ideal for rapid multi-region VM deployments at `$0.00/mo`.
+                      Google Cloud automatically provisions one{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        /20
+                      </code>{' '}
+                      subnet (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        4,092
+                      </code>{' '}
+                      usable IPs) in every GCP region out of the{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        10.128.0.0/9
+                      </code>{' '}
+                      block (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        us-central1
+                      </code>{' '}
+                      ={' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        10.128.0.0/20
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        europe-west1
+                      </code>{' '}
+                      ={' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        10.132.0.0/20
+                      </code>
+                      , etc.). Ideal for rapid multi-region VM deployments at{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        $0.00/mo
+                      </code>
+                      .
                     </div>
                   </div>
                 ) : (
@@ -3688,7 +3757,11 @@ export default function ResourceProvisionModal({
                             Private Google Access (PGA)
                           </div>
                           <div className="text-[10px] text-zinc-500">
-                            Reach GCS/BigQuery/APIs from `--no-address` VMs ($0.00)
+                            Reach GCS/BigQuery/APIs from{' '}
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              --no-address
+                            </code>{' '}
+                            VMs ($0.00)
                           </div>
                         </div>
                         <button
@@ -3786,10 +3859,22 @@ export default function ResourceProvisionModal({
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <span className="text-[11px] font-mono font-bold text-indigo-900 dark:text-indigo-200">
-                            3. VPC-Native GKE Secondary IP Alias Ranges (`secondaryIpRanges`)
+                            3. VPC-Native GKE Secondary IP Alias Ranges (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              secondaryIpRanges
+                            </code>
+                            )
                           </span>
                           <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                            Pre-allocate dedicated Pod (`/14` = 262,140 IPs) and Service (`/20` = 4,092 IPs) alias ranges so GKE Autopilot/Standard clusters route natively without VXLAN overlay.
+                            Pre-allocate dedicated Pod (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              /14
+                            </code>{' '}
+                            = 262,140 IPs) and Service (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              /20
+                            </code>{' '}
+                            = 4,092 IPs) alias ranges so GKE Autopilot/Standard clusters route natively without VXLAN overlay.
                           </p>
                         </div>
                         <button
@@ -3820,7 +3905,11 @@ export default function ResourceProvisionModal({
                           </div>
                           <div>
                             <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
-                              Pod Secondary CIDR (`/14` = 262k Pods)
+                              Pod Secondary CIDR (
+                              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                                /14
+                              </code>{' '}
+                              = 262k Pods)
                             </label>
                             <input
                               type="text"
@@ -3842,7 +3931,11 @@ export default function ResourceProvisionModal({
                           </div>
                           <div>
                             <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
-                              Service Secondary CIDR (`/20` = 4k Svcs)
+                              Service Secondary CIDR (
+                              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                                /20
+                              </code>{' '}
+                              = 4k Svcs)
                             </label>
                             <input
                               type="text"
@@ -3957,7 +4050,11 @@ export default function ResourceProvisionModal({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-1">
                       <span className="text-[11px] font-mono font-bold">
-                        Provision Cloud Router + Cloud NAT Outbound Gateway (for `--no-address` Private VMs)
+                        Provision Cloud Router + Cloud NAT Outbound Gateway (for{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --no-address
+                        </code>{' '}
+                        Private VMs)
                       </span>
                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
                         {vpcBootstrapCloudNat
@@ -3966,7 +4063,40 @@ export default function ResourceProvisionModal({
                       </span>
                     </div>
                     <p className="text-[10px] opacity-85 leading-snug mt-0.5">
-                      Automatically creates `{name || 'vpc'}-nat-router` + `{name || 'vpc'}-cloud-nat` (`AUTO_ONLY`, `ALL_SUBNETWORKS_ALL_IP_RANGES`) in `{vpcPrimarySubnetRegion}` so VMs with `🔒 None (--no-address)` can pull `apt`, `pip`, Docker Hub, and GitHub packages without exposing any inbound public IPv4!
+                      Automatically creates{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        {name || 'vpc'}-nat-router
+                      </code>{' '}
+                      +{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        {name || 'vpc'}-cloud-nat
+                      </code>{' '}
+                      (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        AUTO_ONLY
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        ALL_SUBNETWORKS_ALL_IP_RANGES
+                      </code>
+                      ) in{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        {vpcPrimarySubnetRegion}
+                      </code>{' '}
+                      so VMs with{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] inline-flex items-center gap-1">
+                        <Lock className="w-2.5 h-2.5 shrink-0" />
+                        <span>None (--no-address)</span>
+                      </code>{' '}
+                      can pull{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        apt
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        pip
+                      </code>
+                      , Docker Hub, and GitHub packages without exposing any inbound public IPv4!
                     </p>
                   </div>
                 </button>
@@ -4138,24 +4268,26 @@ resource "google_compute_router_nat" "cloud_nat" {
                     <button
                       type="button"
                       onClick={() => setFirewallAction('ALLOW')}
-                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`inline-flex items-center justify-center gap-1 py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallAction === 'ALLOW'
                           ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      ✓ ALLOW
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span>ALLOW</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFirewallAction('DENY')}
-                      className={`py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                      className={`inline-flex items-center justify-center gap-1 py-2 px-2.5 rounded-md border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallAction === 'DENY'
                           ? 'bg-red-500/15 border-red-500 text-red-600 dark:text-red-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      ✕ DENY
+                      <X className="w-3.5 h-3.5 shrink-0" />
+                      <span>DENY</span>
                     </button>
                   </div>
                 </div>
@@ -4536,7 +4668,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                             : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'
                         }`}
                       >
-                        Custom vCPU / RAM Slider (`custom-N-M`)
+                        Custom vCPU / RAM Slider (
+                        <code className="px-1 py-0.5 rounded bg-black/15 dark:bg-white/10 font-mono text-[0.92em]">
+                          custom-N-M
+                        </code>
+                        )
                       </button>
                     </div>
                   </div>
@@ -4633,7 +4769,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                         <div>
                           <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Attach Dedicated Guest GPU (`guestAccelerators`)
+                            Attach Dedicated Guest GPU (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              guestAccelerators
+                            </code>
+                            )
                           </label>
                           <select
                             value={vmGpuType}
@@ -4664,24 +4804,38 @@ resource "google_compute_router_nat" "cloud_nat" {
                             <button
                               type="button"
                               onClick={() => setEnableNestedVirtualization((v) => !v)}
-                              className={`px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
+                              className={`inline-flex items-center justify-center gap-1 px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
                                 enableNestedVirtualization
                                   ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300'
                                   : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                               }`}
                             >
-                              {enableNestedVirtualization ? '✓ Nested KVM ON' : '○ Nested KVM'}
+                              {enableNestedVirtualization ? (
+                                <>
+                                  <Check className="w-3 h-3 shrink-0" />
+                                  <span>Nested KVM ON</span>
+                                </>
+                              ) : (
+                                '○ Nested KVM'
+                              )}
                             </button>
                             <button
                               type="button"
                               onClick={() => setEnableDisplayDevice((v) => !v)}
-                              className={`px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
+                              className={`inline-flex items-center justify-center gap-1 px-2 py-[7px] rounded-[8px] border text-[10.5px] font-mono font-bold cursor-pointer ${
                                 enableDisplayDevice
                                   ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                                   : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                               }`}
                             >
-                              {enableDisplayDevice ? '✓ Virtual Display' : '○ Headless GPU'}
+                              {enableDisplayDevice ? (
+                                <>
+                                  <Check className="w-3 h-3 shrink-0" />
+                                  <span>Virtual Display</span>
+                                </>
+                              ) : (
+                                '○ Headless GPU'
+                              )}
                             </button>
                           </div>
                         </div>
@@ -4750,7 +4904,7 @@ resource "google_compute_router_nat" "cloud_nat" {
                             type="button"
                             disabled={!currentCustomSeriesSpec.supportsExt}
                             onClick={handleToggleCustomExtendedMem}
-                            className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border transition-colors ${
+                            className={`w-full inline-flex items-center justify-center gap-1 rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border transition-colors ${
                               !currentCustomSeriesSpec.supportsExt
                                 ? 'bg-zinc-100 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-400 cursor-not-allowed'
                                 : vmCustomExtendedMem
@@ -4758,11 +4912,16 @@ resource "google_compute_router_nat" "cloud_nat" {
                                 : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 cursor-pointer'
                             }`}
                           >
-                            {!currentCustomSeriesSpec.supportsExt
-                              ? 'Strict 1–8 GB/vCPU (No Ext)'
-                              : vmCustomExtendedMem
-                              ? '✓ Extended RAM (Up to 16 GB/vCPU)'
-                              : 'Standard 1–8 GB/vCPU Ratio'}
+                            {!currentCustomSeriesSpec.supportsExt ? (
+                              'Strict 1–8 GB/vCPU (No Ext)'
+                            ) : vmCustomExtendedMem ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 shrink-0" />
+                                <span>Extended RAM (Up to 16 GB/vCPU)</span>
+                              </>
+                            ) : (
+                              'Standard 1–8 GB/vCPU Ratio'
+                            )}
                           </button>
                         </div>
                       </div>
@@ -4890,7 +5049,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Local NVMe Scratch SSDs (`375 GB` each)
+                        Local NVMe Scratch SSDs (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          375 GB
+                        </code>{' '}
+                        each)
                       </label>
                       <select
                         value={localSsdCount}
@@ -4912,7 +5075,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                       <div>
                         <div className="flex justify-between text-[11px] mb-1">
                           <span className="text-blue-700 dark:text-blue-300 font-bold">
-                            Hyperdisk Provisioned IOPS (`--provisioned-iops`)
+                            Hyperdisk Provisioned IOPS (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              --provisioned-iops
+                            </code>
+                            )
                           </span>
                           <span className="font-extrabold text-zinc-900 dark:text-white">
                             {provisionedIops.toLocaleString()} IOPS
@@ -4931,7 +5098,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                       <div>
                         <div className="flex justify-between text-[11px] mb-1">
                           <span className="text-blue-700 dark:text-blue-300 font-bold">
-                            Hyperdisk Provisioned Throughput (`--provisioned-throughput`)
+                            Hyperdisk Provisioned Throughput (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              --provisioned-throughput
+                            </code>
+                            )
                           </span>
                           <span className="font-extrabold text-zinc-900 dark:text-white">
                             {provisionedThroughput} MB/s
@@ -4954,20 +5125,31 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Secondary Data Disk (`--create-disk`)
+                        Secondary Data Disk (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --create-disk
+                        </code>
+                        )
                       </label>
                       <button
                         type="button"
                         onClick={() => setAttachDataDisk((v) => !v)}
-                        className={`w-full rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
+                        className={`w-full inline-flex items-center gap-1 rounded-[8px] px-2.5 py-[8px] text-xs font-mono font-bold border text-left cursor-pointer ${
                           attachDataDisk
                             ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
                             : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                         }`}
                       >
-                        {attachDataDisk
-                          ? `✓ Attached (${dataDiskSizeGb}GB ${dataDiskType})`
-                          : '+ Attach Extra Data Disk'}
+                        {attachDataDisk ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              Attached ({dataDiskSizeGb}GB {dataDiskType})
+                            </span>
+                          </>
+                        ) : (
+                          '+ Attach Extra Data Disk'
+                        )}
                       </button>
                     </div>
 
@@ -5005,7 +5187,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     ) : (
                       <div className="sm:col-span-2">
                         <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Cloud KMS CMEK Key (`--boot-disk-kms-key` — blank = Google-Managed AES-256)
+                          Cloud KMS CMEK Key (
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            --boot-disk-kms-key
+                          </code>{' '}
+                          — blank = Google-Managed AES-256)
                         </label>
                         <input
                           type="text"
@@ -5042,14 +5228,43 @@ resource "google_compute_router_nat" "cloud_nat" {
                 <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                      3. VPC Network Interface, External IPv4 (`None` / `Ephemeral` / `Static`), gVNIC &amp; Firewall Rules
+                      3. VPC Network Interface, External IPv4 (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        None
+                      </code>{' '}
+                      /{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        Ephemeral
+                      </code>{' '}
+                      /{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        Static
+                      </code>
+                      ), gVNIC &amp; Firewall Rules
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-                      {!externalIpEnabled || externalIpMode === 'NONE'
-                        ? '🔒 Zero Public IPv4 (--no-address) · Private VPC + Cloud IAP Tunnel + Cloud NAT (-$3.65/mo saved)'
-                        : externalIpMode === 'STATIC'
-                        ? `📌 Static External IPv4 (${staticExternalIp || 'reserved'} · ${networkTier} Tier) + Internal VPC IP`
-                        : `🌐 Ephemeral External IPv4 (${networkTier} Tier) + Internal VPC IP`}
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                      {!externalIpEnabled || externalIpMode === 'NONE' ? (
+                        <>
+                          <Lock className="w-3 h-3 shrink-0" />
+                          <span>
+                            Zero Public IPv4 (--no-address) · Private VPC + Cloud IAP Tunnel + Cloud NAT (-$3.65/mo saved)
+                          </span>
+                        </>
+                      ) : externalIpMode === 'STATIC' ? (
+                        <>
+                          <Pin className="w-3 h-3 shrink-0" />
+                          <span>
+                            Static External IPv4 ({staticExternalIp || 'reserved'} · {networkTier} Tier) + Internal VPC IP
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="w-3 h-3 shrink-0" />
+                          <span>
+                            Ephemeral External IPv4 ({networkTier} Tier) + Internal VPC IP
+                          </span>
+                        </>
+                      )}
                     </span>
                   </div>
 
@@ -5057,7 +5272,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
-                        External IPv4 Address (`nic0` Access Configuration)
+                        External IPv4 Address (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          nic0
+                        </code>{' '}
+                        Access Configuration)
                       </span>
                       <span className="text-[10px] font-mono text-zinc-500">
                         {!externalIpEnabled || externalIpMode === 'NONE'
@@ -5071,21 +5290,24 @@ resource "google_compute_router_nat" "cloud_nat" {
                       {[
                         {
                           mode: 'NONE',
-                          title: '🔒 None (--no-address)',
+                          Icon: Lock,
+                          title: 'None (--no-address)',
                           sub: 'No public IPv4 · SSH via Cloud IAP (35.235.240.0/20) · Outbound via Cloud NAT · Saves $3.65/mo',
                           activeCls:
                             'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300',
                         },
                         {
                           mode: 'EPHEMERAL',
-                          title: '🌐 Ephemeral Public IPv4',
+                          Icon: Globe,
+                          title: 'Ephemeral Public IPv4',
                           sub: 'Dynamic Google Cloud external IPv4 (ONE_TO_ONE_NAT) · Released if VM is stopped · $3.65/mo',
                           activeCls:
                             'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300',
                         },
                         {
                           mode: 'STATIC',
-                          title: '📌 Static Reserved IPv4',
+                          Icon: Pin,
+                          title: 'Static Reserved IPv4',
                           sub: 'Bind a permanent regional reserved external IPv4 (--address) for DNS / allowlists · $3.65/mo',
                           activeCls:
                             'bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-300',
@@ -5094,6 +5316,7 @@ resource "google_compute_router_nat" "cloud_nat" {
                         const active =
                           (ipOpt.mode === 'NONE' && (!externalIpEnabled || externalIpMode === 'NONE')) ||
                           (ipOpt.mode !== 'NONE' && externalIpEnabled && externalIpMode === ipOpt.mode);
+                        const IpIcon = ipOpt.Icon;
                         return (
                           <button
                             key={ipOpt.mode}
@@ -5106,7 +5329,10 @@ resource "google_compute_router_nat" "cloud_nat" {
                             }`}
                           >
                             <div className="text-[11px] font-mono font-bold flex items-center justify-between">
-                              <span>{ipOpt.title}</span>
+                              <span className="inline-flex items-center gap-1.5">
+                                <IpIcon className="w-3.5 h-3.5 shrink-0" />
+                                <span>{ipOpt.title}</span>
+                              </span>
                               {active && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 uppercase">
                                   Active
@@ -5124,7 +5350,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     {externalIpEnabled && externalIpMode === 'STATIC' && (
                       <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-2">
                         <label className="text-[10.5px] font-mono text-violet-600 dark:text-violet-400 shrink-0">
-                          Reserved Static IPv4 or Address Name (`--address`):
+                          Reserved Static IPv4 or Address Name (
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            --address
+                          </code>
+                          ):
                         </label>
                         <input
                           type="text"
@@ -5238,7 +5468,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Virtual NIC Driver (`nicType`)
+                        Virtual NIC Driver (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          nicType
+                        </code>
+                        )
                       </label>
                       <select
                         value={nicType}
@@ -5288,49 +5522,77 @@ resource "google_compute_router_nat" "cloud_nat" {
                     <button
                       type="button"
                       onClick={() => setAllowHttp((v) => !v)}
-                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1 p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
                         allowHttp
                           ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      {allowHttp ? '✓ http-server (TCP 80)' : '○ Block HTTP 80'}
+                      {allowHttp ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>http-server (TCP 80)</span>
+                        </>
+                      ) : (
+                        '○ Block HTTP 80'
+                      )}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setAllowHttps((v) => !v)}
-                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1 p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
                         allowHttps
                           ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      {allowHttps ? '✓ https-server (TCP 443)' : '○ Block HTTPS 443'}
+                      {allowHttps ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>https-server (TCP 443)</span>
+                        </>
+                      ) : (
+                        '○ Block HTTPS 443'
+                      )}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setAllowIapSsh((v) => !v)}
-                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1 p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
                         allowIapSsh
                           ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      {allowIapSsh ? '✓ iap-ssh (35.235.240.0/20)' : '○ No IAP SSH Tag'}
+                      {allowIapSsh ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>iap-ssh (35.235.240.0/20)</span>
+                        </>
+                      ) : (
+                        '○ No IAP SSH Tag'
+                      )}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setAllowLbHealthCheck((v) => !v)}
-                      className={`p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-1 p-2 rounded-md border text-[11px] font-mono text-left transition-colors cursor-pointer ${
                         allowLbHealthCheck
                           ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 font-bold'
                           : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      {allowLbHealthCheck ? '✓ lb-health-check' : '○ No GCLB Probe Tag'}
+                      {allowLbHealthCheck ? (
+                        <>
+                          <Check className="w-3 h-3 shrink-0" />
+                          <span>lb-health-check</span>
+                        </>
+                      ) : (
+                        '○ No GCLB Probe Tag'
+                      )}
                     </button>
 
                     <input
@@ -5347,19 +5609,38 @@ resource "google_compute_router_nat" "cloud_nat" {
                 <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                      4. Confidential Computing (`SEV-SNP` / `TDX`), Shielded VM, IAM OS Login &amp; SSH Key Governance
+                      4. Confidential Computing (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        SEV-SNP
+                      </code>{' '}
+                      /{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        TDX
+                      </code>
+                      ), Shielded VM, IAM OS Login &amp; SSH Key Governance
                     </div>
-                    <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                      {confidentialComputeType !== 'NONE'
-                        ? `🔒 Hardware Memory Encryption Active (${confidentialComputeType})`
-                        : 'Standard vTPM + Shielded Boot Integrity'}
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-purple-600 dark:text-purple-400">
+                      {confidentialComputeType !== 'NONE' ? (
+                        <>
+                          <Lock className="w-3 h-3 shrink-0" />
+                          <span>
+                            Hardware Memory Encryption Active ({confidentialComputeType})
+                          </span>
+                        </>
+                      ) : (
+                        'Standard vTPM + Shielded Boot Integrity'
+                      )}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Confidential VM Enclave (`--confidential-compute-type`)
+                        Confidential VM Enclave (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --confidential-compute-type
+                        </code>
+                        )
                       </label>
                       <select
                         value={confidentialComputeType}
@@ -5381,68 +5662,110 @@ resource "google_compute_router_nat" "cloud_nat" {
                         <button
                           type="button"
                           onClick={() => setShieldedSecureBoot((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             shieldedSecureBoot
                               ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {shieldedSecureBoot ? '✓ Secure Boot' : '○ Secure Boot'}
+                          {shieldedSecureBoot ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Secure Boot</span>
+                            </>
+                          ) : (
+                            '○ Secure Boot'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setShieldedVtpm((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             shieldedVtpm
                               ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {shieldedVtpm ? '✓ vTPM + Integrity' : '○ vTPM OFF'}
+                          {shieldedVtpm ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>vTPM + Integrity</span>
+                            </>
+                          ) : (
+                            '○ vTPM OFF'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEnableOsLogin((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             enableOsLogin
                               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {enableOsLogin ? '✓ IAM OS Login' : '○ Legacy SSH Keys'}
+                          {enableOsLogin ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>IAM OS Login</span>
+                            </>
+                          ) : (
+                            '○ Legacy SSH Keys'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEnableOsLogin2fa((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             enableOsLogin2fa
                               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {enableOsLogin2fa ? '✓ OS Login 2FA' : '○ 2FA Optional'}
+                          {enableOsLogin2fa ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>OS Login 2FA</span>
+                            </>
+                          ) : (
+                            '○ 2FA Optional'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setBlockProjectSshKeys((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             blockProjectSshKeys
                               ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {blockProjectSshKeys ? '✓ Block Proj Keys' : '○ Allow Proj Keys'}
+                          {blockProjectSshKeys ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Block Proj Keys</span>
+                            </>
+                          ) : (
+                            '○ Allow Proj Keys'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeletionProtection((v) => !v)}
-                          className={`p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
+                          className={`inline-flex items-center gap-1 p-2 rounded-md border text-[10.5px] font-mono font-bold cursor-pointer ${
                             deletionProtection
                               ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {deletionProtection ? '🔒 Delete Guard ON' : '○ Delete Guard OFF'}
+                          {deletionProtection ? (
+                            <>
+                              <Lock className="w-3 h-3 shrink-0" />
+                              <span>Delete Guard ON</span>
+                            </>
+                          ) : (
+                            '○ Delete Guard OFF'
+                          )}
                         </button>
                       </div>
                     </div>
@@ -5452,7 +5775,19 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Optional SSH Public Key (`metadata.ssh-keys` — `ssh-ed25519` or `ssh-rsa`)
+                        Optional SSH Public Key (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          metadata.ssh-keys
+                        </code>{' '}
+                        —{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          ssh-ed25519
+                        </code>{' '}
+                        or{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          ssh-rsa
+                        </code>
+                        )
                       </label>
                       <input
                         type="text"
@@ -5464,7 +5799,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     </div>
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Optional Container-on-Boot Image (`gce-container-declaration` for COS)
+                        Optional Container-on-Boot Image (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          gce-container-declaration
+                        </code>{' '}
+                        for COS)
                       </label>
                       <input
                         type="text"
@@ -5481,7 +5820,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                 <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                      5. Availability Policy, Borg Live Host Migration, Auto-Stop Timer (`--max-run-duration`) &amp; Cloud-Init Automation
+                      5. Availability Policy, Borg Live Host Migration, Auto-Stop Timer (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --max-run-duration
+                      </code>
+                      ) &amp; Cloud-Init Automation
                     </div>
                     <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
                       {spotInstance
@@ -5532,7 +5875,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Auto-Stop Sandbox Timer (`--max-run-duration`)
+                        Auto-Stop Sandbox Timer (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --max-run-duration
+                        </code>
+                        )
                       </label>
                       <select
                         value={maxRunDurationHours}
@@ -5569,24 +5916,38 @@ resource "google_compute_router_nat" "cloud_nat" {
                         <button
                           type="button"
                           onClick={() => setInstallOpsAgent((v) => !v)}
-                          className={`rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
+                          className={`inline-flex items-center justify-center gap-1 rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
                             installOpsAgent
                               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {installOpsAgent ? '✓ Ops Agent' : '○ No Agent'}
+                          {installOpsAgent ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Ops Agent</span>
+                            </>
+                          ) : (
+                            '○ No Agent'
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEnableSerialPort((v) => !v)}
-                          className={`rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
+                          className={`inline-flex items-center justify-center gap-1 rounded-[8px] px-1.5 py-[8px] text-[10px] font-mono font-bold border cursor-pointer ${
                             enableSerialPort
                               ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                               : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                           }`}
                         >
-                          {enableSerialPort ? '✓ Serial TTY' : '○ Serial OFF'}
+                          {enableSerialPort ? (
+                            <>
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>Serial TTY</span>
+                            </>
+                          ) : (
+                            '○ Serial OFF'
+                          )}
                         </button>
                       </div>
                     </div>
@@ -5596,7 +5957,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
                       <label className="text-[11px] font-medium text-zinc-500">
-                        Boot Startup Script (`metadata.startup-script` — bash / PowerShell executed as root on first boot)
+                        Boot Startup Script (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          metadata.startup-script
+                        </code>{' '}
+                        — bash / PowerShell executed as root on first boot)
                       </label>
                       <div className="flex flex-wrap items-center gap-1">
                         {[
@@ -5649,7 +6014,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   {/* FinOps Cost Attribution Labels */}
                   <div>
                     <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                      FinOps Cost Attribution Labels (`--labels` — key=value pairs billed to BigQuery Billing Export)
+                      FinOps Cost Attribution Labels (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        --labels
+                      </code>{' '}
+                      — key=value pairs billed to BigQuery Billing Export)
                     </label>
                     <input
                       type="text"
@@ -6259,7 +6628,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                               {isGcsGdpr ? ' — Enforced by GDPR Blueprint' : ''}
                             </div>
                             <div className="text-[10px] font-mono text-zinc-500">
-                              Replicates 100% of newly written objects across both regions within 15 minutes (`rpo: ASYNC_TURBO`).
+                              Replicates 100% of newly written objects across both regions within 15 minutes (
+                              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                                rpo: ASYNC_TURBO
+                              </code>
+                              ).
                             </div>
                           </div>
                         </label>
@@ -6944,7 +7317,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   {gcsEncryptionType === 'CMEK' && (
                     <div className="pt-1">
                       <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Cloud KMS Key Resource Name (`projects/.../locations/.../keyRings/.../cryptoKeys/...`)
+                        Cloud KMS Key Resource Name (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          projects/.../locations/.../keyRings/.../cryptoKeys/...
+                        </code>
+                        )
                       </label>
                       <input
                         type="text"
@@ -7061,7 +7438,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
-                      Bucket Labels (Comma-separated `key=value` pairs)
+                      Bucket Labels (Comma-separated{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        key=value
+                      </code>{' '}
+                      pairs)
                     </label>
                     <input
                       type="text"
@@ -7100,7 +7481,13 @@ resource "google_compute_router_nat" "cloud_nat" {
                       className="rounded border-zinc-400"
                     />
                     <div>
-                      <div className="font-bold">Requester Pays (`billing.requesterPays`)</div>
+                      <div className="font-bold">
+                        Requester Pays (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          billing.requesterPays
+                        </code>
+                        )
+                      </div>
                       <div className="text-[10px] font-mono text-zinc-500">
                         Requesters pay for data access & network egress costs
                       </div>
@@ -7316,7 +7703,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     Container Source (Artifact Registry · GitHub Repo · Custom URI)
                   </label>
                   <span className="text-[10px] font-mono text-zinc-500">
-                    {arImages.length} Image(s) in `{projectId}` Artifact Registry
+                    {arImages.length} Image(s) in{' '}
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      {projectId}
+                    </code>{' '}
+                    Artifact Registry
                   </span>
                 </div>
 
@@ -7368,7 +7759,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     {arImages.length > 0 ? (
                       <div>
                         <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                          Select Container from `{projectId}` Artifact Registry:
+                          Select Container from{' '}
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            {projectId}
+                          </code>{' '}
+                          Artifact Registry:
                         </label>
                         <select
                           value={containerImage}
@@ -7389,7 +7784,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                     ) : (
                       <div className="p-2.5 rounded-[8px] border border-dashed border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-500 flex items-center justify-between gap-2">
                         <span>
-                          No container images found in `{projectId}` Artifact Registry yet.
+                          No container images found in{' '}
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            {projectId}
+                          </code>{' '}
+                          Artifact Registry yet.
                         </span>
                         <button
                           type="button"
@@ -7464,7 +7863,7 @@ resource "google_compute_router_nat" "cloud_nat" {
                             Zero-Dockerfile Google Cloud Buildpacks
                           </option>
                           <option value="DOCKERFILE">
-                            Standard Dockerfile (`docker build`)
+                            Standard Dockerfile (docker build)
                           </option>
                         </select>
                       </div>
@@ -7943,7 +8342,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="flex items-center gap-2">
                     <Network className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                      2026 Direct VPC Egress Network (`template.vpcAccess`)
+                      2026 Direct VPC Egress Network (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                        template.vpcAccess
+                      </code>
+                      )
                     </span>
                     <span className="px-1.5 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
                       $0.00 Connector Tax
@@ -7953,15 +8356,20 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <button
                     type="button"
                     onClick={() => setRunEnableDirectVpc((v) => !v)}
-                    className={`px-3 py-1 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer ${
                       runEnableDirectVpc
                         ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                         : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
-                    {runEnableDirectVpc
-                      ? '✓ Direct VPC Egress Enabled'
-                      : '+ Attach VPC Network'}
+                    {runEnableDirectVpc ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <span>Direct VPC Egress Enabled</span>
+                      </>
+                    ) : (
+                      '+ Attach VPC Network'
+                    )}
                   </button>
                 </div>
 
@@ -8119,7 +8527,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                         title="Target Cloud Storage Bucket (gcs.bucket)"
                         className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
                       >
-                        Cloud Storage Bucket (`gcs.bucket`)
+                        Cloud Storage Bucket (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          gcs.bucket
+                        </code>
+                        )
                       </label>
                       {projectBuckets.length > 0 ? (
                         <select
@@ -8545,7 +8957,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Target BigQuery Location (`--location={bqLocation}`)
+                        Target BigQuery Location (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          --location={bqLocation}
+                        </code>
+                        )
                       </label>
                       {bqLocationType === 'MULTI_REGION' ? (
                         <select
@@ -8614,7 +9030,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                         STEP 2
                       </span>
                       <span>
-                        2026 Storage Billing Model (`storageBillingModel`)
+                        2026 Storage Billing Model (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          storageBillingModel
+                        </code>
+                        )
                       </span>
                     </div>
                     <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -8646,7 +9066,21 @@ resource "google_compute_router_nat" "cloud_nat" {
                         </span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
-                        Billed on actual **Capacitor compressed bytes** on disk (`$0.04/GB` active · `$0.02/GB` 90d long-term) + time-travel delta. A 5:1 compressed table costs effectively **`$0.008/logical-GB`**!
+                        Billed on actual <strong>Capacitor compressed bytes</strong> on disk (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          $0.04/GB
+                        </code>{' '}
+                        active ·{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          $0.02/GB
+                        </code>{' '}
+                        90d long-term) + time-travel delta. A 5:1 compressed table costs effectively{' '}
+                        <strong>
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            $0.008/logical-GB
+                          </code>
+                        </strong>
+                        !
                       </p>
                     </button>
 
@@ -8682,7 +9116,15 @@ resource "google_compute_router_nat" "cloud_nat" {
                         </span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
-                        Billed on uncompressed logical table size (`$0.02/GB` active · `$0.01/GB` 90d long-term). Disabled under enterprise FinOps & regulatory blueprints.
+                        Billed on uncompressed logical table size (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          $0.02/GB
+                        </code>{' '}
+                        active ·{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          $0.01/GB
+                        </code>{' '}
+                        90d long-term). Disabled under enterprise FinOps &amp; regulatory blueprints.
                       </p>
                     </button>
                   </div>
@@ -8696,7 +9138,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                         STEP 3
                       </span>
                       <span>
-                        Time-Travel Recovery Window (`FOR SYSTEM_TIME AS OF`) & Lifecycle Expiration
+                        Time-Travel Recovery Window (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          FOR SYSTEM_TIME AS OF
+                        </code>
+                        ) &amp; Lifecycle Expiration
                       </span>
                     </div>
                     <span className="text-[10px] font-mono text-zinc-500">
@@ -8711,7 +9157,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Time-Travel Window (`maxTimeTravelHours`)
+                        Time-Travel Window (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          maxTimeTravelHours
+                        </code>
+                        )
                       </label>
                       <select
                         value={bqMaxTimeTravelHours}
@@ -8876,13 +9326,13 @@ resource "google_compute_router_nat" "cloud_nat" {
                         className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="" disabled={isAiVector}>
-                          {isAiVector ? '[LOCKED] ' : ''}Binary Case-Sensitive (`&apos;&apos;` · Exact ID Match)
+                          {isAiVector ? '[LOCKED] ' : ''}Binary Case-Sensitive (&apos;&apos; · Exact ID Match)
                         </option>
                         <option
                           value="und:ci"
                           disabled={isSecFinra || isHipaa}
                         >
-                          {isSecFinra || isHipaa ? '[LOCKED] ' : ''}Unicode Case-Insensitive (`und:ci` · Human Search)
+                          {isSecFinra || isHipaa ? '[LOCKED] ' : ''}Unicode Case-Insensitive (und:ci · Human Search)
                         </option>
                       </select>
                     </div>
@@ -8909,7 +9359,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   {bqEncryptionType === 'CMEK' && (
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Cloud KMS CryptoKey Resource Path (`defaultEncryptionConfiguration.kmsKeyName`)
+                        Cloud KMS CryptoKey Resource Path (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          defaultEncryptionConfiguration.kmsKeyName
+                        </code>
+                        )
                       </label>
                       <input
                         type="text"
@@ -8924,7 +9378,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Custom FinOps & Governance Labels (`datacloud=antigravity` auto-enforced)
+                        Custom FinOps &amp; Governance Labels (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          datacloud=antigravity
+                        </code>{' '}
+                        auto-enforced)
                       </label>
                       <input
                         type="text"
@@ -9055,7 +9513,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                 <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                      Step 1 · Control Plane & Operation Mode (`autopilot.enabled`)
+                      Step 1 · Control Plane &amp; Operation Mode (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                        autopilot.enabled
+                      </code>
+                      )
                     </span>
                     <span className="text-[10px] font-mono text-emerald-500 font-bold">
                       $74.40/mo GKE Free Tier Credit Included
@@ -9115,7 +9577,19 @@ resource "google_compute_router_nat" "cloud_nat" {
                         {lockModeAutopilot && <span>[LOCKED]</span>}
                       </div>
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
-                        Direct control over `initialNodeCount`, `Spot VM (-68%)`, and `NVIDIA L4 / T4 / A100` GPU accelerators.
+                        Direct control over{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          initialNodeCount
+                        </code>
+                        ,{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          Spot VM (-68%)
+                        </code>
+                        , and{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          NVIDIA L4 / T4 / A100
+                        </code>{' '}
+                        GPU accelerators.
                       </p>
                     </button>
                   </div>
@@ -9147,7 +9621,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        K8s Release Channel (`releaseChannel.channel`)
+                        K8s Release Channel (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          releaseChannel.channel
+                        </code>
+                        )
                       </label>
                       <select
                         value={gkeReleaseChannel}
@@ -9170,7 +9648,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        VPC Network (`IP_ALIASES` VPC-Native)
+                        VPC Network (
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          IP_ALIASES
+                        </code>{' '}
+                        VPC-Native)
                       </label>
                       <input
                         type="text"
@@ -9218,7 +9700,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                       <div>
                         <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Initial Node Count (`1-12`)
+                          Initial Node Count (
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            1-12
+                          </code>
+                          )
                         </label>
                         <input
                           type="number"
@@ -9236,7 +9722,11 @@ resource "google_compute_router_nat" "cloud_nat" {
 
                       <div>
                         <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          GPU Accelerator (`accelerators`)
+                          GPU Accelerator (
+                          <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                            accelerators
+                          </code>
+                          )
                         </label>
                         <select
                           value={gkeGpuAcceleratorType}
@@ -9298,7 +9788,13 @@ resource "google_compute_router_nat" "cloud_nat" {
                       />
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                          <span>Workload Identity Federation (`{projectId}.svc.id.goog`)</span>
+                          <span>
+                            Workload Identity Federation (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              {projectId}.svc.id.goog
+                            </code>
+                            )
+                          </span>
                           {lockWorkloadIdentityOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
@@ -9331,7 +9827,13 @@ resource "google_compute_router_nat" "cloud_nat" {
                       />
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                          <span>Private Cluster Nodes (`enablePrivateNodes`)</span>
+                          <span>
+                            Private Cluster Nodes (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              enablePrivateNodes
+                            </code>
+                            )
+                          </span>
                           {lockPrivateNodesOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
@@ -9363,7 +9865,13 @@ resource "google_compute_router_nat" "cloud_nat" {
                       />
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                          <span>Binary Authorization SLSA Gatekeeper (`PROJECT_SINGLETON_POLICY_ENFORCE`)</span>
+                          <span>
+                            Binary Authorization SLSA Gatekeeper (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              PROJECT_SINGLETON_POLICY_ENFORCE
+                            </code>
+                            )
+                          </span>
                           {lockBinaryAuthOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
@@ -9388,7 +9896,17 @@ resource "google_compute_router_nat" "cloud_nat" {
                       />
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                          <span>Shielded GKE Nodes (`enableSecureBoot` + `vTPM`)</span>
+                          <span>
+                            Shielded GKE Nodes (
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              enableSecureBoot
+                            </code>{' '}
+                            +{' '}
+                            <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                              vTPM
+                            </code>
+                            )
+                          </span>
                           {isZeroTrustEnclave && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
@@ -9543,7 +10061,11 @@ resource "google_compute_router_nat" "cloud_nat" {
                         </span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
-                        Managed Cloud SQL for MySQL with InnoDB Group Replication, 128 GB Data Cache, and MySQL 8.4 native `VECTOR` search.
+                        Managed Cloud SQL for MySQL with InnoDB Group Replication, 128 GB Data Cache, and MySQL 8.4 native{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                          VECTOR
+                        </code>{' '}
+                        search.
                       </p>
                     </button>
                   </div>

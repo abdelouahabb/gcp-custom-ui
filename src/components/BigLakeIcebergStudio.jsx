@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Sliders,
+  Zap,
 } from 'lucide-react';
 import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 
@@ -1226,11 +1227,27 @@ OPTIONS (
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
               <Layers className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               <span>
-                Google Cloud BigLake &amp; Apache Iceberg Studio (Metastore Catalogs, Zero-Trust `gs://` &amp; Omni)
+                Google Cloud BigLake &amp; Apache Iceberg Studio (Metastore Catalogs, Zero-Trust{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  gs://
+                </code>{' '}
+                &amp; Omni)
               </span>
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              While <strong>BigQuery</strong> stores data in Google&apos;s proprietary Capacitor format, <strong>BigLake</strong> (`biglake.googleapis.com/v1`) lets you store data as <strong>open Apache Iceberg &amp; Parquet files in your own `gs://` bucket</strong> (or AWS S3 / Azure ADLS) so BigQuery, Serverless Spark, Ray, and Vertex AI read and write the exact same files with full ACID transactions and Row/Column security.
+              While <strong>BigQuery</strong> stores data in Google&apos;s proprietary Capacitor format, <strong>BigLake</strong> (
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                biglake.googleapis.com/v1
+              </code>
+              ) lets you store data as{' '}
+              <strong>
+                open Apache Iceberg &amp; Parquet files in your own{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  gs://
+                </code>{' '}
+                bucket
+              </strong>{' '}
+              (or AWS S3 / Azure ADLS) so BigQuery, Serverless Spark, Ray, and Vertex AI read and write the exact same files with full ACID transactions and Row/Column security.
             </p>
           </div>
 
@@ -1277,13 +1294,21 @@ OPTIONS (
               {bigLakeCatalogs.length} Active
             </div>
             <div className="text-[10px] text-zinc-500">
-              REST Catalog (`biglake.googleapis.com/v1`)
+              REST Catalog (
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                biglake.googleapis.com/v1
+              </code>
+              )
             </div>
           </div>
 
           <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] font-mono uppercase text-zinc-500">
-              Cloud Storage Buckets (`gs://`)
+              Cloud Storage Buckets (
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                gs://
+              </code>
+              )
             </div>
             <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
               {gcsBuckets.length} Ready
@@ -1383,14 +1408,22 @@ OPTIONS (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                    Official Google Cloud BigLake Metastore &amp; Iceberg REST Catalogs (`/biglake/metastore/catalogs`)
+                    Official Google Cloud BigLake Metastore &amp; Iceberg REST Catalogs (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      /biglake/metastore/catalogs
+                    </code>
+                    )
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
                     biglake.googleapis.com/v1
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Manage live **BigLake Metastore Catalogs → Databases → Apache Iceberg Tables** (`projects/{projectId}/locations/*/catalogs/*`) with optional **Credential Vending** so external Spark/Trino engines never need static GCS keys.
+                  Manage live <strong>BigLake Metastore Catalogs → Databases → Apache Iceberg Tables</strong> (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    projects/{projectId}/locations/*/catalogs/*
+                  </code>
+                  ) with optional <strong>Credential Vending</strong> so external Spark/Trino engines never need static GCS keys.
                 </p>
               </div>
               <button
@@ -1522,7 +1555,10 @@ OPTIONS (
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Simulate storage + Spark/Vertex AI read costs across all 3 architectures, then **upgrade legacy external tables**, **provision live BigLake Iceberg tables**, or **dry-run SQL in 1 click**:
+                  Simulate storage + Spark/Vertex AI read costs across all 3 architectures, then{' '}
+                  <strong>upgrade legacy external tables</strong>,{' '}
+                  <strong>provision live BigLake Iceberg tables</strong>, or{' '}
+                  <strong>dry-run SQL in 1 click</strong>:
                 </p>
               </div>
 
@@ -1604,16 +1640,40 @@ OPTIONS (
 
                   <ul className="space-y-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
                     <li>
-                      • Every SQL analyst must be granted raw `roles/storage.objectViewer` on the entire `gs://` bucket.
+                      • Every SQL analyst must be granted raw{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        roles/storage.objectViewer
+                      </code>{' '}
+                      on the entire{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>{' '}
+                      bucket.
                     </li>
                     <li>
                       • Zero row-level filtering or column masking support.
                     </li>
                     <li>
-                      • Re-lists `gs://` objects on every query (slow metadata scan).
+                      • Re-lists{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>{' '}
+                      objects on every query (slow metadata scan).
                     </li>
                     <li>
-                      • Strictly read-only (no `MERGE`, `UPDATE`, or `DELETE`).
+                      • Strictly read-only (no{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        MERGE
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        UPDATE
+                      </code>
+                      , or{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        DELETE
+                      </code>
+                      ).
                     </li>
                   </ul>
                 </div>
@@ -1634,8 +1694,8 @@ OPTIONS (
                     }}
                     className="w-full py-1.5 px-2.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-[11px] font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>⚡ 1-Click Upgrade to BigLake Zero-Trust →</span>
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>1-Click Upgrade to BigLake Zero-Trust →</span>
                   </button>
 
                   <div className="grid grid-cols-2 gap-1.5">
@@ -1705,16 +1765,44 @@ OPTIONS (
 
                   <ul className="space-y-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200">
                     <li>
-                      • Zero-Trust Bucket: Only BigLake&apos;s delegated Service Account touches `gs://`.
+                      • Zero-Trust Bucket: Only BigLake&apos;s delegated Service Account touches{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>
+                      .
                     </li>
                     <li>
-                      • Full Row Access Policies &amp; Column Data Masking over `gs://` Parquet.
+                      • Full Row Access Policies &amp; Column Data Masking over{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>{' '}
+                      Parquet.
                     </li>
                     <li>
-                      • Full ACID (`INSERT`, `UPDATE`, `DELETE`, `MERGE`) + Snapshot Time-Travel.
+                      • Full ACID (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        INSERT
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        UPDATE
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        DELETE
+                      </code>
+                      ,{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        MERGE
+                      </code>
+                      ) + Snapshot Time-Travel.
                     </li>
                     <li>
-                      • BigQuery, Serverless Spark, Ray &amp; Trino share 1 open copy in `gs://`.
+                      • BigQuery, Serverless Spark, Ray &amp; Trino share 1 open copy in{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>
+                      .
                     </li>
                   </ul>
                 </div>
@@ -1732,11 +1820,11 @@ OPTIONS (
                     }
                     className="w-full py-1.5 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[11px] font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <PlusCircle className="w-3.5 h-3.5" />
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
                     <span>
                       {provisioningArchId === 'BIGLAKE_ICEBERG'
                         ? 'Provisioning Iceberg Table & Seeding Rows...'
-                        : `⚡ 1-Click Provision Live Iceberg Table (${archMatrixMetrics.ds})`}
+                        : `1-Click Provision Live Iceberg Table (${archMatrixMetrics.ds})`}
                     </span>
                   </button>
 
@@ -1782,7 +1870,11 @@ OPTIONS (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
-                      3. Native BigQuery Table (`Capacitor`)
+                      3. Native BigQuery Table (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        Capacitor
+                      </code>
+                      )
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                       PURE SQL WAREHOUSE
@@ -1809,10 +1901,18 @@ OPTIONS (
                       • Zero bucket or connection setup required.
                     </li>
                     <li>
-                      • High compression ratio (~5:1) under `PHYSICAL` billing ($0.04/GB).
+                      • High compression ratio (~5:1) under{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        PHYSICAL
+                      </code>{' '}
+                      billing ($0.04/GB).
                     </li>
                     <li>
-                      • Closed storage format: Spark/Ray must pay for the BigQuery Storage Read API instead of reading open `gs://` Parquet directly.
+                      • Closed storage format: Spark/Ray must pay for the BigQuery Storage Read API instead of reading open{' '}
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                        gs://
+                      </code>{' '}
+                      Parquet directly.
                     </li>
                   </ul>
                 </div>
@@ -1830,11 +1930,11 @@ OPTIONS (
                     }
                     className="w-full py-1.5 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[11px] font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Database className="w-3.5 h-3.5" />
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
                     <span>
                       {provisioningArchId === 'NATIVE_CAPACITOR'
                         ? 'Provisioning Capacitor Table & Seeding...'
-                        : `⚡ 1-Click Provision Native Capacitor Table`}
+                        : '1-Click Provision Native Capacitor Table'}
                     </span>
                   </button>
 
@@ -1963,7 +2063,15 @@ OPTIONS (
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Eliminates `Not found: Connection` and `Access Denied: gs://` errors by generating the exact 3-step sequence for your project.
+                Eliminates{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  Not found: Connection
+                </code>{' '}
+                and{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  Access Denied: gs://
+                </code>{' '}
+                errors by generating the exact 3-step sequence for your project.
               </p>
             </div>
             <div className="flex items-center gap-1.5">
@@ -1991,7 +2099,11 @@ OPTIONS (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             <div className="lg:col-span-2">
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                1. Cloud Storage Bucket (`gs://`)
+                1. Cloud Storage Bucket (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  gs://
+                </code>
+                )
               </label>
               {gcsBuckets.length > 0 ? (
                 <select
@@ -2081,7 +2193,11 @@ OPTIONS (
 
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Connection Region (`location`)
+                Connection Region (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  location
+                </code>
+                )
               </label>
               <select
                 value={bigLakeLocation}
@@ -2097,7 +2213,11 @@ OPTIONS (
 
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Open File Format (`gs://`)
+                Open File Format (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  gs://
+                </code>
+                )
               </label>
               <select
                 value={bigLakeFormat}
@@ -2113,7 +2233,11 @@ OPTIONS (
 
             <div>
               <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Metadata Cache (`max_staleness`)
+                Metadata Cache (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  max_staleness
+                </code>
+                )
               </label>
               <select
                 value={bigLakeStalenessMins}
@@ -2235,7 +2359,11 @@ OPTIONS (
           <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold font-mono text-emerald-400">
-                Zero-Copy Spark / Ray Read via BigLake Iceberg REST Catalog (`https://biglake.googleapis.com/iceberg/v1beta/restcatalog`)
+                Zero-Copy Spark / Ray Read via BigLake Iceberg REST Catalog (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  https://biglake.googleapis.com/iceberg/v1beta/restcatalog
+                </code>
+                )
               </span>
               <button
                 type="button"
@@ -2345,7 +2473,11 @@ OPTIONS (
                 {compactionStrategy === 'SORT_ZORDER' && (
                   <div>
                     <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                      Sort / Clustering Columns (`sort_order`)
+                      Sort / Clustering Columns (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                        sort_order
+                      </code>
+                      )
                     </label>
                     <input
                       type="text"
@@ -2376,7 +2508,11 @@ OPTIONS (
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
-                  BigQuery Managed Iceberg Snapshot Export (`EXPORT TABLE METADATA`)
+                  BigQuery Managed Iceberg Snapshot Export (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    EXPORT TABLE METADATA
+                  </code>
+                  )
                 </span>
                 <button
                   type="button"
@@ -2396,7 +2532,18 @@ OPTIONS (
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
-                  Iceberg `rewrite_data_files`, `expire_snapshots` &amp; `remove_orphan_files`
+                  Iceberg{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    rewrite_data_files
+                  </code>
+                  ,{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    expire_snapshots
+                  </code>{' '}
+                  &amp;{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    remove_orphan_files
+                  </code>
                 </span>
                 <button
                   type="button"
@@ -2425,7 +2572,11 @@ OPTIONS (
           <div className="lg:col-span-5 space-y-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-sm">
               <div className="text-xs font-extrabold font-mono uppercase text-blue-600 dark:text-blue-400">
-                Row-Level &amp; Column-Level Security over `gs://` Parquet
+                Row-Level &amp; Column-Level Security over{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                  gs://
+                </code>{' '}
+                Parquet
               </div>
               <div className="space-y-2">
                 <div>
@@ -2441,7 +2592,11 @@ OPTIONS (
                 </div>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    IAM Grantee (`GRANT TO`)
+                    IAM Grantee (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      GRANT TO
+                    </code>
+                    )
                   </label>
                   <input
                     type="text"
@@ -2452,7 +2607,11 @@ OPTIONS (
                 </div>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                    Row Predicate (`FILTER USING`)
+                    Row Predicate (
+                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                      FILTER USING
+                    </code>
+                    )
                   </label>
                   <input
                     type="text"
@@ -2508,7 +2667,15 @@ OPTIONS (
               </div>
               <div>
                 <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
-                  External Cloud Bucket URI (`s3://` or `azure://`)
+                  External Cloud Bucket URI (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                    s3://
+                  </code>{' '}
+                  or{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                    azure://
+                  </code>
+                  )
                 </label>
                 <input
                   type="text"
@@ -2558,7 +2725,11 @@ OPTIONS (
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
-                  BigLake Omni Cross-Cloud Connection &amp; Iceberg Table (`{omniRegion}`)
+                  BigLake Omni Cross-Cloud Connection &amp; Iceberg Table (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    {omniRegion}
+                  </code>
+                  )
                 </span>
                 <button
                   type="button"
@@ -2630,8 +2801,31 @@ OPTIONS (
               <span className="font-mono font-bold">AWS Glue Data Catalog</span> into{' '}
               <strong>BigQuery &amp; BigLake Iceberg</strong> without copying files,{' '}
               <strong>(2) Calculate the &ldquo;Double-Tax&rdquo; Savings</strong> of eliminating Databricks DBUs + idle warm GCE clusters, or{' '}
-              <strong>(3) Transpile Databricks PySpark (`dbutils`, `DeltaTable`)</strong> into 100% native{' '}
-              <strong>Dataproc Serverless Spark 2.2 + BigLake Managed Iceberg</strong> (`&lt;5s` startup, `$0.00` idle, `$0.00` DBU surcharge), everything is wired below.
+              <strong>
+                (3) Transpile Databricks PySpark (
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  dbutils
+                </code>
+                ,{' '}
+                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                  DeltaTable
+                </code>
+                )
+              </strong>{' '}
+              into 100% native{' '}
+              <strong>Dataproc Serverless Spark 2.2 + BigLake Managed Iceberg</strong> (
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                &lt;5s
+              </code>{' '}
+              startup,{' '}
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                $0.00
+              </code>{' '}
+              idle,{' '}
+              <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                $0.00
+              </code>{' '}
+              DBU surcharge), everything is wired below.
             </p>
           </div>
 
@@ -2690,7 +2884,11 @@ OPTIONS (
                   ))}
                 </select>
                 <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
-                  Regional Isolation Rule: Your Secret Manager secret, BigLake Federated Catalog, and BigQuery `--location` MUST all use <strong>{activeRegionPair.gcpRegion}</strong>.
+                  Regional Isolation Rule: Your Secret Manager secret, BigLake Federated Catalog, and BigQuery{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">
+                    --location
+                  </code>{' '}
+                  MUST all use <strong>{activeRegionPair.gcpRegion}</strong>.
                 </div>
               </div>
 
@@ -2721,7 +2919,11 @@ OPTIONS (
                 ) : (
                   <div>
                     <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                      12-Digit AWS Account ID (`--glue-warehouse`):
+                      12-Digit AWS Account ID (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                        --glue-warehouse
+                      </code>
+                      ):
                     </label>
                     <input
                       type="text"
@@ -2740,7 +2942,11 @@ OPTIONS (
                 <div className="space-y-2.5">
                   <div>
                     <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                      Databricks Workspace Instance Host (`--unity-instance-name`):
+                      Databricks Workspace Instance Host (
+                      <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                        --unity-instance-name
+                      </code>
+                      ):
                     </label>
                     <input
                       type="text"
@@ -2763,7 +2969,11 @@ OPTIONS (
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                        OAuth `client_id`:
+                        OAuth{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                          client_id
+                        </code>
+                        :
                       </label>
                       <input
                         type="text"
@@ -2775,7 +2985,11 @@ OPTIONS (
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                        OAuth `client_secret`:
+                        OAuth{' '}
+                        <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                          client_secret
+                        </code>
+                        :
                       </label>
                       <input
                         type="password"
@@ -3062,7 +3276,15 @@ OPTIONS (
             <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-extrabold font-mono uppercase text-blue-600 dark:text-blue-400">
-                  Paste Databricks Code (`dbutils` / `DeltaTable`)
+                  Paste Databricks Code (
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                    dbutils
+                  </code>{' '}
+                  /{' '}
+                  <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em] normal-case">
+                    DeltaTable
+                  </code>
+                  )
                 </span>
                 <div className="flex items-center gap-1">
                   {[
