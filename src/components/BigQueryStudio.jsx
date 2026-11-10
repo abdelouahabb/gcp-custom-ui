@@ -81,6 +81,14 @@ const STUDIO_TABS = [
     icon: Cpu,
     tip: 'Run Gemini 2.5 ML.GENERATE_TEXT, ScaNN/IVF VECTOR_SEARCH with text-embedding-005, Zero-Shot TimesFM AI.FORECAST, and Continuous SQL Streaming to Pub/Sub & Bigtable',
   },
+  {
+    id: 'LINEAGE_BLAST_RADIUS',
+    label: 'Data Lineage Blast-Radius & Partition/Cluster Surgeon (@skill:datalineage-bigquery-asset-impact-analysis)',
+    shortLabel: 'Lineage Blast-Radius & Partition Surgeon',
+    badge: 'Lineage + Cluster',
+    icon: Layers,
+    tip: 'Analyze downstream blast radius (tables, views, ETL processes) via datalineage.googleapis.com/v1 before modifying a BigQuery asset, and apply 1-click Partition Filter + Clustering hardening',
+  },
 ];
 
 const SAMPLE_UNOPTIMIZED_QUERIES = [
@@ -342,6 +350,128 @@ LIMIT 25;`;
   const [bqForecastHorizonDays, setBqForecastHorizonDays] = useState(30);
   const [bqContinuousSink, setBqContinuousSink] = useState('PUBSUB'); // 'PUBSUB' | 'BIGTABLE' | 'VERTEX_AI'
   const [provisioningAiTable, setProvisioningAiTable] = useState(false);
+
+  // Sub-Tab 7: Data Lineage Blast-Radius & Partition/Cluster Surgeon state
+  const [lineageTargetTable, setLineageTargetTable] = useState('');
+  const [lineageMaxDepth, setLineageMaxDepth] = useState(10);
+  const [lineageData, setLineageData] = useState(null);
+  const [loadingLineage, setLoadingLineage] = useState(false);
+  const [surgeonBusy, setSurgeonBusy] = useState(false);
+
+  const requestCrossStudioNav = useCallback(
+    (destinationLabel, targetDetail, onConfirmFn) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:request-cross-tab-nav', {
+            detail: {
+              fromStudio: 'BigQuery Capacitor Warehouse Studio',
+              destinationLabel,
+              targetDetail,
+              onConfirm: onConfirmFn,
+            },
+          })
+        );
+      } else {
+        onConfirmFn?.();
+      }
+    },
+    []
+  );
+
+  const runLineageImpactAnalysis = useCallback(
+    async (dsOverride, tblOverride, depthOverride) => {
+      if (!projectId) return;
+      const ds = dsOverride || selectedDatasetId || 'analytics_lakehouse';
+      const tbl =
+        tblOverride ||
+        lineageTargetTable ||
+        tables[0]?.tableId ||
+        rewindTableTarget ||
+        'telemetry_events_2026';
+      const depth = depthOverride || lineageMaxDepth || 10;
+      setLoadingLineage(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/bigquery/lineage-impact-analysis`,
+          {
+            datasetId: ds,
+            tableId: tbl,
+            maxDepth: depth,
+            maxProcessPerLink: 5,
+          }
+        );
+        setLineageData(res.data || null);
+        if (res.data?.tableId && !tblOverride) {
+          setLineageTargetTable(res.data.tableId);
+        }
+      } catch (err) {
+        onShowError?.(
+          err.response?.data?.error ||
+            'Failed to run BigQuery Data Lineage Blast-Radius analysis.'
+        );
+      } finally {
+        setLoadingLineage(false);
+      }
+    },
+    [
+      projectId,
+      selectedDatasetId,
+      lineageTargetTable,
+      tables,
+      rewindTableTarget,
+      lineageMaxDepth,
+      onShowError,
+    ]
+  );
+
+  useEffect(() => {
+    if (activeSubTab === 'LINEAGE_BLAST_RADIUS' && projectId) {
+      runLineageImpactAnalysis(
+        selectedDatasetId,
+        lineageTargetTable || tables[0]?.tableId || rewindTableTarget
+      );
+    }
+  }, [activeSubTab, projectId, selectedDatasetId]);
+
+  const handleRunPartitionClusterSurgeon = async (mode = 'PATCH_METADATA') => {
+    if (!projectId || !lineageData) return;
+    setSurgeonBusy(true);
+    try {
+      const audit = lineageData.partitionClusterAudit || {};
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/bigquery/partition-cluster-surgeon`,
+        {
+          datasetId: lineageData.datasetId || selectedDatasetId,
+          tableId: lineageData.tableId || lineageTargetTable,
+          mode,
+          requirePartitionFilter: true,
+          clusterFields: audit.recommendedClusterCols || [],
+          ddlSql: audit.optimizedMigrationDdl || '',
+        }
+      );
+      onShowToast?.(
+        res.data?.summary ||
+          'Applied Partition & Cluster Surgeon optimization.'
+      );
+      await fetchTables(lineageData.datasetId || selectedDatasetId);
+      await runLineageImpactAnalysis(
+        lineageData.datasetId || selectedDatasetId,
+        lineageData.tableId || lineageTargetTable
+      );
+    } catch (err) {
+      if (err?.message === 'USER_CANCELLED_DESTRUCTIVE_ACTION') return;
+      onShowError?.(
+        err.response?.data?.error ||
+          'Failed to execute Partition & Cluster Surgeon.'
+      );
+    } finally {
+      setSurgeonBusy(false);
+    }
+  };
 
   // Helper to construct partition-filter-compliant WHERE clause for any table
   const getTablePartitionWhereClause = useCallback((tblObj) => {
@@ -859,7 +989,15 @@ LIMIT 25;`;
             <button
               type="button"
               data-feature-id="BQ_OPEN_BIGLAKE_BTN"
-              onClick={() => onOpenBigLakeStudio?.()}
+              onClick={() =>
+                requestCrossStudioNav(
+                  'BigLake & Apache Iceberg Open Lakehouse Studio',
+                  `Project: ${projectId} · Dataset: ${
+                    selectedDatasetId || 'analytics_lakehouse'
+                  }`,
+                  () => onOpenBigLakeStudio?.()
+                )
+              }
               title="Open the dedicated BigLake & Apache Iceberg Open Lakehouse Studio tab"
               className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
             >
@@ -871,9 +1009,20 @@ LIMIT 25;`;
               type="button"
               data-feature-id="BQ_OPEN_MANAGED_SPARK_BTN"
               onClick={() =>
-                onNavigateTab?.('MANAGED_SPARK_STUDIO', 'SPARK_CONNECT_NOTEBOOKS', {
-                  datasetId: selectedDatasetId || '',
-                })
+                requestCrossStudioNav(
+                  'Managed Service for Apache Spark 3.5 Studio',
+                  `Dataset: ${projectId}.${
+                    selectedDatasetId || 'analytics_lakehouse'
+                  }`,
+                  () =>
+                    onNavigateTab?.(
+                      'MANAGED_SPARK_STUDIO',
+                      'SPARK_CONNECT_NOTEBOOKS',
+                      {
+                        datasetId: selectedDatasetId || '',
+                      }
+                    )
+                )
               }
               title="Open Managed Service for Apache Spark 3.5 Studio pre-wired to your active BigQuery dataset"
               className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-orange-600 dark:text-orange-400 border border-orange-500/30 rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
@@ -1525,14 +1674,34 @@ LIMIT 25;`;
                             </button>
                             <button
                               type="button"
+                              onClick={() => {
+                                setLineageTargetTable(t.tableId);
+                                setActiveSubTab('LINEAGE_BLAST_RADIUS');
+                                runLineageImpactAnalysis(
+                                  selectedDatasetId,
+                                  t.tableId
+                                );
+                              }}
+                              className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                              title={`Analyze downstream Data Lineage Blast Radius and Partition/Cluster posture for ${projectId}.${selectedDatasetId}.${t.tableId}`}
+                            >
+                              Blast Radius →
+                            </button>
+                            <button
+                              type="button"
                               onClick={() =>
-                                onNavigateTab?.(
-                                  'MANAGED_SPARK_STUDIO',
-                                  'SPARK_CONNECT_NOTEBOOKS',
-                                  {
-                                    datasetId: selectedDatasetId,
-                                    tableId: t.tableId,
-                                  }
+                                requestCrossStudioNav(
+                                  'Managed Service for Apache Spark 3.5 Studio',
+                                  `Table: ${projectId}.${selectedDatasetId}.${t.tableId}`,
+                                  () =>
+                                    onNavigateTab?.(
+                                      'MANAGED_SPARK_STUDIO',
+                                      'SPARK_CONNECT_NOTEBOOKS',
+                                      {
+                                        datasetId: selectedDatasetId,
+                                        tableId: t.tableId,
+                                      }
+                                    )
                                 )
                               }
                               className="px-2 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-300 border border-orange-500/30 text-[10px] font-bold cursor-pointer"
@@ -3336,6 +3505,391 @@ LIMIT 25;`,
     '_'
   )} ||--o{ Continuous_Streaming_Sink : "EXPORT DATA (${bqContinuousSink})"`}
           />
+        </div>
+      )}
+
+      {/* SUB-TAB 7: DATA LINEAGE BLAST-RADIUS & PARTITION/CLUSTER SURGEON (@skill:datalineage-bigquery-asset-impact-analysis) */}
+      {activeSubTab === 'LINEAGE_BLAST_RADIUS' && (
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-5 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-amber-500" />
+                  <span>
+                    BigQuery Data Lineage Blast-Radius &amp; Partition/Cluster Surgeon (`@skill:datalineage-bigquery-asset-impact-analysis`)
+                  </span>
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                  DOWNSTREAM IMPACT GRAPH · VIEW AST · PARTITION SURGEON
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                Resolves `bigquery:{projectId}.{selectedDatasetId || 'analytics_lakehouse'}.{lineageTargetTable || tables[0]?.tableId || 'telemetry_events_2026'}`, traverses `datalineage.googleapis.com/v1` (`:searchLinks`) + live BigQuery View/Job dependencies, and synthesizes 1-click Partition &amp; Clustering hardening.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedDatasetId}
+                onChange={(e) => {
+                  const nextDs = e.target.value;
+                  setSelectedDatasetId(nextDs);
+                  fetchTables(nextDs);
+                  runLineageImpactAnalysis(nextDs, '');
+                }}
+                className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+              >
+                {(datasets.length > 0
+                  ? datasets
+                  : [{ datasetId: 'analytics_lakehouse' }]
+                ).map((d) => (
+                  <option key={d.datasetId} value={d.datasetId}>
+                    Dataset: {d.datasetId}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={
+                  lineageTargetTable ||
+                  lineageData?.tableId ||
+                  tables[0]?.tableId ||
+                  'telemetry_events_2026'
+                }
+                onChange={(e) => {
+                  const nextTbl = e.target.value;
+                  setLineageTargetTable(nextTbl);
+                  runLineageImpactAnalysis(selectedDatasetId, nextTbl);
+                }}
+                className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+              >
+                {(tables.length > 0
+                  ? tables
+                  : (lineageData?.datasetTables || [
+                      { tableId: 'telemetry_events_2026', type: 'TABLE' },
+                    ])
+                ).map((t) => (
+                  <option key={t.tableId} value={t.tableId}>
+                    Asset: {t.tableId} ({t.type || 'TABLE'})
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={lineageMaxDepth}
+                onChange={(e) => {
+                  const d = Number(e.target.value);
+                  setLineageMaxDepth(d);
+                  runLineageImpactAnalysis(
+                    selectedDatasetId,
+                    lineageTargetTable,
+                    d
+                  );
+                }}
+                className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono"
+              >
+                <option value={3}>Max Depth: 3 Hops</option>
+                <option value={5}>Max Depth: 5 Hops</option>
+                <option value={10}>Max Depth: 10 Hops (Default)</option>
+              </select>
+
+              <button
+                type="button"
+                data-feature-id="BQ_RUN_LINEAGE_BLAST_RADIUS_BTN"
+                disabled={loadingLineage}
+                onClick={() =>
+                  runLineageImpactAnalysis(
+                    selectedDatasetId,
+                    lineageTargetTable || tables[0]?.tableId,
+                    lineageMaxDepth
+                  )
+                }
+                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    loadingLineage ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>
+                  {loadingLineage
+                    ? 'Scanning Lineage...'
+                    : 'Run Blast-Radius Analysis'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {lineageData && (
+            <>
+              {/* 1. Executive Summary Banner + 4 KPI Cards */}
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    1. Executive Summary:{' '}
+                    <span className="text-blue-600 dark:text-blue-400">
+                      {lineageData.fqn}
+                    </span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                      lineageData.analysisMetadata?.dataLineageApiEnabled
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {lineageData.analysisMetadata?.dataLineageApiEnabled
+                      ? 'datalineage.googleapis.com: ENABLED'
+                      : 'View/Job Provenance Active (Data Lineage API Optional)'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 font-mono">
+                  {lineageData.executiveSummary?.statusMessage}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] font-mono uppercase text-zinc-500">
+                      Downstream Assets Affected
+                    </div>
+                    <div className="text-base font-black font-mono text-zinc-900 dark:text-zinc-100">
+                      {lineageData.executiveSummary?.totalDownstreamAssets || 0}{' '}
+                      <span className="text-[10px] font-normal text-zinc-500">
+                        (Max Depth:{' '}
+                        {lineageData.executiveSummary?.maxDepthObserved || 0})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] font-mono uppercase text-zinc-500">
+                      Direct vs Indirect Impact
+                    </div>
+                    <div className="text-base font-black font-mono text-amber-600 dark:text-amber-400">
+                      {lineageData.executiveSummary?.directImpactCount || 0}{' '}
+                      Direct ·{' '}
+                      {lineageData.executiveSummary?.indirectImpactCount || 0}{' '}
+                      Indirect
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] font-mono uppercase text-zinc-500">
+                      Critical Path (Prod/Dashboard)
+                    </div>
+                    <div className="text-base font-black font-mono text-red-600 dark:text-red-400">
+                      {lineageData.executiveSummary?.criticalPathCount || 0}{' '}
+                      <span className="text-[10px] font-normal text-zinc-500">
+                        high-priority assets
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] font-mono uppercase text-zinc-500">
+                      Analysis Scope &amp; Parent
+                    </div>
+                    <div className="text-[11px] font-bold font-mono text-zinc-800 dark:text-zinc-200 truncate">
+                      {(
+                        lineageData.analysisMetadata?.locationsSearched || [
+                          'us',
+                        ]
+                      ).join(', ')}{' '}
+                      · Depth {lineageData.analysisMetadata?.depthLimit || 10}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Canonical Blast Radius Table + Partition & Cluster Surgeon */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+                <div className="xl:col-span-7 p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                      2. Downstream Blast Radius Table (`Downstream Asset | Transform Process | Depth | Impact Type`)
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Parent: {lineageData.analysisMetadata?.parentPath}
+                    </span>
+                  </div>
+
+                  {(lineageData.blastRadiusTable || []).length === 0 ? (
+                    <div className="p-4 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                      No downstream dependencies found in queried locations [
+                      {(
+                        lineageData.analysisMetadata?.locationsSearched || [
+                          'us',
+                        ]
+                      ).join(', ')}
+                      ] for `{lineageData.fqn}`. You can safely modify,
+                      partition, or cluster this table without breaking
+                      downstream views or scheduled queries.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+                      <table className="w-full text-left border-collapse text-[11px] font-mono">
+                        <thead>
+                          <tr className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+                            <th className="py-2 px-2.5">Downstream Asset</th>
+                            <th className="py-2 px-2.5">Transform Process</th>
+                            <th className="py-2 px-2">Depth</th>
+                            <th className="py-2 px-2.5">Impact Type</th>
+                            <th className="py-2 px-2 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(lineageData.blastRadiusTable || []).map(
+                            (row, idx) => (
+                              <tr
+                                key={`${row.downstreamAsset}-${idx}`}
+                                className="border-b border-zinc-200/60 dark:border-zinc-800/60 bg-white dark:bg-zinc-950"
+                              >
+                                <td className="py-2 px-2.5 font-bold text-blue-600 dark:text-blue-400">
+                                  {row.downstreamAsset}
+                                </td>
+                                <td className="py-2 px-2.5 text-zinc-500 truncate max-w-[200px]">
+                                  {row.transformProcess}
+                                </td>
+                                <td className="py-2 px-2 font-bold">
+                                  {row.depth}
+                                </td>
+                                <td className="py-2 px-2.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                      row.depth === 1
+                                        ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                    }`}
+                                  >
+                                    {row.impactType}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const rawTarget = String(
+                                        row.downstreamAsset || ''
+                                      ).replace(/^bigquery:/i, '');
+                                      const q = `SELECT *\nFROM \`${rawTarget}\`\nLIMIT 25;`;
+                                      setSqlInput(q);
+                                      setActiveSubTab('TABLES_SQL');
+                                      handleExecuteQuery(true, q);
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Dry-Run →
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Analysis Metadata Transparency Box */}
+                  <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-zinc-500 space-y-1">
+                    <div className="font-bold text-zinc-700 dark:text-zinc-300">
+                      Analysis Metadata (`@skill:datalineage-bigquery-asset-impact-analysis`):
+                    </div>
+                    <div>
+                      • Locations Searched:{' '}
+                      {(
+                        lineageData.analysisMetadata?.locationsSearched || []
+                      ).join(', ')}{' '}
+                      | Parent Location:{' '}
+                      {lineageData.analysisMetadata?.parentPath}
+                    </div>
+                    <div>
+                      • Depth Limit: {lineageData.analysisMetadata?.depthLimit}{' '}
+                      | Process per Link Limit:{' '}
+                      {lineageData.analysisMetadata?.processPerLinkLimit} | Tip:
+                      Adjust Max Depth above to expand multi-hop traversal.
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Partition & Cluster FinOps Surgeon */}
+                <div className="xl:col-span-5 p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                      3. Partition &amp; Cluster FinOps Surgeon (`@skill:bigquery-sql`)
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
+                      -{lineageData.partitionClusterAudit?.estimatedScanReductionPct || 80}% Scan Bytes
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                    <div className="p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500">
+                        Current Partitioning
+                      </div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {lineageData.partitionClusterAudit?.isPartitioned
+                          ? `${lineageData.partitionClusterAudit.currentPartitionType} (${
+                              lineageData.partitionClusterAudit
+                                .currentPartitionField || '_PARTITIONTIME'
+                            })`
+                          : 'UNPARTITIONED (Full Scan Risk)'}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-[10px] text-zinc-500">
+                        Current Clustering
+                      </div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        {(
+                          lineageData.partitionClusterAudit
+                            ?.currentClusterFields || []
+                        ).length > 0
+                          ? lineageData.partitionClusterAudit.currentClusterFields.join(
+                              ', '
+                            )
+                          : `Recommended: ${(
+                              lineageData.partitionClusterAudit
+                                ?.recommendedClusterCols || []
+                            ).join(', ')}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-44">
+                    {lineageData.partitionClusterAudit?.optimizedMigrationDdl}
+                  </pre>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-feature-id="BQ_SURGEON_PATCH_METADATA_BTN"
+                      disabled={surgeonBusy || !lineageData.tableExists}
+                      onClick={() =>
+                        handleRunPartitionClusterSurgeon('PATCH_METADATA')
+                      }
+                      className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      {surgeonBusy
+                        ? 'Applying...'
+                        : '1-Tap Enforce Partition Filter & Clustering'}
+                    </button>
+                    <button
+                      type="button"
+                      data-feature-id="BQ_SURGEON_CTAS_COPY_BTN"
+                      disabled={surgeonBusy || !lineageData.tableExists}
+                      onClick={() =>
+                        handleRunPartitionClusterSurgeon(
+                          'CREATE_PARTITIONED_COPY'
+                        )
+                      }
+                      className="py-2 px-3 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      Build `{lineageData.tableId}_partitioned` Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -725,6 +725,116 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'gcloud dataproc clusters create (SDK 592.0.0 GA)',
     safetyMode: 'READ_ONLY',
   },
+  BQ_RUN_LINEAGE_BLAST_RADIUS_BTN: {
+    badge: 'LIVE BIGQUERY DATA LINEAGE BLAST-RADIUS',
+    title: 'Run Downstream Data Lineage Blast-Radius & Partition Surgeon Analysis (@skill:datalineage-bigquery-asset-impact-analysis)',
+    whatItDoes:
+      'Resolves the BigQuery asset FQN (bigquery:project.dataset.table), queries datalineage.googleapis.com/v1 (:searchLinks) up to 10 hops plus live View/Job SQL provenance, and audits table partitioning and clustering.',
+    enterpriseValue:
+      'Identifies every downstream table, dashboard view, and ETL process impacted before modifying or pausing a BigQuery table.',
+    gcpApis: 'POST /api/project/{project}/bigquery/lineage-impact-analysis (datalineage.googleapis.com/v1 + bigquery.googleapis.com/v2)',
+    safetyMode: 'READ_ONLY',
+  },
+  BQ_SURGEON_PATCH_METADATA_BTN: {
+    badge: '1-TAP PARTITION FILTER & CLUSTERING PATCH',
+    title: 'Enforce requirePartitionFilter & Optimal Clustering Columns on Live BigQuery Table',
+    whatItDoes:
+      'Calls PATCH bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets/{dataset}/tables/{table} to enforce requirePartitionFilter=true and configure up to 4 clustering columns.',
+    enterpriseValue:
+      'Prevents accidental full-table scan billing spikes ($6.25/TB) with zero table downtime.',
+    gcpApis: 'POST /api/project/{project}/bigquery/partition-cluster-surgeon (PATCH_METADATA)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  BQ_SURGEON_CTAS_COPY_BTN: {
+    badge: 'NON-DESTRUCTIVE PARTITIONED CTAS BUILDER',
+    title: 'Build Partitioned + Clustered Table Copy via BigQuery CTAS Job',
+    whatItDoes:
+      'Submits a CREATE OR REPLACE TABLE ... PARTITION BY ... CLUSTER BY ... AS SELECT * job to materialize a partitioned and clustered copy while keeping your original table untouched.',
+    enterpriseValue:
+      'Cuts BigQuery query scan bytes by up to 88% on previously unpartitioned tables.',
+    gcpApis: 'POST /api/project/{project}/bigquery/partition-cluster-surgeon (CREATE_PARTITIONED_COPY)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOVEREIGN_TAB_PAM_JIT_STUDIO: {
+    badge: 'PRIVILEGED ACCESS MANAGER (PAM) STUDIO',
+    title: 'Open Google Cloud Privileged Access Manager (PAM) Zero-Standing-Privilege Studio (@skill:iam-helper-for-privileged-access-management)',
+    whatItDoes:
+      'Switches to the PAM Studio to manage time-bound Entitlements (privilegedaccessmanager.googleapis.com/v1), request temporary Grants (Mode 1), approve/deny pending elevations (Mode 3), and convert standing Owner/Editor roles to roles/basic.owner & roles/basic.editor.',
+    enterpriseValue:
+      'Eliminates 24/7 standing admin privileges with audited, auto-expiring JIT access.',
+    gcpApis: 'GET /api/project/{project}/pam/overview (privilegedaccessmanager.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOVEREIGN_TAB_WORKLOAD_MANAGER_SAIF: {
+    badge: 'WORKLOAD MANAGER & SAIF TOXIC COMBO STUDIO',
+    title: 'Open Google Cloud Workload Manager & SAIF Security Posture Studio (@skill:workload-manager-basics + @skill:gcs-security-assessment)',
+    whatItDoes:
+      'Correlates project-level signals (VPC-SC, Model Armor, Data Access Audit Logs, Storage Insights) with bucket classifications and Workload Manager evaluations to detect and remediate toxic security combinations.',
+    enterpriseValue:
+      'Detects multi-signal AI data poisoning and ransomware exposures that isolated static rules miss.',
+    gcpApis: 'GET /api/project/{project}/workload-manager/overview (workloadmanager.googleapis.com/v1 + storage.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  PAM_ENABLE_API_BTN: {
+    badge: 'ENABLE PRIVILEGED ACCESS MANAGER API',
+    title: 'Enable privilegedaccessmanager.googleapis.com in Current Project',
+    whatItDoes:
+      'Calls serviceusage.googleapis.com/v1 to enable the Google Cloud Privileged Access Manager API.',
+    enterpriseValue:
+      'Unlocks native PAM Entitlements and temporary JIT Grants at $0.00/mo.',
+    gcpApis: 'POST /api/project/{project}/pam/action (ENABLE_PAM_API)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  PAM_REFRESH_BTN: {
+    badge: 'SYNC LIVE PAM ENTITLEMENTS & GRANTS',
+    title: 'Refresh PAM Entitlements, Active Grants & Standing IAM Candidates',
+    whatItDoes:
+      'Queries privilegedaccessmanager.googleapis.com/v1/projects/{project}/locations/global/entitlements and /grants plus project IAM bindings.',
+    enterpriseValue:
+      'Provides real-time visibility into active elevations and pending approval requests.',
+    gcpApis: 'GET /api/project/{project}/pam/overview',
+    safetyMode: 'READ_ONLY',
+  },
+  PAM_CREATE_ENTITLEMENT_BTN: {
+    badge: 'CREATE ZERO-STANDING-PRIVILEGE PAM ENTITLEMENT',
+    title: 'Create PAM Entitlement (Auto-Maps Legacy Basic Roles to roles/basic.*)',
+    whatItDoes:
+      'Creates a live PAM Entitlement in global location with maxRequestDuration (in seconds, default "14400s" / 4h), eligible requesters, and optional manual approval workflow.',
+    enterpriseValue:
+      'Replaces permanent Owner/Editor/Admin bindings with auditable on-demand access.',
+    gcpApis: 'POST /api/project/{project}/pam/action (CREATE_ENTITLEMENT)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  WLM_ENABLE_API_BTN: {
+    badge: 'ENABLE WORKLOAD MANAGER & MODEL ARMOR APIS',
+    title: 'Enable workloadmanager.googleapis.com & modelarmor.googleapis.com',
+    whatItDoes:
+      'Enables Google Cloud Workload Manager and Model Armor APIs via Service Usage REST API.',
+    enterpriseValue:
+      'Satisfies SAIF AI security prerequisites and unlocks automated posture evaluations.',
+    gcpApis: 'POST /api/project/{project}/workload-manager/action (ENABLE_WLM_API)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  WLM_REFRESH_BTN: {
+    badge: 'RUN 5-PHASE SAIF & WORKLOAD MANAGER ASSESSMENT',
+    title: 'Run Live SAIF Toxic Combination & Workload Manager Evaluation Scan',
+    whatItDoes:
+      'Executes the 5-Phase SAIF security posture assessment across project signals and Cloud Storage buckets alongside Workload Manager evaluations.',
+    enterpriseValue:
+      'Grounds every security finding in live GCP telemetry with zero hallucinated states.',
+    gcpApis: 'GET /api/project/{project}/workload-manager/overview',
+    safetyMode: 'READ_ONLY',
+  },
+  WLM_CREATE_EVALUATION_BTN: {
+    badge: 'CREATE WORKLOAD MANAGER EVALUATION',
+    title: 'Create Live Google Cloud Workload Manager Evaluation (OTHER / SAP / SQL_SERVER)',
+    whatItDoes:
+      'Calls POST workloadmanager.googleapis.com/v1/projects/{project}/locations/{location}/evaluations to provision a continuous best-practice evaluation.',
+    enterpriseValue:
+      'Automates ongoing compliance validation against Google Cloud best practices.',
+    gcpApis: 'POST /api/project/{project}/workload-manager/action (CREATE_EVALUATION)',
+    safetyMode: 'LIVE_MUTATION',
+  },
   SPARK_BTN_RUN_LINEAGE_CATALOG_SYNTHESIS: {
     badge: 'DATA LINEAGE BLAST RADIUS & BIGFRAMES v2.0',
     title: 'Query Live Data Lineage Blast Radius, Dataplex Aspects & Synthesize BigFrames v2.0 + Lightning Engine',
@@ -3468,6 +3578,186 @@ export const INNOVATION_FEATURE_GUIDE = {
       'Copies the complete JSON configuration bundle for all checked Google Cloud Remote MCP servers directly to your clipboard.',
     enterpriseValue:
       'Provides zero-friction onboarding for AI-assisted cloud engineering in Gemini CLI, Claude Code, and Cursor.',
+    gcpApis: 'Browser Clipboard API',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_PROBE_GA_AGENT_REGISTRY_591: {
+    badge: 'SDK 591.0.0 GA · AGENT REGISTRY',
+    title: 'Probe Live Google Cloud Agent Registry (`mcp-servers`, `agents`, `skills`, `publishers`, `findings`)',
+    whatItDoes:
+      'Executes a 5-way live read-only scan across Google Cloud Agent Registry (`gcloud agent-registry mcp-servers/agents/skills/publishers/findings list --location=global`) bridged with your active OAuth2 session token.',
+    enterpriseValue:
+      'Audits all registered MCP endpoints, autonomous agents, reusable skills, and security findings in your project in 1 click.',
+    gcpApis: 'agentregistry.googleapis.com/v1 · gcloud agent-registry (SDK 591.0.0 GA)',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_REAUDIT_STACK: {
+    badge: 'LIVE MCP STACK READINESS DOCTOR',
+    title: 'Re-Audit Selected MCP Server Stack Against Live Service Usage & IAM',
+    whatItDoes:
+      'Checks all selected `*.googleapis.com/mcp` servers against `serviceusage.googleapis.com/v1` (enabled vs disabled APIs), `cloudresourcemanager.googleapis.com/v1:testIamPermissions` (`serviceusage.services.use`), and existing `mcp-agent-readonly` Service Accounts.',
+    enterpriseValue:
+      'Pinpoints why an MCP server is returning 403/400 in your IDE and verifies readiness across your entire MCP stack.',
+    gcpApis: 'POST /api/project/{project}/mcp/architect-doctor · serviceusage.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_TAB_STACK_DOCTOR: {
+    badge: 'PILLAR 1 · MCP STACK DOCTOR',
+    title: 'MCP Stack Readiness Doctor & 1-Click Batch API Provisioner',
+    whatItDoes:
+      'Audits whether the underlying `*.googleapis.com` Service Usage APIs and `serviceusage.services.use` quota permissions are enabled for each selected Remote MCP server, and exposes 1-click `services:batchEnable`.',
+    enterpriseValue:
+      'Eliminates silent 403 SERVICE_DISABLED errors when connecting Claude Code, Gemini CLI, or Cursor to Google Cloud Remote MCP endpoints.',
+    gcpApis: 'serviceusage.googleapis.com/v1/projects/{project}/services:batchEnable',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_TAB_LEAST_PRIVILEGE_SA: {
+    badge: 'PILLAR 2 · ZERO-TRUST AGENT IDENTITY',
+    title: 'Least-Privilege AI Agent Service Account & Scoped Read-Only IAM Minter',
+    whatItDoes:
+      'Replaces personal `roles/owner` developer tokens with a dedicated `mcp-agent-readonly@{project}.iam.gserviceaccount.com` Service Account bound strictly to read-only viewer roles (`roles/bigquery.metadataViewer`, `roles/storage.objectViewer`, `roles/logging.viewer`).',
+    enterpriseValue:
+      'Physically blocks AI agents from executing `destructiveHint=true` mutations (like deleting tables or buckets) at the Google Cloud IAM layer.',
+    gcpApis: 'iam.googleapis.com/v1/projects/{project}/serviceAccounts · cloudresourcemanager.googleapis.com/v1:setIamPolicy',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_TAB_WORKSTATION_IDE_SYNC: {
+    badge: 'PILLAR 3 · LOCAL IDE CONFIG INJECTOR',
+    title: 'Workstation IDE Config Live Diff, Region Doctor & 1-Click Injector',
+    whatItDoes:
+      'Inspects local `.mcp.json`, `~/.gemini/settings.json`, `~/.cursor/mcp.json`, and `~/.claude.json` files on your workstation, repairs unreplaced `$GCP_REGION` placeholders, and merges selected official GCP MCP servers with an automatic `.bak` backup.',
+    enterpriseValue:
+      'Eliminates manual JSON copy-pasting errors and broken regional MCP endpoints across developer workstations.',
+    gcpApis: 'GET/POST /api/project/{project}/mcp/local-ide-sync · Local Filesystem `.bak` Guard',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_TAB_CUSTOM_CLOUDRUN_MCP: {
+    badge: 'PILLAR 4 · CUSTOM CLOUD RUN MCP',
+    title: '1-Click Custom Streamable-HTTP Cloud Run MCP Server Scaffolder & GCS Stager',
+    whatItDoes:
+      'Synthesizes a complete Node.js 22 Streamable-HTTP JSON-RPC 2.0 Remote MCP Server (`server.mjs` + `package.json`) tailored to your project, uploads the deployable bundle to Cloud Storage with a SHA-256 receipt, and generates `--no-allow-unauthenticated` Cloud Run deploy + Agent Registry CLI.',
+    enterpriseValue:
+      'Lets platform architects deploy custom internal Remote MCP servers on Cloud Run with Zero-Trust IAM authentication in minutes.',
+    gcpApis: 'storage.googleapis.com/upload/storage/v1 · run.googleapis.com/v2 · agentregistry.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_BATCH_ENABLE_APIS: {
+    badge: '1-CLICK BATCH API ENABLEMENT',
+    title: 'Batch-Enable All Missing Google Cloud MCP Service APIs (`$0.00`)',
+    whatItDoes:
+      'Calls `POST https://serviceusage.googleapis.com/v1/projects/{project}/services:batchEnable` to activate all disabled `*.googleapis.com` APIs required by your selected Remote MCP servers in a single request.',
+    enterpriseValue:
+      'Unblocks all selected official Google Cloud Remote MCP endpoints simultaneously at $0.00 API enablement cost.',
+    gcpApis: 'serviceusage.googleapis.com/v1/projects/{project}/services:batchEnable',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MCP_ARCH_MINT_READONLY_SA: {
+    badge: 'ZERO-MUTATION AGENT IDENTITY MINTER',
+    title: 'Provision `mcp-agent-readonly` Service Account & Bind Read-Only IAM Roles',
+    whatItDoes:
+      'Creates (or verifies) Service Account `mcp-agent-readonly@{project}.iam.gserviceaccount.com` via `iam.googleapis.com/v1`, binds only the least-privilege Read-Only IAM roles for your selected MCP servers, and generates a keyless short-lived impersonation command.',
+    enterpriseValue:
+      'Guarantees that even if an IDE agent suffers prompt injection or hallucinates a destructive tool call, GCP IAM denies the mutation.',
+    gcpApis: 'POST /api/project/{project}/mcp/mint-least-privilege-sa · iam.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MCP_ARCH_COPY_IMPERSONATION_CLI: {
+    badge: 'KEYLESS SHORT-LIVED TOKEN CLI',
+    title: 'Copy `gcloud auth print-access-token --impersonate-service-account` Command',
+    whatItDoes:
+      'Copies the keyless OAuth2 Service Account impersonation command so your IDE mints 1-hour read-only tokens without ever downloading a static JSON private key file to disk.',
+    enterpriseValue:
+      'Eliminates leaked Service Account JSON keys while enforcing strict read-only MCP permissions.',
+    gcpApis: 'iamcredentials.googleapis.com/v1 (generateAccessToken)',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_OPEN_PAM_JIT: {
+    badge: 'PRIVILEGED ACCESS MANAGER HANDOFF',
+    title: 'Open Privileged Access Manager (PAM) Just-In-Time Entitlements Studio',
+    whatItDoes:
+      'Navigates directly to the PAM JIT Entitlements & Grant Approver Studio in Sovereign IAM so you can require time-bound, audit-logged approval whenever an engineer or agent needs temporary elevated privileges.',
+    enterpriseValue:
+      'Combines standing zero-mutation MCP identities with on-demand, auto-expiring PAM elevation.',
+    gcpApis: 'privilegedaccessmanager.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_SYNC_LOCAL_IDE: {
+    badge: '1-CLICK WORKSTATION IDE INJECTOR',
+    title: 'Backup & Inject Selected Official GCP Remote MCP Servers into Local IDE Config',
+    whatItDoes:
+      'Creates a timestamped `.bak` backup of your selected local MCP configuration file (`.mcp.json`, `~/.gemini/settings.json`, or `~/.cursor/mcp.json`), patches any unreplaced `$GCP_REGION` placeholders, and merges your selected `*.googleapis.com/mcp` servers.',
+    enterpriseValue:
+      'Wires your local AI coding assistant to Google Cloud Remote MCP servers in 1 click without overwriting your existing non-GCP MCP tools.',
+    gcpApis: 'POST /api/project/{project}/mcp/local-ide-sync',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MCP_ARCH_STAGE_CUSTOM_CLOUDRUN_MCP: {
+    badge: 'CUSTOM CLOUD RUN MCP BUNDLE STAGER',
+    title: 'Synthesize & Stage Custom Streamable-HTTP MCP Server Bundle to Cloud Storage',
+    whatItDoes:
+      'Generates a production Node.js 22 JSON-RPC 2.0 Remote MCP Server (`server.mjs` + `package.json`) tailored to your project and uploads the bundle to `gs://<bucket>/mcp-cloudrun-deployments/` with a cryptographic SHA-256 receipt.',
+    enterpriseValue:
+      'Stages a deployable custom Remote MCP server at $0.00 compute cost, ready for `--no-allow-unauthenticated` Cloud Run deployment and Agent Registry registration.',
+    gcpApis: 'POST /api/project/{project}/mcp/stage-custom-cloudrun-mcp · storage.googleapis.com/upload/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  MCP_ARCH_BROWSE_GCS_BUNDLE: {
+    badge: 'CROSS-STUDIO GCS OBJECT DEEP-LINK',
+    title: 'Browse Staged Custom Cloud Run MCP Bundle in Cloud Storage Object Workbench',
+    whatItDoes:
+      'Opens the target Cloud Storage bucket directly inside the 3-Zone Cloud Storage Object Workbench IDE so you can inspect, download, or version-control the staged `mcp-cloudrun-deployments/*.json` bundle.',
+    enterpriseValue:
+      'Provides instant artifact verification and object lifecycle control across Studios.',
+    gcpApis: 'storage.googleapis.com/storage/v1/b/{bucket}/o',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_ARCH_COPY_CLOUDRUN_DEPLOY_CLI: {
+    badge: 'ZERO-TRUST CLOUD RUN + AGENT REGISTRY CLI',
+    title: 'Copy `--no-allow-unauthenticated` Cloud Run Deploy & Agent Registry CLI',
+    whatItDoes:
+      'Copies the exact `gcloud run deploy --no-allow-unauthenticated` command (bound to `mcp-agent-readonly`) and the `gcloud agent-registry mcp-servers create` registration command.',
+    enterpriseValue:
+      'Deploys and registers your custom Remote MCP server with IAM Zero-Trust authentication in a single terminal paste.',
+    gcpApis: 'run.googleapis.com/v2 · agentregistry.googleapis.com/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_RESET_TOOL_ARGS_DEFAULT: {
+    badge: 'PROJECT-SCOPED JSON-RPC DEFAULTS',
+    title: 'Reset JSON-RPC `params.arguments` Payload to Active Project Defaults',
+    whatItDoes:
+      'Repopulates the `params.arguments` JSON editor with schema-validated default arguments pre-populated with your active `projectId` and `region`.',
+    enterpriseValue:
+      'Saves time crafting JSON-RPC 2.0 test payloads by auto-filling required `projectId`, `parent`, and `location` fields.',
+    gcpApis: 'MCP Tool `inputSchema` Default Synthesizer',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_PAYLOAD_VIEW_FORMATTED: {
+    badge: 'STRUCTURED MCP TELEMETRY VIEW',
+    title: 'Switch to Formatted Architectural Cards & Key-Value Review',
+    whatItDoes:
+      'Renders the JSON-RPC 2.0 `tools/call` response as structured resource cards, key-value telemetry pills, and Markdown tables.',
+    enterpriseValue:
+      'Makes complex multi-resource MCP responses (buckets, datasets, billing SKUs, log entries) immediately scannable.',
+    gcpApis: 'JSON-RPC 2.0 Structured Content Normalizer',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_PAYLOAD_VIEW_RAW: {
+    badge: 'RAW JSON-RPC 2.0 WIRE PAYLOAD',
+    title: 'Inspect Raw JSON-RPC 2.0 Wire Response (`result.content` / `structuredContent`)',
+    whatItDoes:
+      'Displays the exact unformatted JSON-RPC 2.0 response payload returned by `https://*.googleapis.com/mcp` for protocol debugging and schema inspection.',
+    enterpriseValue:
+      'Gives agent developers full visibility into the underlying JSON-RPC 2.0 wire format.',
+    gcpApis: 'JSON-RPC 2.0 over HTTPS',
+    safetyMode: 'READ_ONLY',
+  },
+  MCP_COPY_PAYLOAD_BTN: {
+    badge: 'COPY MCP JSON-RPC PAYLOAD',
+    title: 'Copy Live MCP Tool Response Payload to Clipboard',
+    whatItDoes:
+      'Copies the structured JSON or Markdown response returned by the official Google Cloud Remote MCP server directly to your clipboard.',
+    enterpriseValue:
+      'Lets engineers paste live MCP ground-truth telemetry into incident tickets, PRs, or agent evaluation datasets.',
     gcpApis: 'Browser Clipboard API',
     safetyMode: 'READ_ONLY',
   },
@@ -7574,6 +7864,9 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
   } else if (fullContext.includes('budget') || fullContext.includes('finops') || fullContext.includes('billing') || fullContext.includes('cud') || fullContext.includes('spend')) {
     domainBadge = isMutating ? 'FINOPS & BUDGET ENFORCEMENT' : 'CLOUD BILLING & FINOPS CONTROL';
     inferredApi = codeSnippet || 'billingbudgets.googleapis.com/v1 · cloudbilling.googleapis.com/v1';
+  } else if (fullContext.includes('mcp') || fullContext.includes('json-rpc') || fullContext.includes('agent-registry') || fullContext.includes('tools/call') || fullContext.includes('tools/list')) {
+    domainBadge = isMutating ? 'REMOTE MCP GOVERNANCE ACTION' : 'OFFICIAL GOOGLE CLOUD REMOTE MCP';
+    inferredApi = codeSnippet || 'https://*.googleapis.com/mcp (JSON-RPC 2.0) · agentregistry.googleapis.com/v1';
   }
 
   // 4. Compose a Domain- & Action-Specific `whatItDoes` and `enterpriseValue` Using the Button's Own Content & Domain
@@ -7654,13 +7947,19 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
       : `Switches the FinOps & Billing telemetry view to "${displayLabel}"${targetPhrase} to inspect hourly burn, promotional credits, or idle resources.`;
     domainEnterpriseValue =
       'Prevents surprise billing spikes by surfacing unattached static IPs ($7.30/mo), warm idle containers, and Always-Free tier limits.';
+  } else if (fullContext.includes('mcp') || fullContext.includes('json-rpc') || fullContext.includes('agent-registry') || fullContext.includes('tools/call') || fullContext.includes('tools/list')) {
+    domainWhatItDoes = isMutating
+      ? `Executes Remote MCP governance or Agent Registry action "${displayLabel}"${targetPhrase} against official https://*.googleapis.com/mcp and Service Usage / IAM APIs.`
+      : `Inspects or configures Remote MCP JSON-RPC 2.0 control "${displayLabel}"${targetPhrase} inside the Google-Managed Remote MCP Hub.`;
+    domainEnterpriseValue =
+      'Enforces readOnlyHint=true zero-mutation guardrails, least-privilege mcp-agent-readonly Service Account isolation, and direct HTTPS JSON-RPC 2.0 connectivity.';
   } else {
     domainWhatItDoes = isMutating
-      ? `Runs live Google Cloud control-plane action "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''} gated by pre-execution safety validation.`
-      : `Switches the active workspace view or parameter preset to "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''}.`;
+      ? `Executes "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''} against live Google Cloud REST APIs with pre-execution gatekeeper verification.`
+      : `Loads "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''} and refreshes the live Google Cloud telemetry view in real time.`;
     domainEnterpriseValue = isMutating
-      ? `Executes directly against Google Cloud REST APIs with full Flight Recorder audit logging and mandatory confirmation before any state change.`
-      : `Updates the live telemetry lens or interactive studio workflow immediately in your browser with $0.00 cloud cost and zero mutation risk.`;
+      ? `Applies the live infrastructure change directly via Google Cloud REST APIs and records a verifiable receipt in the Flight Recorder.`
+      : `Provides instant, read-only visibility into your live Google Cloud resources at $0.00 cost and zero mutation risk.`;
   }
 
   const primaryExplanation =
@@ -7696,6 +7995,113 @@ function resolveFeatureExplanation(buttonEl) {
   const explicitId = buttonEl.getAttribute('data-feature-id');
   if (explicitId && INNOVATION_FEATURE_GUIDE[explicitId]) {
     return INNOVATION_FEATURE_GUIDE[explicitId];
+  }
+
+  // Dynamic MCP Studio Context Resolvers (Tool Selector Pills, 48 Server Cards, GA 591 Probes, Drift Remediations, IDE Export Toggles)
+  const mcpToolName = buttonEl.getAttribute('data-mcp-tool-name');
+  if (mcpToolName) {
+    const toolDesc = buttonEl.getAttribute('data-mcp-tool-desc') || '';
+    const isReadOnly = buttonEl.getAttribute('data-mcp-tool-readonly') === 'true';
+    const isDestructive = buttonEl.getAttribute('data-mcp-tool-destructive') === 'true';
+    const endpoint = buttonEl.getAttribute('data-mcp-tool-endpoint') || 'https://*.googleapis.com/mcp';
+    return {
+      badge: isDestructive
+        ? 'DESTRUCTIVE-GATED MCP TOOL (destructiveHint=true)'
+        : isReadOnly
+        ? 'READ-ONLY SAFE MCP TOOL (readOnlyHint=true)'
+        : 'OFFICIAL GOOGLE CLOUD MCP TOOL SCHEMA',
+      title: `Inspect & Load MCP Tool Schema: "${mcpToolName}"`,
+      whatItDoes:
+        toolDesc.slice(0, 260) ||
+        `Loads the JSON-RPC 2.0 inputSchema, parameter documentation, and project-scoped default arguments for "${mcpToolName}" on ${endpoint}.`,
+      enterpriseValue: isDestructive
+        ? `Carries annotations.destructiveHint=true — protected by CloudPulse's Human-in-the-Loop Safety Gate and blocked if your IDE uses the mcp-agent-readonly Service Account.`
+        : `Carries annotations.readOnlyHint=true — 100% safe for autonomous AI agent execution and compatible with the mcp-agent-readonly Service Account.`,
+      gcpApis: `POST ${endpoint} (JSON-RPC 2.0 tools/call -> ${mcpToolName})`,
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  const mcpServerCardId = buttonEl.getAttribute('data-mcp-server-card');
+  if (mcpServerCardId) {
+    const srvName = buttonEl.getAttribute('data-mcp-server-name') || mcpServerCardId;
+    const srvEndpoint = buttonEl.getAttribute('data-mcp-server-endpoint') || `https://${mcpServerCardId}.googleapis.com/mcp`;
+    const srvDesc = buttonEl.getAttribute('data-mcp-server-desc') || '';
+    const srvStage = buttonEl.getAttribute('data-mcp-server-stage') || 'GA';
+    const srvTools = buttonEl.getAttribute('data-mcp-server-tools') || 'live';
+    return {
+      badge: `OFFICIAL GCP REMOTE MCP · ${srvStage} (${srvTools} TOOLS)`,
+      title: `${srvName} (${srvEndpoint})`,
+      whatItDoes: `Executes a live JSON-RPC 2.0 tools/list call against ${srvEndpoint} to introspect all available tools, inputSchema parameters, and readOnlyHint/destructiveHint annotations. ${srvDesc}`,
+      enterpriseValue:
+        'Connects directly to Google-managed Remote MCP infrastructure over HTTPS TLS 1.3 with zero local proxy binary required.',
+      gcpApis: `POST ${srvEndpoint} (JSON-RPC 2.0 tools/list & tools/call)`,
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  const mcpProbeCli = buttonEl.getAttribute('data-mcp-probe-cli');
+  if (mcpProbeCli) {
+    const probeLabel = buttonEl.getAttribute('data-mcp-probe-label') || 'GA Agent Registry Probe';
+    const probeDesc =
+      buttonEl.getAttribute('data-mcp-probe-desc') ||
+      `Executes live read-only gcloud probe "${mcpProbeCli}" bridged with your active OAuth2 access token.`;
+    return {
+      badge: 'LIVE GCLOUD 591.0.0 READ-ONLY PROBE',
+      title: `Probe Live: ${probeLabel}`,
+      whatItDoes: `${probeDesc} Runs \`${mcpProbeCli}\` and parses the structured JSON response.`,
+      enterpriseValue:
+        'Verifies real Google Cloud Agent Registry and cryptographic AGENT_IDENTITY state without leaving the browser.',
+      gcpApis: mcpProbeCli,
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  const mcpCopyCli = buttonEl.getAttribute('data-mcp-copy-cli');
+  if (mcpCopyCli) {
+    const probeLabel = buttonEl.getAttribute('data-mcp-probe-label') || 'gcloud CLI Command';
+    return {
+      badge: 'COPY GCLOUD CLI COMMAND',
+      title: `Copy CLI for "${probeLabel}"`,
+      whatItDoes: `Copies \`${mcpCopyCli}\` directly to your clipboard so you can run or script it in Cloud Shell or CI/CD.`,
+      enterpriseValue:
+        'Gives cloud architects an exact, reproducible gcloud CLI one-liner for every MCP & Agent Registry operation.',
+      gcpApis: mcpCopyCli,
+      safetyMode: 'READ_ONLY',
+    };
+  }
+
+  const mcpFindingTitle = buttonEl.getAttribute('data-mcp-finding-title');
+  if (mcpFindingTitle) {
+    const evidence = buttonEl.getAttribute('data-mcp-finding-evidence') || '';
+    const cli = buttonEl.getAttribute('data-mcp-finding-cli') || 'POST /api/project/{project}/mcp/remediate-finding';
+    return {
+      badge: '1-CLICK LIVE MCP DRIFT REMEDIATION',
+      title: mcpFindingTitle,
+      whatItDoes: `Executes a live remediation action to resolve the architectural drift detected by the 4-server MCP Triage Chain: ${evidence}`,
+      enterpriseValue:
+        'Turns passive MCP telemetry into closed-loop cloud security and FinOps remediation in a single click.',
+      gcpApis: cli,
+      safetyMode: 'LIVE_MUTATION',
+    };
+  }
+
+  const mcpExportServer = buttonEl.getAttribute('data-mcp-export-server');
+  if (mcpExportServer) {
+    const srvName = buttonEl.getAttribute('data-mcp-export-name') || mcpExportServer;
+    const srvEndpoint = buttonEl.getAttribute('data-mcp-export-endpoint') || `https://${mcpExportServer}.googleapis.com/mcp`;
+    const isChecked = buttonEl.getAttribute('data-mcp-export-checked') === 'true';
+    return {
+      badge: isChecked ? 'INCLUDED IN IDE MCP BUNDLE' : 'CLICK TO ADD TO IDE MCP BUNDLE',
+      title: `${isChecked ? 'Remove' : 'Include'} "${srvName}" (${srvEndpoint}) in IDE & Doctor Stack`,
+      whatItDoes: `${
+        isChecked ? 'Removes' : 'Adds'
+      } ${srvEndpoint} in your selected MCP stack for the MCP Stack Readiness Doctor, Least-Privilege Agent SA Minter, and Local Workstation IDE Config Injector (.mcp.json / ~/.gemini/settings.json / Cursor).`,
+      enterpriseValue:
+        'Lets you tailor the exact set of official Google Cloud Remote MCP endpoints exposed to your AI coding agents.',
+      gcpApis: srvEndpoint,
+      safetyMode: 'READ_ONLY',
+    };
   }
 
   const rawText = (buttonEl.textContent || '').replace(/\s+/g, ' ').trim();

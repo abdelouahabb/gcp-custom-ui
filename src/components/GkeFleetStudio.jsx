@@ -174,6 +174,89 @@ export default function GkeFleetStudio({
   const [ccPrimaryFamily, setCcPrimaryFamily] = useState('c3'); // 'c3' | 'g2' | 'n2'
   const [ccAutoMigrateBackToSpot, setCcAutoMigrateBackToSpot] = useState(true);
   const [dwsFlexEnabled, setDwsFlexEnabled] = useState(true);
+  const [ccWorkloadProfile, setCcWorkloadProfile] = useState(
+    'STATELESS_MICROSERVICES'
+  ); // 'STATELESS_MICROSERVICES' | 'AI_ML_INFERENCE' | 'STATEFUL_PV_WORKLOAD'
+  const [ccCudCoresCap, setCcCudCoresCap] = useState(100);
+  const [ccArchitectData, setCcArchitectData] = useState(null);
+  const [loadingCcArchitect, setLoadingCcArchitect] = useState(false);
+  const [ccActiveManifestTab, setCcActiveManifestTab] = useState(
+    'computeClassYaml'
+  );
+
+  const requestCrossStudioNav = useCallback(
+    (destinationLabel, targetDetail, onConfirmFn) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:request-cross-tab-nav', {
+            detail: {
+              fromStudio: 'GKE Kubernetes & ComputeClass Studio',
+              destinationLabel,
+              targetDetail,
+              onConfirm: onConfirmFn,
+            },
+          })
+        );
+      } else {
+        onConfirmFn?.();
+      }
+    },
+    []
+  );
+
+  const runComputeClassArchitect = useCallback(
+    async (profileOverride, famOverride, cudOverride) => {
+      if (!projectId) return;
+      setLoadingCcArchitect(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/gke/compute-classes-architect`,
+          {
+            computeClassName,
+            workloadProfile: profileOverride || ccWorkloadProfile,
+            primaryFamily: famOverride || ccPrimaryFamily || 'n4',
+            secondaryFamily: 'n4d',
+            tertiaryFamily: 'c4',
+            cudCoresCap: cudOverride || ccCudCoresCap || 100,
+            gpuType: gpuSku || 'nvidia-l4',
+            gpuCount: gpuCount || 1,
+            bootDiskSize: 50,
+            locationPolicy: 'BALANCED',
+            activeMigration: ccAutoMigrateBackToSpot,
+            allowedNamespace: appNamespace || 'production',
+          }
+        );
+        setCcArchitectData(res.data || null);
+      } catch (err) {
+        onShowToast?.(
+          err.response?.data?.error ||
+            'Failed to run GKE ComputeClass Architect.'
+        );
+      } finally {
+        setLoadingCcArchitect(false);
+      }
+    },
+    [
+      projectId,
+      computeClassName,
+      ccWorkloadProfile,
+      ccPrimaryFamily,
+      ccCudCoresCap,
+      gpuSku,
+      gpuCount,
+      ccAutoMigrateBackToSpot,
+      appNamespace,
+      onShowToast,
+    ]
+  );
+
+  useEffect(() => {
+    if (activeSubTab === 'COMPUTECLASS_GATEWAY_2027' && projectId) {
+      runComputeClassArchitect();
+    }
+  }, [activeSubTab, projectId]);
   const [gatewayClass, setGatewayClass] = useState(
     'gke-l7-global-external-managed'
   );
@@ -1741,7 +1824,11 @@ spec:
                         <button
                           type="button"
                           onClick={() =>
-                            onSelectTab('CLOUD_RUN', 'CLOUDRUN_TO_GKE')
+                            requestCrossStudioNav(
+                              'Cloud Run Serverless Fleet Studio',
+                              `Transpile Cloud Run -> GKE ComputeClass (${computeClassName})`,
+                              () => onSelectTab('CLOUD_RUN', 'CLOUDRUN_TO_GKE')
+                            )
                           }
                           className="px-3 py-1.5 rounded-md bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
                         >
@@ -1751,9 +1838,14 @@ spec:
                         <button
                           type="button"
                           onClick={() =>
-                            onSelectTab(
-                              'FUNCTIONS_STUDIO',
-                              'EVENTARC_BUS_3ENGINE_2027'
+                            requestCrossStudioNav(
+                              'Cloud Functions & Eventarc 3-Engine Studio',
+                              `Compare ComputeClass (${computeClassName}) in 3-Engine TCO Sizer`,
+                              () =>
+                                onSelectTab(
+                                  'FUNCTIONS_STUDIO',
+                                  'EVENTARC_BUS_3ENGINE_2027'
+                                )
                             )
                           }
                           className="px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
@@ -1766,10 +1858,84 @@ spec:
                   </div>
                 </div>
 
-                <div className="lg:col-span-7">
+                <div className="lg:col-span-7 space-y-2.5">
+                  {/* Live @skill:gke-compute-classes Profile & 4-Manifest Switcher */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        {
+                          id: 'STATELESS_MICROSERVICES',
+                          label: 'Stateless + CUD Spillover',
+                        },
+                        {
+                          id: 'AI_ML_INFERENCE',
+                          label: 'AI/ML GPU Inference (No Spot-1st)',
+                        },
+                        {
+                          id: 'STATEFUL_PV_WORKLOAD',
+                          label: 'Stateful PV (`dynamic-rwo`)',
+                        },
+                      ].map((prof) => (
+                        <button
+                          key={prof.id}
+                          type="button"
+                          onClick={() => {
+                            setCcWorkloadProfile(prof.id);
+                            runComputeClassArchitect(
+                              prof.id,
+                              ccPrimaryFamily,
+                              ccCudCoresCap
+                            );
+                          }}
+                          className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                            ccWorkloadProfile === prof.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {prof.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {[
+                        { id: 'computeClassYaml', label: 'ComputeClass' },
+                        { id: 'capacityQuotaYaml', label: 'CapacityQuota' },
+                        { id: 'workloadAndStatefulYaml', label: 'Pod + PDB' },
+                        { id: 'governanceBundleYaml', label: 'RBAC + VAP' },
+                      ].map((mt) => (
+                        <button
+                          key={mt.id}
+                          type="button"
+                          onClick={() => setCcActiveManifestTab(mt.id)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                            ccActiveManifestTab === mt.id
+                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          {mt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <pre className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-96 leading-relaxed">
-                    {computeClassAndGatewayYaml}
+                    {ccArchitectData?.manifests?.[ccActiveManifestTab] ||
+                      computeClassAndGatewayYaml}
                   </pre>
+
+                  {(ccArchitectData?.guardrailsVerified || []).length > 0 && (
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 space-y-1">
+                      <div className="font-bold">
+                        ✓ Verified `@skill:gke-compute-classes` Guardrails ({loadingCcArchitect ? 'Refreshing...' : `${ccArchitectData?.clusters?.length || 0} Live Clusters · ${ccArchitectData?.commitmentsCount || 0} CUDs`}):
+                      </div>
+                      {ccArchitectData.guardrailsVerified.map((g, i) => (
+                        <div key={i}>• {g}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

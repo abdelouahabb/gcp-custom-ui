@@ -400,7 +400,7 @@ div.grid:has(> div:first-child):has(> div:nth-child(4)):not(:has(input)):not(:ha
  * ---------------------------------------------------------------------------- */
 .cp-segmented-menu:not(.grid),
 [role="tablist"]:not(.grid),
-div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
 div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])) {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -424,15 +424,15 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
   align-items: stretch !important;
 }
 
-/* Equal-width flex items inside horizontal non-grid tab strips */
+/* Equal-width flex items inside horizontal non-grid tab strips (never 0% flex-basis so labels never collapse) */
 :is(
   .cp-segmented-menu:not(.grid),
   [role="tablist"]:not(.grid),
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button {
-  flex: 1 1 0% !important;
-  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: max-content !important;
   justify-content: center !important;
 }
 
@@ -461,7 +461,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button {
@@ -510,7 +510,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) {
@@ -523,7 +523,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) {
@@ -536,7 +536,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]) :is(span, div, strong) {
@@ -547,7 +547,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]):hover {
@@ -560,7 +560,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:not(.bg-blue-600):not([aria-selected="true"]):not(.bg-indigo-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-amber-500):not(.border-amber-500):not([class*="bg-amber-500/"]):hover {
@@ -574,7 +574,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) {
@@ -590,7 +590,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) {
@@ -606,7 +606,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) :is(span, div, strong) {
@@ -616,7 +616,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) svg {
@@ -626,7 +626,7 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.inline-flex:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))),
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) svg {
@@ -653,10 +653,9 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
  * ---------------------------------------------------------------------------- */
 button {
   max-width: 100%;
-  overflow: hidden;
 }
 
-button > span:not([class*="absolute"]):not([class*="shrink-0"]) {
+button.w-full > span:not([class*="absolute"]):not([class*="shrink-0"]) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

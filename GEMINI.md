@@ -150,7 +150,30 @@
   - **Redesigned 3-Zone Object Workbench IDE & Cross-Studio Navigation Confirmation Guard (`cloudpulse:request-cross-tab-nav`)**: Streamlined `GcsObjectWorkbench.jsx` with consolidated overflow menus (`Access & Hold`, `Actions & Export`, `Jump to Studio...`), responsive button toolbars, and a global confirmation guard modal before switching studios or sub-tabs.
   - **100% Plain-English Action Gatekeeper (`classifyDestructiveAxiosConfig` in `src/App.jsx`)**: Added explicit `laymanSummary`, `headerBadge`, `targetLabel`, `whatHappensNext`, `costWarning`, `impactWarning`, and `confirmLabel` to 100% of mutating API descriptors (`0` generic fallback modals) and whitelisted read-only `/ransomware-deep-audit`, `/dlp-scan`, and `/gcsfuse-architect` probes.
 
+### K. Wave 23 Skill-Grounded Enterprise Moonshot Suite & Actionable 5-Pillar Cloud Architect Remote MCP Control Plane
+- **Files**:
+  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L67446-L68680) & [`lines 99911–101965`](file:///home/abdelouahab/gcp-ui/server/index.js#L99911-L101965)
+  - [`src/components/GoogleCloudRemoteMcpStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GoogleCloudRemoteMcpStudio.jsx)
+  - [`src/components/BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx)
+  - [`src/components/SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx)
+  - [`src/components/GkeFleetStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GkeFleetStudio.jsx)
+  - [`src/components/VmFleetAndSsh.jsx`](file:///home/abdelouahab/gcp-ui/src/components/VmFleetAndSsh.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx), [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css)
+- **Capabilities**:
+  - **Actionable 5-Pillar Cloud Architect Remote MCP Control Plane (`GoogleCloudRemoteMcpStudio.jsx`)**:
+    1. **Pillar 1 — MCP Stack Readiness Doctor & 1-Click Batch API Provisioner**: `POST /api/project/:id/mcp/architect-doctor` & `POST /api/project/:id/mcp/batch-enable-apis`.
+    2. **Pillar 2 — Least-Privilege AI Agent Service Account & Scoped Read-Only IAM Minter**: `POST /api/project/:id/mcp/mint-least-privilege-sa` (`mcp-agent-readonly@<project>.iam.gserviceaccount.com` + 6 scoped read-only roles, zero JSON keys).
+    3. **Pillar 3 — Workstation IDE Config Live Diff, Region Placeholder Doctor & 1-Click `.mcp.json` Injector (`@skill:resolving-mcp-region-configs`)**: `GET /api/project/:id/mcp/local-ide-inspect` & `POST /api/project/:id/mcp/local-ide-sync` (with automatic `.bak` backup).
+    4. **Pillar 4 — Custom Cloud Run Streamable-HTTP Remote MCP Server Scaffolder & GCS Stager**: `POST /api/project/:id/mcp/stage-custom-cloudrun-mcp` (`server.mjs`, `package.json`, `Dockerfile` staged to `gs://<bucket>/custom-mcp-servers/` + 1-click **`Browse Staged Bundle in GCS →`**).
+    5. **Pillar 5 — Multi-MCP Triage Chains $\to$ Live Architectural Drift & 1-Click Remediations**: `POST /api/project/:id/mcp/remediate-finding` (`LOCK_OPEN_FIREWALL_TO_IAP`, `HARDEN_GCS_BUCKET_PAP_AND_UBLA`, `ENABLE_SERVICE_API`).
+  - **MCP Hub Button Layout Unclipping & 100% Specific Hover Explainer Coverage**: Fixed `div.inline-flex` and `button > span` rules in `src/index.css` so 2-button split wrappers never collapse text to `0px`, redesigned the 7 GA 591.0.0 Agent Registry probe buttons into a 4-column responsive grid, and added 18 handcrafted `INNOVATION_FEATURE_GUIDE` entries + 6 dynamic `data-mcp-*` context resolvers in `src/components/InnovationHoverExplainer.jsx`.
+  - **BigQuery Data Lineage Blast-Radius & Partition Surgeon (`@skill:datalineage-bigquery-asset-impact-analysis`)**: `POST /api/project/:id/bigquery/lineage-impact-analysis` & `/bigquery/partition-cluster-surgeon`.
+  - **Privileged Access Manager (PAM) Zero-Standing-Privilege Studio (`@skill:iam-helper-for-privileged-access-management`)**: `GET /api/project/:id/pam/overview` & `POST /api/project/:id/pam/action`.
+  - **Google Cloud Workload Manager & SAIF Toxic Combination Studio (`@skill:workload-manager-basics` + `@skill:gcs-security-assessment`)**: `GET /api/project/:id/workload-manager/overview` & `POST /api/project/:id/workload-manager/action`.
+  - **GKE ComputeClasses, CapacityQuota CUD Spillover & GPU/TPU Inference Architect (`@skill:gke-compute-classes`)**: `POST /api/project/:id/gke/compute-classes-architect`.
+  - **Cross-Studio Navigation Confirmation Guard (`cloudpulse:request-cross-tab-nav`)**: Extended across `BigQueryStudio.jsx`, `SovereignTimeMachineIamStudio.jsx`, `GkeFleetStudio.jsx`, and `VmFleetAndSsh.jsx`.
+
 ---
 
 ## 4. Next Steps When Resuming in `agy` CLI
-1. Review or test the **4-Pillar Ransomware Resilience & Clean-Room Rollback Studio (`X4`)** ([`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx)), **Redesigned 3-Zone Object Workbench IDE** ([`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx)), and **Cloud Storage Governance Studio** ([`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx)).
+1. Review or test the **Actionable 5-Pillar Cloud Architect Remote MCP Control Plane** ([`src/components/GoogleCloudRemoteMcpStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GoogleCloudRemoteMcpStudio.jsx)) and **Wave 23 Skill-Grounded Moonshot Pillars** across [`BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx), [`SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx), and [`GkeFleetStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GkeFleetStudio.jsx).

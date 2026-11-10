@@ -19,6 +19,10 @@ import {
   Code2,
   Search,
   ExternalLink,
+  Zap,
+  Wrench,
+  Key,
+  Plus,
 } from 'lucide-react';
 import ZeroSniffingWebCryptoEnclaveBar, {
   useSharedGeminiModels,
@@ -455,37 +459,40 @@ function McpStructuredPayloadView({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5" data-action-toolbar="true">
           <button
             type="button"
+            data-feature-id="MCP_PAYLOAD_VIEW_FORMATTED"
             onClick={() => setViewMode('FORMATTED')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+            className={`px-3 py-1.5 min-h-[32px] rounded-md text-xs font-mono font-bold cursor-pointer whitespace-nowrap ${
               viewMode === 'FORMATTED'
                 ? 'bg-blue-600 text-white'
-                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
             }`}
           >
-            Formatted Review
+            <span>Formatted Review</span>
           </button>
           <button
             type="button"
+            data-feature-id="MCP_PAYLOAD_VIEW_RAW"
             onClick={() => setViewMode('RAW')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+            className={`px-3 py-1.5 min-h-[32px] rounded-md text-xs font-mono font-bold cursor-pointer whitespace-nowrap ${
               viewMode === 'RAW'
                 ? 'bg-blue-600 text-white'
-                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
             }`}
           >
-            Raw JSON-RPC
+            <span>Raw JSON-RPC</span>
           </button>
         </div>
         {onCopy && rawString && (
           <button
             type="button"
+            data-feature-id="MCP_COPY_PAYLOAD_BTN"
             onClick={() => onCopy(rawString, 'MCP response payload')}
-            className="inline-flex items-center gap-1 text-[10px] font-mono text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer whitespace-nowrap"
           >
-            <Copy className="w-3 h-3" />
+            <Copy className="w-3.5 h-3.5 shrink-0" />
             <span>Copy</span>
           </button>
         )}
@@ -677,11 +684,36 @@ export default function GoogleCloudRemoteMcpStudio({
   projectId,
   region = 'us-central1',
   onShowToast,
+  onNavigateToStudio,
+  onOpenStorageBucket,
 }) {
   const [catalog, setCatalog] = useState(null);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Cloud Architect Actionable Control Plane State (4 Pillars + Triage Remediation)
+  const [architectTab, setArchitectTab] = useState('STACK_DOCTOR');
+  const [doctorData, setDoctorData] = useState(null);
+  const [loadingDoctor, setLoadingDoctor] = useState(false);
+  const [batchEnablingApis, setBatchEnablingApis] = useState(false);
+
+  const [customSaId, setCustomSaId] = useState('mcp-agent-readonly');
+  const [mintingSa, setMintingSa] = useState(false);
+  const [mintedSaResult, setMintedSaResult] = useState(null);
+
+  const [localIdeReport, setLocalIdeReport] = useState(null);
+  const [loadingIdeInspect, setLoadingIdeInspect] = useState(false);
+  const [syncTargetFileId, setSyncTargetFileId] = useState('WORKSPACE_MCP_JSON');
+  const [syncingLocalIde, setSyncingLocalIde] = useState(false);
+  const [localIdeSyncResult, setLocalIdeSyncResult] = useState(null);
+
+  const [customMcpServiceName, setCustomMcpServiceName] = useState('cloudpulse-custom-mcp');
+  const [stagingCustomMcp, setStagingCustomMcp] = useState(false);
+  const [stagedCustomMcpResult, setStagedCustomMcpResult] = useState(null);
+
+  const [remediatingFindingId, setRemediatingFindingId] = useState(null);
+  const [remediationReceipts, setRemediationReceipts] = useState({});
 
   // Selected MCP Server & Tools Workbench
   const [selectedServerId, setSelectedServerId] = useState('bigquery');
@@ -820,10 +852,222 @@ export default function GoogleCloudRemoteMcpStudio({
     [projectId, region, notify]
   );
 
+  const handleRunArchitectDoctor = useCallback(
+    async (serversToAudit = selectedExportServers) => {
+      if (!projectId) return;
+      setLoadingDoctor(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/mcp/architect-doctor`,
+          {
+            selectedServers: serversToAudit,
+            region,
+          }
+        );
+        setDoctorData(res.data);
+      } catch (err) {
+        notify(
+          `MCP Stack Doctor failed: ${err.response?.data?.error || err.message}`
+        );
+      } finally {
+        setLoadingDoctor(false);
+      }
+    },
+    [projectId, region, selectedExportServers, notify]
+  );
+
+  const handleInspectLocalIde = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingIdeInspect(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/mcp/local-ide-inspect`
+      );
+      setLocalIdeReport(res.data);
+    } catch (err) {
+      notify(
+        `Local IDE MCP inspection failed: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setLoadingIdeInspect(false);
+    }
+  }, [projectId, notify]);
+
+  const handleBatchEnableMissingApis = async (apisToEnable) => {
+    const list =
+      Array.isArray(apisToEnable) && apisToEnable.length > 0
+        ? apisToEnable
+        : doctorData?.missingApis || [];
+    if (!projectId || list.length === 0) return;
+    setBatchEnablingApis(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/mcp/batch-enable-apis`,
+        { serviceApis: list }
+      );
+      notify(
+        res.data?.message ||
+          `Batch-enabled ${list.length} MCP Service API(s) on ${projectId}.`
+      );
+      await handleRunArchitectDoctor(selectedExportServers);
+      await fetchMcpCatalog(false);
+    } catch (err) {
+      notify(
+        `Batch API enablement failed: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setBatchEnablingApis(false);
+    }
+  };
+
+  const handleMintLeastPrivilegeSa = async () => {
+    if (!projectId) return;
+    setMintingSa(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/mcp/mint-least-privilege-sa`,
+        {
+          accountId: customSaId || 'mcp-agent-readonly',
+          selectedServers: selectedExportServers,
+        }
+      );
+      setMintedSaResult(res.data);
+      notify(
+        `Provisioned Read-Only Agent SA ${res.data?.serviceAccountEmail} with ${
+          res.data?.boundReadOnlyRoles?.length || 0
+        } least-privilege roles.`
+      );
+      await handleRunArchitectDoctor(selectedExportServers);
+    } catch (err) {
+      notify(
+        `Service Account minting failed: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setMintingSa(false);
+    }
+  };
+
+  const handleSyncLocalIde = async (overrideTargetFileId) => {
+    if (!projectId) return;
+    const targetId = overrideTargetFileId || syncTargetFileId;
+    setSyncingLocalIde(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/mcp/local-ide-sync`,
+        {
+          targetFileId: targetId,
+          selectedServers: selectedExportServers,
+          region,
+          impersonateServiceAccount:
+            mintedSaResult?.serviceAccountEmail ||
+            (doctorData?.agentServiceAccount?.alreadyProvisioned
+              ? doctorData.agentServiceAccount.recommendedEmail
+              : ''),
+        }
+      );
+      setLocalIdeSyncResult(res.data);
+      notify(
+        `Injected ${res.data?.addedOrUpdatedKeys?.length || 0} official GCP Remote MCP servers into ${res.data?.targetPath} (backup saved).`
+      );
+      await handleInspectLocalIde();
+    } catch (err) {
+      notify(
+        `Local IDE config sync failed: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setSyncingLocalIde(false);
+    }
+  };
+
+  const handleStageCustomCloudRunMcp = async () => {
+    if (!projectId) return;
+    setStagingCustomMcp(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/mcp/stage-custom-cloudrun-mcp`,
+        {
+          serviceName: customMcpServiceName || 'cloudpulse-custom-mcp',
+          region,
+        }
+      );
+      setStagedCustomMcpResult(res.data);
+      notify(
+        res.data?.stagedGcsUri
+          ? `Staged Custom Cloud Run MCP Server bundle to ${res.data.stagedGcsUri} (SHA-256: ${res.data.sha256Hex?.slice(0, 12)}...).`
+          : `Synthesized Custom Cloud Run MCP Server bundle (${res.data?.serviceName}).`
+      );
+    } catch (err) {
+      notify(
+        `Custom Cloud Run MCP staging failed: ${
+          err.response?.data?.error || err.message
+        }`
+      );
+    } finally {
+      setStagingCustomMcp(false);
+    }
+  };
+
+  const handleRemediateTriageFinding = async (finding) => {
+    if (!projectId || !finding) return;
+    setRemediatingFindingId(finding.id);
+    try {
+      if (finding.remediationType === 'MINT_READONLY_MCP_SA') {
+        setArchitectTab('LEAST_PRIVILEGE_SA');
+        await handleMintLeastPrivilegeSa();
+        setRemediationReceipts((prev) => ({
+          ...prev,
+          [finding.id]: `Provisioned Read-Only Agent SA mcp-agent-readonly@${projectId}.iam.gserviceaccount.com`,
+        }));
+        return;
+      }
+      if (finding.remediationType === 'SYNC_LOCAL_IDE_CONFIG') {
+        setArchitectTab('WORKSTATION_IDE_SYNC');
+        await handleSyncLocalIde('WORKSPACE_MCP_JSON');
+        setRemediationReceipts((prev) => ({
+          ...prev,
+          [finding.id]: `Synced verified MCP chain into local .mcp.json with .bak backup`,
+        }));
+        return;
+      }
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/mcp/remediate-finding`,
+        {
+          remediationType: finding.remediationType,
+          targetResource: finding.targetResource,
+        }
+      );
+      setRemediationReceipts((prev) => ({
+        ...prev,
+        [finding.id]: res.data?.message || 'Remediation completed.',
+      }));
+      notify(res.data?.message || 'MCP Finding Remediation executed.');
+    } catch (err) {
+      notify(
+        `Remediation failed: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setRemediatingFindingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchMcpCatalog(false);
     fetchToolsForServer('bigquery');
-  }, [fetchMcpCatalog, fetchToolsForServer]);
+    handleRunArchitectDoctor();
+    handleInspectLocalIde();
+  }, [fetchMcpCatalog, fetchToolsForServer, handleRunArchitectDoctor, handleInspectLocalIde]);
 
   const handleSelectTool = (toolObj) => {
     setSelectedToolName(toolObj.name);
@@ -1136,19 +1380,20 @@ export default function GoogleCloudRemoteMcpStudio({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
-              ⚡ Direct HTTPS JSON-RPC 2.0 · No gcloud Required
+          <div className="flex flex-wrap items-center gap-2" data-action-toolbar="true">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10.5px] font-mono font-extrabold whitespace-nowrap">
+              <Zap className="w-3.5 h-3.5 shrink-0" />
+              <span>Direct HTTPS JSON-RPC 2.0 · No gcloud Required</span>
             </span>
             <button
               type="button"
               data-feature-id="MCP_REFRESH_CORE_PROBE"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(false)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3.5 py-2 min-h-[38px] text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingCatalog ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 shrink-0 ${loadingCatalog ? 'animate-spin' : ''}`}
               />
               <span>Refresh Core MCP Probe</span>
             </button>
@@ -1157,9 +1402,9 @@ export default function GoogleCloudRemoteMcpStudio({
               data-feature-id="MCP_PROBE_ALL_48_SERVERS"
               disabled={loadingCatalog}
               onClick={() => fetchMcpCatalog(true)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 min-h-[38px] text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
-              <Activity className="w-3.5 h-3.5" />
+              <Activity className="w-3.5 h-3.5 shrink-0" />
               <span>
                 {loadingCatalog
                   ? 'Probing All 48 *.googleapis.com/mcp Endpoints...'
@@ -1210,14 +1455,15 @@ export default function GoogleCloudRemoteMcpStudio({
         </div>
 
         {/* SDK 591.0.0 GA Agent Registry (skills, publishers, findings, agents, mcp-servers) & Agent Identity Bar */}
-        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-blue-500/30 space-y-2.5 font-mono text-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-blue-500/30 space-y-3 font-mono text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10.5px] font-extrabold whitespace-nowrap">
                 GA 591.0.0 · 2026-10-27
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
-                🔧 Requires gcloud CLI 591.0.0 · Online Token Bridged
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-extrabold whitespace-nowrap">
+                <Wrench className="w-3 h-3 shrink-0" />
+                <span>Requires gcloud CLI 591.0.0 · Online Token Bridged</span>
               </span>
               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                 Google Cloud Agent Registry (`mcp-servers`, `agents`, `skills`, `publishers`, `findings`) &amp; Cryptographic `AGENT_IDENTITY`
@@ -1225,12 +1471,13 @@ export default function GoogleCloudRemoteMcpStudio({
             </div>
             <button
               type="button"
+              data-feature-id="MCP_PROBE_GA_AGENT_REGISTRY_591"
               disabled={probingAgentRegistry}
               onClick={handleProbeGaAgentRegistry591}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-3.5 py-2 min-h-[36px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
               <RefreshCw
-                className={`w-3 h-3 ${probingAgentRegistry ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 shrink-0 ${probingAgentRegistry ? 'animate-spin' : ''}`}
               />
               <span>
                 {probingAgentRegistry
@@ -1240,58 +1487,74 @@ export default function GoogleCloudRemoteMcpStudio({
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5"
+            data-action-toolbar="true"
+          >
             {[
               {
                 label: 'GA mcp-servers list',
                 cli: `gcloud agent-registry mcp-servers list --location=global --project=${projectId}`,
+                desc: 'Enumerates all registered MCP servers in Google Cloud Agent Registry (locations/global/mcpServers) across your project.',
               },
               {
                 label: 'GA agents list',
                 cli: `gcloud agent-registry agents list --location=global --project=${projectId}`,
+                desc: 'Lists all registered autonomous AI agents, endpoints, and scanning policies in Google Cloud Agent Registry.',
               },
               {
                 label: 'GA skills list',
                 cli: `gcloud agent-registry skills list --location=global --project=${projectId}`,
+                desc: 'Lists reusable Agent Registry skills and capabilities published in your Google Cloud project.',
               },
               {
                 label: 'GA skills revisions',
                 cli: `gcloud agent-registry skills revisions list --location=global --project=${projectId}`,
+                desc: 'Inspects immutable versioned revisions of registered Agent Registry skills for rollback and auditability.',
               },
               {
                 label: 'GA publishers list',
                 cli: `gcloud agent-registry publishers list --location=global --project=${projectId}`,
+                desc: 'Enumerates verified Agent & MCP publishers registered in Google Cloud Agent Registry.',
               },
               {
                 label: 'GA findings list',
                 cli: `gcloud agent-registry findings list --location=global --project=${projectId}`,
+                desc: 'Lists security and posture findings discovered by Google Cloud Agent Registry scanning policies.',
               },
               {
                 label: 'GA VM --identity-type=AGENT_IDENTITY',
                 cli: `gcloud compute instances update agent-vm-01 --zone=us-central1-a --identity-type=AGENT_IDENTITY --project=${projectId}`,
+                desc: 'Verifies SDK 591.0.0 cryptographic AGENT_IDENTITY workload attestation support on Compute Engine VMs.',
               },
             ].map((item) => (
               <div
                 key={item.label}
-                className="inline-flex items-center rounded-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+                className="flex items-stretch justify-between rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 overflow-hidden min-h-[38px]"
               >
                 <button
                   type="button"
+                  data-mcp-probe-label={item.label}
+                  data-mcp-probe-cli={item.cli}
+                  data-mcp-probe-desc={item.desc}
                   disabled={liveCliProbeLoading}
                   onClick={() => handleRunLiveAgentCliProbe(item.cli, item.label)}
                   title={`Run Live Read-Only Probe: ${item.cli}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 hover:bg-blue-500/15 text-[10.5px] font-extrabold text-blue-600 dark:text-blue-400 cursor-pointer border-r border-zinc-200 dark:border-zinc-800"
+                  className="flex-1 inline-flex items-center gap-2 px-3 py-2 hover:bg-blue-500/15 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 cursor-pointer border-r border-zinc-200 dark:border-zinc-800 text-left min-w-0"
                 >
-                  <Activity className="w-3 h-3" />
-                  <span>Probe: {item.label}</span>
+                  <Activity className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                  <span className="truncate">Probe: {item.label}</span>
                 </button>
                 <button
                   type="button"
+                  data-mcp-copy-cli={item.cli}
+                  data-mcp-probe-label={item.label}
                   onClick={() => copyToClipboard(item.cli, item.label)}
-                  title="Copy gcloud CLI command"
-                  className="px-1.5 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
+                  title={`Copy gcloud CLI command: ${item.cli}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer shrink-0"
                 >
-                  <Copy className="w-3 h-3" />
+                  <Copy className="w-3.5 h-3.5 shrink-0" />
+                  <span>CLI</span>
                 </button>
               </div>
             ))}
@@ -1369,8 +1632,9 @@ export default function GoogleCloudRemoteMcpStudio({
             <div className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-blue-500/40 space-y-2 text-[11px] font-mono">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
-                    🔧 LIVE GCLOUD 591.0.0 PROBE
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
+                    <Wrench className="w-3 h-3 shrink-0" />
+                    <span>LIVE GCLOUD 591.0.0 PROBE</span>
                   </span>
                   {liveCliProbeResult?.probeMode && (
                     <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
@@ -1378,10 +1642,18 @@ export default function GoogleCloudRemoteMcpStudio({
                     </span>
                   )}
                   {liveCliProbeResult?.authBridgeMode && (
-                    <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
-                      {liveCliProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER'
-                        ? '🔑 Online Session OAuth Bridge'
-                        : '💻 Local ADC / gcloud Auth'}
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                      {liveCliProbeResult.authBridgeMode === 'OAUTH_ACCESS_TOKEN_HEADER' ? (
+                        <>
+                          <Key className="w-3 h-3 shrink-0" />
+                          <span>Online Session OAuth Bridge</span>
+                        </>
+                      ) : (
+                        <>
+                          <Terminal className="w-3 h-3 shrink-0" />
+                          <span>Local ADC / gcloud Auth</span>
+                        </>
+                      )}
                     </span>
                   )}
                   {typeof liveCliProbeResult?.durationMs === 'number' && (
@@ -1396,9 +1668,9 @@ export default function GoogleCloudRemoteMcpStudio({
                 <button
                   type="button"
                   onClick={() => setLiveCliProbeResult(null)}
-                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] cursor-pointer"
+                  className="px-3 py-1 min-h-[28px] rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-bold cursor-pointer"
                 >
-                  Dismiss
+                  <span>Dismiss</span>
                 </button>
               </div>
               {liveCliProbeLoading ? (
@@ -1509,6 +1781,530 @@ export default function GoogleCloudRemoteMcpStudio({
         </div>
       </div>
 
+      {/* SECTION 0: CLOUD ARCHITECT ACTIONABLE MCP CONTROL PLANE (4-PILLAR OPERATIONAL COMMAND DECK) */}
+      <div className="rounded-2xl border border-amber-500/35 bg-white dark:bg-[#202124] p-5 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-[10px] font-mono font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                CLOUD ARCHITECT ACTIONABLE MCP CONTROL PLANE · ZERO-TRUST GOVERNANCE &amp; LIVE DEPLOYMENT
+              </span>
+            </div>
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+              Operational MCP Stack Doctor, Least-Privilege Agent SA Minter, Local IDE Injector &amp; Cloud Run MCP Deployer
+            </h3>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
+              Go beyond browsing MCP schemas: batch-enable missing Service Usage APIs in 1 click, mint a dedicated read-only Service Account (<code className="font-mono">mcp-agent-readonly@{projectId}.iam.gserviceaccount.com</code>) so IDE agents cannot run destructive tools, inject verified configs directly into your local workstation <code className="font-mono">.mcp.json</code> with automatic <code className="font-mono">.bak</code> backups, or stage a custom Streamable-HTTP MCP server for Cloud Run.
+            </p>
+          </div>
+          <div className="flex items-center gap-2" data-action-toolbar="true">
+            <button
+              type="button"
+              data-feature-id="MCP_ARCH_REAUDIT_STACK"
+              disabled={loadingDoctor}
+              onClick={() => handleRunArchitectDoctor(selectedExportServers)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 min-h-[36px] rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer whitespace-nowrap"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 shrink-0 ${loadingDoctor ? 'animate-spin' : ''}`}
+              />
+              <span>Re-Audit MCP Stack ({selectedExportServers.length} Servers)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Equal-Width Warm-Amber Architectural Pillar Tabs */}
+        <div
+          role="tablist"
+          className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"
+        >
+          {[
+            {
+              id: 'STACK_DOCTOR',
+              featureId: 'MCP_ARCH_TAB_STACK_DOCTOR',
+              label: `1. MCP Stack Doctor (${doctorData?.readinessScore ?? 100}% Ready)`,
+              icon: Activity,
+            },
+            {
+              id: 'LEAST_PRIVILEGE_SA',
+              featureId: 'MCP_ARCH_TAB_LEAST_PRIVILEGE_SA',
+              label: '2. Least-Privilege Agent SA Minter',
+              icon: Lock,
+            },
+            {
+              id: 'WORKSTATION_IDE_SYNC',
+              featureId: 'MCP_ARCH_TAB_WORKSTATION_IDE_SYNC',
+              label: '3. Local Workstation IDE Injector',
+              icon: Terminal,
+            },
+            {
+              id: 'CUSTOM_CLOUDRUN_MCP',
+              featureId: 'MCP_ARCH_TAB_CUSTOM_CLOUDRUN_MCP',
+              label: '4. Custom Cloud Run MCP Deployer',
+              icon: Layers,
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = architectTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                data-feature-id={tab.featureId}
+                aria-selected={active}
+                onClick={() => setArchitectTab(tab.id)}
+                className={`px-3 py-2 text-xs font-mono font-bold cursor-pointer ${
+                  active ? 'bg-amber-500 text-white' : ''
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* PILLAR 1: MCP STACK DOCTOR & 1-CLICK BATCH API PROVISIONER */}
+        {architectTab === 'STACK_DOCTOR' && (
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-mono text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold ${
+                    (doctorData?.missingApis?.length || 0) === 0
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                  }`}
+                >
+                  Stack Readiness: {doctorData?.readinessScore ?? 100}% ({doctorData?.readyCount ?? selectedExportServers.length}/{doctorData?.totalAudited ?? selectedExportServers.length} Ready)
+                </span>
+                <span className="text-zinc-600 dark:text-zinc-300">
+                  Quota Header (<code className="font-mono">serviceusage.services.use</code>):{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400">
+                    {doctorData?.permissions?.canUseServices !== false ? 'VERIFIED' : 'MISSING'}
+                  </strong>
+                </span>
+                {(doctorData?.missingApis?.length || 0) > 0 && (
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">
+                    Missing APIs: {doctorData.missingApis.join(', ')}
+                  </span>
+                )}
+              </div>
+
+              {(doctorData?.missingApis?.length || 0) > 0 ? (
+                <button
+                  type="button"
+                  data-feature-id="MCP_ARCH_BATCH_ENABLE_APIS"
+                  disabled={batchEnablingApis}
+                  onClick={() => handleBatchEnableMissingApis(doctorData.missingApis)}
+                  className="inline-flex items-center gap-2 px-4 py-2 min-h-[36px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                >
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {batchEnablingApis
+                      ? `Batch-Enabling ${doctorData.missingApis.length} API(s)...`
+                      : `1-Click Batch-Enable ${doctorData.missingApis.length} Missing MCP API(s) ($0.00)`}
+                  </span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>All Selected Service Usage APIs Enabled on {projectId}</span>
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 font-mono text-xs">
+              {(doctorData?.serverAudits || []).map((srv) => (
+                <div
+                  key={srv.serverId}
+                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-2"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        {srv.serverId}.googleapis.com/mcp
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
+                          srv.apiEnabled
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                        }`}
+                      >
+                        {srv.apiEnabled ? 'API ENABLED' : 'API DISABLED'}
+                      </span>
+                    </div>
+                    <div className="text-[10.5px] text-zinc-500 truncate">
+                      Service: {srv.serviceApi}
+                    </div>
+                    <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
+                      Least-Priv: {(srv.readOnlyRoles || []).join(', ')}
+                    </div>
+                  </div>
+                  {!srv.apiEnabled && (
+                    <button
+                      type="button"
+                      disabled={batchEnablingApis}
+                      onClick={() => handleBatchEnableMissingApis([srv.serviceApi])}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3 shrink-0" />
+                      <span>Enable {srv.serviceApi}</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PILLAR 2: LEAST-PRIVILEGE AI AGENT SERVICE ACCOUNT & SCOPED IAM MINTER */}
+        {architectTab === 'LEAST_PRIVILEGE_SA' && (
+          <div className="space-y-3 pt-1 font-mono text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+              <div className="lg:col-span-7 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase text-amber-600 dark:text-amber-400">
+                      ZERO-MUTATION AI AGENT IDENTITY GUARDRAIL
+                    </div>
+                    <h4 className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      Replace Personal <code className="font-mono">roles/owner</code> Tokens with Scoped Read-Only Agent SA
+                    </h4>
+                  </div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      doctorData?.agentServiceAccount?.alreadyProvisioned || mintedSaResult
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    {doctorData?.agentServiceAccount?.alreadyProvisioned || mintedSaResult
+                      ? 'SA PROVISIONED ON GCP'
+                      : 'READY TO PROVISION ($0.00)'}
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2" data-action-toolbar="true">
+                  <input
+                    type="text"
+                    value={customSaId}
+                    onChange={(e) => setCustomSaId(e.target.value)}
+                    placeholder="mcp-agent-readonly"
+                    className="flex-1 h-9 px-3 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    data-feature-id="MCP_ARCH_MINT_READONLY_SA"
+                    disabled={mintingSa}
+                    onClick={handleMintLeastPrivilegeSa}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[36px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                  >
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {mintingSa
+                        ? 'Provisioning SA & Binding Read-Only IAM...'
+                        : `1-Click Mint "${customSaId}@${projectId}" & Bind Read-Only IAM`}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/30 space-y-1">
+                    <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                      GRANTED READ-ONLY ROLES (readOnlyHint=true)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(
+                        mintedSaResult?.boundReadOnlyRoles ||
+                        doctorData?.agentServiceAccount?.recommendedReadOnlyRoles || [
+                          'roles/serviceusage.serviceUsageConsumer',
+                          'roles/bigquery.metadataViewer',
+                          'roles/storage.objectViewer',
+                          'roles/logging.viewer',
+                        ]
+                      ).map((r) => (
+                        <span
+                          key={r}
+                          className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold"
+                        >
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-rose-500/30 space-y-1">
+                    <div className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400">
+                      PHYSICALLY BLOCKED AT IAM LAYER (destructiveHint=true)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(
+                        doctorData?.agentServiceAccount?.blockedMutatingRoles || [
+                          'roles/owner',
+                          'roles/editor',
+                          'roles/storage.admin',
+                          'roles/bigquery.admin',
+                        ]
+                      )
+                        .slice(0, 6)
+                        .map((r) => (
+                          <span
+                            key={r}
+                            className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-bold"
+                          >
+                            {r}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                    KEYLESS SHORT-LIVED IMPERSONATION COMMAND
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    Zero JSON private keys downloaded to disk. Your IDE impersonates{' '}
+                    <code className="font-mono">
+                      {mintedSaResult?.serviceAccountEmail ||
+                        `${customSaId}@${projectId}.iam.gserviceaccount.com`}
+                    </code>{' '}
+                    for 1-hour read-only tokens:
+                  </p>
+                  <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-blue-600 dark:text-blue-300 overflow-x-auto">
+                    {mintedSaResult?.impersonatedTokenCmd ||
+                      `gcloud auth print-access-token --impersonate-service-account=${customSaId}@${projectId}.iam.gserviceaccount.com`}
+                  </pre>
+                </div>
+                <div className="flex flex-wrap items-center gap-2" data-action-toolbar="true">
+                  <button
+                    type="button"
+                    data-feature-id="MCP_ARCH_COPY_IMPERSONATION_CLI"
+                    onClick={() =>
+                      copyToClipboard(
+                        mintedSaResult?.impersonatedTokenCmd ||
+                          `gcloud auth print-access-token --impersonate-service-account=${customSaId}@${projectId}.iam.gserviceaccount.com`,
+                        'Impersonated Token Command'
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[34px] rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5 shrink-0" />
+                    <span>Copy Impersonation CLI</span>
+                  </button>
+                  {onNavigateToStudio && (
+                    <button
+                      type="button"
+                      data-feature-id="MCP_ARCH_OPEN_PAM_JIT"
+                      onClick={() => onNavigateToStudio('IAM_SECURITY', 'PAM_JIT_STUDIO')}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[34px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <span>Open PAM JIT Entitlements &rarr;</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PILLAR 3: WORKSTATION IDE CONFIG LIVE DIFF & 1-CLICK INJECTOR */}
+        {architectTab === 'WORKSTATION_IDE_SYNC' && (
+          <div className="space-y-3 pt-1 font-mono text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="space-y-0.5">
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Live Workstation MCP Config Files &amp; Region Placeholder Doctor
+                </div>
+                <div className="text-[11px] text-zinc-500">
+                  Merges {selectedExportServers.length} selected <code className="font-mono">*.googleapis.com/mcp</code> endpoints into your local config file after saving a timestamped <code className="font-mono">.bak</code> backup.
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2" data-action-toolbar="true">
+                <select
+                  value={syncTargetFileId}
+                  onChange={(e) => setSyncTargetFileId(e.target.value)}
+                  className="h-9 px-3 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-bold"
+                >
+                  <option value="WORKSPACE_MCP_JSON">Target: Workspace .mcp.json</option>
+                  <option value="GEMINI_CLI_SETTINGS">Target: ~/.gemini/settings.json</option>
+                  <option value="CURSOR_GLOBAL_MCP">Target: ~/.cursor/mcp.json</option>
+                </select>
+                <button
+                  type="button"
+                  data-feature-id="MCP_ARCH_SYNC_LOCAL_IDE"
+                  disabled={syncingLocalIde}
+                  onClick={() => handleSyncLocalIde(syncTargetFileId)}
+                  className="inline-flex items-center gap-2 px-4 py-2 min-h-[36px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                >
+                  <Download className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {syncingLocalIde
+                      ? 'Backing up & Injecting MCP Servers...'
+                      : `1-Click Backup & Inject ${selectedExportServers.length} MCP Servers`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {(localIdeReport?.fileReports || []).map((file) => (
+                <div
+                  key={file.id}
+                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                      {file.label}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 ${
+                        file.exists
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      {file.exists ? `${file.configuredServersCount} SERVERS` : 'NOT CREATED YET'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">{file.filePath}</div>
+                  <div className="text-[10.5px] text-blue-600 dark:text-blue-400">
+                    GCP Remote MCPs wired: <strong>{file.gcpRemoteServersInstalled?.length || 0}</strong>
+                  </div>
+                  {(file.unreplacedRegionPlaceholders?.length || 0) > 0 && (
+                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                      Unreplaced $GCP_REGION in: {file.unreplacedRegionPlaceholders.join(', ')}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {localIdeSyncResult && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                    Synced {localIdeSyncResult.addedOrUpdatedKeys?.length || 0} Official GCP MCP Server(s) into {localIdeSyncResult.targetPath}
+                  </span>
+                  {localIdeSyncResult.backupPath && (
+                    <span className="text-[10.5px] text-zinc-600 dark:text-zinc-300">
+                      Backup saved: <code className="font-mono">{localIdeSyncResult.backupPath}</code>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PILLAR 4: CUSTOM CLOUD RUN REMOTE MCP SERVER SCAFFOLDER & GCS STAGER */}
+        {architectTab === 'CUSTOM_CLOUDRUN_MCP' && (
+          <div className="space-y-3 pt-1 font-mono text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="space-y-0.5">
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  1-Click Custom Streamable-HTTP Remote MCP Server Scaffolder &amp; Cloud Storage Stager
+                </div>
+                <div className="text-[11px] text-zinc-500">
+                  Synthesizes a zero-trust Node.js 22 JSON-RPC 2.0 MCP server tailored to <code className="font-mono">{projectId}</code>, uploads the bundle to <code className="font-mono">gs://&lt;bucket&gt;/mcp-cloudrun-deployments/</code>, and generates the <code className="font-mono">--no-allow-unauthenticated</code> Cloud Run deploy + Agent Registry CLI.
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2" data-action-toolbar="true">
+                <input
+                  type="text"
+                  value={customMcpServiceName}
+                  onChange={(e) => setCustomMcpServiceName(e.target.value)}
+                  placeholder="cloudpulse-custom-mcp"
+                  className="h-9 px-3 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono"
+                />
+                <button
+                  type="button"
+                  data-feature-id="MCP_ARCH_STAGE_CUSTOM_CLOUDRUN_MCP"
+                  disabled={stagingCustomMcp}
+                  onClick={handleStageCustomCloudRunMcp}
+                  className="inline-flex items-center gap-2 px-4 py-2 min-h-[36px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                >
+                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {stagingCustomMcp
+                      ? 'Staging Custom MCP Bundle to GCS...'
+                      : `1-Click Stage "${customMcpServiceName}" Bundle to GCS ($0.00)`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {stagedCustomMcpResult && (
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-blue-500/30 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10.5px] font-extrabold">
+                      SHA-256: {stagedCustomMcpResult.sha256Hex?.slice(0, 16)}...
+                    </span>
+                    {stagedCustomMcpResult.stagedGcsUri && (
+                      <code className="text-blue-600 dark:text-blue-300 font-bold">
+                        {stagedCustomMcpResult.stagedGcsUri}
+                      </code>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2" data-action-toolbar="true">
+                    {stagedCustomMcpResult.bucketName && onOpenStorageBucket && (
+                      <button
+                        type="button"
+                        data-feature-id="MCP_ARCH_BROWSE_GCS_BUNDLE"
+                        onClick={() => onOpenStorageBucket(stagedCustomMcpResult.bucketName)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                        <span>Browse Staged Bundle in GCS Workbench &rarr;</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      data-feature-id="MCP_ARCH_COPY_CLOUDRUN_DEPLOY_CLI"
+                      onClick={() =>
+                        copyToClipboard(
+                          `${stagedCustomMcpResult.deployCli}\n\n${stagedCustomMcpResult.registerAgentRegistryCli}`,
+                          'Cloud Run Deploy & Agent Registry CLI'
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-md border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5 shrink-0" />
+                      <span>Copy Deploy + Agent Registry CLI</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase text-zinc-500 mb-1">
+                      Zero-Trust Cloud Run Deploy + GA Agent Registry Registration
+                    </div>
+                    <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-emerald-600 dark:text-emerald-400 overflow-x-auto max-h-44">
+                      {`${stagedCustomMcpResult.deployCli}\n\n# Register in Google Cloud Agent Registry (SDK 591.0.0 GA):\n${stagedCustomMcpResult.registerAgentRegistryCli}`}
+                    </pre>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase text-zinc-500 mb-1">
+                      Synthesized Streamable-HTTP JSON-RPC 2.0 Server (server.mjs)
+                    </div>
+                    <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto max-h-44">
+                      {stagedCustomMcpResult.serverMjsCode}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* SECTION 1: LIVE 48-SERVER REMOTE MCP MATRIX & INTERACTIVE JSON-RPC WORKBENCH */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left 5 Cols: Official Remote MCP Server Directory */}
@@ -1561,6 +2357,13 @@ export default function GoogleCloudRemoteMcpStudio({
               return (
                 <div
                   key={srv.id}
+                  data-hover-explain="true"
+                  data-mcp-server-card={srv.id}
+                  data-mcp-server-name={srv.name}
+                  data-mcp-server-endpoint={srv.endpointUrl}
+                  data-mcp-server-desc={srv.description}
+                  data-mcp-server-stage={srv.stage}
+                  data-mcp-server-tools={String(srv.toolCount || 0)}
                   onClick={() => fetchToolsForServer(srv.id)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     isSelected
@@ -1639,22 +2442,30 @@ export default function GoogleCloudRemoteMcpStudio({
                 <div className="text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400">
                   Available MCP Tools ({serverToolsData?.tools?.length || 0}):
                 </div>
-                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+                <div
+                  className="flex flex-wrap gap-2 max-h-44 overflow-y-auto p-1"
+                  data-action-toolbar="true"
+                >
                   {(serverToolsData?.tools || []).map((t) => {
                     const active = selectedToolName === t.name;
                     return (
                       <button
                         key={t.name}
                         type="button"
+                        data-mcp-tool-name={t.name}
+                        data-mcp-tool-desc={t.description || ''}
+                        data-mcp-tool-readonly={String(Boolean(t.annotations?.readOnlyHint))}
+                        data-mcp-tool-destructive={String(Boolean(t.annotations?.destructiveHint))}
+                        data-mcp-tool-endpoint={serverToolsData?.endpointUrl || 'https://bigquery.googleapis.com/mcp'}
                         onClick={() => handleSelectTool(t)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 min-h-[34px] rounded-md text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                           active
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
                         }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
+                          className={`w-2 h-2 rounded-full shrink-0 ${
                             active ? 'bg-white' : 'bg-blue-500'
                           }`}
                         />
@@ -1753,6 +2564,7 @@ export default function GoogleCloudRemoteMcpStudio({
                       </span>
                       <button
                         type="button"
+                        data-feature-id="MCP_RESET_TOOL_ARGS_DEFAULT"
                         onClick={() =>
                           setToolArgsJson(
                             JSON.stringify(activeToolObj.defaultArguments || {}, null, 2)
@@ -1966,7 +2778,7 @@ export default function GoogleCloudRemoteMcpStudio({
         </div>
 
         {chainResult && (
-          <div className="space-y-2.5 pt-2">
+          <div className="space-y-3 pt-2">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                 Chain Telemetry: {chainResult.title}
@@ -1976,6 +2788,91 @@ export default function GoogleCloudRemoteMcpStudio({
                 {chainResult.totalWallTimeMs}ms Total Wall Time
               </span>
             </div>
+
+            {/* Actionable Architectural Findings & 1-Click Live Remediations Synthesized from the 4 MCP Servers */}
+            {(chainResult.actionableFindings || []).length > 0 && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/35 space-y-2.5 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-2 font-extrabold text-amber-700 dark:text-amber-300">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <span>
+                      ACTIONABLE ARCHITECTURAL DRIFT &amp; 1-CLICK REMEDIATIONS ({chainResult.actionableFindings.length} Synthesized from Live MCP Responses)
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5" data-action-toolbar="true">
+                  {chainResult.actionableFindings.map((finding) => {
+                    const receipt = remediationReceipts[finding.id];
+                    const busy = remediatingFindingId === finding.id;
+                    return (
+                      <div
+                        key={finding.id}
+                        className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-2"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold ${
+                                finding.severity === 'CRITICAL' || finding.severity === 'HIGH'
+                                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
+                                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
+                              }`}
+                            >
+                              {finding.severity} · {finding.category}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 truncate">
+                              {finding.mcpSource}
+                            </span>
+                          </div>
+                          <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                            {finding.title}
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                            {finding.evidence}
+                          </p>
+                        </div>
+
+                        {receipt ? (
+                          <div className="p-2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>{receipt}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              data-mcp-finding-title={finding.title}
+                              data-mcp-finding-evidence={finding.evidence}
+                              data-mcp-finding-cli={finding.cliCommand || ''}
+                              disabled={busy}
+                              onClick={() => handleRemediateTriageFinding(finding)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[34px] rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                            >
+                              <Zap className="w-3.5 h-3.5 shrink-0" />
+                              <span>{busy ? 'Executing Fix...' : finding.buttonLabel}</span>
+                            </button>
+                            {finding.cliCommand && (
+                              <button
+                                type="button"
+                                data-mcp-copy-cli={finding.cliCommand}
+                                data-mcp-probe-label={finding.title}
+                                onClick={() =>
+                                  copyToClipboard(finding.cliCommand, finding.title)
+                                }
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[34px] rounded-md border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                              >
+                                <Copy className="w-3.5 h-3.5 shrink-0" />
+                                <span>CLI</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {(chainResult.steps || []).map((st) => (
                 <div
@@ -2060,16 +2957,20 @@ export default function GoogleCloudRemoteMcpStudio({
             compact
           />
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+            data-action-toolbar="true"
+          >
             {REVIEW_PRESET_PROMPTS.map((preset) => (
               <button
                 key={preset.label}
                 type="button"
                 data-feature-id={preset.id}
                 onClick={() => setAgentPrompt(preset.prompt)}
-                className="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-3 py-2 min-h-[36px] rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer transition-colors text-left"
               >
-                {preset.label}
+                <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                <span className="truncate">{preset.label}</span>
               </button>
             ))}
           </div>
@@ -2185,7 +3086,7 @@ export default function GoogleCloudRemoteMcpStudio({
 
         {/* Right 5 Cols: 1-Click IDE MCP Config Bundle Exporter */}
         <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                 1-CLICK DEVELOPER IDE EXPORT
@@ -2194,41 +3095,52 @@ export default function GoogleCloudRemoteMcpStudio({
                 Export Official GCP Remote MCP Config
               </h3>
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1.5" data-action-toolbar="true">
               {['GEMINI_CLI', 'CLAUDE_CODE', 'CURSOR'].map((t) => (
                 <button
                   key={t}
                   type="button"
                   data-feature-id="MCP_IDE_TARGET_BTN"
                   onClick={() => setIdeTarget(t)}
-                  className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                  className={`px-3 py-1.5 min-h-[34px] rounded-md text-xs font-mono font-bold cursor-pointer whitespace-nowrap ${
                     ideTarget === t
                       ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
                   }`}
                 >
-                  {t}
+                  <span>{t}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+          <div
+            className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1"
+            data-action-toolbar="true"
+          >
             {(catalog?.servers || []).slice(0, 18).map((s) => {
               const checked = selectedExportServers.includes(s.id);
               return (
                 <button
                   key={s.id}
                   type="button"
+                  data-mcp-export-server={s.id}
+                  data-mcp-export-name={s.name}
+                  data-mcp-export-endpoint={s.endpointUrl}
+                  data-mcp-export-checked={String(checked)}
                   onClick={() => toggleExportServer(s.id)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-md text-xs font-mono font-bold border cursor-pointer whitespace-nowrap shrink-0 ${
                     checked
-                      ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
                   }`}
                 >
-                  {checked ? '✓ ' : '+ '}
-                  {s.id}
+                  {checked ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{s.id}</span>
                 </button>
               );
             })}

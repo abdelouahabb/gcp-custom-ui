@@ -158,6 +158,151 @@ export default function SovereignTimeMachineIamStudio({
   const [vaultData, setVaultData] = useState(null);
   const [loadingVault, setLoadingVault] = useState(false);
   const [secretId, setSecretId] = useState('');
+
+  // --- Tab 4: Privileged Access Manager (PAM) Zero-Standing-Privilege State (@skill:iam-helper-for-privileged-access-management) ---
+  const [pamData, setPamData] = useState(null);
+  const [loadingPam, setLoadingPam] = useState(false);
+  const [pamActionBusy, setPamActionBusy] = useState(false);
+  const [newPamEntitlementId, setNewPamEntitlementId] = useState('compute-admin-jit');
+  const [newPamRole, setNewPamRole] = useState('roles/compute.admin');
+  const [newPamMaxDurationSec, setNewPamMaxDurationSec] = useState('14400s'); // Default 4 hours per skill
+  const [newPamEligiblePrincipal, setNewPamEligiblePrincipal] = useState('');
+  const [newPamRequireApproval, setNewPamRequireApproval] = useState(false);
+  const [newPamApproverPrincipal, setNewPamApproverPrincipal] = useState('');
+  const [pamGrantDurationSec, setPamGrantDurationSec] = useState('3600s');
+  const [pamGrantJustification, setPamGrantJustification] = useState(
+    'On-demand production debugging and incident response via CloudPulse PAM Studio'
+  );
+  const [pamForceRevokeOnDelete, setPamForceRevokeOnDelete] = useState(false);
+
+  // --- Tab 5: Workload Manager & SAIF Security Posture State (@skill:workload-manager-basics + @skill:gcs-security-assessment) ---
+  const [wlmData, setWlmData] = useState(null);
+  const [loadingWlm, setLoadingWlm] = useState(false);
+  const [wlmActionBusy, setWlmActionBusy] = useState(false);
+  const [wlmLocation, setWlmLocation] = useState('us-central1');
+  const [newWlmEvalId, setNewWlmEvalId] = useState('cloudpulse-saif-posture-eval');
+  const [newWlmEvalType, setNewWlmEvalType] = useState('OTHER');
+
+  const requestCrossStudioNav = useCallback(
+    (destinationLabel, targetDetail, onConfirmFn) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('cloudpulse:request-cross-tab-nav', {
+            detail: {
+              fromStudio: 'Sovereign IAM, PAM & Workload Manager Studio',
+              destinationLabel,
+              targetDetail,
+              onConfirm: onConfirmFn,
+            },
+          })
+        );
+      } else {
+        onConfirmFn?.();
+      }
+    },
+    []
+  );
+
+  const fetchPamOverview = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingPam(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/pam/overview`
+      );
+      setPamData(res.data || null);
+      if (
+        !newPamEligiblePrincipal &&
+        res.data?.standingCandidates?.[0]?.member
+      ) {
+        setNewPamEligiblePrincipal(res.data.standingCandidates[0].member);
+      }
+    } catch (err) {
+      onTriggerToast?.(
+        err.response?.data?.error || 'Failed to load PAM overview.'
+      );
+    } finally {
+      setLoadingPam(false);
+    }
+  }, [projectId, newPamEligiblePrincipal, onTriggerToast]);
+
+  const fetchWlmOverview = useCallback(
+    async (locOverride) => {
+      if (!projectId) return;
+      const loc = locOverride || wlmLocation || 'us-central1';
+      setLoadingWlm(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/workload-manager/overview?location=${encodeURIComponent(loc)}`
+        );
+        setWlmData(res.data || null);
+      } catch (err) {
+        onTriggerToast?.(
+          err.response?.data?.error ||
+            'Failed to load Workload Manager & SAIF posture.'
+        );
+      } finally {
+        setLoadingWlm(false);
+      }
+    },
+    [projectId, wlmLocation, onTriggerToast]
+  );
+
+  useEffect(() => {
+    if (activeSubTab === 'PAM_JIT_STUDIO') {
+      fetchPamOverview();
+    } else if (activeSubTab === 'WORKLOAD_MANAGER_SAIF') {
+      fetchWlmOverview(wlmLocation);
+    }
+  }, [activeSubTab, projectId, wlmLocation]);
+
+  const handlePamAction = async (payload) => {
+    if (!projectId) return;
+    setPamActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/pam/action`,
+        payload
+      );
+      onTriggerToast?.(res.data?.summary || 'PAM operation completed.');
+      await fetchPamOverview();
+    } catch (err) {
+      if (err?.message === 'USER_CANCELLED_DESTRUCTIVE_ACTION') return;
+      onTriggerToast?.(
+        err.response?.data?.error || 'PAM operation failed.'
+      );
+    } finally {
+      setPamActionBusy(false);
+    }
+  };
+
+  const handleWlmAction = async (payload) => {
+    if (!projectId) return;
+    setWlmActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/workload-manager/action`,
+        {
+          location: wlmLocation,
+          ...payload,
+        }
+      );
+      onTriggerToast?.(
+        res.data?.summary || 'Workload Manager / SAIF action completed.'
+      );
+      await fetchWlmOverview(wlmLocation);
+    } catch (err) {
+      if (err?.message === 'USER_CANCELLED_DESTRUCTIVE_ACTION') return;
+      onTriggerToast?.(
+        err.response?.data?.error ||
+          'Workload Manager / SAIF action failed.'
+      );
+    } finally {
+      setWlmActionBusy(false);
+    }
+  };
   const [secretValue, setSecretValue] = useState('');
   const [secretBlueprint, setSecretBlueprint] = useState('gdpr-sovereign');
   const [secretReplicationMode, setSecretReplicationMode] =
@@ -1108,7 +1253,7 @@ export default function SovereignTimeMachineIamStudio({
           <div
             role="tablist"
             aria-label="Sovereign Studio Modules"
-            className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1 p-1 rounded-[10px]"
+            className="cp-segmented-menu grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 p-1 rounded-[10px]"
           >
             {[
               {
@@ -1131,6 +1276,24 @@ export default function SovereignTimeMachineIamStudio({
                   ? `${iamData.userManagedKeys?.length || 0} Keys · ${iamData.serviceAccounts?.length || 0} SAs`
                   : 'JSON & OAuth2',
                 tip: 'Direct access to create, download, rotate, or revoke Service Account .json keys, mint 1h OAuth2 tokens, or freeze a compromised Service Account',
+              },
+              {
+                id: 'PAM_JIT_STUDIO',
+                icon: Clock,
+                label: 'PAM JIT Entitlements & Grants',
+                badge: pamData
+                  ? `${pamData.counts?.entitlements || 0} Entitlements`
+                  : 'Zero Standing',
+                tip: 'Privileged Access Manager (@skill:iam-helper-for-privileged-access-management): Replace standing Owner/Editor roles with time-bound PAM Entitlements & Grants',
+              },
+              {
+                id: 'WORKLOAD_MANAGER_SAIF',
+                icon: ShieldAlert,
+                label: 'Workload Manager & SAIF Posture',
+                badge: wlmData
+                  ? `${wlmData.counts?.toxicComboCount || 0} Toxic Combos`
+                  : 'SAIF + WLM',
+                tip: 'Google Cloud Workload Manager (@skill:workload-manager-basics) + SAIF Toxic Combination Assessment (@skill:gcs-security-assessment)',
               },
               {
                 id: 'TIME_MACHINE',
@@ -4176,6 +4339,810 @@ gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-
                 >
                   Copy 1-Tap Cloud Armor OWASP + Rate-Limit Deployment CLI
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          TAB 4: PRIVILEGED ACCESS MANAGER (PAM) ZERO-STANDING-PRIVILEGE STUDIO
+          (@skill:iam-helper-for-privileged-access-management)
+         ===================================================================== */}
+      {activeSubTab === 'PAM_JIT_STUDIO' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-[12px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                    Privileged Access Manager (PAM) Zero-Standing-Privilege Studio (`@skill:iam-helper-for-privileged-access-management`)
+                  </h3>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                      pamData?.pamApiEnabled
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {pamData?.pamApiEnabled
+                      ? 'privilegedaccessmanager.googleapis.com: ENABLED'
+                      : 'PAM API Not Enabled Yet'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Replaces permanent IAM role assignments (`roles/owner` → `roles/basic.owner`, `roles/editor` → `roles/basic.editor`) with on-demand, time-bound PAM Entitlements (`maxRequestDuration` default `"14400s"` / 4h) and audited Grants.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {!pamData?.pamApiEnabled && (
+                  <button
+                    type="button"
+                    data-feature-id="PAM_ENABLE_API_BTN"
+                    disabled={pamActionBusy}
+                    onClick={() => handlePamAction({ action: 'ENABLE_PAM_API' })}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Enable PAM API (`privilegedaccessmanager.googleapis.com`)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-feature-id="PAM_REFRESH_BTN"
+                  disabled={loadingPam}
+                  onClick={fetchPamOverview}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      loadingPam ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>Sync PAM Entitlements &amp; Grants</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4 PAM KPI Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono">
+              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase">
+                  PAM Entitlements (`global`)
+                </div>
+                <div className="text-base font-black text-zinc-900 dark:text-zinc-100">
+                  {pamData?.counts?.entitlements || 0}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase">
+                  Active / Scheduled Grants
+                </div>
+                <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                  {pamData?.counts?.activeGrants || 0}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase">
+                  Awaiting Approval (`Mode 3`)
+                </div>
+                <div className="text-base font-black text-amber-600 dark:text-amber-400">
+                  {pamData?.counts?.pendingApprovalGrants || 0}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase">
+                  Standing Humans to Convert
+                </div>
+                <div className="text-base font-black text-red-600 dark:text-red-400">
+                  {pamData?.counts?.standingPrivilegedHumans || 0}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+              {/* Left (5 cols): Mode 2 Entitlement Architect & Standing-to-PAM Converter */}
+              <div className="xl:col-span-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  1. Mode 2: PAM Entitlement Architect (`entitlement.yaml` + REST API)
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1">
+                      Entitlement ID (lowercase-hyphen)
+                    </label>
+                    <input
+                      type="text"
+                      value={newPamEntitlementId}
+                      onChange={(e) => setNewPamEntitlementId(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1">
+                      IAM Role (`roles/basic.*` auto-mapped)
+                    </label>
+                    <select
+                      value={newPamRole}
+                      onChange={(e) => {
+                        const r = e.target.value;
+                        setNewPamRole(r);
+                        const slug =
+                          r
+                            .replace(/^roles\//, '')
+                            .replace(/[^a-z0-9]+/gi, '-')
+                            .toLowerCase() + '-jit';
+                        setNewPamEntitlementId(slug);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    >
+                      <option value="roles/compute.admin">
+                        roles/compute.admin
+                      </option>
+                      <option value="roles/storage.admin">
+                        roles/storage.admin
+                      </option>
+                      <option value="roles/bigquery.admin">
+                        roles/bigquery.admin
+                      </option>
+                      <option value="roles/container.admin">
+                        roles/container.admin
+                      </option>
+                      <option value="roles/secretmanager.admin">
+                        roles/secretmanager.admin
+                      </option>
+                      <option value="roles/basic.editor">
+                        roles/basic.editor (v2 equivalent of roles/editor)
+                      </option>
+                      <option value="roles/basic.owner">
+                        roles/basic.owner (v2 equivalent of roles/owner)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1">
+                      Eligible Requester (`user:` / `group:`)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="user:engineer@example.com"
+                      value={newPamEligiblePrincipal}
+                      onChange={(e) =>
+                        setNewPamEligiblePrincipal(e.target.value)
+                      }
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1">
+                      `maxRequestDuration` (Default 4h = `"14400s"`)
+                    </label>
+                    <select
+                      value={newPamMaxDurationSec}
+                      onChange={(e) => setNewPamMaxDurationSec(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    >
+                      <option value="3600s">1 Hour (&quot;3600s&quot;)</option>
+                      <option value="14400s">
+                        4 Hours (&quot;14400s&quot; · Skill Default)
+                      </option>
+                      <option value="28800s">8 Hours (&quot;28800s&quot;)</option>
+                      <option value="86400s">24 Hours (&quot;86400s&quot;)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newPamRequireApproval}
+                    onChange={(e) => setNewPamRequireApproval(e.target.checked)}
+                    className="accent-blue-600"
+                  />
+                  <span>
+                    Require Manual Approver Workflow (`approvalWorkflow.manualApprovals`)
+                  </span>
+                </label>
+
+                {newPamRequireApproval && (
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                      Approver Principal (`user:` or `group:`)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="user:security-lead@example.com"
+                      value={newPamApproverPrincipal}
+                      onChange={(e) =>
+                        setNewPamApproverPrincipal(e.target.value)
+                      }
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  data-feature-id="PAM_CREATE_ENTITLEMENT_BTN"
+                  disabled={pamActionBusy}
+                  onClick={() =>
+                    handlePamAction({
+                      action: 'CREATE_ENTITLEMENT',
+                      entitlementId: newPamEntitlementId,
+                      role: newPamRole,
+                      maxRequestDuration: newPamMaxDurationSec,
+                      eligiblePrincipals: newPamEligiblePrincipal
+                        ? [newPamEligiblePrincipal.trim()]
+                        : [],
+                      requireManualApproval: newPamRequireApproval,
+                      approverPrincipals: newPamApproverPrincipal
+                        ? [newPamApproverPrincipal.trim()]
+                        : [],
+                    })
+                  }
+                  className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-mono font-bold cursor-pointer"
+                >
+                  {pamActionBusy
+                    ? 'Executing PAM Operation...'
+                    : `Create PAM Entitlement "${newPamEntitlementId}"`}
+                </button>
+
+                {/* Standing Principals Ready for PAM Conversion */}
+                {(pamData?.standingCandidates || []).length > 0 && (
+                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                    <div className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                      Standing 24/7 Privileged Principals Found in `{projectId}`:
+                    </div>
+                    <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                      {(pamData.standingCandidates || []).map((cand, idx) => (
+                        <div
+                          key={`${cand.member}-${cand.standingRole}-${idx}`}
+                          className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10.5px] font-mono"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                              {cand.member}
+                            </div>
+                            <div className="text-zinc-500 truncate">
+                              {cand.standingRole}{' '}
+                              {cand.translatedBasicRole
+                                ? `→ ${cand.pamCompatibleRole}`
+                                : ''}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewPamEligiblePrincipal(cand.member);
+                              setNewPamRole(cand.pamCompatibleRole);
+                              setNewPamEntitlementId(cand.suggestedEntitlementId);
+                            }}
+                            className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold shrink-0 cursor-pointer"
+                          >
+                            Load in PAM →
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right (7 cols): Live Entitlements Inventory + Mode 1 Grant Elevation + Mode 3 Approver Queue */}
+              <div className="xl:col-span-7 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                    2. Live PAM Entitlements &amp; Mode 1 / Mode 3 Grant Lifecycle
+                  </div>
+                  <label className="flex items-center gap-1.5 text-[10.5px] font-mono text-zinc-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pamForceRevokeOnDelete}
+                      onChange={(e) =>
+                        setPamForceRevokeOnDelete(e.target.checked)
+                      }
+                      className="accent-red-600"
+                    />
+                    <span>Revoke Open Grants First on Delete</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+                  <select
+                    value={pamGrantDurationSec}
+                    onChange={(e) => setPamGrantDurationSec(e.target.value)}
+                    className="px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="1800s">Grant Duration: 30m (&quot;1800s&quot;)</option>
+                    <option value="3600s">Grant Duration: 1h (&quot;3600s&quot;)</option>
+                    <option value="14400s">Grant Duration: 4h (&quot;14400s&quot;)</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={pamGrantJustification}
+                    onChange={(e) => setPamGrantJustification(e.target.value)}
+                    placeholder="Unstructured justification for audit log..."
+                    className="sm:col-span-2 px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                {(pamData?.entitlements || []).length === 0 ? (
+                  <div className="p-4 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                    No PAM Entitlements found at `projects/{projectId}/locations/global/entitlements` yet. Select a standing principal on the left and click **Create PAM Entitlement** to provision your first Zero-Standing-Privilege policy.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(pamData.entitlements || []).map((ent) => (
+                      <div
+                        key={ent.entitlementId}
+                        className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                              {ent.entitlementId}
+                            </span>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                              Max: {ent.maxRequestDuration}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={pamActionBusy}
+                              onClick={() =>
+                                handlePamAction({
+                                  action: 'REQUEST_GRANT',
+                                  entitlementId: ent.entitlementId,
+                                  requestedDuration: pamGrantDurationSec,
+                                  justification: pamGrantJustification,
+                                })
+                              }
+                              className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-bold cursor-pointer"
+                            >
+                              Request JIT Grant →
+                            </button>
+                            <button
+                              type="button"
+                              disabled={pamActionBusy}
+                              onClick={() =>
+                                handlePamAction({
+                                  action: 'DELETE_ENTITLEMENT',
+                                  entitlementId: ent.entitlementId,
+                                  forceRevokeActiveGrants:
+                                    pamForceRevokeOnDelete,
+                                })
+                              }
+                              className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10.5px] font-bold cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-[10.5px] text-zinc-500">
+                          Roles:{' '}
+                          {(ent.roles || []).map((r) => r.role).join(', ')} ·
+                          Eligible:{' '}
+                          {(ent.eligiblePrincipals || []).join(', ') || 'None'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Active / Pending Grants Table */}
+                {(pamData?.grants || []).length > 0 && (
+                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                    <div className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                      Active &amp; Pending PAM Grants ({pamData.grants.length}):
+                    </div>
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                      {(pamData.grants || []).map((g) => (
+                        <div
+                          key={g.name || g.grantId}
+                          className="p-2.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono"
+                        >
+                          <div>
+                            <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                              {g.entitlementId} / {g.grantId}{' '}
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                {g.state}
+                              </span>
+                            </div>
+                            <div className="text-zinc-500">
+                              Requester: {g.requester || 'current-user'} ·
+                              Duration: {g.requestedDuration} · &quot;
+                              {g.justification}&quot;
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {g.state === 'APPROVAL_AWAITED' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePamAction({
+                                      action: 'APPROVE_GRANT',
+                                      entitlementId: g.entitlementId,
+                                      grantId: g.grantId,
+                                      justification: pamGrantJustification,
+                                    })
+                                  }
+                                  className="px-2 py-1 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePamAction({
+                                      action: 'DENY_GRANT',
+                                      entitlementId: g.entitlementId,
+                                      grantId: g.grantId,
+                                      justification: pamGrantJustification,
+                                    })
+                                  }
+                                  className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 font-bold cursor-pointer"
+                                >
+                                  Deny
+                                </button>
+                              </>
+                            )}
+                            {['ACTIVE', 'SCHEDULED', 'ACTIVATING'].includes(
+                              g.state
+                            ) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handlePamAction({
+                                    action: 'REVOKE_GRANT',
+                                    entitlementId: g.entitlementId,
+                                    grantId: g.grantId,
+                                    justification: pamGrantJustification,
+                                  })
+                                }
+                                className="px-2 py-1 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold cursor-pointer"
+                              >
+                                Revoke Grant
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          TAB 5: GOOGLE CLOUD WORKLOAD MANAGER & SAIF TOXIC COMBINATION POSTURE
+          (@skill:workload-manager-basics + @skill:gcs-security-assessment)
+         ===================================================================== */}
+      {activeSubTab === 'WORKLOAD_MANAGER_SAIF' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-[12px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ShieldAlert className="w-4 h-4 text-red-500" />
+                  <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                    Google Cloud Workload Manager (`workloadmanager.googleapis.com/v1`) &amp; SAIF Toxic Combination Studio
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                    SAIF 5-PHASE ASSESSMENT · TOXIC COMBOS · WLM EVALUATIONS
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Correlates project-level signals (`VPC-SC`, `Model Armor`, `Data Access Audit Logs`, `Storage Insights`) with bucket classifications and Workload Manager evaluations to eliminate toxic security combinations.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={wlmLocation}
+                  onChange={(e) => {
+                    setWlmLocation(e.target.value);
+                    fetchWlmOverview(e.target.value);
+                  }}
+                  className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+                >
+                  <option value="us-central1">Region: us-central1</option>
+                  <option value="us-east1">Region: us-east1</option>
+                  <option value="europe-west1">Region: europe-west1</option>
+                  <option value="global">Location: global</option>
+                </select>
+
+                {!wlmData?.wlmApiEnabled && (
+                  <button
+                    type="button"
+                    data-feature-id="WLM_ENABLE_API_BTN"
+                    disabled={wlmActionBusy}
+                    onClick={() => handleWlmAction({ action: 'ENABLE_WLM_API' })}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Enable Workload Manager + Model Armor API
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  data-feature-id="WLM_REFRESH_BTN"
+                  disabled={loadingWlm}
+                  onClick={() => fetchWlmOverview(wlmLocation)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      loadingWlm ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>Run SAIF &amp; WLM Assessment</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Phase 1 Project Telemetry Signals Strip (@skill:gcs-security-assessment) */}
+            {wlmData && (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 font-mono">
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    VPC Service Controls
+                  </div>
+                  <div className="text-xs font-black text-amber-600 dark:text-amber-400">
+                    {wlmData.projectSignals?.vpcScStatus || 'UNKNOWN'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Model Armor API
+                  </div>
+                  <div
+                    className={`text-xs font-black ${
+                      wlmData.projectSignals?.modelArmorEnabled
+                        ? 'text-emerald-500'
+                        : 'text-red-500'
+                    }`}
+                  >
+                    {wlmData.projectSignals?.modelArmorEnabled
+                      ? 'ENABLED'
+                      : 'NOT ENABLED (SAIF Finding)'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Data Access Audit Logs
+                  </div>
+                  <div className="text-xs font-black text-zinc-900 dark:text-zinc-100">
+                    {wlmData.projectSignals?.dataAccessAuditLogsStatus ||
+                      'UNKNOWN'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Analysis Scope (Storage Insights)
+                  </div>
+                  <div className="text-xs font-black text-blue-600 dark:text-blue-400">
+                    {wlmData.analysisScope || 'project_only'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    SAIF Toxic Combinations
+                  </div>
+                  <div
+                    className={`text-sm font-black ${
+                      (wlmData.counts?.toxicComboCount || 0) === 0
+                        ? 'text-emerald-500'
+                        : 'text-red-500'
+                    }`}
+                  >
+                    {wlmData.counts?.toxicComboCount || 0} Detected
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+              {/* Left (6 cols): SAIF Toxic Combination Findings & 1-Tap Remediation */}
+              <div className="xl:col-span-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  1. SAIF Bucket Classifications &amp; Toxic Combination Remediator (`@skill:gcs-security-assessment`)
+                </div>
+
+                {(wlmData?.saifBucketAssessments || []).length === 0 ? (
+                  <div className="p-3 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                    No buckets found in `{projectId}`.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-96 overflow-y-auto">
+                    {(wlmData.saifBucketAssessments || []).map((b) => (
+                      <div
+                        key={b.bucketName}
+                        className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-xs"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                              gs://{b.bucketName}
+                            </span>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                              {b.classification}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {b.baselineFailures.length > 0 && (
+                              <button
+                                type="button"
+                                disabled={wlmActionBusy}
+                                onClick={() =>
+                                  handleWlmAction({
+                                    action: 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO',
+                                    bucketName: b.bucketName,
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-bold cursor-pointer"
+                              >
+                                1-Tap SAIF Harden
+                              </button>
+                            )}
+                            {onNavigateTab && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  requestCrossStudioNav(
+                                    'Cloud Storage Fleet & Object Intelligence Studio',
+                                    `Bucket: gs://${b.bucketName}`,
+                                    () =>
+                                      onNavigateTab('CLOUD_STORAGE', 'BUCKETS', {
+                                        bucketName: b.bucketName,
+                                      })
+                                  )
+                                }
+                                className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                              >
+                                Inspect in GCS →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {b.toxicCombinations.map((tc) => (
+                          <div
+                            key={tc.id}
+                            className="p-2 rounded bg-red-500/10 border border-red-500/30 text-[10.5px] text-red-700 dark:text-red-300"
+                          >
+                            <strong>[{tc.severity}] {tc.title}:</strong>{' '}
+                            {tc.summary}
+                          </div>
+                        ))}
+
+                        {b.baselineFailures.length > 0 ? (
+                          <div className="text-[10px] text-zinc-500">
+                            Baseline Gaps: {b.baselineFailures.join(' · ')}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-emerald-500 font-bold">
+                            ✓ All SAIF Baseline Controls Enforced (PAP + UBLA + Versioning + Soft-Delete)
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right (6 cols): Workload Manager Evaluations & Best-Practice Rules (@skill:workload-manager-basics) */}
+              <div className="xl:col-span-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  2. Workload Manager Evaluations &amp; Rules (`workloadmanager.googleapis.com/v1`)
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+                  <input
+                    type="text"
+                    value={newWlmEvalId}
+                    onChange={(e) => setNewWlmEvalId(e.target.value)}
+                    placeholder="Evaluation ID"
+                    className="px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                  />
+                  <select
+                    value={newWlmEvalType}
+                    onChange={(e) => setNewWlmEvalType(e.target.value)}
+                    className="px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="OTHER">
+                      Type: OTHER (General Best Practices)
+                    </option>
+                    <option value="SAP">Type: SAP Workload Best Practices</option>
+                    <option value="SQL_SERVER">
+                      Type: SQL_SERVER Best Practices
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    data-feature-id="WLM_CREATE_EVALUATION_BTN"
+                    disabled={wlmActionBusy}
+                    onClick={() =>
+                      handleWlmAction({
+                        action: 'CREATE_EVALUATION',
+                        evaluationId: newWlmEvalId,
+                        evaluationType: newWlmEvalType,
+                        ruleNames: (wlmData?.rules || [])
+                          .slice(0, 4)
+                          .map((r) => r.name),
+                      })
+                    }
+                    className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold cursor-pointer"
+                  >
+                    + Create Evaluation
+                  </button>
+                </div>
+
+                {(wlmData?.evaluations || []).length > 0 && (
+                  <div className="space-y-1.5">
+                    {(wlmData.evaluations || []).map((ev) => (
+                      <div
+                        key={ev.evaluationId}
+                        className="p-2.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            {ev.evaluationId}{' '}
+                            <span className="text-[10px] text-blue-500">
+                              ({ev.evaluationType})
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {ev.description || ev.name}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={wlmActionBusy}
+                          onClick={() =>
+                            handleWlmAction({
+                              action: 'RUN_EVALUATION',
+                              evaluationId: ev.evaluationId,
+                            })
+                          }
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-bold cursor-pointer"
+                        >
+                          Run Evaluation →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                  {(wlmData?.rules || []).map((r) => (
+                    <div
+                      key={r.ruleId}
+                      className="p-2.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono space-y-0.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                          {r.displayName}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9.5px] font-bold">
+                          {r.severity}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {r.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

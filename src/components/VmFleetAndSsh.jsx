@@ -7755,7 +7755,30 @@ export default function VmFleetAndSsh({
               onSelectVm={(vm) => setActiveSshVm(vm)}
               onVmPowerAction={handlePowerAction}
               onOpenMigrateVm={handleToggleMigrateVm}
-              onSelectTab={onSelectTab}
+              onSelectTab={(targetTab, subTab, payload) => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(
+                    new CustomEvent('cloudpulse:request-cross-tab-nav', {
+                      detail: {
+                        fromStudio: 'Compute Engine VM Fleet & Web-SSH Studio',
+                        destinationLabel: `${targetTab}${
+                          subTab ? ` · ${subTab}` : ''
+                        }`,
+                        targetDetail:
+                          payload?.bucketName
+                            ? `Bucket: gs://${payload.bucketName}${
+                                payload.prefix ? `/${payload.prefix}` : ''
+                              }`
+                            : `VM: ${activeSshVm?.name || projectId}`,
+                        onConfirm: () =>
+                          onSelectTab?.(targetTab, subTab, payload),
+                      },
+                    })
+                  );
+                } else {
+                  onSelectTab?.(targetTab, subTab, payload);
+                }
+              }}
               powerBusyVm={powerBusyVm}
               pendingOps={pendingOps}
               defaultUsername={userShort || 'ubuntu'}

@@ -2020,6 +2020,61 @@ const DOC_SECTIONS = [
     billingImpact:
       '100% $0.00/mo for 6-Gate Ransomware Deep Audits, IAM Blast-Radius checks, and Clean-Room Canary Drills (auto-cleaned). Historical noncurrent versions incur standard storage rates ($0.020/GB-mo) only when objects are overwritten.',
   },
+  {
+    id: 'wave23-bq-lineage-pam-jit-workload-manager-saif-gke-computeclasses',
+    wave: 'WAVE 23 SKILL-GROUNDED MOONSHOT SUITE · BQ LINEAGE BLAST-RADIUS, PAM JIT ENTITLEMENTS, WORKLOAD MANAGER SAIF & GKE COMPUTECLASSES',
+    title:
+      '51. BigQuery Data Lineage Blast-Radius & Partition Surgeon, Privileged Access Manager (PAM) JIT Studio, Workload Manager & SAIF Toxic Combo Remediator & GKE ComputeClasses + CapacityQuota Architect',
+    badge: 'BigQuery Studio + Sovereign IAM/PAM/WLM Studio + GKE Fleet Studio',
+    badgeColor:
+      'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
+    icon: Sparkles,
+    targetTab: 'SOVEREIGN_IAM',
+    problemSolved:
+      'Modifying a BigQuery table without knowing its multi-hop downstream lineage breaks executive dashboards; permanent 24/7 Owner/Editor IAM bindings violate Zero-Standing-Privilege; isolated static bucket alerts miss multi-signal SAIF toxic combinations; and manual GKE Spot/CUD node pools suffer from stockout cascades and CUD exhaustion.',
+    howItWorks: [
+      '1. BigQuery Data Lineage Blast-Radius & Partition Surgeon (@skill:datalineage-bigquery-asset-impact-analysis): Resolves bigquery:{project}.{dataset}.{table}, traverses datalineage.googleapis.com/v1 (:searchLinks) up to 10 hops plus live View/Job SQL provenance, renders the canonical Downstream Blast Radius Table, and applies 1-Tap Partition Filter + Clustering hardening.',
+      '2. Privileged Access Manager (PAM) Zero-Standing-Privilege Studio (@skill:iam-helper-for-privileged-access-management): Connects to privilegedaccessmanager.googleapis.com/v1 to create Entitlements (auto-mapping legacy basic roles roles/owner -> roles/basic.owner, roles/editor -> roles/basic.editor with default 4h "14400s" maxRequestDuration), request Mode 1 JIT Grants, execute Mode 3 Approvals/Revocations, and enforce open-grant safety checks before deletion.',
+      '3. Google Cloud Workload Manager & SAIF Toxic Combination Studio (@skill:workload-manager-basics + @skill:gcs-security-assessment): Evaluates VPC-SC (marking PermissionDenied as UNKNOWN), Model Armor, Data Access Audit Logs, and Storage Insights scope alongside 5-Phase SAIF bucket classifications, toxic combination detection, and Workload Manager evaluations (workloadmanager.googleapis.com/v1).',
+      '4. GKE ComputeClasses, CapacityQuota CUD Spillover & GPU/TPU Inference Architect (@skill:gke-compute-classes): Synthesizes schema-verified ComputeClass YAML (# EXAMPLE TEMPLATE - DO NOT DEPLOY + CUD alignment comment, unquoted bootDiskSize, lowercase imageType: cos_containerd), CapacityQuota (autoscaling.x-k8s.io/v1beta1) for CUD exhaustion spillover, AI/ML Inference priority order (Reservations AnyThenFail -> On-Demand -> Spot -> DWS FlexStart last + nvidia.com/gpu toleration), dynamic-rwo StorageClass, and 3-Layer Governance (ClusterRole + ValidatingAdmissionPolicy + CapacityQuota).',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/bigquery/lineage-impact-analysis & /bigquery/partition-cluster-surgeon',
+      'GET /api/project/:id/pam/overview & POST /api/project/:id/pam/action (privilegedaccessmanager.googleapis.com/v1)',
+      'GET /api/project/:id/workload-manager/overview & POST /api/project/:id/workload-manager/action (workloadmanager.googleapis.com/v1)',
+      'POST /api/project/:id/gke/compute-classes-architect (container.googleapis.com/v1 + compute.googleapis.com/v1)',
+    ],
+    billingImpact:
+      '100% $0.00/mo for PAM Entitlements/Grants, Data Lineage blast-radius queries, SAIF Toxic Combination audits, BigQuery metadata partitioning patches, and GKE ComputeClass/CapacityQuota manifests.',
+  },
+  {
+    id: 'wave23-actionable-cloud-architect-remote-mcp-control-plane',
+    wave: 'WAVE 23 CLOUD ARCHITECT MCP CONTROL PLANE · 5-PILLAR LIVE PROVISIONING, LEAST-PRIVILEGE SA MINTER, WORKSTATION .MCP.JSON INJECTOR, CUSTOM CLOUD RUN MCP SCAFFOLDER & DRIFT REMEDIATOR',
+    title:
+      '52. Actionable 5-Pillar Cloud Architect Remote MCP Control Plane — Stack Readiness Doctor & Batch API Provisioner, Least-Privilege AI Agent SA Minter, Live Workstation IDE Config Injector, Custom Cloud Run MCP Scaffolder & Multi-MCP Drift Remediator',
+    badge: 'MCP Servers ★ Studio (GoogleCloudRemoteMcpStudio.jsx)',
+    badgeColor:
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
+    icon: Server,
+    targetTab: 'MCP_HUB',
+    problemSolved:
+      'A static catalog of Model Context Protocol (MCP) endpoints is merely documentation that an architect could read on GitHub. In production, Cloud Architects need an actionable control plane that audits whether their project APIs are actually enabled for MCP, prevents developers from handing personal roles/owner OAuth tokens to AI coding agents, detects broken $GCP_REGION placeholders and missing servers in local workstation IDE config files, deploys custom private Streamable-HTTP MCP servers to Cloud Run Gen2, and turns multi-MCP triage findings into 1-click live cloud remediations.',
+    howItWorks: [
+      'Pillar 1 — MCP Stack Readiness Doctor & 1-Click Batch API Provisioner (POST /api/project/:id/mcp/architect-doctor & /mcp/batch-enable-apis): Audits live serviceusage.googleapis.com state across all 48 official Google Cloud Remote MCP endpoints, calculates an Architect Readiness Score (0–100%), checks whether a dedicated AI Agent Service Account exists, and enables all missing MCP backing APIs in a single batch operation.',
+      'Pillar 2 — Least-Privilege AI Agent Service Account & Scoped Read-Only IAM Minter (POST /api/project/:id/mcp/mint-least-privilege-sa): Provisions a dedicated mcp-agent-readonly@<project>.iam.gserviceaccount.com identity and binds strictly scoped read-only IAM roles (roles/viewer, roles/bigquery.metadataViewer, roles/logging.viewer, roles/monitoring.viewer, roles/cloudasset.viewer, roles/serviceusage.serviceUsageConsumer) with zero standing write/delete privileges and zero static JSON keys (using short-lived --impersonate-service-account OAuth tokens).',
+      'Pillar 3 — Workstation IDE Config Live Diff, Region Placeholder Doctor & 1-Click .mcp.json Injector (GET /api/project/:id/mcp/local-ide-inspect & POST /api/project/:id/mcp/local-ide-sync): Inspects real workstation IDE files on disk (Project .mcp.json, ~/.gemini/settings.json, ~/.claude.json, and ~/.cursor/mcp.json), flags unreplaced $GCP_REGION / ${REGION} placeholders (@skill:resolving-mcp-region-configs), and merges selected *.googleapis.com/mcp servers directly into the file with an automatic timestamped .bak backup.',
+      'Pillar 4 — Custom Cloud Run Streamable-HTTP Remote MCP Server Scaffolder & GCS Stager (POST /api/project/:id/mcp/stage-custom-cloudrun-mcp): Synthesizes a 3-file production Cloud Run Gen2 Streamable-HTTP Remote MCP Server bundle (server.mjs + package.json + Dockerfile) for internal enterprise runbooks (Cloud SQL/AlloyDB Diagnostics, FinOps & Quota Guard, Zero-Trust IAM Auditor), stages the artifacts to gs://<bucket>/custom-mcp-servers/<service>/, and outputs a 1-command gcloud run deploy --no-allow-unauthenticated snippet + 1-click "Browse Staged Bundle in GCS ->" deep-link.',
+      'Pillar 5 — Multi-MCP Triage Chains -> Live Architectural Drift & 1-Click Remediations (POST /api/project/:id/mcp/run-triage-chain & /mcp/remediate-finding): Enriches the 4 parallel multi-server MCP triage chains (Incident RCA, FinOps Cost & Quota Spike, Zero-Trust IAM & Secrets, Lakehouse & Database Health) with live architectural drift detection and 1-click remediations (LOCK_OPEN_FIREWALL_TO_IAP -> 35.235.240.0/20, HARDEN_GCS_BUCKET_PAP_AND_UBLA, and ENABLE_SERVICE_API).',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/mcp/architect-doctor & POST /api/project/:id/mcp/batch-enable-apis (serviceusage.googleapis.com/v1/projects/:id/services:batchEnable)',
+      'POST /api/project/:id/mcp/mint-least-privilege-sa (iam.googleapis.com/v1/projects/:id/serviceAccounts + cloudresourcemanager.googleapis.com/v1/projects/:id:setIamPolicy)',
+      'GET /api/project/:id/mcp/local-ide-inspect & POST /api/project/:id/mcp/local-ide-sync (Local fs .mcp.json / settings.json merge + .bak backup)',
+      'POST /api/project/:id/mcp/stage-custom-cloudrun-mcp (storage.googleapis.com/upload/storage/v1/b/:b/o) & POST /api/project/:id/mcp/remediate-finding',
+    ],
+    billingImpact:
+      '100% $0.00/mo for MCP Stack Readiness audits, IAM Service Account creation, local IDE .mcp.json injection, and firewall/bucket security remediations; staging custom Cloud Run MCP bundles to GCS uses standard object storage (<$0.001/mo).',
+  },
 ];
 
 export default function InteractiveDocsGuide({

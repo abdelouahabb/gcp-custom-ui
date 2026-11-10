@@ -1836,6 +1836,8 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/wave8/war-room/ai-sre-commander') ||
       rawUrl.includes('/dlp-scan') ||
       rawUrl.includes('/ransomware-deep-audit') ||
+      rawUrl.includes('/bigquery/lineage-impact-analysis') ||
+      rawUrl.includes('/gke/compute-classes-architect') ||
       rawUrl.includes('/functions/test-event') ||
       rawUrl.includes('/ai-copilot') ||
       rawUrl.includes('/ai-vault/ask') ||
@@ -1934,6 +1936,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/mcp/run-triage-chain') ||
       rawUrl.includes('/mcp/agent-chat') ||
       rawUrl.includes('/mcp/call-tool') ||
+      rawUrl.includes('/mcp/architect-doctor') ||
       rawUrl.includes('/wave11/stress-audit') ||
       rawUrl.includes('/wave12/ludicrous-megacast') ||
       rawUrl.includes('/wave12/flight-director') ||
@@ -2517,6 +2520,126 @@ function classifyDestructiveAxiosConfig(config) {
     // 3D-0. 5-Persona Enterprise Readiness Drills & Traces (/enterprise-personas/action)
     if (rawUrl.includes('/enterprise-personas/action')) {
       return null;
+    }
+
+    // 3D-0B. Actionable Cloud Architect MCP Control Plane Mutations (/mcp/*)
+    if (rawUrl.includes('/mcp/batch-enable-apis')) {
+      const apis = Array.isArray(body.serviceApis) ? body.serviceApis : [];
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Batch-Enable ${apis.length || 1} Missing Google Cloud MCP API(s) on "${projectId}"?`,
+        headerBadge: 'MCP Stack Readiness Doctor · Service Usage Batch Provisioner',
+        targetLabel: 'Target Google Cloud Service Usage APIs',
+        resourceKind: 'Service Usage API Batch Enable (serviceusage.googleapis.com/v1)',
+        targetName: apis.join(', ') || 'Selected MCP Service APIs',
+        location: 'Global',
+        projectId,
+        method: 'BATCH ENABLE APIS',
+        endpoint: rawUrl,
+        confirmLabel: `Enable ${apis.length || 1} MCP Service API(s) ($0.00)`,
+        cancelToast: 'Batch MCP API enablement cancelled.',
+        laymanSummary: `In Plain English: Activates ${apis.join(', ') || 'the required Google Cloud APIs'} on project "${projectId}" in a single batch call so your Remote MCP servers respond with HTTP 200 instead of 403 SERVICE_DISABLED.`,
+        whatHappensNext: `1. Calls POST https://serviceusage.googleapis.com/v1/projects/${projectId}/services:batchEnable.\n2. Enables ${apis.join(', ')} on "${projectId}".\n3. Re-runs the MCP Stack Readiness Doctor to verify all endpoints are online.`,
+        costWarning: `ZERO COST TO ENABLE APIS ($0.00): Enabling Google Cloud APIs in Service Usage is completely free; you only pay if you later provision billable resources.`,
+        impactWarning: `Enables ${apis.length || 1} Google Cloud Service API(s) on project "${projectId}".`,
+      };
+    }
+
+    if (rawUrl.includes('/mcp/mint-least-privilege-sa')) {
+      const saId = body.accountId || 'mcp-agent-readonly';
+      const saEmail = `${saId}@${projectId}.iam.gserviceaccount.com`;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Provision Least-Privilege Read-Only MCP Agent Service Account "${saEmail}"?`,
+        headerBadge: 'Zero-Trust AI Agent Identity & Scoped IAM Minter',
+        targetLabel: 'Dedicated Read-Only AI Agent Service Account',
+        resourceKind: 'IAM Service Account + Read-Only Policy Bindings (iam.googleapis.com/v1)',
+        targetName: saEmail,
+        location: 'Global IAM',
+        projectId,
+        method: 'MINT READ-ONLY AGENT SA',
+        endpoint: rawUrl,
+        confirmLabel: `Provision "${saId}" & Bind Read-Only IAM ($0.00)`,
+        cancelToast: 'Least-privilege MCP Service Account provisioning cancelled.',
+        laymanSummary: `In Plain English: Creates a dedicated read-only identity ("${saEmail}") for your AI coding agents (Claude Code, Gemini CLI, Cursor) and binds ONLY Viewer/Reader roles. Even if an AI agent hallucinates a delete command, Google Cloud IAM physically blocks the mutation.`,
+        whatHappensNext: `1. Creates or verifies Service Account "${saEmail}" via iam.googleapis.com/v1.\n2. Binds only read-only IAM roles (e.g., bigquery.metadataViewer, storage.objectViewer, logging.viewer, serviceusage.serviceUsageConsumer) on "${projectId}".\n3. Generates an impersonated short-lived token MCP config without exporting any long-lived JSON private keys.`,
+        costWarning: `ZERO COST IMPACT ($0.00): IAM Service Accounts and IAM policy bindings are 100% free on Google Cloud.`,
+        impactWarning: `Creates "${saEmail}" and grants read-only viewer roles on project "${projectId}". Zero destructive or admin roles are granted.`,
+      };
+    }
+
+    if (rawUrl.includes('/mcp/local-ide-sync')) {
+      const targetFile = body.targetFileId || 'WORKSPACE_MCP_JSON';
+      const count = Array.isArray(body.selectedServers) ? body.selectedServers.length : 0;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Sync & Inject ${count} Official GCP Remote MCP Server(s) into Local IDE Config (${targetFile})?`,
+        headerBadge: 'Workstation IDE Config Injector (Automatic .bak Backup)',
+        targetLabel: 'Local Workstation MCP Configuration File',
+        resourceKind: 'Local MCP JSON Config Merge + Region Placeholder Repair',
+        targetName: `${targetFile} (${count} Official *.googleapis.com/mcp servers)`,
+        location: 'Local Workstation',
+        projectId,
+        method: 'SYNC LOCAL IDE CONFIG',
+        endpoint: rawUrl,
+        confirmLabel: `Backup & Inject ${count} MCP Server(s)`,
+        cancelToast: 'Local IDE MCP config sync cancelled.',
+        laymanSummary: `In Plain English: Creates a timestamped .bak backup of your local IDE MCP config file, patches any broken $GCP_REGION placeholders, and merges ${count} official Google Cloud Remote MCP server(s) pinned to project "${projectId}".`,
+        whatHappensNext: `1. Writes a timestamped .bak backup copy of your existing MCP configuration file.\n2. Replaces any unreplaced $GCP_REGION / \${REGION} placeholders with "${body.region || 'us-central1'}".\n3. Merges the ${count} selected *.googleapis.com/mcp endpoints while preserving all your existing non-GCP MCP servers.`,
+        costWarning: `ZERO CLOUD COST ($0.00): Updating your local workstation MCP configuration file is completely free.`,
+        impactWarning: `Updates your local IDE MCP configuration file after saving a full .bak backup copy.`,
+      };
+    }
+
+    if (rawUrl.includes('/mcp/stage-custom-cloudrun-mcp')) {
+      const svc = body.serviceName || 'cloudpulse-custom-mcp';
+      const reg = body.region || 'us-central1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Stage Custom Cloud Run Remote MCP Server "${svc}" (${reg}) Bundle to Cloud Storage?`,
+        headerBadge: 'Custom Streamable-HTTP Remote MCP Scaffolder & GCS Stager',
+        targetLabel: 'Target Custom Remote MCP Bundle',
+        resourceKind: 'Node.js 22 Streamable-HTTP JSON-RPC 2.0 MCP Server Bundle',
+        targetName: `${svc} (${reg})`,
+        location: reg,
+        projectId,
+        method: 'STAGE CUSTOM MCP BUNDLE',
+        endpoint: rawUrl,
+        confirmLabel: `Stage "${svc}" Bundle to GCS ($0.00 Compute)`,
+        cancelToast: 'Custom Cloud Run MCP bundle staging cancelled.',
+        laymanSummary: `In Plain English: Generates a complete, zero-trust Node.js 22 Remote MCP Server ("${svc}") tailored to project "${projectId}" and uploads the deployable source bundle to your Cloud Storage bucket with a cryptographic SHA-256 receipt.`,
+        whatHappensNext: `1. Synthesizes server.mjs + package.json implementing JSON-RPC 2.0 tools/list and tools/call for "${projectId}".\n2. Uploads the bundle to gs://<bucket>/mcp-cloudrun-deployments/${svc}-mcp-bundle.json.\n3. Generates the --no-allow-unauthenticated Cloud Run deploy command and Agent Registry registration command.`,
+        costWarning: `ZERO COMPUTE COST ($0.00): Staging a ~4 KB JSON source bundle in Cloud Storage costs $0.0000001/month and starts zero billable containers until you run gcloud run deploy.`,
+        impactWarning: `Writes the deployable MCP server source bundle to Cloud Storage in project "${projectId}".`,
+      };
+    }
+
+    if (rawUrl.includes('/mcp/remediate-finding')) {
+      const remType = String(body.remediationType || '');
+      const resource = String(body.targetResource || projectId);
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Execute 1-Click MCP Finding Remediation (${remType}) on "${resource}"?`,
+        headerBadge: 'Autonomous Multi-MCP Triage -> Live Cloud Remediation',
+        targetLabel: 'Target Google Cloud Resource',
+        resourceKind: remType,
+        targetName: resource,
+        location: 'Global / Regional',
+        projectId,
+        method: 'EXECUTE MCP REMEDIATION',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Remediate "${resource}"`,
+        cancelToast: 'MCP finding remediation cancelled.',
+        laymanSummary: `In Plain English: Applies the recommended security or readiness fix ("${remType}") directly to "${resource}" in project "${projectId}" based on live telemetry from Google Cloud's Remote MCP servers.`,
+        whatHappensNext: `1. Sends an authenticated REST mutation to Google Cloud for "${resource}" (${remType}).\n2. Verifies the updated resource configuration and returns a live confirmation receipt.`,
+        costWarning: `ZERO CONTROL-PLANE FEE ($0.00): Applying bucket Uniform IAM / 7-day Soft-Delete or enabling a Service API incurs $0.00 in control-plane charges.`,
+        impactWarning: `Applies live configuration hardening (${remType}) on "${resource}" in project "${projectId}".`,
+      };
     }
 
     // 3D. [GA / BETA / ALPHA] gcloud 591.0.0 Frontier Lab Mutations (/alpha-beta/action)
@@ -5932,6 +6055,168 @@ function classifyDestructiveAxiosConfig(config) {
           whatHappensNext: `1. Authenticates against dataproc.googleapis.com/v1 in region "${reg}" for project "${projectId}".\n2. Executes "${friendlyAct}" on "${targetObj}".\n3. Updates the Managed Spark Studio inventory.`,
           costWarning: `SPARK BILLING NOTICE: Session Templates, IAM bindings, and GCS script staging cost $0.00/mo; Serverless Spark batches/sessions bill per-second only while active ($0.00/hr idle).`,
           impactWarning: `Executes "${friendlyAct}" on "${targetObj}" (${reg}) in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/bigquery/partition-cluster-surgeon')) {
+        const dsId = body.datasetId || 'analytics_lakehouse';
+        const tblId = body.tableId || 'telemetry_events_2026';
+        const mode = String(body.mode || 'PATCH_METADATA').toUpperCase();
+        const clusterCols = Array.isArray(body.clusterFields)
+          ? body.clusterFields.join(', ')
+          : '';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `Create Partitioned + Clustered BigQuery Table "${projectId}.${dsId}.${tblId}_partitioned"?`
+              : `Harden BigQuery Table "${projectId}.${dsId}.${tblId}" (Require Partition Filter + Clustering)?`,
+          laymanSummary:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `In Plain English: Runs a BigQuery CTAS (CREATE OR REPLACE TABLE ... PARTITION BY ... CLUSTER BY) job to build a partitioned and clustered table "${dsId}.${tblId}_partitioned" from "${dsId}.${tblId}" while keeping your original table 100% untouched.`
+              : `In Plain English: Patches your live BigQuery table "${dsId}.${tblId}" metadata via bigquery.tables.patch to enforce requirePartitionFilter=${Boolean(
+                  body.requirePartitionFilter
+                )} and clustering columns [${clusterCols || 'auto'}], preventing accidental full-table scan charges.`,
+          headerBadge:
+            'BigQuery Partition & Cluster FinOps Surgeon Gatekeeper (@skill:bigquery-sql)',
+          targetLabel: 'Target BigQuery Dataset & Table',
+          resourceKind: `BigQuery Table (${
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? 'bigquery.jobs.insert CTAS'
+              : 'bigquery.tables.patch'
+          })`,
+          targetName: `${projectId}.${dsId}.${tblId}`,
+          location: 'US',
+          projectId,
+          method: mode === 'CREATE_PARTITIONED_COPY' ? 'POST (CTAS)' : 'PATCH',
+          endpoint: rawUrl,
+          confirmLabel:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `Create "${tblId}_partitioned" Table`
+              : `Apply Partition & Cluster Hardening on "${tblId}"`,
+          cancelToast: `BigQuery Partition & Cluster Surgeon cancelled for "${tblId}".`,
+          whatHappensNext:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `1. Submits a BigQuery DDL CTAS job in "${projectId}.${dsId}".\n2. Creates "${tblId}_partitioned" with Partitioning, Clustering [${clusterCols}], and require_partition_filter = TRUE.\n3. Refreshes the BigQuery Studio table and lineage inventory.`
+              : `1. Calls PATCH https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables/${tblId}.\n2. Sets requirePartitionFilter=${Boolean(
+                  body.requirePartitionFilter
+                )} and clustering.fields=[${clusterCols}].\n3. Refreshes the BigQuery Studio table posture.`,
+          costWarning:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `BIGQUERY CTAS NOTICE: Scanning "${dsId}.${tblId}" once to build the partitioned copy uses standard BigQuery query bytes (first 1 TB/month is $0.00 Free Tier; $6.25/TB thereafter) and reduces future query scan costs by up to 88%.`
+              : `ZERO EXTRA COST ($0.00): bigquery.tables.patch is a free metadata control-plane operation that prevents expensive full-table scans.`,
+          impactWarning:
+            mode === 'CREATE_PARTITIONED_COPY'
+              ? `Creates or replaces "${projectId}.${dsId}.${tblId}_partitioned" without modifying the source table "${tblId}".`
+              : `Queries against "${dsId}.${tblId}" that omit the partition WHERE filter will be safely blocked once requirePartitionFilter=true is active.`,
+        };
+      }
+      if (rawUrl.includes('/pam/action')) {
+        const pamAct = String(body.action || 'CREATE_ENTITLEMENT').toUpperCase();
+        const entId = body.entitlementId || 'jit-entitlement';
+        const gId = body.grantId || '';
+        const role = body.role || 'roles/compute.admin';
+        const dur = body.maxRequestDuration || body.requestedDuration || '14400s';
+        return {
+          gateType:
+            pamAct === 'DELETE_ENTITLEMENT' || pamAct === 'REVOKE_GRANT'
+              ? 'DESTRUCTIVE_DELETE'
+              : 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title:
+            pamAct === 'CREATE_ENTITLEMENT'
+              ? `Create Privileged Access Manager (PAM) Entitlement "${entId}" (${role})?`
+              : pamAct === 'REQUEST_GRANT'
+                ? `Request Temporary JIT PAM Access Grant on "${entId}" for ${dur}?`
+                : pamAct === 'DELETE_ENTITLEMENT'
+                  ? `Delete PAM Entitlement "${entId}" in Project "${projectId}"?`
+                  : `Execute PAM Action "${pamAct.replace(/_/g, ' ')}" on "${
+                      gId || entId
+                    }"?`,
+          laymanSummary:
+            pamAct === 'CREATE_ENTITLEMENT'
+              ? `In Plain English: Creates a Zero-Standing-Privilege PAM Entitlement "${entId}" in project "${projectId}" for role "${role}" (translating legacy basic roles like roles/owner to roles/basic.owner as required by PAM) with a maximum elevation window of ${dur}.`
+              : pamAct === 'REQUEST_GRANT'
+                ? `In Plain English: Requests a time-bound PAM Grant on entitlement "${entId}" for ${dur} with your audit justification. Access automatically expires and revokes itself when the timer ends.`
+                : pamAct === 'DELETE_ENTITLEMENT'
+                  ? `In Plain English: Permanently deletes PAM Entitlement "${entId}" from privilegedaccessmanager.googleapis.com/v1 after verifying or revoking any active/scheduled grants.`
+                  : `In Plain English: Runs "${pamAct.replace(
+                      /_/g,
+                      ' '
+                    )}" on PAM resource "${
+                      gId || entId
+                    }" via privilegedaccessmanager.googleapis.com/v1.`,
+          headerBadge:
+            'Privileged Access Manager (PAM) Zero-Standing-Privilege Gatekeeper (@skill:iam-helper-for-privileged-access-management)',
+          targetLabel: 'Target PAM Entitlement / Temporary Grant',
+          resourceKind: `Google Cloud PAM (privilegedaccessmanager.googleapis.com/v1 · ${pamAct})`,
+          targetName: gId ? `${entId} / Grant ${gId}` : entId,
+          location: body.location || 'global',
+          projectId,
+          method: pamAct,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Run "${pamAct.replace(/_/g, ' ')}"`,
+          cancelToast: `PAM action "${pamAct}" cancelled.`,
+          whatHappensNext: `1. Calls privilegedaccessmanager.googleapis.com/v1/projects/${projectId}/locations/global/entitlements.\n2. Executes "${pamAct}" on "${
+            gId || entId
+          }".\n3. Refreshes the PAM Entitlements & Grants inventory.`,
+          costWarning: `ZERO COST ($0.00/mo): Google Cloud Privileged Access Manager (PAM) entitlements, grant requests, and Cloud Audit Logs are included at $0.00 extra cost.`,
+          impactWarning:
+            pamAct === 'DELETE_ENTITLEMENT'
+              ? `Deleting "${entId}" removes the ability for eligible principals to request future JIT grants against this entitlement.`
+              : `Modifies time-bound PAM access configuration on "${entId}" in "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/workload-manager/action')) {
+        const wlmAct = String(body.action || 'CREATE_EVALUATION').toUpperCase();
+        const target =
+          body.bucketName ||
+          body.evaluationId ||
+          projectId;
+        const loc = body.location || 'us-central1';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? `Remediate SAIF Toxic Combination on Bucket "gs://${target}"?`
+              : `Execute Workload Manager Action "${wlmAct.replace(
+                  /_/g,
+                  ' '
+                )}" on "${target}" (${loc})?`,
+          laymanSummary:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? `In Plain English: Hardens Cloud Storage bucket "gs://${target}" against SAIF AI/data-poisoning and ransomware toxic combinations by enforcing Public Access Prevention (PAP), Uniform Bucket-Level Access (UBLA), Object Versioning, 30-Day Soft-Delete, and SAIF classification labels.`
+              : `In Plain English: Executes "${wlmAct.replace(
+                  /_/g,
+                  ' '
+                )}" via Google Cloud Workload Manager REST API (workloadmanager.googleapis.com/v1) in "${loc}" for project "${projectId}".`,
+          headerBadge:
+            'Workload Manager & SAIF Security Posture Gatekeeper (@skill:workload-manager-basics · @skill:gcs-security-assessment)',
+          targetLabel:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? 'Target Cloud Storage Bucket'
+              : 'Target Workload Manager Evaluation',
+          resourceKind: `Workload Manager & SAIF Posture (${wlmAct})`,
+          targetName: target,
+          location: loc,
+          projectId,
+          method: wlmAct,
+          endpoint: rawUrl,
+          confirmLabel:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? `Harden "gs://${target}" Now`
+              : `Confirm & Run "${wlmAct.replace(/_/g, ' ')}"`,
+          cancelToast: `Workload Manager action "${wlmAct}" cancelled.`,
+          whatHappensNext:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${target}.\n2. Enforces PAP=enforced, UBLA=true, versioning.enabled=true, softDeletePolicy=30d, and labels.saif-posture=hardened.\n3. Re-runs the SAIF Toxic Combination assessment.`
+              : `1. Calls workloadmanager.googleapis.com/v1/projects/${projectId}/locations/${loc}/evaluations.\n2. Executes "${wlmAct}" on "${target}".\n3. Refreshes the Workload Manager & SAIF Studio.`,
+          costWarning: `COST NOTICE: SAIF bucket metadata hardening and enabling Workload Manager API cost $0.00/mo; overwritten object versions incur standard storage rates ($0.020/GB-mo) only when files are modified.`,
+          impactWarning:
+            wlmAct === 'REMEDIATE_SAIF_BUCKET_TOXIC_COMBO'
+              ? `Blocks any public allUsers/allAuthenticatedUsers access on "gs://${target}" and disables legacy per-object ACLs in favor of Uniform IAM.`
+              : `Creates or triggers Workload Manager evaluation "${target}" in "${projectId}" (${loc}).`,
         };
       }
       if (rawUrl.includes('/aws-azure-parity/action')) {
@@ -9512,6 +9797,13 @@ function CloudPulseCockpit() {
                   <GoogleCloudRemoteMcpStudio
                     projectId={selectedProjectId}
                     onShowToast={showToast}
+                    onNavigateToStudio={handleNavigateStudioTab}
+                    onOpenStorageBucket={(bucketName) => {
+                      if (bucketName) {
+                        setSelectedStorageBucket(bucketName);
+                      }
+                      handleNavigateStudioTab('CLOUD_STORAGE', 'OBJECT_WORKBENCH');
+                    }}
                   />
                   <PersonaContextualHelper
                     persona="AI_MLOPS"
