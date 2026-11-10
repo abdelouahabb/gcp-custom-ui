@@ -23,6 +23,7 @@ import {
   Trash2,
   RefreshCw,
   Network,
+  ArrowUpRight,
 } from 'lucide-react';
 
 const CATEGORY_OPTIONS = [
@@ -670,15 +671,20 @@ export default function ResourceControlCenter({
                   setOnlyStaleFilter((prev) => !prev);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
                   onlyStaleFilter
-                    ? 'bg-amber-500 text-zinc-950 border-amber-400'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500'
+                    : 'bg-zinc-100 dark:bg-[#10141d] text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-[#263044] hover:border-amber-500/50'
                 }`}
               >
-                {onlyStaleFilter
-                  ? 'Showing Stale Only in Table ✓ (Click to Reset)'
-                  : 'Filter Table Below to Stale Only'}
+                {onlyStaleFilter ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Showing Stale Only in Table (Click to Reset)</span>
+                  </>
+                ) : (
+                  <span>Filter Table Below to Stale Only</span>
+                )}
               </button>
             </div>
 
@@ -755,7 +761,8 @@ export default function ResourceControlCenter({
                                 onClick={() => onSelectTab(lin.targetTab)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-bold transition-colors cursor-pointer"
                               >
-                                <span>Open Studio →</span>
+                                <span>Open Studio</span>
+                                <ArrowUpRight className="w-3 h-3" />
                               </button>
                             )}
                             {canDelete && lin.isStale && (
@@ -851,144 +858,221 @@ export default function ResourceControlCenter({
         )}
       </div>
 
-      {/* Toolbar with relative z-30 so dropdowns stack above sticky table headers */}
-      <div className="relative z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-[#202124] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Category Dropdown */}
-          <div className="relative">
+      {/* Toolbar with 1-Click Domain Pills, Stale Filter & Instant Search */}
+      <div className="relative z-30 bg-white dark:bg-[#10141d] p-3.5 rounded-xl border border-zinc-200 dark:border-[#1e2433] shadow-sm space-y-2.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Category Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryMenuOpen((o) => !o);
+                  setSourceMenuOpen(false);
+                }}
+                className="inline-flex items-center gap-2 bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-[#262e42] rounded-md px-3 py-1.5 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              >
+                <Filter className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <span>
+                  {CATEGORY_OPTIONS.find((c) => c.value === selectedCategory)
+                    ?.label || 'Service Type'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+
+              {categoryMenuOpen && (
+                <div className="absolute left-0 mt-2 w-60 bg-white dark:bg-[#10141d] shadow-xl border border-zinc-200 dark:border-[#262e42] rounded-lg py-1 z-40">
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(opt.value);
+                        setCategoryMenuOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedCategory === opt.value
+                          ? 'bg-amber-500/15 text-zinc-950 dark:text-white font-semibold'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#151a25]'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {selectedCategory === opt.value && (
+                        <Check className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Data Source Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceMenuOpen((o) => !o);
+                  setCategoryMenuOpen(false);
+                }}
+                className="inline-flex items-center gap-2 bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-[#262e42] rounded-md px-3 py-1.5 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              >
+                <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <span>
+                  {SOURCE_OPTIONS.find((s) => s.value === selectedSource)?.label}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+
+              {sourceMenuOpen && (
+                <div className="absolute left-0 mt-2 w-60 bg-white dark:bg-[#10141d] shadow-xl border border-zinc-200 dark:border-[#262e42] rounded-lg py-1 z-40">
+                  {SOURCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSource(opt.value);
+                        setSourceMenuOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedSource === opt.value
+                          ? 'bg-amber-500/15 text-zinc-950 dark:text-white font-semibold'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#151a25]'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {selectedSource === opt.value && (
+                        <Check className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stale / Leftover Filter Toggle */}
             <button
               type="button"
               onClick={() => {
-                setCategoryMenuOpen((o) => !o);
-                setSourceMenuOpen(false);
+                setOnlyStaleFilter((prev) => !prev);
+                setCurrentPage(1);
               }}
-              className="inline-flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[14px] py-[8px] text-xs font-[500] transition-colors shadow-sm"
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold border transition-colors shadow-2xs cursor-pointer ${
+                onlyStaleFilter
+                  ? 'bg-amber-500 text-zinc-950 border-amber-400'
+                  : 'bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-[#262e42]'
+              }`}
             >
-              <Filter className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-              <span>
-                {CATEGORY_OPTIONS.find((c) => c.value === selectedCategory)
-                  ?.label || 'Service Type'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Stale / Leftovers ({staleResources.length})</span>
             </button>
 
-            {categoryMenuOpen && (
-              <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-[#202124] shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1 z-40">
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(opt.value);
-                      setCategoryMenuOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between ${
-                      selectedCategory === opt.value
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold'
-                        : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {selectedCategory === opt.value && (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                ))}
-              </div>
+            {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
+            {onSelectTab && (
+              <button
+                type="button"
+                data-feature-id="RECYCLE_BIN"
+                onClick={() => onSelectTab('RECYCLE_BIN', 'ALL')}
+                title="Open 30-Day Cloud Recycle Bin: View deleted resources & disabled APIs from the last 30 days with honest Native Recovery vs. Empty Resource Shell Re-Creation badges"
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-[#262e42] transition-colors shadow-2xs cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Recycle Bin (30d)</span>
+              </button>
             )}
           </div>
 
-          {/* Data Source Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setSourceMenuOpen((o) => !o);
-                setCategoryMenuOpen(false);
+          {/* Search Input with Instant Clear & Match Counter */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
               }}
-              className="inline-flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[14px] py-[8px] text-xs font-[500] transition-colors shadow-sm"
-            >
-              <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-              <span>
-                {SOURCE_OPTIONS.find((s) => s.value === selectedSource)?.label}
+              placeholder="Filter resources, APIs, regions..."
+              aria-label="Filter resources, APIs, regions"
+              className="w-full bg-white dark:bg-[#07090d] border border-zinc-200 dark:border-[#263044] rounded-md pl-8 pr-16 py-1.5 text-xs shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentPage(1);
+                  }}
+                  title="Clear filter"
+                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-100 dark:bg-[#151a25] text-zinc-500 dark:text-[#7c879c] tabular-nums">
+                {filteredResources.length}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-            </button>
-
-            {sourceMenuOpen && (
-              <div className="absolute left-0 mt-2 w-60 bg-white dark:bg-[#202124] shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1 z-40">
-                {SOURCE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSource(opt.value);
-                      setSourceMenuOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between ${
-                      selectedSource === opt.value
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold'
-                        : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {selectedSource === opt.value && (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
-
-          {/* Quick Stale / Leftover Filter Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              setOnlyStaleFilter((prev) => !prev);
-              setCurrentPage(1);
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-[8px] px-[12px] py-[8px] text-xs font-[600] border transition-colors shadow-sm cursor-pointer ${
-              onlyStaleFilter
-                ? 'bg-amber-500 text-zinc-950 border-amber-400'
-                : 'bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Stale / Leftovers ({staleResources.length})</span>
-          </button>
-
-          {/* 1-Click 30-Day Cloud Recycle Bin Launcher */}
-          {onSelectTab && (
-            <button
-              type="button"
-              data-feature-id="RECYCLE_BIN"
-              onClick={() => onSelectTab('RECYCLE_BIN', 'ALL')}
-              title="Open 30-Day Cloud Recycle Bin: View deleted resources & disabled APIs from the last 30 days with honest Native Recovery vs. Empty Resource Shell Re-Creation badges"
-              className="inline-flex items-center gap-1.5 rounded-[8px] px-[12px] py-[8px] text-xs font-[600] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Recycle Bin (30d)</span>
-            </button>
-          )}
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Filter resources, APIs, regions..."
-            aria-label="Filter resources, APIs, regions"
-            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-9 pr-3 py-[8px] text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
-          />
+        {/* 1-Click Quick Category Filter Strip */}
+        <div
+          data-action-toolbar="true"
+          className="pt-2 border-t border-zinc-100 dark:border-[#1e2433] flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+        >
+          {[
+            { value: 'ALL', short: 'All Assets', count: resources.length },
+            {
+              value: 'compute',
+              short: 'Compute & Containers',
+              count: resources.filter((r) => r.category === 'compute').length,
+            },
+            {
+              value: 'network',
+              short: 'VPC & Firewalls',
+              count: resources.filter((r) => r.category === 'network').length,
+            },
+            {
+              value: 'storage',
+              short: 'Cloud Storage',
+              count: resources.filter((r) => r.category === 'storage').length,
+            },
+            {
+              value: 'data',
+              short: 'Databases & BigQuery',
+              count: resources.filter((r) => r.category === 'data').length,
+            },
+            {
+              value: 'ai',
+              short: 'AI & Service APIs',
+              count: resources.filter((r) => r.category === 'ai').length,
+            },
+          ].map((pill) => {
+            const active = selectedCategory === pill.value;
+            return (
+              <button
+                key={pill.value}
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(pill.value);
+                  setCurrentPage(1);
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-white font-bold'
+                    : 'bg-zinc-50 dark:bg-[#151a25] border-zinc-200 dark:border-[#262e42] text-zinc-600 dark:text-zinc-300 hover:border-amber-500/45'
+                }`}
+              >
+                <span>{pill.short}</span>
+                <span className="font-mono text-[10px] opacity-80 tabular-nums">
+                  {pill.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1216,9 +1300,9 @@ export default function ResourceControlCenter({
           </div>
         </div>
 
-        {/* Investigation / Details Side Panel (w-1/3 when selected) */}
+        {/* Investigation / Details Side Panel (w-1/3 when selected, sticky on desktop) */}
         {selectedResource && (
-          <div className="w-full lg:w-1/3 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-lg transition-all duration-300 space-y-4">
+          <div className="w-full lg:w-1/3 lg:sticky lg:top-16 bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#262e42] rounded-xl p-5 shadow-lg transition-all duration-300 space-y-4 cp-studio-enter">
             <div className="flex items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">

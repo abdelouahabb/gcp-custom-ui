@@ -42,6 +42,15 @@ import {
   History,
   Wand2,
   Trash2,
+  Search,
+  Star,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ArrowLeft,
+  ArrowRight,
+  X,
+  LayoutGrid,
+  Activity,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -120,15 +129,17 @@ function CollapsibleArchitecturePipelineBar({
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#12151c] px-3.5 py-2 shadow-xs">
+    <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#10141d] px-3.5 py-2 shadow-2xs transition-colors">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Layers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+            <Layers className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+          </div>
           <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
             {label}
           </span>
           {chainSummary && (
-            <span className="hidden lg:inline text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+            <span className="hidden lg:inline text-[10.5px] font-mono text-zinc-500 dark:text-[#7c879c] truncate">
               · {chainSummary}
             </span>
           )}
@@ -136,12 +147,12 @@ function CollapsibleArchitecturePipelineBar({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+          className="px-2.5 py-1 rounded text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] text-zinc-700 dark:text-zinc-200 transition-colors"
         >
           <span>
             {expanded
-              ? 'Hide 6-Stage Architecture Chain'
-              : '6-Stage Architecture Chain & Playbooks'}
+              ? 'Hide Architecture Chain'
+              : '6-Stage Chain & Playbooks'}
           </span>
           {expanded ? (
             <ChevronUp className="w-3 h-3" />
@@ -151,7 +162,7 @@ function CollapsibleArchitecturePipelineBar({
         </button>
       </div>
       {expanded && (
-        <div className="pt-3 mt-2.5 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="pt-3 mt-2.5 border-t border-zinc-200 dark:border-[#1e2433] cp-studio-enter">
           {children}
         </div>
       )}
@@ -6347,8 +6358,78 @@ function CloudPulseCockpit() {
   });
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [headerToolsExpanded, setHeaderToolsExpanded] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('cloudpulse_rail_collapsed_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [railSearchQuery, setRailSearchQuery] = useState('');
+  const railSearchInputRef = useRef(null);
+  const [mobileStudioDrawerOpen, setMobileStudioDrawerOpen] = useState(false);
+  const [pinnedStudios, setPinnedStudios] = useState(() => {
+    const defaults = ['OVERVIEW', 'VM_SSH', 'CLOUD_RUN', 'CLOUD_STORAGE', 'MCP_HUB'];
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem('cloudpulse_pinned_studios_v1') || 'null'
+      );
+      if (Array.isArray(saved)) return saved;
+    } catch {
+      // ignore
+    }
+    return defaults;
+  });
+  const [collapsedRailGroups, setCollapsedRailGroups] = useState(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem('cloudpulse_collapsed_groups_v1') || '{}'
+      );
+      return saved && typeof saved === 'object' ? saved : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const handleToggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('cloudpulse_rail_collapsed_v1', next ? 'true' : 'false');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const handleTogglePinStudio = useCallback((studioId, e) => {
+    if (e) e.stopPropagation();
+    setPinnedStudios((prev) => {
+      const exists = prev.includes(studioId);
+      const next = exists ? prev.filter((id) => id !== studioId) : [...prev, studioId];
+      try {
+        localStorage.setItem('cloudpulse_pinned_studios_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleRailGroup = useCallback((groupId) => {
+    setCollapsedRailGroups((prev) => {
+      const next = { ...prev, [groupId]: !prev[groupId] };
+      try {
+        localStorage.setItem('cloudpulse_collapsed_groups_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
 
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
@@ -6383,6 +6464,52 @@ function CloudPulseCockpit() {
   }, []);
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [studioHistory, setStudioHistory] = useState({
+    stack: ['OVERVIEW'],
+    index: 0,
+  });
+  const isHistoryNavRef = useRef(false);
+  useEffect(() => {
+    if (isHistoryNavRef.current) {
+      isHistoryNavRef.current = false;
+      return;
+    }
+    setStudioHistory((prev) => {
+      if (prev.stack[prev.index] === activeTab) return prev;
+      const truncated = prev.stack.slice(0, prev.index + 1);
+      const nextStack = [...truncated, activeTab].slice(-24);
+      return {
+        stack: nextStack,
+        index: nextStack.length - 1,
+      };
+    });
+  }, [activeTab]);
+
+  const handleStudioHistoryBack = useCallback(() => {
+    setStudioHistory((prev) => {
+      if (prev.index <= 0) return prev;
+      const nextIndex = prev.index - 1;
+      const target = prev.stack[nextIndex];
+      if (target) {
+        isHistoryNavRef.current = true;
+        setActiveTab(target);
+      }
+      return { ...prev, index: nextIndex };
+    });
+  }, []);
+
+  const handleStudioHistoryForward = useCallback(() => {
+    setStudioHistory((prev) => {
+      if (prev.index >= prev.stack.length - 1) return prev;
+      const nextIndex = prev.index + 1;
+      const target = prev.stack[nextIndex];
+      if (target) {
+        isHistoryNavRef.current = true;
+        setActiveTab(target);
+      }
+      return { ...prev, index: nextIndex };
+    });
+  }, []);
   const [activeOrbitalDrawer, setActiveOrbitalDrawer] = useState(null); // null | 'STACK_COMPOSER' | 'FLIGHT_RECORDER' | 'AUTOPILOT_GUARD'
   const [innovationSubTab, setInnovationSubTab] = useState('WAVE11_MOONSHOT');
   const [sovereignSubTab, setSovereignSubTab] = useState('IAM_SURGEON');
@@ -6548,9 +6675,9 @@ function CloudPulseCockpit() {
         STUDIO_DISPLAY_NAMES[targetTab] ||
         targetTab;
 
-      // 1. Highlight top navigation tab button (or top-bar shortcut button)
+      // 1. Highlight left rail / top navigation tab button (or top-bar shortcut button)
       const navBtn = document.querySelector(
-        `nav button[data-feature-id="${targetTab}"], header button[data-feature-id="${targetTab}"]`
+        `aside button[data-feature-id="${targetTab}"], nav button[data-feature-id="${targetTab}"], header button[data-feature-id="${targetTab}"]`
       );
       if (navBtn) {
         navBtn.classList.add('cloudpulse-nav-spotlight-active');
@@ -7374,17 +7501,34 @@ function CloudPulseCockpit() {
     loadGdePrivacyConfig()
   );
 
-  // Global Cmd+K / Ctrl+K shortcut for 2026 Command & Voice Palette
+  // Global Cmd+K / Ctrl+K shortcut + '[' Rail Toggle + '/' Studio Rail Filter
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+      const tag = String(e.target?.tagName || '').toLowerCase();
+      const isEditable =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        e.target?.isContentEditable ||
+        e.target?.closest?.('.xterm');
+      if (isEditable || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === '[') {
+        e.preventDefault();
+        handleToggleSidebarCollapsed();
+      } else if (e.key === '/' && railSearchInputRef.current) {
+        e.preventDefault();
+        railSearchInputRef.current.focus();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [handleToggleSidebarCollapsed]);
 
   const showToast = useCallback((msg, durationMs = 8000) => {
     if (!msg) {
@@ -8507,95 +8651,326 @@ function CloudPulseCockpit() {
       tip: '30-Day Cloud Recycle Bin: Inspect what resources were deleted and which Google Cloud APIs were disabled over the last 30 days (cloudaudit.googleapis.com/activity + Soft-Delete Vaults) with 1-Click Restore / Re-Enable',
       icon: Trash2,
     },
+    {
+      id: 'DOCS_GUIDE',
+      group: 'OPS_DOCS',
+      label: 'Architecture & Docs',
+      tip: 'Interactive Architecture Documentation, Zero-Simulation Security Model, Live GCP API Reference & Studio Walkthrough Guide',
+      icon: BookOpen,
+    },
   ];
 
+  const getTabResourceCount = (tabId) => {
+    if (tabId === 'VM_SSH') {
+      return overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms;
+    }
+    if (tabId === 'VPC_NETWORKS') {
+      return overview?.vpcs?.length;
+    }
+    if (tabId === 'CLOUD_RUN') {
+      return overview?.cloudRunServices?.length;
+    }
+    if (tabId === 'GKE_STUDIO') {
+      return overview?.summary?.liveClustersCount ?? overview?.summary?.gkeClusters;
+    }
+    if (tabId === 'CLOUD_STORAGE') {
+      return overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets;
+    }
+    if (tabId === 'BIGQUERY_STUDIO') {
+      return overview?.summary?.liveDatasetsCount ?? overview?.summary?.bigqueryDatasets;
+    }
+    if (tabId === 'MCP_HUB') {
+      return 48;
+    }
+    return null;
+  };
+
+  const filteredProjectsList = (contextData.projects || []).filter((proj) => {
+    const q = projectSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      String(proj.projectId || '').toLowerCase().includes(q) ||
+      String(proj.name || '').toLowerCase().includes(q) ||
+      String(proj.projectNumber || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#131314] text-zinc-950 dark:text-zinc-50 transition-colors duration-300">
+    <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#090b10] text-zinc-950 dark:text-zinc-50 transition-colors duration-300">
       <div
         className={
           mobilePreview
-            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#131314] min-h-[860px] flex flex-col relative'
-            : 'w-full max-w-none pb-20 md:pb-10'
+            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-200 dark:border-[#262e42] rounded-[40px] shadow-2xl overflow-hidden bg-[#f4f6f9] dark:bg-[#090b10] min-h-[860px] flex flex-col relative'
+            : 'w-full max-w-none pb-20 md:pb-9'
         }
       >
         {mobilePreview && (
-          <div className="bg-white dark:bg-[#131314] text-zinc-800 dark:text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-200 dark:border-zinc-800">
+          <div className="bg-white dark:bg-[#0c0f16] text-zinc-800 dark:text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-200 dark:border-[#1e2433]">
             <span>
               {liveShortClockText} {shortTzName} · GCP 5G+
             </span>
-            <div className="w-20 h-4 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-[9px] text-zinc-700 dark:text-zinc-300">
-              LIVE OAUTH
+            <div className="w-24 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>LIVE OAUTH</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Wifi className="w-3 h-3 text-zinc-400" />
-              <BatteryCharging className="w-3.5 h-3.5 text-zinc-400" />
+              <BatteryCharging className="w-3.5 h-3.5 text-emerald-500" />
             </div>
           </div>
         )}
 
-        {/* Architectural Top Control Bar */}
-        <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-[#1e2433] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-3 sm:px-5 py-2.5">
-          {/* Top Row: Sidebar Rail Toggle + Brand (Left) + Essential Controls (Right) */}
-          <div className="relative z-50 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-2.5 min-w-0">
+        {/* 3-Zone Architectural Cloud Command Header */}
+        <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-[#1e2433] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-3 sm:px-4 py-2">
+          {/* Primary Command Row: [Left: Rail + Brand + Project Context] · [Center: Omnibox Search] · [Right: Telemetry + Actions] */}
+          <div className="relative z-50 flex items-center justify-between gap-2.5 flex-wrap sm:flex-nowrap">
+            {/* LEFT ZONE: Rail Toggle + Brand Mark + Searchable Active GCP Project Switcher */}
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
-                onClick={() => setSidebarCollapsed((v) => !v)}
+                data-feature-id="RAIL_TOGGLE"
+                onClick={handleToggleSidebarCollapsed}
                 title={
                   sidebarCollapsed
-                    ? 'Expand Left Architectural Navigation Rail'
-                    : 'Collapse Left Architectural Navigation Rail to Icon Mode'
+                    ? 'Expand Left Architectural Navigation Rail (Shortcut: [)'
+                    : 'Collapse Left Architectural Navigation Rail to Icon Mode (Shortcut: [)'
                 }
                 className="hidden md:inline-flex items-center justify-center w-8 h-8 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-300 dark:border-[#262e42] text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer shrink-0"
               >
-                <Layers className="w-4 h-4" />
+                {sidebarCollapsed ? (
+                  <PanelLeftOpen className="w-4 h-4" />
+                ) : (
+                  <PanelLeftClose className="w-4 h-4" />
+                )}
               </button>
-              <div className="w-8 h-8 rounded bg-blue-600/10 dark:bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
-                <Cloud className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
-                    CloudPulse <span className="font-mono text-xs font-semibold text-zinc-500 dark:text-zinc-400">GCP</span>
-                  </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-1.5 py-0.5 rounded">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    LIVE API
-                  </span>
-                  {gdePrivacyConfig.enabled && (
-                    <span
-                      title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      GDE SHIELD
-                    </span>
-                  )}
+
+              <button
+                type="button"
+                data-feature-id="OVERVIEW"
+                onClick={() =>
+                  handleNavigateStudioTab('OVERVIEW', null, null, {
+                    skipConfirm: true,
+                  })
+                }
+                title="CloudPulse 2026 — Return to Project Overview & Resource Control Center"
+                className="flex items-center gap-2 min-w-0 text-left bg-transparent border-none p-0 shadow-none cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/30 group-hover:border-blue-500/60 flex items-center justify-center shrink-0 transition-colors">
+                  <Cloud className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <p
-                  data-gde-ignore="true"
-                  className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none"
+                <div className="hidden sm:block min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
+                      CloudPulse
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>LIVE</span>
+                    </span>
+                  </div>
+                  <div
+                    data-gde-ignore="true"
+                    className="text-[10px] text-zinc-500 dark:text-[#7c879c] font-mono truncate max-w-[180px]"
+                  >
+                    {gdePrivacyConfig.enabled
+                      ? redactTextForGdeMode(
+                          contextData.account,
+                          gdePrivacyConfig,
+                          {
+                            accountEmail: contextData.account,
+                            projects: contextData.projects,
+                          }
+                        )
+                      : contextData.account}
+                  </div>
+                </div>
+              </button>
+
+              <span className="hidden sm:inline text-zinc-300 dark:text-[#262e42] select-none font-light text-lg">
+                /
+              </span>
+
+              {/* Searchable Live GCP Project Context Switcher */}
+              <div className={`relative shrink-0 ${projectMenuOpen ? 'z-[70]' : 'z-50'}`}>
+                <button
+                  type="button"
+                  data-feature-id="PROJECT_SWITCHER_TRIGGER"
+                  onClick={() => {
+                    const nextOpen = !projectMenuOpen;
+                    setProjectMenuOpen(nextOpen);
+                    if (nextOpen) {
+                      setProjectSearchQuery('');
+                      if ((contextData.projects?.length || 0) <= 1) {
+                        handleRefreshProjectsList();
+                      }
+                    }
+                  }}
+                  title={`Active GCP Project: ${selectedProjectId} — Click to filter & switch between your authenticated Google Cloud projects`}
+                  className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-[#262e42] rounded-md px-2.5 h-8 text-xs font-mono font-bold transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  {gdePrivacyConfig.enabled
-                    ? redactTextForGdeMode(
-                        contextData.account,
-                        gdePrivacyConfig,
-                        {
-                          accountEmail: contextData.account,
-                          projects: contextData.projects,
-                        }
-                      )
-                    : contextData.account}{' '}
-                  · {liveDateText} · {activeTimeZone} ({utcOffsetLabel})
-                </p>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="max-w-[130px] sm:max-w-[175px] truncate">
+                    {selectedProjectId}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
+                </button>
+
+                {projectMenuOpen && (
+                  <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-[#10141d] shadow-2xl border border-zinc-200 dark:border-[#262e42] rounded-lg py-1.5 z-[80] overflow-hidden">
+                    <div className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-[#7c879c] border-b border-zinc-100 dark:border-[#1e2433] flex items-center justify-between gap-2">
+                      <span>
+                        GCP Projects ({contextData.projects?.length || 1})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRefreshProjectsList();
+                        }}
+                        className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 font-bold text-[10px] cursor-pointer normal-case inline-flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>Sync Projects</span>
+                      </button>
+                    </div>
+                    {(contextData.projects?.length || 0) > 2 && (
+                      <div className="p-2 border-b border-zinc-100 dark:border-[#1e2433]">
+                        <div className="relative">
+                          <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={projectSearchQuery}
+                            onChange={(e) => setProjectSearchQuery(e.target.value)}
+                            placeholder="Filter project ID or number..."
+                            aria-label="Filter GCP projects"
+                            className="w-full pl-8 pr-2.5 py-1.5 text-xs font-mono rounded bg-zinc-50 dark:bg-[#07090d] border border-zinc-200 dark:border-[#263044] text-zinc-900 dark:text-zinc-100 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="max-h-64 overflow-y-auto divide-y divide-zinc-100 dark:divide-[#1e2433]/60">
+                      {filteredProjectsList.length === 0 ? (
+                        <div className="px-3.5 py-4 text-center text-xs text-zinc-500">
+                          No projects match &ldquo;{projectSearchQuery}&rdquo;
+                        </div>
+                      ) : (
+                        filteredProjectsList.map((proj) => (
+                          <button
+                            key={proj.projectId}
+                            type="button"
+                            onClick={() => {
+                              sessionStorage.setItem(
+                                'cloudpulse_project',
+                                proj.projectId
+                              );
+                              sessionStorage.setItem(
+                                'cloudpulse_project_explicit',
+                                'true'
+                              );
+                              sessionStorage.setItem(
+                                'cloudpulse_user_selected_project_v2',
+                                proj.projectId
+                              );
+                              try {
+                                localStorage.setItem(
+                                  'cloudpulse_project',
+                                  proj.projectId
+                                );
+                                localStorage.setItem(
+                                  'cloudpulse_project_explicit',
+                                  'true'
+                                );
+                                localStorage.setItem(
+                                  'cloudpulse_user_selected_project_v2',
+                                  proj.projectId
+                                );
+                              } catch {
+                                // ignore
+                              }
+                              setSelectedProjectId(proj.projectId);
+                              setProjectMenuOpen(false);
+                              showToast(
+                                `Switched live GCP project to ${proj.projectId}`
+                              );
+                            }}
+                            title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
+                            className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                              selectedProjectId === proj.projectId
+                                ? 'bg-amber-500/12 text-zinc-950 dark:text-white font-semibold'
+                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#151a25]'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-mono truncate">{proj.projectId}</div>
+                              <div className="text-[10px] text-zinc-500 dark:text-[#7c879c] truncate">
+                                {proj.name} · #{proj.projectNumber}
+                              </div>
+                            </div>
+                            {selectedProjectId === proj.projectId && (
+                              <Check className="w-4 h-4 text-amber-500 shrink-0" />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {gdePrivacyConfig.enabled && (
+                <span
+                  title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G)"
+                  className="hidden md:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded shrink-0"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span>GDE SHIELD</span>
+                </span>
+              )}
             </div>
 
-            {/* Top-Right Cluster: Essential Controls + Project Switcher + Provision CTA + Cockpit Tools Toggle */}
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* CENTER ZONE: Raycast / Pantheon Global Omnibox Search & Voice Ops Bar */}
+            {!mobilePreview && (
+              <div className="hidden lg:flex flex-1 max-w-md xl:max-w-lg mx-2">
+                <button
+                  type="button"
+                  data-feature-id="CMD_PALETTE"
+                  onClick={() => setCommandPaletteOpen(true)}
+                  title="Open Global Cloud Command, Search & Voice Ops Palette (Shortcut: Cmd+K or Ctrl+K)"
+                  className="w-full h-8 px-3 rounded-md bg-zinc-100/90 hover:bg-zinc-200/70 dark:bg-[#07090d] dark:hover:bg-[#111622] border border-zinc-300/90 dark:border-[#263044] hover:border-blue-500/50 dark:hover:border-blue-500/50 flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-[#8b95a5] transition-all cursor-pointer shadow-inner"
+                >
+                  <span className="flex items-center gap-2 min-w-0 truncate">
+                    <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-[#647087] shrink-0" />
+                    <span className="truncate">
+                      Search 26 studios, live GCP resources, 505 MCP tools, or voice ops...
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1 shrink-0">
+                    <kbd className="cp-kbd">⌘K</kbd>
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* RIGHT ZONE: Live Burn Ticker + Shield + Cockpit Tools + Provision CTA + Sync + Viewport/Theme */}
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              {/* Compact ⌘K button for < lg viewports or mobile preview */}
+              <button
+                type="button"
+                data-feature-id="CMD_PALETTE"
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
+                className={`${
+                  mobilePreview ? 'inline-flex' : 'inline-flex lg:hidden'
+                } items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-[#262e42] rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer`}
+              >
+                <Search className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>⌘K</span>
+              </button>
+
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button
                 type="button"
+                data-feature-id="BURN_RATE_TICKER"
                 onClick={() =>
                   handleNavigateStudioTab('INNOVATION_LAB', 'FINOPS_SLEEP', {
                     targetLabel: '2026 Innovation Lab → Night-Mode FinOps Sleep Switch',
@@ -8603,7 +8978,7 @@ function CloudPulseCockpit() {
                   })
                 }
                 title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-[#262e42] rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 <span>${liveBurn.hourly.toFixed(4)}/hr</span>
@@ -8618,31 +8993,19 @@ function CloudPulseCockpit() {
                 selectedProjectId={selectedProjectId}
               />
 
-              {/* ⌘K Global Command & Voice Action Bar */}
-              <button
-                type="button"
-                data-feature-id="CMD_PALETTE"
-                onClick={() => setCommandPaletteOpen(true)}
-                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
-                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span>⌘K Ops</span>
-              </button>
-
               {/* Progressive Disclosure Toggle for Secondary Cockpit Tools & Telemetry */}
               <button
                 type="button"
                 onClick={() => setHeaderToolsExpanded((v) => !v)}
                 title="Expand or collapse Cockpit Telemetry, Flight Recorder, Auto-Pilot Guard, 10-Persona Board, SDK 592 Lab & Timezone controls"
                 className={`inline-flex items-center gap-1 rounded-md px-2.5 h-8 text-[11px] font-mono font-bold border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                  headerToolsExpanded
+                  headerToolsExpanded || activeOrbitalDrawer
                     ? 'bg-blue-600 text-white border-blue-500'
-                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-[#262e42]'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 shrink-0" />
-                <span>Cockpit Tools</span>
+                <span className="hidden sm:inline">Cockpit</span>
                 {headerToolsExpanded ? (
                   <ChevronUp className="w-3.5 h-3.5 shrink-0" />
                 ) : (
@@ -8650,113 +9013,12 @@ function CloudPulseCockpit() {
                 )}
               </button>
 
-              {/* Live GCP Project Dropdown */}
-              <div className={`relative shrink-0 ${projectMenuOpen ? 'z-[70]' : 'z-50'}`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextOpen = !projectMenuOpen;
-                    setProjectMenuOpen(nextOpen);
-                    if (nextOpen && (contextData.projects?.length || 0) <= 1) {
-                      handleRefreshProjectsList();
-                    }
-                  }}
-                  title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 h-8 text-xs font-mono font-bold transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="hidden md:inline text-[10px] font-sans font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    Project:
-                  </span>
-                  <span className="max-w-[150px] sm:max-w-[200px] truncate">
-                    {selectedProjectId}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
-                </button>
-
-                {projectMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-[80] max-h-80 overflow-y-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
-                      <span>
-                        GCP Projects ({contextData.projects?.length || 1})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRefreshProjectsList();
-                        }}
-                        className="px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 font-bold text-[9.5px] cursor-pointer normal-case"
-                      >
-                        Sync Projects
-                      </button>
-                    </div>
-                    {(contextData.projects || []).map((proj) => (
-                      <button
-                        key={proj.projectId}
-                        type="button"
-                        onClick={() => {
-                          sessionStorage.setItem(
-                            'cloudpulse_project',
-                            proj.projectId
-                          );
-                          sessionStorage.setItem(
-                            'cloudpulse_project_explicit',
-                            'true'
-                          );
-                          sessionStorage.setItem(
-                            'cloudpulse_user_selected_project_v2',
-                            proj.projectId
-                          );
-                          try {
-                            localStorage.setItem(
-                              'cloudpulse_project',
-                              proj.projectId
-                            );
-                            localStorage.setItem(
-                              'cloudpulse_project_explicit',
-                              'true'
-                            );
-                            localStorage.setItem(
-                              'cloudpulse_user_selected_project_v2',
-                              proj.projectId
-                            );
-                          } catch {
-                            // ignore
-                          }
-                          setSelectedProjectId(proj.projectId);
-                          setProjectMenuOpen(false);
-                          showToast(
-                            `Switched live GCP project to ${proj.projectId}`
-                          );
-                        }}
-                        title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
-                        className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors flex items-center justify-between ${
-                          selectedProjectId === proj.projectId
-                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold'
-                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-mono">{proj.projectId}</div>
-                          <div className="text-[10px] text-zinc-500">
-                            {proj.name} · #{proj.projectNumber}
-                          </div>
-                        </div>
-                        {selectedProjectId === proj.projectId && (
-                          <Check className="w-4 h-4 shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+              {/* Primary Provision CTA */}
               <button
                 type="button"
                 onClick={() => handleOpenProvision('COMPUTE_VM')}
                 title="Provision a live GCP resource (1. Compute Engine VM [Default], 2. VPC Network, 3. Firewall Rule, 4. Cloud Run Service, 5. GKE Cluster, 6. Cloud SQL / AlloyDB, 7. Cloud Storage Bucket, or 8. BigQuery Dataset)"
-                className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-3.5 h-8 text-xs font-extrabold tracking-tight transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-3 h-8 text-xs font-extrabold tracking-tight transition-all shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>Provision</span>
@@ -8767,18 +9029,42 @@ function CloudPulseCockpit() {
                 type="button"
                 disabled={loadingOverview}
                 onClick={() => {
-                  fetchProjectOverview(selectedProjectId);
+                  fetchProjectOverview(selectedProjectId, { force: true });
                   setVmRefreshTrigger((c) => c + 1);
                 }}
                 title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
                 aria-label="Refresh GCP telemetry"
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-[#262e42] transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 ${
-                    loadingOverview ? 'animate-spin' : ''
+                    loadingOverview ? 'animate-spin text-blue-500' : ''
                   }`}
                 />
+              </button>
+
+              {/* Responsive Mobile / Desktop PWA Preview Toggle */}
+              <button
+                type="button"
+                data-feature-id="MOBILE_PREVIEW_TOGGLE"
+                onClick={() => setMobilePreview((v) => !v)}
+                title={
+                  mobilePreview
+                    ? 'Exit Mobile PWA Simulator & Return to Full Widescreen Control Plane'
+                    : 'Preview Responsive Mobile PWA Frame (430px iPhone / Android Cockpit)'
+                }
+                aria-label="Toggle Mobile PWA Frame Preview"
+                className={`hidden md:inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors shrink-0 cursor-pointer ${
+                  mobilePreview
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-[#262e42]'
+                }`}
+              >
+                {mobilePreview ? (
+                  <Monitor className="w-3.5 h-3.5" />
+                ) : (
+                  <Smartphone className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                )}
               </button>
 
               {/* Dark / Light Mode Toggle */}
@@ -8788,13 +9074,13 @@ function CloudPulseCockpit() {
                 title={
                   isDark
                     ? 'Switch to Daylight High-Contrast Mode'
-                    : 'Switch to 2026 OLED Dark Cockpit Mode'
+                    : 'Switch to 2026 Obsidian Dark Cockpit Mode'
                 }
                 aria-label="Toggle Dark or Light Mode"
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shrink-0 cursor-pointer"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-[#262e42] transition-colors shrink-0 cursor-pointer"
               >
                 {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-zinc-400" />
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
                 ) : (
                   <Moon className="w-3.5 h-3.5 text-zinc-600" />
                 )}
@@ -9093,111 +9379,290 @@ function CloudPulseCockpit() {
         </header>
 
         {/* Architectural Control Plane Shell: Left Domain Rail + Main Workspace */}
-        <div className="flex items-start min-h-[calc(100vh-3.5rem)]">
-          {/* Left Architectural Navigation Rail (Google Cloud Pantheon / Cloudflare / Datadog Style) */}
+        <div className="flex items-start min-h-[calc(100vh-3.25rem)]">
+          {/* Smart Left Architectural Navigation Rail (Pantheon / Linear / Cloudflare Zero-Trust Style) */}
           {!mobilePreview && (
             <aside
               aria-label="Google Cloud Architectural Studios Navigation"
-              className={`hidden md:flex flex-col shrink-0 sticky top-[53px] h-[calc(100vh-53px)] overflow-y-auto border-r border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0c0f16] select-none transition-all duration-150 ${
-                sidebarCollapsed ? 'w-14' : 'w-56'
+              className={`hidden md:flex flex-col shrink-0 sticky top-[49px] h-[calc(100vh-73px)] overflow-y-auto border-r border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0c0f16] select-none transition-all duration-150 ${
+                sidebarCollapsed ? 'w-14' : 'w-60'
               }`}
             >
-              <div className="py-2.5 space-y-3.5 flex-1">
+              {/* Inline Quick Studio Filter (Expanded Mode) */}
+              {!sidebarCollapsed && (
+                <div className="p-2.5 pb-1.5 sticky top-0 z-10 bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-xs border-b border-zinc-100 dark:border-[#1e2433]/70">
+                  <div className="relative flex items-center">
+                    <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-[#647087] absolute left-2.5 pointer-events-none" />
+                    <input
+                      ref={railSearchInputRef}
+                      type="text"
+                      value={railSearchQuery}
+                      onChange={(e) => setRailSearchQuery(e.target.value)}
+                      placeholder="Filter 26 studios..."
+                      aria-label="Filter engineering studios"
+                      className="w-full h-7 pl-7 pr-7 text-[11px] rounded bg-zinc-100/80 dark:bg-[#07090d] border border-zinc-200 dark:border-[#263044] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-[#647087] focus:outline-none"
+                    />
+                    {railSearchQuery ? (
+                      <button
+                        type="button"
+                        onClick={() => setRailSearchQuery('')}
+                        title="Clear studio filter"
+                        className="cp-nav-rail-item absolute right-1.5 p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-transparent border-none shadow-none cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <kbd className="cp-kbd absolute right-1.5 pointer-events-none text-[9px] px-1 py-0">
+                        /
+                      </kbd>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="py-2 space-y-3 flex-1 overflow-y-auto">
+                {/* Pinned / Favorite Studios Quick-Jump Group */}
+                {!sidebarCollapsed &&
+                  !railSearchQuery.trim() &&
+                  pinnedStudios.length > 0 && (
+                    <div className="space-y-0.5 pb-2 border-b border-zinc-100 dark:border-[#1e2433]/80">
+                      <div className="px-3 pb-1 flex items-center justify-between text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400/90">
+                        <span className="inline-flex items-center gap-1">
+                          <Star className="w-2.5 h-2.5 fill-current" />
+                          <span>Pinned Studios</span>
+                        </span>
+                        <span className="text-[9px] text-zinc-400 dark:text-[#647087]">
+                          {pinnedStudios.length}
+                        </span>
+                      </div>
+                      {pinnedStudios
+                        .map((id) => navTabs.find((t) => t.id === id))
+                        .filter(Boolean)
+                        .map((tab) => {
+                          const Icon = tab.icon;
+                          const isActive = activeTab === tab.id;
+                          const countBadge = getTabResourceCount(tab.id);
+                          return (
+                            <div
+                              key={`pin-${tab.id}`}
+                              className={`group flex items-center pr-1.5 border-l-2 transition-colors ${
+                                isActive
+                                  ? 'border-l-amber-500 bg-amber-500/15'
+                                  : 'border-l-transparent hover:bg-amber-500/[0.06]'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                data-feature-id={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                title={tab.tip}
+                                className={`cp-nav-rail-item flex-1 min-w-0 flex items-center justify-between pl-3 pr-1 h-7 text-[12px] bg-transparent border-none shadow-none cursor-pointer ${
+                                  isActive
+                                    ? 'text-zinc-950 dark:text-white font-semibold'
+                                    : 'text-zinc-700 dark:text-[#b0bac9] hover:text-zinc-950 dark:hover:text-white font-medium'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <Icon
+                                    className={`w-3.5 h-3.5 shrink-0 ${
+                                      isActive
+                                        ? 'text-amber-600 dark:text-amber-400'
+                                        : 'text-zinc-400 dark:text-[#7c879c]'
+                                    }`}
+                                  />
+                                  <span className="truncate">{tab.label}</span>
+                                </span>
+                                {countBadge !== null && countBadge !== undefined && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums ${
+                                      isActive
+                                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold'
+                                        : 'text-zinc-400 dark:text-[#647087]'
+                                    }`}
+                                  >
+                                    {countBadge}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                data-feature-id="RAIL_PIN_STUDIO"
+                                onClick={(e) => handleTogglePinStudio(tab.id, e)}
+                                title={`Unpin ${tab.label} from top of navigation rail`}
+                                className="cp-nav-rail-item p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 text-amber-500 hover:text-amber-400 bg-transparent border-none shadow-none cursor-pointer transition-opacity shrink-0"
+                              >
+                                <Star className="w-3 h-3 fill-current" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+
+                {/* 5 Domain Groups (Collapsible + Instant Filter) */}
                 {[
                   { id: 'COMMAND', title: 'Command & Global' },
                   { id: 'INFRA_COMPUTE', title: 'Compute, VPC & Storage' },
                   { id: 'DATA_AI', title: 'Data & Lakehouse' },
                   { id: 'SECURITY_SRE', title: 'Security, IAM & SRE' },
-                  { id: 'OPS_DOCS', title: 'FinOps & Observability' },
+                  { id: 'OPS_DOCS', title: 'FinOps, Logs & Docs' },
                 ].map((section) => {
-                  const groupTabs = navTabs.filter((t) => t.group === section.id);
+                  const q = railSearchQuery.trim().toLowerCase();
+                  const groupTabs = navTabs.filter((t) => {
+                    if (t.group !== section.id) return false;
+                    if (!q) return true;
+                    return (
+                      t.label.toLowerCase().includes(q) ||
+                      t.id.toLowerCase().includes(q) ||
+                      String(t.tip || '').toLowerCase().includes(q)
+                    );
+                  });
                   if (!groupTabs.length) return null;
+                  const isGroupCollapsed =
+                    !sidebarCollapsed && !q && Boolean(collapsedRailGroups[section.id]);
+
                   return (
                     <div key={section.id} className="space-y-0.5">
                       {!sidebarCollapsed && (
-                        <div className="px-3 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400 dark:text-[#647087]">
-                          {section.title}
-                        </div>
-                      )}
-                      {groupTabs.map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        const countBadge =
-                          tab.id === 'VM_SSH'
-                            ? overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms
-                            : tab.id === 'VPC_NETWORKS'
-                              ? overview?.vpcs?.length
-                              : tab.id === 'CLOUD_RUN'
-                                ? overview?.cloudRunServices?.length
-                                : tab.id === 'CLOUD_STORAGE'
-                                  ? overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets
-                                  : null;
-                        return (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            data-feature-id={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            title={tab.tip}
-                            className={`cp-nav-rail-item w-full flex items-center ${
-                              sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
-                            } h-8 text-[12px] border-l-2 transition-colors cursor-pointer ${
-                              isActive
-                                ? 'border-l-amber-500 bg-amber-500/15 text-zinc-950 dark:text-white font-semibold'
-                                : 'border-l-transparent text-zinc-600 dark:text-[#8b95a5] hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-amber-500/[0.06] font-medium'
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRailGroup(section.id)}
+                          title={`Toggle ${section.title} section`}
+                          className="cp-nav-rail-item w-full px-3 pb-1 flex items-center justify-between text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400 dark:text-[#647087] hover:text-zinc-700 dark:hover:text-zinc-300 bg-transparent border-none shadow-none cursor-pointer"
+                        >
+                          <span>{section.title}</span>
+                          <ChevronDown
+                            className={`w-3 h-3 transition-transform ${
+                              isGroupCollapsed ? '-rotate-90' : ''
                             }`}
-                          >
-                            <span className="flex items-center gap-2.5 min-w-0">
-                              <Icon
-                                className={`w-3.5 h-3.5 shrink-0 ${
+                          />
+                        </button>
+                      )}
+                      {!isGroupCollapsed &&
+                        groupTabs.map((tab) => {
+                          const Icon = tab.icon;
+                          const isActive = activeTab === tab.id;
+                          const isPinned = pinnedStudios.includes(tab.id);
+                          const countBadge = getTabResourceCount(tab.id);
+
+                          if (sidebarCollapsed) {
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                data-feature-id={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                title={tab.tip}
+                                className={`cp-nav-rail-item w-full flex items-center justify-center px-0 h-8 text-[12px] border-l-2 transition-colors cursor-pointer ${
                                   isActive
-                                    ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-zinc-400 dark:text-[#687387]'
+                                    ? 'border-l-amber-500 bg-amber-500/15 text-zinc-950 dark:text-white font-semibold'
+                                    : 'border-l-transparent text-zinc-600 dark:text-[#8b95a5] hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-amber-500/[0.06] font-medium'
                                 }`}
-                              />
-                              {!sidebarCollapsed && (
-                                <span className="truncate">{tab.label}</span>
-                              )}
-                            </span>
-                            {!sidebarCollapsed &&
-                              countBadge !== null &&
-                              countBadge !== undefined && (
-                                <span
-                                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums ${
+                              >
+                                <Icon
+                                  className={`w-3.5 h-3.5 shrink-0 ${
                                     isActive
-                                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold'
-                                      : 'text-zinc-400 dark:text-[#647087]'
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-zinc-400 dark:text-[#687387]'
                                   }`}
-                                >
-                                  {countBadge}
+                                />
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={tab.id}
+                              className={`group flex items-center pr-1.5 border-l-2 transition-colors ${
+                                isActive
+                                  ? 'border-l-amber-500 bg-amber-500/15'
+                                  : 'border-l-transparent hover:bg-amber-500/[0.06]'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                data-feature-id={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                title={tab.tip}
+                                className={`cp-nav-rail-item flex-1 min-w-0 flex items-center justify-between pl-3 pr-1 h-8 text-[12px] bg-transparent border-none shadow-none cursor-pointer ${
+                                  isActive
+                                    ? 'text-zinc-950 dark:text-white font-semibold'
+                                    : 'text-zinc-600 dark:text-[#8b95a5] hover:text-zinc-950 dark:hover:text-zinc-100 font-medium'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2.5 min-w-0">
+                                  <Icon
+                                    className={`w-3.5 h-3.5 shrink-0 ${
+                                      isActive
+                                        ? 'text-amber-600 dark:text-amber-400'
+                                        : 'text-zinc-400 dark:text-[#687387]'
+                                    }`}
+                                  />
+                                  <span className="truncate">{tab.label}</span>
                                 </span>
-                              )}
-                          </button>
-                        );
-                      })}
+                                {countBadge !== null && countBadge !== undefined && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums ${
+                                      isActive
+                                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold'
+                                        : 'text-zinc-400 dark:text-[#647087]'
+                                    }`}
+                                  >
+                                    {countBadge}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                data-feature-id="RAIL_PIN_STUDIO"
+                                onClick={(e) => handleTogglePinStudio(tab.id, e)}
+                                title={
+                                  isPinned
+                                    ? `Unpin ${tab.label} from Pinned Studios`
+                                    : `Pin ${tab.label} to top of navigation rail`
+                                }
+                                className={`cp-nav-rail-item p-1 rounded bg-transparent border-none shadow-none cursor-pointer transition-opacity shrink-0 ${
+                                  isPinned
+                                    ? 'opacity-80 hover:opacity-100 text-amber-500'
+                                    : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-zinc-400 hover:text-amber-500'
+                                }`}
+                              >
+                                <Star
+                                  className={`w-3 h-3 ${
+                                    isPinned ? 'fill-current' : ''
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          );
+                        })}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Rail Footer: Collapse / Expand Toggle */}
+              {/* Rail Footer: Collapse / Expand Toggle with Shortcut Hint */}
               <div className="p-2 border-t border-zinc-200 dark:border-[#1e2433]">
                 <button
                   type="button"
-                  onClick={() => setSidebarCollapsed((v) => !v)}
+                  data-feature-id="RAIL_TOGGLE"
+                  onClick={handleToggleSidebarCollapsed}
                   title={
                     sidebarCollapsed
-                      ? 'Expand Navigation Sidebar'
-                      : 'Collapse Navigation Sidebar'
+                      ? 'Expand Navigation Sidebar (Shortcut: [)'
+                      : 'Collapse Navigation Sidebar (Shortcut: [)'
                   }
-                  className="cp-nav-rail-item w-full flex items-center justify-center gap-1.5 h-7 rounded text-[11px] font-mono text-zinc-500 dark:text-[#7c879c] hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.04] cursor-pointer"
+                  className="cp-nav-rail-item w-full flex items-center justify-between px-2 h-7 rounded text-[11px] font-mono text-zinc-500 dark:text-[#7c879c] hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.04] bg-transparent border-none shadow-none cursor-pointer"
                 >
-                  <ChevronRight
-                    className={`w-3.5 h-3.5 transition-transform ${
-                      sidebarCollapsed ? '' : 'rotate-180'
-                    }`}
-                  />
-                  {!sidebarCollapsed && <span>Collapse Rail</span>}
+                  <span className="flex items-center gap-1.5 mx-auto sm:mx-0">
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 transition-transform ${
+                        sidebarCollapsed ? '' : 'rotate-180'
+                      }`}
+                    />
+                    {!sidebarCollapsed && <span>Collapse Rail</span>}
+                  </span>
+                  {!sidebarCollapsed && <kbd className="cp-kbd text-[9px]">[</kbd>}
                 </button>
               </div>
             </aside>
@@ -9206,28 +9671,66 @@ function CloudPulseCockpit() {
           {/* Main Content Body */}
           <main
             id="cloudpulse-main-workspace"
-            className="min-w-0 flex-1 px-4 sm:px-6 lg:px-7 py-4 space-y-4"
+            className="min-w-0 flex-1 px-4 sm:px-6 lg:px-7 py-3.5 space-y-4"
           >
-            {/* Architectural Workspace Breadcrumb & Context Header */}
+            {/* Architectural Workspace Context, Studio History & Telemetry Header */}
             {(() => {
               const currentTabObj =
                 navTabs.find((t) => t.id === activeTab) || navTabs[0];
               const CurrentIcon = currentTabObj?.icon || Layers;
+              const activeSubLabel = resolveActiveSubTabLabel(activeTab);
+              const isPinnedCurrent = pinnedStudios.includes(activeTab);
+              const canGoBack = studioHistory.index > 0;
+              const canGoForward =
+                studioHistory.index < studioHistory.stack.length - 1;
               const groupNameMap = {
                 COMMAND: 'Command & Global Edge',
                 INFRA_COMPUTE: 'Compute, VPC & Storage',
                 DATA_AI: 'Data & Lakehouse',
                 SECURITY_SRE: 'Security, IAM & SRE',
-                OPS_DOCS: 'FinOps & Observability',
+                OPS_DOCS: 'FinOps, Logs & Docs',
               };
               const domainLabel =
                 groupNameMap[currentTabObj?.group] || 'Google Cloud Control Plane';
               return (
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-200 dark:border-[#1e2433]">
-                  <div className="flex items-center gap-2 min-w-0 text-xs">
-                    <span className="font-mono text-[11px] text-zinc-500 dark:text-[#7c879c] truncate max-w-[160px]">
+                  <div className="flex items-center gap-1.5 min-w-0 text-xs flex-wrap">
+                    {/* Browser-Style Back / Forward Studio History Controls */}
+                    <div
+                      data-action-toolbar="true"
+                      className="inline-flex items-center gap-0.5 mr-1"
+                    >
+                      <button
+                        type="button"
+                        data-feature-id="STUDIO_HISTORY_BACK"
+                        disabled={!canGoBack}
+                        onClick={handleStudioHistoryBack}
+                        title="Navigate back to previous studio in session history"
+                        className="w-6 h-6 inline-flex items-center justify-center rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] text-zinc-600 dark:text-zinc-300 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        data-feature-id="STUDIO_HISTORY_FORWARD"
+                        disabled={!canGoForward}
+                        onClick={handleStudioHistoryForward}
+                        title="Navigate forward to next studio in session history"
+                        className="w-6 h-6 inline-flex items-center justify-center rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] text-zinc-600 dark:text-zinc-300 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      data-feature-id="OVERVIEW"
+                      onClick={() => setActiveTab('OVERVIEW')}
+                      title="Return to Project Overview"
+                      className="font-mono text-[11px] text-zinc-500 hover:text-blue-600 dark:text-[#7c879c] dark:hover:text-blue-400 truncate max-w-[160px] bg-transparent border-none shadow-none p-0 cursor-pointer transition-colors"
+                    >
                       {selectedProjectId || 'gcp-project'}
-                    </span>
+                    </button>
                     <span className="text-zinc-300 dark:text-zinc-700">/</span>
                     <span className="hidden sm:inline text-zinc-500 dark:text-[#8b95a5] font-medium">
                       {domainLabel}
@@ -9235,20 +9738,69 @@ function CloudPulseCockpit() {
                     <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">
                       /
                     </span>
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-950 dark:text-zinc-100">
-                      <CurrentIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span className="inline-flex items-center gap-1.5 font-bold text-zinc-950 dark:text-zinc-100">
+                      <CurrentIcon className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                       <span>{currentTabObj?.label || activeTab}</span>
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="hidden xl:block text-[11px] text-zinc-500 dark:text-[#7c879c] truncate max-w-xl">
-                      {currentTabObj?.tip}
-                    </p>
+                    {activeSubLabel && (
+                      <>
+                        <span className="hidden md:inline text-zinc-300 dark:text-zinc-700">
+                          /
+                        </span>
+                        <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded text-[10.5px] font-mono font-semibold bg-amber-500/12 text-amber-800 dark:text-amber-300 border border-amber-500/30 truncate max-w-[240px]">
+                          {activeSubLabel}
+                        </span>
+                      </>
+                    )}
                     <button
                       type="button"
+                      data-feature-id="RAIL_PIN_STUDIO"
+                      onClick={(e) => handleTogglePinStudio(activeTab, e)}
+                      title={
+                        isPinnedCurrent
+                          ? `Unpin ${currentTabObj?.label || activeTab} from Left Rail`
+                          : `Pin ${currentTabObj?.label || activeTab} to Pinned Studios in Left Rail`
+                      }
+                      className={`w-6 h-6 inline-flex items-center justify-center rounded border transition-colors cursor-pointer ${
+                        isPinnedCurrent
+                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
+                          : 'bg-zinc-100 dark:bg-[#151a25] border-zinc-200 dark:border-[#262e42] text-zinc-400 hover:text-amber-500'
+                      }`}
+                    >
+                      <Star
+                        className={`w-3 h-3 ${
+                          isPinnedCurrent ? 'fill-current' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <p className="hidden 2xl:block text-[11px] text-zinc-500 dark:text-[#7c879c] truncate max-w-lg">
+                      {currentTabObj?.tip}
+                    </p>
+                    <span
+                      className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${
+                        loadingOverview
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
+                      }`}
+                    >
+                      <Activity className="w-3 h-3 shrink-0" />
+                      <span>
+                        {loadingOverview
+                          ? 'SYNCING'
+                          : overview?.fetchLatencyMs === 0
+                            ? 'SWR <16ms'
+                            : `${overview?.fetchLatencyMs || 180}ms`}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      data-feature-id="DOCS_GUIDE"
                       onClick={() => handleNavigateStudioTab('DOCS_GUIDE')}
                       title="Open Interactive Architecture & API Reference"
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-[#151a25] border border-zinc-200 dark:border-[#262e42] hover:border-blue-500/40 cursor-pointer shrink-0"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-[#151a25] border border-zinc-200 dark:border-[#262e42] hover:border-blue-500/40 cursor-pointer shrink-0 transition-colors"
                     >
                       <BookOpen className="w-3 h-3 text-blue-500 shrink-0" />
                       <span>Docs</span>
@@ -9257,36 +9809,38 @@ function CloudPulseCockpit() {
                 </div>
               );
             })()}
+
           {/* Sticky Cross-UI Feature Spotlight Arrival Beacon & 1-Click Return Breadcrumb */}
           {featureSpotlightEnabled && activeSpotlightBanner && (
             <div
               data-spotlight-breadcrumb="true"
-              className="sticky top-16 z-40 rounded-xl border-2 border-amber-500/80 bg-zinc-950/95 text-zinc-100 px-4 py-2.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-mono text-xs"
+              className="sticky top-14 z-40 rounded-lg border border-amber-500/80 bg-[#0c0f16]/95 text-zinc-100 px-3.5 py-2 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-mono text-xs"
             >
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-extrabold uppercase tracking-wider">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-amber-400 text-zinc-950 text-[10px] font-extrabold uppercase tracking-wider">
                   SPOTLIGHT TARGET
                 </span>
-                <span className="text-zinc-300">
-                  Jumped from{' '}
+                <span className="text-zinc-300 inline-flex items-center gap-1.5 flex-wrap">
+                  <span>Jumped from</span>
                   <strong className="text-blue-300">
                     {navTabs.find((t) => t.id === activeSpotlightBanner.fromTab)
                       ?.label || activeSpotlightBanner.fromTab}
-                  </strong>{' '}
-                  &rarr;{' '}
+                  </strong>
+                  <ArrowRight className="w-3 h-3 text-zinc-500" />
                   <strong className="text-amber-300">
                     {activeSpotlightBanner.targetLabel}
                   </strong>
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
                   onClick={() => pulseSpotlightTargetDom(activeSpotlightBanner)}
-                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer inline-flex items-center gap-1"
                 >
-                  Locate &amp; Flash Target Again
+                  <Sparkles className="w-3 h-3" />
+                  <span>Flash Target</span>
                 </button>
 
                 {activeSpotlightBanner.fromTab &&
@@ -9298,33 +9852,39 @@ function CloudPulseCockpit() {
                         setActiveSpotlightBanner(null);
                         setActiveTab(returnTo);
                       }}
-                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-100 text-[10.5px] font-extrabold cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-[#1a2130] hover:bg-[#232c40] border border-[#323d56] text-zinc-100 text-[10.5px] font-extrabold cursor-pointer inline-flex items-center gap-1"
                     >
-                      &larr; Back to{' '}
-                      {navTabs.find((t) => t.id === activeSpotlightBanner.fromTab)
-                        ?.label || activeSpotlightBanner.fromTab}
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>
+                        Back to{' '}
+                        {navTabs.find((t) => t.id === activeSpotlightBanner.fromTab)
+                          ?.label || activeSpotlightBanner.fromTab}
+                      </span>
                     </button>
                   )}
 
                 <button
                   type="button"
                   onClick={() => setActiveSpotlightBanner(null)}
-                  className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10.5px] font-bold cursor-pointer"
+                  className="px-2 py-1 rounded bg-[#151a25] hover:bg-[#1e2636] text-zinc-400 hover:text-white text-[10.5px] font-bold cursor-pointer inline-flex items-center gap-1"
                 >
-                  ✕ Dismiss
+                  <X className="w-3 h-3" />
+                  <span>Dismiss</span>
                 </button>
               </div>
             </div>
           )}
+
+          {/* Glassmorphic Toast & Error Notification Stack with Countdown Bar */}
           {(toastMessage || errorBanner) && (
-            <div className="fixed bottom-5 right-5 z-[120] flex flex-col items-end gap-2.5 max-w-md w-[calc(100vw-2.5rem)] sm:w-auto pointer-events-none">
+            <div className="fixed bottom-9 right-5 z-[120] flex flex-col items-end gap-2.5 max-w-md w-[calc(100vw-2.5rem)] sm:w-auto pointer-events-none">
               {toastMessage && (
                 <div
                   role="status"
                   aria-live="polite"
                   onMouseEnter={pauseToastTimer}
                   onMouseLeave={resumeToastTimer}
-                  className="pointer-events-auto relative overflow-hidden w-full bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3.5 flex items-start justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md"
+                  className="pointer-events-auto relative overflow-hidden w-full bg-[#0c0f16]/95 border border-emerald-500/60 text-emerald-100 rounded-lg px-4 py-3 flex items-start justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md cp-studio-enter"
                 >
                   <div className="flex items-start gap-2.5 min-w-0">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -9339,10 +9899,11 @@ function CloudPulseCockpit() {
                       setToastMessage(null);
                     }}
                     title="Dismiss notification"
-                    className="px-2.5 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white text-[10px] font-extrabold cursor-pointer shrink-0 transition-colors"
+                    className="p-1 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 hover:text-white cursor-pointer shrink-0 transition-colors"
                   >
-                    ✕ Dismiss
+                    <X className="w-3.5 h-3.5" />
                   </button>
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500/70 cp-toast-progress" />
                 </div>
               )}
 
@@ -9364,19 +9925,22 @@ function CloudPulseCockpit() {
                       errorTimerRef.current = null;
                     }, 6000);
                   }}
-                  className="pointer-events-auto w-full bg-zinc-950/95 border border-red-500/60 text-red-200 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs font-mono shadow-2xl backdrop-blur-md"
+                  className="pointer-events-auto w-full bg-[#0c0f16]/95 border border-red-500/60 text-red-100 rounded-lg p-3.5 flex flex-col gap-2.5 text-xs font-mono shadow-2xl backdrop-blur-md cp-studio-enter"
                 >
                   <div className="flex items-start justify-between gap-2.5">
-                    <span className="leading-relaxed break-words">
-                      {errorBanner}
-                    </span>
+                    <div className="flex items-start gap-2 min-w-0">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed break-words">
+                        {errorBanner}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setErrorBanner(null)}
                       title="Dismiss error notification"
-                      className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-bold cursor-pointer shrink-0"
+                      className="p-1 rounded bg-[#151a25] hover:bg-[#1e2636] text-zinc-300 hover:text-white cursor-pointer shrink-0"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   <div className="flex items-center justify-end gap-2">
@@ -9418,17 +9982,19 @@ function CloudPulseCockpit() {
                       type="button"
                       onClick={() => fetchProjectOverview(selectedProjectId)}
                       title="Retry fetching live GCP telemetry"
-                      className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 text-red-300 text-[10px] font-bold cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 text-red-300 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                     >
-                      Retry
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>Retry</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setErrorBanner(null)}
                       title="Dismiss banner"
-                      className="px-2.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-bold cursor-pointer"
+                      className="px-2.5 py-0.5 rounded bg-[#151a25] hover:bg-[#1e2636] text-zinc-300 hover:text-white text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                     >
-                      ✕ Dismiss
+                      <X className="w-2.5 h-2.5" />
+                      <span>Dismiss</span>
                     </button>
                   </div>
                 </div>
@@ -9456,8 +10022,9 @@ function CloudPulseCockpit() {
                 />
               )}
 
+              <div key={activeTab} className="cp-studio-enter">
               {activeTab === 'OVERVIEW' && (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
@@ -9496,24 +10063,24 @@ function CloudPulseCockpit() {
 
                   {/* 5-Domain Organized Studio Directory (Collapsed by default since Left Rail is always visible) */}
                   <CollapsibleArchitecturePipelineBar
-                    label="CloudPulse 2026 Architectural Domain Directory (5 Domains · 25 Studios)"
-                    chainSummary="Full directory of all 25 engineering studios & live resource counts"
+                    label="CloudPulse 2026 Architectural Domain Directory (5 Domains · 26 Studios)"
+                    chainSummary="Full directory of all 26 engineering studios & live resource counts"
                   >
-                  <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div className="bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#1e2433] rounded-xl p-5 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-[#1e2433] pb-3">
                       <div>
                         <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                          <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                           <span>
                             CloudPulse 2026 Architectural Domain Navigator
                           </span>
                         </h3>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-zinc-500 dark:text-[#8b95a5]">
                           Every Google Cloud technology is organized into 5 dedicated engineering domains — click any studio below to open its full control plane.
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 25 DEDICATED STUDIOS
+                      <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-[#151a25] text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-[#262e42]">
+                        5 DOMAINS · 26 DEDICATED STUDIOS
                       </span>
                     </div>
 
@@ -9521,17 +10088,17 @@ function CloudPulseCockpit() {
                       {[
                         {
                           domain: 'I. Innovation, Startups & Global Edge',
-                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
+                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Google for Startups Scale & Credit Radar' },
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '16 Specialized Beyond-Console Studios' },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                           ],
                         },
                         {
                           domain: 'II. Compute (GCE), VPC, Containers & Storage',
-                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
+                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'VM_SSH', label: 'VM (GCE)', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · 1GB–32TB RAM · SSH` },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Firewall Rules` },
@@ -9544,10 +10111,11 @@ function CloudPulseCockpit() {
                         },
                         {
                           domain: 'III. Databases, Data & Lakehouse',
-                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
+                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17, MySQL 8.4 & AlloyDB Vectors' },
                             { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Serverless Spark' },
+                            { id: 'MANAGED_SPARK_STUDIO', label: 'Managed Spark', meta: 'Serverless Spark 3.5, Connect & Lightning' },
                             { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor, SQL X-Ray & 7d Time-Machine' },
                             { id: 'BIGLAKE_STUDIO', label: 'BigLake', meta: 'Iceberg REST Catalogs, Compaction & Omni' },
                             { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: '100-PU Sizer, ISO GQL Graph & ScaNN RAG' },
@@ -9555,22 +10123,23 @@ function CloudPulseCockpit() {
                         },
                         {
                           domain: 'IV. Zero-Trust IAM & Incident SRE',
-                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
+                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'SOVEREIGN_STUDIO', label: 'IAM & Time-Machine', meta: 'SA Key Kill-Switch, JIT & SHA-256 Drift' },
                             { id: 'CLOUD_SOC', label: 'Cloud SOC (20-Pillar)', meta: 'Kill-Chains, Canary, Model-Armor & SOAR' },
                             { id: 'SRE_WAR_ROOM', label: 'SRE War-Room (12-Pillar)', meta: '14.4x SLO Burn, Prober & VPC-SC Perimeter' },
-                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '28-in-1 AWS, Azure, Alibaba & Huawei Bridge' },
+                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '20-in-1 AWS & Azure Bridge' },
+                            { id: 'ALIBABA_HUAWEI_PARITY', label: 'Alibaba & Huawei Parity', meta: '8-in-1 Hyperscale Parity Suite' },
                           ],
                         },
                         {
                           domain: 'V. FinOps, Logs & Architecture Docs',
-                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
+                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'FINOPS', label: 'Finops', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
                             { id: 'LOGS_SHELL', label: 'Logs', meta: 'Neural Chrono-Logs, Trace Waterfall & Shell' },
                             { id: 'RECYCLE_BIN', label: 'Recycle Bin (30d)', meta: 'Deleted Resources & Disabled APIs + Restore' },
-                            { id: 'DOCS_GUIDE', label: 'Docs', meta: 'Interactive Architecture & API Guide' },
+                            { id: 'DOCS_GUIDE', label: 'Architecture & Docs', meta: 'Interactive Architecture & API Guide' },
                           ],
                         },
                       ].map((group) => (
@@ -9588,19 +10157,17 @@ function CloudPulseCockpit() {
                                 type="button"
                                 data-feature-id={item.id}
                                 onClick={() => handleNavigateStudioTab(item.id)}
-                                className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                                className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-[#0c0f16]/90 hover:bg-zinc-100 dark:hover:bg-[#1a2130] border border-zinc-200/80 dark:border-[#262e42] transition-all flex items-center justify-between gap-2 cursor-pointer group"
                               >
                                 <div className="min-w-0">
                                   <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
                                     {item.label}
                                   </div>
-                                  <div className="text-[10px] font-mono text-zinc-500 truncate">
+                                  <div className="text-[10px] font-mono text-zinc-500 dark:text-[#7c879c] truncate">
                                     {item.meta}
                                   </div>
                                 </div>
-                                <span className="text-xs font-mono text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 shrink-0">
-                                  →
-                                </span>
+                                <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                               </button>
                             ))}
                           </div>
@@ -10956,42 +11523,269 @@ function CloudPulseCockpit() {
                   onOpenCommandPalette={() => setCommandPaletteOpen(true)}
                 />
               )}
+              </div>
           </>
         </main>
         </div>
 
+        {/* Slide-Up Searchable 26-Studio Sheet for Mobile & PWA Preview */}
+        {mobileStudioDrawerOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="All 26 CloudPulse Studios"
+            onClick={() => setMobileStudioDrawerOpen(false)}
+            className={`${
+              mobilePreview ? 'absolute inset-0' : 'fixed inset-0 md:hidden'
+            } z-50 bg-black/70 backdrop-blur-xs flex flex-col justify-end`}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[80vh] bg-white dark:bg-[#0c0f16] border-t border-zinc-200 dark:border-[#262e42] rounded-t-2xl flex flex-col overflow-hidden shadow-2xl cp-studio-enter"
+            >
+              <div className="px-4 py-3 border-b border-zinc-200 dark:border-[#1e2433] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono">
+                    All {navTabs.length} Engineering Studios
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileStudioDrawerOpen(false)}
+                  className="p-1.5 rounded bg-zinc-100 dark:bg-[#151a25] text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-3 border-b border-zinc-100 dark:border-[#1e2433]">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={railSearchQuery}
+                    onChange={(e) => setRailSearchQuery(e.target.value)}
+                    placeholder="Search any Google Cloud studio..."
+                    className="w-full pl-8 pr-8 py-2 text-xs rounded-md bg-zinc-100 dark:bg-[#07090d] border border-zinc-200 dark:border-[#263044] text-zinc-900 dark:text-zinc-100 focus:outline-none"
+                  />
+                  {railSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setRailSearchQuery('')}
+                      className="cp-nav-rail-item absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 bg-transparent border-none shadow-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-3 overflow-y-auto space-y-4">
+                {[
+                  { id: 'COMMAND', title: 'Command & Global' },
+                  { id: 'INFRA_COMPUTE', title: 'Compute, VPC & Storage' },
+                  { id: 'DATA_AI', title: 'Data & Lakehouse' },
+                  { id: 'SECURITY_SRE', title: 'Security, IAM & SRE' },
+                  { id: 'OPS_DOCS', title: 'FinOps, Logs & Docs' },
+                ].map((section) => {
+                  const q = railSearchQuery.trim().toLowerCase();
+                  const groupTabs = navTabs.filter((t) => {
+                    if (t.group !== section.id) return false;
+                    if (!q) return true;
+                    return (
+                      t.label.toLowerCase().includes(q) ||
+                      String(t.tip || '').toLowerCase().includes(q)
+                    );
+                  });
+                  if (!groupTabs.length) return null;
+                  return (
+                    <div key={section.id} className="space-y-1.5">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 dark:text-[#647087] px-1">
+                        {section.title}
+                      </div>
+                      <div
+                        data-action-toolbar="true"
+                        className="grid grid-cols-2 gap-1.5"
+                      >
+                        {groupTabs.map((tab) => {
+                          const Icon = tab.icon;
+                          const isActive = activeTab === tab.id;
+                          const countBadge = getTabResourceCount(tab.id);
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => {
+                                setMobileStudioDrawerOpen(false);
+                                handleNavigateStudioTab(tab.id, null, null, {
+                                  skipConfirm: true,
+                                });
+                              }}
+                              className={`cp-nav-rail-item flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-left text-xs border transition-colors cursor-pointer ${
+                                isActive
+                                  ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-white font-bold'
+                                  : 'bg-zinc-50 dark:bg-[#10141d] border-zinc-200 dark:border-[#1e2433] text-zinc-700 dark:text-zinc-200'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2 min-w-0">
+                                <Icon
+                                  className={`w-3.5 h-3.5 shrink-0 ${
+                                    isActive
+                                      ? 'text-amber-500'
+                                      : 'text-zinc-400 dark:text-[#7c879c]'
+                                  }`}
+                                />
+                                <span className="truncate">{tab.label}</span>
+                              </span>
+                              {countBadge !== null && countBadge !== undefined && (
+                                <span className="text-[10px] font-mono text-zinc-400 shrink-0">
+                                  {countBadge}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fixed 5-Slot Mobile & PWA Bottom Dock (Replaces overflowing 25-button mobile bar) */}
         <div
+          data-action-toolbar="true"
           className={`${
             mobilePreview
               ? 'sticky bottom-0'
               : 'fixed bottom-0 left-0 right-0 md:hidden'
-          } z-40 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 px-3 py-2 flex items-center justify-around`}
+          } z-40 bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md border-t border-zinc-200 dark:border-[#1e2433] px-2 py-1.5 grid grid-cols-5 gap-1`}
         >
-          {navTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+          {[
+            { id: 'OVERVIEW', shortLabel: 'Overview', icon: LayoutDashboard },
+            { id: 'VM_SSH', shortLabel: 'VMs & SSH', icon: Server },
+            { id: 'CLOUD_RUN', shortLabel: 'Cloud Run', icon: Rocket },
+            { id: 'LOGS_SHELL', shortLabel: 'Logs', icon: Terminal },
+          ].map((slot) => {
+            const Icon = slot.icon;
+            const isActive = activeTab === slot.id && !mobileStudioDrawerOpen;
             return (
               <button
-                key={tab.id}
+                key={slot.id}
                 type="button"
-                onClick={() =>
-                  handleNavigateStudioTab(tab.id, null, null, {
+                data-feature-id={slot.id}
+                onClick={() => {
+                  setMobileStudioDrawerOpen(false);
+                  handleNavigateStudioTab(slot.id, null, null, {
                     skipConfirm: true,
-                  })
-                }
-                title={tab.tip}
-                className={`flex flex-col items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                  });
+                }}
+                className={`cp-nav-rail-item flex flex-col items-center justify-center gap-0.5 py-1 rounded text-[10px] font-semibold bg-transparent border-none shadow-none transition-colors cursor-pointer ${
                   isActive
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-zinc-500 dark:text-zinc-400'
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-zinc-500 dark:text-[#8b95a5]'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label.split(' ')[0]}</span>
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{slot.shortLabel}</span>
               </button>
             );
           })}
+          <button
+            type="button"
+            data-feature-id="MOBILE_STUDIO_DRAWER"
+            onClick={() => setMobileStudioDrawerOpen((v) => !v)}
+            title="Browse & Search All 26 Google Cloud Engineering Studios"
+            className={`cp-nav-rail-item flex flex-col items-center justify-center gap-0.5 py-1 rounded text-[10px] font-semibold bg-transparent border-none shadow-none transition-colors cursor-pointer ${
+              mobileStudioDrawerOpen ||
+              !['OVERVIEW', 'VM_SSH', 'CLOUD_RUN', 'LOGS_SHELL'].includes(
+                activeTab
+              )
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-zinc-500 dark:text-[#8b95a5]'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4 shrink-0" />
+            <span className="truncate">Studios ({navTabs.length})</span>
+          </button>
         </div>
+
+        {/* 24px IDE-Style Desktop Live Telemetry Status Bar */}
+        {!mobilePreview && (
+          <footer
+            aria-label="Live Google Cloud Telemetry Status Bar"
+            className="hidden md:flex fixed bottom-0 left-0 right-0 z-30 h-6 px-3 bg-white/95 dark:bg-[#080a0f]/95 backdrop-blur-md border-t border-zinc-200 dark:border-[#1a202e] items-center justify-between gap-4 text-[10.5px] font-mono text-zinc-500 dark:text-[#7c879c] select-none"
+          >
+            <div className="flex items-center gap-3 min-w-0 truncate">
+              <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>OAUTH2 LIVE</span>
+              </span>
+              <span className="text-zinc-300 dark:text-[#1e2433]">|</span>
+              <span className="truncate text-zinc-700 dark:text-zinc-300 font-semibold">
+                {selectedProjectId || 'no-project'}
+              </span>
+              <span className="text-zinc-300 dark:text-[#1e2433]">|</span>
+              <span className="hidden lg:inline truncate">
+                {liveDateText} · {activeTimeZone} ({utcOffsetLabel})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden xl:inline-flex items-center gap-2">
+                <span>
+                  VMs:{' '}
+                  <strong className="text-zinc-800 dark:text-zinc-200">
+                    {overview?.summary?.liveVmsCount ??
+                      overview?.summary?.totalVms ??
+                      0}
+                  </strong>
+                </span>
+                <span>·</span>
+                <span>
+                  Run:{' '}
+                  <strong className="text-zinc-800 dark:text-zinc-200">
+                    {overview?.cloudRunServices?.length ?? 0}
+                  </strong>
+                </span>
+                <span>·</span>
+                <span>
+                  Buckets:{' '}
+                  <strong className="text-zinc-800 dark:text-zinc-200">
+                    {overview?.summary?.liveBucketsCount ??
+                      overview?.summary?.storageBuckets ??
+                      0}
+                  </strong>
+                </span>
+                <span>·</span>
+                <span>
+                  APIs:{' '}
+                  <strong className="text-zinc-800 dark:text-zinc-200">
+                    {overview?.summary?.enabledApisCount ?? 0}
+                  </strong>
+                </span>
+              </span>
+              <span className="hidden xl:inline text-zinc-300 dark:text-[#1e2433]">
+                |
+              </span>
+              {(() => {
+                const orb = computeOrbitalTelemetry(overview);
+                return (
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                    CFE {orb.avgCfe}% · {orb.postureGrade}
+                  </span>
+                );
+              })()}
+              <span className="hidden lg:inline text-zinc-300 dark:text-[#1e2433]">
+                |
+              </span>
+              <span className="hidden lg:inline text-[10px]">
+                ⌘K Search · [ Rail · / Filter · Alt+G Shield
+              </span>
+            </div>
+          </footer>
+        )}
       </div>
 
       <CommandPaletteModal

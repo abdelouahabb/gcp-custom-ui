@@ -1070,16 +1070,16 @@ export default function CommandPaletteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-24 px-3 bg-zinc-50 dark:bg-zinc-900/50 dark:bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-[140] flex items-start justify-center pt-12 sm:pt-20 px-3 bg-black/65 backdrop-blur-md cp-studio-enter"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900/95 border border-zinc-200 dark:border-blue-500/30 shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#262e42] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Search & Voice Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-200 dark:border-slate-800 bg-zinc-50 dark:bg-slate-950/60">
-          <Sparkles className="w-5 h-5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-200 dark:border-[#1e2433] bg-zinc-50/80 dark:bg-[#0c0f16]">
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -1088,65 +1088,91 @@ export default function CommandPaletteModal({
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder='Ask or run anything... e.g. "park project for night", "export terraform", "deploy gpu", "security scan"'
-            className="w-full bg-transparent text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-slate-500 focus:outline-none"
+            placeholder='Search studios, resources, or run ops... e.g. "park night", "terraform", "deploy gpu", "mcp"'
+            className="w-full bg-transparent border-none shadow-none text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-[#647087] focus:outline-none"
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setSelectedIndex(0);
+              }}
+              title="Clear search query"
+              className="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleVoiceInput}
             title="Voice-to-Cloud Natural Language Input"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-all shrink-0 cursor-pointer ${
               isListening
                 ? 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300 animate-pulse'
-                : 'bg-white dark:bg-slate-800/90 hover:bg-zinc-100 dark:hover:bg-slate-700 border-zinc-200 dark:border-slate-700 text-zinc-700 dark:text-slate-300'
+                : 'bg-white dark:bg-[#151a25] hover:bg-zinc-100 dark:hover:bg-[#1e2636] border-zinc-200 dark:border-[#262e42] text-zinc-700 dark:text-zinc-300'
             }`}
           >
-            {isListening ? <MicOff className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" /> : <Mic className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />}
+            {isListening ? (
+              <MicOff className="w-3.5 h-3.5 text-red-500" />
+            ) : (
+              <Mic className="w-3.5 h-3.5 text-blue-500" />
+            )}
             <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Voice Ops'}</span>
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-md text-zinc-500 dark:text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-slate-800"
+            aria-label="Close command palette"
+            className="p-1.5 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#151a25] cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Quick Natural Language Prompt Chips */}
-        <div className="px-4 py-2 bg-zinc-100/70 dark:bg-slate-950/40 border-b border-zinc-200 dark:border-slate-800/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-slate-500 shrink-0 mr-1">
-            Try:
+        <div
+          data-action-toolbar="true"
+          className="px-4 py-2 bg-zinc-100/60 dark:bg-[#090b10] border-b border-zinc-200 dark:border-[#1e2433] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-[#647087] shrink-0 mr-0.5">
+              Quick Prompts:
+            </span>
+            {[
+              { label: 'Park for night', q: 'park night' },
+              { label: 'Blast Radius Map', q: 'topology' },
+              { label: 'Export Terraform', q: 'terraform' },
+              { label: 'Security Audit', q: 'security' },
+              { label: 'Deploy GPU Cloud Run', q: 'deploy gpu' },
+              { label: 'Burn-Rate Radar', q: 'burn rate' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  setQuery(chip.q);
+                  setSelectedIndex(0);
+                }}
+                className="px-2 py-0.5 rounded bg-white dark:bg-[#151a25] hover:bg-zinc-50 dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] text-[11px] font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap transition-colors cursor-pointer"
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden sm:inline text-[10px] font-mono text-zinc-400 dark:text-[#647087] shrink-0 tabular-nums">
+            {actions.length} actions
           </span>
-          {[
-            { label: 'Park for night', q: 'park night' },
-            { label: 'Blast Radius Map', q: 'topology' },
-            { label: 'Export Terraform', q: 'terraform' },
-            { label: 'Security Audit', q: 'security' },
-            { label: 'Deploy GPU Cloud Run', q: 'deploy gpu' },
-            { label: 'Burn-Rate Radar', q: 'burn rate' }
-          ].map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => {
-                setQuery(chip.q);
-                setSelectedIndex(0);
-              }}
-              className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-zinc-50 dark:hover:bg-slate-800 border border-zinc-200 dark:border-slate-800 text-[11px] text-zinc-700 dark:text-slate-300 whitespace-nowrap transition-colors"
-            >
-              {chip.label}
-            </button>
-          ))}
         </div>
 
         {/* Fallback Bottom-Right Toast if rendered standalone */}
         {toastMsg && !onShowToast && (
           <div
-            className={`fixed bottom-5 right-5 z-[120] max-w-md p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md ${
+            className={`fixed bottom-8 right-5 z-[150] max-w-md p-3.5 rounded-lg border text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md ${
               toastMsg.type === 'error'
-                ? 'bg-zinc-950/95 border-red-500/60 text-red-200'
-                : 'bg-zinc-950/95 border-emerald-500/60 text-emerald-200'
+                ? 'bg-[#0c0f16]/95 border-red-500/60 text-red-200'
+                : 'bg-[#0c0f16]/95 border-emerald-500/60 text-emerald-200'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1156,25 +1182,29 @@ export default function CommandPaletteModal({
             <button
               type="button"
               onClick={() => setRawToastMsg(null)}
-              className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+              className="p-1 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 cursor-pointer shrink-0"
             >
-              ✕ Dismiss
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
         {/* Action Results List */}
-        <div className="max-h-[60vh] overflow-y-auto p-2 divide-y divide-zinc-100 dark:divide-slate-800/40">
+        <div
+          data-action-toolbar="true"
+          className="max-h-[58vh] overflow-y-auto p-2 space-y-1"
+        >
           {actions.length === 0 ? (
-            <div className="py-10 text-center text-zinc-500 dark:text-slate-400 text-xs">
-              No matching cloud action found for "{query}". Try "sleep", "terraform", "topology", or "gpu".
+            <div className="py-10 text-center text-zinc-500 dark:text-[#8b95a5] text-xs font-mono">
+              No matching cloud action found for &ldquo;{query}&rdquo;. Try &ldquo;sleep&rdquo;, &ldquo;terraform&rdquo;, &ldquo;topology&rdquo;, or &ldquo;gpu&rdquo;.
             </div>
           ) : (
             actions.map((action, idx) => {
               const Icon = action.icon;
               const isSelected = idx === selectedIndex;
-              const isBusy = executingId === `hibernate-SLEEP` && action.id === 'sleep-project' ||
-                             executingId === `hibernate-WAKE` && action.id === 'wake-project';
+              const isBusy =
+                (executingId === 'hibernate-SLEEP' && action.id === 'sleep-project') ||
+                (executingId === 'hibernate-WAKE' && action.id === 'wake-project');
 
               return (
                 <button
@@ -1182,32 +1212,41 @@ export default function CommandPaletteModal({
                   type="button"
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onClick={() => action.run()}
-                  className={`w-full text-left px-3.5 py-3 rounded-md flex items-center justify-between gap-3 transition-all ${
+                  className={`w-full text-left px-3 py-2.5 rounded-md flex items-center justify-between gap-3 border-l-2 transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-blue-500/15 border border-blue-500/30'
-                      : 'hover:bg-zinc-100 dark:hover:bg-slate-800/60 border border-transparent'
+                      ? 'border-l-amber-500 bg-amber-500/12 dark:bg-amber-500/14 border border-amber-500/35'
+                      : 'border-l-transparent hover:bg-zinc-100 dark:hover:bg-[#151a25] border border-transparent'
                   }`}
                 >
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className={`p-2 rounded-xl border shrink-0 mt-0.5 ${action.badgeColor}`}>
+                    <div className={`p-2 rounded-lg border shrink-0 mt-0.5 ${action.badgeColor}`}>
                       {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">{action.title}</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono border ${action.badgeColor}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${action.badgeColor}`}>
                           {action.badge}
                         </span>
                         {action.nlpMatchPct && (
-                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                            NLP Match {action.nlpMatchPct}%
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                            NLP {action.nlpMatchPct}%
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-zinc-500 dark:text-slate-400 truncate mt-0.5">{action.subtitle}</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-[#8b95a5] truncate mt-0.5">{action.subtitle}</p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-zinc-600 dark:text-zinc-400 translate-x-0.5' : 'text-zinc-400 dark:text-slate-600'}`} />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isSelected && <kbd className="cp-kbd">↵</kbd>}
+                    <ArrowRight
+                      className={`w-4 h-4 transition-transform ${
+                        isSelected
+                          ? 'text-amber-500 translate-x-0.5'
+                          : 'text-zinc-400 dark:text-[#647087]'
+                      }`}
+                    />
+                  </div>
                 </button>
               );
             })
@@ -1215,14 +1254,23 @@ export default function CommandPaletteModal({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2.5 bg-zinc-50 dark:bg-slate-950/80 border-t border-zinc-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-zinc-500 dark:text-slate-400">
+        <div className="px-4 py-2.5 bg-zinc-50 dark:bg-[#0c0f16] border-t border-zinc-200 dark:border-[#1e2433] flex items-center justify-between text-[11px] text-zinc-500 dark:text-[#8b95a5]">
           <div className="flex items-center gap-3">
-            <span><kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-slate-800 text-zinc-700 dark:text-slate-300 font-mono text-[10px]">↑↓</kbd> Navigate</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-slate-800 text-zinc-700 dark:text-slate-300 font-mono text-[10px]">↵</kbd> Execute</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-slate-800 text-zinc-700 dark:text-slate-300 font-mono text-[10px]">ESC</kbd> Close</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="cp-kbd">↑↓</kbd>
+              <span>Navigate</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="cp-kbd">↵</kbd>
+              <span>Execute</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="cp-kbd">ESC</kbd>
+              <span>Close</span>
+            </span>
           </div>
-          <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-            Active Project: {projectId || 'None'}
+          <span className="font-mono text-[10.5px] text-blue-600 dark:text-blue-400 font-semibold">
+            Project: {projectId || 'None'}
           </span>
         </div>
       </div>

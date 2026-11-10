@@ -23,7 +23,9 @@ import {
   GripVertical,
   Palette,
   ArrowUpRight,
+  ArrowRight,
   RefreshCw,
+  Network,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -61,37 +63,37 @@ function SortableKpiCard({ item }) {
       onClick={() => item.onPrimaryClick?.()}
       onKeyDown={handleCardKeyDown}
       title={item.clickHint || `Click to open ${item.title}`}
-      className={`group bg-white dark:bg-[#111622] border border-zinc-200 dark:border-slate-800 rounded-lg px-3 py-2 shadow-2xs transition-all duration-150 cursor-pointer select-none hover:border-blue-500/60 dark:hover:border-blue-400/60 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
-        isDragging ? 'opacity-80 scale-[1.01] shadow-md ring-2 ring-blue-500' : ''
+      className={`group bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#1e2433] rounded-lg px-3.5 py-2.5 shadow-2xs transition-all duration-150 cursor-pointer select-none hover:border-amber-500/55 dark:hover:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+        isDragging ? 'opacity-80 scale-[1.01] shadow-md ring-2 ring-amber-500' : ''
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-md bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-md bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
             <Icon className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10.5px] font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <span className="text-[10.5px] font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider truncate group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">
                 {item.title}
               </span>
               <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 inline-flex items-center gap-0.5 shrink-0">
-                <span>{item.primaryTargetLabel}</span>
+                <span className="hidden sm:inline">{item.primaryTargetLabel}</span>
                 <ArrowUpRight className="w-2.5 h-2.5" />
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-sm font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono">
+              <span className="text-base font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono tabular-nums">
                 {item.value}
               </span>
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+              <span className="text-[10.5px] text-zinc-500 dark:text-[#7c879c] truncate">
                 {item.subtitle}
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <span className="font-mono text-[10px] bg-zinc-100 dark:bg-slate-800/90 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+          <span className="font-mono text-[10px] bg-zinc-100 dark:bg-[#151a25] text-zinc-600 dark:text-zinc-300 border border-zinc-200/80 dark:border-[#262e42] px-1.5 py-0.5 rounded">
             {item.badge}
           </span>
           <button
@@ -100,7 +102,7 @@ function SortableKpiCard({ item }) {
             {...listeners}
             onClick={(e) => e.stopPropagation()}
             title="Drag handle to reorder quick-jump tile"
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-grab active:cursor-grabbing rounded transition-colors shrink-0"
+            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#151a25] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0"
           >
             <GripVertical className="w-3.5 h-3.5" />
           </button>
@@ -108,7 +110,10 @@ function SortableKpiCard({ item }) {
       </div>
 
       {Array.isArray(item.quickLinks) && item.quickLinks.length > 0 && (
-        <div className="mt-1.5 pt-1.5 border-t border-zinc-100 dark:border-slate-800/80 flex flex-wrap items-center gap-1">
+        <div
+          data-action-toolbar="true"
+          className="mt-2 pt-2 border-t border-zinc-100 dark:border-[#1e2433] flex flex-wrap items-center gap-1"
+        >
           {item.quickLinks.map((link) => (
             <button
               key={link.label}
@@ -117,10 +122,10 @@ function SortableKpiCard({ item }) {
                 e.stopPropagation();
                 link.onClick?.();
               }}
-              className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-zinc-100 hover:bg-blue-600 text-zinc-700 hover:text-white dark:bg-slate-900 dark:hover:bg-blue-600 dark:text-zinc-300 dark:hover:text-white border border-zinc-200/80 dark:border-slate-800 transition-colors cursor-pointer inline-flex items-center gap-0.5"
+              className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-zinc-100 hover:bg-blue-600 text-zinc-700 hover:text-white dark:bg-[#151a25] dark:hover:bg-blue-600 dark:text-zinc-300 dark:hover:text-white border border-zinc-200/80 dark:border-[#262e42] transition-colors cursor-pointer inline-flex items-center gap-1"
             >
               <span>{link.label}</span>
-              <span>→</span>
+              <ArrowRight className="w-2.5 h-2.5 shrink-0" />
             </button>
           ))}
         </div>
@@ -471,13 +476,100 @@ export default function SortableKpiRow({
         onDragEnd={handleCardDragEnd}
       >
         <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
             {orderedCards.map((item) => (
               <SortableKpiCard key={item.id} item={item} />
             ))}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Live Infrastructure Footprint Proportion Strip (100% Live GCP Inventory Ratios) */}
+      {(() => {
+        const computeTotal = vmsCount + runCount + clustersCount;
+        const networkTotal = vpcsCount + firewallsCount;
+        const dataTotal = bucketsCount + datasetsCount;
+        const segments = [
+          {
+            id: 'compute',
+            label: 'Compute & Serverless',
+            count: computeTotal,
+            colorClass: 'bg-blue-500',
+            dotClass: 'bg-blue-500',
+            onClick: () => navigate('VM_SSH'),
+          },
+          {
+            id: 'network',
+            label: 'VPCs & Firewall Rules',
+            count: networkTotal,
+            colorClass: 'bg-emerald-500',
+            dotClass: 'bg-emerald-500',
+            onClick: () => navigate('VPC_NETWORKS'),
+          },
+          {
+            id: 'storage',
+            label: 'Storage & BigQuery',
+            count: dataTotal,
+            colorClass: 'bg-amber-500',
+            dotClass: 'bg-amber-500',
+            onClick: () => navigate('CLOUD_STORAGE'),
+          },
+          {
+            id: 'apis',
+            label: 'Enabled Service APIs',
+            count: apisCount,
+            colorClass: 'bg-slate-500 dark:bg-slate-400',
+            dotClass: 'bg-slate-500 dark:bg-slate-400',
+            onClick: handleOpenApisSection,
+          },
+        ];
+        const grandTotal = segments.reduce((acc, s) => acc + s.count, 0);
+        if (grandTotal <= 0) return null;
+
+        return (
+          <div className="bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#1e2433] rounded-lg px-3.5 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="h-1.5 w-full rounded-full overflow-hidden bg-zinc-100 dark:bg-[#07090d] flex gap-0.5">
+                {segments
+                  .filter((s) => s.count > 0)
+                  .map((seg) => {
+                    const pct = Math.max(4, (seg.count / grandTotal) * 100);
+                    return (
+                      <div
+                        key={seg.id}
+                        style={{ width: `${pct}%` }}
+                        className={`h-full ${seg.colorClass} transition-all duration-300`}
+                      />
+                    );
+                  })}
+              </div>
+              <div
+                data-action-toolbar="true"
+                className="flex flex-wrap items-center gap-x-4 gap-y-1"
+              >
+                {segments.map((seg) => (
+                  <button
+                    key={seg.id}
+                    type="button"
+                    onClick={seg.onClick}
+                    title={`Open ${seg.label} (${seg.count} live assets)`}
+                    className="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-zinc-600 hover:text-zinc-950 dark:text-[#8b95a5] dark:hover:text-white bg-transparent border-none shadow-none p-0 cursor-pointer transition-colors"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${seg.dotClass} shrink-0`} />
+                    <span>{seg.label}:</span>
+                    <strong className="text-zinc-900 dark:text-zinc-100 tabular-nums">
+                      {seg.count}
+                    </strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-400 dark:text-[#647087] shrink-0">
+              Total Tracked Assets: <strong className="text-zinc-700 dark:text-zinc-300">{grandTotal}</strong>
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }

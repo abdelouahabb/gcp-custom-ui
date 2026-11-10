@@ -16,12 +16,92 @@ export const INNOVATION_FEATURE_GUIDE = {
   // ============================================================================
   OVERVIEW: {
     badge: 'EXECUTIVE CONTROL PLANE',
-    title: 'Project Overview & 5-Domain Studio Directory',
+    title: 'Project Overview, Footprint Proportion Strip & Live Resource Control Center',
     whatItDoes:
-      'Displays real-time inventory, hourly/monthly burn rate, 5-Domain Studio Launcher, and the live Resource Control Center for your selected GCP project.',
+      'Displays real-time inventory, hourly/monthly burn rate, draggable executive KPI cards, live infrastructure proportion bar, and the Resource Control Center for your selected GCP project.',
     enterpriseValue:
       'Gives Cloud Architects and SREs a single-pane-of-glass summary of every active VM, Cloud Run service, bucket, dataset, and VPC without clicking through dozens of console pages.',
     gcpApis: 'cloudresourcemanager.googleapis.com · compute · run · storage · bigquery',
+    safetyMode: 'READ_ONLY',
+  },
+  RAIL_TOGGLE: {
+    badge: 'ARCHITECTURAL RAIL · [',
+    title: 'Collapse or Expand Left Architectural Studio Rail (Shortcut: [)',
+    whatItDoes:
+      'Toggles the left studio navigation rail between full 240px mode (with inline studio search, pinned favorites, domain groups, and live asset counts) and compact 56px icon-only cockpit mode.',
+    enterpriseValue:
+      'Frees up 184px of horizontal workspace width when inspecting wide BigQuery result tables, Xterm.js SSH terminals, or Mermaid architecture diagrams.',
+    gcpApis: 'Client Workspace Layout · Persisted in localStorage',
+    safetyMode: 'READ_ONLY',
+  },
+  RAIL_PIN_STUDIO: {
+    badge: 'PIN FAVORITE STUDIO',
+    title: 'Pin or Unpin Engineering Studio to Top of Left Navigation Rail',
+    whatItDoes:
+      'Adds or removes this studio from your personalized Pinned Studios group at the very top of the left navigation rail.',
+    enterpriseValue:
+      'Keeps your daily driver studios (such as VMs & Web-SSH, Cloud Run, Cloud Storage, or MCP Hub) 1 click away without scrolling through all 5 domain groups.',
+    gcpApis: 'Workspace Favorites · Persisted in localStorage',
+    safetyMode: 'READ_ONLY',
+  },
+  STUDIO_HISTORY_BACK: {
+    badge: 'SESSION HISTORY · BACK',
+    title: 'Navigate Back to Previous Studio in Session History',
+    whatItDoes:
+      'Returns immediately to the previous engineering studio you visited during this session—just like IDE editor tab history.',
+    enterpriseValue:
+      'Lets you jump from a deep-linked investigation (e.g., VPC Firewall or Chrono-Logs) straight back to the studio you were working in.',
+    gcpApis: 'In-Memory Studio Navigation History Stack',
+    safetyMode: 'READ_ONLY',
+  },
+  STUDIO_HISTORY_FORWARD: {
+    badge: 'SESSION HISTORY · FORWARD',
+    title: 'Navigate Forward in Studio Session History',
+    whatItDoes:
+      'Moves forward in your studio navigation history stack after stepping back.',
+    enterpriseValue:
+      'Preserves bi-directional cross-studio investigation context across all 26 Google Cloud studios.',
+    gcpApis: 'In-Memory Studio Navigation History Stack',
+    safetyMode: 'READ_ONLY',
+  },
+  PROJECT_SWITCHER_TRIGGER: {
+    badge: 'MULTI-PROJECT CONTEXT',
+    title: 'Search & Switch Active Google Cloud Project Context',
+    whatItDoes:
+      'Opens a searchable multi-project selector showing every live Google Cloud project accessible to your OAuth2 / ADC identity, with project IDs, project numbers, and 1-click re-discovery.',
+    enterpriseValue:
+      'Switches every studio, terminal, FinOps ticker, and REST API target across dev, staging, and production projects in <16ms via SWR cache.',
+    gcpApis: 'cloudresourcemanager.googleapis.com/v1/projects',
+    safetyMode: 'READ_ONLY',
+  },
+  BURN_RATE_TICKER: {
+    badge: 'LIVE BURN-RATE & SLEEP',
+    title: 'Live Hourly Spend Radar & Night-Mode FinOps Sleep Switch',
+    whatItDoes:
+      'Displays your real-time hourly project burn rate ($/hr) computed from running GCE VMs, Cloud SQL, GKE, and Cloud Run services, and opens the Night-Mode Sleep Switch drawer.',
+    enterpriseValue:
+      'Surfaces active compute spend at a glance in the top bar and lets you hibernate non-production resources before leaving for the night.',
+    gcpApis: 'Cloud Billing SKU Catalog · compute.instances · run.services · sqladmin',
+    safetyMode: 'READ_ONLY',
+  },
+  MOBILE_PREVIEW_TOGGLE: {
+    badge: 'MOBILE / PWA SIMULATOR',
+    title: 'Toggle 430px Mobile PWA On-Call Cockpit Frame',
+    whatItDoes:
+      'Switches the workspace between full desktop multi-pane layout and a 430px iPhone/Android PWA frame with the 5-slot thumb dock and slide-up 26-studio directory.',
+    enterpriseValue:
+      'Lets SREs test mobile incident-response ergonomics (stopping runaway VMs, checking Cloud Run 5xx logs, or rotating secrets on-call) right from desktop.',
+    gcpApis: 'Responsive PWA Viewport Simulator',
+    safetyMode: 'READ_ONLY',
+  },
+  MOBILE_STUDIO_DRAWER: {
+    badge: '26-STUDIO DIRECTORY',
+    title: 'Open Searchable 26-Studio Mobile & PWA Directory Sheet',
+    whatItDoes:
+      'Slides up a searchable directory of all 26 CloudPulse engineering studios grouped by domain, complete with live resource counts.',
+    enterpriseValue:
+      'Gives mobile and PWA operators clean, thumb-friendly access to every specialized Google Cloud studio without crowding the 5-slot bottom dock.',
+    gcpApis: 'Client Navigation Sheet',
     safetyMode: 'READ_ONLY',
   },
   INNOVATION_LAB: {
@@ -8406,77 +8486,89 @@ export default function GlobalInnovationHoverExplainer() {
         transform: placeAbove ? 'translateY(-100%)' : 'none',
         zIndex: 9999,
       }}
-      className="pointer-events-none rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#202124] text-zinc-900 dark:text-zinc-100 shadow-xl p-3.5 space-y-2.5 text-xs transition-opacity duration-150"
+      className="pointer-events-none rounded-xl border border-zinc-300 dark:border-[#2a344a] bg-white/98 dark:bg-[#0e121b]/98 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-2xl overflow-hidden text-xs transition-opacity duration-150"
     >
-      {/* Top Badge & Safety Mode */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider">
-          <Sparkles className="w-3 h-3 shrink-0" />
-          <span className="truncate">{info.badge}</span>
-        </span>
-        <span
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
-            isMutation
-              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-              : isSimulation
-              ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-          }`}
-        >
-          {isMutation ? (
-            <>
-              <ShieldCheck className="w-3 h-3 shrink-0" />
-              <span>Makes a Live Change</span>
-            </>
-          ) : isSimulation ? (
-            <>
-              <Info className="w-3 h-3 shrink-0" />
-              <span>Safe What-If Preview</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>Safe to Click (Read-Only)</span>
-            </>
-          )}
-        </span>
-      </div>
-
-      {/* Full Un-truncated Feature Title */}
-      <div className="text-xs font-extrabold text-zinc-900 dark:text-white leading-snug">
-        {info.title}
-      </div>
-
-      {/* 1. In Simple Terms (What Clicking This Does) */}
-      <div className="space-y-0.5">
-        <div className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1">
-          <Info className="w-3 h-3 shrink-0" />
-          <span>In Simple Terms (What Clicking This Does)</span>
+      {/* Semantic 2px Top Accent Strip */}
+      <div
+        className={`h-0.5 w-full ${
+          isMutation
+            ? 'bg-amber-500'
+            : isSimulation
+            ? 'bg-blue-500'
+            : 'bg-emerald-500'
+        }`}
+      />
+      <div className="p-3.5 space-y-2.5">
+        {/* Top Badge & Safety Mode */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase tracking-wider min-w-0">
+            <Sparkles className="w-3 h-3 shrink-0" />
+            <span className="truncate">{info.badge}</span>
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
+              isMutation
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                : isSimulation
+                ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+            }`}
+          >
+            {isMutation ? (
+              <>
+                <ShieldCheck className="w-3 h-3 shrink-0" />
+                <span>Makes a Live Change</span>
+              </>
+            ) : isSimulation ? (
+              <>
+                <Info className="w-3 h-3 shrink-0" />
+                <span>Safe What-If Preview</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3 h-3 shrink-0" />
+                <span>Safe to Click (Read-Only)</span>
+              </>
+            )}
+          </span>
         </div>
-        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
-          {info.whatItDoes}
-        </p>
-      </div>
 
-      {/* 2. Why This Helps You (Money, Time & Safety) */}
-      {info.enterpriseValue && (
-        <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-0.5">
-          <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
-            Why This Helps You (Money, Time &amp; Safety)
+        {/* Full Un-truncated Feature Title */}
+        <div className="text-xs font-extrabold text-zinc-900 dark:text-white leading-snug tracking-tight">
+          {info.title}
+        </div>
+
+        {/* 1. In Simple Terms (What Clicking This Does) */}
+        <div className="space-y-0.5">
+          <div className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1">
+            <Info className="w-3 h-3 shrink-0" />
+            <span>In Simple Terms (What Clicking This Does)</span>
           </div>
-          <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-            {info.enterpriseValue}
+          <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+            {info.whatItDoes}
           </p>
         </div>
-      )}
 
-      {/* 3. Under the Hood (GCP APIs & CLI) */}
-      {info.gcpApis && (
-        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
-          <Terminal className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span className="truncate">Under the Hood: {info.gcpApis}</span>
-        </div>
-      )}
+        {/* 2. Why This Helps You (Money, Time & Safety) */}
+        {info.enterpriseValue && (
+          <div className="p-2 rounded-lg bg-zinc-50 dark:bg-[#090c12] border border-zinc-200 dark:border-[#1e2638] space-y-0.5">
+            <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
+              Why This Helps You (Money, Time &amp; Safety)
+            </div>
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              {info.enterpriseValue}
+            </p>
+          </div>
+        )}
+
+        {/* 3. Under the Hood (GCP APIs & CLI) */}
+        {info.gcpApis && (
+          <div className="pt-1.5 border-t border-zinc-200 dark:border-[#1e2638] flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+            <Terminal className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="truncate">Under the Hood: {info.gcpApis}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

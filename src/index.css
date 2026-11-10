@@ -6,12 +6,13 @@
   body {
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
-    background-color: #f8f9fa;
-    color: #202124;
+    background-color: var(--cp-bg-canvas, #f4f6f9);
+    color: #0f172a;
+    text-rendering: optimizeLegibility;
   }
 
   .dark body {
-    background-color: #131314;
+    background-color: var(--cp-bg-canvas, #090b10);
     color: #e8eaed;
   }
 
@@ -20,36 +21,35 @@
   }
 }
 
-/* Google Cloud Console Light & Dark Mode Scrollbars */
+/* Precision Architectural Scrollbars (7px Low-Profile) */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f3f4;
+  background: transparent;
 }
 .dark ::-webkit-scrollbar-track {
-  background: #202124;
+  background: #090b10;
 }
 ::-webkit-scrollbar-thumb {
-  background: #bdc1c6;
+  background: #cbd5e1;
   border-radius: 9999px;
-  border: 2px solid #f1f3f4;
-  min-width: 48px;
-  min-height: 48px;
+  min-width: 36px;
+  min-height: 36px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #5f6368;
-  border: 2px solid #202124;
+  background: #283248;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #1a73e8;
+  background: #64748b;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #8ab4f8;
+  background: #4a5a7d;
 }
 ::-webkit-scrollbar-thumb:active {
-  background: #185abc;
+  background: #1a73e8;
 }
 
 /* Light-Mode (html:not(.dark)) Safety-Net Layer — Ensures zero residual dark panels in White Mode */
@@ -305,7 +305,7 @@ span.rounded-full:not(.w-1\.5):not(.w-2):not(.w-2\.5):not(.w-3):not(.h-1\.5):not
 .dark form.bg-\[\#202124\] {
   background-color: var(--cp-bg-surface) !important;
   border-color: var(--cp-border-subtle) !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 1px 2px rgba(0, 0, 0, 0.28) !important;
 }
 
 .dark div.bg-zinc-900,
@@ -735,8 +735,77 @@ button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled)
   box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.25) !important;
 }
 
+/* ----------------------------------------------------------------------------
+ * 5. HARDWARE KEYCAPS (.cp-kbd), MICRO-INTERACTIONS & TABLE TELEMETRY POLISH
+ * ---------------------------------------------------------------------------- */
+.cp-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  box-shadow: inset 0 -1px 0 #94a3b8;
+  color: #475569;
+  user-select: none;
+}
 
+.dark .cp-kbd {
+  background-color: #161d2b;
+  border: 1px solid #2b364d;
+  box-shadow: inset 0 -1px 0 #090b10;
+  color: #94a3b8;
+}
 
+@keyframes cp-studio-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.cp-studio-enter {
+  animation: cp-studio-fade-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 
+@keyframes cp-toast-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.cp-toast-progress {
+  transform-origin: left center;
+  animation: cp-toast-shrink 8s linear forwards;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Crisp Enterprise Data Tables across all 26 Studios */
+.dark thead {
+  background-color: #0d1119 !important;
+  border-color: var(--cp-border-subtle) !important;
+}
+
+.dark tbody tr:hover:not(.cursor-not-allowed) {
+  background-color: rgba(255, 255, 255, 0.025);
+}
 

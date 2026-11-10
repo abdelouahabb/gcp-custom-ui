@@ -173,7 +173,23 @@
   - **GKE ComputeClasses, CapacityQuota CUD Spillover & GPU/TPU Inference Architect (`@skill:gke-compute-classes`)**: `POST /api/project/:id/gke/compute-classes-architect`.
   - **Cross-Studio Navigation Confirmation Guard (`cloudpulse:request-cross-tab-nav`)**: Extended across `BigQueryStudio.jsx`, `SovereignTimeMachineIamStudio.jsx`, `GkeFleetStudio.jsx`, and `VmFleetAndSsh.jsx`.
 
+### L. Wave 24 Flagship Enterprise Cloud Cockpit UX/UI Architecture Upgrade
+- **Files**:
+  - [`index.html`](file:///home/abdelouahab/gcp-ui/index.html)
+  - [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css)
+  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx)
+  - [`src/components/SortableKpiRow.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SortableKpiRow.jsx)
+  - [`src/components/ResourceControlCenter.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ResourceControlCenter.jsx)
+  - [`src/components/CommandPaletteModal.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CommandPaletteModal.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
+- **Capabilities**:
+  - **Precision Obsidian & Daylight Design System (`src/index.css`, `index.html`)**: Unified `#090b10` / `#f4f6f9` canvas, `#10141d` elevated cards with top-edge specular light-catch, `7px` low-profile scrollbars, `.cp-kbd` hardware keycaps, `.cp-toast-progress` countdown bars, and `160ms` `.cp-studio-enter` transitions across all 26 studios.
+  - **3-Zone Cloud Command Header (`src/App.jsx`)**: Left Rail collapse toggle (`[` shortcut) + clickable Brand identity + Searchable Multi-Project Switcher (inline filter + project numbers), Center Global Omnibox Search & Voice Ops Bar (`⌘K`), and Right Burn-Rate pill (`$/hr`), `Alt+G` Privacy Shield, Cockpit tray, `+ Provision` CTA, Mobile PWA frame simulator, and Theme toggle.
+  - **Smart Left Architectural Navigation Rail (`src/App.jsx`)**: Inline `Filter 26 studios...` input (`/` shortcut), Pinned Favorites group (`Star` pin/unpin persisted in `localStorage`), collapsible 5 domain groups, compact `56px` icon-only mode (`[`), and live asset count badges.
+  - **Session History Breadcrumb Bar, 5-Slot Mobile Dock + 26-Studio Sheet & 24px IDE Telemetry Footer**: Browser/IDE-style Back/Forward studio session history, 5-slot thumb dock + searchable slide-up 26-studio directory sheet for mobile/PWA, and a fixed `24px` desktop live status bar (`OAuth2 · Project · Clock · Asset Counts · CFE % · Shortcuts`).
+  - **Executive Overview & Semantic Hover Explainer (`SortableKpiRow.jsx`, `ResourceControlCenter.jsx`, `InnovationHoverExplainer.jsx`)**: Live Infrastructure Footprint Proportion Strip below KPI cards, 1-click Quick Category Filter Bar + sticky investigation side panel in Resource Control Center, and `2px` semantic safety top-accent bars (`emerald` / `blue` / `amber`) across `614` handcrafted hover explainer entries.
+
 ---
 
 ## 4. Next Steps When Resuming in `agy` CLI
-1. Review or test the **Actionable 5-Pillar Cloud Architect Remote MCP Control Plane** ([`src/components/GoogleCloudRemoteMcpStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GoogleCloudRemoteMcpStudio.jsx)) and **Wave 23 Skill-Grounded Moonshot Pillars** across [`BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx), [`SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx), and [`GkeFleetStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GkeFleetStudio.jsx).
+1. Review or test the **Wave 24 Flagship Enterprise Cloud Cockpit UX/UI** (`⌘K` Omnibox, `[` Left Rail collapse, `/` inline studio filter, Pinned Studios, Back/Forward session history, and Mobile PWA 5-slot dock) alongside the **Actionable 5-Pillar Cloud Architect Remote MCP Control Plane** ([`src/components/GoogleCloudRemoteMcpStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GoogleCloudRemoteMcpStudio.jsx)).
