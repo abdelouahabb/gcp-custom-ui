@@ -2306,10 +2306,10 @@ export default function GoogleCloudRemoteMcpStudio({
       </div>
 
       {/* SECTION 1: LIVE 48-SERVER REMOTE MCP MATRIX & INTERACTIVE JSON-RPC WORKBENCH */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left 5 Cols: Official Remote MCP Server Directory */}
-        <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 flex flex-col space-y-3">
-          <div className="flex items-center justify-between gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        {/* Left 5 Cols: Official Remote MCP Server Directory — Full-Height Dynamic Surface */}
+        <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 flex flex-col gap-3 h-full">
+          <div className="flex items-center justify-between gap-2 shrink-0">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                 Official Google Cloud Remote MCP Endpoints
@@ -2324,7 +2324,7 @@ export default function GoogleCloudRemoteMcpStudio({
           </div>
 
           {/* Compact Search + Category Dropdown Toolbar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
               <input
@@ -2350,63 +2350,65 @@ export default function GoogleCloudRemoteMcpStudio({
             </select>
           </div>
 
-          {/* Server List */}
-          <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
-            {filteredServers.map((srv) => {
-              const isSelected = selectedServerId === srv.id;
-              return (
-                <div
-                  key={srv.id}
-                  data-hover-explain="true"
-                  data-mcp-server-card={srv.id}
-                  data-mcp-server-name={srv.name}
-                  data-mcp-server-endpoint={srv.endpointUrl}
-                  data-mcp-server-desc={srv.description}
-                  data-mcp-server-stage={srv.stage}
-                  data-mcp-server-tools={String(srv.toolCount || 0)}
-                  onClick={() => fetchToolsForServer(srv.id)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-500/10 shadow-sm'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 hover:border-blue-500/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-mono font-extrabold text-xs text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          srv.online
-                            ? 'bg-emerald-500'
-                            : 'bg-zinc-400'
-                        }`}
-                      />
-                      <span>{srv.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                        {srv.stage}
-                      </span>
-                      {srv.toolCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-extrabold">
-                          {srv.toolCount} tools
+          {/* Server List — Expands dynamically to 100% of the right workbench height on lg+ (zero dead gray gap) */}
+          <div className="relative flex-1 min-h-[540px]">
+            <div className="space-y-2 max-h-[540px] lg:max-h-none lg:absolute lg:inset-0 overflow-y-auto pr-1">
+              {filteredServers.map((srv) => {
+                const isSelected = selectedServerId === srv.id;
+                return (
+                  <div
+                    key={srv.id}
+                    data-hover-explain="true"
+                    data-mcp-server-card={srv.id}
+                    data-mcp-server-name={srv.name}
+                    data-mcp-server-endpoint={srv.endpointUrl}
+                    data-mcp-server-desc={srv.description}
+                    data-mcp-server-stage={srv.stage}
+                    data-mcp-server-tools={String(srv.toolCount || 0)}
+                    onClick={() => fetchToolsForServer(srv.id)}
+                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-500/12 dark:bg-amber-500/15 shadow-sm'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 hover:border-amber-500/45'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-mono font-extrabold text-xs text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            srv.online
+                              ? 'bg-emerald-500'
+                              : 'bg-zinc-400'
+                          }`}
+                        />
+                        <span className="truncate">{srv.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                          {srv.stage}
                         </span>
-                      )}
-                      {srv.latencyMs && (
-                        <span className="text-[10px] font-mono text-zinc-500">
-                          {srv.latencyMs}ms
-                        </span>
-                      )}
+                        {srv.toolCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-mono font-extrabold">
+                            {srv.toolCount} tools
+                          </span>
+                        )}
+                        {srv.latencyMs && (
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {srv.latencyMs}ms
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 mt-1 truncate">
+                      {srv.endpointUrl}
+                    </div>
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">
+                      {srv.description}
+                    </p>
                   </div>
-                  <div className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400 mt-1 truncate">
-                    {srv.endpointUrl}
-                  </div>
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">
-                    {srv.description}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 

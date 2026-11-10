@@ -18,6 +18,8 @@ import {
   FileCode,
   Workflow,
   ArrowRight,
+  ArrowUpRight,
+  Zap,
   Key,
   Activity,
 } from 'lucide-react';
@@ -856,7 +858,7 @@ export default function FivePersonaCommandCenter({
                 });
               }}
               disabled={loading || tribunalLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-extrabold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer transition-colors disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -873,7 +875,10 @@ export default function FivePersonaCommandCenter({
         </div>
 
         {/* 10-Persona Role Switcher Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+        <div
+          data-action-toolbar="true"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800 items-stretch"
+        >
           {PERSONA_TABS.map((p) => {
             const isActive = activePersona === p.id;
             const liveVoteObj = (
@@ -900,42 +905,42 @@ export default function FivePersonaCommandCenter({
                       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }, 60);
                 }}
-                className={`p-3 rounded-md border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                className={`w-full h-full min-h-[88px] p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                   isActive
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                    ? 'bg-amber-500/15 dark:bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 border-b-2 border-b-amber-500 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-[#0e131d] text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-[#1e2738] hover:border-amber-500/45'
                 }`}
               >
-                <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center justify-between gap-1.5 w-full min-w-0">
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold ${
+                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold truncate ${
                       isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/35'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
                     {p.code} · {p.badge}
                   </span>
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold ${
-                      isActive
-                        ? 'bg-white/20 text-white'
-                        : voteStatus === 'VETO_BLOCK'
-                        ? 'bg-red-500/15 text-red-500'
+                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold shrink-0 ${
+                      voteStatus === 'VETO_BLOCK'
+                        ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
                         : voteStatus === 'CONDITIONAL_WARN'
-                        ? 'bg-amber-500/15 text-amber-500'
-                        : 'bg-emerald-500/15 text-emerald-500'
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                     }`}
                   >
                     {voteScore}/100
                   </span>
                 </div>
-                <div className="text-xs font-mono font-extrabold truncate">
+                <div className="text-xs font-mono font-extrabold leading-snug text-zinc-950 dark:text-zinc-50">
                   {p.role}
                 </div>
                 <div
-                  className={`text-[10px] font-mono line-clamp-2 ${
-                    isActive ? 'text-blue-100' : 'text-zinc-500'
+                  className={`text-[10.5px] font-mono leading-snug line-clamp-2 ${
+                    isActive
+                      ? 'text-zinc-700 dark:text-zinc-300'
+                      : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {p.subtitle}
@@ -949,7 +954,7 @@ export default function FivePersonaCommandCenter({
         <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
           <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
             Active Specialist Lens:{' '}
-            <strong className="text-blue-600 dark:text-blue-400">
+            <strong className="text-amber-600 dark:text-amber-400">
               {activeTabMeta.role}
             </strong>{' '}
             · Focus: <strong>{activeTabMeta.subtitle}</strong>
@@ -967,7 +972,7 @@ export default function FivePersonaCommandCenter({
               className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10.5px] font-mono font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5"
             >
               <span>Companion Studio: {activeTabMeta.ownerLabel}</span>
-              <span className="text-zinc-400">↗</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
             </button>
           )}
         </div>
@@ -1022,11 +1027,14 @@ export default function FivePersonaCommandCenter({
                   tribunalLoading ||
                   remediatingTarget === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS'
                 }
-                className="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
-                {remediatingTarget === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS'
-                  ? 'Batch Hardening...'
-                  : '⚡ 1-Click Batch Harden All Safe Findings'}
+                <Zap className="w-3 h-3 shrink-0" />
+                <span>
+                  {remediatingTarget === 'BATCH_REMEDIATE_ALL_SAFE_FINDINGS'
+                    ? 'Batch Hardening...'
+                    : '1-Click Batch Harden All Safe Findings'}
+                </span>
               </button>
               <button
                 type="button"
@@ -1071,94 +1079,118 @@ export default function FivePersonaCommandCenter({
           </div>
 
           {/* Sub-navigation tabs for the 10 Swarm & 2030 Horizon Intelligence Views */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 w-full">
+          <div
+            data-action-toolbar="true"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 w-full items-stretch"
+          >
             {[
               {
                 id: 'ROLL_CALL',
-                label: '01 · 10-Persona Roll-Call & Live Remediator',
+                code: '01',
+                label: '10-Persona Roll-Call & Live Remediator',
               },
               {
                 id: 'RIPPLE_GRAPH',
-                label: `02 · Cross-Persona Ripple Chains (${
+                code: '02',
+                label: `Cross-Persona Ripple Chains (${
                   (tribunalData.liveCrossPersonaChains || []).length
                 })`,
               },
               {
                 id: 'PARETO_SOLVER',
-                label: '03 · Pareto Conflict Solver',
+                code: '03',
+                label: 'Pareto Conflict Solver',
               },
               {
                 id: 'MERKLE_DIFF',
-                label: `04 · T0 vs. T_Now Merkle Diff & Undo Capsules (${
+                code: '04',
+                label: `T0 vs. T_Now Merkle Diff & Undo Capsules (${
                   (tribunalData.rollbackCapsules || []).length
                 })`,
               },
               {
                 id: 'MULTI_PROJECT_FLEET',
-                label: '05 · [2030] Multi-Project Fleet Council (10 Projects)',
+                code: '05',
+                label: '[2030] Multi-Project Fleet Council (10 Projects)',
               },
               {
                 id: 'PRE_CRIME_72H',
-                label: `06 · [2030] T_+72h Pre-Crime Forecaster (${
+                code: '06',
+                label: `[2030] T_+72h Pre-Crime Forecaster (${
                   tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
                   'ACTIVE'
                 })`,
               },
               {
                 id: 'ZKP_BLIND_PROOF',
-                label: '07 · [2030] ZKP / Ed25519 Blinded Proof & Verifier',
+                code: '07',
+                label: '[2030] ZKP / Ed25519 Blinded Proof & Verifier',
               },
               {
                 id: 'INTENT_COMPILER',
-                label: '08 · [2030] Intent-to-Control-Plane Compiler',
+                code: '08',
+                label: '[2030] Intent-to-Control-Plane Compiler',
               },
               {
                 id: 'WAR_ROOM_DEBATE',
-                label: '09 · [2030] Live 10-Persona Adversarial War-Room Debate',
+                code: '09',
+                label: '[2030] Live 10-Persona Adversarial War-Room Debate',
               },
               {
                 id: 'PRACTITIONER_WORKBENCH',
-                label:
-                  '10 · [2030] 6-Practitioner Agentless Workbench',
+                code: '10',
+                label: '[2030] 6-Practitioner Agentless Workbench',
               },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                data-feature-id={tab.id}
-                onClick={() => {
-                  setTribunalSubTab(tab.id);
-                  if (
-                    tab.id === 'MULTI_PROJECT_FLEET' &&
-                    !fleetTribunalData &&
-                    !fleetLoading
-                  ) {
-                    runFleetTribunal();
-                  }
-                  if (
-                    tab.id === 'WAR_ROOM_DEBATE' &&
-                    !warRoomDebateData &&
-                    !warRoomDebating
-                  ) {
-                    runWarRoomDebate();
-                  }
-                  if (
-                    tab.id === 'PRACTITIONER_WORKBENCH' &&
-                    !vmXrayData &&
-                    !practitionerLoading
-                  ) {
-                    runPractitionerWorkbenchAll();
-                  }
-                }}
-                className={`w-full h-full px-3 py-2.5 rounded-md text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-center text-center leading-snug ${
-                  tribunalSubTab === tab.id
-                    ? 'bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 shadow-sm'
-                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            ].map((tab) => {
+              const isSelected = tribunalSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  data-feature-id={tab.id}
+                  onClick={() => {
+                    setTribunalSubTab(tab.id);
+                    if (
+                      tab.id === 'MULTI_PROJECT_FLEET' &&
+                      !fleetTribunalData &&
+                      !fleetLoading
+                    ) {
+                      runFleetTribunal();
+                    }
+                    if (
+                      tab.id === 'WAR_ROOM_DEBATE' &&
+                      !warRoomDebateData &&
+                      !warRoomDebating
+                    ) {
+                      runWarRoomDebate();
+                    }
+                    if (
+                      tab.id === 'PRACTITIONER_WORKBENCH' &&
+                      !vmXrayData &&
+                      !practitionerLoading
+                    ) {
+                      runPractitionerWorkbenchAll();
+                    }
+                  }}
+                  className={`w-full h-full min-h-[48px] px-3 py-2 rounded-lg text-[11px] font-mono border transition-all cursor-pointer flex items-center gap-2 text-left leading-snug ${
+                    isSelected
+                      ? 'bg-amber-500/15 dark:bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 border-b-2 border-b-amber-500 font-extrabold shadow-sm'
+                      : 'bg-zinc-50 dark:bg-[#0e131d] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-[#1e2738] hover:border-amber-500/45 font-bold'
+                  }`}
+                >
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      isSelected
+                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/35'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    {tab.code}
+                  </span>
+                  <span className="min-w-0 break-words">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* SUB-TAB 1: 10-PERSONA ROLL-CALL VOTING GRID & LIVE GCP REMEDIATOR */}
@@ -1977,11 +2009,14 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => runWarRoomDebate()}
                   disabled={warRoomDebating}
-                  className="px-3.5 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
                 >
-                  {warRoomDebating
-                    ? 'Convening 10-Persona War-Room...'
-                    : '⚡ Convene Live 10-Persona Debate'}
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {warRoomDebating
+                      ? 'Convening 10-Persona War-Room...'
+                      : 'Convene Live 10-Persona Debate'}
+                  </span>
                 </button>
               </div>
 
@@ -2600,13 +2635,17 @@ export default function FivePersonaCommandCenter({
                     activeTabMeta.ownerSubTab
                   )
                 }
-                className="px-2.5 py-1 rounded-md border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
               >
-                Open {activeTabMeta.ownerLabel} ↗
+                <span>Open {activeTabMeta.ownerLabel}</span>
+                <ArrowUpRight className="w-3 h-3 shrink-0" />
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 w-full">
+          <div
+            data-action-toolbar="true"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full items-stretch"
+          >
             {PERSONA_TABS.map((t) => {
               const isSelected = activePersona === t.id;
               const liveVoteObj = (
@@ -2626,48 +2665,46 @@ export default function FivePersonaCommandCenter({
                   type="button"
                   onClick={() => setActivePersona(t.id)}
                   title={`[${t.code}] ${t.role} — ${t.subtitle} (${voteStatus} · ${voteScore}/100)`}
-                  className={`w-full h-full px-2 py-2 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex flex-col items-center justify-between gap-1 text-center border ${
+                  className={`w-full h-full min-h-[44px] px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left border ${
                     isSelected
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:border-blue-500/40'
+                      ? 'bg-amber-500/15 dark:bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 border-b-2 border-b-amber-500 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-[#0e131d] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-[#1e2738] hover:border-amber-500/45'
                   }`}
                 >
-                  <div className="w-full flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span
-                      className={`px-1 py-0.2 rounded text-[8.5px] font-extrabold ${
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
                         isSelected
-                          ? 'bg-white/20 text-white'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                          ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/35'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
                       {t.code}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1 text-[8.5px] font-extrabold ${
-                        isSelected
-                          ? 'text-white'
-                          : voteStatus === 'VETO_BLOCK'
-                          ? 'text-red-500'
-                          : voteStatus === 'CONDITIONAL_WARN'
-                          ? 'text-amber-500'
-                          : 'text-emerald-500'
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          voteStatus === 'VETO_BLOCK'
-                            ? 'bg-red-500'
-                            : voteStatus === 'CONDITIONAL_WARN'
-                            ? 'bg-amber-400'
-                            : 'bg-emerald-400'
-                        }`}
-                      />
-                      {voteScore}
+                    <span className="leading-snug font-extrabold truncate">
+                      {t.role}
                     </span>
                   </div>
-                  <div className="leading-tight font-extrabold text-[10px] line-clamp-2">
-                    {t.role}
-                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[9.5px] font-extrabold shrink-0 ${
+                      voteStatus === 'VETO_BLOCK'
+                        ? 'text-red-600 dark:text-red-400'
+                        : voteStatus === 'CONDITIONAL_WARN'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        voteStatus === 'VETO_BLOCK'
+                          ? 'bg-red-500'
+                          : voteStatus === 'CONDITIONAL_WARN'
+                          ? 'bg-amber-400'
+                          : 'bg-emerald-400'
+                      }`}
+                    />
+                    {voteScore}
+                  </span>
                 </button>
               );
             })}
@@ -3844,11 +3881,14 @@ export default function FivePersonaCommandCenter({
                     type="button"
                     onClick={() => runPersonaAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
                     disabled={busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
-                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
-                    {busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'
-                      ? 'Verifying Model Armor & RAG...'
-                      : '⚡ Verify Model Armor & RAG Recall Live'}
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {busyAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'
+                        ? 'Verifying Model Armor & RAG...'
+                        : 'Verify Model Armor & RAG Recall Live'}
+                    </span>
                   </button>
                   {overview?.aiMlOpsEngineer?.modelArmorFirewall?.gcloudModelArmorCmd && (
                     <>
@@ -4072,11 +4112,14 @@ export default function FivePersonaCommandCenter({
                     type="button"
                     onClick={() => runPersonaAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
                     disabled={busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
-                    className="px-3.5 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
-                    {busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'
-                      ? 'Auditing SLO Gate...'
-                      : '⚡ Run SLO Freeze Gate & Change Correlation'}
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {busyAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'
+                        ? 'Auditing SLO Gate...'
+                        : 'Run SLO Freeze Gate & Change Correlation'}
+                    </span>
                   </button>
                   {overview?.sreOncallCommander?.sloBurnFreezeGate?.canaryRollbackCmd && (
                     <>
@@ -4225,11 +4268,14 @@ export default function FivePersonaCommandCenter({
                     type="button"
                     onClick={() => runPersonaAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
                     disabled={busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
-                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
-                    {busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'
-                      ? 'Auditing Locks & Indexes...'
-                      : '⚡ Run Live Lock & Index Advisor Audit'}
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {busyAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'
+                        ? 'Auditing Locks & Indexes...'
+                        : 'Run Live Lock & Index Advisor Audit'}
+                    </span>
                   </button>
                   {overview?.databaseReliabilityEngineer?.lockTreeAndHotKeyInspector?.terminateLockSql && (
                     <button
@@ -4395,11 +4441,14 @@ export default function FivePersonaCommandCenter({
                     type="button"
                     onClick={() => runPersonaAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
                     disabled={busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
-                    className="px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
-                    {busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'
-                      ? 'Scanning Zombie Disks & IPs...'
-                      : '⚡ Run Live Zombie Resource Reaper & Unit Audit'}
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {busyAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'
+                        ? 'Scanning Zombie Disks & IPs...'
+                        : 'Run Live Zombie Resource Reaper & Unit Audit'}
+                    </span>
                   </button>
                   {overview?.finopsEconomicsEngineer?.zombieResourceReaper?.reapZombiesCmd && (
                     <>
@@ -4531,11 +4580,14 @@ export default function FivePersonaCommandCenter({
                     type="button"
                     onClick={() => runPersonaAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
                     disabled={busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
-                    className="px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
-                    {busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'
-                      ? 'Auditing GKE & mTLS Mesh...'
-                      : '⚡ Run GKE Right-Sizer & mTLS Mesh Check'}
+                    <Zap className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {busyAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'
+                        ? 'Auditing GKE & mTLS Mesh...'
+                        : 'Run GKE Right-Sizer & mTLS Mesh Check'}
+                    </span>
                   </button>
                   {overview?.platformK8sEngineer?.oomAndCpuRightSizer?.patchedResourcesYaml && (
                     <button

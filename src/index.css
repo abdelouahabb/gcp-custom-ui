@@ -440,8 +440,8 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu.grid,
   [role="tablist"].grid,
-  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
-) > button:not(.justify-between) {
+  div.grid:not([data-action-toolbar="true"]):not(:has(> button.flex-col)):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:not(.justify-between):not(.flex-col) {
   width: 100% !important;
   min-width: 0 !important;
   justify-content: center !important;
@@ -457,17 +457,30 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
   justify-content: space-between !important;
 }
 
-/* Base Tab Item Styling (Uniform 38px height, crisp 5px radius, 2px bottom indicator) */
+/* Multi-row vertical specialist/feature switcher cards (`button.flex-col`) keep stacked layout & full card height */
+div.grid:not([data-action-toolbar="true"]):has(> button.flex-col:first-child):has(> button.flex-col:nth-child(3)):not(:has(> :not(button))) > button.flex-col {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 4.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.14s ease !important;
+}
+
+/* Base Tab Item Styling (Auto-expanding 38px+ height so multi-line labels NEVER overflow, crisp 5px radius) */
 :is(
   .cp-segmented-menu,
   [role="tablist"],
   div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
-  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.grid:not([data-action-toolbar="true"]):not(:has(> button.flex-col)):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
-) > button {
-  height: 2.375rem !important;
+) > button:not(.flex-col) {
+  height: auto !important;
   min-height: 2.375rem !important;
-  padding: 0 0.65rem !important;
+  padding: 0.375rem 0.65rem !important;
   border-radius: 0.3125rem !important;
   box-shadow: none !important;
   display: inline-flex !important;
@@ -477,17 +490,17 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   line-height: 1.25rem !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   transition: all 0.12s ease !important;
 }
 
-/* Strip decorative icon-box wrappers & hide multi-line card subtitles inside tabs */
+/* Strip decorative icon-box wrappers & hide multi-line card subtitles inside single-row tabs only */
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.grid:not([data-action-toolbar="true"]):not(:has(> button.flex-col)):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
-) > button span.p-1 {
+) > button:not(.flex-col) span.p-1 {
   background: transparent !important;
   padding: 0 !important;
 }
@@ -495,14 +508,14 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
+  div.grid:not([data-action-toolbar="true"]):not(:has(> button.flex-col)):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600)),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
-) > button div.min-w-0 > div:nth-child(n+2),
+) > button:not(.flex-col) div.min-w-0 > div:nth-child(n+2),
 :is(
   .cp-segmented-menu,
   [role="tablist"],
-  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
-) > button > p {
+  div.grid:not([data-action-toolbar="true"]):not(:has(> button.flex-col)):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600))
+) > button:not(.flex-col) > p {
   display: none !important;
 }
 
