@@ -1237,7 +1237,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35 text-xs font-mono font-extrabold">
                 <Layers className="w-3.5 h-3.5" />
                 <span>50-PLAYBOOK APACHE ICEBERG &amp; BORDERLESS LAKEHOUSE MATRIX</span>
               </span>
@@ -1260,13 +1260,13 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-extrabold">
-              🔧 Hybrid: BQ/GCS Direct REST + gcloud 591.0.0 CLI (Online Token Bridged)
+              Hybrid: BQ/GCS Direct REST + gcloud 591.0.0 CLI (Online Token Bridged)
             </span>
             <button
               type="button"
               onClick={() => handleProbeEstate(false)}
               disabled={probing}
-              className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${probing ? 'animate-spin' : ''}`}
@@ -1450,7 +1450,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 >
                   <div className="space-y-1.5 min-h-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                      <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35">
                         PLAYBOOK #{String(pb.num).padStart(2, '0')}
                       </span>
                       <LakehouseTrackBadge track={pb.track} />
@@ -1756,7 +1756,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35">
                       PLAYBOOK #{String(pb.num).padStart(2, '0')}
                     </span>
                     <LakehouseTrackBadge track={pb.track} />
@@ -1932,8 +1932,8 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         onClick={() => setCodeEngineTab(ct.id)}
                         className={`w-full h-10 px-3 rounded-md text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                           active
-                            ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                            ? 'bg-amber-500/15 text-zinc-950 dark:text-white border-amber-500 shadow-sm'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">

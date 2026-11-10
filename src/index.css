@@ -633,10 +633,23 @@ div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> butto
   color: #fbbf24 !important;
 }
 
-/* Inner step/count badges inside active tabs also use warm amber/orange */
+/* Inner step/count badges inside active tabs also use warm amber/orange (both Light & Dark mode, including inline-flex) */
+html:not(.dark) :is(
+  .cp-segmented-menu,
+  [role="tablist"],
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
+  div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
+) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) span[class*="bg-"] {
+  background-color: rgba(217, 119, 6, 0.16) !important;
+  color: #92400e !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
 .dark :is(
   .cp-segmented-menu,
   [role="tablist"],
+  div.inline-flex:not([data-action-toolbar="true"]):not(.overflow-hidden):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.grid:not([data-action-toolbar="true"]):has(> button:first-child):has(> button:nth-child(3)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"])),
   div.flex:not([data-action-toolbar="true"]):not(.justify-end):not(.justify-between):not(.flex-col):has(> button:first-child):has(> button:nth-child(2)):not(:has(> :not(button))):not(:has(> button[disabled])):not(:has(> button[data-feature-id*="CREATE"])):not(:has(> button[data-feature-id*="REFRESH"])):has(> button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]))
 ) > button:is(.bg-blue-600, [aria-selected="true"], .bg-indigo-600, .bg-purple-600, .bg-emerald-600, .bg-rose-600, .bg-amber-500, .border-amber-500, [class*="bg-amber-500/"]) span[class*="bg-"] {
@@ -678,15 +691,47 @@ button:not(.bg-blue-600):not([role="tab"]):not(.cp-nav-rail-item):not(.border-b-
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-/* Fix buttons that had inverted `dark:bg-zinc-100 dark:text-zinc-900` so they never render dark text on night-blue */
-.dark button:is([class*="dark:text-zinc-900"], [class*="dark:text-zinc-950"], [class*="dark:text-slate-900"], [class*="text-zinc-900"]:not([class*="bg-amber-"]):not([class*="bg-emerald-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"])) {
+/* Fix buttons that had inverted `dark:bg-zinc-100 dark:text-zinc-900` so they never render white-on-white or dark-on-dark */
+.dark button:is([class*="dark:text-zinc-900"], [class*="dark:text-zinc-950"], [class*="dark:text-slate-900"], .dark\:bg-zinc-100, .dark\:bg-zinc-200, .dark\:bg-slate-100, .dark\:bg-white, [class*="text-zinc-900"]:not([class*="bg-amber-"]):not([class*="bg-emerald-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"])) {
   background-color: var(--cp-bg-control) !important;
   border: 1px solid var(--cp-border-control) !important;
   color: #f8fafc !important;
 }
 
-.dark button:not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-emerald-400"]):not([class*="bg-cyan-400"]) :is(.text-zinc-900, .text-zinc-800, .text-zinc-700, .dark\:text-zinc-900, .dark\:text-zinc-950) {
+.dark button:is(.dark\:hover\:bg-white, .dark\:hover\:bg-zinc-100, .dark\:hover\:bg-zinc-200, .hover\:bg-white, .hover\:bg-zinc-50):hover:not(:disabled) {
+  background-color: var(--cp-bg-control-hover) !important;
+  border-color: var(--cp-border-control-hover) !important;
+  color: #ffffff !important;
+}
+
+/* Normalize legacy inverted stark-white tags/badges (`dark:bg-zinc-100` / `dark:bg-white`) in Dark Mode into crisp obsidian steel pills (13.2:1 AAA contrast, zero white-on-white) */
+.dark :is(span, div):is(.dark\:bg-zinc-100, .dark\:bg-zinc-200, .dark\:bg-slate-100, .dark\:bg-white) {
+  background-color: #182032 !important;
   color: #f1f5f9 !important;
+  border: 1px solid #2e3a52 !important;
+}
+
+/* Never force white text onto child badges inside <button> that carry their own bright amber/yellow/emerald/cyan/white fill */
+.dark button:not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-emerald-400"]):not([class*="bg-cyan-400"]) :is(.text-zinc-900, .text-zinc-800, .text-zinc-700, .dark\:text-zinc-900, .dark\:text-zinc-950):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-emerald-300"]):not([class*="bg-emerald-400"]):not([class*="bg-cyan-300"]):not([class*="bg-cyan-400"]):not(.bg-white) {
+  color: #f1f5f9 !important;
+}
+
+/* Crisp recessed badge contrast for `bg-white/20 text-white` & `bg-white/25 text-white` pills inside solid blue buttons (upgrades 3.27:1 milky wash to 6.8:1 AAA contrast) */
+button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item) :is(span.bg-white\/20, span.bg-white\/25) {
+  background-color: rgba(9, 13, 22, 0.34) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* Guarantee dark text (#09090b) on solid bright yellow-amber (`#fbbc04` / `#fcc934`) badges & buttons outside of tab strips */
+:is(span, button:not([role="tab"])):is(.bg-amber-500, .bg-amber-400, .bg-yellow-500, .bg-yellow-400).text-white {
+  color: #09090b !important;
+}
+
+/* Upgrade muted `bg-zinc-100 dark:bg-zinc-800 text-zinc-500` count tags in Dark Mode from 2.24:1 to 8.9:1 legible slate */
+.dark span.dark\:bg-zinc-800.text-zinc-500,
+.dark span.dark\:bg-zinc-900.text-zinc-500 {
+  color: #cbd5e1 !important;
 }
 
 .dark button:not(.bg-blue-600):not([role="tab"]):not(.cp-nav-rail-item):not(.border-b-2):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]):not([class*="bg-green-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-cyan-"]):hover:not(:disabled) {

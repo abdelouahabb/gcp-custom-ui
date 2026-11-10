@@ -447,7 +447,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   <button
                     type="button"
                     onClick={handleStartGmailPkceSignIn}
-                    className="w-full bg-white hover:bg-zinc-50 text-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md py-3 px-4 text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-3"
+                    className="w-full bg-white dark:bg-[#151b28] hover:bg-zinc-50 dark:hover:bg-[#1f283b] text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-[#2e3a52] rounded-md py-3 px-4 text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-3 cursor-pointer"
                   >
                     {/* Google G SVG */}
                     <svg className="w-5 h-5" viewBox="0 0 24 24">

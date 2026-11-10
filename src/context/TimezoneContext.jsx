@@ -816,7 +816,7 @@ export function TimezoneSelectorPill({ onShowToast }) {
               onClick={toggleHour24}
               className={`py-1.5 px-2.5 rounded-lg border font-mono text-[10.5px] font-bold transition-colors cursor-pointer ${
                 hour24
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                  ? 'bg-amber-500/15 text-zinc-950 dark:text-amber-300 border-amber-500'
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
               }`}
             >
@@ -863,10 +863,10 @@ export function TimezoneSelectorPill({ onShowToast }) {
                 key={cf.id}
                 type="button"
                 onClick={() => setContinentFilter(cf.id)}
-                className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold whitespace-nowrap transition-colors cursor-pointer shrink-0 border ${
                   continentFilter === cf.id
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                    ? 'bg-amber-500/15 text-zinc-950 dark:text-amber-300 border-amber-500'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800'
                 }`}
               >
                 {cf.label}

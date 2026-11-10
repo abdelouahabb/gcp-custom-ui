@@ -3880,10 +3880,10 @@ LIMIT 50;`;
                       ? 'Encrypt and seal your API key inside a non-extractable Browser WebCrypto AES-256-GCM enclave (0 bytes sent over local HTTP)'
                       : 'Encrypt your API key in the browser with RSA-OAEP-256 and seal it inside the Node.js server AES-256-GCM RAM Vault'
                   }
-                  className={`flex-1 px-3 py-2 rounded-md text-white text-xs font-mono font-bold cursor-pointer transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-mono font-bold cursor-pointer transition-all ${
                     apiKeyInput.trim()
-                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
-                      : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-600'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20'
+                      : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-100'
                   }`}
                 >
                   {transportMode === 'BROWSER_DIRECT_TLS13'

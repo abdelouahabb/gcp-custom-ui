@@ -1856,7 +1856,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 aria-selected={active}
                 onClick={() => setArchitectTab(tab.id)}
                 className={`px-3 py-2 text-xs font-mono font-bold cursor-pointer ${
-                  active ? 'bg-amber-500 text-white' : ''
+                  active ? 'bg-amber-500/15 text-zinc-950 dark:text-white border border-amber-500' : ''
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />

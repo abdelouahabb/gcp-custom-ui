@@ -5448,7 +5448,7 @@ export default function LogStreamerAndShell({
                               onClick={() => togglePinLog(entry.id)}
                               className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
                                 isPinned
-                                  ? 'bg-amber-500 text-white border-amber-500'
+                                  ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500'
                                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
                               }`}
                             >
