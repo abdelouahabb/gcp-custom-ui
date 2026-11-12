@@ -134,6 +134,756 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'https://*.googleapis.com/mcp (JSON-RPC 2.0) · Vertex AI Gemini 3.8 Flash',
     safetyMode: 'READ_ONLY',
   },
+  LOCAL_EMULATORS: {
+    badge: '5 OFFICIAL 127.0.0.1 EMULATORS · $0.00/HR',
+    title: 'Google Cloud Local Emulators Studio — $0.00/hr 127.0.0.1 Inner-Loop Twin & REST Workbench',
+    whatItDoes:
+      'Manages official local Google Cloud SDK and Docker emulators on 127.0.0.1 (Pub/Sub, Firestore, Datastore, Spanner, Bigtable), provides an interactive local REST/SQL workbench, clones live cloud schemas locally at $0.00/hr, and exports project-scoped *_EMULATOR_HOST configs.',
+    enterpriseValue:
+      'Eliminates hourly cloud dev/staging database burn ($0.00/hr local execution) and prevents accidental test mutations against shared cloud infrastructure.',
+    gcpApis: 'gcloud beta emulators (pubsub · firestore · datastore · spanner · bigtable) · 127.0.0.1 REST',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_TAB_FLEET_CONTROL: {
+    badge: 'PILLAR 1 · EMULATOR FLEET & HOST READINESS',
+    title: 'Emulator Fleet Control, Host SDK/JRE/Docker Readiness & Port Cockpit',
+    whatItDoes:
+      'Displays live process PIDs, RSS memory usage, TCP socket RTT, installed Google Cloud SDK emulator components, Java JRE and Docker Engine readiness, and 1-click lifecycle controls across all 5 official emulators.',
+    enterpriseValue:
+      'Verifies workstation prerequisites in milliseconds and starts or stops isolated 127.0.0.1 emulators without touching live cloud resources.',
+    gcpApis: 'GET /api/project/{project}/emulators/overview · gcloud components list · TCP Socket Probe',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_TAB_LIVE_WORKBENCH: {
+    badge: 'PILLAR 2 · INTERACTIVE 127.0.0.1 REST WORKBENCH',
+    title: 'Interactive Local REST & SQL Workbench (Pub/Sub, Datastore, Firestore, Spanner, Bigtable)',
+    whatItDoes:
+      'Executes real HTTP REST and SQL requests directly against your running 127.0.0.1 emulators—publishing/pulling Pub/Sub messages, committing Datastore entities, upserting Firestore documents, and running Spanner DDL/SQL.',
+    enterpriseValue:
+      'Lets engineers prototype schemas, test event payloads, and inspect local state visually at $0.00 API cost before writing application code.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench -> http://127.0.0.1:<port>/v1/...',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_TAB_CLOUD_SCHEMA_SYNC: {
+    badge: 'PILLAR 3 · $0.00 CLOUD-TO-LOCAL TWIN SYNC',
+    title: 'Cloud-to-Local $0.00 Schema Twin Sync & FinOps Savings Matrix',
+    whatItDoes:
+      'Compares live Pub/Sub topics/subscriptions, Firestore databases, Spanner instances, and Bigtable clusters in your active GCP project against your 127.0.0.1 emulators, with 1-click read-only schema cloning into localhost.',
+    enterpriseValue:
+      'Mirrors real production topic topologies and Spanner DDL onto 127.0.0.1 in seconds while saving hundreds of dollars per month in dedicated dev instances.',
+    gcpApis: 'POST /api/project/{project}/emulators/clone-cloud-schema · pubsub · firestore · spanner',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_TAB_ENV_AND_LOGS: {
+    badge: 'PILLAR 4 · *_EMULATOR_HOST EXPORTER & LOGS',
+    title: 'Multi-Format *_EMULATOR_HOST Exporter & Live Process Stdout/Stderr Ring Buffer',
+    whatItDoes:
+      'Generates ready-to-copy Bash exports, .env files, docker-compose.yml sidecars, and Node.js/Python/Go SDK connection snippets dynamically bound to your active emulator ports, alongside live process stdout/stderr logs.',
+    enterpriseValue:
+      'Wires local microservices, pytest/Jest suites, and Docker Compose stacks to 127.0.0.1 emulators with zero manual port-matching errors.',
+    gcpApis: 'GET /api/project/{project}/emulators/{type}/logs · PUBSUB/FIRESTORE/SPANNER_EMULATOR_HOST',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_START: {
+    badge: 'LAUNCH $0.00 LOCAL EMULATOR',
+    title: 'Start Official Google Cloud Emulator Process on 127.0.0.1',
+    whatItDoes:
+      'Spawns a detached local emulator process group (gcloud beta emulators ... or Docker container fallback) bound strictly to 127.0.0.1 on the configured TCP port and verifies socket readiness.',
+    enterpriseValue:
+      'Gives you a real local wire-compatible Google Cloud endpoint in seconds at $0.00/hr cloud cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/start (gcloud beta emulators / docker run)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_STOP: {
+    badge: 'STOP LOCAL EMULATOR PROCESS',
+    title: 'Stop Running Local Emulator Process Group on 127.0.0.1',
+    whatItDoes:
+      'Terminates the selected local emulator process group (or managed Docker container) on 127.0.0.1, frees its bound TCP port, and drops ephemeral in-memory session state after confirmation.',
+    enterpriseValue:
+      'Reclaims local workstation RAM and ports cleanly without leaving orphaned background Java or container processes.',
+    gcpApis: 'POST /api/project/{project}/emulators/stop (Process Group SIGTERM / docker stop)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_STOP_ALL: {
+    badge: 'TEARDOWN ALL LOCAL EMULATORS',
+    title: 'Stop All Running Local Cloud Emulators on 127.0.0.1',
+    whatItDoes:
+      'Gracefully stops every active local Google Cloud emulator process group and managed emulator container on 127.0.0.1 in a single confirmed action.',
+    enterpriseValue:
+      'Frees all localhost emulator ports (8081, 8085, 8086, 8089, 9010/9020) and workstation memory in one click when switching tasks.',
+    gcpApis: 'POST /api/project/{project}/emulators/stop ({ stopAll: true })',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_RESET_STATE: {
+    badge: 'WIPE LOCAL EMULATOR STATE',
+    title: 'Reset Emulator State & Purge Local Data Directory',
+    whatItDoes:
+      'Stops the selected local emulator if active, removes its local temporary data directory under /tmp/cloudpulse-emulators/, and resets all local topics, documents, entities, or SQL tables to a clean slate.',
+    enterpriseValue:
+      'Guarantees deterministic, repeatable integration tests from a fresh zero-state baseline without touching live cloud data.',
+    gcpApis: 'POST /api/project/{project}/emulators/reset-data (127.0.0.1 Local Directory Purge)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_INSTALL_COMPONENT: {
+    badge: 'INSTALL GCLOUD SDK COMPONENT',
+    title: 'Install Official Emulator Component into Local Google Cloud SDK',
+    whatItDoes:
+      'Runs gcloud components install <componentId> --quiet on your local host after confirmation—or detects apt/snap/Homebrew SDK management and provides the exact copyable OS package install command.',
+    enterpriseValue:
+      'Unlocks missing Pub/Sub, Firestore, Spanner, Datastore, or Bigtable emulator binaries directly from the cockpit.',
+    gcpApis: 'POST /api/project/{project}/emulators/install-component (gcloud components install)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_PROBE_PORT: {
+    badge: 'LIVE 127.0.0.1 TCP SOCKET PROBE',
+    title: 'Probe Local Emulator TCP Socket & Measure Loopback RTT',
+    whatItDoes:
+      'Opens a real TCP socket connection to 127.0.0.1:<port> to verify whether the local emulator listener is accepting connections and measures exact sub-millisecond loopback RTT.',
+    enterpriseValue:
+      'Confirms instant wire-level port reachability and detects port conflicts or externally started emulators.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PROBE_PORT via net.Socket)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_OPEN_WORKBENCH: {
+    badge: 'OPEN IN LOCAL REST WORKBENCH',
+    title: 'Open Selected Emulator in Interactive Local REST & SQL Workbench',
+    whatItDoes:
+      'Switches to the Interactive Local REST Workbench pre-focused on this emulator so you can create topics, publish/pull messages, upsert entities/documents, or execute Spanner SQL.',
+    enterpriseValue:
+      'Zero context-switching from process startup straight into live payload testing on 127.0.0.1.',
+    gcpApis: 'Local Cloud Emulators Studio -> LIVE_WORKBENCH Sub-Tab',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_REFRESH_FLEET: {
+    badge: 'REFRESH HOST & FLEET TELEMETRY',
+    title: 'Refresh Local Emulator Fleet, PID/RSS Metrics & Cloud Asset Counts',
+    whatItDoes:
+      'Re-probes all 5 local emulator TCP ports, process PIDs, RSS memory usage, host SDK/Java/Docker readiness, and live Google Cloud schema counts in parallel.',
+    enterpriseValue:
+      'Keeps local process health and cloud twin drift metrics 100% live without restarting any running emulators.',
+    gcpApis: 'GET /api/project/{project}/emulators/overview',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_CREATE_TOPIC: {
+    badge: 'CREATE LOCAL PUB/SUB TOPIC & SUB',
+    title: 'Create Topic & Pull Subscription on Local Pub/Sub Emulator',
+    whatItDoes:
+      'Calls PUT http://127.0.0.1:8085/v1/projects/{project}/topics/{topic} (and optional subscription) directly against your running local Pub/Sub emulator.',
+    enterpriseValue:
+      'Lets you scaffold event-driven topics and pull subscriptions locally at $0.00 cost in milliseconds.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · CREATE_TOPIC)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_PUBLISH_MESSAGE: {
+    badge: 'PUBLISH TO LOCAL PUB/SUB',
+    title: 'Publish Base64-Encoded UTF-8 / JSON Message to Local Pub/Sub Topic',
+    whatItDoes:
+      'Encodes your UTF-8/JSON payload and custom message attributes and calls :publish on the local 127.0.0.1 Pub/Sub emulator, returning the assigned local messageId.',
+    enterpriseValue:
+      'Tests event consumers, dead-letter handling, and schema validation locally with zero cloud Pub/Sub throughput fees.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · PUBLISH_MESSAGE)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_PULL_MESSAGES: {
+    badge: 'PULL & INSPECT LOCAL MESSAGES',
+    title: 'Pull & Decode Buffered Messages from Local Pub/Sub Subscription',
+    whatItDoes:
+      'Calls :pull (and optional :acknowledge) against your local Pub/Sub subscription on 127.0.0.1 and decodes Base64 message payloads, attributes, and publish timestamps.',
+    enterpriseValue:
+      'Verifies exact end-to-end message delivery and attribute propagation inside your local event loop.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · PULL_MESSAGES)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_DELETE_TOPIC: {
+    badge: 'DELETE LOCAL PUB/SUB TOPIC',
+    title: 'Delete Topic from Local 127.0.0.1 Pub/Sub Emulator',
+    whatItDoes:
+      'Deletes the selected topic from your local Pub/Sub emulator on 127.0.0.1 after confirmation while leaving all real Google Cloud Pub/Sub topics untouched.',
+    enterpriseValue:
+      'Cleans up obsolete local test topics without resetting your entire emulator session.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · DELETE_TOPIC)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_LIST_ENTITIES: {
+    badge: 'QUERY LOCAL DATASTORE KIND',
+    title: 'Run GQL / Kind Query Against Local Cloud Datastore Emulator',
+    whatItDoes:
+      'Calls :runQuery on http://127.0.0.1:8081/v1/projects/{project}:runQuery to list entities and typed properties stored under the selected Kind.',
+    enterpriseValue:
+      'Inspects local Datastore entity keys and property types instantly with zero cloud read operations.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · LIST_ENTITIES)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_PUT_ENTITY: {
+    badge: 'COMMIT LOCAL DATASTORE ENTITY',
+    title: 'Upsert (Put) Entity into Local Cloud Datastore Emulator',
+    whatItDoes:
+      'Maps your JSON fields into typed Datastore Value objects and commits a non-transactional upsert to http://127.0.0.1:8081/v1/projects/{project}:commit.',
+    enterpriseValue:
+      'Seeds local NoSQL test fixtures and verifies entity key structures at $0.00 cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · PUT_ENTITY)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_DELETE_ENTITY: {
+    badge: 'DELETE LOCAL DATASTORE ENTITY',
+    title: 'Delete Entity from Local 127.0.0.1 Cloud Datastore Emulator',
+    whatItDoes:
+      'Commits a delete mutation for the selected Kind and key against your local Datastore emulator after confirmation, leaving cloud entities 100% untouched.',
+    enterpriseValue:
+      'Removes individual test entities cleanly during local debugging.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · DELETE_ENTITY)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_LIST_DOCUMENTS: {
+    badge: 'LIST LOCAL FIRESTORE COLLECTION',
+    title: 'List Documents in Collection on Local Cloud Firestore Emulator',
+    whatItDoes:
+      'Fetches documents from http://127.0.0.1:8086/v1/projects/{project}/databases/(default)/documents/{collection} and flattens typed Firestore fields into readable JSON.',
+    enterpriseValue:
+      'Inspects local Firestore collections and nested document payloads without burning daily cloud read quotas.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · LIST_DOCUMENTS)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_UPSERT_DOCUMENT: {
+    badge: 'UPSERT LOCAL FIRESTORE DOCUMENT',
+    title: 'Create or Patch JSON Document in Local Cloud Firestore Emulator',
+    whatItDoes:
+      'Converts your JSON object into Firestore typed fields and writes the document to http://127.0.0.1:8086/v1/projects/{project}/databases/(default)/documents/{collection}/{docId}.',
+    enterpriseValue:
+      'Seeds realistic Firestore documents locally for mobile/web app and Cloud Functions testing at $0.00.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · UPSERT_DOCUMENT)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_DELETE_DOCUMENT: {
+    badge: 'DELETE LOCAL FIRESTORE DOCUMENT',
+    title: 'Delete Document from Local 127.0.0.1 Cloud Firestore Emulator',
+    whatItDoes:
+      'Calls HTTP DELETE on the selected document path inside your local Firestore emulator after confirmation, leaving live cloud Firestore databases untouched.',
+    enterpriseValue:
+      'Tests document deletion listeners and cleans up local Firestore fixtures safely.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · DELETE_DOCUMENT)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  LOCAL_EMULATORS_BOOTSTRAP_INSTANCE: {
+    badge: 'BOOTSTRAP LOCAL SPANNER DB',
+    title: 'Bootstrap Local Spanner Emulator Instance & Database on 127.0.0.1:9020',
+    whatItDoes:
+      'Provisions an emulator-config instance and database via the local Cloud Spanner REST API (http://127.0.0.1:9020/v1) so you can immediately run DDL and SQL queries.',
+    enterpriseValue:
+      'Gives you a working Cloud Spanner instance in <1 second at $0.00/hr instead of paying $65–$650+/mo for a cloud dev instance.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (SPANNER · BOOTSTRAP_INSTANCE_DB)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_EXECUTE_SQL: {
+    badge: 'EXECUTE LOCAL SPANNER SQL / DDL',
+    title: 'Execute SQL Query or Schema DDL Against Local Spanner Emulator',
+    whatItDoes:
+      'Creates a local Spanner session on 127.0.0.1:9020 and executes your SELECT query, DML statement, or CREATE TABLE DDL, returning typed rows and column metadata.',
+    enterpriseValue:
+      'Validates GoogleSQL queries, interleaved table schemas, and migrations locally at $0.00 cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (SPANNER · EXECUTE_SQL)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_CLONE_CLOUD_SCHEMA: {
+    badge: '1-CLICK CLOUD -> LOCAL TWIN SYNC',
+    title: 'Clone Live Cloud Schema & Topology into 127.0.0.1 Local Emulator ($0.00)',
+    whatItDoes:
+      'Reads live Pub/Sub topics/subscriptions, Firestore collection structure, or Spanner DDL from your active Google Cloud project in 100% read-only mode and recreates matching resources inside your local emulator.',
+    enterpriseValue:
+      'Eliminates drift between production schemas and local developer environments with zero risk to production data.',
+    gcpApis: 'POST /api/project/{project}/emulators/clone-cloud-schema (Read-Only Cloud -> Local Write)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_COPY_ENV_BUNDLE: {
+    badge: 'COPY *_EMULATOR_HOST BUNDLE',
+    title: 'Copy Project-Scoped *_EMULATOR_HOST Configuration Bundle to Clipboard',
+    whatItDoes:
+      'Copies the generated Bash export script, .env file, docker-compose.yml service block, or Node.js/Python/Go client SDK snippet pre-wired with your active project ID and 127.0.0.1 emulator ports.',
+    enterpriseValue:
+      'Redirects official @google-cloud/* client libraries from live cloud billing to 127.0.0.1 automatically via standard environment variables.',
+    gcpApis: 'PUBSUB_EMULATOR_HOST · FIRESTORE_EMULATOR_HOST · DATASTORE_EMULATOR_HOST · SPANNER_EMULATOR_HOST · BIGTABLE_EMULATOR_HOST',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_COPY_REMEDIATION: {
+    badge: 'COPY HOST REMEDIATION CLI',
+    title: 'Copy Exact Host SDK / JRE / Package-Manager Remediation Command',
+    whatItDoes:
+      'Copies the exact apt-get, gcloud components install, or OpenJDK JRE installation command required to unlock the emulator binary on your Linux/macOS host.',
+    enterpriseValue:
+      'Resolves missing Java JRE or system-package-managed Cloud SDK component errors in one paste.',
+    gcpApis: 'Host Readiness Doctor (google-cloud-cli-* / default-jre-headless)',
+    safetyMode: 'READ_ONLY',
+  },
+  LOCAL_EMULATORS_REFRESH_LOGS: {
+    badge: 'TAIL LOCAL PROCESS RING BUFFER',
+    title: 'Refresh Live Local Emulator Stdout/Stderr Process Logs',
+    whatItDoes:
+      'Fetches the latest 300 stdout/stderr log lines, PID, RSS memory footprint, and TCP socket RTT from the selected local emulator process ring buffer.',
+    enterpriseValue:
+      'Surfaces Java stack traces, port binding confirmations, and local gRPC/REST request logs directly in the browser.',
+    gcpApis: 'GET /api/project/{project}/emulators/{emulatorType}/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_TAB_FLEET_CONTROL: {
+    badge: 'PILLAR 1 · EMULATOR FLEET & HOST READINESS',
+    title: 'Emulator Fleet Control, Host SDK/JRE/Docker Readiness & Port Cockpit',
+    whatItDoes:
+      'Displays live process PIDs, RSS memory usage, TCP socket RTT, installed Google Cloud SDK emulator components, Java JRE and Docker Engine readiness, and 1-click lifecycle controls across all 5 official emulators.',
+    enterpriseValue:
+      'Verifies workstation prerequisites in milliseconds and starts or stops isolated 127.0.0.1 emulators without touching live cloud resources.',
+    gcpApis: 'GET /api/project/{project}/emulators/overview · gcloud components list · TCP Socket Probe',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_TAB_LIVE_WORKBENCH: {
+    badge: 'PILLAR 2 · INTERACTIVE 127.0.0.1 REST WORKBENCH',
+    title: 'Interactive Local REST & SQL Workbench (Pub/Sub, Datastore, Firestore, Spanner, Bigtable)',
+    whatItDoes:
+      'Executes real HTTP REST and SQL requests directly against your running 127.0.0.1 emulators—publishing/pulling Pub/Sub messages, committing Datastore entities, upserting Firestore documents, and running Spanner DDL/SQL.',
+    enterpriseValue:
+      'Lets engineers prototype schemas, test event payloads, and inspect local state visually at $0.00 API cost before writing application code.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench -> http://127.0.0.1:<port>/v1/...',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_TAB_CLOUD_SCHEMA_SYNC: {
+    badge: 'PILLAR 3 · $0.00 CLOUD-TO-LOCAL TWIN SYNC',
+    title: 'Cloud-to-Local $0.00 Schema Twin Sync & FinOps Savings Matrix',
+    whatItDoes:
+      'Compares live Pub/Sub topics/subscriptions, Firestore databases, Spanner instances, and Bigtable clusters in your active GCP project against your 127.0.0.1 emulators, with 1-click read-only schema cloning into localhost.',
+    enterpriseValue:
+      'Mirrors real production topic topologies and Spanner DDL onto 127.0.0.1 in seconds while saving hundreds of dollars per month in dedicated dev instances.',
+    gcpApis: 'POST /api/project/{project}/emulators/clone-cloud-schema · pubsub · firestore · spanner',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_TAB_ENV_AND_LOGS: {
+    badge: 'PILLAR 4 · *_EMULATOR_HOST EXPORTER & LOGS',
+    title: 'Multi-Format *_EMULATOR_HOST Exporter & Live Process Stdout/Stderr Ring Buffer',
+    whatItDoes:
+      'Generates ready-to-copy Bash exports, .env files, docker-compose.yml sidecars, and Node.js/Python/Go SDK connection snippets dynamically bound to your active emulator ports, alongside live process stdout/stderr logs.',
+    enterpriseValue:
+      'Wires local microservices, pytest/Jest suites, and Docker Compose stacks to 127.0.0.1 emulators with zero manual port-matching errors.',
+    gcpApis: 'GET /api/project/{project}/emulators/{type}/logs · PUBSUB/FIRESTORE/SPANNER_EMULATOR_HOST',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_REFRESH_FLEET: {
+    badge: 'REFRESH HOST & FLEET TELEMETRY',
+    title: 'Refresh Local Emulator Fleet, PID/RSS Metrics & Cloud Asset Counts',
+    whatItDoes:
+      'Re-probes all 5 local emulator TCP ports, process PIDs, RSS memory usage, host SDK/Java/Docker readiness, and live Google Cloud schema counts in parallel.',
+    enterpriseValue:
+      'Keeps local process health and cloud twin drift metrics 100% live without restarting any running emulators.',
+    gcpApis: 'GET /api/project/{project}/emulators/overview',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_STOP_ALL: {
+    badge: 'TEARDOWN ALL LOCAL EMULATORS',
+    title: 'Stop All Running Local Cloud Emulators on 127.0.0.1',
+    whatItDoes:
+      'Gracefully stops every active local Google Cloud emulator process group and managed emulator container on 127.0.0.1 in a single confirmed action.',
+    enterpriseValue:
+      'Frees all localhost emulator ports (8081, 8085, 8086, 8089, 9010/9020) and workstation memory in one click when switching tasks.',
+    gcpApis: 'POST /api/project/{project}/emulators/stop ({ stopAll: true })',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_START_EMULATOR: {
+    badge: 'LAUNCH $0.00 LOCAL EMULATOR',
+    title: 'Start Official Google Cloud Emulator Process on 127.0.0.1',
+    whatItDoes:
+      'Spawns a detached local emulator process group (gcloud beta emulators ... or Docker container fallback) bound strictly to 127.0.0.1 on the configured TCP port and verifies socket readiness.',
+    enterpriseValue:
+      'Gives you a real local wire-compatible Google Cloud endpoint in seconds at $0.00/hr cloud cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/start (gcloud beta emulators / docker run)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_START_SELECTED: {
+    badge: 'LAUNCH SELECTED LOCAL EMULATOR',
+    title: 'Start Selected Local Cloud Emulator Directly from Workbench',
+    whatItDoes:
+      'Starts the currently selected local Google Cloud emulator on 127.0.0.1 and verifies TCP port readiness so you can immediately run local REST or SQL calls.',
+    enterpriseValue:
+      'Boots the required local emulator in place without leaving the Interactive Local REST Workbench.',
+    gcpApis: 'POST /api/project/{project}/emulators/start (127.0.0.1 Loopback)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_STOP_EMULATOR: {
+    badge: 'STOP LOCAL EMULATOR PROCESS',
+    title: 'Stop Running Local Emulator Process Group on 127.0.0.1',
+    whatItDoes:
+      'Terminates the selected local emulator process group (or managed Docker container) on 127.0.0.1, frees its bound TCP port, and drops ephemeral in-memory session state after confirmation.',
+    enterpriseValue:
+      'Reclaims local workstation RAM and ports cleanly without leaving orphaned background Java or container processes.',
+    gcpApis: 'POST /api/project/{project}/emulators/stop (Process Group SIGTERM / docker stop)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_RESET_EMULATOR: {
+    badge: 'WIPE LOCAL EMULATOR STATE',
+    title: 'Reset Emulator State & Purge Local Data Directory',
+    whatItDoes:
+      'Stops the selected local emulator if active, removes its local temporary data directory under /tmp/cloudpulse-emulators/, and resets all local topics, documents, entities, or SQL tables to a clean slate.',
+    enterpriseValue:
+      'Guarantees deterministic, repeatable integration tests from a fresh zero-state baseline without touching live cloud data.',
+    gcpApis: 'POST /api/project/{project}/emulators/reset-data (127.0.0.1 Local Directory Purge)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_OPEN_WORKBENCH: {
+    badge: 'OPEN IN LOCAL REST WORKBENCH',
+    title: 'Open Selected Emulator in Interactive Local REST & SQL Workbench',
+    whatItDoes:
+      'Switches to the Interactive Local REST Workbench pre-focused on this emulator so you can create topics, publish/pull messages, upsert entities/documents, or execute Spanner SQL.',
+    enterpriseValue:
+      'Zero context-switching from process startup straight into live payload testing on 127.0.0.1.',
+    gcpApis: 'Local Cloud Emulators Studio -> LIVE_WORKBENCH Sub-Tab',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_INSTALL_COMPONENT: {
+    badge: 'INSTALL GCLOUD SDK COMPONENT',
+    title: 'Install Official Emulator Component into Local Google Cloud SDK',
+    whatItDoes:
+      'Runs gcloud components install <componentId> --quiet on your local host after confirmation—or detects apt/snap/Homebrew SDK management and provides the exact copyable OS package install command.',
+    enterpriseValue:
+      'Unlocks missing Pub/Sub, Firestore, Spanner, Datastore, or Bigtable emulator binaries directly from the cockpit.',
+    gcpApis: 'POST /api/project/{project}/emulators/install-component (gcloud components install)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_PROBE_PORT: {
+    badge: 'LIVE 127.0.0.1 TCP SOCKET PROBE',
+    title: 'Probe Local Emulator TCP Socket & Measure Loopback RTT',
+    whatItDoes:
+      'Opens a real TCP socket connection to 127.0.0.1:<port> to verify whether the local emulator listener is accepting connections and measures exact sub-millisecond loopback RTT.',
+    enterpriseValue:
+      'Confirms instant wire-level port reachability and detects port conflicts or externally started emulators.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PROBE_PORT via net.Socket)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_COPY_REMEDIATION: {
+    badge: 'COPY HOST REMEDIATION CLI',
+    title: 'Copy Exact Host SDK / JRE / Package-Manager Remediation Command',
+    whatItDoes:
+      'Copies the exact apt-get, gcloud components install, or OpenJDK 25+ JRE installation command required to unlock the emulator binary on your Linux/macOS host.',
+    enterpriseValue:
+      'Resolves missing Java JRE or system-package-managed Cloud SDK component errors in one paste.',
+    gcpApis: 'Host Readiness Doctor (google-cloud-cli-* / openjdk-jre)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_CREATE_TOPIC: {
+    badge: 'CREATE LOCAL PUB/SUB TOPIC & SUB',
+    title: 'Create Topic & Pull Subscription on Local Pub/Sub Emulator',
+    whatItDoes:
+      'Calls PUT http://127.0.0.1:8085/v1/projects/{project}/topics/{topic} (and optional subscription) directly against your running local Pub/Sub emulator.',
+    enterpriseValue:
+      'Lets you scaffold event-driven topics and pull subscriptions locally at $0.00 cost in milliseconds.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · CREATE_TOPIC)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_LIST_TOPICS: {
+    badge: 'LIST LOCAL PUB/SUB TOPICS',
+    title: 'List Active Topics & Subscriptions on Local 127.0.0.1 Pub/Sub Emulator',
+    whatItDoes:
+      'Queries http://127.0.0.1:8085/v1/projects/{project}/topics and /subscriptions on your local Pub/Sub emulator to inspect all registered local topics and pull subscriptions.',
+    enterpriseValue:
+      'Verifies local event bus topology instantly at $0.00 cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · LIST_TOPICS)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_DELETE_TOPIC: {
+    badge: 'DELETE LOCAL PUB/SUB TOPIC',
+    title: 'Delete Topic from Local 127.0.0.1 Pub/Sub Emulator',
+    whatItDoes:
+      'Deletes the selected topic from your local Pub/Sub emulator on 127.0.0.1 after confirmation while leaving all real Google Cloud Pub/Sub topics untouched.',
+    enterpriseValue:
+      'Cleans up obsolete local test topics without resetting your entire emulator session.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · DELETE_TOPIC)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_PUBLISH_MESSAGE: {
+    badge: 'PUBLISH TO LOCAL PUB/SUB',
+    title: 'Publish Base64-Encoded UTF-8 / JSON Message to Local Pub/Sub Topic',
+    whatItDoes:
+      'Encodes your UTF-8/JSON payload and custom message attributes and calls :publish on the local 127.0.0.1 Pub/Sub emulator, returning the assigned local messageId.',
+    enterpriseValue:
+      'Tests event consumers, dead-letter handling, and schema validation locally with zero cloud Pub/Sub throughput fees.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · PUBLISH_MESSAGE)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_PULL_MESSAGES: {
+    badge: 'PULL & INSPECT LOCAL MESSAGES',
+    title: 'Pull & Decode Buffered Messages from Local Pub/Sub Subscription',
+    whatItDoes:
+      'Calls :pull (and optional :acknowledge) against your local Pub/Sub subscription on 127.0.0.1 and decodes Base64 message payloads, attributes, and publish timestamps.',
+    enterpriseValue:
+      'Verifies exact end-to-end message delivery and attribute propagation inside your local event loop.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (PUBSUB · PULL_MESSAGES)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_PUT_ENTITY: {
+    badge: 'COMMIT LOCAL DATASTORE ENTITY',
+    title: 'Upsert (Put) Entity into Local Cloud Datastore Emulator',
+    whatItDoes:
+      'Maps your JSON fields into typed Datastore Value objects and commits a non-transactional upsert to http://127.0.0.1:8081/v1/projects/{project}:commit.',
+    enterpriseValue:
+      'Seeds local NoSQL test fixtures and verifies entity key structures at $0.00 cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · PUT_ENTITY)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_QUERY_ENTITIES: {
+    badge: 'QUERY LOCAL DATASTORE KIND',
+    title: 'Query Entities by Kind Against Local Cloud Datastore Emulator',
+    whatItDoes:
+      'Calls :runQuery on http://127.0.0.1:8081/v1/projects/{project}:runQuery to list entities and typed properties stored under the selected Kind.',
+    enterpriseValue:
+      'Inspects local Datastore entity keys and property types instantly with zero cloud read operations.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · LIST_ENTITIES)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_DELETE_ENTITY: {
+    badge: 'DELETE LOCAL DATASTORE ENTITY',
+    title: 'Delete Entity from Local 127.0.0.1 Cloud Datastore Emulator',
+    whatItDoes:
+      'Commits a delete mutation for the selected Kind and key against your local Datastore emulator after confirmation, leaving cloud entities 100% untouched.',
+    enterpriseValue:
+      'Removes individual test entities cleanly during local debugging.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (DATASTORE · DELETE_ENTITY)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_UPSERT_DOCUMENT: {
+    badge: 'UPSERT LOCAL FIRESTORE DOCUMENT',
+    title: 'Create or Patch JSON Document in Local Cloud Firestore Emulator',
+    whatItDoes:
+      'Converts your JSON object into Firestore typed fields and writes the document to http://127.0.0.1:8086/v1/projects/{project}/databases/(default)/documents/{collection}/{docId}.',
+    enterpriseValue:
+      'Seeds realistic Firestore documents locally for mobile/web app and Cloud Functions testing at $0.00.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · UPSERT_DOCUMENT)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_LIST_DOCUMENTS: {
+    badge: 'LIST LOCAL FIRESTORE COLLECTION',
+    title: 'List Documents in Collection on Local Cloud Firestore Emulator',
+    whatItDoes:
+      'Fetches documents from http://127.0.0.1:8086/v1/projects/{project}/databases/(default)/documents/{collection} and flattens typed Firestore fields into readable JSON.',
+    enterpriseValue:
+      'Inspects local Firestore collections and nested document payloads without burning daily cloud read quotas.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · LIST_DOCUMENTS)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_DELETE_DOCUMENT: {
+    badge: 'DELETE LOCAL FIRESTORE DOCUMENT',
+    title: 'Delete Document from Local 127.0.0.1 Cloud Firestore Emulator',
+    whatItDoes:
+      'Calls HTTP DELETE on the selected document path inside your local Firestore emulator after confirmation, leaving live cloud Firestore databases untouched.',
+    enterpriseValue:
+      'Tests document deletion listeners and cleans up local Firestore fixtures safely.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (FIRESTORE · DELETE_DOCUMENT)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  EMU_BTN_BOOTSTRAP_SPANNER: {
+    badge: 'BOOTSTRAP LOCAL SPANNER DB',
+    title: 'Bootstrap Local Spanner Emulator Instance & Database on 127.0.0.1:9020',
+    whatItDoes:
+      'Provisions an emulator-config instance and database via the local Cloud Spanner REST API (http://127.0.0.1:9020/v1) so you can immediately run DDL and SQL queries.',
+    enterpriseValue:
+      'Gives you a working Cloud Spanner instance in <1 second at $0.00/hr instead of paying $65-$650+/mo for a cloud dev instance.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (SPANNER · BOOTSTRAP_INSTANCE_DB)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_LIST_SPANNER_INSTANCES: {
+    badge: 'LIST LOCAL SPANNER INSTANCES',
+    title: 'List Instances & Databases on Local 127.0.0.1:9020 Spanner Emulator',
+    whatItDoes:
+      'Queries http://127.0.0.1:9020/v1/projects/{project}/instances to list all provisioned local Spanner instances and child databases.',
+    enterpriseValue:
+      'Confirms local Spanner instance/database readiness before running DDL migrations or SQL queries.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (SPANNER · LIST_INSTANCES)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_EXECUTE_LOCAL_SQL: {
+    badge: 'EXECUTE LOCAL SPANNER SQL / DDL',
+    title: 'Execute SQL Query or Schema DDL Against Local Spanner Emulator',
+    whatItDoes:
+      'Creates a local Spanner session on 127.0.0.1:9020 and executes your SELECT query, DML statement, or CREATE TABLE DDL, returning typed rows and column metadata.',
+    enterpriseValue:
+      'Validates GoogleSQL queries, interleaved table schemas, and migrations locally at $0.00 cost.',
+    gcpApis: 'POST /api/project/{project}/emulators/workbench (SPANNER · EXECUTE_SQL)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_COPY_CBT_COMMAND: {
+    badge: 'COPY LOCAL CBT CLI COMMAND',
+    title: 'Copy Bigtable cbt CLI Command Bound to BIGTABLE_EMULATOR_HOST',
+    whatItDoes:
+      'Copies the exact BIGTABLE_EMULATOR_HOST=127.0.0.1:8089 cbt CLI command (create table, create column family, set cell, or read rows) scoped to your active project.',
+    enterpriseValue:
+      'Tests wide-column Bigtable row keys and column families locally against gRPC 127.0.0.1:8089 instead of provisioning a $470+/mo Bigtable node.',
+    gcpApis: 'BIGTABLE_EMULATOR_HOST=127.0.0.1:8089 · cbt -project={project} -instance=local',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_CLONE_SCHEMA: {
+    badge: '1-CLICK CLOUD -> LOCAL TWIN SYNC',
+    title: 'Clone Live Cloud Schema & Topology into 127.0.0.1 Local Emulator ($0.00)',
+    whatItDoes:
+      'Reads live Pub/Sub topics/subscriptions, Firestore collection structure, or Spanner DDL from your active Google Cloud project in 100% read-only mode and recreates matching resources inside your local emulator.',
+    enterpriseValue:
+      'Eliminates drift between production schemas and local developer environments with zero risk to production data.',
+    gcpApis: 'POST /api/project/{project}/emulators/clone-cloud-schema (Read-Only Cloud -> Local Write)',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_COPY_ENV_BUNDLE: {
+    badge: 'COPY *_EMULATOR_HOST BUNDLE',
+    title: 'Copy Project-Scoped *_EMULATOR_HOST Configuration Bundle to Clipboard',
+    whatItDoes:
+      'Copies the generated Bash export script, .env file, docker-compose.yml service block, or Node.js/Python/Go client SDK snippet pre-wired with your active project ID and 127.0.0.1 emulator ports.',
+    enterpriseValue:
+      'Redirects official @google-cloud/* client libraries from live cloud billing to 127.0.0.1 automatically via standard environment variables.',
+    gcpApis: 'PUBSUB_EMULATOR_HOST · FIRESTORE_EMULATOR_HOST · DATASTORE_EMULATOR_HOST · SPANNER_EMULATOR_HOST · BIGTABLE_EMULATOR_HOST',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_BTN_REFRESH_LOGS: {
+    badge: 'TAIL LOCAL PROCESS RING BUFFER',
+    title: 'Refresh Live Local Emulator Stdout/Stderr Process Logs',
+    whatItDoes:
+      'Fetches the latest 300 stdout/stderr log lines, PID, RSS memory footprint, and TCP socket RTT from the selected local emulator process ring buffer.',
+    enterpriseValue:
+      'Surfaces Java stack traces, port binding confirmations, and local gRPC/REST request logs directly in the browser.',
+    gcpApis: 'GET /api/project/{project}/emulators/{emulatorType}/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_PILL_PUBSUB: {
+    badge: 'WORKBENCH · PUB/SUB :8085',
+    title: 'Switch Local REST Workbench to Cloud Pub/Sub Emulator (127.0.0.1:8085)',
+    whatItDoes:
+      'Focuses the Interactive Local REST Workbench on your local Pub/Sub emulator so you can create topics/subscriptions, publish messages with attributes, and pull/ack messages.',
+    enterpriseValue:
+      'Tests asynchronous event-driven workflows locally at $0.00 cost.',
+    gcpApis: 'PUBSUB_EMULATOR_HOST=127.0.0.1:8085 · REST v1',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_PILL_DATASTORE: {
+    badge: 'WORKBENCH · DATASTORE :8081',
+    title: 'Switch Local REST Workbench to Cloud Datastore Emulator (127.0.0.1:8081)',
+    whatItDoes:
+      'Focuses the Interactive Local REST Workbench on your local Datastore emulator so you can commit (put), query by Kind, and delete local NoSQL entities.',
+    enterpriseValue:
+      'Validates Datastore entity keys and indexes locally with zero cloud read/write operations.',
+    gcpApis: 'DATASTORE_EMULATOR_HOST=127.0.0.1:8081 · v1 :runQuery & :commit',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_PILL_FIRESTORE: {
+    badge: 'WORKBENCH · FIRESTORE :8086',
+    title: 'Switch Local REST Workbench to Cloud Firestore Emulator (127.0.0.1:8086)',
+    whatItDoes:
+      'Focuses the Interactive Local REST Workbench on your local Firestore emulator so you can list collections, upsert JSON documents, and delete test documents.',
+    enterpriseValue:
+      'Develops and tests document schemas locally without consuming Firestore daily quotas.',
+    gcpApis: 'FIRESTORE_EMULATOR_HOST=127.0.0.1:8086 · REST v1 Documents',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_PILL_SPANNER: {
+    badge: 'WORKBENCH · SPANNER :9020',
+    title: 'Switch Local REST Workbench to Cloud Spanner Emulator (REST :9020 / gRPC :9010)',
+    whatItDoes:
+      'Focuses the Interactive Local REST Workbench on your local Cloud Spanner emulator so you can bootstrap instances/databases and execute GoogleSQL DDL, DML, and SELECT queries.',
+    enterpriseValue:
+      'Replaces expensive cloud dev Spanner Processing Units with a $0.00/hr local SQL engine.',
+    gcpApis: 'SPANNER_EMULATOR_HOST=127.0.0.1:9010 · HTTP REST 127.0.0.1:9020/v1',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_PILL_BIGTABLE: {
+    badge: 'WORKBENCH · BIGTABLE :8089',
+    title: 'Switch Local Workbench to Cloud Bigtable gRPC Emulator (127.0.0.1:8089)',
+    whatItDoes:
+      'Focuses the Workbench on your local Bigtable gRPC emulator with live TCP socket RTT probing and copyable cbt CLI commands.',
+    enterpriseValue:
+      'Develops high-throughput wide-column schemas locally instead of paying $470+/mo for a single cloud Bigtable node.',
+    gcpApis: 'BIGTABLE_EMULATOR_HOST=127.0.0.1:8089 · gRPC + cbt CLI',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_LOGPILL_PUBSUB: {
+    badge: 'PROCESS LOGS · PUB/SUB',
+    title: 'Tail Live Stdout/Stderr Ring Buffer for Local Pub/Sub Emulator',
+    whatItDoes:
+      'Selects the local Pub/Sub emulator process stream to inspect startup flags, bound ports, PID/RSS usage, and request logs.',
+    enterpriseValue:
+      'Instant visibility into local emulator daemon output without switching terminal tabs.',
+    gcpApis: 'GET /api/project/{project}/emulators/PUBSUB/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_LOGPILL_FIRESTORE: {
+    badge: 'PROCESS LOGS · FIRESTORE',
+    title: 'Tail Live Stdout/Stderr Ring Buffer for Local Firestore Emulator',
+    whatItDoes:
+      'Selects the local Firestore emulator process stream to inspect startup output, Java runtime status, and local document operations.',
+    enterpriseValue:
+      'Pinpoints port collisions or security-rule/Java errors in real time.',
+    gcpApis: 'GET /api/project/{project}/emulators/FIRESTORE/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_LOGPILL_DATASTORE: {
+    badge: 'PROCESS LOGS · DATASTORE',
+    title: 'Tail Live Stdout/Stderr Ring Buffer for Local Datastore Emulator',
+    whatItDoes:
+      'Selects the local Cloud Datastore emulator process stream to inspect consistency flags, --no-store-on-disk mode, and HTTP request logs.',
+    enterpriseValue:
+      'Confirms local Datastore daemon health and memory footprint.',
+    gcpApis: 'GET /api/project/{project}/emulators/DATASTORE/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_LOGPILL_SPANNER: {
+    badge: 'PROCESS LOGS · SPANNER',
+    title: 'Tail Live Stdout/Stderr Ring Buffer for Local Spanner Emulator',
+    whatItDoes:
+      'Selects the local Cloud Spanner emulator process stream to inspect gRPC (:9010) and REST (:9020) gateway logs.',
+    enterpriseValue:
+      'Surfaces DDL parser diagnostics and session lifecycle events from the local Spanner engine.',
+    gcpApis: 'GET /api/project/{project}/emulators/SPANNER/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_LOGPILL_BIGTABLE: {
+    badge: 'PROCESS LOGS · BIGTABLE',
+    title: 'Tail Live Stdout/Stderr Ring Buffer for Local Bigtable Emulator',
+    whatItDoes:
+      'Selects the local Cloud Bigtable in-memory Go gRPC emulator stream (:8089) to inspect listener readiness and client connections.',
+    enterpriseValue:
+      'Verifies Bigtable gRPC listener status with sub-millisecond loopback RTT.',
+    gcpApis: 'GET /api/project/{project}/emulators/BIGTABLE/logs',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_FMT_bash: {
+    badge: 'EXPORT FORMAT · BASH SHELL',
+    title: 'Preview Shell export *_EMULATOR_HOST=... Statements',
+    whatItDoes:
+      'Switches the environment exporter to Bash/Zsh export syntax so you can paste export PUBSUB_EMULATOR_HOST=127.0.0.1:8085 directly into your terminal session.',
+    enterpriseValue:
+      'Redirects local CLI tools, pytest, go test, and npm start processes to 127.0.0.1 in one paste.',
+    gcpApis: 'Bash / Zsh POSIX Environment Export Bundle',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_FMT_dotenv: {
+    badge: 'EXPORT FORMAT · .ENV FILE',
+    title: 'Preview KEY=VALUE .env Configuration File',
+    whatItDoes:
+      'Switches the environment exporter to standard .env KEY=VALUE format ready to drop into .env.local or .env.test.',
+    enterpriseValue:
+      'Works out of the box with Vite, Next.js, FastAPI, Spring Boot, and dotenv loaders.',
+    gcpApis: 'Dotenv (.env.local / .env.test) Emulator Host Bundle',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_FMT_dockerCompose: {
+    badge: 'EXPORT FORMAT · DOCKER COMPOSE',
+    title: 'Preview docker-compose.yml Official Emulator Sidecar Stack',
+    whatItDoes:
+      'Switches the exporter to a complete docker-compose.yml service specification using official Google Cloud emulator container images and port bindings.',
+    enterpriseValue:
+      'Lets CI/CD pipelines (GitHub Actions / Cloud Build) and teammates without local Java JRE spin up identical emulator sidecars.',
+    gcpApis: 'gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators · cloud-spanner-emulator',
+    safetyMode: 'READ_ONLY',
+  },
+  EMU_FMT_sdk: {
+    badge: 'EXPORT FORMAT · NODE / PYTHON / GO SDK',
+    title: 'Preview Official Google Cloud Client SDK Initialization Code',
+    whatItDoes:
+      'Displays ready-to-run Node.js (@google-cloud/*), Python (google-cloud-*), and Go client SDK initialization snippets wired to your active project ID and 127.0.0.1 emulator ports.',
+    enterpriseValue:
+      'Shows the exact zero-credential client setup needed to talk to local emulators without touching production.',
+    gcpApis: '@google-cloud/pubsub · @google-cloud/firestore · @google-cloud/datastore · @google-cloud/spanner',
+    safetyMode: 'READ_ONLY',
+  },
   GLOBAL_MAP: {
     badge: '40 REGIONS & SUBSEA CABLES',
     title: 'Global Network World Map — 40 GCP Regions, Subsea Fiber & Carbon Grid',
@@ -7726,6 +8476,128 @@ function matchSpecificButtonInLaymanTerms(
     };
   }
 
+  // ============================================================================
+  // J. GOOGLE CLOUD LOCAL EMULATORS STUDIO (127.0.0.1 FLEET, REST WORKBENCH & TWIN SYNC)
+  // ============================================================================
+  const isEmulatorContext =
+    headingText.toLowerCase().includes('emulator') ||
+    combined.includes('emulator') ||
+    combined.includes('127.0.0.1') ||
+    codeSnippet.includes('_EMULATOR_HOST');
+
+  if (labelLower === 'start emulator' || labelLower === 'start selected emulator') {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_START;
+  }
+  if (labelLower === 'stop emulator') {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_STOP;
+  }
+  if (labelLower === 'stop all running' || labelLower.startsWith('stop all running')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_STOP_ALL;
+  }
+  if (labelLower === 'reset emulator state' || labelLower === 'reset state') {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_RESET_STATE;
+  }
+  if (labelLower === 'install sdk component' || labelLower.startsWith('install sdk component')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_INSTALL_COMPONENT;
+  }
+  if (labelLower === 'probe tcp port' || labelLower.startsWith('probe tcp port')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_PROBE_PORT;
+  }
+  if (isEmulatorContext && (labelLower === 'open workbench' || labelLower.startsWith('open workbench'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_OPEN_WORKBENCH;
+  }
+  if (isEmulatorContext && (labelLower === 'refresh fleet' || labelLower.startsWith('refresh fleet'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_REFRESH_FLEET;
+  }
+  if (isEmulatorContext && (labelLower === 'create topic' || labelLower.startsWith('create topic'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_CREATE_TOPIC;
+  }
+  if (labelLower === 'list topics & subscriptions' || labelLower.startsWith('list topics')) {
+    return INNOVATION_FEATURE_GUIDE.EMU_BTN_LIST_TOPICS;
+  }
+  if (labelLower === 'list local instances' || labelLower.startsWith('list local instances')) {
+    return INNOVATION_FEATURE_GUIDE.EMU_BTN_LIST_SPANNER_INSTANCES;
+  }
+  if (labelLower === 'copy cbt command' || labelLower.startsWith('copy cbt command')) {
+    return INNOVATION_FEATURE_GUIDE.EMU_BTN_COPY_CBT_COMMAND;
+  }
+  if (isEmulatorContext && (labelLower === 'publish message' || labelLower.startsWith('publish message'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_PUBLISH_MESSAGE;
+  }
+  if (
+    isEmulatorContext &&
+    (labelLower === 'pull messages' ||
+      labelLower.startsWith('pull messages') ||
+      labelLower.includes('pull & inspect'))
+  ) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_PULL_MESSAGES;
+  }
+  if (isEmulatorContext && (labelLower === 'delete topic' || labelLower.startsWith('delete topic'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_DELETE_TOPIC;
+  }
+  if (
+    isEmulatorContext &&
+    (labelLower === 'list entities' ||
+      labelLower === 'query entities' ||
+      labelLower.startsWith('query entities'))
+  ) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_LIST_ENTITIES;
+  }
+  if (labelLower === 'put entity' || labelLower.startsWith('put entity')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_PUT_ENTITY;
+  }
+  if (labelLower === 'delete entity' || labelLower.startsWith('delete entity')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_DELETE_ENTITY;
+  }
+  if (isEmulatorContext && (labelLower === 'list documents' || labelLower.startsWith('list documents'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_LIST_DOCUMENTS;
+  }
+  if (labelLower === 'upsert document' || labelLower.startsWith('upsert document')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_UPSERT_DOCUMENT;
+  }
+  if (isEmulatorContext && (labelLower === 'delete document' || labelLower.startsWith('delete document'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_DELETE_DOCUMENT;
+  }
+  if (
+    labelLower === 'bootstrap local instance' ||
+    labelLower.startsWith('bootstrap local instance')
+  ) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_BOOTSTRAP_INSTANCE;
+  }
+  if (
+    labelLower === 'execute local sql' ||
+    (isEmulatorContext && labelLower === 'execute sql')
+  ) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_EXECUTE_SQL;
+  }
+  if (
+    labelLower.includes('clone cloud schema to local emulator') ||
+    (isEmulatorContext && labelLower.includes('clone cloud schema'))
+  ) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_CLONE_CLOUD_SCHEMA;
+  }
+  if (labelLower.includes('copy environment bundle')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_COPY_ENV_BUNDLE;
+  }
+  if (labelLower.includes('copy remediation command')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_COPY_REMEDIATION;
+  }
+  if (isEmulatorContext && (labelLower === 'refresh logs' || labelLower.startsWith('refresh logs'))) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_REFRESH_LOGS;
+  }
+  if (labelLower.includes('emulator fleet & host readiness')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_TAB_FLEET_CONTROL;
+  }
+  if (labelLower.includes('interactive local rest workbench')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_TAB_LIVE_WORKBENCH;
+  }
+  if (labelLower.includes('cloud-to-local') && labelLower.includes('twin sync')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_TAB_CLOUD_SCHEMA_SYNC;
+  }
+  if (labelLower.includes('_emulator_host exporter') || labelLower.includes('live process logs')) {
+    return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS_TAB_ENV_AND_LOGS;
+  }
+
   return null;
 }
 
@@ -7947,6 +8819,9 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
   } else if (fullContext.includes('mcp') || fullContext.includes('json-rpc') || fullContext.includes('agent-registry') || fullContext.includes('tools/call') || fullContext.includes('tools/list')) {
     domainBadge = isMutating ? 'REMOTE MCP GOVERNANCE ACTION' : 'OFFICIAL GOOGLE CLOUD REMOTE MCP';
     inferredApi = codeSnippet || 'https://*.googleapis.com/mcp (JSON-RPC 2.0) · agentregistry.googleapis.com/v1';
+  } else if (fullContext.includes('emulator') || fullContext.includes('127.0.0.1') || fullContext.includes('_emulator_host')) {
+    domainBadge = isMutating ? 'LOCAL 127.0.0.1 EMULATOR ACTION' : 'LOCAL CLOUD EMULATOR ($0.00/HR)';
+    inferredApi = codeSnippet || 'gcloud beta emulators · http://127.0.0.1:<port>/v1/...';
   }
 
   // 4. Compose a Domain- & Action-Specific `whatItDoes` and `enterpriseValue` Using the Button's Own Content & Domain
@@ -8033,6 +8908,12 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
       : `Inspects or configures Remote MCP JSON-RPC 2.0 control "${displayLabel}"${targetPhrase} inside the Google-Managed Remote MCP Hub.`;
     domainEnterpriseValue =
       'Enforces readOnlyHint=true zero-mutation guardrails, least-privilege mcp-agent-readonly Service Account isolation, and direct HTTPS JSON-RPC 2.0 connectivity.';
+  } else if (fullContext.includes('emulator') || fullContext.includes('127.0.0.1') || fullContext.includes('_emulator_host')) {
+    domainWhatItDoes = isMutating
+      ? `Executes local 127.0.0.1 emulator action "${displayLabel}"${targetPhrase} without mutating live Google Cloud production resources.`
+      : `Switches or inspects "${displayLabel}"${targetPhrase} inside the Local Cloud Emulators Studio on 127.0.0.1.`;
+    domainEnterpriseValue =
+      'Runs official Google Cloud wire-compatible emulators locally at $0.00/hr compute cost with zero risk to live cloud environments.';
   } else {
     domainWhatItDoes = isMutating
       ? `Executes "${displayLabel}"${targetPhrase}${studioPhrase}${codeSnippet ? ` (\`${codeSnippet.slice(0, 68)}\`)` : ''} against live Google Cloud REST APIs with pre-execution gatekeeper verification.`
@@ -8215,6 +9096,9 @@ function resolveFeatureExplanation(buttonEl) {
   if (!isInnerActionBtn) {
     if (textLower.includes('startup 10x') || textLower.includes('google for startups')) {
       return INNOVATION_FEATURE_GUIDE.STARTUP_10X;
+    }
+    if (textLower.includes('local cloud emulators') && textLower.length < 48) {
+      return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS;
     }
     if (textLower.includes('wave 16') && textLower.length < 45) {
       return INNOVATION_FEATURE_GUIDE.WAVE16_ENTERPRISE_MOONSHOT;

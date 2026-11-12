@@ -51,6 +51,7 @@ import {
   X,
   LayoutGrid,
   Activity,
+  Boxes,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -102,6 +103,7 @@ import GdeStreamerPrivacyShield, {
 } from './components/GdeStreamerPrivacyShield';
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
+import LocalCloudEmulatorsStudio from './components/LocalCloudEmulatorsStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
@@ -736,6 +738,213 @@ function classifyDestructiveAxiosConfig(config) {
 
   // 2. Destructive HTTP POST endpoints
   if (method === 'post') {
+    // Google Cloud Local Emulators Studio (/emulators/*) — Bespoke Local Host Gatekeeper & Safe Read/Start/Clone Exemptions
+    if (rawUrl.includes('/emulators/')) {
+      const emuType = String(body.emulatorType || 'PUBSUB').toUpperCase();
+      const emuDisplayMap = {
+        PUBSUB: 'Cloud Pub/Sub Emulator',
+        FIRESTORE: 'Cloud Firestore Emulator',
+        DATASTORE: 'Cloud Datastore Emulator',
+        SPANNER: 'Cloud Spanner Emulator',
+        BIGTABLE: 'Cloud Bigtable Emulator',
+      };
+      const emuEnvMap = {
+        PUBSUB: 'PUBSUB_EMULATOR_HOST',
+        FIRESTORE: 'FIRESTORE_EMULATOR_HOST',
+        DATASTORE: 'DATASTORE_EMULATOR_HOST',
+        SPANNER: 'SPANNER_EMULATOR_HOST',
+        BIGTABLE: 'BIGTABLE_EMULATOR_HOST',
+      };
+      const emuFriendly = emuDisplayMap[emuType] || `${emuType} Local Emulator`;
+      const emuEnvName = emuEnvMap[emuType] || `${emuType}_EMULATOR_HOST`;
+
+      // Exempt non-destructive $0.00 local start & cloud-to-local schema twin seeding
+      if (
+        rawUrl.includes('/emulators/start') ||
+        rawUrl.includes('/emulators/clone-cloud-schema')
+      ) {
+        return null;
+      }
+
+      // 2-EMU-1. Stop Local Emulator(s) (/emulators/stop)
+      if (rawUrl.includes('/emulators/stop')) {
+        const isStopAll = Boolean(body.stopAll);
+        if (isStopAll) {
+          return {
+            gateType: 'DELETE',
+            releaseTrack: 'GA',
+            title: 'Stop All Running Local Cloud Emulators on 127.0.0.1?',
+            headerBadge: 'Local Cloud Emulator Fleet Process Group Teardown Gatekeeper',
+            targetLabel: 'All Active Local Emulator Process Groups & Containers',
+            resourceKind:
+              'Google Cloud SDK Local Emulator Fleet (gcloud beta emulators / Docker)',
+            targetName:
+              'All Running Local Emulators (Pub/Sub, Firestore, Datastore, Spanner, Bigtable)',
+            location: '127.0.0.1 (Local Host)',
+            projectId,
+            method: 'STOP ALL LOCAL EMULATORS',
+            endpoint: rawUrl,
+            confirmLabel: 'Confirm & Stop All Running Emulators',
+            cancelToast:
+              'Stop All Local Emulators cancelled — local emulator processes remain active.',
+            laymanSummary: `In Plain English: Terminates every currently running Google Cloud emulator process group on your local workstation (127.0.0.1) and drops any ephemeral in-memory Pub/Sub messages, Firestore documents, Datastore entities, or Spanner SQL tables. Live cloud resources in Google Cloud project "${projectId}" remain 100% untouched.`,
+            whatHappensNext: `1. Sends SIGTERM (with clean process-group cleanup) to all active local emulator processes and stops any managed cloudpulse-emu-* Docker containers.\n2. Releases bound localhost TCP ports (8081, 8085, 8086, 8089, 9010/9020) on 127.0.0.1.\n3. Clears ephemeral in-memory emulator sessions while leaving cloud resources in "${projectId}" untouched.`,
+            costWarning:
+              'ZERO CLOUD COST ($0.00/HR): Local emulators run strictly on 127.0.0.1 using workstation CPU/RAM and incur $0.00 in Google Cloud charges.',
+            impactWarning:
+              'Terminates all active local emulator process groups on 127.0.0.1 and drops any unsaved ephemeral in-memory messages, entities, documents, and local SQL tables.',
+          };
+        }
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: `Stop Local ${emuFriendly} Process on 127.0.0.1?`,
+          headerBadge: 'Local Cloud Emulator Process Teardown Gatekeeper',
+          targetLabel: 'Target Local Emulator Process Group',
+          resourceKind: `${emuFriendly} (${emuEnvName})`,
+          targetName: `${emuFriendly} (${emuType})`,
+          location: '127.0.0.1 (Local Host)',
+          projectId,
+          method: 'STOP LOCAL EMULATOR',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Stop ${emuType} Emulator`,
+          cancelToast: `Stopping local ${emuFriendly} cancelled — process remains running.`,
+          laymanSummary: `In Plain English: Terminates the local ${emuFriendly} process running on 127.0.0.1 and drops any ephemeral in-memory messages, entities, documents, or SQL tables held inside this local session. Your live Google Cloud resources in project "${projectId}" are 100% untouched.`,
+          whatHappensNext: `1. Terminates the detached ${emuType} local process group (or managed cloudpulse-emu-${emuType.toLowerCase()} Docker container) on 127.0.0.1.\n2. Frees the bound localhost TCP port immediately.\n3. Refreshes the Local Cloud Emulators Fleet readiness telemetry.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00/HR): Starting or stopping local 127.0.0.1 emulators incurs $0.00 on your Google Cloud invoice.',
+          impactWarning: `Stops the local ${emuFriendly} process on 127.0.0.1 and clears any ephemeral in-memory state not persisted to disk.`,
+        };
+      }
+
+      // 2-EMU-2. Purge Local Emulator Data Directory (/emulators/reset-data)
+      if (rawUrl.includes('/emulators/reset-data')) {
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: `Purge Local Data Directory & Wipe All ${emuFriendly} State?`,
+          headerBadge: 'Local Emulator Data Directory & State Purge Gatekeeper',
+          targetLabel: 'Target Local Emulator Data Directory & Ephemeral State',
+          resourceKind: `Local Emulator Storage Directory (/tmp/cloudpulse-emulators/${emuType.toLowerCase()}-${projectId})`,
+          targetName: `${emuFriendly} Local Data (${projectId})`,
+          location: '127.0.0.1 (Local Host)',
+          projectId,
+          method: 'RESET LOCAL EMULATOR DATA',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Wipe Local ${emuType} Data`,
+          cancelToast: `Local ${emuFriendly} state reset cancelled — local data preserved.`,
+          laymanSummary: `In Plain English: Stops the local ${emuFriendly} (if currently running), deletes its local temporary data directory on 127.0.0.1, and wipes all local test topics, messages, Firestore documents, Datastore entities, or Spanner tables back to a clean empty slate. Live resources in Google Cloud project "${projectId}" are 100% untouched.`,
+          whatHappensNext: `1. Gracefully stops the local ${emuType} emulator process if active on 127.0.0.1.\n2. Deletes the local emulator data directory under /tmp/cloudpulse-emulators/ scoped to "${projectId}".\n3. Resets local test storage to an empty baseline ready for fresh seeding or Cloud Schema Sync.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00): Wiping local 127.0.0.1 emulator directories incurs $0.00 in Google Cloud charges and never touches production cloud data.',
+          impactWarning: `Permanently deletes all local topics, entities, documents, and SQL tables stored in the ${emuFriendly} on 127.0.0.1.`,
+        };
+      }
+
+      // 2-EMU-3. Install Google Cloud SDK Emulator Component (/emulators/install-component)
+      if (rawUrl.includes('/emulators/install-component')) {
+        const compId = String(body.componentId || 'cloud-datastore-emulator').trim();
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Install Google Cloud SDK Component "${compId}" on Local Host?`,
+          headerBadge: 'Local Google Cloud SDK Component Installer Gatekeeper',
+          targetLabel: 'Target Google Cloud CLI Emulator Component',
+          resourceKind: `Google Cloud SDK Component (gcloud components install ${compId})`,
+          targetName: compId,
+          location: '127.0.0.1 (Local Host)',
+          projectId,
+          method: 'INSTALL GCLOUD COMPONENT',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Install "${compId}"`,
+          cancelToast: `Installation of Google Cloud SDK component "${compId}" cancelled.`,
+          laymanSummary: `In Plain English: Runs "gcloud components install ${compId} --quiet" on your local workstation to install the official Google Cloud emulator binary into your local Cloud SDK installation (or surfaces the exact OS package-manager command if your SDK was installed via apt/dnf/snap).`,
+          whatHappensNext: `1. Executes "gcloud components install ${compId} --quiet" on 127.0.0.1.\n2. Detects apt/snap/Homebrew package-manager ownership automatically and returns a copyable OS remediation command if direct SDK self-update is disabled.\n3. Refreshes host component readiness so "${compId}" unlocks in the Fleet Control cockpit.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00): Official Google Cloud SDK emulator binaries are 100% free ($0.00) to install and run locally.',
+          impactWarning: `Updates your local workstation Google Cloud SDK installation on 127.0.0.1 by installing component "${compId}".`,
+        };
+      }
+
+      // 2-EMU-4. Interactive Local REST Workbench (/emulators/workbench)
+      if (rawUrl.includes('/emulators/workbench')) {
+        const wbAct = String(body.action || '').toUpperCase();
+        if (wbAct === 'DELETE_TOPIC') {
+          const topicName = String(body.topicName || 'local-topic').trim();
+          return {
+            gateType: 'DELETE',
+            releaseTrack: 'GA',
+            title: `Delete Local Pub/Sub Emulator Topic "${topicName}" on 127.0.0.1?`,
+            headerBadge: 'Local Pub/Sub Emulator Topic Deletion Gatekeeper',
+            targetLabel: 'Target Local Pub/Sub Emulator Topic',
+            resourceKind: 'Local Pub/Sub Emulator Topic (PUBSUB_EMULATOR_HOST)',
+            targetName: `projects/${projectId}/topics/${topicName} (Local)`,
+            location: '127.0.0.1 (Local Host)',
+            projectId,
+            method: 'DELETE LOCAL TOPIC',
+            endpoint: rawUrl,
+            confirmLabel: `Confirm & Delete Local Topic "${topicName}"`,
+            cancelToast: `Deletion of local Pub/Sub topic "${topicName}" cancelled.`,
+            laymanSummary: `In Plain English: Deletes topic "${topicName}" and any unpulled buffered messages from your local Pub/Sub emulator on 127.0.0.1. Real Pub/Sub topics in Google Cloud project "${projectId}" are 100% untouched.`,
+            whatHappensNext: `1. Calls HTTP DELETE against http://127.0.0.1:<port>/v1/projects/${projectId}/topics/${topicName} on the local Pub/Sub emulator.\n2. Removes "${topicName}" from the local emulator registry.\n3. Refreshes the Interactive Local REST Workbench topic list.`,
+            costWarning:
+              'ZERO CLOUD COST ($0.00): Local Pub/Sub emulator operations run strictly over 127.0.0.1 loopback at $0.00 cost.',
+            impactWarning: `Permanently deletes local topic "${topicName}" from the running Pub/Sub emulator on 127.0.0.1.`,
+          };
+        }
+        if (wbAct === 'DELETE_ENTITY') {
+          const kind = String(body.kind || 'Task').trim();
+          const entityKey = String(body.keyName || body.keyId || 'selected-entity').trim();
+          return {
+            gateType: 'DELETE',
+            releaseTrack: 'GA',
+            title: `Delete Local Datastore Emulator Entity "${kind}/${entityKey}" on 127.0.0.1?`,
+            headerBadge: 'Local Datastore Emulator Entity Deletion Gatekeeper',
+            targetLabel: 'Target Local Datastore Entity Key',
+            resourceKind: 'Local Cloud Datastore Emulator Entity (DATASTORE_EMULATOR_HOST)',
+            targetName: `${kind} :: ${entityKey} (Local)`,
+            location: '127.0.0.1 (Local Host)',
+            projectId,
+            method: 'DELETE LOCAL ENTITY',
+            endpoint: rawUrl,
+            confirmLabel: `Confirm & Delete Local Entity "${entityKey}"`,
+            cancelToast: `Deletion of local Datastore entity "${kind}/${entityKey}" cancelled.`,
+            laymanSummary: `In Plain English: Deletes entity "${entityKey}" of Kind "${kind}" from your local Cloud Datastore emulator on 127.0.0.1. Live Datastore/Firestore entities in Google Cloud project "${projectId}" are 100% untouched.`,
+            whatHappensNext: `1. Calls POST http://127.0.0.1:<port>/v1/projects/${projectId}:commit with a delete mutation for (${kind}, "${entityKey}") on the local emulator.\n2. Removes the entity from local emulator storage.\n3. Refreshes the Kind entity table in the Interactive Local REST Workbench.`,
+            costWarning:
+              'ZERO CLOUD COST ($0.00): Local Datastore emulator commits run strictly on 127.0.0.1 with $0.00 cloud read/write charges.',
+            impactWarning: `Permanently deletes local entity "${kind}/${entityKey}" from the running Datastore emulator on 127.0.0.1.`,
+          };
+        }
+        if (wbAct === 'DELETE_DOCUMENT') {
+          const colId = String(body.collectionId || 'local_items').trim();
+          const docId = String(body.documentId || 'selected-doc').trim();
+          return {
+            gateType: 'DELETE',
+            releaseTrack: 'GA',
+            title: `Delete Local Firestore Emulator Document "${colId}/${docId}" on 127.0.0.1?`,
+            headerBadge: 'Local Firestore Emulator Document Deletion Gatekeeper',
+            targetLabel: 'Target Local Firestore Document Path',
+            resourceKind: 'Local Cloud Firestore Emulator Document (FIRESTORE_EMULATOR_HOST)',
+            targetName: `${colId}/${docId} (Local)`,
+            location: '127.0.0.1 (Local Host)',
+            projectId,
+            method: 'DELETE LOCAL DOCUMENT',
+            endpoint: rawUrl,
+            confirmLabel: `Confirm & Delete Local Document "${docId}"`,
+            cancelToast: `Deletion of local Firestore document "${colId}/${docId}" cancelled.`,
+            laymanSummary: `In Plain English: Deletes document "${docId}" inside collection "${colId}" from your local Cloud Firestore emulator on 127.0.0.1. Live Firestore databases in Google Cloud project "${projectId}" are 100% untouched.`,
+            whatHappensNext: `1. Calls HTTP DELETE against http://127.0.0.1:<port>/v1/projects/${projectId}/databases/(default)/documents/${colId}/${docId}.\n2. Removes document "${docId}" from the local Firestore emulator.\n3. Refreshes the collection document inspector in the Interactive Local REST Workbench.`,
+            costWarning:
+              'ZERO CLOUD COST ($0.00): Local Firestore emulator document operations incur $0.00 in Google Cloud document delete charges.',
+            impactWarning: `Permanently deletes local document "${colId}/${docId}" from the running Firestore emulator on 127.0.0.1.`,
+          };
+        }
+        // Exempt non-destructive local workbench actions (LIST_TOPICS, CREATE_TOPIC, PUBLISH_MESSAGE, PULL_MESSAGES, LIST_ENTITIES, PUT_ENTITY, LIST_DOCUMENTS, UPSERT_DOCUMENT, LIST_INSTANCES, BOOTSTRAP_INSTANCE_DB, EXECUTE_SQL, PROBE_PORT)
+        return null;
+      }
+    }
+
     // Cloud Storage Empty & Delete Bucket
     const emptyBucketMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/empty-and-delete/);
     if (emptyBucketMatch) {
@@ -1985,6 +2194,12 @@ function classifyDestructiveAxiosConfig(config) {
         )) ||
       (rawUrl.includes('/wave16/action') &&
         ['DRY_RUN_SQL_SURGEON', 'SYNTHESIZE_IAM_CUSTOM_ROLE'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
+      rawUrl.includes('/emulators/start') ||
+      rawUrl.includes('/emulators/clone-cloud-schema') ||
+      (rawUrl.includes('/emulators/workbench') &&
+        !['DELETE_TOPIC', 'DELETE_ENTITY', 'DELETE_DOCUMENT'].includes(
           String(body.action || '').toUpperCase()
         )) ||
       (rawUrl.includes('/enterprise-personas/action') &&
@@ -7480,6 +7695,8 @@ function CloudPulseCockpit() {
     useState('ICEBERG_50_MATRIX');
   const [managedSparkSubTab, setManagedSparkSubTab] =
     useState('SERVERLESS_BATCHES');
+  const [localEmulatorsSubTab, setLocalEmulatorsSubTab] =
+    useState('FLEET_CONTROL');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
@@ -7515,6 +7732,7 @@ function CloudPulseCockpit() {
     INNOVATION_LAB: '2026 Innovation Lab (16 Studios)',
     STARTUP_10X: 'Startup 10X Mentor Studio',
     MCP_HUB: 'Google Cloud Remote MCP Hub',
+    LOCAL_EMULATORS: 'Local Cloud Emulators Studio',
     CLOUD_STORAGE: 'Cloud Storage & WORM Studio',
     BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
     BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
@@ -7568,6 +7786,10 @@ function CloudPulseCockpit() {
     SPARK_CONNECT_NOTEBOOKS: 'Spark Connect & PySpark IDE',
     DIAGNOSTICS_RCA: 'SparkApplications 3-Pillar RCA & Logs',
     KNOWLEDGE_LINEAGE_BIGFRAMES: 'Lightning Engine, BigFrames v2 & Lineage',
+    FLEET_CONTROL: 'Emulator Fleet & Host Readiness',
+    LIVE_WORKBENCH: 'Interactive Local REST Workbench',
+    CLOUD_SCHEMA_SYNC: 'Cloud-to-Local $0.00 Twin Sync',
+    ENV_AND_LOGS: '*_EMULATOR_HOST Exporter & Live Process Logs',
     IAM_SURGEON: 'Autonomous IAM Least-Privilege Surgeon',
     TIME_MACHINE: 'IAM Policy Time-Machine & Drift Rollback',
     SECRETS_KMS_WAF: 'Secret Manager Lifecycle & KMS Vault',
@@ -7615,6 +7837,7 @@ function CloudPulseCockpit() {
       BIGLAKE_STUDIO: bigLakeSubTab,
       DATA_ENGINEER_STUDIO: dataEngineerSubTab,
       MANAGED_SPARK_STUDIO: managedSparkSubTab,
+      LOCAL_EMULATORS: localEmulatorsSubTab,
       SOVEREIGN_STUDIO: sovereignSubTab,
       INNOVATION_LAB: innovationSubTab,
       SRE_WAR_ROOM: sreSubTab,
@@ -7631,6 +7854,7 @@ function CloudPulseCockpit() {
     bigLakeSubTab,
     dataEngineerSubTab,
     managedSparkSubTab,
+    localEmulatorsSubTab,
     sovereignSubTab,
     innovationSubTab,
     sreSubTab,
@@ -8125,6 +8349,10 @@ function CloudPulseCockpit() {
       ? 'GKE_STUDIO'
       : tabId === 'REMOTE_MCP' || tabId === 'MCP_SERVERS' || tabId === 'AGENT_MCP'
       ? 'MCP_HUB'
+      : tabId === 'EMULATORS' ||
+        tabId === 'CLOUD_EMULATORS' ||
+        tabId === 'LOCAL_CLOUD_EMULATORS'
+      ? 'LOCAL_EMULATORS'
       : tabId;
 
     const VALID_TOP_LEVEL_TABS = new Set([
@@ -8132,6 +8360,7 @@ function CloudPulseCockpit() {
       'INNOVATION_LAB',
       'STARTUP_10X',
       'MCP_HUB',
+      'LOCAL_EMULATORS',
       'GLOBAL_MAP',
       'VPC_NETWORKS',
       'VM_SSH',
@@ -8270,6 +8499,22 @@ function CloudPulseCockpit() {
       setAlibabaHuaweiSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
       setDataEngineerSubTab(resolvedSubTab);
+    } else if (normalizedTab === 'LOCAL_EMULATORS') {
+      if (resolvedSubTab) {
+        setLocalEmulatorsSubTab(resolvedSubTab);
+      }
+      if (resolvedSubTab || (extraTarget && typeof extraTarget === 'object')) {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:open-local-emulators', {
+              detail: {
+                subTab: resolvedSubTab,
+                ...(extraTarget && typeof extraTarget === 'object' ? extraTarget : {}),
+              },
+            })
+          );
+        }, 45);
+      }
     } else if (normalizedTab === 'MANAGED_SPARK_STUDIO') {
       if (resolvedSubTab) {
         setManagedSparkSubTab(resolvedSubTab);
@@ -9541,6 +9786,14 @@ function CloudPulseCockpit() {
       icon: Cpu,
     },
     {
+      id: 'LOCAL_EMULATORS',
+      group: 'COMMAND',
+      label: 'Local Cloud Emulators',
+      isStar: true,
+      tip: 'Google Cloud Local Emulators Studio ($0.00/hr 127.0.0.1 Inner-Loop Twin): Manage Pub/Sub, Firestore, Datastore, Spanner & Bigtable Local Emulators, Interactive Local REST Workbench, Cloud-to-Local Schema Sync & *_EMULATOR_HOST Exporter',
+      icon: Boxes,
+    },
+    {
       id: 'GLOBAL_MAP',
       group: 'COMMAND',
       label: 'Global Map',
@@ -9733,6 +9986,9 @@ function CloudPulseCockpit() {
     }
     if (tabId === 'MCP_HUB') {
       return 48;
+    }
+    if (tabId === 'LOCAL_EMULATORS') {
+      return 5;
     }
     return null;
   };
@@ -11145,6 +11401,7 @@ function CloudPulseCockpit() {
                             { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Google for Startups Scale & Credit Radar' },
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
+                            { id: 'LOCAL_EMULATORS', label: 'Local Cloud Emulators', meta: '5 Official 127.0.0.1 Emulators · $0/hr Dev' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                           ],
                         },
@@ -11428,6 +11685,48 @@ function CloudPulseCockpit() {
                     persona="AI_MLOPS"
                     projectId={selectedProjectId}
                     studioContextLabel="MCP & Agent Hub · Model Armor Firewall, Smart Router & RAG Recall"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'LOCAL_EMULATORS' && (
+                <div className="space-y-4">
+                  <CollapsibleArchitecturePipelineBar
+                    label="Local 127.0.0.1 $0.00 Twin -> Cloud Serverless & Database Architecture Chain"
+                    chainSummary="Pub/Sub · Firestore · Datastore · Spanner · Bigtable Local Emulators -> Cloud Run & Lakehouse"
+                  >
+                    <DataLakehouseAiPipelineBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onOpenProvision={handleOpenProvision}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
+                  <LocalCloudEmulatorsStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={localEmulatorsSubTab}
+                    subTabNonce={studioSubTabNonce}
+                    onSubTabChange={setLocalEmulatorsSubTab}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                    onNavigateStudio={handleNavigateStudioTab}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                  />
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Local Cloud Emulators Studio · $0.00/hr 127.0.0.1 Twin, REST Workbench & Schema Sync"
                     defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
@@ -13259,6 +13558,10 @@ function buildPlainEnglishModalSummary(descriptor = {}) {
     scopePill = isDelete ? 'Deletes Storage Bucket / File' : 'Updates Cloud Storage Folder';
   } else if (combinedText.includes('bigquery') || combinedText.includes('dataset')) {
     scopePill = isDelete ? 'Deletes BigQuery Table / Dataset' : 'Runs BigQuery Data Operation';
+  } else if (combinedText.includes('/emulators/') || String(location || '').includes('127.0.0.1')) {
+    scopePill = isDelete
+      ? 'Mutates Local 127.0.0.1 Emulator (Zero Cloud Impact)'
+      : 'Updates Local 127.0.0.1 SDK (Zero Cloud Impact)';
   }
 
   // 4. Use explicit laymanSummary if provided, otherwise synthesize a crystal-clear layman paragraph

@@ -29,6 +29,7 @@ import {
   HardDrive,
   Trash2,
   Cpu,
+  Boxes,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
@@ -2074,6 +2075,33 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       '100% $0.00/mo for MCP Stack Readiness audits, IAM Service Account creation, local IDE .mcp.json injection, and firewall/bucket security remediations; staging custom Cloud Run MCP bundles to GCS uses standard object storage (<$0.001/mo).',
+  },
+  {
+    id: 'wave24-local-cloud-emulators-studio',
+    wave: 'WAVE 24 LOCAL CLOUD EMULATORS STUDIO · 5 OFFICIAL 127.0.0.1 EMULATORS, INTERACTIVE LOCAL REST WORKBENCH, $0.00 CLOUD-TO-LOCAL SCHEMA TWIN SYNC & *_EMULATOR_HOST EXPORTER',
+    title:
+      '53. Google Cloud Local Emulators Studio — Pub/Sub, Firestore, Datastore, Spanner & Bigtable Local Fleet Manager, Interactive REST Workbench, Cloud Schema Twin Sync & SDK Environment Exporter',
+    badge: 'Local Cloud Emulators Studio (LocalCloudEmulatorsStudio.jsx)',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Boxes,
+    targetTab: 'LOCAL_EMULATORS',
+    problemSolved:
+      'Running inner-loop integration tests against live cloud instances burns hourly Spanner, Bigtable, and Pub/Sub/Firestore developer budgets while risking accidental mutations against shared staging environments. Engineers need a unified 127.0.0.1 local twin cockpit that manages official Google Cloud SDK and Docker emulators, tests local REST payloads interactively, mirrors real cloud schemas locally at $0.00/hr, and exports ready-to-paste *_EMULATOR_HOST bundles.',
+    howItWorks: [
+      'Pillar 1 — 5-Emulator Fleet & Host Readiness Cockpit (GET /api/project/:id/emulators/overview, POST .../start, .../stop, .../reset-data, .../install-component): Probes local Google Cloud SDK version, installed emulator components, Java JRE runtime, Docker Engine availability, process RSS MB, and live TCP socket RTT across Pub/Sub (:8085), Datastore (:8081), Firestore (:8086), Spanner (:9010/:9020), and Bigtable (:8089).',
+      'Pillar 2 — Interactive Local REST & SQL Workbench (POST /api/project/:id/emulators/workbench): Executes real HTTP/REST and SQL operations directly against 127.0.0.1 emulators — creating Pub/Sub topics/subscriptions and publishing/pulling messages, committing/querying Datastore entities, upserting/listing Firestore documents, executing Spanner DDL/SQL, and probing Bigtable gRPC sockets.',
+      'Pillar 3 — Cloud-to-Local $0.00 Twin Schema Sync (POST /api/project/:id/emulators/clone-cloud-schema): Reads live Pub/Sub topic/subscription topology, Firestore collection metadata, and Spanner instance/database DDL from your active Google Cloud project in 100% read-only mode and seeds matching resources into your local 127.0.0.1 emulators.',
+      'Pillar 4 — Multi-Format *_EMULATOR_HOST Exporter & Live Process Logs (GET /api/project/:id/emulators/:type/logs): Synthesizes project-scoped Bash exports, .env files, docker-compose.yml sidecars, and Node.js/Python/Go client SDK snippets alongside a live stdout/stderr ring-buffer log viewer.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/emulators/overview & GET /api/project/:id/emulators/:type/logs (gcloud beta emulators + 127.0.0.1 TCP probes)',
+      'POST /api/project/:id/emulators/start, /stop, /reset-data & /install-component (Detached process group & Docker lifecycle)',
+      'POST /api/project/:id/emulators/workbench (Local 127.0.0.1 REST APIs for Pub/Sub v1, Datastore v1, Firestore v1 & Spanner v1)',
+      'POST /api/project/:id/emulators/clone-cloud-schema (Read-only pubsub.googleapis.com, firestore.googleapis.com & spanner.googleapis.com -> 127.0.0.1)',
+    ],
+    billingImpact:
+      '100% $0.00/hr local compute and storage — all emulator processes run strictly on 127.0.0.1 loopback and read-only cloud schema discovery incurs $0.00 in cloud mutation charges.',
   },
 ];
 
