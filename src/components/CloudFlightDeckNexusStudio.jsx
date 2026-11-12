@@ -1828,9 +1828,16 @@ export default function CloudFlightDeckNexusStudio({
                 className="rounded-md border border-zinc-200 dark:border-zinc-800 p-2.5 space-y-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
-                    {r.model}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
+                      {r.model}
+                    </span>
+                    {r.resolvedModelId && r.resolvedModelId !== r.model && (
+                      <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                        ({r.resolvedModelId})
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {r.error && <StatusPill tone="rose">ERROR</StatusPill>}
                     {r.jsonValid !== undefined && r.jsonValid !== null && (
