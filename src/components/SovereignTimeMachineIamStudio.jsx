@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { WifKeylessPanel } from './OpsFrontierPanels';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -1305,6 +1306,13 @@ export default function SovereignTimeMachineIamStudio({
                     : `${tmData.drifts?.length || 0} DRIFTS`
                   : 'Merkle Diff',
                 tip: 'Seal SHA-256 Merkle-signed snapshots of VMs, Cloud Run, Storage, BigQuery, Firewalls & IAM, detect out-of-band console tampering, and heal drift in 1 tap',
+              },
+              {
+                id: 'WIF_KEYLESS',
+                icon: KeyRound,
+                label: 'Keyless Workload Identity (WIF)',
+                badge: 'OIDC + Pools',
+                tip: 'Provision Workload Identity Pools and export keyless GitHub Actions / GitLab CI OIDC workflows so no long-lived Service Account JSON keys are needed',
               },
               {
                 id: 'SECRETS_KMS_WAF',
@@ -4343,6 +4351,17 @@ gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-
             </div>
           </div>
         </div>
+      )}
+
+      {activeSubTab === 'WIF_KEYLESS' && (
+        <WifKeylessPanel
+          projectId={projectId}
+          onShowToast={onTriggerToast}
+          onNavigateStudio={() => {
+            setActiveSubTab('IAM_SURGEON');
+            setIamSectionView('SA_VAULT');
+          }}
+        />
       )}
 
       {/* =====================================================================

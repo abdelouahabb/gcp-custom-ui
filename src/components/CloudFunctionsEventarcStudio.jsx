@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import { PubSubTimeMachinePanel } from './OpsFrontierPanels';
 import {
   Zap,
   Sparkles,
@@ -1149,6 +1150,12 @@ main:
               label: '2027 Eventarc Advanced Bus, DLQ Replay & 3-Engine Sizer',
               badge: 'CEL + DLQ',
             },
+            {
+              id: 'PUBSUB_TIMEMACHINE',
+              icon: Activity,
+              label: 'Pub/Sub DLQ Peek & Seek Time-Machine',
+              badge: 'Snapshots + Seek',
+            },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
@@ -1208,6 +1215,14 @@ main:
       <div id="functions-active-subtab-anchor" className="scroll-mt-24" />
 
       {/* SUB-TAB 1: PLAIN-ENGLISH EVENTARC TRIGGER WIZARD & 4-HOP VISUAL PIPELINE */}
+      {activeSubTab === 'PUBSUB_TIMEMACHINE' && (
+        <PubSubTimeMachinePanel
+          projectId={projectId}
+          onShowToast={onShowToast}
+          onNavigateStudio={onSelectTab}
+        />
+      )}
+
       {activeSubTab === 'TRIGGER_WIZARD' && (
         <div className="space-y-4">
           {/* Step 1: Pick Event Trigger (Dual-Mode: Beginner Everyday Recipes vs Advanced Universal 130+ GCP Services Catalog) */}

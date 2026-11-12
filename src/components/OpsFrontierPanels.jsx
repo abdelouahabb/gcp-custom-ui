@@ -43,53 +43,11 @@ import {
  * /api/project/:id/frontier/*.
  * ============================================================================ */
 
-const SUB_TABS = [
-  {
-    id: 'QUOTA_RADAR',
-    featureId: 'W26_TAB_QUOTA_RADAR',
-    label: 'Cloud Quota & GPU Capacity Radar',
-    shortDesc:
-      'Audit live Compute & regional GPU quota utilization, synthesize gcloud quota CLI commands, and wire Cloud Monitoring quota alerts',
-    icon: Gauge,
-  },
-  {
-    id: 'WIF_KEYLESS',
-    featureId: 'W26_TAB_WIF_KEYLESS',
-    label: 'Zero-Trust WIF & SA Key Hunter',
-    shortDesc:
-      'Hunt aged user-managed Service Account JSON keys, provision Workload Identity Pools, and export keyless GitHub/GitLab OIDC workflows',
-    icon: KeyRound,
-  },
-  {
-    id: 'CLOUD_DNS_TLS',
-    featureId: 'W26_TAB_CLOUD_DNS_TLS',
-    label: 'Cloud DNS, Certs & Multi-Resolver X-Ray',
-    shortDesc:
-      'Inspect live Cloud DNS zones and Certificate Manager certs, compare 8.8.8.8 vs 1.1.1.1 resolution, verify SPF/DMARC/CAA, and check :443 TLS expiry',
-    icon: Globe,
-  },
-  {
-    id: 'PUBSUB_TIMEMACHINE',
-    featureId: 'W26_TAB_PUBSUB_TIMEMACHINE',
-    label: 'Pub/Sub DLQ & Seek Time-Machine',
-    shortDesc:
-      'Inspect live Pub/Sub topics, DLQ subscriptions, and snapshots; publish events, non-destructively peek messages, create snapshots, and seek back in time',
-    icon: Radio,
-  },
-];
-
-const VALID_SUB_TAB_IDS = new Set(SUB_TABS.map((t) => t.id));
-
 const INPUT_CLS =
   'w-full px-2.5 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-amber-500';
 
 const LABEL_CLS =
   'block text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1';
-
-const TAB_ACTIVE =
-  'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300';
-const TAB_INACTIVE =
-  'border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/45 hover:text-zinc-900 dark:hover:text-zinc-100';
 
 /* ----------------------------------------------------------------------------
  * Pure Helpers
@@ -443,12 +401,15 @@ function ApiStatusPills({ apiStatus }) {
  * Main Studio Component
  * ============================================================================ */
 
-export default function Wave26OpsFrontierStudio({
+export default function OpsFrontierPanel({
   projectId,
   onShowToast,
   onNavigateStudio,
+  panel,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('QUOTA_RADAR');
+  const [activeSubTabState, setActiveSubTab] = useState(panel || 'QUOTA_RADAR');
+  const activeSubTab = panel || activeSubTabState;
+  const projLabel = projectId || 'no-project-selected';
   const [busy, setBusy] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
 
@@ -516,19 +477,6 @@ export default function Wave26OpsFrontierStudio({
     },
     [toast]
   );
-
-  // Cross-studio navigation listener: cloudpulse:open-ops-frontier
-  useEffect(() => {
-    const handleOpenFrontier = (ev) => {
-      const requested = ev?.detail?.subTab;
-      if (requested && VALID_SUB_TAB_IDS.has(requested)) {
-        setActiveSubTab(requested);
-      }
-    };
-    window.addEventListener('cloudpulse:open-ops-frontier', handleOpenFrontier);
-    return () =>
-      window.removeEventListener('cloudpulse:open-ops-frontier', handleOpenFrontier);
-  }, []);
 
   /* --------------------------------------------------------------------------
    * Pillar 1 Handlers: Cloud Quota & GPU Capacity Radar
@@ -971,67 +919,6 @@ export default function Wave26OpsFrontierStudio({
         (s) => Boolean(s?.deadLetterPolicy?.deadLetterTopic || s?.deadLetterTopic)
       ).length,
     [subscriptions]
-  );
-
-  /* --------------------------------------------------------------------------
-   * Studio Header & Warm-Amber Sub-Tab Bar
-   * -------------------------------------------------------------------------- */
-
-  const projLabel = projectId || 'no-project-selected';
-
-  const header = (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 space-y-3">
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone="amber">
-            <ShieldCheck className="w-3 h-3" />
-            WAVE 26 OPS FRONTIER
-          </StatusPill>
-          <StatusPill tone="blue">
-            <Cloud className="w-3 h-3" />
-            QUOTA + WIF + DNS/TLS + PUB/SUB SEEK
-          </StatusPill>
-        </div>
-        <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Cloud Ops Frontier Studio
-        </h2>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          Live operational guardrails for <Chip>{projLabel}</Chip>: prevent Compute
-          and GPU capacity exhaustion, eliminate long-lived Service Account JSON keys
-          with Workload Identity Federation, compare multi-resolver DNS and :443 TLS
-          chains, and rewind Pub/Sub subscriptions via snapshots.
-        </p>
-      </div>
-
-      <div
-        role="tablist"
-        aria-label="Wave 26 Ops Frontier Modules"
-        className="cp-segmented-menu flex flex-wrap gap-1.5"
-      >
-        {SUB_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeSubTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              data-subtab-id={tab.id}
-              data-feature-id={tab.featureId}
-              title={tab.shortDesc}
-              onClick={() => setActiveSubTab(tab.id)}
-              className={`px-3 h-9 rounded-md border text-xs font-mono font-bold flex items-center gap-2 cursor-pointer transition ${
-                isActive ? TAB_ACTIVE : TAB_INACTIVE
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5 shrink-0" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 
   /* ==========================================================================
@@ -2193,11 +2080,24 @@ export default function Wave26OpsFrontierStudio({
 
   return (
     <div className="space-y-3">
-      {header}
       {activeSubTab === 'QUOTA_RADAR' && quotaTab}
       {activeSubTab === 'WIF_KEYLESS' && wifTab}
       {activeSubTab === 'CLOUD_DNS_TLS' && dnsTab}
       {activeSubTab === 'PUBSUB_TIMEMACHINE' && pubsubTab}
     </div>
   );
+}
+
+/* Embedded single-pillar panels hosted inside canonical studios. */
+export function QuotaRadarPanel(props) {
+  return <OpsFrontierPanel {...props} panel="QUOTA_RADAR" />;
+}
+export function WifKeylessPanel(props) {
+  return <OpsFrontierPanel {...props} panel="WIF_KEYLESS" />;
+}
+export function DnsTlsPanel(props) {
+  return <OpsFrontierPanel {...props} panel="CLOUD_DNS_TLS" />;
+}
+export function PubSubTimeMachinePanel(props) {
+  return <OpsFrontierPanel {...props} panel="PUBSUB_TIMEMACHINE" />;
 }

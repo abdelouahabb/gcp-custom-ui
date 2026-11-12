@@ -70,6 +70,8 @@ const SUB_TABS = [
   },
 ];
 
+const STANDALONE_TAB_IDS = new Set(['TERRAFORM_DRIFT', 'VERTEX_ARENA']);
+
 const HCL_FILES = [
   { id: 'mainTf', label: 'main.tf' },
   { id: 'importsTf', label: 'imports.tf' },
@@ -334,8 +336,12 @@ export default function CloudFlightDeckNexusStudio({
   projectId,
   onShowToast,
   onNavigateStudio,
+  embeddedTab,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('TERRAFORM_DRIFT');
+  const [activeSubTabState, setActiveSubTab] = useState(
+    embeddedTab || 'TERRAFORM_DRIFT'
+  );
+  const activeSubTab = embeddedTab || activeSubTabState;
   const [busy, setBusy] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
 
@@ -529,7 +535,7 @@ export default function CloudFlightDeckNexusStudio({
   useEffect(() => {
     const onOpen = (ev) => {
       const sub = ev?.detail?.subTab;
-      if (sub && SUB_TABS.some((t) => t.id === sub)) setActiveSubTab(sub);
+      if (sub && STANDALONE_TAB_IDS.has(sub)) setActiveSubTab(sub);
     };
     window.addEventListener('cloudpulse:open-cloud-nexus', onOpen);
     return () => window.removeEventListener('cloudpulse:open-cloud-nexus', onOpen);
@@ -837,7 +843,7 @@ export default function CloudFlightDeckNexusStudio({
           </StatusPill>
           <StatusPill tone="blue">
             <Cloud className="w-3 h-3" />
-            4-IN-1 LIVE CONTROL PLANE
+            2-IN-1 LIVE CONTROL PLANE
           </StatusPill>
         </div>
         <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -845,9 +851,7 @@ export default function CloudFlightDeckNexusStudio({
         </h2>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
           Reverse-compile <Chip>{proj}</Chip> into Terraform and catch ClickOps
-          drift, map IAM and network blast radius, benchmark Gemini models on
-          Vertex AI, and replay a black-box timeline of audit changes versus
-          runtime errors.
+          drift and benchmark Gemini models side by side on Vertex AI.
         </p>
       </div>
       <div
@@ -855,7 +859,7 @@ export default function CloudFlightDeckNexusStudio({
         aria-label="Cloud Flight-Deck Modules"
         className="cp-segmented-menu flex flex-wrap gap-1.5"
       >
-        {SUB_TABS.map((tab) => {
+        {SUB_TABS.filter((t) => STANDALONE_TAB_IDS.has(t.id)).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
           return (
@@ -2198,11 +2202,19 @@ export default function CloudFlightDeckNexusStudio({
 
   return (
     <div className="space-y-3">
-      {header}
+      {!embeddedTab && header}
       {activeSubTab === 'TERRAFORM_DRIFT' && terraformTab}
       {activeSubTab === 'BLAST_RADIUS' && blastTab}
       {activeSubTab === 'VERTEX_ARENA' && arenaTab}
       {activeSubTab === 'FLIGHT_RECORDER' && recorderTab}
     </div>
   );
+}
+
+/* Embedded single-pillar panels hosted inside canonical studios. */
+export function BlastRadiusPanel(props) {
+  return <CloudFlightDeckNexusStudio {...props} embeddedTab="BLAST_RADIUS" />;
+}
+export function FlightRecorderPanel(props) {
+  return <CloudFlightDeckNexusStudio {...props} embeddedTab="FLIGHT_RECORDER" />;
 }

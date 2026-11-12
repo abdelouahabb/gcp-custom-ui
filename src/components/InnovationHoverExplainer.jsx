@@ -885,13 +885,13 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   CLOUD_NEXUS: {
-    badge: '4-IN-1 FLIGHT-DECK',
-    title: 'Cloud Flight-Deck Nexus Studio — Terraform Drift, Blast-Radius, Vertex Arena & Flight Recorder',
+    badge: '2-IN-1 TERRAFORM & VERTEX EVAL',
+    title: 'Terraform & Vertex Eval — Cloud Flight-Deck Nexus Studio',
     whatItDoes:
-      'Unifies four live SRE/platform capabilities: Terraform drift detection against real inventory, a topology blast-radius graph with packet probes, a Vertex AI model arena with red-team probes, and a unified incident flight recorder with Cloud Run canary rehearsal.',
+      'Unifies two live platform capabilities: Terraform drift detection and HCL export against real inventory, and a Vertex AI multi-model arena with red-team probes and evaluation history.',
     enterpriseValue:
-      'Replaces four disjoint consoles with one cockpit so platform teams can detect drift, quantify blast radius, benchmark models and rehearse resilience before an incident.',
-    gcpApis: 'compute.googleapis.com · run.googleapis.com · networkmanagement.googleapis.com · aiplatform.googleapis.com · logging.googleapis.com',
+      'Detects out-of-band console changes before they break IaC pipelines and picks models from measured latency, cost and quality.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · storage.googleapis.com · aiplatform.googleapis.com',
     safetyMode: 'READ_ONLY',
   },
   NEXUS_TAB_TERRAFORM_DRIFT: {
@@ -904,16 +904,6 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'cloudasset / compute / run / storage REST inventory',
     safetyMode: 'READ_ONLY',
   },
-  NEXUS_TAB_BLAST_RADIUS: {
-    badge: 'PILLAR 2 · BLAST RADIUS',
-    title: 'Dependency Blast-Radius & Packet Probe Tab',
-    whatItDoes:
-      'Renders a live topology graph of VMs, networks, firewalls and services and shows what is impacted if a node fails, with real TCP reachability probes.',
-    enterpriseValue:
-      'Quantifies downstream impact before maintenance or incident response.',
-    gcpApis: 'compute.googleapis.com · networkmanagement.googleapis.com',
-    safetyMode: 'READ_ONLY',
-  },
   NEXUS_TAB_VERTEX_ARENA: {
     badge: 'PILLAR 3 · VERTEX ARENA',
     title: 'Vertex AI Model Arena & Red-Team Tab',
@@ -922,16 +912,6 @@ export const INNOVATION_FEATURE_GUIDE = {
     enterpriseValue:
       'Chooses the best model for cost and safety using measured, not marketed, results.',
     gcpApis: 'aiplatform.googleapis.com/v1 generateContent',
-    safetyMode: 'READ_ONLY',
-  },
-  NEXUS_TAB_FLIGHT_RECORDER: {
-    badge: 'PILLAR 4 · FLIGHT RECORDER',
-    title: 'Incident Flight Recorder & Canary Rehearsal Tab',
-    whatItDoes:
-      'Merges audit logs, error logs and deployment events into one scrubbable timeline and rehearses Cloud Run resilience with HTTP bursts and canary shifts.',
-    enterpriseValue:
-      'Gives responders a single replayable incident timeline and a safe way to rehearse rollouts.',
-    gcpApis: 'logging.googleapis.com/v2 · run.googleapis.com/v2',
     safetyMode: 'READ_ONLY',
   },
   NEXUS_BTN_SCAN_TERRAFORM: {
@@ -1104,56 +1084,6 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'HTTP burst from CloudPulse host',
     safetyMode: 'READ_ONLY',
   },
-  CLOUD_OPS_FRONTIER: {
-    badge: 'WAVE 26 · 4-PILLAR OPS FRONTIER',
-    title: 'Wave 26 Ops Frontier Studio — Quota Radar, Zero-Trust WIF, Cloud DNS/TLS X-Ray & Pub/Sub Seek Time-Machine',
-    whatItDoes:
-      'Combines four live Google Cloud operational guardrails in one cockpit: regional Compute and GPU quota saturation radar with Monitoring alerts, IAM Service Account static JSON key hunter with keyless Workload Identity Federation setup, Cloud DNS and Certificate Manager X-Ray with dual-resolver (8.8.8.8 vs 1.1.1.1) and TLS 443 chain inspection, and a non-destructive Pub/Sub DLQ peek and snapshot seek time-machine.',
-    enterpriseValue:
-      'Prevents silent quota exhaustion outages, eliminates long-lived JSON service account keys, catches DNS/TLS certificate expiry before downtime, and enables safe event-stream replay.',
-    gcpApis: 'compute.googleapis.com · monitoring.googleapis.com · iam.googleapis.com · dns.googleapis.com · certificatemanager.googleapis.com · pubsub.googleapis.com',
-    safetyMode: 'READ_ONLY',
-  },
-  W26_TAB_QUOTA_RADAR: {
-    badge: 'PILLAR 1 · QUOTA & GPU RADAR',
-    title: 'Cloud Quota & GPU Capacity Radar Tab',
-    whatItDoes:
-      'Audits live project-wide, regional, and GPU (A100, H100, L4, T4) Compute Engine quota limits versus active consumption, ranking metrics by saturation percentage.',
-    enterpriseValue:
-      'Surfaces impending vCPU, IP, SSD, or GPU quota walls before autoscaling or production deployments fail.',
-    gcpApis: 'compute.googleapis.com/compute/v1/projects & regions · monitoring.googleapis.com/v3',
-    safetyMode: 'READ_ONLY',
-  },
-  W26_TAB_WIF_KEYLESS: {
-    badge: 'PILLAR 2 · ZERO-TRUST WIF',
-    title: 'Zero-Trust Workload Identity Federation & SA Key Hunter Tab',
-    whatItDoes:
-      'Discovers risky user-managed Service Account JSON keys with key age tracking alongside global Workload Identity Pools and ready-to-use GitHub Actions and GitLab CI OIDC YAML workflows.',
-    enterpriseValue:
-      'Replaces static, leak-prone JSON credentials with short-lived keyless OIDC token federation.',
-    gcpApis: 'iam.googleapis.com/v1 serviceAccounts/keys & workloadIdentityPools',
-    safetyMode: 'READ_ONLY',
-  },
-  W26_TAB_CLOUD_DNS_TLS: {
-    badge: 'PILLAR 3 · DNS & TLS X-RAY',
-    title: 'Cloud DNS, Certificate Manager & Multi-Resolver X-Ray Tab',
-    whatItDoes:
-      'Lists Cloud DNS managed zones, record sets, and Certificate Manager certificates, and runs live side-by-side Google (8.8.8.8) vs Cloudflare (1.1.1.1) DNS resolution plus port 443 TLS X.509 handshake inspection.',
-    enterpriseValue:
-      'Detects split-horizon DNS drift, missing SPF/DMARC/CAA email/CA protections, and expiring TLS certificates in seconds.',
-    gcpApis: 'dns.googleapis.com/dns/v1 · certificatemanager.googleapis.com/v1 · Node dns.Resolver & tls.connect',
-    safetyMode: 'READ_ONLY',
-  },
-  W26_TAB_PUBSUB_TIMEMACHINE: {
-    badge: 'PILLAR 4 · PUB/SUB TIME-MACHINE',
-    title: 'Cloud Pub/Sub DLQ & Snapshot Seek Time-Machine Tab',
-    whatItDoes:
-      'Inspects live Pub/Sub topics, dead-letter queue (DLQ) subscriptions, and replay snapshots, allowing non-destructive message peeking, test publishing, snapshot creation, and subscription cursor seeking.',
-    enterpriseValue:
-      'Lets SREs inspect poison-pill messages without acknowledging them and rewind event streams to recover from buggy consumer deployments.',
-    gcpApis: 'pubsub.googleapis.com/v1 topics, subscriptions & snapshots',
-    safetyMode: 'READ_ONLY',
-  },
   W26_BTN_REFRESH_QUOTAS: {
     badge: 'QUOTA INVENTORY SYNC',
     title: 'Refresh Live Compute & GPU Quotas',
@@ -1312,6 +1242,66 @@ export const INNOVATION_FEATURE_GUIDE = {
     enterpriseValue:
       'Keeps one canonical place for credential lifecycle actions instead of duplicating key deletion controls.',
     gcpApis: 'iam.googleapis.com/v1 serviceAccounts/keys (opens IAM Studio)',
+    safetyMode: 'READ_ONLY',
+  },
+  SOVEREIGN_TAB_WIF_KEYLESS: {
+    badge: 'KEYLESS WIF & OIDC',
+    title: 'Keyless Workload Identity Federation & OIDC YAML Tab',
+    whatItDoes:
+      'Lists live Workload Identity Pools, creates new pools behind a confirmation modal, and exports GitHub Actions and GitLab CI keyless OIDC YAML for the active project.',
+    enterpriseValue:
+      'Replaces static JSON service account keys with short-lived federated tokens inside the IAM studio.',
+    gcpApis: 'iam.googleapis.com/v1 workloadIdentityPools',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_GPU_QUOTA_RADAR: {
+    badge: 'GPU QUOTA RADAR',
+    title: 'Cloud Quota & GPU Capacity Radar Pillar',
+    whatItDoes:
+      'Audits project, regional and GPU Compute Engine quota usage against limits and creates Cloud Monitoring saturation alerts.',
+    enterpriseValue:
+      'Surfaces quota walls during incident response before autoscaling or deployments fail.',
+    gcpApis: 'compute.googleapis.com/v1 quotas, monitoring.googleapis.com/v3',
+    safetyMode: 'READ_ONLY',
+  },
+  SRE_PILLAR_CAUSAL_FLIGHT_RECORDER: {
+    badge: 'CAUSAL FLIGHT RECORDER',
+    title: 'Causal Flight-Recorder & Audit-to-Error Correlator Pillar',
+    whatItDoes:
+      'Merges audit, error and deployment logs into one scrubbable incident timeline and runs bounded HTTP resilience probes.',
+    enterpriseValue:
+      'Shows which change preceded an outage without stitching logs by hand.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  FUNCTIONS_TAB_PUBSUB_TIMEMACHINE: {
+    badge: 'PUB/SUB TIME-MACHINE',
+    title: 'Pub/Sub DLQ Peek & Seek Time-Machine Tab',
+    whatItDoes:
+      'Inspects live topics, subscriptions and snapshots, peeks messages without acknowledging, and seeks subscriptions to saved snapshots behind confirmation modals.',
+    enterpriseValue:
+      'Recovers from faulty consumers by replaying events without losing messages.',
+    gcpApis: 'pubsub.googleapis.com/v1 topics, subscriptions, snapshots',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_NETINTEL_TAB_BLAST_RADIUS: {
+    badge: 'BLAST RADIUS GRAPH',
+    title: 'VPC Blast-Radius Graph & Connectivity Tests Tab',
+    whatItDoes:
+      'Renders a live topology graph of VMs, networks and firewalls with real TCP reachability probes and Network Intelligence Connectivity Tests.',
+    enterpriseValue:
+      'Quantifies downstream impact of a failing node before maintenance.',
+    gcpApis: 'compute.googleapis.com, networkmanagement.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_NETINTEL_TAB_CLOUD_DNS_TLS: {
+    badge: 'DNS & TLS X-RAY',
+    title: 'Cloud DNS, Certificates & Multi-Resolver X-Ray Tab',
+    whatItDoes:
+      'Inventories Cloud DNS zones and Certificate Manager certificates and compares 8.8.8.8 vs 1.1.1.1 answers with SPF, DMARC, CAA and port 443 TLS inspection.',
+    enterpriseValue:
+      'Catches DNS drift and expiring certificates in seconds.',
+    gcpApis: 'dns.googleapis.com/dns/v1, certificatemanager.googleapis.com/v1',
     safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP: {
@@ -9536,11 +9526,8 @@ function resolveFeatureExplanation(buttonEl) {
     if (textLower.includes('startup 10x') || textLower.includes('google for startups')) {
       return INNOVATION_FEATURE_GUIDE.STARTUP_10X;
     }
-    if (textLower.includes('cloud flight-deck') && textLower.length < 60) {
+    if ((textLower.includes('cloud flight-deck') || textLower.includes('terraform & vertex eval')) && textLower.length < 60) {
       return INNOVATION_FEATURE_GUIDE.CLOUD_NEXUS;
-    }
-    if ((textLower.includes('ops frontier') || textLower.includes('wave 26')) && textLower.length < 60) {
-      return INNOVATION_FEATURE_GUIDE.CLOUD_OPS_FRONTIER;
     }
     if (textLower.includes('local cloud emulators') && textLower.length < 48) {
       return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS;

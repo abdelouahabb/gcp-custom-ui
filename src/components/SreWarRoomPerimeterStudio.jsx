@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { QuotaRadarPanel } from './OpsFrontierPanels';
+import { FlightRecorderPanel } from './CloudFlightDeckNexusStudio';
 import {
   Flame,
   ShieldCheck,
@@ -110,6 +112,18 @@ const SRE_PILLARS = [
     num: '12',
     shortTitle: 'Health, Drift & SOC Bridge',
     subtitle: 'Merkle State Vault, GitOps HCL & Wave 16 SOC Link',
+  },
+  {
+    id: 'GPU_QUOTA_RADAR',
+    num: '13',
+    shortTitle: 'GPU & Quota Radar',
+    subtitle: 'Live Compute and GPU quota utilization with Monitoring alerts',
+  },
+  {
+    id: 'CAUSAL_FLIGHT_RECORDER',
+    num: '14',
+    shortTitle: 'Causal Flight Recorder',
+    subtitle: 'Audit changes correlated with runtime errors and resilience probes',
   },
 ];
 
@@ -1007,6 +1021,22 @@ export default function SreWarRoomPerimeterStudio({
       {/* ====================================================================
           PILLAR 01: MULTI-WINDOW SLO ERROR-BUDGET BURN RADAR & LogRCA AUTOPSY
          ==================================================================== */}
+      {activePillar === 'GPU_QUOTA_RADAR' && (
+        <QuotaRadarPanel
+          projectId={projectId}
+          onShowToast={onTriggerToast}
+          onNavigateStudio={onNavigateTab}
+        />
+      )}
+
+      {activePillar === 'CAUSAL_FLIGHT_RECORDER' && (
+        <FlightRecorderPanel
+          projectId={projectId}
+          onShowToast={onTriggerToast}
+          onNavigateStudio={onNavigateTab}
+        />
+      )}
+
       {activePillar === 'SLO_BURN_AND_RCA' && (
         <div className="space-y-4">
           {/* Google SRE Book Chapter 5 Multi-Window Burn Rate Table */}

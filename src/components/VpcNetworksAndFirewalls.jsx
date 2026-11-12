@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
+import { DnsTlsPanel } from './OpsFrontierPanels';
+import { BlastRadiusPanel } from './CloudFlightDeckNexusStudio';
 import {
   Network,
   Shield,
@@ -246,7 +248,24 @@ export default function VpcNetworksAndFirewalls({
   onShowToast,
   onShowError,
   onSelectTab,
+  initialSubTab = null,
+  subTabNonce = 0,
 }) {
+  const [netIntelTab, setNetIntelTab] = useState(
+    initialSubTab === 'BLAST_RADIUS' || initialSubTab === 'CLOUD_DNS_TLS'
+      ? initialSubTab
+      : 'NONE'
+  );
+  useEffect(() => {
+    if (initialSubTab === 'BLAST_RADIUS' || initialSubTab === 'CLOUD_DNS_TLS') {
+      setNetIntelTab(initialSubTab);
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById('vpc-network-intel-anchor')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [initialSubTab, subTabNonce]);
   // Local optimistic VPC & firewall lists so creates, edits, toggles, deletes, and direct API syncs reflect immediately
   const [localVpcs, setLocalVpcs] = useState(propVpcs);
   const [localFirewalls, setLocalFirewalls] = useState(firewalls);
@@ -3214,6 +3233,63 @@ export default function VpcNetworksAndFirewalls({
           </div>
         </div>
       )}
+
+      {/* 5. Network Intelligence: Blast-Radius Graph, Connectivity Tests, Cloud DNS & Resolver X-Ray */}
+      <div
+        id="vpc-network-intel-anchor"
+        className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3 shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              Network Intelligence
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Live dependency blast radius, connectivity tests, Cloud DNS zones and
+              dual-resolver DNS/TLS probes for this project.
+            </div>
+          </div>
+          <div role="tablist" aria-label="Network Intelligence" className="flex flex-wrap gap-1.5">
+            {[
+              { id: 'BLAST_RADIUS', label: 'Blast-Radius & Connectivity Tests' },
+              { id: 'CLOUD_DNS_TLS', label: 'Cloud DNS, Certs & Resolver X-Ray' },
+            ].map((t) => {
+              const active = netIntelTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  data-feature-id={`VPC_NETINTEL_TAB_${t.id}`}
+                  onClick={() => setNetIntelTab(active ? 'NONE' : t.id)}
+                  className={`px-3 h-9 rounded-md border text-xs font-mono font-bold cursor-pointer transition ${
+                    active
+                      ? 'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                      : 'border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/45'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {netIntelTab === 'BLAST_RADIUS' && (
+          <BlastRadiusPanel
+            projectId={projectId}
+            onShowToast={onShowToast}
+            onNavigateStudio={onSelectTab}
+          />
+        )}
+        {netIntelTab === 'CLOUD_DNS_TLS' && (
+          <DnsTlsPanel
+            projectId={projectId}
+            onShowToast={onShowToast}
+            onNavigateStudio={onSelectTab}
+          />
+        )}
+      </div>
     </div>
   );
 }

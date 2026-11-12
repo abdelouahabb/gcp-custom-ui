@@ -2108,7 +2108,7 @@ const DOC_SECTIONS = [
     id: 'wave25-cloud-flight-deck-nexus-studio',
     wave: 'WAVE 25 CLOUD FLIGHT-DECK NEXUS STUDIO · TERRAFORM DRIFT, BLAST-RADIUS GRAPH, VERTEX AI ARENA & INCIDENT FLIGHT RECORDER',
     title:
-      '54. Cloud Flight-Deck Nexus Studio — Terraform Drift & HCL Export, Dependency Blast-Radius & Packet Probes, Vertex AI Model Arena & Red-Team, Incident Flight Recorder & Cloud Run Canary Rehearsal',
+      '54. Terraform & Vertex Eval (Cloud Flight-Deck Nexus Studio) — Terraform Drift & HCL Export, Vertex AI Model Arena & Red-Team',
     badge: 'Cloud Flight-Deck Nexus Studio (CloudFlightDeckNexusStudio.jsx)',
     badgeColor:
       'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
@@ -2133,30 +2133,30 @@ const DOC_SECTIONS = [
   },
   {
     id: 'wave26-ops-frontier-studio',
-    wave: 'WAVE 26 OPS FRONTIER STUDIO · QUOTA & GPU RADAR, ZERO-TRUST WIF, CLOUD DNS/TLS X-RAY & PUB/SUB SEEK TIME-MACHINE',
+    wave: 'WAVE 26/27 OPS FRONTIER PILLARS · CONSOLIDATED INTO CANONICAL STUDIOS (SRE WAR-ROOM, IAM, VPC, FUNCTIONS)',
     title:
-      '55. Wave 26 Ops Frontier Studio — Cloud Quota & GPU Capacity Radar, Zero-Trust WIF & SA Key Hunter, Cloud DNS / TLS Multi-Resolver X-Ray & Pub/Sub DLQ Seek Time-Machine',
-    badge: 'Wave 26 Ops Frontier Studio (Wave26OpsFrontierStudio.jsx)',
+      '55. Ops Frontier Pillars (Consolidated) — GPU Quota Radar & Causal Flight-Recorder in SRE War-Room, Keyless WIF in IAM Studio, Blast-Radius & Cloud DNS/TLS X-Ray in VPC Studio, Pub/Sub DLQ Seek Time-Machine in Functions Studio',
+    badge: 'Embedded panels (OpsFrontierPanels.jsx) in SRE_WAR_ROOM, SOVEREIGN_STUDIO, VPC_NETWORKS, FUNCTIONS_STUDIO',
     badgeColor:
       'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     icon: ShieldCheck,
-    targetTab: 'CLOUD_OPS_FRONTIER',
+    targetTab: 'SRE_WAR_ROOM',
     problemSolved:
-      'Production cloud teams routinely get blindsided by four silent operational hazards: regional Compute or NVIDIA GPU quota exhaustion during traffic spikes, forgotten long-lived Service Account JSON keys sitting in CI/CD pipelines, split-horizon DNS or expiring port-443 TLS certificates, and poison-pill Pub/Sub messages or buggy consumer releases that require time-travel replay without losing events.',
+      'Quota exhaustion, static JSON service account keys, split-horizon DNS or expiring TLS certificates, and poison-pill Pub/Sub messages each belong next to the studio that already owns that domain. Wave 27 removed the standalone Ops Frontier sidebar item and embedded each pillar in its canonical studio so there is one home per capability.',
     howItWorks: [
-      'Pillar 1 — Cloud Quota & GPU Capacity Radar (GET /api/project/:id/frontier/quotas, POST .../frontier/quota-alert): Audits project-wide, regional, and GPU (A100, H100, L4, T4) Compute Engine quota usage versus ceilings, classifies CRITICAL (>=85%) and WARNING (>=70%) saturation, exports gcloud quota CLI commands, and provisions Cloud Monitoring quota alert policies behind a bespoke confirmation modal.',
-      'Pillar 2 — Zero-Trust WIF & SA Key Vault Deep-Link (GET .../frontier/wif-overview, POST .../frontier/wif-action): Creates global Workload Identity Pools behind a bespoke confirmation modal, deep-links to the IAM Time-Machine Studio for Service Account key review and revocation, and generates project-interpolated GitHub Actions and GitLab CI keyless OIDC YAML templates.',
-      'Pillar 3 — Cloud DNS, Certificate Manager & Multi-Resolver TLS X-Ray (GET .../frontier/dns-overview, POST .../frontier/dns-probe): Inventories Cloud DNS managed zones, record sets, and Certificate Manager certificates, and runs live side-by-side Google (8.8.8.8) vs Cloudflare (1.1.1.1) A/AAAA/MX/TXT/CAA/NS lookups, SPF/DMARC/CAA posture checks, and real port-443 TLS X.509 handshake inspection.',
-      'Pillar 4 — Pub/Sub DLQ & Seek Time-Machine (GET .../frontier/pubsub-overview, POST .../frontier/pubsub-action): Inspects topics, DLQ subscriptions, and snapshots; supports test event publishing, non-destructive 5-message pull peeks (without acknowledging), point-in-time snapshot capture, and bespoke-gated subscription cursor seeks and snapshot deletions.',
+      'GPU Quota Radar and Causal Flight-Recorder (SRE_WAR_ROOM sub-tabs GPU_QUOTA_RADAR and CAUSAL_FLIGHT_RECORDER; GET /api/project/:id/frontier/quotas, POST .../frontier/quota-alert, GET .../nexus/flight-recorder, POST .../nexus/canary-rehearsal HTTP_RESILIENCE_PROBE): quota saturation by project, region and GPU with Monitoring alert creation behind a bespoke modal, plus a merged audit/error/deploy timeline. Live canary traffic shifting is a deep-link to Cloud Run Fleet.',
+      'Keyless Workload Identity Federation (SOVEREIGN_STUDIO sub-tab WIF_KEYLESS; GET .../frontier/wif-overview, POST .../frontier/wif-action CREATE_WIF_POOL): live pools, pool creation behind a bespoke modal, GitHub Actions and GitLab CI OIDC YAML export, and a deep-link to the existing SA Key vault for key revocation.',
+      'Blast-Radius Graph, Connectivity Tests and Cloud DNS / TLS X-Ray (VPC_NETWORKS Network Intelligence section; GET .../nexus/blast-radius, POST .../nexus/packet-probe, GET .../frontier/dns-overview, POST .../frontier/dns-probe): live topology graph, TCP probes, Connectivity Tests, DNS zones, certificates and 8.8.8.8 vs 1.1.1.1 comparison with SPF/DMARC/CAA and port 443 TLS inspection.',
+      'Pub/Sub DLQ Peek and Seek Time-Machine (FUNCTIONS_STUDIO sub-tab PUBSUB_TIMEMACHINE; GET .../frontier/pubsub-overview, POST .../frontier/pubsub-action): topics, subscriptions, snapshots, non-destructive peek, snapshot create, and bespoke-gated seek and snapshot delete.',
     ],
     apisUsed: [
       'GET /api/project/:id/frontier/quotas & POST /api/project/:id/frontier/quota-alert (compute.googleapis.com/compute/v1, monitoring.googleapis.com/v3)',
-      'GET /api/project/:id/frontier/wif-overview & POST /api/project/:id/frontier/wif-action (iam.googleapis.com/v1 serviceAccounts/keys & workloadIdentityPools)',
+      'GET /api/project/:id/frontier/wif-overview & POST /api/project/:id/frontier/wif-action (iam.googleapis.com/v1 workloadIdentityPools)',
       'GET /api/project/:id/frontier/dns-overview & POST /api/project/:id/frontier/dns-probe (dns.googleapis.com/dns/v1, certificatemanager.googleapis.com/v1, Node dns.Resolver & tls.connect)',
       'GET /api/project/:id/frontier/pubsub-overview & POST /api/project/:id/frontier/pubsub-action (pubsub.googleapis.com/v1 topics, subscriptions & snapshots)',
     ],
     billingImpact:
-      'Quota, WIF, DNS/Certificate inventory reads, 8.8.8.8/1.1.1.1 DNS/TLS probes and WIF pool creation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub publish/pull/snapshot operations fall within standard Google Cloud free tiers with normal usage-based throughput pricing above free limits.',
+      'Quota, WIF, DNS/Certificate reads, DNS/TLS probes and WIF pool creation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub operations fall within standard free tiers with usage-based pricing above them.',
   },
 ];
 

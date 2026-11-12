@@ -106,7 +106,6 @@ import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import LocalCloudEmulatorsStudio from './components/LocalCloudEmulatorsStudio';
 import CloudFlightDeckNexusStudio from './components/CloudFlightDeckNexusStudio';
-import Wave26OpsFrontierStudio from './components/Wave26OpsFrontierStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
@@ -7916,7 +7915,7 @@ function CloudPulseCockpit() {
   const [localEmulatorsSubTab, setLocalEmulatorsSubTab] =
     useState('FLEET_CONTROL');
   const [cloudNexusSubTab, setCloudNexusSubTab] = useState('TERRAFORM_DRIFT');
-  const [opsFrontierSubTab, setOpsFrontierSubTab] = useState('QUOTA_RADAR');
+  const [vpcSubTab, setVpcSubTab] = useState('');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
@@ -7953,8 +7952,7 @@ function CloudPulseCockpit() {
     STARTUP_10X: 'Startup 10X Mentor Studio',
     MCP_HUB: 'Google Cloud Remote MCP Hub',
     LOCAL_EMULATORS: 'Local Cloud Emulators Studio',
-    CLOUD_NEXUS: 'Cloud Flight-Deck Nexus Studio',
-    CLOUD_OPS_FRONTIER: 'Wave 26 Ops Frontier Studio',
+    CLOUD_NEXUS: 'Terraform & Vertex Eval (Flight-Deck Nexus) Studio',
     CLOUD_STORAGE: 'Cloud Storage & WORM Studio',
     BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
     BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
@@ -8016,10 +8014,11 @@ function CloudPulseCockpit() {
     BLAST_RADIUS: 'Blast-Radius Graph & VPC Packet-Path X-Ray',
     VERTEX_ARENA: 'Vertex AI Multi-Model Arena & LLM Judge',
     FLIGHT_RECORDER: 'Causal Flight-Recorder & Canary Rehearsal',
-    QUOTA_RADAR: 'Cloud Quota & GPU Capacity Radar',
-    WIF_KEYLESS: 'Zero-Trust WIF & SA Key Hunter',
+    GPU_QUOTA_RADAR: 'Cloud Quota & GPU Capacity Radar',
+    CAUSAL_FLIGHT_RECORDER: 'Causal Flight-Recorder & Audit-to-Error Correlator',
+    WIF_KEYLESS: 'Keyless Workload Identity Federation & OIDC YAML',
     CLOUD_DNS_TLS: 'Cloud DNS, Certs & Multi-Resolver X-Ray',
-    PUBSUB_TIMEMACHINE: 'Pub/Sub DLQ & Seek Time-Machine',
+    PUBSUB_TIMEMACHINE: 'Pub/Sub DLQ Peek & Seek Time-Machine',
     IAM_SURGEON: 'Autonomous IAM Least-Privilege Surgeon',
     TIME_MACHINE: 'IAM Policy Time-Machine & Drift Rollback',
     SECRETS_KMS_WAF: 'Secret Manager Lifecycle & KMS Vault',
@@ -8069,7 +8068,7 @@ function CloudPulseCockpit() {
       MANAGED_SPARK_STUDIO: managedSparkSubTab,
       LOCAL_EMULATORS: localEmulatorsSubTab,
       CLOUD_NEXUS: cloudNexusSubTab,
-      CLOUD_OPS_FRONTIER: opsFrontierSubTab,
+      VPC_NETWORKS: vpcSubTab,
       SOVEREIGN_STUDIO: sovereignSubTab,
       INNOVATION_LAB: innovationSubTab,
       SRE_WAR_ROOM: sreSubTab,
@@ -8088,7 +8087,7 @@ function CloudPulseCockpit() {
     managedSparkSubTab,
     localEmulatorsSubTab,
     cloudNexusSubTab,
-    opsFrontierSubTab,
+    vpcSubTab,
     sovereignSubTab,
     innovationSubTab,
     sreSubTab,
@@ -8535,19 +8534,42 @@ function CloudPulseCockpit() {
     const isDirectPersonaSubTab = String(tabId || '').startsWith('FIVE_PERSONA_');
     const isDirectInnovationSubTab =
       Boolean(innovationSubTabAliases[tabId]) || isDirectPersonaSubTab;
-    const rawResolvedSubTab = isDirectInnovationSubTab
+    // Wave 27: legacy CLOUD_OPS_FRONTIER / Nexus pillar aliases redirect to each pillar's canonical studio
+    const OPS_PILLAR_REDIRECTS = {
+      QUOTA_RADAR: ['SRE_WAR_ROOM', 'GPU_QUOTA_RADAR'],
+      FLIGHT_RECORDER: ['SRE_WAR_ROOM', 'CAUSAL_FLIGHT_RECORDER'],
+      WIF_KEYLESS: ['SOVEREIGN_STUDIO', 'WIF_KEYLESS'],
+      PUBSUB_TIMEMACHINE: ['FUNCTIONS_STUDIO', 'PUBSUB_TIMEMACHINE'],
+      BLAST_RADIUS: ['VPC_NETWORKS', 'BLAST_RADIUS'],
+      CLOUD_DNS_TLS: ['VPC_NETWORKS', 'CLOUD_DNS_TLS'],
+    };
+    const opsPillarKey =
+      tabId === 'OPS_FRONTIER' || tabId === 'CLOUD_OPS_FRONTIER'
+        ? OPS_PILLAR_REDIRECTS[subTab]
+          ? subTab
+          : 'QUOTA_RADAR'
+        : tabId === 'WIF_STUDIO'
+        ? 'WIF_KEYLESS'
+        : (tabId === 'CLOUD_NEXUS' || tabId === 'NEXUS' || tabId === 'FLIGHT_DECK' || tabId === 'CLOUD_FLIGHT_DECK') &&
+          OPS_PILLAR_REDIRECTS[subTab]
+        ? subTab
+        : OPS_PILLAR_REDIRECTS[tabId]
+        ? tabId
+        : null;
+    const opsPillarRedirect = opsPillarKey ? OPS_PILLAR_REDIRECTS[opsPillarKey] : null;
+    const rawResolvedSubTab = opsPillarRedirect
+      ? opsPillarRedirect[1]
+      : isDirectInnovationSubTab
       ? subTab || innovationSubTabAliases[tabId] || tabId
       : tabId === 'BIGLAKE_ICEBERG'
       ? subTab || 'METASTORE_CATALOGS'
       : tabId === 'DATA_PIPELINES'
       ? subTab || 'MEDALLION_ELT'
-      : tabId === 'QUOTA_RADAR'
-      ? subTab || 'QUOTA_RADAR'
-      : tabId === 'WIF_STUDIO'
-      ? subTab || 'WIF_KEYLESS'
       : subTab;
 
-    const rawNormalizedTab = isDirectInnovationSubTab
+    const rawNormalizedTab = opsPillarRedirect
+      ? opsPillarRedirect[0]
+      : isDirectInnovationSubTab
       ? 'INNOVATION_LAB'
       : tabId === 'DATA_ENGINEER' || tabId === 'DATA_PIPELINES'
       ? 'DATA_ENGINEER_STUDIO'
@@ -8593,8 +8615,6 @@ function CloudPulseCockpit() {
       ? 'LOCAL_EMULATORS'
       : tabId === 'NEXUS' || tabId === 'FLIGHT_DECK' || tabId === 'CLOUD_FLIGHT_DECK'
       ? 'CLOUD_NEXUS'
-      : tabId === 'OPS_FRONTIER' || tabId === 'QUOTA_RADAR' || tabId === 'WIF_STUDIO'
-      ? 'CLOUD_OPS_FRONTIER'
       : tabId;
 
     const VALID_TOP_LEVEL_TABS = new Set([
@@ -8604,7 +8624,6 @@ function CloudPulseCockpit() {
       'MCP_HUB',
       'LOCAL_EMULATORS',
       'CLOUD_NEXUS',
-      'CLOUD_OPS_FRONTIER',
       'GLOBAL_MAP',
       'VPC_NETWORKS',
       'VM_SSH',
@@ -8754,17 +8773,6 @@ function CloudPulseCockpit() {
           );
         }, 45);
       }
-    } else if (normalizedTab === 'CLOUD_OPS_FRONTIER') {
-      if (resolvedSubTab) {
-        setOpsFrontierSubTab(resolvedSubTab);
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent('cloudpulse:open-ops-frontier', {
-              detail: { subTab: resolvedSubTab },
-            })
-          );
-        }, 45);
-      }
     } else if (normalizedTab === 'LOCAL_EMULATORS') {
       if (resolvedSubTab) {
         setLocalEmulatorsSubTab(resolvedSubTab);
@@ -8798,6 +8806,8 @@ function CloudPulseCockpit() {
       setBigLakeSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'BIGQUERY_STUDIO') {
       setBigQuerySubTab(resolvedSubTab);
+    } else if (normalizedTab === 'VPC_NETWORKS') {
+      setVpcSubTab(resolvedSubTab || '');
     } else if (resolvedSubTab && normalizedTab === 'SRE_WAR_ROOM') {
       setSreSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'WAVE9_STUDIO') {
@@ -10062,18 +10072,10 @@ function CloudPulseCockpit() {
     {
       id: 'CLOUD_NEXUS',
       group: 'COMMAND',
-      label: 'Cloud Flight-Deck',
+      label: 'Terraform & Vertex Eval',
       isStar: true,
-      tip: 'Cloud Flight-Deck Nexus (4-in-1): Live Cloud-to-Terraform Reverse-Compiler & ClickOps Drift Time-Machine, Blast-Radius Graph & VPC Packet-Path X-Ray, Vertex AI Multi-Model Arena with LLM Judge, and Black-Box Causal Flight-Recorder with Cloud Run Canary Rehearsal',
+      tip: 'Cloud Flight-Deck Nexus (2-in-1): Live Cloud-to-Terraform Reverse-Compiler & ClickOps Drift Time-Machine, and Vertex AI Multi-Model Arena with LLM Judge & Red-Team Probe',
       icon: Compass,
-    },
-    {
-      id: 'CLOUD_OPS_FRONTIER',
-      group: 'COMMAND',
-      label: 'Ops Frontier',
-      isStar: true,
-      tip: 'Wave 26 Ops Frontier Studio (4-Pillar): Cloud Quota & GPU Capacity Radar, Zero-Trust WIF & Service Account Key Hunter, Cloud DNS / Certs & Multi-Resolver TLS X-Ray, and Pub/Sub DLQ & Seek Time-Machine',
-      icon: ShieldCheck,
     },
     {
       id: 'GLOBAL_MAP',
@@ -10273,10 +10275,7 @@ function CloudPulseCockpit() {
       return 5;
     }
     if (tabId === 'CLOUD_NEXUS') {
-      return '4-IN-1';
-    }
-    if (tabId === 'CLOUD_OPS_FRONTIER') {
-      return 'WAVE 26';
+      return '2-IN-1';
     }
     return null;
   };
@@ -11690,8 +11689,7 @@ function CloudPulseCockpit() {
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'LOCAL_EMULATORS', label: 'Local Cloud Emulators', meta: '5 Official 127.0.0.1 Emulators · $0/hr Dev' },
-                            { id: 'CLOUD_NEXUS', label: 'Cloud Flight-Deck', meta: 'Terraform Drift, Blast-Radius, Vertex Arena & Flight-Recorder' },
-                            { id: 'CLOUD_OPS_FRONTIER', label: 'Ops Frontier', meta: 'Quota Radar, Zero-Trust WIF, DNS/TLS X-Ray & Pub/Sub Seek' },
+                            { id: 'CLOUD_NEXUS', label: 'Terraform & Vertex Eval', meta: 'Terraform 1.9 Drift Compiler & Vertex Multi-Model Arena' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                           ],
                         },
@@ -12039,28 +12037,6 @@ function CloudPulseCockpit() {
                     persona="CLOUD_ENG"
                     projectId={selectedProjectId}
                     studioContextLabel="Cloud Flight-Deck Nexus Studio · Terraform Drift, Blast-Radius Graph, Vertex Arena & Flight Recorder"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
-              )}
-
-              {activeTab === 'CLOUD_OPS_FRONTIER' && (
-                <div className="space-y-4">
-                  <Wave26OpsFrontierStudio
-                    projectId={selectedProjectId}
-                    onShowToast={showToast}
-                    onNavigateStudio={handleNavigateStudioTab}
-                  />
-                  <PersonaContextualHelper
-                    persona="CLOUD_ENG"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Wave 26 Ops Frontier Studio · Quota Radar, Zero-Trust WIF, Cloud DNS/TLS X-Ray & Pub/Sub Seek Time-Machine"
                     defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
@@ -12878,6 +12854,8 @@ function CloudPulseCockpit() {
                     vpcs={overview?.vpcs || []}
                     firewalls={overview?.firewalls || []}
                     initialRuleSeed={vpcStudioRuleSeed}
+                    initialSubTab={vpcSubTab}
+                    subTabNonce={studioSubTabNonce}
                     onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
                     onOpenProvisionFirewall={() =>
                       handleOpenProvision('VPC_FIREWALL')
