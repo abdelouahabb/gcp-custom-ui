@@ -797,32 +797,6 @@ function classifyDestructiveAxiosConfig(config) {
         };
       }
 
-      // 3. Risky Service Account Static Key Deletion (/frontier/wif-action DELETE_SA_KEY)
-      if (rawUrl.includes('/frontier/wif-action') && frAction === 'DELETE_SA_KEY') {
-        const keyName = body.keyName || 'Selected Service Account Key';
-        const shortKeyId = String(keyName).split('/').pop() || keyName;
-        return {
-          gateType: 'DELETE',
-          releaseTrack: 'GA',
-          title: `Permanently Revoke & Delete Service Account Key "${shortKeyId}"?`,
-          headerBadge: 'IAM Service Account Static JSON Key Revocation Gatekeeper',
-          targetLabel: 'Target User-Managed Service Account Key',
-          resourceKind: 'IAM ServiceAccountKey (iam.googleapis.com/v1)',
-          targetName: keyName,
-          location: 'global',
-          projectId,
-          method: 'DELETE SERVICE ACCOUNT KEY',
-          endpoint: rawUrl,
-          confirmLabel: `Confirm & Delete SA Key "${shortKeyId}"`,
-          cancelToast: `Deletion of Service Account key "${shortKeyId}" cancelled.`,
-          laymanSummary: `In Plain English: Permanently revokes and deletes the long-lived user-managed JSON private key "${shortKeyId}". Any external script, CI runner, or server still authenticating with this JSON key file will immediately lose access.`,
-          whatHappensNext: `1. Calls DELETE https://iam.googleapis.com/v1/${keyName}.\n2. Immediately invalidates cryptographic signatures from key "${shortKeyId}" across Google Cloud.\n3. Removes the key from the Risky SA Key Hunter table.`,
-          costWarning:
-            'ZERO CLOUD COST ($0.00): Revoking static IAM Service Account keys incurs no charges and reduces credential-leak blast radius.',
-          impactWarning: `IRREVERSIBLE CREDENTIAL REVOCATION: Key "${shortKeyId}" cannot be restored once deleted. Verify workloads have migrated to keyless Workload Identity Federation first.`,
-        };
-      }
-
       // 4. Pub/Sub Subscription Time-Machine Seek (/frontier/pubsub-action SEEK_SNAPSHOT)
       if (rawUrl.includes('/frontier/pubsub-action') && frAction === 'SEEK_SNAPSHOT') {
         const subName = String(body.subscriptionName || 'selected-subscription').split('/').pop();
@@ -974,34 +948,6 @@ function classifyDestructiveAxiosConfig(config) {
             'ZERO CLOUD COST ($0.00): Only locally stored benchmark history is removed.',
           impactWarning:
             'All saved Arena and Red-Team benchmark history is permanently removed and cannot be recovered.',
-        };
-      }
-
-      // 4. Cloud Run canary traffic shift (live production routing change)
-      if (rawUrl.includes('/nexus/canary-rehearsal') && nxAction === 'SHIFT_CANARY_TRAFFIC') {
-        const cnSvc = body.serviceName || 'Cloud Run Service';
-        const cnRev = body.revisionName || 'selected revision';
-        const cnPct = body.canaryPercent ?? '?';
-        return {
-          gateType: 'MUTATE',
-          releaseTrack: 'GA',
-          title: `Shift ${cnPct}% of Live Cloud Run Traffic to a Canary Revision?`,
-          headerBadge: 'Cloud Run Live Traffic Canary Shift Gatekeeper',
-          targetLabel: 'Cloud Run Service Traffic Split',
-          resourceKind: 'run.googleapis.com/v2 Service Traffic Allocation',
-          targetName: `${cnSvc} → ${cnRev} (${cnPct}%)`,
-          location: body.region || 'GCP Region',
-          projectId,
-          method: 'SHIFT CANARY TRAFFIC',
-          endpoint: rawUrl,
-          confirmLabel: 'Confirm & Shift Live Traffic',
-          cancelToast: 'Canary traffic shift cancelled — current traffic split is unchanged.',
-          laymanSummary: `In Plain English: Immediately routes ${cnPct}% of real production requests for Cloud Run service \"${cnSvc}\" in project \"${projectId}\" to revision \"${cnRev}\". Real users will be served by that revision right away.`,
-          whatHappensNext: `1. Patches the service traffic allocation via the Cloud Run Admin API.\n2. ${cnPct}% of live requests start hitting revision \"${cnRev}\" within seconds.\n3. Roll back by shifting traffic back to the previous revision.`,
-          costWarning:
-            'USAGE-BASED: Requests are billed per normal Cloud Run pricing; a faulty canary can raise error rates and downstream costs.',
-          impactWarning:
-            'This changes LIVE production traffic routing. If the canary revision is unhealthy, end users will receive errors until traffic is shifted back.',
         };
       }
 

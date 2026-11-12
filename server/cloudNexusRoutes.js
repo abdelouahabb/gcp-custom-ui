@@ -1395,40 +1395,6 @@ export function registerCloudNexusRoutes(app, { getLocalOrMetadataAccessToken } 
         return res.json({ ok: true, projectId, targetUrl: url.toString(), burstCount, p50Ms: pct(lat, 50), p95Ms: pct(lat, 95), statusCounts, samples });
       }
 
-      if (action === 'SHIFT_CANARY_TRAFFIC') {
-        const region = String(req.body?.region || '').trim();
-        const serviceName = String(req.body?.serviceName || '').trim();
-        const revisionName = String(req.body?.revisionName || '').trim();
-        const canaryPercent = Number(req.body?.canaryPercent);
-        if (!REGION_REGEX.test(region) || region === 'global') return res.status(400).json({ ok: false, error: 'A valid Cloud Run region is required.' });
-        if (!RESOURCE_NAME_REGEX.test(serviceName) || !RESOURCE_NAME_REGEX.test(revisionName)) return res.status(400).json({ ok: false, error: 'Invalid serviceName or revisionName.' });
-        if (!Number.isInteger(canaryPercent) || canaryPercent < 0 || canaryPercent > 100) return res.status(400).json({ ok: false, error: 'canaryPercent must be an integer 0-100.' });
-
-        const svcName = `projects/${projectId}/locations/${region}/services/${serviceName}`;
-        const svcUrl = `https://run.googleapis.com/v2/${svcName}`;
-        const cur = await gGet(svcUrl, token);
-        if (!cur.ok) return res.status(cur.status === 404 ? 404 : 422).json({ ok: false, error: cur.error });
-        const revCheck = await gGet(`${svcUrl}/revisions/${revisionName}`, token);
-        if (!revCheck.ok) return res.status(404).json({ ok: false, error: `Revision "${revisionName}" not found: ${revCheck.error}` });
-
-        const existing = (cur.data.traffic || []).filter((t) => !(t.revision === revisionName));
-        const stable = [...existing].sort((a, b) => (b.percent || 0) - (a.percent || 0))[0];
-        const traffic = [];
-        if (canaryPercent > 0) traffic.push({ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION', revision: revisionName, percent: canaryPercent });
-        if (canaryPercent < 100) {
-          if (stable?.type === 'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION' && stable.revision) {
-            traffic.push({ type: stable.type, revision: stable.revision, percent: 100 - canaryPercent });
-          } else if (stable) {
-            traffic.push({ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 - canaryPercent });
-          } else {
-            return res.status(422).json({ ok: false, error: 'No stable traffic target found to receive the remaining percentage.' });
-          }
-        }
-        const r = await gSend('PATCH', svcUrl, token, { traffic }, { updateMask: 'traffic' });
-        if (!r.ok) return res.status(422).json({ ok: false, error: r.error });
-        return res.json({ ok: true, projectId, service: svcName, canaryRevision: revisionName, canaryPercent, appliedTraffic: traffic, operation: r.data?.name || null });
-      }
-
       return res.status(400).json({ ok: false, error: `Unsupported action "${action}".` });
     } catch (err) {
       return fail(res, err, 'Canary rehearsal failed.');

@@ -17,10 +17,6 @@ function sanitizeProjectId(raw) {
   return PROJECT_ID_REGEX.test(v) ? v : null;
 }
 
-function escapeRegex(str) {
-  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function shortName(full) {
   const parts = String(full || '').split('/');
   return parts[parts.length - 1] || '';
@@ -602,53 +598,6 @@ export function registerWave26FrontierRoutes(app, { getLocalOrMetadataAccessToke
       ]);
 
       const rawAccounts = saRes.items || [];
-      const inspectedAccounts = rawAccounts.slice(0, 15);
-
-      const keyLists = await Promise.all(
-        inspectedAccounts.map(async (sa) => {
-          const email = String(sa?.email || '').trim();
-          if (!email) return { email: '', keys: [] };
-          const keysUrl = `https://iam.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/serviceAccounts/${encodeURIComponent(email)}/keys`;
-          const kr = await gGet(keysUrl, token, { keyTypes: 'USER_MANAGED' });
-          return {
-            sa,
-            email,
-            keys: kr.ok && Array.isArray(kr.data?.keys) ? kr.data.keys : [],
-          };
-        })
-      );
-
-      const riskyKeys = [];
-      const keyCountBySa = new Map();
-      const nowMs = Date.now();
-
-      for (const entry of keyLists) {
-        const list = entry.keys || [];
-        keyCountBySa.set(entry.email, list.length);
-        for (const k of list) {
-          const createdMs = k.validAfterTime ? Date.parse(k.validAfterTime) : NaN;
-          const ageDays = Number.isFinite(createdMs)
-            ? Math.max(0, Math.floor((nowMs - createdMs) / 86400000))
-            : 0;
-          const severity =
-            ageDays >= 90 ? 'CRITICAL' : ageDays >= 30 ? 'WARNING' : 'ACTIVE_KEY';
-          riskyKeys.push({
-            keyName: k.name || '',
-            keyId: shortName(k.name),
-            serviceAccountEmail: entry.email,
-            serviceAccountDisplayName: entry.sa?.displayName || entry.email,
-            keyAlgorithm: k.keyAlgorithm || 'KEY_ALG_RSA_2048',
-            keyOrigin: k.keyOrigin || 'GOOGLE_PROVIDED',
-            keyType: k.keyType || 'USER_MANAGED',
-            validAfterTime: k.validAfterTime || null,
-            validBeforeTime: k.validBeforeTime || null,
-            ageDays,
-            severity,
-          });
-        }
-      }
-
-      riskyKeys.sort((a, b) => b.ageDays - a.ageDays);
 
       const serviceAccounts = rawAccounts.map((sa) => ({
         name: sa.name || '',
@@ -656,8 +605,6 @@ export function registerWave26FrontierRoutes(app, { getLocalOrMetadataAccessToke
         displayName: sa.displayName || sa.email || '',
         uniqueId: sa.uniqueId || '',
         disabled: Boolean(sa.disabled),
-        userManagedKeyCount: keyCountBySa.get(sa.email) ?? 0,
-        keysInspected: keyCountBySa.has(sa.email),
       }));
 
       const rawPools = poolsRes.items || [];
@@ -709,13 +656,9 @@ export function registerWave26FrontierRoutes(app, { getLocalOrMetadataAccessToke
         timestamp: new Date().toISOString(),
         summary: {
           serviceAccountCount: serviceAccounts.length,
-          inspectedServiceAccountCount: inspectedAccounts.length,
-          riskyKeyCount: riskyKeys.length,
-          criticalKeyCount: riskyKeys.filter((k) => k.ageDays >= 90).length,
           poolCount: pools.length,
           providerCount: pools.reduce((acc, p) => acc + p.providerCount, 0),
         },
-        riskyKeys,
         pools,
         serviceAccounts,
         oidcYamlTemplates,
@@ -794,38 +737,9 @@ export function registerWave26FrontierRoutes(app, { getLocalOrMetadataAccessToke
       });
     }
 
-    if (action === 'DELETE_SA_KEY') {
-      const keyName = String(req.body?.keyName || '').trim();
-      const keyPattern = new RegExp(
-        `^projects/${escapeRegex(projectId)}/serviceAccounts/[^/]+/keys/[a-zA-Z0-9_-]+$`
-      );
-      if (!keyPattern.test(keyName)) {
-        return res.status(400).json({
-          ok: false,
-          error: `keyName must belong to project "${projectId}" (projects/${projectId}/serviceAccounts/<email>/keys/<keyId>).`,
-        });
-      }
-
-      const r = await gSend('DELETE', `https://iam.googleapis.com/v1/${keyName}`, token);
-      if (!r.ok) {
-        return res.status(422).json({
-          ok: false,
-          error: r.error || 'Failed to delete service account key.',
-          status: r.status,
-        });
-      }
-
-      return res.json({
-        ok: true,
-        action,
-        projectId,
-        deletedKeyName: keyName,
-      });
-    }
-
     return res.status(400).json({
       ok: false,
-      error: `Unsupported WIF action "${action}". Expected CREATE_WIF_POOL or DELETE_SA_KEY.`,
+      error: `Unsupported WIF action "${action}". Expected CREATE_WIF_POOL (SA key management lives in the IAM Sovereign Studio).`,
     });
   });
 

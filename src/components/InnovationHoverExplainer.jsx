@@ -1104,16 +1104,6 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'HTTP burst from CloudPulse host',
     safetyMode: 'READ_ONLY',
   },
-  NEXUS_BTN_SHIFT_CANARY: {
-    badge: 'CLOUD RUN CANARY SHIFT',
-    title: 'Shift Live Cloud Run Traffic to Canary',
-    whatItDoes:
-      'Updates the Cloud Run service traffic split to route a percentage of production requests to a chosen revision after bespoke confirmation.',
-    enterpriseValue:
-      'Enables progressive delivery with a fast, auditable rollout step.',
-    gcpApis: 'run.googleapis.com/v2 services.patch',
-    safetyMode: 'LIVE_MUTATION',
-  },
   CLOUD_OPS_FRONTIER: {
     badge: 'WAVE 26 · 4-PILLAR OPS FRONTIER',
     title: 'Wave 26 Ops Frontier Studio — Quota Radar, Zero-Trust WIF, Cloud DNS/TLS X-Ray & Pub/Sub Seek Time-Machine',
@@ -1214,16 +1204,6 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'POST /api/project/{project}/frontier/wif-action (iam.googleapis.com/v1 workloadIdentityPools)',
     safetyMode: 'LIVE_MUTATION',
   },
-  W26_BTN_DELETE_SA_KEY: {
-    badge: 'REVOKE STATIC SA KEY',
-    title: 'Permanently Revoke & Delete Service Account Key',
-    whatItDoes:
-      'Deletes the selected user-managed Service Account JSON key via the IAM API after bespoke confirmation, immediately invalidating it across Google Cloud.',
-    enterpriseValue:
-      'Eliminates leaked or aging long-lived JSON private keys before attackers can abuse them.',
-    gcpApis: 'POST /api/project/{project}/frontier/wif-action (DELETE iam.googleapis.com/v1/{keyName})',
-    safetyMode: 'LIVE_MUTATION',
-  },
   W26_BTN_COPY_OIDC_YAML: {
     badge: 'COPY OIDC PIPELINE YAML',
     title: 'Copy Keyless GitHub Actions / GitLab CI OIDC YAML',
@@ -1313,6 +1293,26 @@ export const INNOVATION_FEATURE_GUIDE = {
       'Cleans up expired release checkpoints and halts retained snapshot backlog storage charges.',
     gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (DELETE pubsub.googleapis.com/v1 snapshots)',
     safetyMode: 'LIVE_MUTATION',
+  },
+  NEXUS_BTN_OPEN_CLOUD_RUN_CANARY: {
+    badge: 'CLOUD RUN FLEET DEEP-LINK',
+    title: 'Open Cloud Run Fleet for Canary Traffic Shifting',
+    whatItDoes:
+      'Jumps to the Cloud Run Serverless Fleet Studio where revision traffic splits and canary rollouts are managed behind the standard confirmation gatekeeper.',
+    enterpriseValue:
+      'Keeps one canonical place for live traffic changes instead of duplicating rollout controls.',
+    gcpApis: 'run.googleapis.com/v2 (opens Cloud Run Fleet Studio)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_OPEN_SA_VAULT: {
+    badge: 'IAM SA VAULT DEEP-LINK',
+    title: 'Open Service Account Key Vault in IAM Studio',
+    whatItDoes:
+      'Jumps to the IAM Time-Machine Studio Service Account Vault tab where user-managed JSON keys are reviewed, disabled and revoked behind the standard confirmation gatekeeper.',
+    enterpriseValue:
+      'Keeps one canonical place for credential lifecycle actions instead of duplicating key deletion controls.',
+    gcpApis: 'iam.googleapis.com/v1 serviceAccounts/keys (opens IAM Studio)',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP: {
     badge: '40 REGIONS & SUBSEA CABLES',

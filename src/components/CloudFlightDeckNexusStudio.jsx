@@ -31,6 +31,7 @@ import {
   Layers,
   Eraser,
   Target,
+  ExternalLink,
 } from 'lucide-react';
 
 /* ============================================================================
@@ -332,7 +333,7 @@ function ListChips({ title, items, tone }) {
 export default function CloudFlightDeckNexusStudio({
   projectId,
   onShowToast,
-  onNavigateStudio, // eslint-disable-line no-unused-vars
+  onNavigateStudio,
 }) {
   const [activeSubTab, setActiveSubTab] = useState('TERRAFORM_DRIFT');
   const [busy, setBusy] = useState('');
@@ -384,8 +385,6 @@ export default function CloudFlightDeckNexusStudio({
   const [probeUrl, setProbeUrl] = useState('');
   const [burstCount, setBurstCount] = useState(5);
   const [resilience, setResilience] = useState(null);
-  const [canaryRevision, setCanaryRevision] = useState('');
-  const [canaryPercent, setCanaryPercent] = useState(10);
 
   const toast = useCallback(
     (msg) => {
@@ -798,23 +797,9 @@ export default function CloudFlightDeckNexusStudio({
   const targetRegion = selectedTarget?.region || selectedTarget?.location || '';
   const targetUrlGuess = selectedTarget?.uri || selectedTarget?.url || '';
 
-  const revisionOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [
-            selectedTarget?.latestReadyRevision,
-            ...asList(selectedTarget?.traffic).map((t) => t.revision),
-          ].filter(Boolean)
-        )
-      ),
-    [selectedTarget]
-  );
-
   useEffect(() => {
     if (targetUrlGuess) setProbeUrl(targetUrlGuess);
-    setCanaryRevision(revisionOptions[0] || '');
-  }, [targetUrlGuess, revisionOptions]);
+  }, [targetUrlGuess]);
 
   const handleWindow = async (minutes) => {
     setWindowMinutes(minutes);
@@ -833,28 +818,6 @@ export default function CloudFlightDeckNexusStudio({
       toast(`Resilience probe: p50 ${res.data?.p50Ms} ms, p95 ${res.data?.p95Ms} ms.`);
     } catch (err) {
       if (!isCancelled(err)) toast(errorText(err, 'Resilience probe failed.'));
-    } finally {
-      setBusy('');
-    }
-  };
-
-  const handleShiftCanary = async () => {
-    setBusy('shift');
-    try {
-      const res = await axios.post(`${base}/canary-rehearsal`, {
-        action: 'SHIFT_CANARY_TRAFFIC',
-        region: targetRegion || undefined,
-        serviceName: canaryService,
-        revisionName: canaryRevision,
-        canaryPercent: Number(canaryPercent),
-      });
-      toast(
-        res.data?.message ||
-          `Shifted ${canaryPercent}% of ${canaryService} traffic to ${canaryRevision}.`
-      );
-      await loadRecorder(windowMinutes);
-    } catch (err) {
-      if (!isCancelled(err)) toast(errorText(err, 'Canary traffic shift failed.'));
     } finally {
       setBusy('');
     }
@@ -2212,67 +2175,20 @@ export default function CloudFlightDeckNexusStudio({
 
         <Panel title="Canary Traffic Shift" icon={Target}>
           <div className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            Moves a share of live traffic for{' '}
-            <Chip>{canaryService || 'the selected service'}</Chip> to a chosen
-            revision. This patches the real Cloud Run service and asks for
-            confirmation first.
-          </div>
-          {selectedTarget?.traffic && (
-            <div className="flex flex-wrap gap-1.5">
-              {asList(selectedTarget.traffic).map((t, idx) => (
-                <Chip key={idx}>
-                  {t.revision || t.revisionName || t.type || 'LATEST'}: {fmtNum(t.percent, '%')}
-                </Chip>
-              ))}
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label className={LABEL_CLS}>Canary Revision</label>
-              {revisionOptions.length > 0 ? (
-                <select
-                  className={INPUT_CLS}
-                  value={canaryRevision}
-                  onChange={(e) => setCanaryRevision(e.target.value)}
-                >
-                  {revisionOptions.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  className={INPUT_CLS}
-                  value={canaryRevision}
-                  onChange={(e) => setCanaryRevision(e.target.value)}
-                  placeholder="service-00002-abc"
-                />
-              )}
-            </div>
-            <div>
-              <label className={LABEL_CLS}>Canary Traffic: {canaryPercent}%</label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={canaryPercent}
-                onChange={(e) => setCanaryPercent(Number(e.target.value))}
-                aria-label="Canary percent"
-                className="w-full accent-amber-500"
-              />
-            </div>
+            Live traffic splits for{' '}
+            <Chip>{canaryService || 'your Cloud Run services'}</Chip> are managed
+            in the Cloud Run Fleet Manager, so there is a single place to shift
+            revisions.
           </div>
           <div data-action-toolbar="true" className="flex flex-wrap gap-2">
             <Btn
-              variant="danger"
-              icon={Target}
-              busy={busy === 'shift'}
-              disabled={!canaryService || !canaryRevision}
-              onClick={handleShiftCanary}
-              featureId="NEXUS_BTN_SHIFT_CANARY"
+              variant="secondary"
+              icon={ExternalLink}
+              disabled={typeof onNavigateStudio !== 'function'}
+              onClick={() => onNavigateStudio('CLOUD_RUN')}
+              featureId="NEXUS_BTN_OPEN_CLOUD_RUN_CANARY"
             >
-              Shift Canary Traffic
+              Open Cloud Run Fleet Manager
             </Btn>
           </div>
         </Panel>

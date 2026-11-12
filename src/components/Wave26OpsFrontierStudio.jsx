@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Copy,
   Check,
+  ExternalLink,
   Trash2,
   Play,
   Loader2,
@@ -445,7 +446,7 @@ function ApiStatusPills({ apiStatus }) {
 export default function Wave26OpsFrontierStudio({
   projectId,
   onShowToast,
-  onNavigateStudio, // eslint-disable-line no-unused-vars
+  onNavigateStudio,
 }) {
   const [activeSubTab, setActiveSubTab] = useState('QUOTA_RADAR');
   const [busy, setBusy] = useState('');
@@ -620,29 +621,6 @@ export default function Wave26OpsFrontierStudio({
       setBusy('');
     }
   }, [base, loadWif, poolDisplayInput, poolIdInput, projectId, toast]);
-
-  const handleDeleteSaKey = useCallback(
-    async (keyObj) => {
-      const keyName = keyObj?.name || keyObj?.keyName || '';
-      if (!projectId || !keyName) return;
-      setBusy(`del-key-${keyName}`);
-      setWifErr({ error: '', cmd: '' });
-      try {
-        await axios.post(`${base}/wif-action`, {
-          action: 'DELETE_SA_KEY',
-          keyName,
-        });
-        toast(`Deleted user-managed Service Account key ${shortId(keyName)}.`);
-        await loadWif();
-      } catch (err) {
-        if (isCancelled(err)) return;
-        setWifErr(extractError(err, 'Failed to delete Service Account key.'));
-      } finally {
-        setBusy('');
-      }
-    },
-    [base, loadWif, projectId, toast]
-  );
 
   /* --------------------------------------------------------------------------
    * Pillar 3 Handlers: Cloud DNS, Certs & Multi-Resolver X-Ray
@@ -1375,7 +1353,7 @@ export default function Wave26OpsFrontierStudio({
       <ErrorBanner errState={wifErr} />
 
       <Panel
-        title="Risky User-Managed Service Account JSON Keys"
+        title="Service Account Key Hunter"
         icon={KeyRound}
         right={
           <StatusPill tone={riskyKeys.length === 0 ? 'emerald' : 'rose'}>
@@ -1385,73 +1363,23 @@ export default function Wave26OpsFrontierStudio({
           </StatusPill>
         }
       >
-        <div className="overflow-auto max-h-72 rounded-md border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full text-[11px] font-mono">
-            <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400">
-              <tr>
-                <th className="text-left px-2.5 py-1.5">Service Account</th>
-                <th className="text-left px-2.5 py-1.5">Key ID</th>
-                <th className="text-left px-2.5 py-1.5">Age</th>
-                <th className="text-left px-2.5 py-1.5">Created</th>
-                <th className="text-right px-2.5 py-1.5">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {riskyKeys.map((k, idx) => {
-                const fullKeyName = k.name || k.keyName || '';
-                const ageDays = Number(k.ageDays ?? 0);
-                const ageTone =
-                  ageDays >= 90 ? 'rose' : ageDays >= 30 ? 'amber' : 'zinc';
-                const saEmail =
-                  k.serviceAccountEmail ||
-                  k.saEmail ||
-                  k.email ||
-                  (fullKeyName.includes('/serviceAccounts/')
-                    ? fullKeyName.split('/serviceAccounts/')[1]?.split('/')[0]
-                    : 'unknown');
-                return (
-                  <tr
-                    key={`${fullKeyName}-${idx}`}
-                    className="border-t border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
-                  >
-                    <td className="px-2.5 py-1.5 break-all">{saEmail}</td>
-                    <td className="px-2.5 py-1.5">
-                      <Chip>{shortId(fullKeyName)}</Chip>
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      <StatusPill tone={ageTone}>{ageDays}d old</StatusPill>
-                    </td>
-                    <td className="px-2.5 py-1.5 text-zinc-500">
-                      {k.validAfterTime
-                        ? new Date(k.validAfterTime).toISOString().slice(0, 10)
-                        : 'n/a'}
-                    </td>
-                    <td className="px-2.5 py-1.5 text-right">
-                      <Btn
-                        variant="danger"
-                        icon={Trash2}
-                        busy={busy === `del-key-${fullKeyName}`}
-                        disabled={!fullKeyName}
-                        onClick={() => handleDeleteSaKey(k)}
-                        featureId="W26_BTN_DELETE_SA_KEY"
-                      >
-                        Delete SA Key
-                      </Btn>
-                    </td>
-                  </tr>
-                );
-              })}
-              {riskyKeys.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-4 text-zinc-500">
-                    {busy === 'wif'
-                      ? 'Auditing Service Accounts for user-managed JSON keys...'
-                      : 'Zero user-managed Service Account JSON keys detected across inspected accounts.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          {riskyKeys.length === 0
+            ? 'No user-managed Service Account JSON keys detected across inspected accounts.'
+            : `${aged90KeysCount} of ${riskyKeys.length} user-managed key(s) are 90 days or older.`}{' '}
+          Key inspection, rotation and deletion live in the IAM, KMS &amp;
+          Time-Machine Studio so there is a single place to revoke credentials.
+        </p>
+        <div data-action-toolbar="true" className="flex flex-wrap gap-2">
+          <Btn
+            variant="secondary"
+            icon={ExternalLink}
+            disabled={typeof onNavigateStudio !== 'function'}
+            onClick={() => onNavigateStudio('SOVEREIGN_STUDIO', 'IAM_SURGEON_SA_VAULT')}
+            featureId="W26_BTN_OPEN_SA_VAULT"
+          >
+            Manage SA Keys in IAM Studio
+          </Btn>
         </div>
       </Panel>
 

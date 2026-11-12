@@ -2120,7 +2120,7 @@ const DOC_SECTIONS = [
       'Pillar 1 — Terraform Drift & HCL Export (GET /api/project/:id/nexus/terraform-scan, POST .../nexus/terraform-snapshot): Scans live Compute, Cloud Run and Storage inventory, saves named snapshots, diffs snapshots against each other or live state, and exports Terraform HCL. Snapshot deletion is gated by a bespoke confirmation modal.',
       'Pillar 2 — Dependency Blast-Radius Graph & Packet Probe (GET .../nexus/blast-radius, POST .../nexus/packet-probe): Builds a live topology graph, highlights downstream impact of any node, runs real TCP reachability probes and manages Network Intelligence Connectivity Tests (create/delete gated by bespoke modals).',
       'Pillar 3 — Vertex AI Arena & Red-Team (GET .../nexus/vertex-overview, POST .../nexus/vertex-benchmark): Benchmarks Vertex AI models side by side for latency and tokens and runs adversarial red-team prompts; clearing saved history is gated by a bespoke modal.',
-      'Pillar 4 — Incident Flight Recorder & Canary Rehearsal (GET .../nexus/flight-recorder, POST .../nexus/canary-rehearsal): Merges audit, error and deployment logs into a scrubbable timeline, runs bounded HTTP resilience bursts, and shifts Cloud Run canary traffic behind a bespoke live-traffic confirmation modal.',
+      'Pillar 4 — Incident Flight Recorder & Canary Rehearsal (GET .../nexus/flight-recorder, POST .../nexus/canary-rehearsal): Merges audit, error and deployment logs into a scrubbable timeline, runs bounded HTTP resilience bursts, and links to Cloud Run Fleet for live canary traffic shifting.',
     ],
     apisUsed: [
       'GET /api/project/:id/nexus/terraform-scan & POST /api/project/:id/nexus/terraform-snapshot (compute, run, storage REST inventory + local snapshot vault)',
@@ -2129,7 +2129,7 @@ const DOC_SECTIONS = [
       'GET /api/project/:id/nexus/flight-recorder & POST /api/project/:id/nexus/canary-rehearsal (logging.googleapis.com/v2, run.googleapis.com/v2)',
     ],
     billingImpact:
-      'Scans, snapshots, diffs, graph reads, TCP probes and timeline reads are $0.00 cloud charges; Vertex AI Arena runs bill standard per-token model pricing; Connectivity Tests are free for configuration analysis; canary shifts use normal Cloud Run request pricing.',
+      'Scans, snapshots, diffs, graph reads, TCP probes and timeline reads are $0.00 cloud charges; Vertex AI Arena runs bill standard per-token model pricing; Connectivity Tests are free for configuration analysis; canary shifting is handled in Cloud Run Fleet.',
   },
   {
     id: 'wave26-ops-frontier-studio',
@@ -2145,7 +2145,7 @@ const DOC_SECTIONS = [
       'Production cloud teams routinely get blindsided by four silent operational hazards: regional Compute or NVIDIA GPU quota exhaustion during traffic spikes, forgotten long-lived Service Account JSON keys sitting in CI/CD pipelines, split-horizon DNS or expiring port-443 TLS certificates, and poison-pill Pub/Sub messages or buggy consumer releases that require time-travel replay without losing events.',
     howItWorks: [
       'Pillar 1 — Cloud Quota & GPU Capacity Radar (GET /api/project/:id/frontier/quotas, POST .../frontier/quota-alert): Audits project-wide, regional, and GPU (A100, H100, L4, T4) Compute Engine quota usage versus ceilings, classifies CRITICAL (>=85%) and WARNING (>=70%) saturation, exports gcloud quota CLI commands, and provisions Cloud Monitoring quota alert policies behind a bespoke confirmation modal.',
-      'Pillar 2 — Zero-Trust WIF & Service Account Key Hunter (GET .../frontier/wif-overview, POST .../frontier/wif-action): Scans IAM Service Accounts for risky user-managed JSON keys with key age calculation, revokes static keys or creates global Workload Identity Pools behind bespoke confirmation modals, and generates project-interpolated GitHub Actions and GitLab CI keyless OIDC YAML templates.',
+      'Pillar 2 — Zero-Trust WIF & SA Key Vault Deep-Link (GET .../frontier/wif-overview, POST .../frontier/wif-action): Creates global Workload Identity Pools behind a bespoke confirmation modal, deep-links to the IAM Time-Machine Studio for Service Account key review and revocation, and generates project-interpolated GitHub Actions and GitLab CI keyless OIDC YAML templates.',
       'Pillar 3 — Cloud DNS, Certificate Manager & Multi-Resolver TLS X-Ray (GET .../frontier/dns-overview, POST .../frontier/dns-probe): Inventories Cloud DNS managed zones, record sets, and Certificate Manager certificates, and runs live side-by-side Google (8.8.8.8) vs Cloudflare (1.1.1.1) A/AAAA/MX/TXT/CAA/NS lookups, SPF/DMARC/CAA posture checks, and real port-443 TLS X.509 handshake inspection.',
       'Pillar 4 — Pub/Sub DLQ & Seek Time-Machine (GET .../frontier/pubsub-overview, POST .../frontier/pubsub-action): Inspects topics, DLQ subscriptions, and snapshots; supports test event publishing, non-destructive 5-message pull peeks (without acknowledging), point-in-time snapshot capture, and bespoke-gated subscription cursor seeks and snapshot deletions.',
     ],
@@ -2156,7 +2156,7 @@ const DOC_SECTIONS = [
       'GET /api/project/:id/frontier/pubsub-overview & POST /api/project/:id/frontier/pubsub-action (pubsub.googleapis.com/v1 topics, subscriptions & snapshots)',
     ],
     billingImpact:
-      'Quota, WIF, DNS/Certificate inventory reads, 8.8.8.8/1.1.1.1 DNS/TLS probes, WIF pool creation, and SA key revocation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub publish/pull/snapshot operations fall within standard Google Cloud free tiers with normal usage-based throughput pricing above free limits.',
+      'Quota, WIF, DNS/Certificate inventory reads, 8.8.8.8/1.1.1.1 DNS/TLS probes and WIF pool creation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub publish/pull/snapshot operations fall within standard Google Cloud free tiers with normal usage-based throughput pricing above free limits.',
   },
 ];
 
