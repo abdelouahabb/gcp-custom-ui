@@ -106,6 +106,7 @@ import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import LocalCloudEmulatorsStudio from './components/LocalCloudEmulatorsStudio';
 import CloudFlightDeckNexusStudio from './components/CloudFlightDeckNexusStudio';
+import Wave26OpsFrontierStudio from './components/Wave26OpsFrontierStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
@@ -740,6 +741,144 @@ function classifyDestructiveAxiosConfig(config) {
 
   // 2. Destructive HTTP POST endpoints
   if (method === 'post') {
+    // Wave 26 Ops Frontier Studio (/frontier/*) — 5 Bespoke Gatekeepers + Safe Probe/Publish/Peek/Snapshot Exemptions
+    if (rawUrl.includes('/frontier/')) {
+      const frAction = String(body.action || '').toUpperCase();
+
+      // 1. Cloud Monitoring Quota Alert Policy Creation (/frontier/quota-alert)
+      if (rawUrl.includes('/frontier/quota-alert')) {
+        const metricName = body.metricName || 'Selected Compute / GPU Quota Metric';
+        const thresholdPct = body.thresholdPct ?? 80;
+        return {
+          gateType: 'CREATE',
+          releaseTrack: 'GA',
+          title: `Create Cloud Monitoring Quota Alert Policy (${thresholdPct}% Threshold)?`,
+          headerBadge: 'Cloud Monitoring Quota Exhaustion Alert Gatekeeper',
+          targetLabel: 'Target Quota Metric & Threshold',
+          resourceKind: 'Cloud Monitoring AlertPolicy (monitoring.googleapis.com/v3)',
+          targetName: `${metricName} >= ${thresholdPct}%`,
+          location: 'global',
+          projectId,
+          method: 'CREATE QUOTA ALERT POLICY',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Create ${thresholdPct}% Quota Alert`,
+          cancelToast: `Quota alert policy creation for "${metricName}" cancelled.`,
+          laymanSummary: `In Plain English: Creates a live Google Cloud Monitoring alert policy in project "${projectId}" that watches quota metric "${metricName}" and triggers an incident when utilization reaches ${thresholdPct}% of your limit.`,
+          whatHappensNext: `1. Calls POST https://monitoring.googleapis.com/v3/projects/${projectId}/alertPolicies.\n2. Provisions a threshold condition monitoring "${metricName}" at ${thresholdPct}%.\n3. Activates continuous server-side quota saturation evaluation.`,
+          costWarning:
+            'LOW / FREE TIER ELIGIBLE: Cloud Monitoring includes a generous monthly free allotment for standard GCP metric alert policies; minimal metric evaluation charges apply only above free tier limits.',
+          impactWarning: `A live Cloud Monitoring AlertPolicy resource for "${metricName}" (>= ${thresholdPct}%) will be created in project "${projectId}".`,
+        };
+      }
+
+      // 2. Workload Identity Pool Creation (/frontier/wif-action CREATE_WIF_POOL)
+      if (rawUrl.includes('/frontier/wif-action') && frAction === 'CREATE_WIF_POOL') {
+        const poolId = body.poolId || 'github-actions-oidc-pool';
+        const displayName = body.displayName || poolId;
+        return {
+          gateType: 'CREATE',
+          releaseTrack: 'GA',
+          title: `Create Zero-Trust Workload Identity Pool "${poolId}"?`,
+          headerBadge: 'IAM Workload Identity Federation Pool Gatekeeper',
+          targetLabel: 'New Workload Identity Pool',
+          resourceKind: 'IAM WorkloadIdentityPool (iam.googleapis.com/v1)',
+          targetName: `${displayName} (${poolId})`,
+          location: 'global',
+          projectId,
+          method: 'CREATE WORKLOAD IDENTITY POOL',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Create WIF Pool "${poolId}"`,
+          cancelToast: `Creation of Workload Identity Pool "${poolId}" cancelled.`,
+          laymanSummary: `In Plain English: Creates a keyless Workload Identity Pool "${poolId}" in project "${projectId}" so external CI/CD pipelines (such as GitHub Actions or GitLab CI) can exchange short-lived OIDC tokens instead of storing static Service Account JSON keys.`,
+          whatHappensNext: `1. Calls POST https://iam.googleapis.com/v1/projects/${projectId}/locations/global/workloadIdentityPools?workloadIdentityPoolId=${poolId}.\n2. Registers global OIDC federation pool "${displayName}".\n3. Refreshes the Zero-Trust WIF inventory.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00/MO): IAM Workload Identity Pools and OIDC token exchanges are completely free on Google Cloud.',
+          impactWarning: `Creates a persistent global Workload Identity Pool "${poolId}" in project "${projectId}". Note: soft-deleted WIF pool IDs remain reserved for 30 days.`,
+        };
+      }
+
+      // 3. Risky Service Account Static Key Deletion (/frontier/wif-action DELETE_SA_KEY)
+      if (rawUrl.includes('/frontier/wif-action') && frAction === 'DELETE_SA_KEY') {
+        const keyName = body.keyName || 'Selected Service Account Key';
+        const shortKeyId = String(keyName).split('/').pop() || keyName;
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: `Permanently Revoke & Delete Service Account Key "${shortKeyId}"?`,
+          headerBadge: 'IAM Service Account Static JSON Key Revocation Gatekeeper',
+          targetLabel: 'Target User-Managed Service Account Key',
+          resourceKind: 'IAM ServiceAccountKey (iam.googleapis.com/v1)',
+          targetName: keyName,
+          location: 'global',
+          projectId,
+          method: 'DELETE SERVICE ACCOUNT KEY',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete SA Key "${shortKeyId}"`,
+          cancelToast: `Deletion of Service Account key "${shortKeyId}" cancelled.`,
+          laymanSummary: `In Plain English: Permanently revokes and deletes the long-lived user-managed JSON private key "${shortKeyId}". Any external script, CI runner, or server still authenticating with this JSON key file will immediately lose access.`,
+          whatHappensNext: `1. Calls DELETE https://iam.googleapis.com/v1/${keyName}.\n2. Immediately invalidates cryptographic signatures from key "${shortKeyId}" across Google Cloud.\n3. Removes the key from the Risky SA Key Hunter table.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00): Revoking static IAM Service Account keys incurs no charges and reduces credential-leak blast radius.',
+          impactWarning: `IRREVERSIBLE CREDENTIAL REVOCATION: Key "${shortKeyId}" cannot be restored once deleted. Verify workloads have migrated to keyless Workload Identity Federation first.`,
+        };
+      }
+
+      // 4. Pub/Sub Subscription Time-Machine Seek (/frontier/pubsub-action SEEK_SNAPSHOT)
+      if (rawUrl.includes('/frontier/pubsub-action') && frAction === 'SEEK_SNAPSHOT') {
+        const subName = String(body.subscriptionName || 'selected-subscription').split('/').pop();
+        const snapName = String(body.snapshotName || 'selected-snapshot').split('/').pop();
+        return {
+          gateType: 'MUTATE',
+          releaseTrack: 'GA',
+          title: `Seek Pub/Sub Subscription "${subName}" to Snapshot "${snapName}"?`,
+          headerBadge: 'Cloud Pub/Sub Subscription Cursor Seek Gatekeeper',
+          targetLabel: 'Target Subscription -> Replay Snapshot',
+          resourceKind: 'Cloud Pub/Sub Subscription Seek (pubsub.googleapis.com/v1)',
+          targetName: `${subName} -> ${snapName}`,
+          location: 'global',
+          projectId,
+          method: 'SEEK PUBSUB SUBSCRIPTION',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Seek "${subName}" to "${snapName}"`,
+          cancelToast: `Pub/Sub seek on "${subName}" cancelled.`,
+          laymanSummary: `In Plain English: Rewinds or jumps the acknowledgment cursor of live Pub/Sub subscription "${subName}" to saved snapshot "${snapName}". Messages published after that snapshot will be redelivered to connected consumers.`,
+          whatHappensNext: `1. Calls POST https://pubsub.googleapis.com/v1/projects/${projectId}/subscriptions/${subName}:seek targeting snapshot "${snapName}".\n2. Resets message acknowledgment state on "${subName}" to match snapshot "${snapName}".\n3. Active subscribers immediately begin receiving replayed messages.`,
+          costWarning:
+            'USAGE-BASED THROUGHPUT: Seeking is a $0.00 control-plane call; replayed message bytes are billed at standard Cloud Pub/Sub delivery rates after the 10 GiB/month free tier.',
+          impactWarning: `LIVE MESSAGE REPLAY: Downstream consumers on "${subName}" must be idempotent because previously acknowledged messages after snapshot "${snapName}" will be redelivered.`,
+        };
+      }
+
+      // 5. Pub/Sub Snapshot Deletion (/frontier/pubsub-action DELETE_SNAPSHOT)
+      if (rawUrl.includes('/frontier/pubsub-action') && frAction === 'DELETE_SNAPSHOT') {
+        const snapName = String(body.snapshotName || 'selected-snapshot').split('/').pop();
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: `Permanently Delete Cloud Pub/Sub Snapshot "${snapName}"?`,
+          headerBadge: 'Cloud Pub/Sub Replay Snapshot Deletion Gatekeeper',
+          targetLabel: 'Target Pub/Sub Replay Snapshot',
+          resourceKind: 'Cloud Pub/Sub Snapshot (pubsub.googleapis.com/v1)',
+          targetName: snapName,
+          location: 'global',
+          projectId,
+          method: 'DELETE PUBSUB SNAPSHOT',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Snapshot "${snapName}"`,
+          cancelToast: `Deletion of Pub/Sub snapshot "${snapName}" cancelled.`,
+          laymanSummary: `In Plain English: Permanently deletes saved Pub/Sub replay checkpoint "${snapName}" in project "${projectId}". Active topics and subscriptions keep running normally, but you will no longer be able to seek back to this snapshot.`,
+          whatHappensNext: `1. Calls DELETE https://pubsub.googleapis.com/v1/projects/${projectId}/snapshots/${snapName}.\n2. Releases retained backlog message references pinned solely by snapshot "${snapName}".\n3. Refreshes the Pub/Sub Time-Machine inventory.`,
+          costWarning:
+            'BILLING STOP ($0.00/HR AFTER DELETION): Deleting unused Pub/Sub snapshots stops any retained snapshot backlog storage charges.',
+          impactWarning: `Snapshot "${snapName}" will be permanently deleted from project "${projectId}" and cannot be recovered for future subscription seeks.`,
+        };
+      }
+
+      // Exempt safe actions: /frontier/dns-probe, and /frontier/pubsub-action for
+      // PUBLISH_EVENT, PULL_PEEK, CREATE_SNAPSHOT (and any other non-listed /frontier/ read/probe).
+      return null;
+    }
+
     // Cloud Flight-Deck Nexus Studio (/nexus/*) — 4 Bespoke Gatekeepers + Safe Read/Probe/Benchmark Exemptions
     if (rawUrl.includes('/nexus/')) {
       const nxAction = String(body.action || '').toUpperCase();
@@ -7831,6 +7970,7 @@ function CloudPulseCockpit() {
   const [localEmulatorsSubTab, setLocalEmulatorsSubTab] =
     useState('FLEET_CONTROL');
   const [cloudNexusSubTab, setCloudNexusSubTab] = useState('TERRAFORM_DRIFT');
+  const [opsFrontierSubTab, setOpsFrontierSubTab] = useState('QUOTA_RADAR');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
@@ -7868,6 +8008,7 @@ function CloudPulseCockpit() {
     MCP_HUB: 'Google Cloud Remote MCP Hub',
     LOCAL_EMULATORS: 'Local Cloud Emulators Studio',
     CLOUD_NEXUS: 'Cloud Flight-Deck Nexus Studio',
+    CLOUD_OPS_FRONTIER: 'Wave 26 Ops Frontier Studio',
     CLOUD_STORAGE: 'Cloud Storage & WORM Studio',
     BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
     BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
@@ -7929,6 +8070,10 @@ function CloudPulseCockpit() {
     BLAST_RADIUS: 'Blast-Radius Graph & VPC Packet-Path X-Ray',
     VERTEX_ARENA: 'Vertex AI Multi-Model Arena & LLM Judge',
     FLIGHT_RECORDER: 'Causal Flight-Recorder & Canary Rehearsal',
+    QUOTA_RADAR: 'Cloud Quota & GPU Capacity Radar',
+    WIF_KEYLESS: 'Zero-Trust WIF & SA Key Hunter',
+    CLOUD_DNS_TLS: 'Cloud DNS, Certs & Multi-Resolver X-Ray',
+    PUBSUB_TIMEMACHINE: 'Pub/Sub DLQ & Seek Time-Machine',
     IAM_SURGEON: 'Autonomous IAM Least-Privilege Surgeon',
     TIME_MACHINE: 'IAM Policy Time-Machine & Drift Rollback',
     SECRETS_KMS_WAF: 'Secret Manager Lifecycle & KMS Vault',
@@ -7978,6 +8123,7 @@ function CloudPulseCockpit() {
       MANAGED_SPARK_STUDIO: managedSparkSubTab,
       LOCAL_EMULATORS: localEmulatorsSubTab,
       CLOUD_NEXUS: cloudNexusSubTab,
+      CLOUD_OPS_FRONTIER: opsFrontierSubTab,
       SOVEREIGN_STUDIO: sovereignSubTab,
       INNOVATION_LAB: innovationSubTab,
       SRE_WAR_ROOM: sreSubTab,
@@ -7996,6 +8142,7 @@ function CloudPulseCockpit() {
     managedSparkSubTab,
     localEmulatorsSubTab,
     cloudNexusSubTab,
+    opsFrontierSubTab,
     sovereignSubTab,
     innovationSubTab,
     sreSubTab,
@@ -8448,6 +8595,10 @@ function CloudPulseCockpit() {
       ? subTab || 'METASTORE_CATALOGS'
       : tabId === 'DATA_PIPELINES'
       ? subTab || 'MEDALLION_ELT'
+      : tabId === 'QUOTA_RADAR'
+      ? subTab || 'QUOTA_RADAR'
+      : tabId === 'WIF_STUDIO'
+      ? subTab || 'WIF_KEYLESS'
       : subTab;
 
     const rawNormalizedTab = isDirectInnovationSubTab
@@ -8496,6 +8647,8 @@ function CloudPulseCockpit() {
       ? 'LOCAL_EMULATORS'
       : tabId === 'NEXUS' || tabId === 'FLIGHT_DECK' || tabId === 'CLOUD_FLIGHT_DECK'
       ? 'CLOUD_NEXUS'
+      : tabId === 'OPS_FRONTIER' || tabId === 'QUOTA_RADAR' || tabId === 'WIF_STUDIO'
+      ? 'CLOUD_OPS_FRONTIER'
       : tabId;
 
     const VALID_TOP_LEVEL_TABS = new Set([
@@ -8505,6 +8658,7 @@ function CloudPulseCockpit() {
       'MCP_HUB',
       'LOCAL_EMULATORS',
       'CLOUD_NEXUS',
+      'CLOUD_OPS_FRONTIER',
       'GLOBAL_MAP',
       'VPC_NETWORKS',
       'VM_SSH',
@@ -8649,6 +8803,17 @@ function CloudPulseCockpit() {
         setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent('cloudpulse:open-cloud-nexus', {
+              detail: { subTab: resolvedSubTab },
+            })
+          );
+        }, 45);
+      }
+    } else if (normalizedTab === 'CLOUD_OPS_FRONTIER') {
+      if (resolvedSubTab) {
+        setOpsFrontierSubTab(resolvedSubTab);
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:open-ops-frontier', {
               detail: { subTab: resolvedSubTab },
             })
           );
@@ -9957,6 +10122,14 @@ function CloudPulseCockpit() {
       icon: Compass,
     },
     {
+      id: 'CLOUD_OPS_FRONTIER',
+      group: 'COMMAND',
+      label: 'Ops Frontier',
+      isStar: true,
+      tip: 'Wave 26 Ops Frontier Studio (4-Pillar): Cloud Quota & GPU Capacity Radar, Zero-Trust WIF & Service Account Key Hunter, Cloud DNS / Certs & Multi-Resolver TLS X-Ray, and Pub/Sub DLQ & Seek Time-Machine',
+      icon: ShieldCheck,
+    },
+    {
       id: 'GLOBAL_MAP',
       group: 'COMMAND',
       label: 'Global Map',
@@ -10155,6 +10328,9 @@ function CloudPulseCockpit() {
     }
     if (tabId === 'CLOUD_NEXUS') {
       return '4-IN-1';
+    }
+    if (tabId === 'CLOUD_OPS_FRONTIER') {
+      return 'WAVE 26';
     }
     return null;
   };
@@ -11569,6 +11745,7 @@ function CloudPulseCockpit() {
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'LOCAL_EMULATORS', label: 'Local Cloud Emulators', meta: '5 Official 127.0.0.1 Emulators · $0/hr Dev' },
                             { id: 'CLOUD_NEXUS', label: 'Cloud Flight-Deck', meta: 'Terraform Drift, Blast-Radius, Vertex Arena & Flight-Recorder' },
+                            { id: 'CLOUD_OPS_FRONTIER', label: 'Ops Frontier', meta: 'Quota Radar, Zero-Trust WIF, DNS/TLS X-Ray & Pub/Sub Seek' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                           ],
                         },
@@ -11916,6 +12093,28 @@ function CloudPulseCockpit() {
                     persona="CLOUD_ENG"
                     projectId={selectedProjectId}
                     studioContextLabel="Cloud Flight-Deck Nexus Studio · Terraform Drift, Blast-Radius Graph, Vertex Arena & Flight Recorder"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'CLOUD_OPS_FRONTIER' && (
+                <div className="space-y-4">
+                  <Wave26OpsFrontierStudio
+                    projectId={selectedProjectId}
+                    onShowToast={showToast}
+                    onNavigateStudio={handleNavigateStudioTab}
+                  />
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Wave 26 Ops Frontier Studio · Quota Radar, Zero-Trust WIF, Cloud DNS/TLS X-Ray & Pub/Sub Seek Time-Machine"
                     defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)

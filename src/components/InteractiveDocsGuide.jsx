@@ -2131,6 +2131,33 @@ const DOC_SECTIONS = [
     billingImpact:
       'Scans, snapshots, diffs, graph reads, TCP probes and timeline reads are $0.00 cloud charges; Vertex AI Arena runs bill standard per-token model pricing; Connectivity Tests are free for configuration analysis; canary shifts use normal Cloud Run request pricing.',
   },
+  {
+    id: 'wave26-ops-frontier-studio',
+    wave: 'WAVE 26 OPS FRONTIER STUDIO · QUOTA & GPU RADAR, ZERO-TRUST WIF, CLOUD DNS/TLS X-RAY & PUB/SUB SEEK TIME-MACHINE',
+    title:
+      '55. Wave 26 Ops Frontier Studio — Cloud Quota & GPU Capacity Radar, Zero-Trust WIF & SA Key Hunter, Cloud DNS / TLS Multi-Resolver X-Ray & Pub/Sub DLQ Seek Time-Machine',
+    badge: 'Wave 26 Ops Frontier Studio (Wave26OpsFrontierStudio.jsx)',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: ShieldCheck,
+    targetTab: 'CLOUD_OPS_FRONTIER',
+    problemSolved:
+      'Production cloud teams routinely get blindsided by four silent operational hazards: regional Compute or NVIDIA GPU quota exhaustion during traffic spikes, forgotten long-lived Service Account JSON keys sitting in CI/CD pipelines, split-horizon DNS or expiring port-443 TLS certificates, and poison-pill Pub/Sub messages or buggy consumer releases that require time-travel replay without losing events.',
+    howItWorks: [
+      'Pillar 1 — Cloud Quota & GPU Capacity Radar (GET /api/project/:id/frontier/quotas, POST .../frontier/quota-alert): Audits project-wide, regional, and GPU (A100, H100, L4, T4) Compute Engine quota usage versus ceilings, classifies CRITICAL (>=85%) and WARNING (>=70%) saturation, exports gcloud quota CLI commands, and provisions Cloud Monitoring quota alert policies behind a bespoke confirmation modal.',
+      'Pillar 2 — Zero-Trust WIF & Service Account Key Hunter (GET .../frontier/wif-overview, POST .../frontier/wif-action): Scans IAM Service Accounts for risky user-managed JSON keys with key age calculation, revokes static keys or creates global Workload Identity Pools behind bespoke confirmation modals, and generates project-interpolated GitHub Actions and GitLab CI keyless OIDC YAML templates.',
+      'Pillar 3 — Cloud DNS, Certificate Manager & Multi-Resolver TLS X-Ray (GET .../frontier/dns-overview, POST .../frontier/dns-probe): Inventories Cloud DNS managed zones, record sets, and Certificate Manager certificates, and runs live side-by-side Google (8.8.8.8) vs Cloudflare (1.1.1.1) A/AAAA/MX/TXT/CAA/NS lookups, SPF/DMARC/CAA posture checks, and real port-443 TLS X.509 handshake inspection.',
+      'Pillar 4 — Pub/Sub DLQ & Seek Time-Machine (GET .../frontier/pubsub-overview, POST .../frontier/pubsub-action): Inspects topics, DLQ subscriptions, and snapshots; supports test event publishing, non-destructive 5-message pull peeks (without acknowledging), point-in-time snapshot capture, and bespoke-gated subscription cursor seeks and snapshot deletions.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/frontier/quotas & POST /api/project/:id/frontier/quota-alert (compute.googleapis.com/compute/v1, monitoring.googleapis.com/v3)',
+      'GET /api/project/:id/frontier/wif-overview & POST /api/project/:id/frontier/wif-action (iam.googleapis.com/v1 serviceAccounts/keys & workloadIdentityPools)',
+      'GET /api/project/:id/frontier/dns-overview & POST /api/project/:id/frontier/dns-probe (dns.googleapis.com/dns/v1, certificatemanager.googleapis.com/v1, Node dns.Resolver & tls.connect)',
+      'GET /api/project/:id/frontier/pubsub-overview & POST /api/project/:id/frontier/pubsub-action (pubsub.googleapis.com/v1 topics, subscriptions & snapshots)',
+    ],
+    billingImpact:
+      'Quota, WIF, DNS/Certificate inventory reads, 8.8.8.8/1.1.1.1 DNS/TLS probes, WIF pool creation, and SA key revocation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub publish/pull/snapshot operations fall within standard Google Cloud free tiers with normal usage-based throughput pricing above free limits.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

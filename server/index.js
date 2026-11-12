@@ -20,6 +20,7 @@ import { WebSocketServer } from 'ws';
 import { Client as Ssh2Client } from 'ssh2';
 import { registerCloudEmulatorsRoutes } from './emulatorsRoutes.js';
 import { registerCloudNexusRoutes } from './cloudNexusRoutes.js';
+import { registerWave26FrontierRoutes } from './wave26FrontierRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102313,6 +102314,7 @@ spec:
 // ============================================================================
 registerCloudEmulatorsRoutes(app, { getLocalOrMetadataAccessToken });
 registerCloudNexusRoutes(app, { getLocalOrMetadataAccessToken });
+registerWave26FrontierRoutes(app, { getLocalOrMetadataAccessToken });
 
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');

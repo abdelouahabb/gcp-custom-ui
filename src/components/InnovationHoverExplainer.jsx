@@ -1114,6 +1114,206 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'run.googleapis.com/v2 services.patch',
     safetyMode: 'LIVE_MUTATION',
   },
+  CLOUD_OPS_FRONTIER: {
+    badge: 'WAVE 26 · 4-PILLAR OPS FRONTIER',
+    title: 'Wave 26 Ops Frontier Studio — Quota Radar, Zero-Trust WIF, Cloud DNS/TLS X-Ray & Pub/Sub Seek Time-Machine',
+    whatItDoes:
+      'Combines four live Google Cloud operational guardrails in one cockpit: regional Compute and GPU quota saturation radar with Monitoring alerts, IAM Service Account static JSON key hunter with keyless Workload Identity Federation setup, Cloud DNS and Certificate Manager X-Ray with dual-resolver (8.8.8.8 vs 1.1.1.1) and TLS 443 chain inspection, and a non-destructive Pub/Sub DLQ peek and snapshot seek time-machine.',
+    enterpriseValue:
+      'Prevents silent quota exhaustion outages, eliminates long-lived JSON service account keys, catches DNS/TLS certificate expiry before downtime, and enables safe event-stream replay.',
+    gcpApis: 'compute.googleapis.com · monitoring.googleapis.com · iam.googleapis.com · dns.googleapis.com · certificatemanager.googleapis.com · pubsub.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_TAB_QUOTA_RADAR: {
+    badge: 'PILLAR 1 · QUOTA & GPU RADAR',
+    title: 'Cloud Quota & GPU Capacity Radar Tab',
+    whatItDoes:
+      'Audits live project-wide, regional, and GPU (A100, H100, L4, T4) Compute Engine quota limits versus active consumption, ranking metrics by saturation percentage.',
+    enterpriseValue:
+      'Surfaces impending vCPU, IP, SSD, or GPU quota walls before autoscaling or production deployments fail.',
+    gcpApis: 'compute.googleapis.com/compute/v1/projects & regions · monitoring.googleapis.com/v3',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_TAB_WIF_KEYLESS: {
+    badge: 'PILLAR 2 · ZERO-TRUST WIF',
+    title: 'Zero-Trust Workload Identity Federation & SA Key Hunter Tab',
+    whatItDoes:
+      'Discovers risky user-managed Service Account JSON keys with key age tracking alongside global Workload Identity Pools and ready-to-use GitHub Actions and GitLab CI OIDC YAML workflows.',
+    enterpriseValue:
+      'Replaces static, leak-prone JSON credentials with short-lived keyless OIDC token federation.',
+    gcpApis: 'iam.googleapis.com/v1 serviceAccounts/keys & workloadIdentityPools',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_TAB_CLOUD_DNS_TLS: {
+    badge: 'PILLAR 3 · DNS & TLS X-RAY',
+    title: 'Cloud DNS, Certificate Manager & Multi-Resolver X-Ray Tab',
+    whatItDoes:
+      'Lists Cloud DNS managed zones, record sets, and Certificate Manager certificates, and runs live side-by-side Google (8.8.8.8) vs Cloudflare (1.1.1.1) DNS resolution plus port 443 TLS X.509 handshake inspection.',
+    enterpriseValue:
+      'Detects split-horizon DNS drift, missing SPF/DMARC/CAA email/CA protections, and expiring TLS certificates in seconds.',
+    gcpApis: 'dns.googleapis.com/dns/v1 · certificatemanager.googleapis.com/v1 · Node dns.Resolver & tls.connect',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_TAB_PUBSUB_TIMEMACHINE: {
+    badge: 'PILLAR 4 · PUB/SUB TIME-MACHINE',
+    title: 'Cloud Pub/Sub DLQ & Snapshot Seek Time-Machine Tab',
+    whatItDoes:
+      'Inspects live Pub/Sub topics, dead-letter queue (DLQ) subscriptions, and replay snapshots, allowing non-destructive message peeking, test publishing, snapshot creation, and subscription cursor seeking.',
+    enterpriseValue:
+      'Lets SREs inspect poison-pill messages without acknowledging them and rewind event streams to recover from buggy consumer deployments.',
+    gcpApis: 'pubsub.googleapis.com/v1 topics, subscriptions & snapshots',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_REFRESH_QUOTAS: {
+    badge: 'QUOTA INVENTORY SYNC',
+    title: 'Refresh Live Compute & GPU Quotas',
+    whatItDoes:
+      'Re-queries project-level and regional Compute Engine quota ceilings and live usage counters across CPU, memory, network, disk, and NVIDIA GPU metrics.',
+    enterpriseValue:
+      'Verifies real-time quota headroom immediately after scaling events or quota increase approvals.',
+    gcpApis: 'GET /api/project/{project}/frontier/quotas (compute.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_CREATE_QUOTA_ALERT: {
+    badge: 'QUOTA ALERT POLICY',
+    title: 'Create Cloud Monitoring Quota Saturation Alert Policy',
+    whatItDoes:
+      'Provisions a live Cloud Monitoring alert policy for the selected quota metric and utilization threshold percentage after bespoke confirmation.',
+    enterpriseValue:
+      'Pages on-call engineers automatically before a critical regional vCPU or GPU quota hits 100%.',
+    gcpApis: 'POST /api/project/{project}/frontier/quota-alert (monitoring.googleapis.com/v3/projects/{project}/alertPolicies)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  W26_BTN_COPY_QUOTA_CLI: {
+    badge: 'GCLOUD QUOTA CLI',
+    title: 'Copy gcloud Cloud Quotas Inspection Command',
+    whatItDoes:
+      'Copies the synthesized gcloud alpha services quota list CLI command pre-bound to your active Google Cloud project ID.',
+    enterpriseValue:
+      'Speeds up terminal auditing and quota increase request scripting with zero manual flag lookup.',
+    gcpApis: 'gcloud alpha services quota list (local clipboard)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_REFRESH_WIF: {
+    badge: 'IAM & WIF SYNC',
+    title: 'Refresh Service Account Keys & Workload Identity Pools',
+    whatItDoes:
+      'Scans project Service Accounts for user-managed static JSON keys (calculating key age in days) and reloads global Workload Identity Pools and OIDC providers.',
+    enterpriseValue:
+      'Gives security teams an up-to-the-second inventory of static credential debt versus keyless OIDC adoption.',
+    gcpApis: 'GET /api/project/{project}/frontier/wif-overview (iam.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_CREATE_WIF_POOL: {
+    badge: 'CREATE KEYLESS WIF POOL',
+    title: 'Create IAM Workload Identity Pool',
+    whatItDoes:
+      'Creates a new global Workload Identity Pool in IAM after bespoke confirmation so CI/CD runners can authenticate via OIDC tokens without static JSON keys.',
+    enterpriseValue:
+      'Establishes zero-trust keyless federation for GitHub Actions, GitLab CI, or multi-cloud workloads at $0.00/mo.',
+    gcpApis: 'POST /api/project/{project}/frontier/wif-action (iam.googleapis.com/v1 workloadIdentityPools)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  W26_BTN_DELETE_SA_KEY: {
+    badge: 'REVOKE STATIC SA KEY',
+    title: 'Permanently Revoke & Delete Service Account Key',
+    whatItDoes:
+      'Deletes the selected user-managed Service Account JSON key via the IAM API after bespoke confirmation, immediately invalidating it across Google Cloud.',
+    enterpriseValue:
+      'Eliminates leaked or aging long-lived JSON private keys before attackers can abuse them.',
+    gcpApis: 'POST /api/project/{project}/frontier/wif-action (DELETE iam.googleapis.com/v1/{keyName})',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  W26_BTN_COPY_OIDC_YAML: {
+    badge: 'COPY OIDC PIPELINE YAML',
+    title: 'Copy Keyless GitHub Actions / GitLab CI OIDC YAML',
+    whatItDoes:
+      'Copies a production-ready CI/CD YAML workflow configured with google-github-actions/auth or GitLab id_tokens for your active project.',
+    enterpriseValue:
+      'Lets engineering teams migrate pipelines off static JSON secrets in minutes.',
+    gcpApis: 'sts.googleapis.com · iamcredentials.googleapis.com OIDC YAML template (clipboard)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_REFRESH_DNS: {
+    badge: 'DNS & CERTS SYNC',
+    title: 'Refresh Cloud DNS Zones & Certificate Manager Inventory',
+    whatItDoes:
+      'Reloads live Cloud DNS managed zones, authoritative record sets, and Certificate Manager TLS certificates for the active project.',
+    enterpriseValue:
+      'Provides a unified view of authoritative DNS routing and managed TLS certificate health.',
+    gcpApis: 'GET /api/project/{project}/frontier/dns-overview (dns.googleapis.com/dns/v1 · certificatemanager.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_RUN_DNS_PROBE: {
+    badge: 'DUAL-RESOLVER & TLS PROBE',
+    title: 'Run Live 8.8.8.8 vs 1.1.1.1 DNS & Port 443 TLS X-Ray Probe',
+    whatItDoes:
+      'Queries Google Public DNS (8.8.8.8) and Cloudflare DNS (1.1.1.1) in parallel for A, AAAA, MX, TXT, CAA, and NS records, audits SPF/DMARC/CAA posture, and performs a live TLS handshake on port 443 to inspect certificate issuer, protocol, and days remaining.',
+    enterpriseValue:
+      'Verifies global DNS propagation, email/CA domain security records, and live HTTPS certificate validity in one click.',
+    gcpApis: 'POST /api/project/{project}/frontier/dns-probe (Node dns.Resolver & tls.connect :443)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_REFRESH_PUBSUB: {
+    badge: 'PUB/SUB INVENTORY SYNC',
+    title: 'Refresh Pub/Sub Topics, Subscriptions & Snapshots',
+    whatItDoes:
+      'Fetches live Cloud Pub/Sub topics, subscriptions (including dead-letter topic policies and ack deadlines), and saved replay snapshots.',
+    enterpriseValue:
+      'Surfaces unguarded subscriptions missing DLQs and available time-travel checkpoints.',
+    gcpApis: 'GET /api/project/{project}/frontier/pubsub-overview (pubsub.googleapis.com/v1)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_PUBLISH_EVENT: {
+    badge: 'PUBLISH PUB/SUB MESSAGE',
+    title: 'Publish Diagnostic Event to Pub/Sub Topic',
+    whatItDoes:
+      'Publishes a UTF-8 JSON/text payload and optional attributes directly to the selected Cloud Pub/Sub topic and returns the assigned server messageId.',
+    enterpriseValue:
+      'Validates end-to-end event pipeline routing and subscriber ingestion directly from the cockpit.',
+    gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (pubsub.googleapis.com/v1 topics:publish)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_PULL_PEEK: {
+    badge: 'NON-DESTRUCTIVE PEEK',
+    title: 'Peek Up to 5 Queued Messages Without Acknowledging',
+    whatItDoes:
+      'Pulls up to 5 messages from the selected Pub/Sub subscription without sending an ack, leaving every message safely in the queue for downstream consumers.',
+    enterpriseValue:
+      'Lets SREs inspect malformed or dead-lettered payloads safely without losing production events.',
+    gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (pubsub.googleapis.com/v1 subscriptions:pull, zero ack)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_CREATE_SNAPSHOT: {
+    badge: 'SAVE REPLAY SNAPSHOT',
+    title: 'Create Pub/Sub Subscription Replay Snapshot',
+    whatItDoes:
+      'Captures an immutable point-in-time acknowledgment checkpoint of the selected Pub/Sub subscription so you can rewind to this exact cursor later.',
+    enterpriseValue:
+      'Creates an instant safety net before deploying risky consumer changes or schema migrations.',
+    gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (PUT pubsub.googleapis.com/v1 snapshots)',
+    safetyMode: 'READ_ONLY',
+  },
+  W26_BTN_SEEK_SNAPSHOT: {
+    badge: 'REWIND SUBSCRIPTION CURSOR',
+    title: 'Seek Pub/Sub Subscription to Saved Snapshot',
+    whatItDoes:
+      'Rewinds or advances the live Pub/Sub subscription acknowledgment cursor to the selected snapshot after bespoke confirmation, replaying retained messages.',
+    enterpriseValue:
+      'Recovers from defective consumer releases in seconds by replaying exact post-checkpoint events.',
+    gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (pubsub.googleapis.com/v1 subscriptions:seek)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  W26_BTN_DELETE_PUBSUB_SNAPSHOT: {
+    badge: 'DELETE PUB/SUB SNAPSHOT',
+    title: 'Delete Saved Pub/Sub Replay Snapshot',
+    whatItDoes:
+      'Permanently removes the selected Pub/Sub snapshot after bespoke confirmation while leaving topics and active subscriptions untouched.',
+    enterpriseValue:
+      'Cleans up expired release checkpoints and halts retained snapshot backlog storage charges.',
+    gcpApis: 'POST /api/project/{project}/frontier/pubsub-action (DELETE pubsub.googleapis.com/v1 snapshots)',
+    safetyMode: 'LIVE_MUTATION',
+  },
   GLOBAL_MAP: {
     badge: '40 REGIONS & SUBSEA CABLES',
     title: 'Global Network World Map — 40 GCP Regions, Subsea Fiber & Carbon Grid',
@@ -9338,6 +9538,9 @@ function resolveFeatureExplanation(buttonEl) {
     }
     if (textLower.includes('cloud flight-deck') && textLower.length < 60) {
       return INNOVATION_FEATURE_GUIDE.CLOUD_NEXUS;
+    }
+    if ((textLower.includes('ops frontier') || textLower.includes('wave 26')) && textLower.length < 60) {
+      return INNOVATION_FEATURE_GUIDE.CLOUD_OPS_FRONTIER;
     }
     if (textLower.includes('local cloud emulators') && textLower.length < 48) {
       return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS;
