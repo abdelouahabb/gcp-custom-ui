@@ -52,6 +52,7 @@ import {
   LayoutGrid,
   Activity,
   Boxes,
+  Compass,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -104,6 +105,7 @@ import GdeStreamerPrivacyShield, {
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import LocalCloudEmulatorsStudio from './components/LocalCloudEmulatorsStudio';
+import CloudFlightDeckNexusStudio from './components/CloudFlightDeckNexusStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
@@ -738,6 +740,137 @@ function classifyDestructiveAxiosConfig(config) {
 
   // 2. Destructive HTTP POST endpoints
   if (method === 'post') {
+    // Cloud Flight-Deck Nexus Studio (/nexus/*) — 4 Bespoke Gatekeepers + Safe Read/Probe/Benchmark Exemptions
+    if (rawUrl.includes('/nexus/')) {
+      const nxAction = String(body.action || '').toUpperCase();
+
+      // 1. Terraform snapshot deletion (local CloudPulse snapshot store only)
+      if (rawUrl.includes('/nexus/terraform-snapshot') && nxAction === 'DELETE_SNAPSHOT') {
+        const snapName = body.label || body.snapshotId || 'Terraform Drift Snapshot';
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: 'Delete Saved Terraform Drift Snapshot?',
+          headerBadge: 'Terraform Drift Snapshot Vault Deletion Gatekeeper',
+          targetLabel: 'Saved Infrastructure Snapshot',
+          resourceKind: 'CloudPulse Terraform Drift Snapshot (local snapshot vault)',
+          targetName: String(snapName),
+          location: 'Local CloudPulse Snapshot Vault',
+          projectId,
+          method: 'DELETE SNAPSHOT',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Delete Snapshot',
+          cancelToast: 'Snapshot deletion cancelled — the saved baseline is preserved.',
+          laymanSummary: `In Plain English: Permanently removes the saved infrastructure snapshot \"${snapName}\" for project \"${projectId}\" from the CloudPulse snapshot vault. No live Google Cloud resource is changed, but you lose this baseline for future drift comparisons.`,
+          whatHappensNext: `1. Deletes snapshot \"${snapName}\" from the local snapshot vault.\n2. Future drift diffs can no longer use it as a baseline.\n3. Live resources in \"${projectId}\" remain untouched.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00): Only a local snapshot file is removed; no Google Cloud billing is affected.',
+          impactWarning:
+            'The saved baseline is permanently removed and cannot be recovered. Save a new snapshot to re-establish a drift baseline.',
+        };
+      }
+
+      // 2. Network Intelligence connectivity test create / delete
+      if (
+        rawUrl.includes('/nexus/packet-probe') &&
+        (nxAction === 'CREATE_CONNECTIVITY_TEST' || nxAction === 'DELETE_CONNECTIVITY_TEST')
+      ) {
+        const isCreateTest = nxAction === 'CREATE_CONNECTIVITY_TEST';
+        const testLabel =
+          body.testId || [body.sourceVm, body.destIp].filter(Boolean).join(' -> ') || 'Connectivity Test';
+        return {
+          gateType: isCreateTest ? 'CREATE' : 'DELETE',
+          releaseTrack: 'GA',
+          title: isCreateTest
+            ? 'Create Network Intelligence Connectivity Test?'
+            : 'Delete Network Intelligence Connectivity Test?',
+          headerBadge: isCreateTest
+            ? 'Network Intelligence Center Connectivity Test Creation Gatekeeper'
+            : 'Network Intelligence Center Connectivity Test Deletion Gatekeeper',
+          targetLabel: 'Network Management Connectivity Test',
+          resourceKind: 'networkmanagement.googleapis.com/v1 ConnectivityTest',
+          targetName: String(testLabel),
+          location: 'global',
+          projectId,
+          method: isCreateTest ? 'CREATE CONNECTIVITY TEST' : 'DELETE CONNECTIVITY TEST',
+          endpoint: rawUrl,
+          confirmLabel: isCreateTest ? 'Confirm & Create Test' : 'Confirm & Delete Test',
+          cancelToast: isCreateTest
+            ? 'Connectivity test creation cancelled.'
+            : 'Connectivity test deletion cancelled.',
+          laymanSummary: isCreateTest
+            ? `In Plain English: Creates a persistent Google Cloud Connectivity Test \"${testLabel}\" in project \"${projectId}\" that analyzes the configured network path (firewalls, routes, VPC) between source and destination without sending production traffic.`
+            : `In Plain English: Permanently deletes the Connectivity Test \"${testLabel}\" from project \"${projectId}\". Network data-plane traffic is not affected.`,
+          whatHappensNext: isCreateTest
+            ? `1. Calls networkmanagement.googleapis.com to create the connectivity test.\n2. Google analyzes the configuration path and returns a reachability verdict.\n3. The test stays saved in \"${projectId}\" until you delete it.`
+            : `1. Calls networkmanagement.googleapis.com to delete the connectivity test.\n2. Removes its saved reachability history from \"${projectId}\".`,
+          costWarning: isCreateTest
+            ? 'LOW COST: Connectivity Tests are free for configuration analysis; live data-plane verification may incur minimal Network Intelligence charges.'
+            : 'BILLING NEUTRAL: Deleting a connectivity test does not change any compute or network spend.',
+          impactWarning: isCreateTest
+            ? `A new persistent Connectivity Test resource will be created in project \"${projectId}\".`
+            : 'The saved connectivity test and its result history will be permanently removed.',
+        };
+      }
+
+      // 3. Vertex Arena evaluation history wipe
+      if (rawUrl.includes('/nexus/vertex-benchmark') && nxAction === 'CLEAR_EVAL_HISTORY') {
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: 'Clear Vertex AI Arena Evaluation History?',
+          headerBadge: 'Vertex Arena Evaluation History Wipe Gatekeeper',
+          targetLabel: 'Saved Model Arena Results',
+          resourceKind: 'CloudPulse Vertex Arena Evaluation History (local)',
+          targetName: 'All Saved Arena & Red-Team Benchmark Runs',
+          location: 'Local CloudPulse Evaluation Store',
+          projectId,
+          method: 'CLEAR EVAL HISTORY',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Clear History',
+          cancelToast: 'Evaluation history clear cancelled — saved runs are preserved.',
+          laymanSummary: `In Plain English: Permanently erases every saved model Arena and Red-Team benchmark run recorded for project \"${projectId}\" (latency, token counts, verdicts). Vertex AI models and endpoints are not modified.`,
+          whatHappensNext: `1. Deletes all saved evaluation records from the local CloudPulse store.\n2. Resets the leaderboard and trend charts.\n3. Vertex AI resources in \"${projectId}\" remain untouched.`,
+          costWarning:
+            'ZERO CLOUD COST ($0.00): Only locally stored benchmark history is removed.',
+          impactWarning:
+            'All saved Arena and Red-Team benchmark history is permanently removed and cannot be recovered.',
+        };
+      }
+
+      // 4. Cloud Run canary traffic shift (live production routing change)
+      if (rawUrl.includes('/nexus/canary-rehearsal') && nxAction === 'SHIFT_CANARY_TRAFFIC') {
+        const cnSvc = body.serviceName || 'Cloud Run Service';
+        const cnRev = body.revisionName || 'selected revision';
+        const cnPct = body.canaryPercent ?? '?';
+        return {
+          gateType: 'MUTATE',
+          releaseTrack: 'GA',
+          title: `Shift ${cnPct}% of Live Cloud Run Traffic to a Canary Revision?`,
+          headerBadge: 'Cloud Run Live Traffic Canary Shift Gatekeeper',
+          targetLabel: 'Cloud Run Service Traffic Split',
+          resourceKind: 'run.googleapis.com/v2 Service Traffic Allocation',
+          targetName: `${cnSvc} → ${cnRev} (${cnPct}%)`,
+          location: body.region || 'GCP Region',
+          projectId,
+          method: 'SHIFT CANARY TRAFFIC',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Shift Live Traffic',
+          cancelToast: 'Canary traffic shift cancelled — current traffic split is unchanged.',
+          laymanSummary: `In Plain English: Immediately routes ${cnPct}% of real production requests for Cloud Run service \"${cnSvc}\" in project \"${projectId}\" to revision \"${cnRev}\". Real users will be served by that revision right away.`,
+          whatHappensNext: `1. Patches the service traffic allocation via the Cloud Run Admin API.\n2. ${cnPct}% of live requests start hitting revision \"${cnRev}\" within seconds.\n3. Roll back by shifting traffic back to the previous revision.`,
+          costWarning:
+            'USAGE-BASED: Requests are billed per normal Cloud Run pricing; a faulty canary can raise error rates and downstream costs.',
+          impactWarning:
+            'This changes LIVE production traffic routing. If the canary revision is unhealthy, end users will receive errors until traffic is shifted back.',
+        };
+      }
+
+      // Exempt safe actions: SAVE_SNAPSHOT, DIFF_SNAPSHOTS, LIVE_REACHABILITY_PROBE, RUN_ARENA,
+      // RUN_REDTEAM_PROBE, HTTP_RESILIENCE_PROBE and any other non-listed /nexus/ action.
+      return null;
+    }
+
     // Google Cloud Local Emulators Studio (/emulators/*) — Bespoke Local Host Gatekeeper & Safe Read/Start/Clone Exemptions
     if (rawUrl.includes('/emulators/')) {
       const emuType = String(body.emulatorType || 'PUBSUB').toUpperCase();
@@ -7697,6 +7830,7 @@ function CloudPulseCockpit() {
     useState('SERVERLESS_BATCHES');
   const [localEmulatorsSubTab, setLocalEmulatorsSubTab] =
     useState('FLEET_CONTROL');
+  const [cloudNexusSubTab, setCloudNexusSubTab] = useState('TERRAFORM_DRIFT');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
@@ -7733,6 +7867,7 @@ function CloudPulseCockpit() {
     STARTUP_10X: 'Startup 10X Mentor Studio',
     MCP_HUB: 'Google Cloud Remote MCP Hub',
     LOCAL_EMULATORS: 'Local Cloud Emulators Studio',
+    CLOUD_NEXUS: 'Cloud Flight-Deck Nexus Studio',
     CLOUD_STORAGE: 'Cloud Storage & WORM Studio',
     BIGQUERY_STUDIO: 'BigQuery Lakehouse Studio',
     BIGLAKE_STUDIO: 'BigLake & Apache Iceberg Studio',
@@ -7790,6 +7925,10 @@ function CloudPulseCockpit() {
     LIVE_WORKBENCH: 'Interactive Local REST Workbench',
     CLOUD_SCHEMA_SYNC: 'Cloud-to-Local $0.00 Twin Sync',
     ENV_AND_LOGS: '*_EMULATOR_HOST Exporter & Live Process Logs',
+    TERRAFORM_DRIFT: 'Cloud-to-Terraform Reverse-Compiler & Drift Time-Machine',
+    BLAST_RADIUS: 'Blast-Radius Graph & VPC Packet-Path X-Ray',
+    VERTEX_ARENA: 'Vertex AI Multi-Model Arena & LLM Judge',
+    FLIGHT_RECORDER: 'Causal Flight-Recorder & Canary Rehearsal',
     IAM_SURGEON: 'Autonomous IAM Least-Privilege Surgeon',
     TIME_MACHINE: 'IAM Policy Time-Machine & Drift Rollback',
     SECRETS_KMS_WAF: 'Secret Manager Lifecycle & KMS Vault',
@@ -7838,6 +7977,7 @@ function CloudPulseCockpit() {
       DATA_ENGINEER_STUDIO: dataEngineerSubTab,
       MANAGED_SPARK_STUDIO: managedSparkSubTab,
       LOCAL_EMULATORS: localEmulatorsSubTab,
+      CLOUD_NEXUS: cloudNexusSubTab,
       SOVEREIGN_STUDIO: sovereignSubTab,
       INNOVATION_LAB: innovationSubTab,
       SRE_WAR_ROOM: sreSubTab,
@@ -7855,6 +7995,7 @@ function CloudPulseCockpit() {
     dataEngineerSubTab,
     managedSparkSubTab,
     localEmulatorsSubTab,
+    cloudNexusSubTab,
     sovereignSubTab,
     innovationSubTab,
     sreSubTab,
@@ -8353,6 +8494,8 @@ function CloudPulseCockpit() {
         tabId === 'CLOUD_EMULATORS' ||
         tabId === 'LOCAL_CLOUD_EMULATORS'
       ? 'LOCAL_EMULATORS'
+      : tabId === 'NEXUS' || tabId === 'FLIGHT_DECK' || tabId === 'CLOUD_FLIGHT_DECK'
+      ? 'CLOUD_NEXUS'
       : tabId;
 
     const VALID_TOP_LEVEL_TABS = new Set([
@@ -8361,6 +8504,7 @@ function CloudPulseCockpit() {
       'STARTUP_10X',
       'MCP_HUB',
       'LOCAL_EMULATORS',
+      'CLOUD_NEXUS',
       'GLOBAL_MAP',
       'VPC_NETWORKS',
       'VM_SSH',
@@ -8499,6 +8643,17 @@ function CloudPulseCockpit() {
       setAlibabaHuaweiSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
       setDataEngineerSubTab(resolvedSubTab);
+    } else if (normalizedTab === 'CLOUD_NEXUS') {
+      if (resolvedSubTab) {
+        setCloudNexusSubTab(resolvedSubTab);
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('cloudpulse:open-cloud-nexus', {
+              detail: { subTab: resolvedSubTab },
+            })
+          );
+        }, 45);
+      }
     } else if (normalizedTab === 'LOCAL_EMULATORS') {
       if (resolvedSubTab) {
         setLocalEmulatorsSubTab(resolvedSubTab);
@@ -9794,6 +9949,14 @@ function CloudPulseCockpit() {
       icon: Boxes,
     },
     {
+      id: 'CLOUD_NEXUS',
+      group: 'COMMAND',
+      label: 'Cloud Flight-Deck',
+      isStar: true,
+      tip: 'Cloud Flight-Deck Nexus (4-in-1): Live Cloud-to-Terraform Reverse-Compiler & ClickOps Drift Time-Machine, Blast-Radius Graph & VPC Packet-Path X-Ray, Vertex AI Multi-Model Arena with LLM Judge, and Black-Box Causal Flight-Recorder with Cloud Run Canary Rehearsal',
+      icon: Compass,
+    },
+    {
       id: 'GLOBAL_MAP',
       group: 'COMMAND',
       label: 'Global Map',
@@ -9989,6 +10152,9 @@ function CloudPulseCockpit() {
     }
     if (tabId === 'LOCAL_EMULATORS') {
       return 5;
+    }
+    if (tabId === 'CLOUD_NEXUS') {
+      return '4-IN-1';
     }
     return null;
   };
@@ -11402,6 +11568,7 @@ function CloudPulseCockpit() {
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Specialized Beyond-Console Studios' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'LOCAL_EMULATORS', label: 'Local Cloud Emulators', meta: '5 Official 127.0.0.1 Emulators · $0/hr Dev' },
+                            { id: 'CLOUD_NEXUS', label: 'Cloud Flight-Deck', meta: 'Terraform Drift, Blast-Radius, Vertex Arena & Flight-Recorder' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                           ],
                         },
@@ -11727,6 +11894,28 @@ function CloudPulseCockpit() {
                     persona="CLOUD_ENG"
                     projectId={selectedProjectId}
                     studioContextLabel="Local Cloud Emulators Studio · $0.00/hr 127.0.0.1 Twin, REST Workbench & Schema Sync"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'CLOUD_NEXUS' && (
+                <div className="space-y-4">
+                  <CloudFlightDeckNexusStudio
+                    projectId={selectedProjectId}
+                    onShowToast={showToast}
+                    onNavigateStudio={handleNavigateStudioTab}
+                  />
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Cloud Flight-Deck Nexus Studio · Terraform Drift, Blast-Radius Graph, Vertex Arena & Flight Recorder"
                     defaultExpanded={false}
                     onOpenFullBoard={(p) =>
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)

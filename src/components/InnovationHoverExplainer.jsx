@@ -884,6 +884,236 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: '@google-cloud/pubsub · @google-cloud/firestore · @google-cloud/datastore · @google-cloud/spanner',
     safetyMode: 'READ_ONLY',
   },
+  CLOUD_NEXUS: {
+    badge: '4-IN-1 FLIGHT-DECK',
+    title: 'Cloud Flight-Deck Nexus Studio — Terraform Drift, Blast-Radius, Vertex Arena & Flight Recorder',
+    whatItDoes:
+      'Unifies four live SRE/platform capabilities: Terraform drift detection against real inventory, a topology blast-radius graph with packet probes, a Vertex AI model arena with red-team probes, and a unified incident flight recorder with Cloud Run canary rehearsal.',
+    enterpriseValue:
+      'Replaces four disjoint consoles with one cockpit so platform teams can detect drift, quantify blast radius, benchmark models and rehearse resilience before an incident.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · networkmanagement.googleapis.com · aiplatform.googleapis.com · logging.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_TAB_TERRAFORM_DRIFT: {
+    badge: 'PILLAR 1 · TERRAFORM DRIFT',
+    title: 'Terraform Drift & HCL Export Tab',
+    whatItDoes:
+      'Scans live Google Cloud inventory, saves point-in-time snapshots, diffs them to reveal drift, and exports ready-to-apply Terraform HCL.',
+    enterpriseValue:
+      'Catches out-of-band console changes before they break your IaC pipeline.',
+    gcpApis: 'cloudasset / compute / run / storage REST inventory',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_TAB_BLAST_RADIUS: {
+    badge: 'PILLAR 2 · BLAST RADIUS',
+    title: 'Dependency Blast-Radius & Packet Probe Tab',
+    whatItDoes:
+      'Renders a live topology graph of VMs, networks, firewalls and services and shows what is impacted if a node fails, with real TCP reachability probes.',
+    enterpriseValue:
+      'Quantifies downstream impact before maintenance or incident response.',
+    gcpApis: 'compute.googleapis.com · networkmanagement.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_TAB_VERTEX_ARENA: {
+    badge: 'PILLAR 3 · VERTEX ARENA',
+    title: 'Vertex AI Model Arena & Red-Team Tab',
+    whatItDoes:
+      'Benchmarks Vertex AI models side by side for latency, tokens and answer quality, and runs adversarial red-team prompts.',
+    enterpriseValue:
+      'Chooses the best model for cost and safety using measured, not marketed, results.',
+    gcpApis: 'aiplatform.googleapis.com/v1 generateContent',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_TAB_FLIGHT_RECORDER: {
+    badge: 'PILLAR 4 · FLIGHT RECORDER',
+    title: 'Incident Flight Recorder & Canary Rehearsal Tab',
+    whatItDoes:
+      'Merges audit logs, error logs and deployment events into one scrubbable timeline and rehearses Cloud Run resilience with HTTP bursts and canary shifts.',
+    enterpriseValue:
+      'Gives responders a single replayable incident timeline and a safe way to rehearse rollouts.',
+    gcpApis: 'logging.googleapis.com/v2 · run.googleapis.com/v2',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_SCAN_TERRAFORM: {
+    badge: 'TERRAFORM DRIFT SCAN',
+    title: 'Scan Live Infrastructure for Terraform Drift',
+    whatItDoes:
+      'Queries live Google Cloud REST APIs for Compute, Cloud Run, Storage and networking inventory and renders the current state as Terraform resources.',
+    enterpriseValue:
+      'Provides a trustworthy, current infrastructure baseline in seconds.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_SAVE_SNAPSHOT: {
+    badge: 'SNAPSHOT SAVE',
+    title: 'Save Infrastructure Snapshot',
+    whatItDoes:
+      'Stores the current scanned inventory as a named local snapshot to serve as a drift baseline. No cloud resource is changed.',
+    enterpriseValue:
+      'Creates an auditable before/after baseline around any change window.',
+    gcpApis: 'local CloudPulse snapshot vault',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_DIFF_SNAPSHOT: {
+    badge: 'SNAPSHOT DIFF',
+    title: 'Diff Snapshot Against Another or Live State',
+    whatItDoes:
+      'Computes added, removed and changed resources between two snapshots or a snapshot and the live scan.',
+    enterpriseValue:
+      'Pinpoints exactly which resources drifted and when.',
+    gcpApis: 'local CloudPulse snapshot vault',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_DELETE_SNAPSHOT: {
+    badge: 'SNAPSHOT DELETE',
+    title: 'Delete Saved Snapshot',
+    whatItDoes:
+      'Permanently removes a saved snapshot from the local vault after a bespoke confirmation. Live resources are not touched.',
+    enterpriseValue:
+      'Keeps the baseline vault tidy while preventing accidental baseline loss.',
+    gcpApis: 'local CloudPulse snapshot vault',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  NEXUS_BTN_COPY_HCL: {
+    badge: 'HCL CLIPBOARD COPY',
+    title: 'Copy Terraform HCL to Clipboard',
+    whatItDoes:
+      'Copies the generated Terraform HCL for the scanned resources to your clipboard.',
+    enterpriseValue:
+      'Speeds up importing existing infrastructure into Terraform state.',
+    gcpApis: 'terraform HCL generation (local)',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_DOWNLOAD_TF_BUNDLE: {
+    badge: 'TERRAFORM BUNDLE DOWNLOAD',
+    title: 'Download Terraform Bundle',
+    whatItDoes:
+      'Downloads the generated HCL and import commands as a file bundle for local use.',
+    enterpriseValue:
+      'Gives IaC teams a ready starting repository for unmanaged infrastructure.',
+    gcpApis: 'terraform HCL generation (local)',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_REFRESH_GRAPH: {
+    badge: 'BLAST-RADIUS GRAPH REFRESH',
+    title: 'Refresh Dependency Graph',
+    whatItDoes:
+      'Re-reads live VMs, networks, firewall rules and Cloud Run services and rebuilds the dependency graph.',
+    enterpriseValue:
+      'Ensures impact analysis reflects the real current topology.',
+    gcpApis: 'compute.googleapis.com · run.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_SELECT_NODE: {
+    badge: 'BLAST-RADIUS NODE SELECT',
+    title: 'Select Node to Compute Blast Radius',
+    whatItDoes:
+      'Highlights every upstream and downstream dependency affected if the selected resource fails.',
+    enterpriseValue:
+      'Answers what breaks if this goes down before it does.',
+    gcpApis: 'compute.googleapis.com topology graph',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_RUN_PACKET_PROBE: {
+    badge: 'LIVE REACHABILITY PROBE',
+    title: 'Run Live TCP Reachability Probe',
+    whatItDoes:
+      'Opens a real TCP connection from the CloudPulse host to the target host and port and reports latency and outcome. Nothing is created in Google Cloud.',
+    enterpriseValue:
+      'Confirms real connectivity quickly without creating cloud resources.',
+    gcpApis: 'node net TCP connect (local)',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_CREATE_CONN_TEST: {
+    badge: 'CONNECTIVITY TEST CREATE',
+    title: 'Create Network Intelligence Connectivity Test',
+    whatItDoes:
+      'Creates a persistent Connectivity Test in Network Management after confirmation, analyzing firewalls and routes between source and destination.',
+    enterpriseValue:
+      'Validates network paths by configuration analysis before production traffic depends on them.',
+    gcpApis: 'networkmanagement.googleapis.com/v1 connectivityTests',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  NEXUS_BTN_DELETE_CONN_TEST: {
+    badge: 'CONNECTIVITY TEST DELETE',
+    title: 'Delete Connectivity Test',
+    whatItDoes:
+      'Deletes a saved Network Intelligence Connectivity Test after a bespoke confirmation.',
+    enterpriseValue:
+      'Removes obsolete tests and their result history.',
+    gcpApis: 'networkmanagement.googleapis.com/v1 connectivityTests',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  NEXUS_BTN_RUN_ARENA: {
+    badge: 'VERTEX MODEL ARENA',
+    title: 'Run Vertex AI Model Arena',
+    whatItDoes:
+      'Sends the same prompt to selected Vertex AI models and records latency, token usage and responses side by side.',
+    enterpriseValue:
+      'Selects models by measured speed and quality for your own workload.',
+    gcpApis: 'aiplatform.googleapis.com/v1 publishers/google/models:generateContent',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_RUN_REDTEAM: {
+    badge: 'VERTEX RED-TEAM PROBE',
+    title: 'Run Red-Team Safety Probe',
+    whatItDoes:
+      'Sends adversarial prompts to a Vertex AI model and scores whether it resisted jailbreak and leakage attempts.',
+    enterpriseValue:
+      'Surfaces model safety gaps before they reach end users.',
+    gcpApis: 'aiplatform.googleapis.com/v1 generateContent',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_CLEAR_EVAL_HISTORY: {
+    badge: 'EVAL HISTORY CLEAR',
+    title: 'Clear Evaluation History',
+    whatItDoes:
+      'Erases all saved Arena and Red-Team runs from the local store after a bespoke confirmation. Vertex AI resources are untouched.',
+    enterpriseValue:
+      'Resets benchmarks between model generations.',
+    gcpApis: 'local CloudPulse evaluation store',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  NEXUS_BTN_REFRESH_TIMELINE: {
+    badge: 'FLIGHT RECORDER REFRESH',
+    title: 'Refresh Flight Recorder Timeline',
+    whatItDoes:
+      'Pulls audit, error and deployment log entries for the selected time window into the unified incident timeline.',
+    enterpriseValue:
+      'Builds an incident narrative from real logs in one view.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_SCRUB_WINDOW: {
+    badge: 'TIMELINE WINDOW SCRUB',
+    title: 'Scrub Timeline Window',
+    whatItDoes:
+      'Changes the time window shown in the flight recorder and reloads events for that range.',
+    enterpriseValue:
+      'Lets responders replay what happened before and during an incident.',
+    gcpApis: 'logging.googleapis.com/v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_RUN_RESILIENCE_PROBE: {
+    badge: 'HTTP RESILIENCE PROBE',
+    title: 'Run HTTP Resilience Burst Probe',
+    whatItDoes:
+      'Sends a bounded burst of real HTTP requests to a target URL and reports success rate and latency percentiles.',
+    enterpriseValue:
+      'Rehearses behavior under load without changing any configuration.',
+    gcpApis: 'HTTP burst from CloudPulse host',
+    safetyMode: 'READ_ONLY',
+  },
+  NEXUS_BTN_SHIFT_CANARY: {
+    badge: 'CLOUD RUN CANARY SHIFT',
+    title: 'Shift Live Cloud Run Traffic to Canary',
+    whatItDoes:
+      'Updates the Cloud Run service traffic split to route a percentage of production requests to a chosen revision after bespoke confirmation.',
+    enterpriseValue:
+      'Enables progressive delivery with a fast, auditable rollout step.',
+    gcpApis: 'run.googleapis.com/v2 services.patch',
+    safetyMode: 'LIVE_MUTATION',
+  },
   GLOBAL_MAP: {
     badge: '40 REGIONS & SUBSEA CABLES',
     title: 'Global Network World Map — 40 GCP Regions, Subsea Fiber & Carbon Grid',
@@ -8819,6 +9049,9 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
   } else if (fullContext.includes('mcp') || fullContext.includes('json-rpc') || fullContext.includes('agent-registry') || fullContext.includes('tools/call') || fullContext.includes('tools/list')) {
     domainBadge = isMutating ? 'REMOTE MCP GOVERNANCE ACTION' : 'OFFICIAL GOOGLE CLOUD REMOTE MCP';
     inferredApi = codeSnippet || 'https://*.googleapis.com/mcp (JSON-RPC 2.0) · agentregistry.googleapis.com/v1';
+  } else if (fullContext.includes('terraform') || fullContext.includes('blast radius') || fullContext.includes('flight recorder') || fullContext.includes('vertex arena')) {
+    domainBadge = isMutating ? 'CLOUD FLIGHT-DECK ACTION' : 'CLOUD FLIGHT-DECK NEXUS';
+    inferredApi = codeSnippet || 'compute.googleapis.com · run.googleapis.com · aiplatform.googleapis.com · logging.googleapis.com';
   } else if (fullContext.includes('emulator') || fullContext.includes('127.0.0.1') || fullContext.includes('_emulator_host')) {
     domainBadge = isMutating ? 'LOCAL 127.0.0.1 EMULATOR ACTION' : 'LOCAL CLOUD EMULATOR ($0.00/HR)';
     inferredApi = codeSnippet || 'gcloud beta emulators · http://127.0.0.1:<port>/v1/...';
@@ -8908,6 +9141,12 @@ function synthesizeRealUseCaseExplanation(buttonEl, cleanLabel, rawText, rawTitl
       : `Inspects or configures Remote MCP JSON-RPC 2.0 control "${displayLabel}"${targetPhrase} inside the Google-Managed Remote MCP Hub.`;
     domainEnterpriseValue =
       'Enforces readOnlyHint=true zero-mutation guardrails, least-privilege mcp-agent-readonly Service Account isolation, and direct HTTPS JSON-RPC 2.0 connectivity.';
+  } else if (fullContext.includes('terraform') || fullContext.includes('blast radius') || fullContext.includes('flight recorder') || fullContext.includes('vertex arena')) {
+    domainWhatItDoes = isMutating
+      ? `Executes Cloud Flight-Deck action "${displayLabel}"${targetPhrase} against live Google Cloud APIs after gatekeeper confirmation.`
+      : `Runs read-only Cloud Flight-Deck analysis "${displayLabel}"${targetPhrase} against live Google Cloud telemetry.`;
+    domainEnterpriseValue =
+      'Unifies drift detection, blast-radius analysis, model benchmarking and incident replay in one cockpit.';
   } else if (fullContext.includes('emulator') || fullContext.includes('127.0.0.1') || fullContext.includes('_emulator_host')) {
     domainWhatItDoes = isMutating
       ? `Executes local 127.0.0.1 emulator action "${displayLabel}"${targetPhrase} without mutating live Google Cloud production resources.`
@@ -9096,6 +9335,9 @@ function resolveFeatureExplanation(buttonEl) {
   if (!isInnerActionBtn) {
     if (textLower.includes('startup 10x') || textLower.includes('google for startups')) {
       return INNOVATION_FEATURE_GUIDE.STARTUP_10X;
+    }
+    if (textLower.includes('cloud flight-deck') && textLower.length < 60) {
+      return INNOVATION_FEATURE_GUIDE.CLOUD_NEXUS;
     }
     if (textLower.includes('local cloud emulators') && textLower.length < 48) {
       return INNOVATION_FEATURE_GUIDE.LOCAL_EMULATORS;

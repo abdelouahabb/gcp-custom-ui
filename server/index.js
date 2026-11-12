@@ -19,6 +19,7 @@ import { promisify } from 'util';
 import { WebSocketServer } from 'ws';
 import { Client as Ssh2Client } from 'ssh2';
 import { registerCloudEmulatorsRoutes } from './emulatorsRoutes.js';
+import { registerCloudNexusRoutes } from './cloudNexusRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102311,6 +102312,7 @@ spec:
 // GOOGLE CLOUD LOCAL EMULATORS STUDIO ROUTES (/api/project/:id/emulators/*)
 // ============================================================================
 registerCloudEmulatorsRoutes(app, { getLocalOrMetadataAccessToken });
+registerCloudNexusRoutes(app, { getLocalOrMetadataAccessToken });
 
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');

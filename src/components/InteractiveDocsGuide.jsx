@@ -30,6 +30,7 @@ import {
   Trash2,
   Cpu,
   Boxes,
+  Compass,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
@@ -2102,6 +2103,33 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       '100% $0.00/hr local compute and storage — all emulator processes run strictly on 127.0.0.1 loopback and read-only cloud schema discovery incurs $0.00 in cloud mutation charges.',
+  },
+  {
+    id: 'wave25-cloud-flight-deck-nexus-studio',
+    wave: 'WAVE 25 CLOUD FLIGHT-DECK NEXUS STUDIO · TERRAFORM DRIFT, BLAST-RADIUS GRAPH, VERTEX AI ARENA & INCIDENT FLIGHT RECORDER',
+    title:
+      '54. Cloud Flight-Deck Nexus Studio — Terraform Drift & HCL Export, Dependency Blast-Radius & Packet Probes, Vertex AI Model Arena & Red-Team, Incident Flight Recorder & Cloud Run Canary Rehearsal',
+    badge: 'Cloud Flight-Deck Nexus Studio (CloudFlightDeckNexusStudio.jsx)',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Compass,
+    targetTab: 'CLOUD_NEXUS',
+    problemSolved:
+      'Platform and SRE teams juggle separate tools for IaC drift, dependency impact analysis, model selection and incident forensics. Out-of-band console changes silently break Terraform, nobody knows the blast radius of a failing node, model choices are made on marketing rather than measurements, and incident timelines are stitched together by hand. One cockpit that works on live data closes all four gaps.',
+    howItWorks: [
+      'Pillar 1 — Terraform Drift & HCL Export (GET /api/project/:id/nexus/terraform-scan, POST .../nexus/terraform-snapshot): Scans live Compute, Cloud Run and Storage inventory, saves named snapshots, diffs snapshots against each other or live state, and exports Terraform HCL. Snapshot deletion is gated by a bespoke confirmation modal.',
+      'Pillar 2 — Dependency Blast-Radius Graph & Packet Probe (GET .../nexus/blast-radius, POST .../nexus/packet-probe): Builds a live topology graph, highlights downstream impact of any node, runs real TCP reachability probes and manages Network Intelligence Connectivity Tests (create/delete gated by bespoke modals).',
+      'Pillar 3 — Vertex AI Arena & Red-Team (GET .../nexus/vertex-overview, POST .../nexus/vertex-benchmark): Benchmarks Vertex AI models side by side for latency and tokens and runs adversarial red-team prompts; clearing saved history is gated by a bespoke modal.',
+      'Pillar 4 — Incident Flight Recorder & Canary Rehearsal (GET .../nexus/flight-recorder, POST .../nexus/canary-rehearsal): Merges audit, error and deployment logs into a scrubbable timeline, runs bounded HTTP resilience bursts, and shifts Cloud Run canary traffic behind a bespoke live-traffic confirmation modal.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/nexus/terraform-scan & POST /api/project/:id/nexus/terraform-snapshot (compute, run, storage REST inventory + local snapshot vault)',
+      'GET /api/project/:id/nexus/blast-radius & POST /api/project/:id/nexus/packet-probe (compute.googleapis.com, networkmanagement.googleapis.com, TCP probe)',
+      'GET /api/project/:id/nexus/vertex-overview & POST /api/project/:id/nexus/vertex-benchmark (aiplatform.googleapis.com/v1)',
+      'GET /api/project/:id/nexus/flight-recorder & POST /api/project/:id/nexus/canary-rehearsal (logging.googleapis.com/v2, run.googleapis.com/v2)',
+    ],
+    billingImpact:
+      'Scans, snapshots, diffs, graph reads, TCP probes and timeline reads are $0.00 cloud charges; Vertex AI Arena runs bill standard per-token model pricing; Connectivity Tests are free for configuration analysis; canary shifts use normal Cloud Run request pricing.',
   },
 ];
 
