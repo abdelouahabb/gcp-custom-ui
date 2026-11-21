@@ -13089,7 +13089,7 @@ SELECT
   bq_hist.lifetime_value_usd
 FROM EXTERNAL_QUERY(
   '${projectId}.${region}.alloydb_${alloyClusterId.replace(/[^a-z0-9_]/gi, '_')}',
-  'SELECT order_id, customer_id, total_usd FROM public.orders WHERE created_at >= now() - interval ''24 hours'''
+  """SELECT order_id, customer_id, total_usd FROM public.orders WHERE created_at >= now() - interval '24 hours'"""
 ) AS live_orders
 LEFT JOIN \`${projectId}.${datasetId}.customer_ltv_gold\` AS bq_hist
   ON live_orders.customer_id = bq_hist.customer_id
