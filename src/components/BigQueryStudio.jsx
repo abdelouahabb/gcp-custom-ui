@@ -857,7 +857,7 @@ LIMIT 25;`;
         }
       );
       const durationMs = Math.max(18, Date.now() - startedAt);
-      const enriched = { ...res.data, durationMs };
+      const enriched = { ...res.data, durationMs, executedSql: targetSql };
       setQueryResult(enriched);
       setQueryHistory((prev) => [
         {
@@ -876,6 +876,17 @@ LIMIT 25;`;
         ...prev.slice(0, 19),
       ]);
       fetchJobs();
+      if (
+        !isDryRun &&
+        res.data?.ok !== false &&
+        /\b(CREATE|ALTER|DROP|INSERT|MERGE|DELETE|UPDATE|EXPORT\s+DATA)\b/i.test(
+          targetSql
+        )
+      ) {
+        if (selectedDatasetId) {
+          fetchTables(selectedDatasetId);
+        }
+      }
 
       setTimeout(() => {
         document
@@ -2632,6 +2643,145 @@ LIMIT 25;`;
                       )}
                     </div>
                   )}
+
+                  {/* Live DDL / Multi-Statement / 0-Row Success Card with 1-Click Preview Table */}
+                  {!queryResult.dryRun &&
+                    queryResult.ok !== false &&
+                    (!Array.isArray(queryResult.rows) ||
+                      queryResult.rows.length === 0) && (() => {
+                      const ranSql = String(queryResult.executedSql || sqlInput || '');
+                      const createdTables = Array.from(
+                        new Set(
+                          Array.from(
+                            ranSql.matchAll(
+                              /CREATE\s+(?:OR\s+REPLACE\s+)?(?:EXTERNAL\s+|TEMP\s+|TEMPORARY\s+)?(?:TABLE|VIEW|MATERIALIZED\s+VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-zA-Z0-9_.-]+)`?/gi
+                            )
+                          ).map((m) => m[1])
+                        )
+                      );
+                      const createdModels = Array.from(
+                        new Set(
+                          Array.from(
+                            ranSql.matchAll(
+                              /CREATE\s+(?:OR\s+REPLACE\s+)?MODEL\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-zA-Z0-9_.-]+)`?/gi
+                            )
+                          ).map((m) => m[1])
+                        )
+                      );
+                      const exportUris = Array.from(
+                        new Set(
+                          Array.from(
+                            ranSql.matchAll(/uri\s*=\s*['"](gs:\/\/[^'"]+)['"]/gi)
+                          ).map((m) => m[1])
+                        )
+                      );
+                      const isDdlOrExport =
+                        createdTables.length > 0 ||
+                        createdModels.length > 0 ||
+                        exportUris.length > 0 ||
+                        /\b(CREATE|ALTER|DROP|EXPORT\s+DATA|INSERT|MERGE|UPDATE|DELETE)\b/i.test(
+                          ranSql
+                        );
+                      return (
+                        <div className="p-4 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/35 space-y-3 text-xs font-mono">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 font-extrabold text-emerald-700 dark:text-emerald-300">
+                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              <span>
+                                {isDdlOrExport
+                                  ? `DDL / Pipeline Script Completed Successfully (${queryResult.durationMs || 0}ms)`
+                                  : `Live Query Completed Successfully — 0 Matching Rows Returned (${queryResult.durationMs || 0}ms)`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {queryResult.jobId && (
+                                <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-400">
+                                  Job: {queryResult.jobId.slice(0, 22)}
+                                </span>
+                              )}
+                              {selectedDatasetId && (
+                                <button
+                                  type="button"
+                                  onClick={() => fetchTables(selectedDatasetId)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10.5px] font-bold cursor-pointer"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                  <span>Refresh Tables</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                            {isDdlOrExport
+                              ? 'BigQuery DDL, Remote Model, and EXPORT DATA statements commit directly to storage and return 0 result rows. Use the 1-click Preview buttons below to inspect your newly created tables.'
+                              : 'Your SELECT query succeeded with 0 rows matching the filter predicates (e.g., empty GCS prefix or date range).'}
+                          </div>
+
+                          {(createdTables.length > 0 ||
+                            createdModels.length > 0 ||
+                            exportUris.length > 0) && (
+                            <div className="space-y-2 pt-1">
+                              {createdTables.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[10.5px] font-bold uppercase text-zinc-500">
+                                    Created / Updated Tables:
+                                  </span>
+                                  {createdTables.map((tblFqn) => (
+                                    <button
+                                      key={tblFqn}
+                                      type="button"
+                                      disabled={runningQuery}
+                                      onClick={() => {
+                                        const previewSql = `SELECT *\nFROM \`${tblFqn}\`\nLIMIT 25;`;
+                                        setSqlInput(previewSql);
+                                        handleExecuteQuery(false, previewSql);
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold cursor-pointer transition-colors"
+                                    >
+                                      <Play className="w-3 h-3 shrink-0" />
+                                      <span>Preview {tblFqn.split('.').pop()} (LIMIT 25)</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {createdModels.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[10.5px] font-bold uppercase text-zinc-500">
+                                    Registered Remote AI Models:
+                                  </span>
+                                  {createdModels.map((m) => (
+                                    <span
+                                      key={m}
+                                      className="px-2 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-[10.5px] font-bold"
+                                    >
+                                      {m}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {exportUris.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[10.5px] font-bold uppercase text-zinc-500">
+                                    GCS Export Destination:
+                                  </span>
+                                  {exportUris.map((u) => (
+                                    <code
+                                      key={u}
+                                      className="px-2 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[10.5px]"
+                                    >
+                                      {u}
+                                    </code>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                   {/* Live Query Rows Table with Search Filter, Column Schema Badges & CSV/JSON Export */}
                   {!queryResult.dryRun &&
