@@ -13360,8 +13360,8 @@ app.post('/api/project/:projectId/data-fabric/rag-loop', async (req, res) => {
     // STAGE 2: Enrich with Gemini 4 + Embed (768-d text-embedding-005) + Persist live record in BigQuery
     if (stage === 'RUN_BQ_GEMINI4') {
       const cleanDataset = String(datasetId || '').trim();
-      if (!cleanDataset) {
-        return res.status(400).json({ error: 'Please select or enter a live BigQuery dataset ID.' });
+      if (!cleanDataset || !/^[a-zA-Z0-9_]+$/.test(cleanDataset)) {
+        return res.status(400).json({ error: 'Please select or enter a valid BigQuery dataset ID (letters, numbers, underscores).' });
       }
       const textBody = String(docContent || '').trim();
       if (!textBody) {
@@ -13418,6 +13418,12 @@ VALUES (
         }
       );
 
+      if (Array.isArray(bqRes?.errors) && bqRes.errors.length > 0) {
+        return res.status(400).json({
+          error: bqRes.errors[0]?.message || 'BigQuery persistence job returned an error.',
+        });
+      }
+
       return res.json({
         ok: true,
         stage: 'RUN_BQ_GEMINI4',
@@ -13433,8 +13439,12 @@ VALUES (
 
     // STAGE 3: Load 768-d embedding + doc into live local AlloyDB Omni & build real SCaNN index
     if (stage === 'LOAD_ALLOYDB_SCANN') {
-      if (!Array.isArray(embedding) || embedding.length !== 768) {
-        return res.status(400).json({ error: 'Stage 2 must complete first to provide a 768-d Vertex AI embedding vector.' });
+      if (
+        !Array.isArray(embedding) ||
+        embedding.length !== 768 ||
+        !embedding.every((n) => Number.isFinite(Number(n)))
+      ) {
+        return res.status(400).json({ error: 'Stage 2 must complete first to provide a valid finite 768-d Vertex AI embedding vector.' });
       }
       const conn = await discoverLiveOmni();
       const targetUri = String(docUri || `gs://${bucketName || 'bucket'}/docs/${docFilename}`).trim();
@@ -13519,10 +13529,30 @@ SELECT id FROM public.cloudpulse_rag_docs
 ORDER BY embedding <=> '${vecLiteral}'::vector(768)
 LIMIT ${limit};`;
 
-      const [rowsOut, explainOut] = await Promise.all([
-        runLocalPsql(conn, searchSql),
-        runLocalPsql(conn, explainSql),
-      ]);
+      let rowsOut = '[]';
+      let explainOut = '[]';
+      try {
+        [rowsOut, explainOut] = await Promise.all([
+          runLocalPsql(conn, searchSql),
+          runLocalPsql(conn, explainSql),
+        ]);
+      } catch (pgErr) {
+        if (/relation\s+"?public\.cloudpulse_rag_docs"?\s+does not exist/i.test(String(pgErr?.message || ''))) {
+          return res.json({
+            ok: true,
+            stage: 'QUERY_SCANN_RAG',
+            query: q,
+            container: conn.container,
+            dsnMasked: `postgres://postgres:****@${conn.host}:${conn.port}/postgres`,
+            pgExecutionMs: null,
+            matches: [],
+            groundedAnswer: null,
+            modelUsed: geminiModel,
+            totalDurationMs: Date.now() - startedAt,
+          });
+        }
+        throw pgErr;
+      }
 
       let matches = [];
       try {
