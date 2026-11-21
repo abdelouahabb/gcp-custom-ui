@@ -22,6 +22,11 @@ const httpAgent = new http.Agent({ family: 4, keepAlive: false });
 const gcp = axios.create({ httpsAgent, timeout: 15000, validateStatus: () => true });
 
 export const VERTEX_MODEL_CATALOG = [
+  { id: 'gemini-4-carbon', label: 'Gemini 4 Carbon (Frontier Deep Reasoning · 1M)', inputUsdPer1M: 2.0, outputUsdPer1M: 12.0 },
+  { id: 'gemini-4-argon', label: 'Gemini 4 Argon (Balanced Frontier Thinking · 1M)', inputUsdPer1M: 2.0, outputUsdPer1M: 12.0 },
+  { id: 'gemini-4-neon', label: 'Gemini 4 Neon (Low-Latency Agentic Coding · 1M)', inputUsdPer1M: 0.5, outputUsdPer1M: 3.0 },
+  { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen (Ultra-Fast High-QPS RAG · 1M)', inputUsdPer1M: 0.15, outputUsdPer1M: 0.6 },
+  { id: 'gemini-3.8-flash-cyber', label: 'Gemini 3.8 Flash Cyber (Cybersecurity Defense · Fairwind)', inputUsdPer1M: 0.15, outputUsdPer1M: 0.6 },
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', inputUsdPer1M: 0.15, outputUsdPer1M: 0.6 },
   { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro', inputUsdPer1M: 1.25, outputUsdPer1M: 5.0 },
 ];
@@ -839,10 +844,19 @@ function vertexUrl(projectId, region, model) {
 function resolveModelCandidates(model) {
   const m = String(model || '').trim();
   const lower = m.toLowerCase();
-  if (lower.includes('pro')) {
-    return Array.from(new Set([m, 'gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash'].filter(Boolean)));
+  if (lower.includes('cyber')) {
+    return Array.from(new Set([m, 'gemini-3.8-flash-cyber', 'gemini-4-carbon', 'gemini-4-neon', 'gemini-3.8-flash'].filter(Boolean)));
   }
-  return Array.from(new Set([m, 'gemini-3.8-flash', 'gemini-3-flash-preview'].filter(Boolean)));
+  if (lower.includes('carbon') || lower.includes('argon')) {
+    return Array.from(new Set([m, 'gemini-4-carbon', 'gemini-4-argon', 'gemini-4-neon', 'gemini-3.1-pro'].filter(Boolean)));
+  }
+  if (lower.includes('neon') || lower.includes('hydrogen')) {
+    return Array.from(new Set([m, 'gemini-4-neon', 'gemini-4-hydrogen', 'gemini-3.8-flash'].filter(Boolean)));
+  }
+  if (lower.includes('pro')) {
+    return Array.from(new Set([m, 'gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-4-carbon', 'gemini-4-neon'].filter(Boolean)));
+  }
+  return Array.from(new Set([m, 'gemini-4-neon', 'gemini-4-hydrogen', 'gemini-3.8-flash'].filter(Boolean)));
 }
 
 function extractText(data) {

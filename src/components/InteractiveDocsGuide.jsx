@@ -2158,6 +2158,33 @@ const DOC_SECTIONS = [
     billingImpact:
       'Quota, WIF, DNS/Certificate reads, DNS/TLS probes and WIF pool creation incur $0.00 cloud charges; Cloud Monitoring alert policies and Pub/Sub operations fall within standard free tiers with usage-based pricing above them.',
   },
+  {
+    id: 'alloydb-mastery-express-sovereign',
+    wave: 'WAVE 28 ALLOYDB MASTERY & GEMINI 4 · EXPRESS (PG 18), SOVEREIGN CMEK/DORA, SCANN RAG, LIVE PSQL & OMNI DOCKER',
+    title:
+      '56. AlloyDB Mastery & Express Studio (ALLOYDB_STUDIO) + Platform-Wide Gemini 4 Family (Carbon, Argon, Neon, Hydrogen & 3.8 Flash Cyber)',
+    badge: 'Top-Level Studio (AlloyDbMasteryStudio.jsx) · 6 Pillars · 10 Scenarios · 8 Live Endpoints',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'ALLOYDB_STUDIO',
+    problemSolved:
+      'Enterprises hesitate on AlloyDB due to perceived vendor lock-in, lack of awareness of AlloyDB Express (PG 18) for instant prototyping, unclear SCaNN vs pgvector HNSW gains, Aurora parity questions, and C-Suite Sovereign Cloud (CMEK/EKM, EU residency, DORA Art. 28 exit) mandates. This dedicated studio pairs live alloydb.googleapis.com/v1beta lifecycle controls with real local AlloyDB Omni Docker, live psql execution, Terraform HCL compilation, and Dual-Engine Gemini 4 NL2SQL.',
+    howItWorks: [
+      'Pillar 1 (EXPRESS_QUICKSTART): Live AlloyDB Express (PG 18, 1 vCPU / 4 GB, Scale-to-Zero) provisioner, 1-click in-place Enterprise upgrade (--no-enable-express), full cluster lifecycle toolbar (+ 2-Node Read Pool, Scale vCPU, Enable 10X Flags, Snapshot Backup, + Zero-Password IAM User), and Hackathon-to-Production starter kits (Next.js + Cloud Run, Node.js pg, Python FastAPI).',
+      'Pillar 2 (ZERO_LOCKIN_PGLOGICAL): 4 proof labs (Zero-Downtime pglogical Migration In, 100% PG Drop-in Compat, Local AlloyDB Omni Docker -> Cloud AlloyDB, Stock PostgreSQL DR Exit with Mermaid topology) + deterministic PostgreSQL DDL & pglogical Compatibility X-Ray Auditor.',
+      'Pillar 3 (SCANN_VECTOR_RAG) & Pillar 4 (BEYOND_AURORA_AGENTS): Interactive ECharts SCaNN vs HNSW RAM scaling curve, inline Vertex AI embedding() RAG harness, Autonomous PostgreSQL AI Agents SQL (Gemini 4), 36-Month C-Suite TCO Consolidation ECharts + 1-click Executive Migration Dossier (.md), Live 6-Control Sovereign Cloud CMEK/EKM & DORA/GDPR Shield, and Live Terraform HCL (.tf) Compiler.',
+      'Pillar 5 (LIVE_SQL_AND_OMNI) & Pillar 6 (PLAYBOOK_MATRIX): Real /usr/bin/psql wire-protocol SQL & EXPLAIN (ANALYZE, BUFFERS) runner, 1-click Live SCaNN PoV Benchmark, Dual-Engine Gemini 4 (Carbon, Argon, Neon, Hydrogen + 3.8 Flash Cyber) NL2SQL Copilot (Vertex AI Keyless OAuth2 OR Vaulted AI Studio Key), Live 4-Step Streaming Local AlloyDB Omni Docker Control Plane with local image cache detection, and the 10-Topic Field Playbook Matrix.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/alloydb/overview & POST /api/project/:id/alloydb/action (alloydb.googleapis.com/v1beta clusters, instances, backups, users & IAM)',
+      'POST /api/project/:id/alloydb/readiness-xray & POST /api/project/:id/alloydb/sovereign-audit (cloudkms.googleapis.com/v1, cloudresourcemanager.googleapis.com/v1, serviceusage.googleapis.com/v1)',
+      'POST /api/project/:id/alloydb/execute-sql (/usr/bin/psql) & POST /api/project/:id/alloydb/omni-local (/usr/bin/docker google/alloydbomni:latest)',
+      'POST /api/project/:id/alloydb/compat-audit, POST /api/project/:id/alloydb/export-terraform & POST /api/project/:id/alloydb/nl2sql (Dual-Engine Gemini 4)',
+    ],
+    billingImpact:
+      'Readiness X-Ray, Sovereign Audit, DDL Compatibility Audit, Terraform HCL compilation, and Local AlloyDB Omni Docker cost $0.00 in GCP; live AlloyDB Express/Enterprise clusters and Vertex AI calls follow standard Google Cloud pricing.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

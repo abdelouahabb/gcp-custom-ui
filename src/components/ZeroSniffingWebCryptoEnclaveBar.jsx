@@ -18,13 +18,38 @@ const CUSTOM_MODELS_STORAGE_KEY = 'cloudpulse_custom_gemini_models_v1';
 
 export const BASE_GEMINI_MODELS = [
   {
+    id: 'gemini-4-carbon',
+    label: 'gemini-4-carbon (Frontier Deep Reasoning · 1M Unified)',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-4-argon',
+    label: 'gemini-4-argon (Balanced Frontier Thinking · 1M Unified)',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-4-neon',
+    label: 'gemini-4-neon (Low-Latency Agentic Coding & SRE · 1M)',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-4-hydrogen',
+    label: 'gemini-4-hydrogen (Ultra-Fast Everyday Coding & RAG · 1M)',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-3.8-flash-cyber',
+    label: 'gemini-3.8-flash-cyber (Cybersecurity Defense & SecOps · Fairwind)',
+    isBuiltIn: true,
+  },
+  {
     id: 'gemini-3.8-flash',
-    label: 'gemini-3.8-flash (Ultra-Fast SRE & MCP Grounding)',
+    label: 'gemini-3.8-flash (Gen-3 Ultra-Fast SRE & MCP Grounding)',
     isBuiltIn: true,
   },
   {
     id: 'gemini-3.1-pro',
-    label: 'gemini-3.1-pro (Deep Architecture & Forensic Reasoning)',
+    label: 'gemini-3.1-pro (Gen-3 Deep Architecture & Forensic Reasoning)',
     isBuiltIn: true,
   },
 ];
@@ -73,7 +98,7 @@ const sharedBrowserEnclave = {
   keyFingerprint: null,
   transportMode: 'RSA_OAEP_SERVER_VAULT', // 'BROWSER_DIRECT_TLS13' | 'RSA_OAEP_SERVER_VAULT'
   preferredProvider: 'AUTO', // 'AUTO' | 'VERTEX_AI_OAUTH' | 'AI_STUDIO_KEY'
-  activeModel: 'gemini-3.8-flash',
+  activeModel: 'gemini-4-neon',
   customModels: typeof window !== 'undefined' ? loadSavedCustomModels() : [],
   listeners: new Set(),
 };
@@ -138,7 +163,7 @@ export function removeCustomGeminiModel(modelIdToRemove) {
   sharedBrowserEnclave.customModels = nextCustom;
   saveCustomModelsToStorage(nextCustom);
   if (sharedBrowserEnclave.activeModel === cleanId) {
-    sharedBrowserEnclave.activeModel = 'gemini-3.8-flash';
+    sharedBrowserEnclave.activeModel = 'gemini-4-neon';
   }
   notifyEnclaveListeners();
 }
@@ -181,7 +206,7 @@ export function getSharedPreferredProvider() {
 }
 
 export function getSharedActiveModel() {
-  return sharedBrowserEnclave.activeModel || 'gemini-3.8-flash';
+  return sharedBrowserEnclave.activeModel || 'gemini-4-neon';
 }
 
 export function setSharedPreferredProvider(provider) {
@@ -313,7 +338,7 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
   const [, forceTick] = useState(0);
 
   const activeProvider = controlledProvider || internalProvider || 'AUTO';
-  const activeModel = controlledModel || internalModel || 'gemini-3.8-flash';
+  const activeModel = controlledModel || internalModel || 'gemini-4-neon';
   const allModels = getAllAvailableGeminiModels();
 
   const notify = useCallback(
@@ -955,8 +980,8 @@ export default function ZeroSniffingWebCryptoEnclaveBar({
         )}
       </div>
 
-      {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — ONLY shown when Path B (AI Studio Key) is visible */}
-      {showPathB && (
+      {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — ONLY shown when AI Studio API Key option is selected */}
+      {activeProvider === 'AI_STUDIO_KEY' && (
         <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono border-t border-zinc-200/70 dark:border-zinc-800/70">
           <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
             <Lock className="w-3.5 h-3.5 shrink-0" />

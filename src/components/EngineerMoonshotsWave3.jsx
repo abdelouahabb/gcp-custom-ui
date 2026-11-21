@@ -3682,8 +3682,8 @@ LIMIT 50;`;
           </div>
         )}
 
-        {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — only shown when Path B (AI Studio Key) is active */}
-        {aiPreferredProvider !== 'VERTEX_AI_OAUTH' && (
+        {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector — ONLY shown when AI Studio API Key option is selected */}
+        {aiPreferredProvider === 'AI_STUDIO_KEY' && (
         <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
           <div className="flex items-center gap-2 text-emerald-400">
             <Lock className="w-4 h-4 shrink-0" />

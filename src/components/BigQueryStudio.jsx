@@ -3257,14 +3257,23 @@ LIMIT 25;`;
                 onChange={(e) => setBqAiModel(e.target.value)}
                 className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               >
+                <option value="gemini-4-neon">
+                  gemini-4-neon (Low-Latency Agentic SQL · 1M)
+                </option>
+                <option value="gemini-4-hydrogen">
+                  gemini-4-hydrogen (Ultra-Fast High-QPS SQL · 1M)
+                </option>
+                <option value="gemini-4-carbon">
+                  gemini-4-carbon (Frontier Deep Reasoning SQL · 1M)
+                </option>
+                <option value="gemini-4-argon">
+                  gemini-4-argon (Balanced Frontier Thinking SQL · 1M)
+                </option>
                 <option value="gemini-3.8-flash">
-                  gemini-3.8-flash (Low-Latency SQL · -80% Cache)
+                  gemini-3.8-flash (Gen-3 Low-Latency SQL)
                 </option>
                 <option value="gemini-3.1-pro">
-                  gemini-3.1-pro (Deep Reasoning SQL)
-                </option>
-                <option value="gemini-2.5-flash">
-                  gemini-2.5-flash (Legacy Endpoint)
+                  gemini-3.1-pro (Gen-3 Deep Reasoning SQL)
                 </option>
               </select>
             </div>

@@ -2864,6 +2864,7 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Bridges Google Cloud AlloyDB for PostgreSQL (with AlloyDB Columnar Engine for HTAP isolation) / Cloud SQL Enterprise Plus with BigQuery Federated `EXTERNAL_QUERY` Zero-ETL analytics and `gcloud sql instances clone` / AlloyDB continuous backup point-in-time clones.',
             gcpServicesInvolved: [
+              { name: 'AlloyDB Mastery & Express Studio', tab: 'ALLOYDB_STUDIO' },
               { name: 'Cloud SQL & AlloyDB Studio', tab: 'CLOUD_SQL_STUDIO' },
               { name: 'BigQuery Federated HTAP Lakehouse', tab: 'BIGQUERY_STUDIO' },
             ],

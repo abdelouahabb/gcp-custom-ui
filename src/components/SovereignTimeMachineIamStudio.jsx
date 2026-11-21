@@ -2970,6 +2970,23 @@ export default function SovereignTimeMachineIamStudio({
          ===================================================================== */}
       {activeSubTab === 'SECRETS_KMS_WAF' && (
         <div className="space-y-4">
+          {typeof onNavigateTab === 'function' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 text-xs">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>
+                  <strong>Sovereign Database CMEK &amp; DORA Exit:</strong> Bind your Cloud KMS / EKM keys directly to EU AlloyDB clusters and verify 6 Sovereign Controls.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('ALLOYDB_STUDIO', 'BEYOND_AURORA_AGENTS')}
+                className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer shrink-0"
+              >
+                Open AlloyDB Sovereign CMEK &amp; DORA Shield →
+              </button>
+            </div>
+          )}
           {/* Top FinOps Free-Tier & Pricing Transparency Banner for Secret Manager */}
           {(() => {
             const fin = vaultData?.finopsSummary || {

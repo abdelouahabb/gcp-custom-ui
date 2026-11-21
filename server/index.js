@@ -11080,6 +11080,1782 @@ app.delete(
   }
 );
 
+// 9a-alloydb-overview. GET /api/project/:projectId/alloydb/overview
+// Real multi-region discovery of AlloyDB Express & Enterprise clusters, instances, backups, and API readiness
+app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const encProj = encodeURIComponent(projectId);
+    const [apiRes, clustersRes, instancesRes, backupsRes] = await Promise.all([
+      gcpFetch(
+        `https://serviceusage.googleapis.com/v1/projects/${encProj}/services/alloydb.googleapis.com`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => null),
+      gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/clusters`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch((e) => ({ _error: e?.response?.data?.error?.message || e?.message || null, clusters: [] })),
+      gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/clusters/-/instances`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ instances: [] })),
+      gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/backups`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ backups: [] })),
+    ]);
+
+    const apiEnabled = apiRes?.state === 'ENABLED';
+    const rawInstances = Array.isArray(instancesRes?.instances) ? instancesRes.instances : [];
+    const instances = rawInstances.map((inst) => {
+      const parts = String(inst.name || '').split('/');
+      const locIdx = parts.indexOf('locations');
+      const clIdx = parts.indexOf('clusters');
+      const location = locIdx >= 0 ? parts[locIdx + 1] : 'us-central1';
+      const clusterId = clIdx >= 0 ? parts[clIdx + 1] : '';
+      const instanceId = parts[parts.length - 1] || inst.name;
+      const flags = inst.databaseFlags || {};
+      return {
+        name: inst.name,
+        instanceId,
+        clusterId,
+        location,
+        instanceType: inst.instanceType || 'PRIMARY',
+        state: inst.state || 'READY',
+        cpuCount: Number(inst.machineConfig?.cpuCount || 0),
+        machineType: inst.machineConfig?.machineType || null,
+        availabilityType: inst.availabilityType || 'ZONAL',
+        ipAddress: inst.ipAddress || null,
+        publicIpAddress: inst.publicIpAddress || null,
+        publicDnsName: inst.networkConfig?.enablePublicIp || inst.networkConfig?.publicDnsEnabled ? (inst.publicIpAddress || inst.ipAddress || 'Public DNS Enabled') : null,
+        publicDnsEnabled: Boolean(inst.networkConfig?.publicDnsEnabled || inst.networkConfig?.enablePublicIp),
+        pscEnabled: Boolean(inst.pscInstanceConfig?.pscDnsName || inst.pscInstanceConfig?.allowedConsumerProjects?.length),
+        pscDnsName: inst.pscInstanceConfig?.pscDnsName || null,
+        databaseFlags: flags,
+        pglogicalEnabled:
+          String(flags['alloydb.logical_decoding'] || '').toLowerCase() === 'on' &&
+          String(flags['alloydb.enable_pglogical'] || '').toLowerCase() === 'on',
+        columnarEnabled:
+          String(flags['google_columnar_engine.enabled'] || '').toLowerCase() === 'on',
+        mlIntegrationEnabled:
+          String(flags['google_ml_integration.enable_model_support'] || '').toLowerCase() === 'on',
+        scannReady:
+          String(flags['scann.enable_preview_features'] || '').toLowerCase() === 'on' ||
+          String(flags['google_ml_integration.enable_model_support'] || '').toLowerCase() === 'on',
+        createTime: inst.createTime || null,
+      };
+    });
+
+    const rawClusters = Array.isArray(clustersRes?.clusters) ? clustersRes.clusters : [];
+    const clusters = rawClusters.map((c) => {
+      const parts = String(c.name || '').split('/');
+      const locIdx = parts.indexOf('locations');
+      const location = locIdx >= 0 ? parts[locIdx + 1] : 'us-central1';
+      const clusterId = parts[parts.length - 1] || c.name;
+      const isExpress = Boolean(c.expressConfig?.enabled);
+      const clusterInstances = instances.filter(
+        (i) => i.clusterId === clusterId && i.location === location
+      );
+      return {
+        name: c.name,
+        clusterId,
+        location,
+        state: c.state || 'READY',
+        databaseVersion: c.databaseVersion || (isExpress ? 'POSTGRES_18' : 'POSTGRES_16'),
+        isExpress,
+        subscriptionType: c.subscriptionType || (isExpress ? 'EXPRESS' : 'STANDARD'),
+        network: c.networkConfig?.network || c.network || null,
+        continuousBackupEnabled: Boolean(c.continuousBackupConfig?.enabled),
+        recoveryWindowDays: Number(c.continuousBackupConfig?.recoveryWindowDays || 0),
+        labels: c.labels || {},
+        createTime: c.createTime || null,
+        instances: clusterInstances,
+        instanceCount: clusterInstances.length,
+        primaryInstance: clusterInstances.find((i) => i.instanceType === 'PRIMARY') || clusterInstances[0] || null,
+      };
+    });
+
+    const backups = (Array.isArray(backupsRes?.backups) ? backupsRes.backups : []).map((b) => {
+      const parts = String(b.name || '').split('/');
+      return {
+        name: b.name,
+        backupId: parts[parts.length - 1] || b.name,
+        state: b.state || 'READY',
+        type: b.type || 'AUTOMATED',
+        clusterName: b.clusterName || '',
+        sizeBytes: Number(b.sizeBytes || 0),
+        createTime: b.createTime || null,
+      };
+    });
+
+    const expressCount = clusters.filter((c) => c.isExpress).length;
+    const enterpriseCount = clusters.length - expressCount;
+
+    res.json({
+      ok: true,
+      projectId,
+      apiEnabled,
+      apiError: clustersRes?._error || null,
+      summary: {
+        totalClusters: clusters.length,
+        expressClusters: expressCount,
+        enterpriseClusters: enterpriseCount,
+        totalInstances: instances.length,
+        totalBackups: backups.length,
+        pglogicalReadyInstances: instances.filter((i) => i.pglogicalEnabled).length,
+        columnarEnabledInstances: instances.filter((i) => i.columnarEnabled).length,
+        mlReadyInstances: instances.filter((i) => i.mlIntegrationEnabled).length,
+      },
+      clusters,
+      instances,
+      backups,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect AlloyDB fleet.',
+    });
+  }
+});
+
+// 9a-alloydb-action. POST /api/project/:projectId/alloydb/action
+// Live AlloyDB Express & Enterprise mutations: Enable API, Create Express Cluster/Instance,
+// In-Place Upgrade Express -> Enterprise, Patch pglogical/SCaNN/Columnar Flags, Delete Cluster
+app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action,
+    region = 'us-central1',
+    clusterId = '',
+    instanceId = '',
+    databaseVersion = 'POSTGRES_18',
+    password = '',
+    publicDnsEnabled = true,
+    flagPreset = '',
+    customFlags = null,
+    cpuCount = 2,
+    network = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+    const encProj = encodeURIComponent(projectId);
+    const encReg = encodeURIComponent(String(region || 'us-central1').trim());
+
+    if (action === 'ENABLE_ALLOYDB_API') {
+      const services = ['alloydb.googleapis.com', 'servicenetworking.googleapis.com'];
+      const results = [];
+      for (const svc of services) {
+        const op = await gcpFetch(
+          `https://serviceusage.googleapis.com/v1/projects/${encProj}/services/${svc}:enable`,
+          token,
+          projectId,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: {}, timeout: 10000 }
+        ).catch((e) => ({ error: e?.response?.data?.error?.message || e?.message }));
+        results.push({ service: svc, op });
+      }
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_API_ENABLED',
+        resourceType: 'GCP_API',
+        resourceName: 'alloydb.googleapis.com',
+        region: 'global',
+        summary: 'Enabled alloydb.googleapis.com & servicenetworking.googleapis.com',
+      });
+      return res.json({
+        ok: true,
+        action,
+        message: 'Enabled AlloyDB API (alloydb.googleapis.com) & Service Networking API.',
+        results,
+      });
+    }
+
+    if (action === 'CREATE_EXPRESS_CLUSTER') {
+      const cleanCluster = String(clusterId || `alloydb-express-${Date.now().toString().slice(-4)}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+      const initialPassword =
+        String(password || '').trim() || `AlloyExpress2026!${Math.floor(1000 + Math.random() * 8999)}`;
+
+      const body = {
+        databaseVersion: databaseVersion || 'POSTGRES_18',
+        expressConfig: { enabled: true },
+        initialUser: {
+          user: 'postgres',
+          password: initialPassword,
+        },
+        labels: {
+          managed_by: 'cloudpulse_2026',
+          tier: 'alloydb_express',
+        },
+      };
+
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters?clusterId=${encodeURIComponent(
+          cleanCluster
+        )}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_EXPRESS_CLUSTER_CREATED',
+        resourceType: 'ALLOYDB_CLUSTER',
+        resourceName: cleanCluster,
+        region,
+        summary: `Dispatched AlloyDB Express (${body.databaseVersion}) cluster "${cleanCluster}" in ${region}`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId: cleanCluster,
+        region,
+        message: `Dispatched AlloyDB Express (${body.databaseVersion}) cluster "${cleanCluster}" in ${region}! Once cluster status is READY, create its 1-vCPU primary instance.`,
+        operation: op,
+      });
+    }
+
+    if (action === 'CREATE_EXPRESS_PRIMARY_INSTANCE') {
+      if (!clusterId) {
+        return res.status(400).json({ error: 'clusterId is required.' });
+      }
+      const cleanInst = String(instanceId || `${clusterId}-primary`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+
+      const body = {
+        instanceType: 'PRIMARY',
+        machineConfig: { cpuCount: 1 },
+        ...(publicDnsEnabled ? { networkConfig: { publicDnsEnabled: true } } : {}),
+        labels: {
+          managed_by: 'cloudpulse_2026',
+          tier: 'alloydb_express',
+        },
+      };
+
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/instances?instanceId=${encodeURIComponent(cleanInst)}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_EXPRESS_INSTANCE_CREATED',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${cleanInst}`,
+        region,
+        summary: `Dispatched 1-vCPU (4 GB RAM) AlloyDB Express primary instance "${cleanInst}"`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId,
+        instanceId: cleanInst,
+        message: `Dispatched 1-vCPU AlloyDB Express primary instance "${cleanInst}" on cluster "${clusterId}" (${publicDnsEnabled ? 'Public DNS enabled' : 'Private connectivity'}).`,
+        operation: op,
+      });
+    }
+
+    if (action === 'UPGRADE_EXPRESS_TO_ENTERPRISE') {
+      if (!clusterId) {
+        return res.status(400).json({ error: 'clusterId is required.' });
+      }
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}?updateMask=expressConfig.enabled`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { expressConfig: { enabled: false } },
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_EXPRESS_UPGRADED',
+        resourceType: 'ALLOYDB_CLUSTER',
+        resourceName: clusterId,
+        region,
+        summary: `Dispatched in-place upgrade of AlloyDB Express "${clusterId}" to Enterprise AlloyDB (1:8 RAM ratio, up to 288 vCPUs)`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId,
+        message: `Dispatched in-place upgrade of "${clusterId}" from AlloyDB Express to Enterprise AlloyDB (preserves data, schemas, credentials & DNS/PSC; upgrades RAM ratio to 1:8 and unlocks scaling to 288 vCPUs).`,
+        operation: op,
+      });
+    }
+
+    if (action === 'APPLY_INSTANCE_FLAGS') {
+      if (!clusterId || !instanceId) {
+        return res.status(400).json({ error: 'clusterId and instanceId are required.' });
+      }
+      const PRESET_FLAGS = {
+        PGLOGICAL_ZERO_LOCKIN: {
+          'alloydb.logical_decoding': 'on',
+          'alloydb.enable_pglogical': 'on',
+        },
+        SCANN_AI_AGENTS: {
+          'google_ml_integration.enable_model_support': 'on',
+          'scann.enable_preview_features': 'on',
+        },
+        COLUMNAR_HTAP: {
+          'google_columnar_engine.enabled': 'on',
+          'google_columnar_engine.enable_auto_columnarization': 'on',
+        },
+        FULL_ALLOYDB_10X: {
+          'alloydb.logical_decoding': 'on',
+          'alloydb.enable_pglogical': 'on',
+          'google_ml_integration.enable_model_support': 'on',
+          'scann.enable_preview_features': 'on',
+          'google_columnar_engine.enabled': 'on',
+          'google_columnar_engine.enable_auto_columnarization': 'on',
+        },
+        SOVEREIGN_COMPLIANCE: {
+          'alloydb.iam_authentication': 'on',
+          'alloydb.enable_pgaudit': 'on',
+          'pgaudit.log': 'ddl,role,write',
+          'alloydb.logical_decoding': 'on',
+          'alloydb.enable_pglogical': 'on',
+        },
+      };
+
+      const targetFlags =
+        customFlags && typeof customFlags === 'object'
+          ? customFlags
+          : PRESET_FLAGS[flagPreset] || null;
+
+      if (!targetFlags || Object.keys(targetFlags).length === 0) {
+        return res.status(400).json({ error: 'Valid flagPreset or customFlags required.' });
+      }
+
+      // Fetch existing flags first so we merge non-destructively
+      const existing = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/instances/${encodeURIComponent(instanceId)}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({}));
+
+      const mergedFlags = {
+        ...(existing?.databaseFlags || {}),
+        ...targetFlags,
+      };
+
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/instances/${encodeURIComponent(instanceId)}?updateMask=databaseFlags`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { databaseFlags: mergedFlags },
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_FLAGS_UPDATED',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${instanceId}`,
+        region,
+        summary: `Patched AlloyDB flags (${Object.keys(targetFlags).join(', ')}) on ${clusterId}/${instanceId}`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        appliedFlags: targetFlags,
+        message: `Applied AlloyDB flags (${Object.entries(targetFlags)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ')}) to "${clusterId}/${instanceId}".`,
+        operation: op,
+      });
+    }
+
+    if (action === 'CREATE_ENTERPRISE_CLUSTER') {
+      const cleanCluster = String(clusterId || `alloydb-ent-${Date.now().toString().slice(-4)}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+      const initialPassword =
+        String(password || '').trim() || `AlloyEnt2026!${Math.floor(1000 + Math.random() * 8999)}`;
+
+      const body = {
+        databaseVersion: databaseVersion || 'POSTGRES_16',
+        networkConfig: {
+          network: network || `projects/${projectId}/global/networks/default`,
+        },
+        initialUser: {
+          user: 'postgres',
+          password: initialPassword,
+        },
+        continuousBackupConfig: {
+          enabled: true,
+          recoveryWindowDays: 14,
+          ...(req.body?.kmsKeyName
+            ? { encryptionConfig: { kmsKeyName: String(req.body.kmsKeyName).trim() } }
+            : {}),
+        },
+        ...(req.body?.kmsKeyName
+          ? { encryptionConfig: { kmsKeyName: String(req.body.kmsKeyName).trim() } }
+          : {}),
+        labels: {
+          managed_by: 'cloudpulse_2026',
+          tier: req.body?.kmsKeyName ? 'alloydb_sovereign_cmek' : 'alloydb_enterprise',
+        },
+      };
+
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters?clusterId=${encodeURIComponent(
+          cleanCluster
+        )}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_ENTERPRISE_CLUSTER_CREATED',
+        resourceType: 'ALLOYDB_CLUSTER',
+        resourceName: cleanCluster,
+        region,
+        summary: `Dispatched Enterprise AlloyDB (${body.databaseVersion}, ${cpuCount} vCPU target) cluster "${cleanCluster}" in ${region}`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId: cleanCluster,
+        message: `Dispatched Enterprise AlloyDB cluster "${cleanCluster}" in ${region} (${body.databaseVersion}, 14d continuous backup).`,
+        operation: op,
+      });
+    }
+
+    if (action === 'DELETE_CLUSTER') {
+      if (!clusterId) {
+        return res.status(400).json({ error: 'clusterId is required.' });
+      }
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}?force=true`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 10000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_CLUSTER_DELETED',
+        resourceType: 'ALLOYDB_CLUSTER',
+        resourceName: clusterId,
+        region,
+        summary: `Deleted AlloyDB cluster "${clusterId}" in ${region}`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        message: `Dispatched deletion of AlloyDB cluster "${clusterId}" in ${region}.`,
+        operation: op,
+      });
+    }
+
+    if (action === 'GRANT_ALLOYDB_VERTEX_AI_ROLE') {
+      const projMeta = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      );
+      const projNum = projMeta?.projectNumber;
+      if (!projNum) {
+        return res.status(400).json({ error: 'Could not resolve GCP projectNumber for AlloyDB Service Agent.' });
+      }
+      const member = `serviceAccount:service-${projNum}@gcp-sa-alloydb.iam.gserviceaccount.com`;
+      const policy = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: { options: { requestedPolicyVersion: 3 } }, timeout: 8000 }
+      );
+      const bindings = Array.isArray(policy?.bindings) ? [...policy.bindings] : [];
+      const existing = bindings.find((b) => b.role === 'roles/aiplatform.user' && !b.condition);
+      if (existing) {
+        if (!existing.members.includes(member)) existing.members.push(member);
+      } else {
+        bindings.push({ role: 'roles/aiplatform.user', members: [member] });
+      }
+      await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:setIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { policy: { ...policy, bindings } },
+          timeout: 10000,
+        }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_VERTEX_IAM_GRANTED',
+        resourceType: 'IAM_BINDING',
+        resourceName: member,
+        region: 'global',
+        summary: `Granted roles/aiplatform.user to AlloyDB Service Agent (${member}) for inline Vertex AI embedding() & Gemini SQL`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        member,
+        message: `Granted roles/aiplatform.user to AlloyDB Service Agent (${member})! Inline Vertex AI embedding() & Gemini SQL are now authorized.`,
+      });
+    }
+
+    if (action === 'CREATE_READ_POOL') {
+      if (!clusterId) return res.status(400).json({ error: 'clusterId is required.' });
+      const poolId = String(instanceId || `${clusterId}-readpool-${Date.now().toString().slice(-3)}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .slice(0, 50);
+      const nodeCount = Math.min(20, Math.max(1, Number(req.body?.nodeCount || 2)));
+      const poolCpu = Math.min(128, Math.max(2, Number(cpuCount || 2)));
+      const body = {
+        instanceType: 'READ_POOL',
+        machineConfig: { cpuCount: poolCpu },
+        readPoolConfig: { nodeCount },
+        labels: { managed_by: 'cloudpulse_2026', role: 'read_pool_htap_rag' },
+      };
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/instances?instanceId=${encodeURIComponent(poolId)}`,
+        token,
+        projectId,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, timeout: 12000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_READ_POOL_CREATED',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${poolId}`,
+        region,
+        summary: `Dispatched ${nodeCount}-node (${poolCpu} vCPU/node) AlloyDB Read Pool "${poolId}" on "${clusterId}"`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        message: `Dispatched ${nodeCount}-node (${poolCpu} vCPU/node) Read Pool "${poolId}" on cluster "${clusterId}" for Columnar HTAP & SCaNN RAG read scaling.`,
+        operation: op,
+      });
+    }
+
+    if (action === 'SCALE_INSTANCE_CPU') {
+      if (!clusterId || !instanceId) {
+        return res.status(400).json({ error: 'clusterId and instanceId are required.' });
+      }
+      const targetCpu = Math.min(288, Math.max(1, Number(cpuCount || 2)));
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/instances/${encodeURIComponent(instanceId)}?updateMask=machineConfig.cpuCount`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { machineConfig: { cpuCount: targetCpu } },
+          timeout: 12000,
+        }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_INSTANCE_SCALED',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${instanceId}`,
+        region,
+        summary: `Scaled AlloyDB instance "${clusterId}/${instanceId}" to ${targetCpu} vCPUs`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        message: `Dispatched vertical scale of "${clusterId}/${instanceId}" to ${targetCpu} vCPUs.`,
+        operation: op,
+      });
+    }
+
+    if (action === 'TRIGGER_ON_DEMAND_BACKUP') {
+      if (!clusterId) return res.status(400).json({ error: 'clusterId is required.' });
+      const backupId = String(req.body?.backupId || `${clusterId}-snap-${Date.now().toString().slice(-6)}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .slice(0, 60);
+      const body = {
+        clusterName: `projects/${projectId}/locations/${region}/clusters/${clusterId}`,
+        type: 'ON_DEMAND',
+        description: `CloudPulse executive pre-cutover snapshot for ${clusterId}`,
+        labels: { managed_by: 'cloudpulse_2026' },
+      };
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/backups?backupId=${encodeURIComponent(
+          backupId
+        )}`,
+        token,
+        projectId,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, timeout: 12000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_BACKUP_TRIGGERED',
+        resourceType: 'ALLOYDB_BACKUP',
+        resourceName: backupId,
+        region,
+        summary: `Triggered on-demand AlloyDB backup "${backupId}" for cluster "${clusterId}"`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        backupId,
+        message: `Dispatched on-demand AlloyDB backup "${backupId}" for cluster "${clusterId}" in ${region}.`,
+        operation: op,
+      });
+    }
+
+    if (action === 'CREATE_ALLOYDB_USER') {
+      if (!clusterId) return res.status(400).json({ error: 'clusterId is required.' });
+      const userId = String(req.body?.userId || '').trim();
+      const userType = req.body?.userType === 'ALLOYDB_BUILT_IN' ? 'ALLOYDB_BUILT_IN' : 'ALLOYDB_IAM_USER';
+      if (!userId) return res.status(400).json({ error: 'userId (email or service account for IAM user) is required.' });
+      const body = {
+        userType,
+        databaseRoles: ['alloydbsuperuser'],
+        ...(userType === 'ALLOYDB_BUILT_IN' && password ? { password } : {}),
+      };
+      const created = await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/users?userId=${encodeURIComponent(userId)}`,
+        token,
+        projectId,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, timeout: 10000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_USER_CREATED',
+        resourceType: 'ALLOYDB_USER',
+        resourceName: `${clusterId}/${userId}`,
+        region,
+        summary: `Created ${userType} "${userId}" on AlloyDB cluster "${clusterId}"`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        message: `Created ${userType === 'ALLOYDB_IAM_USER' ? 'Zero-Password IAM User' : 'Built-in User'} "${userId}" on cluster "${clusterId}".`,
+        user: created,
+      });
+    }
+
+    if (action === 'GRANT_ALLOYDB_KMS_ROLE') {
+      const projMeta = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      );
+      const projNum = projMeta?.projectNumber;
+      if (!projNum) {
+        return res.status(400).json({ error: 'Could not resolve GCP projectNumber for AlloyDB Service Agent.' });
+      }
+      const member = `serviceAccount:service-${projNum}@gcp-sa-alloydb.iam.gserviceaccount.com`;
+      const policy = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: { options: { requestedPolicyVersion: 3 } }, timeout: 8000 }
+      );
+      const bindings = Array.isArray(policy?.bindings) ? [...policy.bindings] : [];
+      const existing = bindings.find(
+        (b) => b.role === 'roles/cloudkms.cryptoKeyEncrypterDecrypter' && !b.condition
+      );
+      if (existing) {
+        if (!existing.members.includes(member)) existing.members.push(member);
+      } else {
+        bindings.push({ role: 'roles/cloudkms.cryptoKeyEncrypterDecrypter', members: [member] });
+      }
+      await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:setIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { policy: { ...policy, bindings } },
+          timeout: 10000,
+        }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_KMS_IAM_GRANTED',
+        resourceType: 'IAM_BINDING',
+        resourceName: member,
+        region: 'global',
+        summary: `Granted roles/cloudkms.cryptoKeyEncrypterDecrypter to AlloyDB Service Agent (${member}) for Sovereign CMEK/EKM encryption`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        member,
+        message: `Granted roles/cloudkms.cryptoKeyEncrypterDecrypter to AlloyDB Service Agent (${member})! Sovereign CMEK / Cloud EKM cluster encryption is now authorized.`,
+      });
+    }
+
+    return res.status(400).json({ error: `Unsupported AlloyDB action: ${action}` });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'AlloyDB API operation failed.',
+    });
+  }
+});
+
+// 9a-alloydb-xray. POST /api/project/:projectId/alloydb/readiness-xray
+// 6-Gate Live GCP Production & AI Readiness X-Ray for AlloyDB Express, SCaNN, Vertex AI & Enterprise VPC Peering
+app.post('/api/project/:projectId/alloydb/readiness-xray', async (req, res) => {
+  const { projectId } = req.params;
+  const { region = 'us-central1' } = req.body || {};
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const encProj = encodeURIComponent(projectId);
+
+    const [projMeta, iamPolicy, alloyApi, vertexApi, svcNetApi, vpcRes] = await Promise.all([
+      gcpFetch(`https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`, token, projectId, { timeout: 6000 }).catch(() => null),
+      gcpFetch(`https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`, token, projectId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { options: { requestedPolicyVersion: 3 } },
+        timeout: 6000,
+      }).catch(() => null),
+      gcpFetch(`https://serviceusage.googleapis.com/v1/projects/${encProj}/services/alloydb.googleapis.com`, token, projectId, { timeout: 5000 }).catch(() => null),
+      gcpFetch(`https://serviceusage.googleapis.com/v1/projects/${encProj}/services/aiplatform.googleapis.com`, token, projectId, { timeout: 5000 }).catch(() => null),
+      gcpFetch(`https://serviceusage.googleapis.com/v1/projects/${encProj}/services/servicenetworking.googleapis.com`, token, projectId, { timeout: 5000 }).catch(() => null),
+      gcpFetch(`https://compute.googleapis.com/v1/projects/${encProj}/global/addresses?filter=purpose%3D%22VPC_PEERING%22`, token, projectId, { timeout: 6000 }).catch(() => ({ items: [] })),
+    ]);
+
+    const projectNumber = projMeta?.projectNumber || null;
+    const alloyServiceAgent = projectNumber
+      ? `service-${projectNumber}@gcp-sa-alloydb.iam.gserviceaccount.com`
+      : null;
+    const bindings = Array.isArray(iamPolicy?.bindings) ? iamPolicy.bindings : [];
+    const hasVertexRole = Boolean(
+      alloyServiceAgent &&
+        bindings.some(
+          (b) =>
+            (b.role === 'roles/aiplatform.user' || b.role === 'roles/aiplatform.admin' || b.role === 'roles/owner') &&
+            Array.isArray(b.members) &&
+            b.members.includes(`serviceAccount:${alloyServiceAgent}`)
+        )
+    );
+    const peeringRanges = Array.isArray(vpcRes?.items) ? vpcRes.items : [];
+    const C4A_REGIONS = new Set(['us-central1', 'us-east1', 'us-east4', 'us-west1', 'europe-west1', 'europe-west4', 'asia-southeast1']);
+    const c4aReady = C4A_REGIONS.has(String(region || 'us-central1'));
+
+    const gates = [
+      {
+        id: 'ALLOYDB_API',
+        label: 'AlloyDB API (alloydb.googleapis.com)',
+        pass: alloyApi?.state === 'ENABLED',
+        detail: alloyApi?.state === 'ENABLED' ? 'ENABLED' : 'NOT ENABLED — click Enable AlloyDB API',
+      },
+      {
+        id: 'VERTEX_AI_API',
+        label: 'Vertex AI API (aiplatform.googleapis.com)',
+        pass: vertexApi?.state === 'ENABLED',
+        detail: vertexApi?.state === 'ENABLED' ? 'ENABLED (inline embedding() & Gemini SQL ready)' : 'DISABLED — required for AlloyDB AI & Gemini SQL',
+      },
+      {
+        id: 'ALLOYDB_VERTEX_IAM',
+        label: 'AlloyDB Service Agent → roles/aiplatform.user',
+        pass: hasVertexRole,
+        detail: hasVertexRole
+          ? `Verified on ${alloyServiceAgent}`
+          : alloyServiceAgent
+          ? `Missing on ${alloyServiceAgent} (#1 cause of embedding() permission denied)`
+          : 'Unable to resolve projectNumber',
+        fixAction: hasVertexRole ? null : 'GRANT_ALLOYDB_VERTEX_AI_ROLE',
+      },
+      {
+        id: 'SERVICE_NETWORKING',
+        label: 'Service Networking API (Enterprise Private IP)',
+        pass: svcNetApi?.state === 'ENABLED',
+        detail: svcNetApi?.state === 'ENABLED' ? 'ENABLED' : 'DISABLED (Express works with Public DNS; Enterprise needs PSA/PSC)',
+      },
+      {
+        id: 'VPC_PEERING_RANGE',
+        label: 'VPC Private Services Access Peering Range',
+        pass: peeringRanges.length > 0,
+        detail: peeringRanges.length > 0
+          ? `${peeringRanges.length} VPC_PEERING range(s): ${peeringRanges.map((r) => `${r.name} (${r.address}/${r.prefixLength})`).slice(0, 2).join(', ')}`
+          : 'No VPC_PEERING range yet (AlloyDB Express Public DNS does not require one)',
+      },
+      {
+        id: 'C4A_UPGRADE_REGION',
+        label: `C4A 1-vCPU Express→Enterprise Upgrade (${region})`,
+        pass: c4aReady,
+        detail: c4aReady
+          ? `${region} supports 1-vCPU in-place Express → Enterprise upgrade`
+          : `${region} requires resizing Express to 2 vCPUs before Enterprise upgrade`,
+      },
+    ];
+
+    const passedCount = gates.filter((g) => g.pass).length;
+    res.json({
+      ok: true,
+      projectId,
+      projectNumber,
+      alloyServiceAgent,
+      region,
+      score: Math.round((passedCount / gates.length) * 100),
+      passedCount,
+      totalGates: gates.length,
+      gates,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(400).json({ error: err?.response?.data?.error?.message || err.message || 'Readiness X-Ray failed.' });
+  }
+});
+
+// 9a-alloydb-sql. POST /api/project/:projectId/alloydb/execute-sql
+// Real PostgreSQL wire-protocol runner via /usr/bin/psql against live AlloyDB Express, Auth Proxy, or Local AlloyDB Omni
+app.post('/api/project/:projectId/alloydb/execute-sql', async (req, res) => {
+  const { dsn = '', sql = '', mode = 'RUN_CUSTOM_SQL' } = req.body || {};
+  const cleanDsn = String(dsn || '').trim();
+  if (!cleanDsn || !/^postgres(ql)?:\/\//i.test(cleanDsn)) {
+    return res.status(400).json({
+      error: 'Provide a valid PostgreSQL connection URI starting with postgres:// or postgresql:// (e.g. AlloyDB Express DNS, Auth Proxy 127.0.0.1:5432, or Local AlloyDB Omni).',
+    });
+  }
+
+  let queryToRun = String(sql || '').trim();
+  if (mode === 'INTROSPECT_ALLOYDB') {
+    queryToRun = `
+SELECT current_database() AS db, current_user AS usr, version() AS pg_version;
+SELECT extname, extversion FROM pg_extension ORDER BY extname;
+SELECT name, setting FROM pg_settings
+WHERE name IN (
+  'wal_level',
+  'alloydb.logical_decoding',
+  'alloydb.enable_pglogical',
+  'google_columnar_engine.enabled',
+  'google_ml_integration.enable_model_support',
+  'scann.enable_preview_features'
+) ORDER BY name;
+SELECT slot_name, plugin, active FROM pg_replication_slots;`;
+  }
+  if (!queryToRun) {
+    return res.status(400).json({ error: 'SQL query cannot be empty.' });
+  }
+
+  const startedAt = Date.now();
+  try {
+    const wrappedSql = `SET statement_timeout = '12000';\n${queryToRun}`;
+    const { stdout, stderr } = await new Promise((resolve, reject) => {
+      execFile(
+        '/usr/bin/psql',
+        [cleanDsn, '-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', '-c', wrappedSql],
+        { timeout: 15000, maxBuffer: 512 * 1024, env: { ...process.env, PGCONNECT_TIMEOUT: '8' } },
+        (err, out, errOut) => {
+          if (err) return reject({ err, out, errOut });
+          resolve({ stdout: out, stderr: errOut });
+        }
+      );
+    });
+    const durationMs = Date.now() - startedAt;
+    const planMatch = stdout.match(/Planning Time:\s*([\d.]+)\s*ms/i);
+    const execMatch = stdout.match(/Execution Time:\s*([\d.]+)\s*ms/i);
+    return res.json({
+      ok: true,
+      mode,
+      durationMs,
+      planningTimeMs: planMatch ? Number(planMatch[1]) : null,
+      executionTimeMs: execMatch ? Number(execMatch[1]) : null,
+      stdout: stdout || '(Query completed with empty output)',
+      stderr: stderr || '',
+    });
+  } catch (failure) {
+    const durationMs = Date.now() - startedAt;
+    const msg =
+      String(failure?.errOut || failure?.err?.message || 'psql execution failed').trim();
+    return res.status(400).json({
+      ok: false,
+      durationMs,
+      error: msg,
+      stdout: failure?.out || '',
+    });
+  }
+});
+
+// 9a-alloydb-omni. POST /api/project/:projectId/alloydb/omni-local
+// Real local Docker control plane for google/alloydbomni with live streaming pull/startup progress & pg_isready check
+const alloyDbOmniJobs = new Map();
+
+app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
+  const {
+    action = 'STATUS',
+    tag = 'latest',
+    port = 5432,
+    password = 'localdevpass',
+    containerName = 'alloydb-omni-dev',
+  } = req.body || {};
+
+  const safeName = String(containerName || 'alloydb-omni-dev').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 40) || 'alloydb-omni-dev';
+  const safeTag = String(tag || 'latest').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 24) || 'latest';
+  const safePort = Math.min(65535, Math.max(1024, Number(port) || 5432));
+
+  const runDocker = (args, timeoutMs = 20000) =>
+    new Promise((resolve, reject) => {
+      execFile('/usr/bin/docker', args, { timeout: timeoutMs, maxBuffer: 512 * 1024 }, (err, stdout, stderr) => {
+        if (err) return reject(new Error(String(stderr || err.message || 'Docker command failed').trim()));
+        resolve({ stdout: String(stdout || '').trim(), stderr: String(stderr || '').trim() });
+      });
+    });
+
+  const getJobSnapshot = () => {
+    const j = alloyDbOmniJobs.get(safeName);
+    if (!j) return null;
+    return {
+      active: j.active,
+      phase: j.phase,
+      image: j.image,
+      port: j.port,
+      startedAt: j.startedAt,
+      elapsedSec: Math.max(0, Math.round(((j.finishedAt || Date.now()) - j.startedAt) / 1000)),
+      error: j.error || null,
+      pgReady: Boolean(j.pgReady),
+      logs: j.logs.slice(-40),
+    };
+  };
+
+  try {
+    if (action === 'STATUS') {
+      const [psRes, imgRes] = await Promise.all([
+        runDocker(['ps', '-a', '--filter', `name=${safeName}`, '--format', '{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}'], 6000).catch((e) => ({ error: e.message, stdout: '' })),
+        runDocker(['images', 'google/alloydbomni', '--format', '{{.Repository}}:{{.Tag}}|{{.Size}}'], 6000).catch(() => ({ stdout: '' })),
+      ]);
+      if (psRes.error) {
+        return res.json({
+          ok: true,
+          dockerAvailable: false,
+          dockerError: psRes.error,
+          running: false,
+          exists: false,
+          containers: [],
+          localImages: [],
+          job: getJobSnapshot(),
+        });
+      }
+      const containers = psRes.stdout
+        ? psRes.stdout.split('\n').filter(Boolean).map((line) => {
+            const [name, image, status, ports] = line.split('|');
+            return { name, image, status, ports, running: /^Up\b/i.test(status || '') };
+          })
+        : [];
+      const localImages = imgRes.stdout
+        ? imgRes.stdout.split('\n').filter(Boolean).map((line) => {
+            const [image, size] = line.split('|');
+            return { image, size };
+          })
+        : [];
+      const target = containers.find((c) => c.name === safeName) || containers[0] || null;
+      return res.json({
+        ok: true,
+        dockerAvailable: true,
+        exists: Boolean(target),
+        running: Boolean(target?.running),
+        container: target,
+        containers,
+        localImages,
+        job: getJobSnapshot(),
+        suggestedDsn: `postgres://postgres:${password}@127.0.0.1:${safePort}/postgres`,
+      });
+    }
+
+    if (action === 'START_OMNI') {
+      const existingJob = alloyDbOmniJobs.get(safeName);
+      if (existingJob?.active) {
+        return res.json({
+          ok: true,
+          action,
+          asyncStarted: true,
+          message: `AlloyDB Omni startup already in progress (${existingJob.phase})...`,
+          job: getJobSnapshot(),
+          suggestedDsn: `postgres://postgres:${password}@127.0.0.1:${safePort}/postgres`,
+        });
+      }
+
+      const fullImage = `google/alloydbomni:${safeTag}`;
+      const job = {
+        active: true,
+        phase: 'CHECKING',
+        image: fullImage,
+        port: safePort,
+        startedAt: Date.now(),
+        finishedAt: null,
+        error: null,
+        pgReady: false,
+        logs: [`[${new Date().toLocaleTimeString()}] Checking local Docker container & image cache for ${fullImage}...`],
+      };
+      const pushLog = (line) => {
+        const clean = String(line || '').replace(/\r/g, '').trim();
+        if (!clean) return;
+        const ts = new Date().toLocaleTimeString();
+        // Avoid flooding identical progress lines
+        const last = job.logs[job.logs.length - 1] || '';
+        if (last.endsWith(clean)) return;
+        job.logs.push(`[${ts}] ${clean}`);
+        if (job.logs.length > 120) job.logs.splice(0, job.logs.length - 120);
+      };
+      alloyDbOmniJobs.set(safeName, job);
+
+      // Run pull -> start/run -> pg_isready asynchronously so the UI streams live progress!
+      (async () => {
+        try {
+          const check = await runDocker(['ps', '-a', '--filter', `name=^/${safeName}$`, '--format', '{{.Names}}|{{.Status}}'], 6000);
+          if (check.stdout) {
+            job.phase = 'STARTING_CONTAINER';
+            pushLog(`Found existing container "${safeName}" — running docker start ${safeName}...`);
+            await runDocker(['start', safeName], 20000);
+            pushLog(`Container "${safeName}" started on 127.0.0.1:${safePort}.`);
+          } else {
+            const imgCheck = await runDocker(['images', '-q', fullImage], 6000).catch(() => ({ stdout: '' }));
+            if (!imgCheck.stdout) {
+              job.phase = 'PULLING_IMAGE';
+              pushLog(`Image ${fullImage} not cached locally — pulling from Docker Hub (first pull may take 1-3 min)...`);
+              await new Promise((resolve, reject) => {
+                const pullProc = spawn('/usr/bin/docker', ['pull', fullImage]);
+                let stderrBuf = '';
+                pullProc.stdout.on('data', (chunk) => {
+                  String(chunk).split(/\r?\n/).forEach((l) => pushLog(l));
+                });
+                pullProc.stderr.on('data', (chunk) => {
+                  stderrBuf += String(chunk);
+                  String(chunk).split(/\r?\n/).forEach((l) => pushLog(l));
+                });
+                pullProc.on('error', (e) => reject(e));
+                pullProc.on('close', (code) => {
+                  if (code === 0) resolve();
+                  else reject(new Error(stderrBuf.trim() || `docker pull exited with code ${code}`));
+                });
+              });
+              pushLog(`Successfully pulled ${fullImage}.`);
+            } else {
+              pushLog(`Found cached local image ${fullImage} (${imgCheck.stdout.slice(0, 12)}).`);
+            }
+
+            job.phase = 'STARTING_CONTAINER';
+            pushLog(`Launching container "${safeName}" exposing PostgreSQL on 127.0.0.1:${safePort}...`);
+            const runOut = await runDocker(
+              [
+                'run',
+                '-d',
+                '--name',
+                safeName,
+                '-e',
+                `POSTGRES_PASSWORD=${password}`,
+                '-e',
+                'PGDATA=/var/lib/postgresql/data/pgdata',
+                '-v',
+                `${safeName}_data:/var/lib/postgresql/data`,
+                '-p',
+                `${safePort}:5432`,
+                fullImage,
+              ],
+              30000
+            );
+            pushLog(`Container started (ID: ${(runOut.stdout || '').slice(0, 12)}).`);
+          }
+
+          job.phase = 'WAITING_PG_READY';
+          pushLog('Waiting for AlloyDB Omni PostgreSQL engine (pg_isready -U postgres)...');
+          let ready = false;
+          for (let attempt = 1; attempt <= 30; attempt++) {
+            try {
+              const pgCheck = await runDocker(['exec', safeName, 'pg_isready', '-U', 'postgres'], 4000);
+              if (/accepting connections/i.test(pgCheck.stdout)) {
+                ready = true;
+                pushLog(`pg_isready: ${pgCheck.stdout}`);
+                break;
+              }
+            } catch {
+              // still initializing PGDATA
+            }
+            if (attempt % 4 === 0) {
+              pushLog(`Still initializing PostgreSQL data directory (attempt ${attempt}/30)...`);
+            }
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+          job.pgReady = ready;
+          job.phase = 'READY';
+          job.active = false;
+          job.finishedAt = Date.now();
+          pushLog(
+            ready
+              ? `AlloyDB Omni is READY on 127.0.0.1:${safePort}! Click "Introspect Live Extensions & Flags" to verify.`
+              : `Container is running on 127.0.0.1:${safePort} (PostgreSQL may still be finishing init — retry in a few seconds).`
+          );
+        } catch (bgErr) {
+          job.phase = 'ERROR';
+          job.error = bgErr?.message || 'AlloyDB Omni startup failed.';
+          job.active = false;
+          job.finishedAt = Date.now();
+          pushLog(`ERROR: ${job.error}`);
+        }
+      })();
+
+      return res.json({
+        ok: true,
+        action,
+        asyncStarted: true,
+        message: `Launching local AlloyDB Omni (${fullImage}) — streaming live Docker progress below...`,
+        job: getJobSnapshot(),
+        suggestedDsn: `postgres://postgres:${password}@127.0.0.1:${safePort}/postgres`,
+      });
+    }
+
+    if (action === 'STOP_OMNI') {
+      await runDocker(['stop', safeName], 15000);
+      alloyDbOmniJobs.delete(safeName);
+      return res.json({ ok: true, action, message: `Stopped local AlloyDB Omni container "${safeName}".` });
+    }
+
+    if (action === 'REMOVE_OMNI') {
+      await runDocker(['rm', '-f', safeName], 15000);
+      alloyDbOmniJobs.delete(safeName);
+      return res.json({ ok: true, action, message: `Removed local AlloyDB Omni container "${safeName}".` });
+    }
+
+    return res.status(400).json({ error: `Unsupported omni-local action: ${action}` });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Local AlloyDB Omni Docker operation failed.' });
+  }
+});
+
+// 9a-alloydb-compat. POST /api/project/:projectId/alloydb/compat-audit
+// Deterministic PostgreSQL DDL & ORM Migration Compatibility + pglogical Primary-Key Readiness Scanner
+app.post('/api/project/:projectId/alloydb/compat-audit', async (req, res) => {
+  const { ddl = '' } = req.body || {};
+  const raw = String(ddl || '').trim();
+  if (!raw) {
+    return res.status(400).json({ error: 'Paste PostgreSQL DDL (CREATE TABLE / CREATE EXTENSION) to audit.' });
+  }
+
+  const SUPPORTED_ALLOYDB_EXTS = new Set([
+    'plpgsql', 'pg_stat_statements', 'pg_trgm', 'pgcrypto', 'uuid-ossp', 'hstore', 'citext',
+    'postgis', 'postgis_topology', 'btree_gin', 'btree_gist', 'fuzzystrmatch', 'intarray',
+    'ltree', 'pg_buffercache', 'pg_prewarm', 'pg_visibility', 'postgres_fdw', 'tablefunc',
+    'unaccent', 'pg_cron', 'pg_partman', 'pg_repack', 'pgaudit', 'pglogical', 'vector',
+    'hypopg', 'pg_hint_plan', 'orafce', 'timescaledb', 'pg_bigm',
+  ]);
+  const ALLOYDB_SUPERPOWER_EXTS = new Set([
+    'alloydb_scann', 'google_ml_integration', 'google_columnar_engine', 'alloydb_ai_nl',
+  ]);
+  const AURORA_LOCKIN_EXTS = new Set([
+    'aws_s3', 'aws_commons', 'aws_lambda', 'aws_ml', 'aurora_stat_utils', 'apg_plan_mgmt', 'babelfishpg_tsql',
+  ]);
+
+  // 1. Parse CREATE EXTENSION statements
+  const extRe = /CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?["']?([a-zA-Z0-9_-]+)["']?/gi;
+  const extensions = [];
+  let em;
+  while ((em = extRe.exec(raw))) {
+    const ext = em[1].toLowerCase();
+    if (ALLOYDB_SUPERPOWER_EXTS.has(ext)) {
+      extensions.push({ name: ext, status: 'ALLOYDB_SUPERPOWER', note: 'Native AlloyDB enterprise differentiator' });
+    } else if (SUPPORTED_ALLOYDB_EXTS.has(ext)) {
+      extensions.push({ name: ext, status: 'SUPPORTED_NATIVE', note: '100% drop-in compatible on AlloyDB' });
+    } else if (AURORA_LOCKIN_EXTS.has(ext)) {
+      extensions.push({
+        name: ext,
+        status: 'AURORA_LOCKIN_REWRITE',
+        note:
+          ext === 'aws_s3'
+            ? 'Replace aws_s3 with AlloyDB Cloud Storage import/export or pg_dump/COPY'
+            : ext === 'aws_ml'
+            ? 'Replace aws_ml with AlloyDB google_ml_integration (native Vertex AI & Gemini SQL)'
+            : 'AWS Aurora proprietary extension — replace with native PostgreSQL / AlloyDB equivalent',
+      });
+    } else {
+      extensions.push({ name: ext, status: 'VERIFY_EXTENSION', note: 'Verify custom extension availability in AlloyDB catalog' });
+    }
+  }
+
+  // 2. Parse CREATE TABLE blocks for PRIMARY KEY (pglogical replication requirement)
+  const tableRe = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z0-9_."]+)\s*\(([\s\S]*?)\)\s*;/gi;
+  const tables = [];
+  const remediationLines = [];
+  let tm;
+  while ((tm = tableRe.exec(raw))) {
+    const tableName = tm[1].replace(/"/g, '');
+    const bodyText = tm[2] || '';
+    const hasPk = /PRIMARY\s+KEY/i.test(bodyText);
+    const hasVector = /\bvector\s*\(\s*\d+\s*\)/i.test(bodyText);
+    tables.push({
+      tableName,
+      hasPrimaryKey: hasPk,
+      hasVectorColumn: hasVector,
+      pglogicalReady: hasPk,
+      issue: hasPk ? null : 'Missing PRIMARY KEY — pglogical cannot replicate UPDATE/DELETE without PK or REPLICA IDENTITY FULL',
+    });
+    if (!hasPk) {
+      remediationLines.push(`ALTER TABLE ${tableName} REPLICA IDENTITY FULL; -- Unblocks pglogical zero-downtime migration`);
+    }
+    if (hasVector) {
+      remediationLines.push(`CREATE INDEX IF NOT EXISTS idx_${tableName.replace(/\W+/g, '_')}_scann ON ${tableName} USING scann (embedding cosine) WITH (MODE='AUTO');`);
+    }
+  }
+
+  const auroraBlockers = extensions.filter((e) => e.status === 'AURORA_LOCKIN_REWRITE').length;
+  const missingPkCount = tables.filter((t) => !t.hasPrimaryKey).length;
+  const score = Math.max(25, 100 - auroraBlockers * 18 - missingPkCount * 10);
+
+  res.json({
+    ok: true,
+    compatibilityScore: score,
+    summary: {
+      tablesScanned: tables.length,
+      pglogicalReadyTables: tables.filter((t) => t.pglogicalReady).length,
+      missingPrimaryKeyTables: missingPkCount,
+      vectorTablesDetected: tables.filter((t) => t.hasVectorColumn).length,
+      extensionsScanned: extensions.length,
+      auroraLockInExtensions: auroraBlockers,
+    },
+    tables,
+    extensions,
+    remediationSql:
+      remediationLines.length > 0
+        ? remediationLines.join('\n')
+        : '-- Zero blockers detected! Your schema is 100% drop-in ready for AlloyDB & pglogical.',
+  });
+});
+
+// 9a-alloydb-sovereign. POST /api/project/:projectId/alloydb/sovereign-audit
+// Live Sovereign Cloud, CMEK / Cloud EKM, EU Data Residency, Zero-Public-IP & DORA Exit Readiness Auditor
+app.post('/api/project/:projectId/alloydb/sovereign-audit', async (req, res) => {
+  const { projectId } = req.params;
+  const { region = 'europe-west1', framework = 'EU_DORA_GDPR' } = req.body || {};
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const encProj = encodeURIComponent(projectId);
+    const encReg = encodeURIComponent(String(region || 'europe-west1'));
+
+    const [projMeta, iamPolicy, clustersRes, instancesRes, keyRingsRes] = await Promise.all([
+      gcpFetch(`https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`, token, projectId, { timeout: 6000 }).catch(() => null),
+      gcpFetch(`https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`, token, projectId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { options: { requestedPolicyVersion: 3 } },
+        timeout: 6000,
+      }).catch(() => null),
+      gcpFetch(`https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/clusters`, token, projectId, { timeout: 7000 }).catch(() => ({ clusters: [] })),
+      gcpFetch(`https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/clusters/-/instances`, token, projectId, { timeout: 7000 }).catch(() => ({ instances: [] })),
+      gcpFetch(`https://cloudkms.googleapis.com/v1/projects/${encProj}/locations/${encReg}/keyRings`, token, projectId, { timeout: 6000 }).catch(() => ({ keyRings: [] })),
+    ]);
+
+    // Discover real Cloud KMS CryptoKeys in the target sovereign region
+    const keyRings = Array.isArray(keyRingsRes?.keyRings) ? keyRingsRes.keyRings.slice(0, 6) : [];
+    const kmsKeys = [];
+    for (const kr of keyRings) {
+      const keysRes = await gcpFetch(
+        `https://cloudkms.googleapis.com/v1/${kr.name}/cryptoKeys`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ).catch(() => ({ cryptoKeys: [] }));
+      for (const k of Array.isArray(keysRes?.cryptoKeys) ? keysRes.cryptoKeys : []) {
+        kmsKeys.push({
+          name: k.name,
+          shortName: String(k.name || '').split('/').slice(-3).join('/'),
+          protectionLevel: k.versionTemplate?.protectionLevel || 'SOFTWARE',
+          purpose: k.purpose || 'ENCRYPT_DECRYPT',
+        });
+      }
+    }
+
+    const projectNumber = projMeta?.projectNumber || null;
+    const alloyServiceAgent = projectNumber
+      ? `service-${projectNumber}@gcp-sa-alloydb.iam.gserviceaccount.com`
+      : null;
+    const bindings = Array.isArray(iamPolicy?.bindings) ? iamPolicy.bindings : [];
+    const hasKmsBinding = Boolean(
+      alloyServiceAgent &&
+        bindings.some(
+          (b) =>
+            (b.role === 'roles/cloudkms.cryptoKeyEncrypterDecrypter' || b.role === 'roles/owner') &&
+            Array.isArray(b.members) &&
+            b.members.includes(`serviceAccount:${alloyServiceAgent}`)
+        )
+    );
+
+    const EU_SOVEREIGN_REGIONS = new Set([
+      'europe-west1', 'europe-west3', 'europe-west4', 'europe-west6',
+      'europe-west8', 'europe-west9', 'europe-north1', 'europe-southwest1', 'europe-central2',
+    ]);
+
+    const clusters = Array.isArray(clustersRes?.clusters) ? clustersRes.clusters : [];
+    const instances = Array.isArray(instancesRes?.instances) ? instancesRes.instances : [];
+
+    const cmekProtectedClusters = clusters.filter((c) => Boolean(c.encryptionConfig?.kmsKeyName)).length;
+    const euResidentClusters = clusters.filter((c) => {
+      const parts = String(c.name || '').split('/');
+      const loc = parts[parts.indexOf('locations') + 1] || '';
+      return EU_SOVEREIGN_REGIONS.has(loc);
+    }).length;
+    const privateOnlyInstances = instances.filter(
+      (i) => !i.networkConfig?.publicDnsEnabled && !i.networkConfig?.enablePublicIp
+    ).length;
+    const pgauditAndIamInstances = instances.filter((i) => {
+      const f = i.databaseFlags || {};
+      return (
+        String(f['alloydb.enable_pgaudit'] || '').toLowerCase() === 'on' &&
+        String(f['alloydb.iam_authentication'] || '').toLowerCase() === 'on'
+      );
+    }).length;
+    const pglogicalExitInstances = instances.filter((i) => {
+      const f = i.databaseFlags || {};
+      return (
+        String(f['alloydb.logical_decoding'] || '').toLowerCase() === 'on' &&
+        String(f['alloydb.enable_pglogical'] || '').toLowerCase() === 'on'
+      );
+    }).length;
+
+    const controls = [
+      {
+        id: 'CMEK_EKM',
+        pillar: 'Cryptographic Sovereignty (CMEK / Cloud EKM)',
+        pass: clusters.length > 0 ? cmekProtectedClusters === clusters.length : kmsKeys.length > 0,
+        detail:
+          clusters.length > 0
+            ? `${cmekProtectedClusters}/${clusters.length} live cluster(s) use Customer-Managed Keys (CMEK/EKM)`
+            : `${kmsKeys.length} Cloud KMS CryptoKey(s) discovered in ${region} ready for Sovereign AlloyDB CMEK`,
+      },
+      {
+        id: 'KMS_AGENT_IAM',
+        pillar: 'AlloyDB Service Agent KMS Binding',
+        pass: hasKmsBinding,
+        detail: hasKmsBinding
+          ? `Verified roles/cloudkms.cryptoKeyEncrypterDecrypter on ${alloyServiceAgent}`
+          : `Missing roles/cloudkms.cryptoKeyEncrypterDecrypter on ${alloyServiceAgent || 'gcp-sa-alloydb'} (required to provision CMEK clusters)`,
+        fixAction: hasKmsBinding ? null : 'GRANT_ALLOYDB_KMS_ROLE',
+      },
+      {
+        id: 'DATA_RESIDENCY',
+        pillar: `Regional Data Residency (${framework})`,
+        pass: clusters.length > 0 ? euResidentClusters === clusters.length : EU_SOVEREIGN_REGIONS.has(region),
+        detail:
+          clusters.length > 0
+            ? `${euResidentClusters}/${clusters.length} live cluster(s) strictly inside EU Sovereign Regions`
+            : `Target region "${region}" is ${EU_SOVEREIGN_REGIONS.has(region) ? 'an EU Sovereign Data Residency region' : 'outside EU residency — select europe-west1/3/4/6/9 for EU GDPR/DORA'}`,
+      },
+      {
+        id: 'ZERO_PUBLIC_IP',
+        pillar: 'Zero Public IP / Private Service Connect (PSC)',
+        pass: instances.length > 0 ? privateOnlyInstances === instances.length : true,
+        detail:
+          instances.length > 0
+            ? `${privateOnlyInstances}/${instances.length} live instance(s) have zero Public IP exposure (PSC/VPC-only)`
+            : 'No public AlloyDB instances exposed (enforce PSC-only for Sovereign production)',
+      },
+      {
+        id: 'PGAUDIT_IAM',
+        pillar: 'Immutable Audit Trail (pgaudit) & Zero-Password IAM Auth',
+        pass: instances.length > 0 ? pgauditAndIamInstances === instances.length : false,
+        detail:
+          instances.length > 0
+            ? `${pgauditAndIamInstances}/${instances.length} instance(s) enforce pgaudit + alloydb.iam_authentication=on`
+            : 'Apply 1-click Sovereign Compliance Flags on your primary instance once provisioned',
+      },
+      {
+        id: 'DORA_EXIT_PORTABILITY',
+        pillar: 'DORA Art. 28 Exit Plan (pglogical + Air-Gapped AlloyDB Omni)',
+        pass: instances.length > 0 ? pglogicalExitInstances > 0 : true,
+        detail:
+          instances.length > 0
+            ? `${pglogicalExitInstances}/${instances.length} instance(s) enabled for continuous pglogical exit to stock PostgreSQL + AlloyDB Omni air-gapped portability`
+            : 'AlloyDB Omni Docker/K8s + pglogical guarantees regulator-verifiable exit to sovereign bare-metal or stock PostgreSQL',
+      },
+    ];
+
+    const passed = controls.filter((c) => c.pass).length;
+    res.json({
+      ok: true,
+      projectId,
+      region,
+      framework,
+      sovereignScore: Math.round((passed / controls.length) * 100),
+      passedControls: passed,
+      totalControls: controls.length,
+      alloyServiceAgent,
+      kmsKeys,
+      controls,
+      auditedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(400).json({ error: err?.response?.data?.error?.message || err.message || 'Sovereign audit failed.' });
+  }
+});
+
+// 9a-alloydb-tf. POST /api/project/:projectId/alloydb/export-terraform
+// Compiles live discovered AlloyDB clusters/instances (or requested Express/Sovereign blueprint) into production Terraform HCL
+app.post('/api/project/:projectId/alloydb/export-terraform', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    mode = 'SOVEREIGN_ENTERPRISE', // EXPRESS | SOVEREIGN_ENTERPRISE
+    clusterId = 'alloydb-sovereign-eu',
+    region = 'europe-west1',
+    databaseVersion = 'POSTGRES_18',
+    kmsKeyName = '',
+    primaryCpu = 4,
+    readPoolNodes = 2,
+    readPoolCpu = 2,
+    iamUserEmail = '',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const encProj = encodeURIComponent(projectId);
+
+    const [projMeta, liveClusters] = await Promise.all([
+      gcpFetch(`https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`, token, projectId, { timeout: 6000 }).catch(() => null),
+      gcpFetch(`https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/clusters`, token, projectId, { timeout: 6000 }).catch(() => ({ clusters: [] })),
+    ]);
+
+    const projNum = projMeta?.projectNumber || 'PROJECT_NUMBER';
+    const isExpress = mode === 'EXPRESS';
+    const liveCount = Array.isArray(liveClusters?.clusters) ? liveClusters.clusters.length : 0;
+
+    const hcl = `# ============================================================================
+# Google Cloud AlloyDB for PostgreSQL — Production Terraform HCL Blueprint
+# Project: ${projectId} (Project Number: ${projNum})
+# Mode: ${isExpress ? 'AlloyDB Express (PG 18 · Scale-to-Zero)' : 'Sovereign Enterprise AlloyDB (CMEK + Columnar + SCaNN + pglogical)'}
+# Live Clusters Discovered at Compile Time: ${liveCount}
+# ============================================================================
+
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 6.10.0"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = ">= 6.10.0"
+    }
+  }
+}
+
+locals {
+  project_id          = "${projectId}"
+  region              = "${region}"
+  cluster_id          = "${clusterId}"
+  alloydb_sa          = "service-${projNum}@gcp-sa-alloydb.iam.gserviceaccount.com"
+}
+
+# 1. Authorize AlloyDB Service Agent for Inline Vertex AI embedding() & Gemini SQL
+resource "google_project_iam_member" "alloydb_vertex_ai" {
+  project = local.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:\${local.alloydb_sa}"
+}
+${
+  kmsKeyName
+    ? `
+# 2. Authorize AlloyDB Service Agent for Sovereign CMEK / Cloud EKM Encryption
+resource "google_project_iam_member" "alloydb_cmek" {
+  project = local.project_id
+  role    = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member  = "serviceAccount:\${local.alloydb_sa}"
+}
+`
+    : ''
+}
+# 3. AlloyDB Cluster (${isExpress ? 'Express PG 18' : 'Sovereign Enterprise'})
+resource "google_alloydb_cluster" "primary" {
+  provider         = google-beta
+  project          = local.project_id
+  cluster_id       = local.cluster_id
+  location         = local.region
+  database_version = "${databaseVersion}"
+${
+  isExpress
+    ? `
+  # AlloyDB Express: 1 vCPU / 4 GB RAM, Scale-to-Zero, 1-command upgrade to Enterprise
+  # Remove or set enabled = false to upgrade in-place without downtime!
+  labels = {
+    managed_by = "cloudpulse_2026"
+    tier       = "alloydb_express"
+  }
+`
+    : `
+  network_config {
+    network = "projects/\${local.project_id}/global/networks/default"
+  }
+
+  continuous_backup_config {
+    enabled              = true
+    recovery_window_days = 14${
+      kmsKeyName
+        ? `
+    encryption_config {
+      kms_key_name = "${kmsKeyName}"
+    }`
+        : ''
+    }
+  }${
+    kmsKeyName
+      ? `
+
+  encryption_config {
+    kms_key_name = "${kmsKeyName}"
+  }`
+      : ''
+  }
+
+  labels = {
+    managed_by = "cloudpulse_2026"
+    tier       = "${kmsKeyName ? 'alloydb_sovereign_cmek' : 'alloydb_enterprise'}"
+  }
+`
+}}
+
+# 4. Primary Compute Instance (SCaNN + Columnar HTAP + pglogical Zero-Lock-in + pgaudit)
+resource "google_alloydb_instance" "primary" {
+  provider      = google-beta
+  cluster       = google_alloydb_cluster.primary.name
+  instance_id   = "\${local.cluster_id}-primary"
+  instance_type = "PRIMARY"
+
+  machine_config {
+    cpu_count = ${isExpress ? 1 : Number(primaryCpu) || 4}
+  }
+
+  database_flags = {
+    "alloydb.logical_decoding"                   = "on"
+    "alloydb.enable_pglogical"                   = "on"
+    "alloydb.iam_authentication"                 = "on"
+    "alloydb.enable_pgaudit"                     = "on"
+    "pgaudit.log"                                = "ddl,role,write"
+    "google_ml_integration.enable_model_support" = "on"
+    "google_columnar_engine.enabled"             = "on"
+  }
+}
+${
+  !isExpress && Number(readPoolNodes) > 0
+    ? `
+# 5. Horizontal Read Pool (Isolates Columnar HTAP Analytics & High-QPS SCaNN RAG)
+resource "google_alloydb_instance" "read_pool" {
+  provider      = google-beta
+  cluster       = google_alloydb_cluster.primary.name
+  instance_id   = "\${local.cluster_id}-readpool"
+  instance_type = "READ_POOL"
+
+  read_pool_config {
+    node_count = ${Number(readPoolNodes) || 2}
+  }
+
+  machine_config {
+    cpu_count = ${Number(readPoolCpu) || 2}
+  }
+}
+`
+    : ''
+}${
+  iamUserEmail
+    ? `
+# 6. Zero-Password IAM Database Principal
+resource "google_alloydb_user" "iam_principal" {
+  cluster        = google_alloydb_cluster.primary.name
+  user_id        = "${iamUserEmail}"
+  user_type      = "ALLOYDB_IAM_USER"
+  database_roles = ["alloydbsuperuser"]
+}
+`
+    : ''
+}`;
+
+    res.json({
+      ok: true,
+      projectId,
+      mode,
+      filename: `alloydb-${isExpress ? 'express' : 'sovereign'}-${clusterId}.tf`,
+      liveClustersDiscovered: liveCount,
+      hcl,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err?.response?.data?.error?.message || err.message || 'Terraform compilation failed.' });
+  }
+});
+
+// 9a-alloydb-nl2sql. POST /api/project/:projectId/alloydb/nl2sql
+// Dual-Engine Gemini 4 (Vertex AI Keyless OAuth2 OR Vaulted AI Studio API Key) Natural-Language-to-AlloyDB-SQL Synthesizer
+app.post('/api/project/:projectId/alloydb/nl2sql', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    prompt = '',
+    model = 'gemini-4-neon',
+    preferredProvider = 'AUTO',
+  } = req.body || {};
+  const cleanPrompt = String(prompt || '').trim();
+  if (!cleanPrompt) {
+    return res.status(400).json({ error: 'Enter a natural language question or DBA/executive goal.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const fullPrompt = `You are a Google Cloud Principal AlloyDB for PostgreSQL Architect.
+Convert the following user request into production-ready AlloyDB for PostgreSQL SQL (PostgreSQL 18 / 16, alloydb_scann, vector, google_ml_integration, google_columnar_engine, pglogical).
+Respond strictly as valid JSON (no markdown fences) with keys:
+- "sql": string (pure runnable SQL with concise comments)
+- "executiveSummary": string (2 sentences explaining the AlloyDB advantage vs AWS Aurora / standalone vector DBs)
+- "featuresUsed": array of short strings like ["alloydb_scann", "google_columnar_engine"]
+
+User Request: ${cleanPrompt}`;
+
+    const dualRes = await executeLiveDualEngineGemini({
+      projectId,
+      token,
+      model: String(model || 'gemini-4-neon').trim(),
+      preferredProvider: String(preferredProvider || 'AUTO').toUpperCase(),
+      promptText: fullPrompt,
+      temperature: 0.15,
+      maxOutputTokens: 2048,
+      timeoutMs: 25000,
+    });
+
+    if (dualRes?.ok && dualRes.text) {
+      try {
+        const cleaned = String(dualRes.text)
+          .trim()
+          .replace(/^```(?:json)?\s*/i, '')
+          .replace(/```$/, '')
+          .trim();
+        const parsed = JSON.parse(cleaned);
+        return res.json({
+          ok: true,
+          engine: `${dualRes.providerLabel || dualRes.provider || 'Dual-Engine Gemini'} · ${dualRes.modelUsed || model}`,
+          provider: dualRes.provider || preferredProvider,
+          modelUsed: dualRes.modelUsed || model,
+          sql: String(parsed.sql || '').trim(),
+          executiveSummary: String(parsed.executiveSummary || '').trim(),
+          featuresUsed: Array.isArray(parsed.featuresUsed) ? parsed.featuresUsed : ['AlloyDB PostgreSQL'],
+        });
+      } catch {
+        // If Gemini returned raw SQL text instead of JSON, return it cleanly
+        return res.json({
+          ok: true,
+          engine: `${dualRes.providerLabel || dualRes.provider || 'Dual-Engine Gemini'} · ${dualRes.modelUsed || model}`,
+          provider: dualRes.provider || preferredProvider,
+          modelUsed: dualRes.modelUsed || model,
+          sql: String(dualRes.text).replace(/^```(?:sql)?\s*/i, '').replace(/```$/, '').trim(),
+          executiveSummary: 'Synthesized via live Dual-Engine Gemini 4 (Vertex AI Keyless OAuth2 / Vaulted AI Studio Key).',
+          featuresUsed: ['AlloyDB PostgreSQL', dualRes.modelUsed || model],
+        });
+      }
+    }
+
+    {
+      const vertexErr = new Error(dualRes?.error || 'Dual-Engine Gemini unavailable');
+      // Deterministic AlloyDB SQL synthesis if aiplatform.googleapis.com is not enabled or quota-limited
+      const lower = cleanPrompt.toLowerCase();
+      let sql = '';
+      let featuresUsed = ['PostgreSQL 18', 'alloydb_scann'];
+      let executiveSummary =
+        'Runs directly inside AlloyDB with 100% PostgreSQL compatibility, eliminating external vector databases and ETL pipelines.';
+
+      if (/pglogical|migrat|replicat|exit|failover|lock/.test(lower)) {
+        featuresUsed = ['pglogical', 'WAL Logical Decoding', 'Zero Lock-in'];
+        sql = `-- Zero-Lock-in pglogical Replication Status & Lag Audit\nSELECT subscription_name, status, provider_node\nFROM pglogical.show_subscription_status();\n\nSELECT slot_name, plugin, active,\n       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_lag\nFROM pg_replication_slots;`;
+        executiveSummary =
+          'Verifies live zero-downtime pglogical replication lag and exit readiness to stock open-source PostgreSQL with zero vendor lock-in.';
+      } else if (/columnar|olap|analytic|revenue|report|htap/.test(lower)) {
+        featuresUsed = ['google_columnar_engine', 'HTAP 100x Acceleration'];
+        sql = `-- AlloyDB Columnar Engine 100x HTAP Analytical Query (Zero Redshift/ETL Offload)\nSELECT google_columnar_engine_add('orders');\nEXPLAIN (ANALYZE, BUFFERS)\nSELECT date_trunc('day', created_at) AS day,\n       region,\n       COUNT(*) AS order_count,\n       SUM(total_usd) AS gross_revenue_usd\nFROM orders\nWHERE created_at >= now() - interval '90 days'\nGROUP BY 1, 2\nORDER BY 1 DESC, gross_revenue_usd DESC;`;
+        executiveSummary =
+          'Leverages AlloyDB built-in Columnar Engine to run analytical aggregations up to 100x faster on live OLTP tables without paying for Redshift Zero-ETL.';
+      } else {
+        featuresUsed = ['alloydb_scann', 'google_ml_integration', 'Vertex AI'];
+        sql = `-- AlloyDB SCaNN Hybrid Vector + Relational RAG Query\nCREATE EXTENSION IF NOT EXISTS vector;\nCREATE EXTENSION IF NOT EXISTS alloydb_scann;\nCREATE EXTENSION IF NOT EXISTS google_ml_integration;\n\nEXPLAIN (ANALYZE, BUFFERS)\nSELECT id, title,\n       1 - (embedding <=> embedding('text-embedding-005', '${cleanPrompt.replace(/'/g, "''")}')::vector) AS similarity\nFROM knowledge_chunks\nORDER BY embedding <=> embedding('text-embedding-005', '${cleanPrompt.replace(/'/g, "''")}')::vector\nLIMIT 10;`;
+        executiveSummary =
+          'Combines inline Vertex AI text-embedding-005 generation with Google SCaNN tree-quantized vector search inside ACID PostgreSQL transactions.';
+      }
+
+      return res.json({
+        ok: true,
+        engine: 'AlloyDB Deterministic SQL Synthesizer (Enable Vertex AI API for Gemini NL2SQL)',
+        vertexNote: vertexErr?.response?.data?.error?.message || vertexErr.message,
+        sql,
+        executiveSummary,
+        featuresUsed,
+      });
+    }
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'NL2SQL synthesis failed.' });
+  }
+});
+
 // 9a-gke. DELETE /api/project/:projectId/gke/clusters/:location/:clusterName
 app.delete(
   '/api/project/:projectId/gke/clusters/:location/:clusterName',
@@ -28292,7 +30068,7 @@ const SANDBOX_S3_COMPATIBLE_MANIFEST = {
         contentType: 'text/csv; charset=utf-8',
         body: [
           'timestamp,cluster_node,model_id,p95_latency_ms,tokens_per_sec,vram_gb',
-          `${new Date().toISOString()},minio-node-01,gemini-2.5-flash,38,410,18.4`,
+          `${new Date().toISOString()},minio-node-01,gemini-4-hydrogen,38,410,18.4`,
           `${new Date().toISOString()},minio-node-02,llama-3.3-70b,92,145,68.2`,
           `${new Date().toISOString()},minio-node-03,mistral-large,64,215,44.0`,
         ].join('\n'),
@@ -31199,12 +32975,32 @@ if (process.env.GEMINI_API_KEY) {
 
 const DEFAULT_2026_GEMINI_MODELS = [
   {
+    id: 'gemini-4-carbon',
+    label: 'gemini-4-carbon (Frontier Deep Reasoning · 1M Unified Context)',
+  },
+  {
+    id: 'gemini-4-argon',
+    label: 'gemini-4-argon (Balanced Frontier Thinking · 1M Unified Context)',
+  },
+  {
+    id: 'gemini-4-neon',
+    label: 'gemini-4-neon (Low-Latency Agentic Coding & SRE · 1M Unified)',
+  },
+  {
+    id: 'gemini-4-hydrogen',
+    label: 'gemini-4-hydrogen (Ultra-Fast Everyday Coding & High-QPS RAG · 1M)',
+  },
+  {
+    id: 'gemini-3.8-flash-cyber',
+    label: 'gemini-3.8-flash-cyber (Cybersecurity Defense & SecOps · Fairwind GA)',
+  },
+  {
     id: 'gemini-3.8-flash',
-    label: ' gemini-3.8-flash (2026 Ultra-Fast SRE & FinOps Engine)',
+    label: 'gemini-3.8-flash (Gen-3 Ultra-Fast SRE & FinOps Engine)',
   },
   {
     id: 'gemini-3.1-pro',
-    label: ' gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
+    label: 'gemini-3.1-pro (Gen-3 Deep Architecture & Security Reasoning)',
   },
 ];
 
@@ -31416,14 +33212,15 @@ async function executeLiveDualEngineGemini({
   timeoutMs = 45000,
 }) {
   const t0 = Date.now();
-  const rawModel = String(model || 'gemini-3.8-flash')
+  const rawModel = String(model || 'gemini-4-neon')
     .trim()
     .replace(/^models\//i, '');
-  const isProRequested = rawModel.toLowerCase().includes('pro');
-  const selectedModel = rawModel || 'gemini-3.8-flash';
-  const baseCandidates = isProRequested
-    ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
-    : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
+  const lowerM = rawModel.toLowerCase();
+  const isDeepRequested = lowerM.includes('carbon') || lowerM.includes('argon') || lowerM.includes('pro');
+  const selectedModel = rawModel || 'gemini-4-neon';
+  const baseCandidates = isDeepRequested
+    ? ['gemini-4-carbon', 'gemini-4-argon', 'gemini-4-neon', 'gemini-3.1-pro', 'gemini-3.8-flash']
+    : ['gemini-4-neon', 'gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3-flash-preview'];
   const candidateModels = Array.from(
     new Set([rawModel, ...baseCandidates].filter(Boolean))
   );
@@ -81868,14 +83665,15 @@ app.post('/api/project/:projectId/soc/ai-commander', async (req, res) => {
   } = req.body || {};
 
   const t0 = Date.now();
-  const rawModel = String(model || 'gemini-3.8-flash')
+  const rawModel = String(model || 'gemini-4-neon')
     .trim()
     .replace(/^models\//i, '');
-  const isProRequested = rawModel.toLowerCase().includes('pro');
-  const selectedModel = rawModel || 'gemini-3.8-flash';
-  const baseCandidates = isProRequested
-    ? ['gemini-3.1-pro', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
-    : ['gemini-3.8-flash', 'gemini-3-flash-preview'];
+  const lowerM = rawModel.toLowerCase();
+  const isDeepRequested = lowerM.includes('carbon') || lowerM.includes('argon') || lowerM.includes('pro');
+  const selectedModel = rawModel || 'gemini-4-neon';
+  const baseCandidates = isDeepRequested
+    ? ['gemini-4-carbon', 'gemini-4-argon', 'gemini-4-neon', 'gemini-3.1-pro', 'gemini-3.8-flash']
+    : ['gemini-4-neon', 'gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3-flash-preview'];
   const candidateModels = Array.from(
     new Set([rawModel, ...baseCandidates].filter(Boolean))
   );

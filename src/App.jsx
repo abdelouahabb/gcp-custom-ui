@@ -73,6 +73,7 @@ import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
 import CloudFunctionsEventarcStudio from './components/CloudFunctionsEventarcStudio';
 import GkeFleetStudio from './components/GkeFleetStudio';
+import AlloyDbMasteryStudio from './components/AlloyDbMasteryStudio';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
 import BigLakeIcebergStudio from './components/BigLakeIcebergStudio';
@@ -2286,6 +2287,11 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/snapshots/create') ||
       rawUrl.includes('/snapshots/clone-vm') ||
       rawUrl.includes('/fleet-radar/schedule') ||
+      rawUrl.includes('/alloydb/readiness-xray') ||
+      rawUrl.includes('/alloydb/sovereign-audit') ||
+      rawUrl.includes('/alloydb/compat-audit') ||
+      rawUrl.includes('/alloydb/export-terraform') ||
+      rawUrl.includes('/alloydb/nl2sql') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
         String(body.action || '').toUpperCase() === 'PROBE_FROM_VM') ||
       (rawUrl.includes('/vms/') &&
@@ -5403,6 +5409,9 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/bigquery/partition-cluster-surgeon') ||
       rawUrl.includes('/pam/action') ||
       rawUrl.includes('/workload-manager/action') ||
+      rawUrl.includes('/alloydb/action') ||
+      rawUrl.includes('/alloydb/omni-local') ||
+      rawUrl.includes('/alloydb/execute-sql') ||
       rawUrl.includes('/aws-azure-parity/action') ||
       rawUrl.includes('/zombies/exterminate') ||
       rawUrl.includes('/dlp-rehydrate-from-secret-manager') ||
@@ -7274,6 +7283,169 @@ function classifyDestructiveAxiosConfig(config) {
               : `Updates time-bound PAM access configuration on "${entId}" in "${projectId}".`,
         };
       }
+      if (rawUrl.includes('/alloydb/action')) {
+        const adbAct = String(body.action || '').toUpperCase();
+        const cId = body.clusterId || 'alloydb-cluster';
+        const iId = body.instanceId || `${cId}-primary`;
+        const reg = body.region || 'us-central1';
+        const adbSpecs = {
+          ENABLE_ALLOYDB_API: {
+            title: `Enable AlloyDB for PostgreSQL API in Project "${projectId}" ($0.00)?`,
+            laymanSummary: `In Plain English: Activates alloydb.googleapis.com and servicenetworking.googleapis.com in "${projectId}" so you can discover, provision, and manage AlloyDB Express & Enterprise clusters.`,
+            whatHappensNext: `1. Calls POST serviceusage.googleapis.com/v1/projects/${projectId}/services/alloydb.googleapis.com:enable.\n2. Enables servicenetworking.googleapis.com for private VPC / PSC peering.\n3. Refreshes the AlloyDB Mastery Studio fleet.`,
+            confirmLabel: `Enable AlloyDB API ($0.00)`,
+          },
+          CREATE_EXPRESS_CLUSTER: {
+            title: `Create Live AlloyDB Express (${body.databaseVersion || 'POSTGRES_18'}) Cluster "${cId}" in ${reg}?`,
+            laymanSummary: `In Plain English: Provisions a lightweight AlloyDB Express cluster ("${cId}") in "${reg}" with expressConfig.enabled=true (1 vCPU / 4 GB RAM, auto-scaling storage up to 20 GB, scale-to-zero compute, and 1-click in-place Enterprise upgrade).`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters?clusterId=${cId}.\n2. Initializes PostgreSQL engine "${body.databaseVersion || 'POSTGRES_18'}" with initial user "postgres".\n3. Returns the live LRO operation receipt and refreshes the fleet.`,
+            confirmLabel: `Create Express Cluster "${cId}"`,
+          },
+          CREATE_EXPRESS_PRIMARY_INSTANCE: {
+            title: `Create 1-vCPU AlloyDB Express Primary Instance "${iId}" on "${cId}" (${reg})?`,
+            laymanSummary: `In Plain English: Attaches the 1-vCPU (4 GB RAM) primary compute instance "${iId}" to AlloyDB Express cluster "${cId}" in "${reg}" (${body.publicDnsEnabled ? 'with Public DNS enabled for instant app connectivity' : 'with private connectivity'}).`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/instances?instanceId=${iId}.\n2. Provisions the PRIMARY compute node.\n3. Refreshes live AlloyDB instance telemetry.`,
+            confirmLabel: `Create 1-vCPU Primary "${iId}"`,
+          },
+          UPGRADE_EXPRESS_TO_ENTERPRISE: {
+            title: `Upgrade AlloyDB Express Cluster "${cId}" In-Place to Enterprise AlloyDB (${reg})?`,
+            laymanSummary: `In Plain English: Performs a zero-data-loss in-place upgrade of "${cId}" from AlloyDB Express to full Enterprise AlloyDB (sets expressConfig.enabled=false). Preserves all data, schemas, extensions, credentials, and DNS/PSC while upgrading RAM ratio from 1:4 to 1:8 and unlocking scaling up to 288 vCPUs. Note: disables scale-to-zero (always-on Enterprise billing applies).`,
+            whatHappensNext: `1. Calls PATCH alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}?updateMask=expressConfig.enabled.\n2. Transitions "${cId}" to always-on Enterprise AlloyDB (1:8 RAM ratio).\n3. Refreshes the AlloyDB fleet status.`,
+            confirmLabel: `Upgrade "${cId}" → Enterprise`,
+          },
+          APPLY_INSTANCE_FLAGS: {
+            title: `Patch AlloyDB PostgreSQL Flags (${body.flagPreset || 'Custom'}) on "${cId}/${iId}" (${reg})?`,
+            laymanSummary: `In Plain English: Non-destructively merges PostgreSQL database flags (${body.flagPreset === 'PGLOGICAL_ZERO_LOCKIN' ? 'alloydb.logical_decoding=on, alloydb.enable_pglogical=on' : body.flagPreset === 'SCANN_AI_AGENTS' ? 'google_ml_integration.enable_model_support=on, scann.enable_preview_features=on' : body.flagPreset === 'COLUMNAR_HTAP' ? 'google_columnar_engine.enabled=on, google_columnar_engine.enable_auto_columnarization=on' : body.flagPreset || 'custom flags'}) onto instance "${cId}/${iId}".`,
+            whatHappensNext: `1. Reads existing databaseFlags on "${cId}/${iId}" so no current flags are lost.\n2. Calls PATCH alloydb.googleapis.com/v1beta/.../instances/${iId}?updateMask=databaseFlags.\n3. Refreshes instance flag readiness badges.`,
+            confirmLabel: `Apply Flags to "${iId}"`,
+          },
+          CREATE_ENTERPRISE_CLUSTER: {
+            title: `Create Enterprise AlloyDB Cluster "${cId}" (${body.databaseVersion || 'POSTGRES_16'}) in ${reg}?`,
+            laymanSummary: `In Plain English: Provisions a full Enterprise AlloyDB for PostgreSQL cluster ("${cId}") in "${reg}" with 14-day continuous backup/PITR and disaggregated Colossus storage.`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters?clusterId=${cId}.\n2. Initializes Enterprise cluster with continuous backup enabled.\n3. Refreshes the AlloyDB fleet.`,
+            confirmLabel: `Create Enterprise Cluster "${cId}"`,
+          },
+          DELETE_CLUSTER: {
+            title: `Permanently Delete AlloyDB Cluster "${cId}" and All Instances in ${reg}?`,
+            laymanSummary: `In Plain English: Permanently deletes AlloyDB cluster "${cId}" in "${reg}" (force=true), terminating its primary and read-pool instances and deleting its cluster storage volume.`,
+            whatHappensNext: `1. Calls DELETE alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}?force=true.\n2. Stops compute billing and removes the cluster from project "${projectId}".\n3. Refreshes the AlloyDB fleet.`,
+            confirmLabel: `Delete Cluster "${cId}"`,
+            severity: 'CRITICAL',
+          },
+          GRANT_ALLOYDB_VERTEX_AI_ROLE: {
+            title: `Grant roles/aiplatform.user to AlloyDB Service Agent in "${projectId}"?`,
+            laymanSummary: `In Plain English: Grants roles/aiplatform.user to your project's Google-managed AlloyDB Service Agent (service-<projectNumber>@gcp-sa-alloydb.iam.gserviceaccount.com) so inline Vertex AI embedding() and Gemini SQL calls succeed without Permission Denied errors.`,
+            whatHappensNext: `1. Reads the current project IAM policy via cloudresourcemanager.googleapis.com/v1.\n2. Appends serviceAccount:service-<projectNumber>@gcp-sa-alloydb.iam.gserviceaccount.com to roles/aiplatform.user.\n3. Re-runs the 6-Gate AlloyDB Readiness X-Ray.`,
+            confirmLabel: `Grant roles/aiplatform.user`,
+            severity: 'HIGH',
+          },
+          CREATE_READ_POOL: {
+            title: `Provision ${body.nodeCount || 2}-Node (${body.cpuCount || 2} vCPU) AlloyDB Read Pool on "${cId}" (${reg})?`,
+            laymanSummary: `In Plain English: Adds a horizontally scalable Read Pool (${body.nodeCount || 2} nodes × ${body.cpuCount || 2} vCPU) to cluster "${cId}" to isolate Columnar HTAP analytics and high-QPS SCaNN vector RAG traffic from your OLTP primary.`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/instances (READ_POOL).\n2. Shares the same disaggregated Colossus storage layer with sub-10ms replication lag.\n3. Refreshes the AlloyDB fleet.`,
+            confirmLabel: `Create ${body.nodeCount || 2}-Node Read Pool`,
+          },
+          SCALE_INSTANCE_CPU: {
+            title: `Scale AlloyDB Instance "${cId}/${iId}" to ${body.cpuCount || 2} vCPUs (${reg})?`,
+            laymanSummary: `In Plain English: Vertically resizes compute capacity on "${cId}/${iId}" to ${body.cpuCount || 2} vCPUs via machineConfig.cpuCount without changing storage volumes or connection endpoints.`,
+            whatHappensNext: `1. Calls PATCH alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/instances/${iId}?updateMask=machineConfig.cpuCount.\n2. Applies new vCPU & RAM allocation.\n3. Refreshes live AlloyDB instance specs.`,
+            confirmLabel: `Scale to ${body.cpuCount || 2} vCPUs`,
+          },
+          TRIGGER_ON_DEMAND_BACKUP: {
+            title: `Trigger Instant On-Demand Backup of AlloyDB Cluster "${cId}" (${reg})?`,
+            laymanSummary: `In Plain English: Creates a consistent on-demand storage-layer backup snapshot of "${cId}" before migrations, schema changes, or Executive DR drills.`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/backups.\n2. Records an ON_DEMAND backup entry in project "${projectId}".\n3. Refreshes the AlloyDB backup inventory.`,
+            confirmLabel: `Take On-Demand Backup`,
+          },
+          CREATE_ALLOYDB_USER: {
+            title: `Create ${body.userType === 'ALLOYDB_BUILT_IN' ? 'Built-in' : 'Zero-Password IAM'} User "${body.userId || 'iam-user'}" on "${cId}"?`,
+            laymanSummary: `In Plain English: Registers "${body.userId || 'iam-user'}" on AlloyDB cluster "${cId}" using ${body.userType === 'ALLOYDB_BUILT_IN' ? 'PostgreSQL built-in authentication' : 'Google Cloud IAM authentication (ALLOYDB_IAM_USER — zero static database passwords)'}.`,
+            whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/users.\n2. Assigns database roles on cluster "${cId}".\n3. Refreshes the AlloyDB fleet.`,
+            confirmLabel: `Create AlloyDB User`,
+          },
+          GRANT_ALLOYDB_KMS_ROLE: {
+            title: `Grant Sovereign CMEK/EKM Role (roles/cloudkms.cryptoKeyEncrypterDecrypter) to AlloyDB Service Agent?`,
+            laymanSummary: `In Plain English: Authorizes your project's Google-managed AlloyDB Service Agent (service-<projectNumber>@gcp-sa-alloydb.iam.gserviceaccount.com) to encrypt and decrypt AlloyDB clusters and backups using your Customer-Managed Encryption Keys (CMEK / Cloud EKM).`,
+            whatHappensNext: `1. Reads the current IAM policy for "${projectId}".\n2. Grants roles/cloudkms.cryptoKeyEncrypterDecrypter to the AlloyDB Service Agent.\n3. Re-runs the 6-Control Sovereign Cloud Audit.`,
+            confirmLabel: `Grant Sovereign KMS Role`,
+            severity: 'HIGH',
+          },
+        };
+        const spec = adbSpecs[adbAct] || adbSpecs.CREATE_EXPRESS_CLUSTER;
+        return {
+          title: spec.title,
+          resourceKind: 'Google Cloud AlloyDB (alloydb.googleapis.com/v1beta)',
+          resourceName: cId,
+          projectId,
+          httpMethod: adbAct === 'DELETE_CLUSTER' ? 'DELETE' : 'POST',
+          endpoint: rawUrl,
+          severity: spec.severity || 'HIGH',
+          laymanSummary: spec.laymanSummary,
+          whatHappensNext: spec.whatHappensNext,
+          confirmLabel: spec.confirmLabel,
+        };
+      }
+      if (rawUrl.includes('/alloydb/omni-local')) {
+        const omniAct = String(body.action || 'STATUS').toUpperCase();
+        if (omniAct === 'STATUS') return null;
+        const cName = body.containerName || 'alloydb-omni-dev';
+        const omniSpecs = {
+          START_OMNI: {
+            title: `Start Local AlloyDB Omni Docker Container "${cName}" (Port ${body.port || 5432})?`,
+            laymanSummary: `In Plain English: Runs "docker run" (or starts existing container) for google/alloydbomni:${body.tag || 'latest'} locally on 127.0.0.1:${body.port || 5432} so you can develop against identical PostgreSQL + SCaNN + Columnar Engine locally at $0.00 cloud cost.`,
+            whatHappensNext: `1. Executes local Docker container "${cName}" with persistent volume "${cName}_data".\n2. Exposes PostgreSQL wire protocol on 127.0.0.1:${body.port || 5432}.\n3. Populates the Live SQL Runner DSN automatically.`,
+            confirmLabel: `Start Local AlloyDB Omni`,
+          },
+          STOP_OMNI: {
+            title: `Stop Local AlloyDB Omni Container "${cName}"?`,
+            laymanSummary: `In Plain English: Gracefully stops the local Docker container "${cName}" while preserving its Docker data volume "${cName}_data".`,
+            whatHappensNext: `1. Executes "docker stop ${cName}".\n2. Frees local RAM & port ${body.port || 5432}.\n3. Refreshes local Docker status.`,
+            confirmLabel: `Stop "${cName}"`,
+          },
+          REMOVE_OMNI: {
+            title: `Remove Local AlloyDB Omni Container "${cName}"?`,
+            laymanSummary: `In Plain English: Force-removes the local Docker container "${cName}" ("docker rm -f").`,
+            whatHappensNext: `1. Executes "docker rm -f ${cName}".\n2. Refreshes local Docker container list.`,
+            confirmLabel: `Remove "${cName}"`,
+            severity: 'CRITICAL',
+          },
+        };
+        const spec = omniSpecs[omniAct] || omniSpecs.START_OMNI;
+        return {
+          title: spec.title,
+          resourceKind: 'Local AlloyDB Omni (Docker Engine)',
+          resourceName: cName,
+          projectId,
+          httpMethod: 'POST',
+          endpoint: rawUrl,
+          severity: spec.severity || 'HIGH',
+          laymanSummary: spec.laymanSummary,
+          whatHappensNext: spec.whatHappensNext,
+          confirmLabel: spec.confirmLabel,
+        };
+      }
+      if (rawUrl.includes('/alloydb/execute-sql')) {
+        const sqlMode = String(body.mode || 'RUN_CUSTOM_SQL').toUpperCase();
+        const sqlText = String(body.sql || '');
+        const isMutatingSql =
+          sqlMode !== 'INTROSPECT_ALLOYDB' &&
+          /\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE|CALL|GRANT|REVOKE|pglogical\.create_|pglogical\.drop_)\b/i.test(
+            sqlText
+          );
+        if (!isMutatingSql) return null;
+        return {
+          title: `Execute Mutating PostgreSQL / AlloyDB SQL Statement via Live Wire Protocol?`,
+          resourceKind: 'Live PostgreSQL / AlloyDB Wire Protocol (psql)',
+          resourceName: String(body.dsn || '').replace(/:\/\/[^@]+@/, '://***@').slice(0, 64),
+          projectId,
+          httpMethod: 'POST',
+          endpoint: rawUrl,
+          severity: /\b(DROP|TRUNCATE|DELETE)\b/i.test(sqlText) ? 'CRITICAL' : 'HIGH',
+          laymanSummary: `In Plain English: Sends your SQL statement (containing DDL/DML writes) directly to the connected PostgreSQL / AlloyDB endpoint via /usr/bin/psql with a 12s statement_timeout.`,
+          whatHappensNext: `1. Connects to the target DSN over PostgreSQL wire protocol.\n2. Executes the SQL script with ON_ERROR_STOP=1.\n3. Returns live execution timing (ms) and psql output.`,
+          confirmLabel: `Execute Live SQL`,
+        };
+      }
       if (rawUrl.includes('/workload-manager/action')) {
         const wlmAct = String(body.action || 'CREATE_EVALUATION').toUpperCase();
         const target =
@@ -7917,6 +8089,7 @@ function CloudPulseCockpit() {
   const [cloudNexusSubTab, setCloudNexusSubTab] = useState('TERRAFORM_DRIFT');
   const [vpcSubTab, setVpcSubTab] = useState('');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
+  const [alloyDbSubTab, setAlloyDbSubTab] = useState('EXPRESS_QUICKSTART');
   const [wave9SubTab, setWave9SubTab] = useState('CLOUD_BUILD_GITHUB');
   const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
   const [storageTargetBucket, setStorageTargetBucket] = useState('');
@@ -7959,6 +8132,7 @@ function CloudPulseCockpit() {
     DATA_ENGINEER_STUDIO: 'Data Engineering & Medallion Studio',
     MANAGED_SPARK_STUDIO: 'Managed Service for Apache Spark & Serverless Studio',
     CLOUD_SQL_STUDIO: 'Cloud SQL & AlloyDB Studio',
+    ALLOYDB_STUDIO: 'AlloyDB Mastery & Express Studio',
     WAVE9_STUDIO: 'Cloud Build & Supply Chain Studio',
     WAVE10_FRONTIER: 'Cloud Spanner Graph & Frontier DB Studio',
     SOVEREIGN_STUDIO: 'IAM, KMS & Time-Machine Studio',
@@ -8006,6 +8180,12 @@ function CloudPulseCockpit() {
     SPARK_CONNECT_NOTEBOOKS: 'Spark Connect & PySpark IDE',
     DIAGNOSTICS_RCA: 'SparkApplications 3-Pillar RCA & Logs',
     KNOWLEDGE_LINEAGE_BIGFRAMES: 'Lightning Engine, BigFrames v2 & Lineage',
+    EXPRESS_QUICKSTART: 'AlloyDB Express (PG 18) & Live Fleet',
+    ZERO_LOCKIN_PGLOGICAL: 'Zero Lock-in (pglogical, 100% Compat & Omni)',
+    SCANN_VECTOR_RAG: 'SCaNN Vector Performance & Production RAG',
+    BEYOND_AURORA_AGENTS: 'Beyond Aurora: AI Agents & Columnar HTAP',
+    LIVE_SQL_AND_OMNI: 'Live psql SQL Runner & Local Omni Docker',
+    PLAYBOOK_MATRIX: '10-Topic AlloyDB Field Playbook Matrix',
     FLEET_CONTROL: 'Emulator Fleet & Host Readiness',
     LIVE_WORKBENCH: 'Interactive Local REST Workbench',
     CLOUD_SCHEMA_SYNC: 'Cloud-to-Local $0.00 Twin Sync',
@@ -8064,6 +8244,7 @@ function CloudPulseCockpit() {
       CLOUD_STORAGE: storageSubTab,
       BIGQUERY_STUDIO: bigQuerySubTab,
       BIGLAKE_STUDIO: bigLakeSubTab,
+      ALLOYDB_STUDIO: alloyDbSubTab,
       DATA_ENGINEER_STUDIO: dataEngineerSubTab,
       MANAGED_SPARK_STUDIO: managedSparkSubTab,
       LOCAL_EMULATORS: localEmulatorsSubTab,
@@ -8083,6 +8264,7 @@ function CloudPulseCockpit() {
     storageSubTab,
     bigQuerySubTab,
     bigLakeSubTab,
+    alloyDbSubTab,
     dataEngineerSubTab,
     managedSparkSubTab,
     localEmulatorsSubTab,
@@ -8581,6 +8763,8 @@ function CloudPulseCockpit() {
       ? 'BIGLAKE_STUDIO'
       : tabId === 'CLOUD_SQL'
       ? 'CLOUD_SQL_STUDIO'
+      : tabId === 'ALLOYDB' || tabId === 'ALLOYDB_EXPRESS' || tabId === 'ALLOYDB_MASTERY'
+      ? 'ALLOYDB_STUDIO'
       : tabId === 'SPANNER' || tabId === 'WAVE10_STUDIO'
       ? 'WAVE10_FRONTIER'
       : tabId === 'VPC_FIREWALL' || tabId === 'VPC' || tabId === 'NETWORK_VPC_FIREWALL'
@@ -8633,6 +8817,7 @@ function CloudPulseCockpit() {
       'WAVE9_STUDIO',
       'FUNCTIONS_STUDIO',
       'CLOUD_SQL_STUDIO',
+      'ALLOYDB_STUDIO',
       'DATA_ENGINEER_STUDIO',
       'MANAGED_SPARK_STUDIO',
       'BIGQUERY_STUDIO',
@@ -8804,6 +8989,8 @@ function CloudPulseCockpit() {
       }
     } else if (resolvedSubTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'ALLOYDB_STUDIO') {
+      setAlloyDbSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'BIGQUERY_STUDIO') {
       setBigQuerySubTab(resolvedSubTab);
     } else if (normalizedTab === 'VPC_NETWORKS') {
@@ -10142,6 +10329,13 @@ function CloudPulseCockpit() {
       group: 'DATA_AI',
       label: 'Cloud SQL',
       tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
+      icon: Database,
+    },
+    {
+      id: 'ALLOYDB_STUDIO',
+      group: 'DATA_AI',
+      label: 'AlloyDB',
+      tip: 'AlloyDB Mastery & Express Studio: AlloyDB Express (PG 18) 1-Click Provisioner & In-Place Enterprise Upgrade, Zero Lock-in pglogical + Omni + Stock PG DR Exit, SCaNN Vector RAG & Beyond Aurora AI Agents',
       icon: Database,
     },
     {
@@ -11540,6 +11734,15 @@ function CloudPulseCockpit() {
                   </div>
                   <div className="flex items-center justify-end gap-2">
                     {(() => {
+                      const errText = String(errorBanner || '');
+                      const isProjectScopedGcpError =
+                        /permission|denied|forbidden|billing|not enabled|403|quota|project/i.test(
+                          errText
+                        ) &&
+                        !/docker|psql|manifest|localhost|127\.0\.0\.1/i.test(
+                          errText
+                        );
+                      if (!isProjectScopedGcpError) return null;
                       const primaryProj =
                         (contextData?.defaultProject &&
                         contextData.defaultProject !== selectedProjectId
@@ -11711,6 +11914,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
                           items: [
                             { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17, MySQL 8.4 & AlloyDB Vectors' },
+                            { id: 'ALLOYDB_STUDIO', label: 'AlloyDB', meta: 'PG 18 Express, SCaNN, pglogical & Agents' },
                             { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Serverless Spark' },
                             { id: 'MANAGED_SPARK_STUDIO', label: 'Managed Spark', meta: 'Serverless Spark 3.5, Connect & Lightning' },
                             { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor, SQL X-Ray & 7d Time-Machine' },
@@ -12324,6 +12528,64 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                </div>
+              )}
+
+              {activeTab === 'ALLOYDB_STUDIO' && (
+                <div className="space-y-4">
+                  <CollapsibleArchitecturePipelineBar
+                    label="OLTP Database, AlloyDB Express, Sovereign CMEK & Spanner Continuity Chain"
+                    chainSummary="AlloyDB Express (PG 18) → SCaNN Vector / Columnar HTAP → pglogical Exit → Sovereign CMEK → Spanner"
+                  >
+                    <OltpDatabaseContinuityBar
+                      projectId={selectedProjectId}
+                      activeTab={activeTab}
+                      onSelectTab={handleNavigateStudioTab}
+                      onOpenProvision={handleOpenProvision}
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                    />
+                  </CollapsibleArchitecturePipelineBar>
+                  <AlloyDbMasteryStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={alloyDbSubTab}
+                    subTabNonce={studioSubTabNonce}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="DATA_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="AlloyDB Mastery & Express · SCaNN Vector RAG, Columnar HTAP & pglogical"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="SECURITY"
+                      projectId={selectedProjectId}
+                      studioContextLabel="AlloyDB Sovereign Cloud · CMEK/EKM, pgaudit, Zero-Password IAM & DORA Exit"
+                      defaultExpanded={false}
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onOpenBigQuerySql={handleOpenBigQuerySql}
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                 </div>
               )}
 

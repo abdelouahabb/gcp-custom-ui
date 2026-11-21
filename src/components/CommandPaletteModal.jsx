@@ -649,6 +649,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-alloydb-studio',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open Dedicated AlloyDB Mastery, Express, Zero Lock-in & SCaNN AI Studio',
+        subtitle: 'AlloyDB Express (PG 18) Provisioner & In-Place Enterprise Upgrade, pglogical Migration & Stock PG DR Exit, AlloyDB Omni, SCaNN Vector RAG & Beyond Aurora AI Agents',
+        keywords: 'alloydb express pg18 scann pgvector pglogical omni docker aurora columnar agents rag postgres',
+        badge: 'ALLOYDB STUDIO',
+        badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/35',
+        icon: Database,
+        run: () => {
+          onSelectTab('ALLOYDB_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-cloud-sql-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
         title: 'Open Dedicated Cloud SQL (MySQL & PostgreSQL) & AlloyDB Studio',

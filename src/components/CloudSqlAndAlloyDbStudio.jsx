@@ -1084,6 +1084,16 @@ LIMIT 25;`,
               <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Cloud SQL, AlloyDB, Spanner Graph &amp; Zero-ETL CDC Modules (Select Module Below):</span>
             </div>
+            {typeof onNavigateTab === 'function' && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('ALLOYDB_STUDIO')}
+                className="px-2.5 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-200 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3 h-3" />
+                Open Dedicated AlloyDB Express, SCaNN &amp; Zero-Lock-in Studio →
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {[
