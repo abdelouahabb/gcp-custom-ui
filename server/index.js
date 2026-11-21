@@ -13342,7 +13342,11 @@ EXPORT DATA OPTIONS(
   uri='gs://${bucketName}/exports/rag_embeddings_*.parquet',
   format='PARQUET',
   overwrite=true
-) AS SELECT * FROM \`${projectId}.${datasetId}.rag_embeddings_gold\`;`,
+) AS SELECT
+  uri,
+  content_type,
+  executive_summary
+FROM \`${projectId}.${datasetId}.rag_embeddings_gold\`;`,
       primaryTargetTab: 'BIGQUERY_STUDIO',
       secondaryTargetTab: 'ALLOYDB_STUDIO',
     },
@@ -34057,57 +34061,50 @@ function analyzeAndOptimizeBigQuerySql(
     ? schemaFields.map((f) => f?.name).filter(Boolean)
     : [];
 
-  // Rule 1: Column Pruning (`SELECT *` -> explicit column list from actual table schema)
-  if (/SELECT\s+\*/i.test(optimizedSql)) {
-    let prunedCols = [
-      'event_id',
-      'user_id',
-      'event_timestamp',
-      'region',
-      'revenue_usd',
-    ];
-    if (validSchemaCols.length > 0) {
-      const heavyBlobCols = new Set([
-        'body',
-        'payload_json',
-        'raw_payload',
-        'text',
-        'comment_text',
-        'html',
-        'accepted_answer_id',
-        'community_owned_date',
-        'last_editor_display_name',
-        'last_editor_user_id',
-        'owner_display_name',
-        'parent_id',
-        'post_type_id',
-        'favorite_count',
-        'comment_count',
-        'bike_id',
-        'bike_type',
-        'end_station_id',
-        'end_station_name',
-      ]);
-      // Always keep columns explicitly referenced in WHERE / GROUP BY / ORDER BY
-      const sqlWithoutSelectStar = optimizedSql.replace(/SELECT\s+\*/i, '');
-      const referencedCols = validSchemaCols.filter((col) =>
-        new RegExp(`\\b${col}\\b`, 'i').test(sqlWithoutSelectStar)
-      );
-      const candidateCols = validSchemaCols.filter(
-        (col) => !heavyBlobCols.has(col.toLowerCase())
-      );
-      const merged = Array.from(new Set([...referencedCols, ...candidateCols]));
-      const targetCount = Math.max(
-        2,
-        Math.min(
-          6,
-          validSchemaCols.length > 2
-            ? validSchemaCols.length - 1
-            : validSchemaCols.length
-        )
-      );
-      prunedCols = merged.slice(0, targetCount);
-    }
+  // Rule 1: Column Pruning (`SELECT *` -> explicit column list ONLY when verified against live table schema;
+  // never invent hardcoded columns like `event_id` on unknown/newly-created tables or EXPORT DATA statements)
+  const isExportDataScript = /\bEXPORT\s+DATA\b/i.test(optimizedSql);
+  if (/SELECT\s+\*/i.test(optimizedSql) && validSchemaCols.length > 0 && !isExportDataScript) {
+    const heavyBlobCols = new Set([
+      'body',
+      'payload_json',
+      'raw_payload',
+      'text',
+      'comment_text',
+      'html',
+      'accepted_answer_id',
+      'community_owned_date',
+      'last_editor_display_name',
+      'last_editor_user_id',
+      'owner_display_name',
+      'parent_id',
+      'post_type_id',
+      'favorite_count',
+      'comment_count',
+      'bike_id',
+      'bike_type',
+      'end_station_id',
+      'end_station_name',
+    ]);
+    // Always keep columns explicitly referenced in WHERE / GROUP BY / ORDER BY
+    const sqlWithoutSelectStar = optimizedSql.replace(/SELECT\s+\*/i, '');
+    const referencedCols = validSchemaCols.filter((col) =>
+      new RegExp(`\\b${col}\\b`, 'i').test(sqlWithoutSelectStar)
+    );
+    const candidateCols = validSchemaCols.filter(
+      (col) => !heavyBlobCols.has(col.toLowerCase())
+    );
+    const merged = Array.from(new Set([...referencedCols, ...candidateCols]));
+    const targetCount = Math.max(
+      2,
+      Math.min(
+        6,
+        validSchemaCols.length > 2
+          ? validSchemaCols.length - 1
+          : validSchemaCols.length
+      )
+    );
+    const prunedCols = merged.slice(0, targetCount);
 
     optimizedSql = optimizedSql.replace(
       /SELECT\s+\*/i,
