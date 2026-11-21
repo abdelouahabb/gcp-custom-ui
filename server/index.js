@@ -12052,14 +12052,22 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
   const {
     action = 'STATUS',
     tag = 'latest',
-    port = 5432,
+    port = 5433,
     password = 'localdevpass',
     containerName = 'alloydb-omni-dev',
   } = req.body || {};
 
   const safeName = String(containerName || 'alloydb-omni-dev').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 40) || 'alloydb-omni-dev';
   const safeTag = String(tag || 'latest').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 24) || 'latest';
-  const safePort = Math.min(65535, Math.max(1024, Number(port) || 5432));
+  let safePort = Math.min(65535, Math.max(1024, Number(port) || 5433));
+
+  const isPortFree = (p) =>
+    new Promise((resolve) => {
+      const srv = net.createServer();
+      srv.once('error', () => resolve(false));
+      srv.once('listening', () => srv.close(() => resolve(true)));
+      srv.listen(p, '127.0.0.1');
+    });
 
   const runDocker = (args, timeoutMs = 20000) =>
     new Promise((resolve, reject) => {
@@ -12224,13 +12232,25 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
             }
 
             job.phase = 'STARTING_CONTAINER';
-            pushLog(`Launching container "${safeName}" exposing PostgreSQL on 127.0.0.1:${safePort}...`);
+            // Auto-detect if requested host port (e.g. 5432) is already occupied by local PostgreSQL and pick next free port!
+            const origPort = safePort;
+            while (!(await isPortFree(safePort)) && safePort < origPort + 20) {
+              safePort += 1;
+            }
+            if (safePort !== origPort) {
+              job.port = safePort;
+              pushLog(
+                `Host port ${origPort} is already in use (e.g. local PostgreSQL) — automatically binding AlloyDB Omni to 127.0.0.1:${safePort}!`
+              );
+            }
+            pushLog(`Launching container "${safeName}" (--shm-size=1g) exposing PostgreSQL on 127.0.0.1:${safePort}...`);
             const runOut = await runDocker(
               [
                 'run',
                 '-d',
                 '--name',
                 safeName,
+                '--shm-size=1g',
                 '-e',
                 `POSTGRES_PASSWORD=${password}`,
                 '-e',
@@ -12238,7 +12258,7 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
                 '-v',
                 `${safeName}_data:/var/lib/postgresql/data`,
                 '-p',
-                `${safePort}:5432`,
+                `127.0.0.1:${safePort}:5432`,
                 fullImage,
               ],
               30000

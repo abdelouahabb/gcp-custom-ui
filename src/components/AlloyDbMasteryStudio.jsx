@@ -258,10 +258,10 @@ export default function AlloyDbMasteryStudio({
   const [loadingXray, setLoadingXray] = useState(false);
 
   const [omniStatus, setOmniStatus] = useState(null);
-  const [omniPort, setOmniPort] = useState(5432);
+  const [omniPort, setOmniPort] = useState(5433);
   const [omniPassword, setOmniPassword] = useState('localdevpass');
 
-  const [liveDsn, setLiveDsn] = useState('postgres://postgres:localdevpass@127.0.0.1:5432/postgres');
+  const [liveDsn, setLiveDsn] = useState('postgres://postgres:localdevpass@127.0.0.1:5433/postgres');
   const [liveSqlInput, setLiveSqlInput] = useState(
     'SELECT current_database() AS db, version() AS engine;\nSELECT extname, extversion FROM pg_extension ORDER BY extname;'
   );
@@ -3263,70 +3263,8 @@ GROUP BY 1 ORDER BY turns DESC;`;
             </div>
           </div>
 
-          {/* Right 7 Cols: Vertex AI NL2SQL Copilot + Live PostgreSQL / AlloyDB Wire-Protocol psql Runner */}
+          {/* Right 7 Cols: Live PostgreSQL / AlloyDB Wire-Protocol psql Runner (Directly paired with Local Omni on the left) */}
           <div className="lg:col-span-7 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
-            {/* Dual-Engine Gemini 4 (Vertex AI Keyless OAuth2 OR Vaulted AI Studio Key) NL2SQL Copilot */}
-            <div className="p-3 rounded-xl border border-amber-500/35 bg-amber-500/5 space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  <Wand2 className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Dual-Engine Gemini 4 Natural-Language → AlloyDB SQL Copilot</span>
-                </div>
-                {nlResult?.engine && (
-                  <span className="text-[10px] font-mono text-zinc-500">{nlResult.engine}</span>
-                )}
-              </div>
-              <ZeroSniffingWebCryptoEnclaveBar
-                projectId={projectId}
-                selectedModel={nlModel}
-                onChangeModel={setNlModel}
-                onShowToast={notify}
-                compact
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  value={nlPrompt}
-                  onChange={(e) => setNlPrompt(e.target.value)}
-                  placeholder="Ask in plain English (e.g. 'Run a 90-day Columnar HTAP revenue rollup' or 'Check pglogical replication lag')..."
-                  className="flex-1 min-w-[220px] px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100"
-                />
-                <button
-                  type="button"
-                  disabled={runningNl2Sql}
-                  onClick={runNl2SqlCopilot}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {runningNl2Sql ? 'Synthesizing...' : 'Synthesize SQL'}
-                </button>
-              </div>
-              {nlResult && (
-                <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                      {(nlResult.featuresUsed || []).map((f) => (
-                        <code key={f} className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px]">
-                          {f}
-                        </code>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLiveSqlInput(nlResult.sql);
-                        notify('Loaded synthesized SQL into Live psql Runner below');
-                      }}
-                      className="px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
-                    >
-                      Load into Runner Below ↓
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300">{nlResult.executiveSummary}</p>
-                </div>
-              )}
-            </div>
-
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-emerald-500" />
@@ -3435,6 +3373,68 @@ LIMIT 10;`)
                 <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-200 font-mono text-[10.5px] max-h-60 overflow-auto whitespace-pre-wrap">
                   {liveSqlResult.ok ? liveSqlResult.stdout : liveSqlResult.error}
                 </pre>
+              </div>
+            )}
+          </div>
+
+          {/* Full-Width Row Below: Dual-Engine Gemini 4 (Vertex AI Keyless OAuth2 OR Vaulted AI Studio Key) NL2SQL Copilot */}
+          <div className="lg:col-span-12 p-4 rounded-xl border border-amber-500/35 bg-white dark:bg-[#10141d] space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                <Wand2 className="w-4 h-4 text-amber-500" />
+                <span>Dual-Engine Gemini 4 Natural-Language → AlloyDB SQL Copilot</span>
+              </div>
+              {nlResult?.engine && (
+                <span className="text-[10.5px] font-mono text-zinc-500">{nlResult.engine}</span>
+              )}
+            </div>
+            <ZeroSniffingWebCryptoEnclaveBar
+              projectId={projectId}
+              selectedModel={nlModel}
+              onChangeModel={setNlModel}
+              onShowToast={notify}
+              compact
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={nlPrompt}
+                onChange={(e) => setNlPrompt(e.target.value)}
+                placeholder="Ask in plain English (e.g. 'Run a 90-day Columnar HTAP revenue rollup' or 'Check pglogical replication lag')..."
+                className="flex-1 min-w-[240px] px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100"
+              />
+              <button
+                type="button"
+                disabled={runningNl2Sql}
+                onClick={runNl2SqlCopilot}
+                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {runningNl2Sql ? 'Synthesizing...' : 'Synthesize AlloyDB SQL'}
+              </button>
+            </div>
+            {nlResult && (
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(nlResult.featuresUsed || []).map((f) => (
+                      <code key={f} className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px]">
+                        {f}
+                      </code>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLiveSqlInput(nlResult.sql);
+                      notify('Loaded synthesized SQL into Live psql Runner above');
+                    }}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                  >
+                    Load into SQL Runner Above ↑
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-300">{nlResult.executiveSummary}</p>
               </div>
             )}
           </div>
