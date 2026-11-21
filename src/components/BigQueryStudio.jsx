@@ -216,6 +216,9 @@ export default function BigQueryStudio({
   const [sqlInput, setSqlInput] = useState(SAMPLE_UNOPTIMIZED_QUERIES[0].sql);
   const [maxBytesGuardGb, setMaxBytesGuardGb] = useState(1); // 1 GB safety guard
   const [runningQuery, setRunningQuery] = useState(false);
+  const [runningQueryMode, setRunningQueryMode] = useState(null); // 'DRY_RUN' | 'LIVE' | null
+  const [queryElapsedMs, setQueryElapsedMs] = useState(0);
+  const [runningQueryMeta, setRunningQueryMeta] = useState(null);
   const [queryResult, setQueryResult] = useState(null);
   const [grantingConnSaIam, setGrantingConnSaIam] = useState(false);
   const [grantedConnSaEmail, setGrantedConnSaEmail] = useState(null);
@@ -797,13 +800,50 @@ LIMIT 25;`;
     }
   };
 
+  // Live 100ms elapsed timer while BigQuery Dremel is executing
+  useEffect(() => {
+    if (!runningQuery) {
+      setQueryElapsedMs(0);
+      return undefined;
+    }
+    const startTs = Date.now();
+    setQueryElapsedMs(0);
+    const id = setInterval(() => {
+      setQueryElapsedMs(Date.now() - startTs);
+    }, 100);
+    return () => clearInterval(id);
+  }, [runningQuery]);
+
   // Run SQL Dry-Run X-Ray or Live Query
   const handleExecuteQuery = async (isDryRun = true, sqlOverride = null) => {
     const targetSql = sqlOverride !== null ? sqlOverride : sqlInput;
     const startedAt = Date.now();
+    const activeDs = datasets.find((d) => d.datasetId === selectedDatasetId);
+    const statementCount = targetSql
+      .split(';')
+      .map((s) => s.replace(/--.*$/gm, '').trim())
+      .filter(Boolean).length;
+    const hasAiCall = /\b(ML\.GENERATE_TEXT|ML\.GENERATE_EMBEDDING|AI\.GENERATE|AI\.FORECAST|CREATE\s+(OR\s+REPLACE\s+)?MODEL)\b/i.test(
+      targetSql
+    );
+    const hasExport = /\bEXPORT\s+DATA\b/i.test(targetSql);
     setRunningQuery(true);
+    setRunningQueryMode(isDryRun ? 'DRY_RUN' : 'LIVE');
+    setRunningQueryMeta({
+      location: activeDs?.location || 'US',
+      statementCount: Math.max(1, statementCount),
+      isScript: statementCount > 1,
+      hasAiCall,
+      hasExport,
+    });
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById('bigquery-live-execution-progress')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
     try {
-      const activeDs = datasets.find((d) => d.datasetId === selectedDatasetId);
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/bigquery/query`,
         {
@@ -882,11 +922,14 @@ LIMIT 25;`;
         );
       }
     } catch (err) {
+      if (err?.code === 'CLOUDPULSE_DESTRUCTIVE_CANCELLED') return;
       onShowError?.(
         err.response?.data?.error || 'BigQuery SQL execution failed.'
       );
     } finally {
       setRunningQuery(false);
+      setRunningQueryMode(null);
+      setRunningQueryMeta(null);
     }
   };
 
@@ -1950,12 +1993,16 @@ LIMIT 25;`;
                     disabled={runningQuery}
                     onClick={() => handleExecuteQuery(true)}
                     title="Run a $0.00 BigQuery Dry-Run X-Ray + Automatic SQL Optimization Pass"
-                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    {runningQueryMode === 'DRY_RUN' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
                     <span>
-                      {runningQuery
-                        ? 'Scanning Capacitor Metadata...'
+                      {runningQueryMode === 'DRY_RUN'
+                        ? `Scanning Metadata (${(queryElapsedMs / 1000).toFixed(1)}s)...`
                         : '1. Dry-Run X-Ray & Auto-Optimize ($0.00)'}
                     </span>
                   </button>
@@ -1965,10 +2012,18 @@ LIMIT 25;`;
                     disabled={runningQuery}
                     onClick={() => handleExecuteQuery(false)}
                     title={`Execute live BigQuery SQL query protected by maximumBytesBilled=${maxBytesGuardGb}GB circuit-breaker`}
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-md px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
-                    <Play className="w-3.5 h-3.5" />
-                    <span>2. Execute Live SQL (Protected)</span>
+                    {runningQueryMode === 'LIVE' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {runningQueryMode === 'LIVE'
+                        ? `Executing Live SQL (${(queryElapsedMs / 1000).toFixed(1)}s)...`
+                        : '2. Execute Live SQL (Protected)'}
+                    </span>
                   </button>
 
                   {queryHistory.length > 0 && (
@@ -2005,6 +2060,112 @@ LIMIT 25;`;
                     </button>
                   )}
               </div>
+
+              {/* Live BigQuery Dremel Execution Flight-Card (shown immediately while running) */}
+              {runningQuery && (
+                <div
+                  id="bigquery-live-execution-progress"
+                  className="p-3.5 rounded-xl bg-emerald-500/[0.06] dark:bg-emerald-500/[0.09] border border-emerald-500/35 space-y-2.5 text-xs font-mono scroll-mt-20"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 font-bold text-emerald-700 dark:text-emerald-300">
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                      <span>
+                        {runningQueryMode === 'DRY_RUN'
+                          ? 'Running $0.00 BigQuery Dry-Run X-Ray & Capacitor Cost Estimation...'
+                          : runningQueryMeta?.hasAiCall
+                          ? 'Executing Live BigQuery AI / Gemini 4 Pipeline on Dremel...'
+                          : runningQueryMeta?.isScript
+                          ? `Executing ${runningQueryMeta.statementCount}-Statement BigQuery SQL Script...`
+                          : 'Executing Live BigQuery SQL Job on Dremel...'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold tabular-nums">
+                        {(queryElapsedMs / 1000).toFixed(1)}s elapsed
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                        {runningQueryMeta?.location || 'US'} · Guard {maxBytesGuardGb} GB
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Animated Progress Strip */}
+                  <div className="h-1.5 w-full rounded-full bg-emerald-500/15 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-blue-500 to-emerald-400 transition-all duration-300 animate-pulse"
+                      style={{
+                        width: `${Math.min(
+                          94,
+                          Math.max(12, Math.round((queryElapsedMs / 12000) * 100))
+                        )}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* 4-Stage Real-Time Execution Stepper */}
+                  {(() => {
+                    const sec = queryElapsedMs / 1000;
+                    const activeStep =
+                      runningQueryMode === 'DRY_RUN'
+                        ? sec < 0.8
+                          ? 0
+                          : 1
+                        : sec < 1.2
+                        ? 0
+                        : sec < 3.5
+                        ? 1
+                        : sec < 8
+                        ? 2
+                        : 3;
+                    const steps = [
+                      `1. Safety Guard (${maxBytesGuardGb} GB Cap)`,
+                      `2. Dremel Job Submit (${runningQueryMeta?.location || 'US'})`,
+                      runningQueryMeta?.hasAiCall
+                        ? '3. Gemini 4 / Remote Model Inference'
+                        : runningQueryMeta?.hasExport
+                        ? '3. Table Materialize & GCS Export'
+                        : '3. Capacitor Columnar Scan',
+                      '4. Streaming Rows & Slot Telemetry',
+                    ];
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 pt-0.5">
+                        {steps.map((label, idx) => {
+                          const done = idx < activeStep;
+                          const current = idx === activeStep;
+                          return (
+                            <div
+                              key={label}
+                              className={`px-2 py-1.5 rounded-lg border text-[10.5px] flex items-center gap-1.5 transition-colors ${
+                                done
+                                  ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300'
+                                  : current
+                                  ? 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
+                                  : 'bg-zinc-100/60 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                              }`}
+                            >
+                              {done ? (
+                                <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-500" />
+                              ) : current ? (
+                                <RefreshCw className="w-3 h-3 shrink-0 animate-spin text-blue-500" />
+                              ) : (
+                                <Clock className="w-3 h-3 shrink-0 opacity-60" />
+                              )}
+                              <span className="truncate">{label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {(runningQueryMeta?.hasAiCall || runningQueryMeta?.isScript) && (
+                    <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400">
+                      Multi-statement scripts &amp; BigQuery AI (<code className="text-emerald-600 dark:text-emerald-400">ML.GENERATE_TEXT</code> / <code className="text-emerald-600 dark:text-emerald-400">EXPORT DATA</code>) execute sequentially on Google Cloud Dremel and typically complete in 8–25 seconds.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Session Query Audit Trail & Cost History Drawer */}
               {showQueryHistoryDrawer && queryHistory.length > 0 && (
