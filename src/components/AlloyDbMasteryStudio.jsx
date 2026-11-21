@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import {
   Database,
@@ -267,6 +267,7 @@ export default function AlloyDbMasteryStudio({
   );
   const [liveSqlResult, setLiveSqlResult] = useState(null);
   const [runningLiveSqlMode, setRunningLiveSqlMode] = useState(''); // '' | 'RUN_CUSTOM_SQL' | 'INTROSPECT_ALLOYDB'
+  const sqlOutputRef = useRef(null);
 
   const [compatDdlInput, setCompatDdlInput] = useState(`CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -469,6 +470,9 @@ CREATE TABLE knowledge_docs (
       );
       setLiveSqlResult(data);
       notify(`Executed ${mode === 'INTROSPECT_ALLOYDB' ? 'Introspection' : 'SQL'} in ${data.durationMs}ms`);
+      setTimeout(() => {
+        sqlOutputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
     } catch (err) {
       if (err?.isCancelledByUser) return;
       const errData = err?.response?.data;
@@ -481,6 +485,9 @@ CREATE TABLE knowledge_docs (
         stdout: errData?.stdout || '',
       });
       reportError(errMsg);
+      setTimeout(() => {
+        sqlOutputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
     } finally {
       setRunningLiveSqlMode('');
     }
@@ -3378,8 +3385,9 @@ LIMIT 10;`)
               </button>
             </div>
 
-            {/* Always-Mounted Result Output Console (Prevents Layout Jump) */}
+            {/* Always-Mounted Result Output Console (Prevents Layout Jump & Auto-Scrolls on Result) */}
             <div
+              ref={sqlOutputRef}
               className={`p-3 rounded-xl border space-y-2 ${
                 !liveSqlResult
                   ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/60'
