@@ -451,22 +451,40 @@ CREATE TABLE knowledge_docs (
   const executeLiveSql = async (mode = 'RUN_CUSTOM_SQL', overrideSql = null) => {
     if (!projectId) return;
     setRunningLiveSql(true);
+    // Auto-resolve live running AlloyDB Omni DSN if liveDsn still points to default 5432/5433 while Omni hopped to e.g. 5434
+    let targetDsn = liveDsn;
+    if (
+      omniStatus?.running &&
+      omniStatus?.suggestedDsn &&
+      /127\.0\.0\.1:(5432|5433)\b/.test(targetDsn) &&
+      targetDsn !== omniStatus.suggestedDsn
+    ) {
+      targetDsn = omniStatus.suggestedDsn;
+      setLiveDsn(targetDsn);
+    }
+    if (mode === 'INTROSPECT_ALLOYDB') {
+      setLiveSqlInput(
+        `-- Live AlloyDB / PostgreSQL Introspection\nSELECT current_database() AS db, current_user AS usr, version() AS pg_version;\nSELECT extname, extversion FROM pg_extension ORDER BY extname;\nSELECT name, setting FROM pg_settings WHERE name IN ('wal_level','alloydb.logical_decoding','alloydb.enable_pglogical','google_columnar_engine.enabled','google_ml_integration.enable_model_support','scann.enable_preview_features') ORDER BY name;\nSELECT slot_name, plugin, active FROM pg_replication_slots;`
+      );
+    }
     try {
       const { data } = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/alloydb/execute-sql`,
-        { dsn: liveDsn, sql: overrideSql !== null ? overrideSql : liveSqlInput, mode }
+        { dsn: targetDsn, sql: overrideSql !== null ? overrideSql : liveSqlInput, mode }
       );
       setLiveSqlResult(data);
-      notify(`Executed in ${data.durationMs}ms`);
+      notify(`Executed ${mode === 'INTROSPECT_ALLOYDB' ? 'Introspection' : 'SQL'} in ${data.durationMs}ms`);
     } catch (err) {
       if (err?.isCancelledByUser) return;
       const errData = err?.response?.data;
+      const errMsg = errData?.error || err.message || 'Live SQL execution failed.';
       setLiveSqlResult({
         ok: false,
         durationMs: errData?.durationMs || 0,
-        error: errData?.error || err.message,
+        error: errMsg,
         stdout: errData?.stdout || '',
       });
+      reportError(errMsg);
     } finally {
       setRunningLiveSql(false);
     }
@@ -3316,7 +3334,7 @@ LIMIT 10;`)
                   onClick={() => executeLiveSql('INTROSPECT_ALLOYDB')}
                   className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer disabled:opacity-60"
                 >
-                  Introspect Live Extensions &amp; Flags
+                  {runningLiveSql ? 'Introspecting...' : 'Introspect Live Extensions & Flags'}
                 </button>
               </div>
             </div>

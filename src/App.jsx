@@ -2292,6 +2292,8 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/alloydb/compat-audit') ||
       rawUrl.includes('/alloydb/export-terraform') ||
       rawUrl.includes('/alloydb/nl2sql') ||
+      (rawUrl.includes('/alloydb/execute-sql') &&
+        String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
         String(body.action || '').toUpperCase() === 'PROBE_FROM_VM') ||
       (rawUrl.includes('/vms/') &&
