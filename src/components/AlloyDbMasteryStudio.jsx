@@ -266,7 +266,7 @@ export default function AlloyDbMasteryStudio({
     'SELECT current_database() AS db, version() AS engine;\nSELECT extname, extversion FROM pg_extension ORDER BY extname;'
   );
   const [liveSqlResult, setLiveSqlResult] = useState(null);
-  const [runningLiveSql, setRunningLiveSql] = useState(false);
+  const [runningLiveSqlMode, setRunningLiveSqlMode] = useState(''); // '' | 'RUN_CUSTOM_SQL' | 'INTROSPECT_ALLOYDB'
 
   const [compatDdlInput, setCompatDdlInput] = useState(`CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -450,7 +450,7 @@ CREATE TABLE knowledge_docs (
 
   const executeLiveSql = async (mode = 'RUN_CUSTOM_SQL', overrideSql = null) => {
     if (!projectId) return;
-    setRunningLiveSql(true);
+    setRunningLiveSqlMode(mode);
     // Auto-resolve live running AlloyDB Omni DSN if liveDsn still points to default 5432/5433 while Omni hopped to e.g. 5434
     let targetDsn = liveDsn;
     if (
@@ -461,11 +461,6 @@ CREATE TABLE knowledge_docs (
     ) {
       targetDsn = omniStatus.suggestedDsn;
       setLiveDsn(targetDsn);
-    }
-    if (mode === 'INTROSPECT_ALLOYDB') {
-      setLiveSqlInput(
-        `-- Live AlloyDB / PostgreSQL Introspection\nSELECT current_database() AS db, current_user AS usr, version() AS pg_version;\nSELECT extname, extversion FROM pg_extension ORDER BY extname;\nSELECT name, setting FROM pg_settings WHERE name IN ('wal_level','alloydb.logical_decoding','alloydb.enable_pglogical','google_columnar_engine.enabled','google_ml_integration.enable_model_support','scann.enable_preview_features') ORDER BY name;\nSELECT slot_name, plugin, active FROM pg_replication_slots;`
-      );
     }
     try {
       const { data } = await axios.post(
@@ -480,13 +475,14 @@ CREATE TABLE knowledge_docs (
       const errMsg = errData?.error || err.message || 'Live SQL execution failed.';
       setLiveSqlResult({
         ok: false,
+        mode,
         durationMs: errData?.durationMs || 0,
         error: errMsg,
         stdout: errData?.stdout || '',
       });
       reportError(errMsg);
     } finally {
-      setRunningLiveSql(false);
+      setRunningLiveSqlMode('');
     }
   };
 
@@ -3330,18 +3326,25 @@ LIMIT 10;`)
                 </button>
                 <button
                   type="button"
-                  disabled={runningLiveSql}
+                  disabled={Boolean(runningLiveSqlMode)}
                   onClick={() => executeLiveSql('INTROSPECT_ALLOYDB')}
-                  className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer disabled:opacity-60"
+                  className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
-                  {runningLiveSql ? 'Introspecting...' : 'Introspect Live Extensions & Flags'}
+                  {runningLiveSqlMode === 'INTROSPECT_ALLOYDB' && (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  )}
+                  <span>
+                    {runningLiveSqlMode === 'INTROSPECT_ALLOYDB'
+                      ? 'Introspecting...'
+                      : 'Introspect Live Extensions & Flags'}
+                  </span>
                 </button>
               </div>
             </div>
 
             <div>
               <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                Target PostgreSQL / AlloyDB Connection URI (Express Public DNS, Auth Proxy 127.0.0.1:5432, or Local Omni)
+                Target PostgreSQL / AlloyDB Connection URI (Express Public DNS, Auth Proxy, or Local Omni)
               </label>
               <input
                 type="text"
@@ -3352,7 +3355,7 @@ LIMIT 10;`)
             </div>
 
             <textarea
-              rows={7}
+              rows={6}
               value={liveSqlInput}
               onChange={(e) => setLiveSqlInput(e.target.value)}
               className="w-full p-3 rounded-lg bg-zinc-950 border border-zinc-800 font-mono text-[11px] text-emerald-300"
@@ -3364,46 +3367,93 @@ LIMIT 10;`)
               </span>
               <button
                 type="button"
-                disabled={runningLiveSql}
+                disabled={Boolean(runningLiveSqlMode)}
                 onClick={() => executeLiveSql('RUN_CUSTOM_SQL')}
                 className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
               >
-                <Play className="w-3.5 h-3.5" />
-                {runningLiveSql ? 'Executing Live SQL...' : 'Execute Live SQL'}
+                {runningLiveSqlMode === 'RUN_CUSTOM_SQL' ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5" />
+                )}
+                {runningLiveSqlMode === 'RUN_CUSTOM_SQL' ? 'Executing Live SQL...' : 'Execute Live SQL'}
               </button>
             </div>
 
-            {liveSqlResult && (
-              <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
-                  <span
-                    className={`px-2 py-0.5 rounded font-extrabold ${
-                      liveSqlResult.ok
-                        ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                    }`}
-                  >
-                    {liveSqlResult.ok ? 'SUCCESS' : 'ERROR'}
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    Wall: <strong>{liveSqlResult.durationMs} ms</strong>
-                  </span>
-                  {liveSqlResult.planningTimeMs !== null && liveSqlResult.planningTimeMs !== undefined && (
-                    <span className="text-sky-600 dark:text-sky-400">
-                      Planning: <strong>{liveSqlResult.planningTimeMs} ms</strong>
-                    </span>
-                  )}
-                  {liveSqlResult.executionTimeMs !== null && liveSqlResult.executionTimeMs !== undefined && (
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      Execution: <strong>{liveSqlResult.executionTimeMs} ms</strong>
-                    </span>
-                  )}
+            {/* Always-Mounted Result Output Console (Prevents Layout Jump) */}
+            <div
+              className={`p-3 rounded-xl border space-y-2 ${
+                !liveSqlResult
+                  ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/60'
+                  : liveSqlResult.ok
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : 'border-rose-500/40 bg-rose-500/5'
+              }`}
+            >
+              {!liveSqlResult ? (
+                <div className="text-[11px] font-mono text-zinc-500 py-4 text-center">
+                  Ready — click <strong>Introspect Live Extensions &amp; Flags</strong> or <strong>Execute Live SQL</strong> to stream live <code className="px-1 rounded bg-zinc-200/70 dark:bg-zinc-800">/usr/bin/psql</code> output here.
                 </div>
-                <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-200 font-mono text-[10.5px] max-h-60 overflow-auto whitespace-pre-wrap">
-                  {liveSqlResult.ok ? liveSqlResult.stdout : liveSqlResult.error}
-                </pre>
-              </div>
-            )}
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded font-extrabold ${
+                          liveSqlResult.ok
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                        }`}
+                      >
+                        {liveSqlResult.ok
+                          ? liveSqlResult.mode === 'INTROSPECT_ALLOYDB'
+                            ? 'INTROSPECTION OK'
+                            : 'QUERY OK'
+                          : 'ERROR'}
+                      </span>
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        Wall: <strong>{liveSqlResult.durationMs} ms</strong>
+                      </span>
+                      {liveSqlResult.planningTimeMs !== null && liveSqlResult.planningTimeMs !== undefined && (
+                        <span className="text-sky-600 dark:text-sky-400">
+                          Planning: <strong>{liveSqlResult.planningTimeMs} ms</strong>
+                        </span>
+                      )}
+                      {liveSqlResult.executionTimeMs !== null && liveSqlResult.executionTimeMs !== undefined && (
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          Execution: <strong>{liveSqlResult.executionTimeMs} ms</strong>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            liveSqlResult.ok ? liveSqlResult.stdout : liveSqlResult.error,
+                            'psql-out',
+                            'SQL Output'
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        {copiedKey === 'psql-out' ? 'Copied' : 'Copy'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLiveSqlResult(null)}
+                        className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-bold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-200 font-mono text-[10.5px] max-h-56 overflow-auto whitespace-pre-wrap">
+                    {liveSqlResult.ok ? liveSqlResult.stdout : liveSqlResult.error}
+                  </pre>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Full-Width Row Below: Dual-Engine Gemini 4 (Vertex AI Keyless OAuth2 OR Vaulted AI Studio Key) NL2SQL Copilot */}
