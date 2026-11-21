@@ -413,6 +413,17 @@ CREATE TABLE knowledge_docs (
         { action: 'STATUS', port: omniPort, password: omniPassword }
       );
       setOmniStatus(data);
+      if (data?.running) {
+        if (data.actualPort && data.actualPort !== omniPort) {
+          setOmniPort(data.actualPort);
+        }
+        if (data.actualPassword && data.actualPassword !== omniPassword) {
+          setOmniPassword(data.actualPassword);
+        }
+        if (data.suggestedDsn && liveDsn.includes('127.0.0.1:')) {
+          setLiveDsn(data.suggestedDsn);
+        }
+      }
     } catch {
       // silent
     }

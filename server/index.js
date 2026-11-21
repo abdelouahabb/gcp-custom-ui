@@ -12124,6 +12124,24 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
           })
         : [];
       const target = containers.find((c) => c.name === safeName) || containers[0] || null;
+      let actualPort = safePort;
+      let actualPassword = password;
+      if (target) {
+        const portMatch = String(target.ports || '').match(/:(\d+)->5432\/tcp/);
+        if (portMatch) actualPort = Number(portMatch[1]);
+        try {
+          const envOut = await runDocker(
+            ['inspect', target.name, '--format', '{{range .Config.Env}}{{println .}}{{end}}'],
+            4000
+          );
+          const pwLine = String(envOut.stdout || '')
+            .split('\n')
+            .find((l) => l.startsWith('POSTGRES_PASSWORD='));
+          if (pwLine) actualPassword = pwLine.slice('POSTGRES_PASSWORD='.length).trim() || password;
+        } catch {
+          // ignore inspect error
+        }
+      }
       return res.json({
         ok: true,
         dockerAvailable: true,
@@ -12132,8 +12150,10 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
         container: target,
         containers,
         localImages,
+        actualPort,
+        actualPassword,
         job: getJobSnapshot(),
-        suggestedDsn: `postgres://postgres:${password}@127.0.0.1:${safePort}/postgres`,
+        suggestedDsn: `postgres://postgres:${actualPassword}@127.0.0.1:${actualPort}/postgres`,
       });
     }
 
