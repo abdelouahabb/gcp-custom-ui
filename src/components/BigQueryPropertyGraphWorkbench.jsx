@@ -71,7 +71,7 @@ FILTER src.entity_id != dst.entity_id AND dst.risk_score >= 0.7
 RETURN
   src.entity_name AS source_name,
   dst.entity_name AS target_name,
-  ARRAY_LENGTH(EDGES(p)) AS hops,
+  PATH_LENGTH(p) AS hops,
   dst.risk_score AS target_risk_score
 ORDER BY target_risk_score DESC, hops ASC
 LIMIT 20`,

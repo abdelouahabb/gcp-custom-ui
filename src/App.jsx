@@ -8369,6 +8369,7 @@ function CloudPulseCockpit() {
     DATABRICKS_UNITY_BRIDGE: 'Federated Databricks Unity & AWS Glue Bridge',
     MEDALLION_ELT: 'Bronze-Silver-Gold Medallion ELT',
     DATA_FABRIC_MESH: 'Live 6-Engine Data Fabric Mesh & Cross-Studio Bridge',
+    BQ_PROPERTY_GRAPH: 'BigQuery Property Graph (GoogleSQL GQL) Workbench',
     SCHEMA_CONTRACTS: 'Live Schema Contracts & Drift Firewall',
     SERVERLESS_SPARK: 'Serverless Spark Pipeline Builder',
     SERVERLESS_BATCHES: 'Serverless Spark 3.5 Batches',
