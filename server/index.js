@@ -13009,17 +13009,17 @@ app.get('/api/project/:projectId/data-fabric/mesh', async (req, res) => {
 
     const mermaidCode = `flowchart LR
   subgraph L1["1. Bronze Storage & Operational OLTP"]
-    GCS["Cloud Storage\n${buckets.length} Bucket(s)\n(${b0})"]
-    ADB["AlloyDB PG 18\n${alloyClusters.length} Cluster(s)\n(${adb0})"]
-    SQL["Cloud SQL\n${sqlInstances.length} Instance(s)"]
+    GCS["Cloud Storage · ${buckets.length} Bucket(s) · ${b0}"]
+    ADB["AlloyDB PG 18 · ${alloyClusters.length} Cluster(s) · ${adb0}"]
+    SQL["Cloud SQL · ${sqlInstances.length} Instance(s)"]
   end
   subgraph L2["2. Open Lakehouse & Compute Fabric"]
-    SPK["Managed Spark 3.5\nLightning Engine\n(${sparkBatches.length} Batches)"]
-    BL["BigLake Iceberg\n${icebergCatalogs.length} Catalog(s)\n(${cat0})"]
+    SPK["Managed Spark 3.5 Lightning · ${sparkBatches.length} Batches"]
+    BL["BigLake Iceberg · ${icebergCatalogs.length} Catalog(s) · ${cat0}"]
   end
   subgraph L3["3. Warehouse, Gemini 4 AI & Vector Serving"]
-    BQ["BigQuery Capacitor\n${datasets.length} Dataset(s)\n(${ds0})"]
-    AI["Gemini 4 + SCaNN\nSub-5ms RAG & HTAP"]
+    BQ["BigQuery Capacitor · ${datasets.length} Dataset(s) · ${ds0}"]
+    AI["Gemini 4 + SCaNN · Sub-5ms RAG & HTAP"]
   end
   GCS -- "$0/GB Same-Region" --> SPK
   SPK -- "ACID Iceberg MERGE" --> BL

@@ -1482,15 +1482,15 @@ GROUP BY 1 ORDER BY turns DESC;`;
 
   const drMermaidCode = `flowchart LR
   subgraph SRC["Source / On-Prem / AWS RDS"]
-    PG1["Stock PostgreSQL\n(pglogical Provider)"]
+    PG1["Stock PostgreSQL (pglogical Provider)"]
   end
   subgraph GCP["Google Cloud AlloyDB (Zero Lock-in)"]
-    ADB["AlloyDB Primary\n(Colossus Storage + SCaNN + Columnar)"]
-    RP["Read Pool Nodes\n(Sub-10ms Lag · Auto-Scale)"]
+    ADB["AlloyDB Primary (Colossus + SCaNN + Columnar)"]
+    RP["Read Pool Nodes (Sub-10ms Lag · Auto-Scale)"]
     ADB --> RP
   end
   subgraph EXIT["Customer-Owned DR Exit"]
-    PG2["Stock Open-Source PostgreSQL\n(pglogical Subscriber · Multi-Cloud)"]
+    PG2["Stock Open-Source PostgreSQL (pglogical Subscriber)"]
   end
   PG1 -- "Zero-Downtime pglogical WAL Stream" --> ADB
   ADB -- "Continuous Exit Replication (No Lock-in)" --> PG2`;
