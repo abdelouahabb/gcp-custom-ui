@@ -13161,6 +13161,425 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-data-fabric-rag-loop. POST /api/project/:projectId/data-fabric/rag-loop
+// Real 4-stage live RAG pipeline: GCS Upload -> BigQuery + Gemini 4 + text-embedding-005 -> AlloyDB Omni SCaNN -> Sub-5ms Semantic Search
+app.post('/api/project/:projectId/data-fabric/rag-loop', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    stage = 'QUERY_SCANN_RAG',
+    bucketName = '',
+    datasetId = '',
+    region = 'us-central1',
+    geminiModel = 'gemini-4-neon',
+    docFilename = 'cloudpulse-rag-brief.md',
+    docTitle = 'AlloyDB Express & 6-Engine Data Fabric Brief',
+    docContent = '',
+    docUri = '',
+    summary = '',
+    embedding = null,
+    searchQuery = '',
+    topK = 5,
+    containerName = 'alloydb-omni-dev',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeRegion = String(region || 'us-central1').trim() || 'us-central1';
+
+  const discoverLiveOmni = async () => {
+    const safeContainer = String(containerName || 'alloydb-omni-dev').replace(/[^a-zA-Z0-9_.-]/g, '') || 'alloydb-omni-dev';
+    const psOut = await new Promise((resolve) => {
+      const p = spawn('docker', ['ps', '--filter', `name=^/${safeContainer}$`, '--format', '{{.Names}}||{{.Ports}}'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let stdout = '';
+      p.stdout.on('data', (d) => { stdout += d.toString(); });
+      p.on('close', () => resolve(stdout.trim()));
+      p.on('error', () => resolve(''));
+    });
+    if (!psOut) {
+      throw Object.assign(
+        new Error(`Local AlloyDB Omni container "${safeContainer}" is not running. Start it in AlloyDB Mastery Studio (Pillar 5: Local Omni Docker).`),
+        { status: 400 }
+      );
+    }
+    const portMatch = psOut.match(/:(\d+)->5432\/tcp/);
+    const port = portMatch ? Number(portMatch[1]) : 5434;
+    let password = 'localdevpass';
+    const envOut = await new Promise((resolve) => {
+      const p = spawn('docker', ['inspect', safeContainer, '--format', '{{range .Config.Env}}{{println .}}{{end}}'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let stdout = '';
+      p.stdout.on('data', (d) => { stdout += d.toString(); });
+      p.on('close', () => resolve(stdout));
+      p.on('error', () => resolve(''));
+    });
+    const pwLine = envOut.split('\n').find((l) => l.startsWith('POSTGRES_PASSWORD='));
+    if (pwLine) password = pwLine.slice('POSTGRES_PASSWORD='.length).trim() || password;
+    return { host: '127.0.0.1', port, password, container: safeContainer };
+  };
+
+  const runLocalPsql = (conn, sqlText) =>
+    new Promise((resolve, reject) => {
+      const child = spawn(
+        '/usr/bin/psql',
+        ['-h', conn.host, '-p', String(conn.port), '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-t', '-A'],
+        {
+          env: { ...process.env, PGPASSWORD: conn.password, PGCONNECT_TIMEOUT: '8' },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      );
+      let stdout = '';
+      let stderr = '';
+      const timer = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* noop */ }
+        reject(new Error('psql execution timed out after 20s'));
+      }, 20000);
+      child.stdout.on('data', (d) => { stdout += d.toString(); });
+      child.stderr.on('data', (d) => { stderr += d.toString(); });
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          reject(new Error(stderr.trim() || `psql exited with code ${code}`));
+        } else {
+          resolve(stdout.trim());
+        }
+      });
+      child.stdin.write(sqlText);
+      child.stdin.end();
+    });
+
+  const getVertexEmbedding = async (token, textToEmbed) => {
+    const embRes = await gcpFetch(
+      `https://${encodeURIComponent(safeRegion)}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(safeRegion)}/publishers/google/models/text-embedding-005:predict`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          instances: [{ content: String(textToEmbed || '').slice(0, 6000), task_type: 'RETRIEVAL_DOCUMENT' }],
+        },
+        timeout: 15000,
+      }
+    );
+    const values = embRes?.predictions?.[0]?.embeddings?.values;
+    if (!Array.isArray(values) || values.length === 0) {
+      throw new Error('Vertex AI text-embedding-005 returned no embedding vector.');
+    }
+    return values.map((v) => Number(v));
+  };
+
+  const callVertexGemini = async (token, modelId, promptText) => {
+    const cleanModel = String(modelId || 'gemini-4-neon').trim();
+    const candidates = [
+      `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+      `https://${encodeURIComponent(safeRegion)}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(safeRegion)}/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+    ];
+    let lastErr = null;
+    for (const url of candidates) {
+      try {
+        const gRes = await gcpFetch(url, token, projectId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 320 },
+          },
+          timeout: 20000,
+        });
+        const text =
+          gRes?.candidates?.[0]?.content?.parts
+            ?.map((p) => p?.text || '')
+            .join('')
+            .trim() || '';
+        if (text) return { text, modelUsed: cleanModel };
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error(`Gemini model ${cleanModel} did not return a response.`);
+  };
+
+  const sqlLit = (s) => `'${String(s ?? '').replace(/'/g, "''")}'`;
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    // STAGE 1: Upload real document directly to GCS bucket (docs/<filename>)
+    if (stage === 'UPLOAD_GCS_DOC') {
+      const cleanBucket = String(bucketName || '').trim();
+      if (!cleanBucket) {
+        return res.status(400).json({ error: 'Please select or enter a live GCS bucket name.' });
+      }
+      const safeFile = String(docFilename || 'cloudpulse-rag-brief.md').replace(/[^a-zA-Z0-9._-]/g, '-');
+      const objectPath = `docs/${safeFile}`;
+      const bodyText = String(docContent || '').trim();
+      if (!bodyText) {
+        return res.status(400).json({ error: 'Document content cannot be empty.' });
+      }
+      const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+        cleanBucket
+      )}/o?uploadType=media&name=${encodeURIComponent(objectPath)}`;
+      const upRes = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'text/markdown; charset=utf-8',
+        },
+        body: bodyText,
+      });
+      const upJson = await upRes.json().catch(() => ({}));
+      if (!upRes.ok) {
+        return res.status(upRes.status).json({
+          error: upJson?.error?.message || `GCS upload failed (HTTP ${upRes.status}).`,
+        });
+      }
+      return res.json({
+        ok: true,
+        stage: 'UPLOAD_GCS_DOC',
+        gcsUri: `gs://${cleanBucket}/${objectPath}`,
+        bucket: cleanBucket,
+        objectPath,
+        sizeBytes: Number(upJson?.size || Buffer.byteLength(bodyText, 'utf8')),
+        generation: upJson?.generation || null,
+        md5Hash: upJson?.md5Hash || null,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // STAGE 2: Enrich with Gemini 4 + Embed (768-d text-embedding-005) + Persist live record in BigQuery
+    if (stage === 'RUN_BQ_GEMINI4') {
+      const cleanDataset = String(datasetId || '').trim();
+      if (!cleanDataset) {
+        return res.status(400).json({ error: 'Please select or enter a live BigQuery dataset ID.' });
+      }
+      const textBody = String(docContent || '').trim();
+      if (!textBody) {
+        return res.status(400).json({ error: 'Document content is required for Gemini 4 enrichment.' });
+      }
+      const targetUri = String(docUri || `gs://${bucketName || 'bucket'}/docs/${docFilename}`).trim();
+
+      const [gemOut, embVec] = await Promise.all([
+        callVertexGemini(
+          token,
+          geminiModel,
+          `Summarize this enterprise cloud architecture document in 2 crisp technical sentences suitable for RAG indexing:\n\nTitle: ${docTitle}\nURI: ${targetUri}\n\n${textBody.slice(0, 5000)}`
+        ),
+        getVertexEmbedding(token, `${docTitle}\n\n${textBody}`),
+      ]);
+
+      // Persist enriched record live in BigQuery
+      const bqTable = `${projectId}.${cleanDataset}.cloudpulse_rag_gold`;
+      const bqSql = `
+CREATE TABLE IF NOT EXISTS \`${bqTable}\` (
+  doc_uri STRING,
+  title STRING,
+  executive_summary STRING,
+  content_preview STRING,
+  embedding_dims INT64,
+  model_used STRING,
+  indexed_at TIMESTAMP
+);
+DELETE FROM \`${bqTable}\` WHERE doc_uri = ${sqlLit(targetUri)};
+INSERT INTO \`${bqTable}\` (doc_uri, title, executive_summary, content_preview, embedding_dims, model_used, indexed_at)
+VALUES (
+  ${sqlLit(targetUri)},
+  ${sqlLit(docTitle)},
+  ${sqlLit(gemOut.text)},
+  ${sqlLit(textBody.slice(0, 400))},
+  ${embVec.length},
+  ${sqlLit(gemOut.modelUsed)},
+  CURRENT_TIMESTAMP()
+);`;
+
+      const bqRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            query: bqSql,
+            useLegacySql: false,
+            timeoutMs: 25000,
+          },
+          timeout: 30000,
+        }
+      );
+
+      return res.json({
+        ok: true,
+        stage: 'RUN_BQ_GEMINI4',
+        bigqueryTable: bqTable,
+        bqJobId: bqRes?.jobReference?.jobId || null,
+        summary: gemOut.text,
+        modelUsed: gemOut.modelUsed,
+        embeddingDims: embVec.length,
+        embedding: embVec,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // STAGE 3: Load 768-d embedding + doc into live local AlloyDB Omni & build real SCaNN index
+    if (stage === 'LOAD_ALLOYDB_SCANN') {
+      if (!Array.isArray(embedding) || embedding.length !== 768) {
+        return res.status(400).json({ error: 'Stage 2 must complete first to provide a 768-d Vertex AI embedding vector.' });
+      }
+      const conn = await discoverLiveOmni();
+      const targetUri = String(docUri || `gs://${bucketName || 'bucket'}/docs/${docFilename}`).trim();
+      const vecLiteral = `[${embedding.map((n) => Number(n).toFixed(6)).join(',')}]`;
+
+      const loadSql = `
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS alloydb_scann;
+CREATE TABLE IF NOT EXISTS public.cloudpulse_rag_docs (
+  id SERIAL PRIMARY KEY,
+  doc_uri TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  content TEXT NOT NULL,
+  embedding vector(768) NOT NULL,
+  indexed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO public.cloudpulse_rag_docs (doc_uri, title, summary, content, embedding, indexed_at)
+VALUES (
+  ${sqlLit(targetUri)},
+  ${sqlLit(docTitle)},
+  ${sqlLit(summary)},
+  ${sqlLit(docContent)},
+  '${vecLiteral}'::vector(768),
+  now()
+)
+ON CONFLICT (doc_uri) DO UPDATE SET
+  title = EXCLUDED.title,
+  summary = EXCLUDED.summary,
+  content = EXCLUDED.content,
+  embedding = EXCLUDED.embedding,
+  indexed_at = now();
+CREATE INDEX IF NOT EXISTS idx_cloudpulse_rag_scann
+  ON public.cloudpulse_rag_docs
+  USING scann (embedding cosine)
+  WITH (num_leaves = 1);
+SELECT COUNT(*) FROM public.cloudpulse_rag_docs;
+`;
+      const out = await runLocalPsql(conn, loadSql);
+      const countLine = out.split('\n').filter(Boolean).pop() || '1';
+      return res.json({
+        ok: true,
+        stage: 'LOAD_ALLOYDB_SCANN',
+        container: conn.container,
+        dsnMasked: `postgres://postgres:****@${conn.host}:${conn.port}/postgres`,
+        table: 'public.cloudpulse_rag_docs',
+        indexName: 'idx_cloudpulse_rag_scann',
+        indexMethod: 'alloydb_scann (cosine)',
+        totalDocsIndexed: Number(countLine) || 1,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // STAGE 4: Live sub-5ms SCaNN vector search + optional Gemini 4 grounded RAG answer
+    if (stage === 'QUERY_SCANN_RAG') {
+      const q = String(searchQuery || '').trim();
+      if (!q) {
+        return res.status(400).json({ error: 'Enter a semantic search query.' });
+      }
+      const conn = await discoverLiveOmni();
+      const qVec = await getVertexEmbedding(token, q);
+      const vecLiteral = `[${qVec.map((n) => Number(n).toFixed(6)).join(',')}]`;
+      const limit = Math.max(1, Math.min(10, Number(topK) || 5));
+
+      const searchSql = `
+SELECT json_agg(t) FROM (
+  SELECT
+    doc_uri AS "docUri",
+    title,
+    summary,
+    LEFT(content, 280) AS "contentPreview",
+    ROUND((1 - (embedding <=> '${vecLiteral}'::vector(768)))::numeric, 4) AS "cosineSimilarity",
+    indexed_at AS "indexedAt"
+  FROM public.cloudpulse_rag_docs
+  ORDER BY embedding <=> '${vecLiteral}'::vector(768)
+  LIMIT ${limit}
+) t;`;
+
+      const explainSql = `
+EXPLAIN (ANALYZE, FORMAT JSON)
+SELECT id FROM public.cloudpulse_rag_docs
+ORDER BY embedding <=> '${vecLiteral}'::vector(768)
+LIMIT ${limit};`;
+
+      const [rowsOut, explainOut] = await Promise.all([
+        runLocalPsql(conn, searchSql),
+        runLocalPsql(conn, explainSql),
+      ]);
+
+      let matches = [];
+      try {
+        matches = JSON.parse(rowsOut || '[]') || [];
+      } catch {
+        matches = [];
+      }
+      let pgExecutionMs = null;
+      try {
+        const expJson = JSON.parse(explainOut);
+        pgExecutionMs = Number(expJson?.[0]?.['Execution Time'] ?? null);
+      } catch {
+        pgExecutionMs = null;
+      }
+
+      let groundedAnswer = null;
+      if (matches.length > 0) {
+        const ctx = matches
+          .map(
+            (m, i) =>
+              `[${i + 1}] ${m.title} (${m.docUri}, similarity=${m.cosineSimilarity}): ${m.summary} | Excerpt: ${m.contentPreview}`
+          )
+          .join('\n');
+        try {
+          const ans = await callVertexGemini(
+            token,
+            geminiModel,
+            `Answer the user's question concisely using ONLY the retrieved AlloyDB SCaNN context below. Cite the gs:// URI.\n\nQuestion: ${q}\n\nRetrieved Context:\n${ctx}`
+          );
+          groundedAnswer = ans.text;
+        } catch {
+          groundedAnswer = null;
+        }
+      }
+
+      return res.json({
+        ok: true,
+        stage: 'QUERY_SCANN_RAG',
+        query: q,
+        container: conn.container,
+        dsnMasked: `postgres://postgres:****@${conn.host}:${conn.port}/postgres`,
+        pgExecutionMs,
+        matches,
+        groundedAnswer,
+        modelUsed: geminiModel,
+        totalDurationMs: Date.now() - startedAt,
+      });
+    }
+
+    return res.status(400).json({ error: `Unknown RAG loop stage: ${stage}` });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Live RAG Demo Loop stage failed.',
+    });
+  }
+});
+
 // 9a-data-fabric-bridge. POST /api/project/:projectId/data-fabric/synthesize-bridge
 // Synthesizes real runnable cross-engine bridges (SQL, PySpark 3.5 Lightning, gcloud CLI) wired to live discovered assets
 app.post('/api/project/:projectId/data-fabric/synthesize-bridge', async (req, res) => {

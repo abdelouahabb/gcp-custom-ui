@@ -2293,6 +2293,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/alloydb/export-terraform') ||
       rawUrl.includes('/alloydb/nl2sql') ||
       rawUrl.includes('/data-fabric/synthesize-bridge') ||
+      (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5145,6 +5146,75 @@ function classifyDestructiveAxiosConfig(config) {
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
         };
+      }
+      if (rawUrl.includes('/data-fabric/rag-loop')) {
+        const stage = String(body.stage || '');
+        if (stage === 'UPLOAD_GCS_DOC') {
+          const b = body.bucketName || 'target-bucket';
+          const f = body.docFilename || 'cloudpulse-rag-brief.md';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Upload RAG Source Document to gs://${b}/docs/${f}?`,
+            laymanSummary: `In Plain English: Uploads your document to gs://${b}/docs/${f} via the live Cloud Storage JSON API so BigQuery Gemini 4 and AlloyDB SCaNN can index it.`,
+            headerBadge: 'Live RAG Loop — Stage 1 (Cloud Storage)',
+            targetLabel: 'Target GCS Object',
+            resourceKind: 'Cloud Storage Object (storage.googleapis.com/upload/storage/v1)',
+            targetName: `gs://${b}/docs/${f}`,
+            location: body.region || 'us-central1',
+            projectId,
+            method: 'UPLOAD GCS OBJECT',
+            endpoint: rawUrl,
+            confirmLabel: `Upload to gs://${b}/docs/${f}`,
+            cancelToast: 'Stage 1 GCS upload cancelled.',
+            whatHappensNext: `1. Streams your Markdown document directly to gs://${b}/docs/${f}.\n2. Returns the live GCS generation and md5Hash for Stage 2.`,
+            costWarning: `NEGLIGIBLE COST (~$0.00): Storing a few KB in Cloud Storage is well within the 5 GB Always-Free tier.`,
+            impactWarning: `Creates or overwrites gs://${b}/docs/${f}.`,
+          };
+        }
+        if (stage === 'RUN_BQ_GEMINI4') {
+          const ds = body.datasetId || 'target_dataset';
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Enrich with ${body.geminiModel || 'gemini-4-neon'} & Persist in BigQuery (${ds}.cloudpulse_rag_gold)?`,
+            laymanSummary: `In Plain English: Calls Vertex AI ${body.geminiModel || 'gemini-4-neon'} + text-embedding-005 (768-d) on your document and writes the enriched row into BigQuery table ${projectId}.${ds}.cloudpulse_rag_gold.`,
+            headerBadge: 'Live RAG Loop — Stage 2 (BigQuery + Gemini 4)',
+            targetLabel: 'Target BigQuery Table & Vertex AI Models',
+            resourceKind: 'BigQuery Table + Vertex AI (bigquery.googleapis.com + aiplatform.googleapis.com)',
+            targetName: `${projectId}.${ds}.cloudpulse_rag_gold`,
+            location: body.region || 'us-central1',
+            projectId,
+            method: 'ENRICH & WRITE BIGQUERY',
+            endpoint: rawUrl,
+            confirmLabel: `Run Gemini 4 + Write to BigQuery`,
+            cancelToast: 'Stage 2 BigQuery + Gemini 4 enrichment cancelled.',
+            whatHappensNext: `1. Generates a 2-sentence executive summary with ${body.geminiModel || 'gemini-4-neon'}.\n2. Generates a live 768-d vector with text-embedding-005.\n3. Upserts the row into ${projectId}.${ds}.cloudpulse_rag_gold.`,
+            costWarning: `LOW ON-DEMAND COST (<$0.001): Single-document Vertex AI inference + BigQuery Always-Free 1 TiB/mo query tier.`,
+            impactWarning: `Creates/updates table ${projectId}.${ds}.cloudpulse_rag_gold.`,
+          };
+        }
+        if (stage === 'LOAD_ALLOYDB_SCANN') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Index 768-d Vector into Local AlloyDB Omni SCaNN?`,
+            laymanSummary: `In Plain English: Connects to your running local AlloyDB Omni Docker container, creates public.cloudpulse_rag_docs + the Google SCaNN cosine index (idx_cloudpulse_rag_scann), and upserts your live 768-d vector.`,
+            headerBadge: 'Live RAG Loop — Stage 3 (AlloyDB Omni SCaNN)',
+            targetLabel: 'Local AlloyDB Omni Container',
+            resourceKind: 'PostgreSQL / AlloyDB SCaNN Index (127.0.0.1)',
+            targetName: `public.cloudpulse_rag_docs (idx_cloudpulse_rag_scann)`,
+            location: '127.0.0.1 (Local Docker)',
+            projectId,
+            method: 'UPSERT & BUILD SCANN INDEX',
+            endpoint: rawUrl,
+            confirmLabel: `Load & Build SCaNN Index`,
+            cancelToast: 'Stage 3 AlloyDB SCaNN indexing cancelled.',
+            whatHappensNext: `1. Auto-discovers your running alloydb-omni-dev port & credentials.\n2. Enables vector + alloydb_scann extensions and builds idx_cloudpulse_rag_scann.\n3. Upserts the live 768-d vector for sub-5ms semantic search.`,
+            costWarning: `ZERO CLOUD COST ($0.00): Runs 100% locally in your AlloyDB Omni Docker container.`,
+            impactWarning: `Creates/updates public.cloudpulse_rag_docs in local AlloyDB Omni.`,
+          };
+        }
       }
       if (rawUrl.includes('/bigquery/grant-connection-sa-roles')) {
         const saEmail = String(body.serviceAccountEmail || 'bqcx-...@gcp-sa-bigquery-condel.iam.gserviceaccount.com');
